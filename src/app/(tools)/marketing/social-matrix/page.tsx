@@ -13,8 +13,17 @@ import {
   MatrixCopy, ProxyType, ProxyProtocol, SocialPlatform,
   OfficialRentableProxy, ProxyLease, OfficialProxyStatus
 } from '@/lib/social-matrix/types'
+import { PlanGate } from '@/components/marketing/PlanGate'
 
 export default function SocialMatrixPage() {
+  return (
+    <PlanGate allowed={info => info.features.socialMatrix === true} featureName="社群矩陣與自動養號" requiredPlan="PRO 以上">
+      <SocialMatrixContent />
+    </PlanGate>
+  )
+}
+
+function SocialMatrixContent() {
   const [activeTab, setActiveTab] = useState<'proxies' | 'accounts' | 'campaign'>('proxies')
   const [isLoading, setIsLoading] = useState(false)
   const [copiedId, setCopiedId] = useState<string | null>(null)
@@ -46,6 +55,8 @@ export default function SocialMatrixPage() {
   const [proxySubTab, setProxySubTab] = useState<'my_proxies' | 'official_market' | 'admin_manage'>('my_proxies')
   const [officialProxies, setOfficialProxies] = useState<OfficialRentableProxy[]>([])
   const [leases, setLeases] = useState<ProxyLease[]>([])
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false)
+  const [leaseQuota, setLeaseQuota] = useState<{ quota: number; used: number } | null>(null)
   const [isAddOfficialOpen, setIsAddOfficialOpen] = useState(false)
   const [isEditOfficialOpen, setIsEditOfficialOpen] = useState(false)
   const [editingOfficial, setEditingOfficial] = useState<OfficialRentableProxy | null>(null)
@@ -130,6 +141,8 @@ export default function SocialMatrixPage() {
       let serverProxies: SocialProxy[] = pRes.proxies || []
       if (offRes.official_proxies) setOfficialProxies(offRes.official_proxies)
       if (offRes.leases) setLeases(offRes.leases)
+      setIsPlatformAdmin(offRes.is_admin === true)
+      if (typeof offRes.lease_quota === 'number') setLeaseQuota({ quota: offRes.lease_quota, used: offRes.lease_used ?? 0 })
 
       // Merge with browser local storage backup so user configurations are never lost
       if (typeof window !== 'undefined') {
@@ -725,6 +738,7 @@ export default function SocialMatrixPage() {
                   <span>🏢 官方原生 IP 租賃市場 ({officialProxies.length})</span>
                   <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-400 text-amber-950 font-bold">免自備</span>
                 </button>
+                {isPlatformAdmin && (
                 <button
                   onClick={() => setProxySubTab('admin_manage')}
                   className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all ${
@@ -736,6 +750,7 @@ export default function SocialMatrixPage() {
                   <ShieldCheck className="h-3.5 w-3.5 text-amber-400" />
                   <span>⚙️ 管理者專區：供租用 IP 庫存維護</span>
                 </button>
+                )}
               </div>
 
               {/* Quick Actions according to sub-tab */}
@@ -765,7 +780,7 @@ export default function SocialMatrixPage() {
                     </button>
                   </>
                 )}
-                {proxySubTab === 'admin_manage' && (
+                {isPlatformAdmin && proxySubTab === 'admin_manage' && (
                   <button
                     onClick={() => setIsAddOfficialOpen(true)}
                     className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold rounded-lg bg-amber-600 hover:bg-amber-700 text-white shadow-sm transition-colors"
@@ -972,6 +987,15 @@ export default function SocialMatrixPage() {
             {/* ==================================================== */}
             {proxySubTab === 'official_market' && (
               <div className="space-y-6">
+                {leaseQuota && !isPlatformAdmin && (
+                  <div className="flex items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 dark:border-emerald-800 px-4 py-3 text-sm">
+                    <BadgeCheck className="h-4 w-4 text-emerald-600 shrink-0" />
+                    <span className="font-semibold text-emerald-900 dark:text-emerald-200">
+                      方案附贈官方 IP：{leaseQuota.quota} 個（已使用 {Math.min(leaseQuota.used, leaseQuota.quota)} 個）
+                      {leaseQuota.used >= leaseQuota.quota && '，額外 IP 需另行購買，請聯繫客服'}
+                    </span>
+                  </div>
+                )}
                 {/* Official Market Value Proposition Banner */}
                 <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-violet-900 text-white rounded-3xl p-6 shadow-xl border border-indigo-500/30">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -1136,7 +1160,7 @@ export default function SocialMatrixPage() {
             {/* ==================================================== */}
             {/* SUB-TAB 3: ADMIN INVENTORY MANAGEMENT (管理者後台)    */}
             {/* ==================================================== */}
-            {proxySubTab === 'admin_manage' && (
+            {isPlatformAdmin && proxySubTab === 'admin_manage' && (
               <div className="space-y-6">
                 {/* Admin Header */}
                 <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-2xl p-5 shadow-sm border border-slate-700">
