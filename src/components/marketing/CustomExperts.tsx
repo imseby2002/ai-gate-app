@@ -54,13 +54,13 @@ export function CustomExperts() {
           <h1 className="text-2xl font-bold">自製專家</h1>
         </div>
         <p className="text-sm text-muted-foreground mb-6">
-          餵網址、文件或文字，訓練成你這個領域的專屬顧問。問答依方案可用（點數扣款）；建立與訓練需 TEAM 以上方案。
+          餵網址、文件或文字，訓練成你這個領域的專屬顧問。問答依方案可用（點數扣款）；建立與訓練需 PRO 以上方案。
         </p>
 
         {canBuild && <CreateExpert onCreated={loadExperts} />}
         {!canBuild && (
           <div className="mb-5 rounded-xl border bg-card p-5 flex items-center justify-between gap-3 flex-wrap">
-            <p className="text-sm text-muted-foreground">建立自製專家需 TEAM 以上方案；你仍可使用已建立的專家提問。</p>
+            <p className="text-sm text-muted-foreground">建立自製專家需 PRO 以上方案；你仍可使用已建立的專家提問。</p>
             <Link href="/marketing/plan" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold text-primary-foreground bg-primary">
               <Crown className="h-4 w-4" />升級方案
             </Link>

@@ -18,7 +18,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const { plan, features } = await getMarketingEntitlements(supabase, user.id)
   if (!features.customExpertBuild) {
-    return NextResponse.json({ error: '訓練自製專家需 TEAM 以上方案', plan }, { status: 403 })
+    return NextResponse.json({ error: '訓練自製專家需 PRO 以上方案', plan }, { status: 403 })
   }
 
   // 確認專家存在且屬於自己（RLS）

@@ -141,7 +141,7 @@ export async function POST(req: NextRequest) {
   // 電話撥打：行銷流水線（aiCallEmail）或潛在客戶行銷全開（prospectMarketing full）擇一即可
   const { plan, features } = await getMarketingEntitlements(supabase, user.id)
   if (!features.aiCallEmail && features.prospectMarketing !== 'full') {
-    return NextResponse.json({ error: '目前方案未開放電話撥打，請升級至 TEAM 以上', plan }, { status: 403 })
+    return NextResponse.json({ error: '目前方案未開放電話撥打，請升級至 PRO 以上', plan }, { status: 403 })
   }
 
   // 執行前餘額檢查：TTS 一次 + 依撥打通數估算；實際依成功數扣點

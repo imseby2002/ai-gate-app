@@ -115,7 +115,7 @@ export default function MarketingPipelinePage() {
     <PlanGate
       allowed={info => info.features.marketingPipeline === true}
       featureName="行銷流水線"
-      requiredPlan="TEAM 以上"
+      requiredPlan="PRO 以上"
     >
       <MarketingPipelineContent />
     </PlanGate>

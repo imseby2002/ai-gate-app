@@ -159,7 +159,7 @@ export async function POST(req: NextRequest) {
 
   const { plan, features } = await getMarketingEntitlements(supabase, user.id)
   if (features.aiStudio === 'none') {
-    return NextResponse.json({ error: '目前方案未開放 AI 視覺工坊，請升級至 TEAM 以上', plan }, { status: 403 })
+    return NextResponse.json({ error: '目前方案未開放 AI 視覺工坊，請升級至 PRO 以上', plan }, { status: 403 })
   }
 
   // 執行前餘額檢查：suggest 為輕量呼叫，節點執行以上限預估、實際依節點 cost 扣

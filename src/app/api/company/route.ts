@@ -52,7 +52,8 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ company })
 }
 
-// PATCH /api/company — 更新公司設定（名稱／開通模組），僅 owner/admin 角色可改
+// PATCH /api/company — 更新公司設定（名稱），僅 owner/admin 角色可改。
+// 開通模組由平台在 admin 後台（/api/admin/companies）設定，公司不能自行開通。
 export async function PATCH(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -63,14 +64,13 @@ export async function PATCH(req: NextRequest) {
   if (!(await isCompanyOwnerOrAdmin(user.id)))
     return NextResponse.json({ error: '僅公司管理者可修改設定' }, { status: 403 })
 
-  const { name, enabledModules } = await req.json() as { name?: string; enabledModules?: string[] | null }
+  const { name } = await req.json() as { name?: string }
   const patch: Record<string, unknown> = {}
   if (name !== undefined) {
     const trimmed = String(name).trim()
     if (!trimmed) return NextResponse.json({ error: '公司名稱不可為空' }, { status: 400 })
     patch.name = trimmed
   }
-  if (enabledModules !== undefined) patch.enabled_modules = enabledModules
 
   if (Object.keys(patch).length === 0) return NextResponse.json({ error: '參數錯誤' }, { status: 400 })
 

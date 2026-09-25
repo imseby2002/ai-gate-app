@@ -1,6 +1,6 @@
 /**
  * GET  /api/marketing/experts — 列出自己的自製專家（含來源數）
- * POST /api/marketing/experts — 建立自製專家（需 customExpertBuild：TEAM 以上）
+ * POST /api/marketing/experts — 建立自製專家（需 customExpertBuild：PRO 以上）
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
 
   const { plan, features } = await getMarketingEntitlements(supabase, user.id)
   if (!features.customExpertBuild) {
-    return NextResponse.json({ error: '建立自製專家需 TEAM 以上方案', plan }, { status: 403 })
+    return NextResponse.json({ error: '建立自製專家需 PRO 以上方案', plan }, { status: 403 })
   }
 
   const body = await req.json()

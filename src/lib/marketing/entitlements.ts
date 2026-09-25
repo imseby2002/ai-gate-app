@@ -27,7 +27,7 @@ export interface MarketingPlanFeatures {
   prospectMarketing: ProspectMarketingAccess
   // 專家模式
   expertSkills: boolean           // 13 項現有技能：全方案皆可用（點數扣款）
-  customExpertBuild: boolean      // 自製專家功能「建立」權限（TEAM 以上）；Free/PRO 只能使用
+  customExpertBuild: boolean      // 自製專家功能「建立」權限（PRO 以上）；Free/CORE 只能使用
 }
 
 export const MARKETING_PLAN_FEATURES: Record<MarketingPlan, MarketingPlanFeatures> = {
@@ -123,7 +123,7 @@ export async function getMarketingEntitlements(
     .select('user_type')
     .eq('id', ownerId)
     .maybeSingle()
-  // 內部帳號（admin / employee）不受方案／額度限制，一律視同企業方案。
+  // 內部帳號（admin / employee）不受方案／額度限制，一律視同 MAX 方案。
   // 比照全站計費慣例：只有 external（付費客戶）才受方案與額度限制（見 lib/marketing/billing.ts）。
   if (ownerProfile?.user_type === 'admin' || ownerProfile?.user_type === 'employee') {
     return { plan: 'enterprise', features: MARKETING_PLAN_FEATURES.enterprise }

@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // 內建專家「知識附掛」：僅 TEAM+ 方案（含 admin/employee 內部帳號）享有專業知識庫注入；
+  // 內建專家「知識附掛」：僅 PRO+ 方案（含 admin/employee 內部帳號）享有專業知識庫注入；
   // free/pro 使用基礎版專家。knowledge 為空時 skill 走原本提示詞，行為不變。
   // 內容 = 內建精煉知識（getSkillKnowledge）＋ 使用者自訂上傳知識（builtin_expert_knowledge）。
   let knowledge = ''

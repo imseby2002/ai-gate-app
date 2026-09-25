@@ -61,7 +61,7 @@ export function SkillRunner({ module, title }: { module: string; title: string }
   const [lastCost, setLastCost] = useState<number | null>(null)
   const [copied, setCopied] = useState(false)
 
-  // 內建專家「知識附掛」（TEAM+）：對目前選中的專家上傳連結／文字／檔案作為專屬知識庫
+  // 內建專家「知識附掛」（PRO+）：對目前選中的專家上傳連結／文字／檔案作為專屬知識庫
   const [kSources, setKSources] = useState<KnowledgeSource[]>([])
   const [kCanBuild, setKCanBuild] = useState(false)
   const [kTab, setKTab] = useState<'url' | 'text' | 'file'>('url')
@@ -124,7 +124,7 @@ export function SkillRunner({ module, title }: { module: string; title: string }
       })
       const data = await res.json()
       if (!res.ok) {
-        setKError(res.status === 403 ? '訓練專家知識需 TEAM 以上方案' : (data.error ?? '新增失敗'))
+        setKError(res.status === 403 ? '訓練專家知識需 PRO 以上方案' : (data.error ?? '新增失敗'))
         return
       }
       if (data.source) setKSources(v => [data.source, ...v])
@@ -316,7 +316,7 @@ export function SkillRunner({ module, title }: { module: string; title: string }
             </div>
           )}
 
-          {/* 內建專家「知識附掛」：訓練這位專家（TEAM+） */}
+          {/* 內建專家「知識附掛」：訓練這位專家（PRO+） */}
           <div className="mt-6 border rounded-xl bg-white">
             <div className="flex items-center gap-2 px-4 py-3 border-b">
               <BookOpen className="h-4 w-4 text-indigo-600" />
@@ -326,7 +326,7 @@ export function SkillRunner({ module, title }: { module: string; title: string }
 
             {!kCanBuild ? (
               <div className="px-4 py-4 text-sm text-gray-500">
-                訓練專屬知識庫為 <span className="font-medium text-indigo-600">TEAM 以上方案</span> 功能。升級後可讓這位專家學習你上傳的爆款案例、風格與資料。
+                訓練專屬知識庫為 <span className="font-medium text-indigo-600">PRO 以上方案</span> 功能。升級後可讓這位專家學習你上傳的爆款案例、風格與資料。
               </div>
             ) : (
               <div className="px-4 py-4 space-y-3">
