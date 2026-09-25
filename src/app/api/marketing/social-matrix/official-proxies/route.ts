@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { requireSocialMatrix } from '@/lib/social-matrix/access'
+import { requireSocialMatrix, requirePlatformAdmin, getOfficialProxyQuota } from '@/lib/social-matrix/access'
 import { StorageService } from '@/lib/social-matrix/storage'
 import { ProxyType, ProxyProtocol } from '@/lib/social-matrix/types'
 
@@ -8,6 +8,9 @@ export async function GET(req: NextRequest) {
   const guard = await requireSocialMatrix(req)
   if (guard.res) return guard.res
   const authUser = guard.user
+  const activeInMemory = () => StorageService.getLeases(authUser.id).filter(l => l.status === 'active').length
+  const { isAdmin, quota, used } = await getOfficialProxyQuota(authUser, activeInMemory())
+  const meta = { is_admin: isAdmin, lease_quota: quota, lease_used: used }
 
   try {
     const supabase = await createClient()
@@ -28,18 +31,21 @@ export async function GET(req: NextRequest) {
     if (offErr || !dbOfficial || dbOfficial.length === 0) {
       // Use fallback
       return NextResponse.json({
+        ...meta,
         official_proxies: StorageService.getOfficialProxies(),
         leases: StorageService.getLeases(authUser.id),
       })
     }
 
     return NextResponse.json({
+        ...meta,
       official_proxies: dbOfficial,
       leases: dbLeases || StorageService.getLeases(authUser.id),
     })
   } catch (err) {
     console.warn('[official-proxies GET] Fallback to StorageService:', err)
     return NextResponse.json({
+        ...meta,
       official_proxies: StorageService.getOfficialProxies(),
       leases: StorageService.getLeases(authUser.id),
     })
@@ -59,6 +65,8 @@ export async function POST(req: NextRequest) {
     // ACTION 1: ADMIN CREATE OFFICIAL PROXY
     // ==========================================
     if (action === 'admin_create') {
+      const denied = await requirePlatformAdmin(authUser)
+      if (denied) return denied
       const {
         name,
         proxy_type = 'home_static',
@@ -149,6 +157,16 @@ export async function POST(req: NextRequest) {
       const { official_proxy_id } = body
       if (!official_proxy_id) {
         return NextResponse.json({ error: '請指定要租用的官方 IP' }, { status: 400 })
+      }
+
+      const activeInMemory = StorageService.getLeases(authUser.id).filter(l => l.status === 'active').length
+      const { isAdmin, quota, used } = await getOfficialProxyQuota(authUser, activeInMemory)
+      if (!isAdmin && used >= quota) {
+        return NextResponse.json({
+          error: quota > 0
+            ? `方案附贈的 ${quota} 個官方 IP 已使用完畢，額外 IP 需另行購買，請聯繫客服`
+            : '目前方案未附贈官方 IP，請升級至 PRO 以上或自備 IP',
+        }, { status: 403 })
       }
 
       let leasedResult: any = null

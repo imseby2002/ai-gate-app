@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { requireSocialMatrix } from '@/lib/social-matrix/access'
+import { requireSocialMatrix, requirePlatformAdmin } from '@/lib/social-matrix/access'
 import { StorageService } from '@/lib/social-matrix/storage'
 
 export async function PATCH(
@@ -9,7 +9,8 @@ export async function PATCH(
 ) {
   const guard = await requireSocialMatrix(req)
   if (guard.res) return guard.res
-  const authUser = guard.user
+  const denied = await requirePlatformAdmin(guard.user)
+  if (denied) return denied
 
   const { id } = await params
   if (!id) return NextResponse.json({ error: 'Missing ID' }, { status: 400 })
@@ -43,7 +44,8 @@ export async function DELETE(
 ) {
   const guard = await requireSocialMatrix(req)
   if (guard.res) return guard.res
-  const authUser = guard.user
+  const denied = await requirePlatformAdmin(guard.user)
+  if (denied) return denied
 
   const { id } = await params
   if (!id) return NextResponse.json({ error: 'Missing ID' }, { status: 400 })
