@@ -17,7 +17,71 @@ export function noDataFoundSuffix(altMethods: string): string {
 // 對上系統資料，一律不能直接洩漏——先用這句固定問法跟客人核對，客人明確承認了，下一輪
 // 用這個確認過的姓名重查才能真的給密碼。用固定字串（不是 LLM 自由發揮的句子），才能在
 // 下一輪對話用同一個 regex 抓出候選姓名。
-export const NAME_VERIFY_ASK_RE = /請問訂房登記的姓名是不是「([^」]{1,40})」呢/
+// ── 訂房平台提示 ──────────────────────────────────────────────
+// 各平台的訂單號碼可不可靠不一樣：Booking.com／Agoda／AsiaYo 給客人的單號跟民宿收到的
+// 一樣；Trip.com 大多不一樣；KKday、四方通行、易遊網等是經由 Agoda/Trip 中轉進來的，
+// 客人手上的單號跟民宿收到的一定不同——這些只能靠姓名查。官網／電話／LINE 預訂沒有平台
+// 單號，只能靠手機號碼。不強制先問平台（客人常直接給資料），客人有提到就拿來調整引導
+// 與姓名比對範圍。
+export type BookingPlatformHint = 'booking_com' | 'agoda' | 'asiayo' | 'trip_com' | 'reseller' | 'direct'
+
+const PLATFORM_PATTERNS: [BookingPlatformHint, RegExp][] = [
+  ['reseller', /kkday|四方通行|易遊網?|eztravel/gi],
+  ['trip_com', /trip\.com|攜程|携程|ctrip|(?:在|從|用|透過|經由)\s*trip(?:\.com)?\b|\btrip\s*(?:訂|預訂|平台|網站|app)|^\s*trip\s*$/gi],
+  ['booking_com', /booking\.com|繽客|缤客|(?:在|從|用|透過|經由)\s*booking(?:\.com)?\b|\bbooking\s*(?:訂|預訂|平台|網站|app)|^\s*booking\s*$/gi],
+  ['agoda', /agoda|安可達/gi],
+  ['asiayo', /asia\s*yo/gi],
+  ['direct', /官網|官方網站|電話(?:預訂|訂房|訂的)|line\s*(?:預訂|訂房|訂的)|私訊(?:預訂|訂房|訂的)/gi],
+]
+
+const PLATFORM_LABEL: Record<BookingPlatformHint, string> = {
+  booking_com: 'Booking.com', agoda: 'Agoda', asiayo: 'AsiaYo', trip_com: 'Trip.com',
+  reseller: 'KKday／四方通行等中轉平台', direct: '官網／電話／LINE 預訂',
+}
+
+export function detectBookingPlatform(text: string): BookingPlatformHint | null {
+  for (const [hint, re] of PLATFORM_PATTERNS) {
+    re.lastIndex = 0
+    if (re.test(text)) return hint
+  }
+  return null
+}
+
+// 客人把平台跟姓名打在同一則（例如「trip訂的 王小明」），拿掉平台字樣後剩下的才是姓名候選
+export function stripPlatformMention(text: string): string {
+  let t = text
+  for (const [, re] of PLATFORM_PATTERNS) t = t.replace(re, ' ')
+  return t
+    .replace(/(訂房姓名|訂房大名|姓名|大名|名字)\s*[:：是]?/g, ' ')
+    .replace(/(^|\s)(的|訂的|訂房|預訂|訂)(?=\s|$)/g, ' ')
+    .replace(/[，,、/|:：]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/^(我是|我叫|我|是)\s*/, '')
+    .replace(/^(的|訂的|訂房|預訂|訂)$/, '')
+}
+
+// 訂單號碼查無資料時，依客人提到的平台決定接下來要請客人提供什麼
+export function orderLookupAltMethods(hint: BookingPlatformHint | null): string {
+  if (hint === 'trip_com' || hint === 'reseller') {
+    return `訂房姓名（${PLATFORM_LABEL[hint]}給旅客的訂單號碼跟民宿收到的不同，請直接用訂房時填寫的姓名查，英文拼音照訂房時的寫法）`
+  }
+  if (hint === 'direct') return '訂房時留的手機號碼'
+  if (hint) return `訂房姓名，或再核對一次 ${PLATFORM_LABEL[hint]} 的訂單編號`
+  return '訂房姓名，並順便詢問是透過哪個平台訂房（Booking.com／Agoda／AsiaYo／Trip.com／KKday／官網、電話、LINE 等）；官網、電話或 LINE 預訂的客人請改提供訂房手機號碼'
+}
+
+// 客人只回了平台名稱（通常是回答「請問是透過哪個平台訂房」）時，注入給回覆模型的引導
+export function platformReplyGuidance(hint: BookingPlatformHint): string {
+  const ask = hint === 'trip_com' || hint === 'reseller'
+    ? `請客人直接提供訂房姓名（${PLATFORM_LABEL[hint]}給旅客的訂單號碼跟民宿收到的不同，不要再要求訂單號碼）`
+    : hint === 'direct'
+      ? '請客人提供訂房時留的手機號碼'
+      : `請客人提供 ${PLATFORM_LABEL[hint]} 的訂單編號，或訂房姓名`
+  return `【訂房平台】客人表示是透過「${PLATFORM_LABEL[hint]}」訂房（尚未查詢任何訂單資料，嚴禁提供或捏造密碼、房號）。${ask}。`
+}
+
+export const NAME_VERIFY_ASK_RE =/請問訂房登記的姓名是不是「([^」]{1,40})」呢/
 
 function buildNameVerifyPrompt(candidateName: string): string {
   return `【訂單查詢結果】\n系統找到一筆疑似相符的旅客資料，但姓名不是逐字對上，需要先跟客人核對身份，絕對不能直接提供密碼。\n請一字不改照抄以下這句話回覆客人，不要加其他文字：\n請問訂房登記的姓名是不是「${candidateName}」呢？\n只有客人下一則訊息明確回覆「是/對/沒錯」等肯定語，系統才會在下一輪提供密碼；客人否認、不確定、或給了別的名字，一律不可提供任何密碼、房號，並引導客人改用訂單號碼或手機號碼查詢。`
@@ -620,7 +684,7 @@ function matchByTransliteration<T extends { guest_name: string | null }>(
   return best.candidate
 }
 
-export async function queryBookingByGuestName(supabase: any, userId: string, candidateName: string, model: LanguageModel, confirmedExactName?: string): Promise<string | null> {
+export async function queryBookingByGuestName(supabase: any, userId: string, candidateName: string, model: LanguageModel, confirmedExactName?: string, platformHint?: BookingPlatformHint | null): Promise<string | null> {
   const { features } = await getBookingEntitlements(supabase, userId)
   if (!features.csIntegration) return null
 
@@ -630,7 +694,9 @@ export async function queryBookingByGuestName(supabase: any, userId: string, can
   const lookupName = (confirmedExactName ?? candidateName).trim()
   if (!lookupName) return null
 
-  const notFoundMsg = `【訂單查詢結果】\n查無旅客「${name}」的訂單資料，系統中沒有符合的訂房紀錄。\n（嚴禁自行推測或回覆「已找到」「已核對」「訂單已完成處理」等話術）\n${noDataFoundSuffix('訂單號碼或手機號碼')}`
+  const notFoundMsg = `【訂單查詢結果】\n查無旅客「${name}」的訂單資料，系統中沒有符合的訂房紀錄。\n（嚴禁自行推測或回覆「已找到」「已核對」「訂單已完成處理」等話術）\n${noDataFoundSuffix(platformHint === 'trip_com' || platformHint === 'reseller'
+    ? '訂房時實際填寫的姓名寫法（例如英文拼音、姓氏順序對調）或手機號碼'
+    : '訂單號碼或手機號碼')}`
 
   const past = new Date(); past.setDate(past.getDate() - 3)
   const future = new Date(); future.setDate(future.getDate() + 180)
@@ -641,12 +707,30 @@ export async function queryBookingByGuestName(supabase: any, userId: string, can
 
   const hasChinese = /[一-鿿]/.test(lookupName)
 
+  // 近期範圍：昨天～7 天後。姓名（尤其中文對拼音）模糊比對時候選越少越不容易配錯人，
+  // 先在「近期入住」＋「客人說的平台」範圍內比，找不到才放寬到全部候選。
+  const todayTpe = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Taipei' })
+  const shiftDay = (d: string, days: number) => { const x = new Date(`${d}T00:00:00Z`); x.setUTCDate(x.getUTCDate() + days); return x.toISOString().slice(0, 10) }
+  const nearFrom = shiftDay(todayTpe, -1)
+  const nearTo = shiftDay(todayTpe, 7)
+  const dbPlatform = platformHint === 'booking_com' || platformHint === 'agoda' || platformHint === 'asiayo' || platformHint === 'trip_com' ? platformHint : null
+
+  // 依序套用篩選條件，回傳第一個「篩完還有候選」的子集合；全部篩完都空就回原集合
+  const narrow = <T,>(rows: T[], preds: ((r: T) => boolean)[]): T[] => {
+    for (const p of preds) {
+      const sub = rows.filter(p)
+      if (sub.length) return sub
+    }
+    return rows
+  }
+
+  let translitCache: string[] | null = null
   const fuzzyMatchOne = async <T extends { guest_name: string | null }>(candidates: T[]): Promise<T | null> => {
     // 第一層：中文姓名先試確定性的拼音相似度比對（AI 只負責音譯，比對決策本身
     // 固定門檻、可稽核）；找不到高信心候選再退回下面既有的「AI 自由心證」流程。
     if (hasChinese) {
-      const translits = await transliterateToLatin(lookupName, model)
-      const byTranslit = matchByTransliteration(candidates, translits)
+      if (!translitCache) translitCache = await transliterateToLatin(lookupName, model)
+      const byTranslit = matchByTransliteration(candidates, translitCache)
       if (byTranslit) return byTranslit
     }
     try {
@@ -667,6 +751,20 @@ export async function queryBookingByGuestName(supabase: any, userId: string, can
     return null
   }
 
+  // 由窄到寬逐層模糊比對，窄的範圍比到就不再往外找
+  const fuzzyTiered = async <T extends { guest_name: string | null }>(candidates: T[], tiers: ((r: T) => boolean)[]): Promise<T | null> => {
+    const tried = new Set<string>()
+    for (const pred of [...tiers, () => true]) {
+      const sub = candidates.filter(pred)
+      const key = sub.map(c => candidates.indexOf(c)).join(',')
+      if (!sub.length || tried.has(key)) continue
+      tried.add(key)
+      const one = await fuzzyMatchOne(sub)
+      if (one) return one
+    }
+    return null
+  }
+
   // 1. 優先查「每日入住」（bnb_daily_records）——這是民宿自己維護、資料最準確即時的來源，
   // 房號與密碼直接就在同一列，不像 bookings 需要另外查 properties/daily_records 兩層。
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -684,10 +782,14 @@ export async function queryBookingByGuestName(supabase: any, userId: string, can
       const g = norm(c.guest_name ?? '')
       return !!g && (g.includes(n) || n.includes(g))
     })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const dailyNear = (c: any) => c.date >= nearFrom && c.date <= nearTo
     if (!dailyMatched.length && allowFuzzy) {
-      const one = await fuzzyMatchOne(dailyCandidates)
+      const one = await fuzzyTiered(dailyCandidates, [dailyNear])
       if (one) dailyMatched = [one]
     }
+    // 子字串比對到多筆不同人時，優先取近期入住的那幾筆
+    if (dailyMatched.length > 1) dailyMatched = narrow(dailyMatched, [dailyNear])
 
     if (dailyMatched.length) {
       // 同一人、同一組訂單號可能橫跨多間房（同一 LINE 帳號一次訂好幾間房）——
@@ -755,7 +857,7 @@ export async function queryBookingByGuestName(supabase: any, userId: string, can
   // 排除掉，不然這種佔位字串會混進候選名單、也永遠比對不到客人講的真實姓名。
   const { data: candidates } = await supabase
     .from('bookings')
-    .select('id, property_id, guest_name, check_in, check_out, status')
+    .select('id, property_id, guest_name, check_in, check_out, status, platform')
     .eq('user_id', userId)
     .not('guest_name', 'is', null)
     .neq('guest_name', '(Not available)')
@@ -773,10 +875,17 @@ export async function queryBookingByGuestName(supabase: any, userId: string, can
   })
 
   // 簡單子字串比對不到，才交給 LLM 做模糊比對（中文姓名/拼音互換、姓氏順序），比對失敗一律當查無資料
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const bookingNear = (c: any) => c.check_in <= nearTo && (c.check_out ?? c.check_in) >= nearFrom
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const onPlatform = (c: any) => !!dbPlatform && c.platform === dbPlatform
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const bookingTiers = dbPlatform ? [(c: any) => bookingNear(c) && onPlatform(c), bookingNear, onPlatform] : [bookingNear]
   if (!matched.length && allowFuzzy) {
-    const one = await fuzzyMatchOne(candidates)
+    const one = await fuzzyTiered(candidates, bookingTiers)
     if (one) matched = [one]
   }
+  if (matched.length > 1) matched = narrow(matched, bookingTiers)
 
   if (!matched.length) return notFoundMsg
 

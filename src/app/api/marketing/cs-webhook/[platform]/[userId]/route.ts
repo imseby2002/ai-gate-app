@@ -17,7 +17,7 @@ import { queryGoogleSheet, type SheetConfig, type SheetQueryOpts } from '@/lib/c
 import { buildBookingSystemPrompt, type BookingFlowDef } from '@/lib/cs/booking-prompt'
 import { sendTicketNotification, type NotifyWebhook } from '@/lib/cs/ticket-notify'
 import { buildSellSection, type CsCustomerRow } from '@/lib/cs/sell-section'
-import { queryBnbCheckin, checkBeforeCheckin, queryBookingByGuestName, queryBookingByPhone, noDataFoundSuffix, NAME_VERIFY_ASK_RE, wrapImageDerivedResultForConfirm, looksLikeGuestName, isAffirmativeReply } from '@/lib/cs/checkin-lookup'
+import { queryBnbCheckin, checkBeforeCheckin, queryBookingByGuestName, queryBookingByPhone, noDataFoundSuffix, NAME_VERIFY_ASK_RE, wrapImageDerivedResultForConfirm, looksLikeGuestName, isAffirmativeReply, detectBookingPlatform, stripPlatformMention, orderLookupAltMethods, platformReplyGuidance } from '@/lib/cs/checkin-lookup'
 import { getCsEntitlements } from '@/lib/cs/entitlements'
 import { generateCsReplyL2, generateCsReplyL3, generateCsReplySearch, IMAGE_DOWNGRADE_REPLY, notifyOwnerUpgradeNudge } from '@/lib/cs/csReply'
 import { findLatestPendingApproval, resumeRunAfterApproval } from '@/lib/agents/approvals'
@@ -2034,6 +2034,10 @@ async function getAIReply(
     let currentLookupKind: LookupKind | null = null
     let currentLookupFailed = false
     if (userId) {
+      // 客人這則或最近幾則訊息提到的訂房平台（沒提到就是 null，不強制先問平台）——
+      // 用來決定訂單號查無資料時要改問什麼，以及姓名比對優先比哪個平台的訂單
+      const recentUserText = history.filter(m => m.role === 'user').slice(-8).map(m => m.content).join('\n')
+      const platformHint = detectBookingPlatform(message) ?? detectBookingPlatform(recentUserText)
       // 上一輪如果是「請問訂房登記的姓名是不是「XXX」呢？」的身份核對問句，且客人這則訊息
       // 是明確的肯定回覆（且沒有夾帶新的訂單號碼/電話，那種情況讓下面照舊走新的查詢），
       // 才用這個已經核對過的姓名重查、直接給密碼——沒有核對過的模糊比對絕對不能直接洩漏。
@@ -2051,7 +2055,7 @@ async function getAIReply(
         currentLookupKind = 'name'
         try {
           const confirmedName = verifyMatch[1]
-          const byName = await queryBookingByGuestName(getServiceClient(), userId, confirmedName, google('gemini-3.1-flash-lite'), confirmedName)
+          const byName = await queryBookingByGuestName(getServiceClient(), userId, confirmedName, google('gemini-3.1-flash-lite'), confirmedName, platformHint)
           if (byName) {
             currentLookupFailed = byName.includes('查無')
             if (!currentLookupFailed) void saveConfirmedFacts(userId, platform, customerId, knowledge.industry, { confirmedName })
@@ -2074,7 +2078,7 @@ async function getAIReply(
             const bnbResult = await queryBnbCheckin(getServiceClient(), userId, orderNum)
             currentLookupFailed = !bnbResult
             if (!currentLookupFailed) void saveConfirmedFacts(userId, platform, customerId, knowledge.industry, { orderNumber: orderNum })
-            const bnb = bnbResult ?? `【入住資訊查詢結果】\n查無訂單「${orderNum}」的資料。\n${noDataFoundSuffix('訂房姓名或手機號碼')}`
+            const bnb = bnbResult ?? `【入住資訊查詢結果】\n查無訂單「${orderNum}」的資料。\n${noDataFoundSuffix(orderLookupAltMethods(platformHint))}`
             externalDataSection = `\n\n${bnb}${externalDataSection}`
           } else {
             // 資料來源密碼表路徑：未到入住時間加最高優先禁止指令
@@ -2114,7 +2118,7 @@ async function getAIReply(
             const bnbResult = await queryBnbCheckin(getServiceClient(), userId, altOrderNum)
             currentLookupFailed = !bnbResult
             if (!currentLookupFailed) void saveConfirmedFacts(userId, platform, customerId, knowledge.industry, { orderNumber: altOrderNum })
-            const bnb = bnbResult ?? `【入住資訊查詢結果】\n查無訂單「${altOrderNum}」的資料，系統中沒有這筆訂單（有些訂房平台顯示給客人的訂單號跟系統收到的不同）。\n${noDataFoundSuffix('訂房姓名或手機號碼')}`
+            const bnb = bnbResult ?? `【入住資訊查詢結果】\n查無訂單「${altOrderNum}」的資料，系統中沒有這筆訂單（有些訂房平台顯示給客人的訂單號跟系統收到的不同）。\n${noDataFoundSuffix(orderLookupAltMethods(platformHint))}`
             externalDataSection = `\n\n${bnb}${externalDataSection}`
           } else {
             const { before, checkinTime, nowHHMM } = await checkBeforeCheckin(getServiceClient(), userId)
@@ -2133,14 +2137,19 @@ async function getAIReply(
         // 字樣導致這輪完全不觸發，也擋不到下面的數字前綴姓名判斷——擴大成只要上一輪是在要求
         // 任何一種身份識別資訊就算。
         const askedForName = /大名|姓名|訂單編號|訂單號碼|電話號碼|手機號碼/.test(lastAssistantTurn)
-        const trimmed = message.trim()
+        // 客人把平台跟姓名打在一起（「trip訂的 王小明」）時，拿掉平台字樣再判斷姓名
+        const messagePlatform = detectBookingPlatform(message)
+        const trimmed = messagePlatform ? stripPlatformMention(message) : message.trim()
         // 客人有時會把訂房編號跟姓名連在一起打（例如「00009呂聰明」），純數字開頭讓
         // NAME_ONLY_RE 直接判定不是姓名，導致這則訊息完全沒有觸發任何查詢——AI 在沒有
         // 比對到任何資料的情況下，還是自己說「已查到」您的訂房紀錄，這種假造比誠實回覆
         // 查無資料更嚴重。這裡額外允許「開頭一段數字＋姓名」的格式，把姓名部分抽出來查。
         const digitPrefixMatch = trimmed.match(/^\d{1,10}[\s,、-]*([A-Za-z一-鿿][A-Za-z一-鿿\s.'-]{1,39})$/)
         const nameCandidate = NAME_ONLY_RE.test(trimmed) ? trimmed : (digitPrefixMatch?.[1] ?? null)
-        if (nameCandidate && !NON_NAME_ACK_RE.test(nameCandidate) && askedForName && !passwordFromDatasource) {
+        if (messagePlatform && !trimmed && !passwordFromDatasource) {
+          // 客人只回了平台名稱（通常是回答「是透過哪個平台訂房」）——不查詢，依平台引導下一步
+          externalDataSection = `\n\n${platformReplyGuidance(messagePlatform)}${externalDataSection}`
+        } else if (nameCandidate && !NON_NAME_ACK_RE.test(nameCandidate) && askedForName && !passwordFromDatasource) {
           // NAME_ONLY_RE 只能抓「形式像姓名（無數字無符號）」，抓不到語意——像「我在門口」
           // 這種完整句子一樣會通過形式檢查，所以再用 LLM 判斷這句話語意上是不是真的在報姓名，
           // 不是的話（例如在描述位置、回答是非題）就不觸發查詢，避免拿無關的話去比對訂單。
@@ -2148,7 +2157,7 @@ async function getAIReply(
             orderLookupDone = true
             currentLookupKind = 'name'
             try {
-              const byName = await queryBookingByGuestName(getServiceClient(), userId, nameCandidate, google('gemini-3.1-flash-lite'))
+              const byName = await queryBookingByGuestName(getServiceClient(), userId, nameCandidate, google('gemini-3.1-flash-lite'), undefined, platformHint)
               if (byName) {
                 currentLookupFailed = byName.includes('查無')
                 if (!currentLookupFailed) void saveConfirmedFacts(userId, platform, customerId, knowledge.industry, { confirmedName: nameCandidate })
@@ -2211,21 +2220,21 @@ async function getAIReply(
               // 旅客姓名，改用姓名再查一次才查得到，而不是讓 AI 在「查無資料」的提示下自己
               // 編一個「已核對到您的訂房紀錄」的話術搪塞客人。
               currentLookupKind = 'name'
-              const byName = await queryBookingByGuestName(getServiceClient(), userId, clue.guest_name, google('gemini-3.1-flash-lite'))
+              const byName = await queryBookingByGuestName(getServiceClient(), userId, clue.guest_name, google('gemini-3.1-flash-lite'), undefined, platformHint)
               if (byName) {
                 currentLookupFailed = byName.includes('查無')
                 externalDataSection = `\n\n${wrapImageDerivedResultForConfirm(byName)}${externalDataSection}`
               } else {
                 currentLookupFailed = true
-                externalDataSection = `\n\n【入住資訊查詢結果】\n查無訂單「${clue.order_number}」的資料。\n${noDataFoundSuffix('訂房姓名或手機號碼')}${externalDataSection}`
+                externalDataSection = `\n\n【入住資訊查詢結果】\n查無訂單「${clue.order_number}」的資料。\n${noDataFoundSuffix(orderLookupAltMethods(platformHint))}${externalDataSection}`
               }
             } else {
               currentLookupFailed = true
-              externalDataSection = `\n\n【入住資訊查詢結果】\n查無訂單「${clue.order_number}」的資料。\n${noDataFoundSuffix('訂房姓名或手機號碼')}${externalDataSection}`
+              externalDataSection = `\n\n【入住資訊查詢結果】\n查無訂單「${clue.order_number}」的資料。\n${noDataFoundSuffix(orderLookupAltMethods(platformHint))}${externalDataSection}`
             }
           } else if (clue?.guest_name) {
             currentLookupKind = 'name'
-            const byName = await queryBookingByGuestName(getServiceClient(), userId, clue.guest_name, google('gemini-3.1-flash-lite'))
+            const byName = await queryBookingByGuestName(getServiceClient(), userId, clue.guest_name, google('gemini-3.1-flash-lite'), undefined, platformHint)
             if (byName) {
               currentLookupFailed = byName.includes('查無')
               // 圖片辨識出的姓名同樣不是客人自己打的，即使剛好比對到系統裡的訂單，
