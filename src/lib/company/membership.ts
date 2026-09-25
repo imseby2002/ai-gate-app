@@ -33,3 +33,13 @@ export async function isCompanyOwnerOrAdmin(userId: string): Promise<boolean> {
   const company = await getUserCompany(userId)
   return !!company && (company.role === 'owner' || company.role === 'admin')
 }
+
+// 可為公司錢包線上儲值的人：公司負責人／管理員／經理，或個人單位（profiles.units）含財務（'finance'）的成員。
+export async function canTopUpCompanyWallet(userId: string): Promise<UserCompany | null> {
+  const company = await getUserCompany(userId)
+  if (!company) return null
+  if (company.role === 'owner' || company.role === 'admin' || company.role === 'manager') return company
+  const admin = createAdminClient()
+  const { data: profile } = await admin.from('profiles').select('units').eq('id', userId).single()
+  return (profile?.units ?? []).includes('finance') ? company : null
+}

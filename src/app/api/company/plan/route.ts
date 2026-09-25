@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getUserCompany } from '@/lib/company/membership'
+import { getUserCompany, canTopUpCompanyWallet } from '@/lib/company/membership'
 import { getCompanyEntitlements } from '@/lib/company/entitlements'
 import { calcCompanyMonthlyPrice } from '@/lib/company/pricing'
 
@@ -40,5 +40,6 @@ export async function GET() {
     config,
     price: calcCompanyMonthlyPrice(config),
     wallet: { gift: Number(walletRow?.gift ?? 0), paid: Number(walletRow?.paid ?? 0) },
+    canTopUp: !!(await canTopUpCompanyWallet(user.id)),
   })
 }

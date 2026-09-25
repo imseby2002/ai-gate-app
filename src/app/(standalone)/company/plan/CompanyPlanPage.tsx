@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Check, Loader2, Lock, Building2 } from 'lucide-react'
 import { YEARLY_MONTHS, COMPANY_MONTHLY_GIFT_USD, type CompanyPriceLine } from '@/lib/company/pricing'
+import { CREDIT_PACKAGES } from '@/lib/ecpay/client'
 
 type Cycle = 'monthly' | 'yearly'
 
@@ -12,6 +13,7 @@ interface PlanData {
   currentPeriodEnd: string | null
   price: { lines: CompanyPriceLine[]; monthlyUsd: number }
   wallet: { gift: number; paid: number }
+  canTopUp: boolean
 }
 
 // 公司方案為模組化計價：開通內容（模組、ERP 人數、門市數、自訂網域）由平台設定，
@@ -33,14 +35,21 @@ export function CompanyPlanPage({ isOwnerOrAdmin }: { isOwnerOrAdmin: boolean })
 
   useEffect(() => { load() }, [load])
 
-  const pay = async () => {
-    setCheckingOut(true)
+  const [toppingUp, setToppingUp] = useState<string | null>(null)
+
+  const pay = () => startCheckout('/api/billing/create-company-plan-checkout', { cycle }, setCheckingOut)
+  const topUp = (packageId: string) =>
+    startCheckout('/api/billing/create-company-credit-checkout', { packageId }, busy => setToppingUp(busy ? packageId : null))
+
+  // 建立綠界訂單後以隱藏表單送出（另開分頁付款）
+  const startCheckout = async (url: string, body: Record<string, unknown>, setBusy: (busy: boolean) => void) => {
+    setBusy(true)
     setError('')
     try {
-      const res = await fetch('/api/billing/create-company-plan-checkout', {
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cycle, returnUrl: window.location.href }),
+        body: JSON.stringify({ ...body, returnUrl: window.location.href }),
       })
       const d = await res.json()
       if (!res.ok) { setError(d.error ?? '建立訂單失敗'); return }
@@ -62,7 +71,7 @@ export function CompanyPlanPage({ isOwnerOrAdmin }: { isOwnerOrAdmin: boolean })
     } catch {
       setError('網路錯誤，請稍後再試')
     } finally {
-      setCheckingOut(false)
+      setBusy(false)
     }
   }
 
@@ -137,7 +146,22 @@ export function CompanyPlanPage({ isOwnerOrAdmin }: { isOwnerOrAdmin: boolean })
           <div className="font-semibold text-foreground">公司錢包</div>
           <div className="flex justify-between text-muted-foreground tabular-nums"><span>本月贈點（每月 ${COMPANY_MONTHLY_GIFT_USD}，不累積）</span><span>${data.wallet.gift.toFixed(2)}</span></div>
           <div className="flex justify-between text-muted-foreground tabular-nums"><span>儲值餘額</span><span>${data.wallet.paid.toFixed(2)}</span></div>
-          <p className="text-[11px] text-muted-foreground">成員使用行銷生成、智慧圓桌、AI Agent 等扣點功能時，先扣本月贈點，再扣儲值。儲值請聯繫我們。</p>
+          <p className="text-[11px] text-muted-foreground">成員使用行銷生成、智慧圓桌、AI Agent 等扣點功能時，先扣本月贈點，再扣儲值。</p>
+          {data.canTopUp && active ? (
+            <div className="grid grid-cols-3 gap-2 pt-2">
+              {CREDIT_PACKAGES.map(pkg => (
+                <button key={pkg.id} onClick={() => topUp(pkg.id)} disabled={toppingUp !== null}
+                  className="rounded-lg border px-2 py-2 text-xs hover:bg-muted disabled:opacity-40 flex flex-col items-center gap-0.5">
+                  {toppingUp === pkg.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <span className="font-semibold text-foreground">儲值 {pkg.label}</span>}
+                  <span className="text-muted-foreground">得 ${pkg.usdCredit} 點</span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="text-[11px] text-muted-foreground pt-1">
+              {active ? '儲值需由負責人、管理員、經理或財務人員操作。' : '啟用公司方案後即可儲值公司錢包。'}
+            </p>
+          )}
         </div>
 
         <button
