@@ -1,5 +1,6 @@
 ﻿import { redirect } from 'next/navigation'
 import { createClient, getCachedUser } from '@/lib/supabase/server'
+import { isChatModelAllowed } from '@/lib/ai/chat-policy'
 import { ChatInterface } from '@/components/chat/ChatInterface'
 
 export default async function ConversationPage({
@@ -36,12 +37,18 @@ export default async function ConversationPage({
     .eq('is_enabled', true)
     .order('sort_order')
 
+  // 付費客戶的 CHAT 只列出免費／低價模型（見 lib/ai/chat-policy.ts）
+  const { data: viewer } = await supabase.from('profiles').select('user_type').eq('id', user.id).single()
+  const visibleModels = viewer?.user_type === 'external'
+    ? (models ?? []).filter(m => isChatModelAllowed(m.id))
+    : (models ?? [])
+
   return (
     <ChatInterface
       conversationId={conversationId}
       initialMessages={orderedMessages}
       assistant={conversation.assistants ?? null}
-      models={models ?? []}
+      models={visibleModels}
     />
   )
 }

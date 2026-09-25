@@ -28,6 +28,8 @@ type NavItem = {
   icon: React.ElementType
   module: string | null
   adminOnly?: boolean
+  /** 僅內部帳號（admin／employee）可見，付費客戶隱藏 */
+  internalOnly?: boolean
   alwaysShow?: boolean
 }
 
@@ -35,8 +37,8 @@ const MAIN_NAV: NavItem[] = [
   { labelKey: 'dashboard',   href: '/apps',           icon: LayoutDashboard, module: null },
   { labelKey: 'roundtable',  label: '智慧圓桌',        href: '/roundtable',     icon: Users,           module: 'chat' },
   { labelKey: 'assistants',  href: '/assistants',     icon: Bot,             module: 'chat' },
-  { labelKey: 'imageGen',    href: '/image-gen',      icon: Image,           module: 'chat' },
-  { labelKey: 'videoGen',    href: '/video-gen',      icon: Video,           module: 'chat' },
+  { labelKey: 'imageGen',    href: '/image-gen',      icon: Image,           module: 'chat', internalOnly: true },
+  { labelKey: 'videoGen',    href: '/video-gen',      icon: Video,           module: 'chat', internalOnly: true },
 ]
 
 const TOOL_NAV: NavItem[] = [
@@ -88,6 +90,7 @@ export function Sidebar({ userType, enabledModules, scope: scopeProp, conversati
   const isVisible = (item: NavItem) => {
     if (item.alwaysShow) return true
     if (item.adminOnly) return isAdmin
+    if (item.internalOnly && userType === 'external') return false
     
     // module 為 null 代表不綁定任何系統的共用連結（例如 dashboard, feedback），恆顯示
     if (scope) return item.module === null || item.module === scope

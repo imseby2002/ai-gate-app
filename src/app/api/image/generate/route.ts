@@ -6,6 +6,12 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  // CHAT 不提供生圖／影片給付費客戶（成本高且不扣點），僅內部帳號（admin／employee）可用
+  const { data: profile } = await supabase.from('profiles').select('user_type').eq('id', user.id).single()
+  if (!profile || profile.user_type === 'external') {
+    return NextResponse.json({ error: '此功能未開放，請改用行銷中心的圖片／影片產出' }, { status: 403 })
+  }
+
   const { prompt, model, aspectRatio = '1:1' } = await req.json()
   if (!prompt) return NextResponse.json({ error: 'prompt required' }, { status: 400 })
 
