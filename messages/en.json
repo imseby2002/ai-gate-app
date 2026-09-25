@@ -4829,7 +4829,7 @@
     "bookingCollabHeader": "Booking Collab Invites",
     "collabSubtitle": "Only shows businesses that invited you to collaborate — you can't add one yourself here. Independent from the identity above: you can be \"employed by K\" while \"handling X's CS\" at the same time.",
     "noCollabInvites": "No one has invited you to collaborate yet",
-    "personalAccountOption": "Personal (not part of any company)",
+    "personalAccountOption": "Personal account",
     "noCompanies": "You don't belong to any company yet",
     "switchCompanyFailed": "Failed to switch company",
     "noManagePermission": "Your role (manager/viewer) can't view or manage this business's team. Only the owner or an admin can.",

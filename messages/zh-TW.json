@@ -4829,7 +4829,7 @@
     "bookingCollabHeader": "訂房協作邀請",
     "collabSubtitle": "只顯示別人邀請你協作的項目，不能在這裡自己新增。跟上面的操作身分各自獨立，可以同時「身分是 K 公司、客服在幫 X 公司代操」。",
     "noCollabInvites": "目前沒有人邀請你協作",
-    "personalAccountOption": "個人身分（不屬於任何公司）",
+    "personalAccountOption": "個人帳號",
     "noCompanies": "你目前不屬於任何公司",
     "switchCompanyFailed": "切換公司失敗",
     "noManagePermission": "你目前的角色（一般管理／唯讀）無法查看或管理此業務的團隊名單，僅擁有者或管理員角色可以。",
