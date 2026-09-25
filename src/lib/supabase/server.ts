@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { cookies, headers } from 'next/headers'
 import { cache } from 'react'
 
@@ -82,25 +83,19 @@ export const getCachedUser = cache(async () => {
   return supabase.auth.getUser()
 })
 
+// 這裡原本用 createServerClient 接 cookies 建「service-role client」，但
+// @supabase/ssr 只要餵了 cookies 就會主動管理 session：一旦這次請求本來就有
+// 登入者的 session cookie，之後每個查詢送出的 Authorization header 會被換成
+// 那個使用者的 access token，蓋掉建構時傳入的 service-role key——結果這個
+// 「admin」client 實際上是用登入者身分在跑，RLS 照樣套用，完全沒有真的繞過。
+// 例如查團隊名單時，只會看到 RLS 允許登入者自己看到的那幾列（自己的那筆），
+// 看不到其他協作者，因為背後根本不是 service-role 在查。
+// 改成跟 @/lib/supabase/admin.ts 一樣，用不吃 cookies 的純 createClient，
+// 才是真的 service-role、真的繞過 RLS。維持 async 簽章，呼叫端的 await 不用改。
 export async function createAdminClient() {
-  const cookieStore = await cookies()
-
-  return createServerClient(
+  return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll()
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            )
-          } catch {}
-        },
-      },
-    }
+    { auth: { persistSession: false } }
   )
 }
