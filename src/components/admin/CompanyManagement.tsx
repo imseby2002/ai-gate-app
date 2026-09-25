@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { calcCompanyMonthlyPrice, YEARLY_MONTHS } from '@/lib/company/pricing'
+import { validateCompanySlug } from '@/lib/company/subdomain'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -39,6 +40,7 @@ export interface CompanyItem {
   name: string
   created_by: string
   enabled_modules: string[] | null
+  slug?: string | null
   bnb_owner_id: string | null
   feedback_free_features: boolean
   free_feature_quota_monthly: number | null
@@ -134,6 +136,7 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
   const [formRetailStores, setFormRetailStores] = useState('0')
   const [formCustomDomain, setFormCustomDomain] = useState(false)
   const [formTopUp, setFormTopUp] = useState('')
+  const [formSlug, setFormSlug] = useState('')
 
   // Member Management state
   const [selectedUserToAdd, setSelectedUserToAdd] = useState('')
@@ -253,6 +256,7 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
     setFormRetailStores(String(company.retailStores ?? 0))
     setFormCustomDomain(company.customDomain ?? false)
     setFormTopUp('')
+    setFormSlug(company.slug ?? '')
   }
 
   const handleSaveEdit = async () => {
@@ -276,6 +280,7 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
           retailStores: Number(formRetailStores) || 0,
           customDomain: formCustomDomain,
           creditTopUpUsd: Number(formTopUp) > 0 ? Number(formTopUp) : undefined,
+          slug: formSlug.trim().toLowerCase(),
         }),
       })
       const d = await res.json()
@@ -1023,6 +1028,18 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
                     )
                   })}
                 </div>
+              </div>
+
+              <div>
+                <label htmlFor="company-slug" className="font-bold text-slate-800 block mb-1.5">專屬子網域</label>
+                <div className="flex items-center gap-1.5">
+                  <input id="company-slug" value={formSlug} onChange={e => setFormSlug(e.target.value)} placeholder="feelingtea"
+                    className="flex-1 h-10 px-3 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500" />
+                  <span className="text-sm text-slate-500">.im-tourist.com</span>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">
+                  {formSlug.trim() ? (validateCompanySlug(formSlug.trim().toLowerCase()) ?? `成員登入後由 ${formSlug.trim().toLowerCase()}.im-tourist.com 進入公司 ERP`) : '留空 = 不使用專屬子網域'}
+                </p>
               </div>
 
               <div>

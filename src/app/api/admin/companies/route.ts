@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { validateCompanySlug } from '@/lib/company/subdomain'
 
 async function checkIsAdmin() {
   const supabase = await createClient()
@@ -191,7 +192,7 @@ export async function PATCH(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { id, name, enabledModules, bnbOwnerId, ownerId, itId, feedbackFree, freeFeatureQuotaMonthly, plan, erpSeats, retailStores, customDomain, creditTopUpUsd } = body as {
+    const { id, name, enabledModules, bnbOwnerId, ownerId, itId, feedbackFree, freeFeatureQuotaMonthly, plan, erpSeats, retailStores, customDomain, creditTopUpUsd, slug } = body as {
       id: string
       name?: string
       enabledModules?: string[] | null
@@ -205,6 +206,7 @@ export async function PATCH(req: NextRequest) {
       retailStores?: number
       customDomain?: boolean
       creditTopUpUsd?: number
+      slug?: string | null
     }
 
     if (!id) {
@@ -221,10 +223,19 @@ export async function PATCH(req: NextRequest) {
       patch.bnb_owner_id = ownerId
     }
     if (feedbackFree !== undefined) patch.feedback_free_features = feedbackFree
+    if (slug !== undefined) {
+      const normalized = (slug ?? '').trim().toLowerCase()
+      if (normalized) {
+        const slugErr = validateCompanySlug(normalized)
+        if (slugErr) return NextResponse.json({ error: slugErr }, { status: 400 })
+      }
+      patch.slug = normalized || null
+    }
     if (freeFeatureQuotaMonthly !== undefined) patch.free_feature_quota_monthly = freeFeatureQuotaMonthly
 
     if (Object.keys(patch).length > 0) {
       const { error: updateErr } = await admin.from('companies').update(patch).eq('id', id)
+      if (updateErr?.code === '23505') return NextResponse.json({ error: '這個子網域已被其他公司使用' }, { status: 409 })
       if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 })
     }
 
