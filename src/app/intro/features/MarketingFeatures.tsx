@@ -77,7 +77,7 @@ const GROUPS: Array<{ id: string; n: string; title: string; sub: string; items: 
         lead: '多帳號、多平台，同時經營。',
         desc: '支援住宅 IP 與代理池綁定、14 天擬人化自動養號、真人 Copilot 與矩陣自動發文兩種模式，搭配 AI 目標社群雷達與防封防重文案庫。',
         points: ['代理池管理', 'AI 自動養號', 'Copilot／自動發文', 'FB／IG／Threads／TikTok／Dcard／X'],
-        plan: '全方案',
+        plan: 'PRO 起',
       },
     ],
   },

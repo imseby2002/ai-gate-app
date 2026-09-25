@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCronOrUserAuth } from '@/lib/cron-auth'
+import { requireSocialMatrix } from '@/lib/social-matrix/access'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { generateText } from 'ai'
 import { TargetGroup, MatrixCopy, SocialPlatform } from '@/lib/social-matrix/types'
@@ -7,8 +7,9 @@ import { TargetGroup, MatrixCopy, SocialPlatform } from '@/lib/social-matrix/typ
 export const maxDuration = 120
 
 export async function POST(req: NextRequest) {
-  const authUser = await getCronOrUserAuth(req)
-  if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const guard = await requireSocialMatrix(req)
+  if (guard.res) return guard.res
+  const authUser = guard.user
 
   try {
     const body = await req.json()

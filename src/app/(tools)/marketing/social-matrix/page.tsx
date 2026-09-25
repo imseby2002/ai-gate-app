@@ -13,8 +13,17 @@ import {
   MatrixCopy, ProxyType, ProxyProtocol, SocialPlatform,
   OfficialRentableProxy, ProxyLease, OfficialProxyStatus
 } from '@/lib/social-matrix/types'
+import { PlanGate } from '@/components/marketing/PlanGate'
 
 export default function SocialMatrixPage() {
+  return (
+    <PlanGate allowed={info => info.features.socialMatrix === true} featureName="社群矩陣與自動養號" requiredPlan="PRO 以上">
+      <SocialMatrixContent />
+    </PlanGate>
+  )
+}
+
+function SocialMatrixContent() {
   const [activeTab, setActiveTab] = useState<'proxies' | 'accounts' | 'campaign'>('proxies')
   const [isLoading, setIsLoading] = useState(false)
   const [copiedId, setCopiedId] = useState<string | null>(null)

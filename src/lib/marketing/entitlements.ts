@@ -28,6 +28,7 @@ export interface MarketingPlanFeatures {
   // 專家模式
   expertSkills: boolean           // 13 項現有技能：全方案皆可用（點數扣款）
   customExpertBuild: boolean      // 自製專家功能「建立」權限（PRO 以上）；Free/CORE 只能使用
+  socialMatrix: boolean           // 社群矩陣與自動養號（PRO 以上）
 }
 
 export const MARKETING_PLAN_FEATURES: Record<MarketingPlan, MarketingPlanFeatures> = {
@@ -47,6 +48,7 @@ export const MARKETING_PLAN_FEATURES: Record<MarketingPlan, MarketingPlanFeature
     prospectMarketing: 'collectOnly',
     expertSkills: true,
     customExpertBuild: false,
+    socialMatrix: false,
   },
   pro: {
     campaignLimit: 10,
@@ -64,6 +66,7 @@ export const MARKETING_PLAN_FEATURES: Record<MarketingPlan, MarketingPlanFeature
     prospectMarketing: 'email',
     expertSkills: true,
     customExpertBuild: false,
+    socialMatrix: false,
   },
   team: {
     campaignLimit: Infinity,
@@ -81,6 +84,7 @@ export const MARKETING_PLAN_FEATURES: Record<MarketingPlan, MarketingPlanFeature
     prospectMarketing: 'full',
     expertSkills: true,
     customExpertBuild: true,
+    socialMatrix: true,
   },
   enterprise: {
     campaignLimit: Infinity,
@@ -98,6 +102,7 @@ export const MARKETING_PLAN_FEATURES: Record<MarketingPlan, MarketingPlanFeature
     prospectMarketing: 'full',
     expertSkills: true,
     customExpertBuild: true,
+    socialMatrix: true,
   },
 }
 
