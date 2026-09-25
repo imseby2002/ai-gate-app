@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { SYSTEMS, isSystemKey, SUBDOMAIN_SYSTEM, SYSTEM_SUBDOMAIN } from '@/lib/systems'
+import { SYSTEMS, isSystemKey, systemForHost, SYSTEM_SUBDOMAIN } from '@/lib/systems'
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url)
@@ -10,10 +10,9 @@ export async function GET(request: NextRequest) {
   // cookie 不受 OAuth redirect 丟 query / fallback 到 Site URL 影響，最可靠。
   const cookieSys = request.cookies.get('oauth_sys')?.value
   const system = searchParams.get('system')
-  const sub = url.host.split('.')[0]
   const sysKey = isSystemKey(cookieSys) ? cookieSys
     : isSystemKey(system) ? system
-    : SUBDOMAIN_SYSTEM[sub]
+    : systemForHost(url.host.split(':')[0])
   const next = searchParams.get('next') ?? (sysKey ? SYSTEMS[sysKey].home : '/apps')
 
   if (code) {

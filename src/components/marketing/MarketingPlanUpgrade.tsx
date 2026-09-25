@@ -63,7 +63,7 @@ export function MarketingPlanUpgrade() {
           <Sparkles className="h-5 w-5 text-primary" />
           <span className="text-base font-semibold">行銷方案</span>
           <span className="text-xs px-2.5 py-1 rounded-full bg-primary/10 text-primary font-medium">
-            目前：{plan === 'free' ? '免費' : plan === 'enterprise' ? '企業' : plan.toUpperCase()}
+            目前：{({ free: '免費', pro: 'CORE', team: 'PRO', enterprise: 'MAX' } as Record<MarketingPlan, string>)[plan]}
           </span>
           <a href="/settings" className="text-sm text-primary font-medium hover:underline">
             儲值點數 →
@@ -133,9 +133,9 @@ export function MarketingPlanUpgrade() {
               <tr className="bg-muted/60 text-muted-foreground">
                 <th className="text-left font-medium py-2.5 px-3">功能</th>
                 <th className="text-center font-medium py-2.5 px-3">免費</th>
+                <th className="text-center font-medium py-2.5 px-3">CORE</th>
                 <th className="text-center font-medium py-2.5 px-3">PRO</th>
-                <th className="text-center font-medium py-2.5 px-3">TEAM</th>
-                <th className="text-center font-medium py-2.5 px-3">企業</th>
+                <th className="text-center font-medium py-2.5 px-3">MAX</th>
               </tr>
             </thead>
             <tbody>

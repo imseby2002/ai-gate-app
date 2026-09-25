@@ -38,7 +38,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const { plan, features } = await getMarketingEntitlements(supabase, user.id)
   if (!features.customExpertBuild) {
-    return NextResponse.json({ error: '編輯自製專家需 TEAM 以上方案', plan }, { status: 403 })
+    return NextResponse.json({ error: '編輯自製專家需 PRO 以上方案', plan }, { status: 403 })
   }
 
   const body = await req.json()
@@ -60,7 +60,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 
   const { plan, features } = await getMarketingEntitlements(supabase, user.id)
   if (!features.customExpertBuild) {
-    return NextResponse.json({ error: '刪除自製專家需 TEAM 以上方案', plan }, { status: 403 })
+    return NextResponse.json({ error: '刪除自製專家需 PRO 以上方案', plan }, { status: 403 })
   }
 
   const { error } = await supabase

@@ -27,7 +27,7 @@ export interface MarketingPlanFeatures {
   prospectMarketing: ProspectMarketingAccess
   // 專家模式
   expertSkills: boolean           // 13 項現有技能：全方案皆可用（點數扣款）
-  customExpertBuild: boolean      // 自製專家功能「建立」權限（TEAM 以上）；Free/PRO 只能使用
+  customExpertBuild: boolean      // 自製專家功能「建立」權限（PRO 以上）；Free/CORE 只能使用
 }
 
 export const MARKETING_PLAN_FEATURES: Record<MarketingPlan, MarketingPlanFeatures> = {
@@ -123,7 +123,7 @@ export async function getMarketingEntitlements(
     .select('user_type')
     .eq('id', ownerId)
     .maybeSingle()
-  // 內部帳號（admin / employee）不受方案／額度限制，一律視同企業方案。
+  // 內部帳號（admin / employee）不受方案／額度限制，一律視同 MAX 方案。
   // 比照全站計費慣例：只有 external（付費客戶）才受方案與額度限制（見 lib/marketing/billing.ts）。
   if (ownerProfile?.user_type === 'admin' || ownerProfile?.user_type === 'employee') {
     return { plan: 'enterprise', features: MARKETING_PLAN_FEATURES.enterprise }
@@ -147,9 +147,12 @@ export async function getMarketingEntitlements(
   // current_period_end 為 null 視為不到期（管理員手動指定的長期方案）。
   const expired = !!data?.current_period_end && new Date(data.current_period_end).getTime() < Date.now()
 
-  const plan: MarketingPlan = (data?.status === 'active' && !expired && data?.plan && data.plan in MARKETING_PLAN_FEATURES)
+  const personalPlan: MarketingPlan = (data?.status === 'active' && !expired && data?.plan && data.plan in MARKETING_PLAN_FEATURES)
     ? (data.plan as MarketingPlan)
     : 'free'
+  // 所屬公司開通行銷模組（'company' 方案）→ 一律 MAX（enterprise）
+  const { hasCompanyModuleGrant } = await import('@/lib/company/entitlements')
+  const plan: MarketingPlan = personalPlan !== 'enterprise' && await hasCompanyModuleGrant(ownerId, 'marketing') ? 'enterprise' : personalPlan
 
   // 過期訂閱連帶失效 feature_overrides（客製加開的功能不應在到期後繼續生效）；
   // 未過期時照常疊加，包括管理員對免費帳號手動加開的功能。

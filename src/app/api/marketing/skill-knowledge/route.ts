@@ -1,9 +1,9 @@
 /**
- * 內建專家「使用者自訂知識庫」— 讓 TEAM+ 使用者對某內建專家（skill）上傳連結／檔案／文字，
+ * 內建專家「使用者自訂知識庫」— 讓 PRO+ 使用者對某內建專家（skill）上傳連結／檔案／文字，
  * 執行時自動注入 system prompt（見 /api/skills/run）。
  *
- * GET    ?skillId=  → 列出自己對該專家的知識來源 + canBuild（是否 TEAM+）
- * POST   { skillId, type:'url'|'file'|'text', url?, text?, name? }  → 新增（需 TEAM+，依萃取字數扣點）
+ * GET    ?skillId=  → 列出自己對該專家的知識來源 + canBuild（是否 PRO+）
+ * POST   { skillId, type:'url'|'file'|'text', url?, text?, name? }  → 新增（需 PRO+，依萃取字數扣點）
  *   （檔案：前端先呼叫 /api/marketing/upload-file 取得 textContent，再以 type='file' + text 送入）
  * DELETE ?id=  → 刪除自己的一筆
  */
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
 
   const { plan, features } = await getMarketingEntitlements(supabase, user.id)
   if (!features.customExpertBuild) {
-    return NextResponse.json({ error: '訓練內建專家知識需 TEAM 以上方案', plan }, { status: 403 })
+    return NextResponse.json({ error: '訓練內建專家知識需 PRO 以上方案', plan }, { status: 403 })
   }
 
   const { count } = await supabase

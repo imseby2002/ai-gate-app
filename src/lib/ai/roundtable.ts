@@ -26,6 +26,19 @@ import { streamText } from 'ai'
 import type { LanguageModel } from 'ai'
 import { loadExpertContext } from '@/lib/experts/loader'
 
+// ── 用量記錄（供 API route 會後扣點）────────────────────────────────────────
+// 此檔也被 client 頁面 import，不能直接用 node:async_hooks；由 server 端的
+// lib/ai/roundtable-usage.ts 註冊記錄函式，未註冊（client 端）時不做任何事。
+type UsageSink = (billingModelId: string, inputTokens: number, outputTokens: number) => void
+let usageSink: UsageSink | null = null
+export function registerRoundtableUsageSink(sink: UsageSink) {
+  usageSink = sink
+}
+
+function addUsage(billingModelId: string, inputTokens?: number, outputTokens?: number) {
+  usageSink?.(billingModelId, inputTokens ?? 0, outputTokens ?? 0)
+}
+
 // ── 領域與哲學學派定義 ────────────────────────────────────────────────────────
 
 export type RoundtableDomain = 'auto' | 'academic' | 'finance' | 'marketing' | 'tech' | 'hr'
@@ -684,6 +697,7 @@ export async function fetchFactBriefing(
       if (resp.ok) {
         const data = await resp.json()
         fullText = data.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
+        addUsage('google/gemini-2.5-flash', data.usageMetadata?.promptTokenCount, data.usageMetadata?.candidatesTokenCount)
       } else {
         console.warn('[fact-briefing] Gemini Google Search returned non-200:', resp.status)
       }
@@ -711,6 +725,8 @@ export async function fetchFactBriefing(
           emit?.({ type: 'briefing-delta', content: part.text })
         }
       }
+      const usage = await result.totalUsage
+      addUsage('perplexity-sonar-pro', usage.inputTokens, usage.outputTokens)
     } catch (pErr) {
       console.warn('[fact-briefing] Perplexity fallback error:', pErr)
     }
@@ -735,6 +751,8 @@ export async function fetchFactBriefing(
           emit?.({ type: 'briefing-delta', content: part.text })
         }
       }
+      const usage = await result.totalUsage
+      addUsage('google/gemini-2.5-flash', usage.inputTokens, usage.outputTokens)
     } catch (err) {
       console.error('[fact-briefing] fallback streamText error:', err)
       fullText = '⚠️ 資料專員聯網檢索暫時不可用，由各合夥人依自身知識庫展開研議。'
@@ -800,6 +818,8 @@ async function speak(
         throw part.error
       }
     }
+    const usage = await result.totalUsage
+    addUsage(seat.model, usage.inputTokens, usage.outputTokens)
   } catch (err) {
     console.warn(`[roundtable] primary model failed for ${seat.name} (${seat.model}):`, err)
     if (seat.model.startsWith('anthropic/')) {
@@ -862,6 +882,9 @@ async function speak(
               throw part.error
             }
           }
+          const fbUsage = await fallbackResult.totalUsage
+          // OpenRouter 的 Claude 備援以 Claude Sonnet 牌價計
+          addUsage(candidate.name.startsWith('openrouter/claude') ? 'anthropic/claude-sonnet-4-6' : candidate.name, fbUsage.inputTokens, fbUsage.outputTokens)
           if (full.length > 0) {
             fallbackSuccess = true
             break

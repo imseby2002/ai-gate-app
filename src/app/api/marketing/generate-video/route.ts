@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
 
   const { plan, features } = await getMarketingEntitlements(supabase, user.id)
   if (!features.videoGen) {
-    return NextResponse.json({ error: '目前方案未開放影片產出，請升級至 TEAM 以上', plan }, { status: 403 })
+    return NextResponse.json({ error: '目前方案未開放影片產出，請升級至 PRO 以上', plan }, { status: 403 })
   }
 
   // 影片生成成本高：提交前檢查點數，提交成功即扣點（供應商在提交後就會計費）

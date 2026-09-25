@@ -106,6 +106,34 @@ export async function POST(req: NextRequest) {
     return new NextResponse('1|OK', { status: 200 })
   }
 
+  // 找不到個人點數訂單 → 檢查是否為公司錢包儲值訂單
+  // 先把 pending 改成 paid（條件更新），只有真的改到一筆才入帳，避免綠界重送回調時重複加值
+  const { data: companyCredit } = await supabase
+    .from('company_credit_purchases')
+    .update({ status: 'paid', paid_at: new Date().toISOString() })
+    .eq('trade_no', MerchantTradeNo)
+    .eq('status', 'pending')
+    .select('id, company_id, purchased_by, package_id, usd_credit')
+    .maybeSingle()
+
+  if (companyCredit) {
+    const { error: addErr } = await supabase.rpc('add_company_credits', {
+      p_company_id: companyCredit.company_id,
+      p_user_id: companyCredit.purchased_by,
+      p_amount: Number(companyCredit.usd_credit),
+      p_type: 'topup',
+      p_description: `ECPay 公司點數 ${companyCredit.package_id} (${MerchantTradeNo})`,
+    })
+    if (addErr) {
+      // 入帳失敗：把訂單改回 pending，讓綠界重送回調時可以再試一次
+      console.error('[ECPay] 公司錢包入帳失敗', { tradeNo: MerchantTradeNo, error: addErr })
+      await supabase.from('company_credit_purchases').update({ status: 'pending', paid_at: null }).eq('id', companyCredit.id)
+      return new NextResponse('0|ERROR', { status: 200 })
+    }
+    console.log('[ECPay] 公司錢包儲值成功', { companyId: companyCredit.company_id, usdCredit: companyCredit.usd_credit })
+    return new NextResponse('1|OK', { status: 200 })
+  }
+
   // 找不到點數訂單 → 檢查是否為 CS 方案升級訂單
   const { data: planPurchase } = await supabase
     .from('cs_plan_purchases')

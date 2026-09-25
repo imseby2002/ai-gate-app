@@ -3,7 +3,8 @@ import { headers } from 'next/headers'
 import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { getLocale } from 'next-intl/server'
 import { AppShell } from '@/components/layout/AppShell'
-import { SUBDOMAIN_SYSTEM } from '@/lib/systems'
+import { systemForHost } from '@/lib/systems'
+import { getBalance } from '@/lib/skills/billing'
 
 export const dynamic = 'force-dynamic'
 
@@ -40,10 +41,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // Get credit balance for external users
   let creditBalance: number | undefined
   if (profile.user_type === 'external') {
-    const { data, error: creditErr } = await supabase.rpc('get_credit_balance', { p_user_id: user.id })
-    // 失敗時餘額會顯示成 0，跟「真的沒錢」看起來一模一樣——這是跟錢有關的數字，不能無聲。
-    if (creditErr) console.error('[app-layout] get_credit_balance 失敗', { userId: user.id, error: creditErr })
-    creditBalance = data ?? 0
+    // 公司方案成員顯示公司錢包餘額（見 lib/skills/billing.ts）
+    try {
+      creditBalance = await getBalance(user.id)
+    } catch (creditErr) {
+      // 失敗時餘額會顯示成 0，跟「真的沒錢」看起來一模一樣——這是跟錢有關的數字，不能無聲。
+      console.error('[app-layout] 餘額查詢失敗', { userId: user.id, error: creditErr })
+      creditBalance = 0
+    }
   }
 
   const locale = await getLocale()
@@ -53,8 +58,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   //   若不在此處推導，側邊欄會退回 enabled_modules 而列出所有模組。）
   const hdrs = await headers()
   const host = (hdrs.get('host') || '').split(':')[0].toLowerCase()
-  const sub = host.split('.')[0]
-  const subScope = SUBDOMAIN_SYSTEM[sub]
+  const subScope = systemForHost(host)
 
   // 公司的 enabled_modules 分開查，不用 PostgREST 的 embed：companies 與 profiles 之間
   // 有三條外鍵（profiles.company_id、companies.bnb_owner_id、companies.created_by），

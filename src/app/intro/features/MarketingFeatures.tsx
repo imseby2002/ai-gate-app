@@ -29,7 +29,7 @@ const GROUPS: Array<{ id: string; n: string; title: string; sub: string; items: 
         lead: '上傳產品圖，四步驟拿到完整行銷包。',
         desc: 'AI 自動生成行銷策略、內容組合、市場分析與 SEO 內容策略，不用自己想切角。',
         points: ['行銷策略規劃', '內容組合', '市場分析', 'SEO 內容策略'],
-        plan: 'PRO 起（策略＋文案）· TEAM 全開',
+        plan: 'CORE 起（策略＋文案）· PRO 全開',
       },
       {
         id: 'templates', Icon: Sparkles, title: '視覺風格與廣告創作',
@@ -42,20 +42,20 @@ const GROUPS: Array<{ id: string; n: string; title: string; sub: string; items: 
         lead: '用一句話串起修圖、換風格、去背、生影片。',
         desc: 'ComfyUI 概念的圖片＋影片流水線：上傳圖片，用自然語言串接多個 AI 節點，一鍵跑完。',
         points: ['AI 修圖', '風格轉換', '去除背景', '高清放大', '圖生影片'],
-        plan: 'TEAM 起（基礎節點）· 企業全節點',
+        plan: 'PRO 起（基礎節點）· MAX 全節點',
       },
       {
         id: 'geo', Icon: Search, title: 'GEO 內容寫手',
         lead: '讓 ChatGPT、Perplexity、Google AI 摘要引用你。',
         desc: '填主題與獨家資訊，AI 探勘高意圖問句，產出容易被 AI 搜尋引用的文章，並附 JSON-LD 結構化資料。',
         points: ['問句探勘', '意圖分類', 'JSON-LD', 'AI 引用優化'],
-        plan: '免費每月 1 篇 · PRO 起無限',
+        plan: '免費每月 1 篇 · CORE 起無限',
       },
       {
         id: 'experts', Icon: Brain, title: '13 項 AI 專家技能',
         lead: '內建各領域專家，按需叫用。',
         desc: '電商商品文案、行銷推廣文案、短影音爆款腳本、文章自動配圖、市場研究報告、商品影片企劃、電商帶貨短影片腳本、AI 語音配音、簡報生成（PPTX）、社群帳號運營教練、病毒內容企劃、社群人設文案、開播／直播文案。',
-        points: ['全方案可用（依點數）', '自製專家：TEAM 起可建立'],
+        points: ['全方案可用（依點數）', '自製專家：PRO 起可建立'],
         plan: '全方案',
       },
     ],
@@ -68,7 +68,7 @@ const GROUPS: Array<{ id: string; n: string; title: string; sub: string; items: 
         lead: '名單自己來，聯繫自己跑。',
         desc: '自動蒐集組織 → AI 篩選分類 → 距離計算 → 電話撥打／Email 寄送，主動開發潛在客戶。',
         points: ['自動蒐集名單', 'AI 篩選分類', '距離計算', 'AI 電訪', 'Email 行銷'],
-        plan: '免費：蒐集＋篩選 · PRO：+Email · TEAM：+電話',
+        plan: '免費：蒐集＋篩選 · CORE：+Email · PRO：+電話',
       },
       {
         id: 'social-matrix', Icon: Share2, title: '社群矩陣與自動養號',
@@ -108,7 +108,7 @@ const GROUPS: Array<{ id: string; n: string; title: string; sub: string; items: 
         id: 'auto', Icon: Megaphone, title: '行銷自動化',
         lead: '一個行銷案，從頭做到尾。',
         desc: '資料蒐集、競品分析、文案生成、圖片影片製作，到平台上傳的全流程自動化。',
-        points: ['資料蒐集', '文案生成', '圖片（PRO 起）', '影片（TEAM 起）', '主播影片（企業）', '自動上傳平台'],
+        points: ['資料蒐集', '文案生成', '圖片（CORE 起）', '影片（PRO 起）', '主播影片（MAX）', '自動上傳平台'],
         plan: '免費起',
       },
       {
@@ -116,7 +116,7 @@ const GROUPS: Array<{ id: string; n: string; title: string; sub: string; items: 
         lead: '排好時間，它自己跑；你只要審核。',
         desc: '視覺化排程與進度追蹤，同時管理多個行銷活動，每一步可透過 Telegram 審核後再放行。',
         points: ['任務排程', '進度追蹤', 'Telegram 審核', '多活動管理'],
-        plan: 'TEAM 起',
+        plan: 'PRO 起',
       },
     ],
   },
@@ -171,7 +171,7 @@ export function MarketingFeatures() {
         <Link href="/intro/pricing" className="group flex items-center justify-between gap-4 rounded-2xl border border-[#6a4be0] bg-white p-6 hover:shadow-[0_16px_40px_rgba(60,40,120,0.12)]">
           <div>
             <div className="font-black text-[20px]">哪個方案適合我？</div>
-            <div className="text-[14px] text-[#3f3a4d]">免費／PRO／TEAM／企業，逐項功能比較。</div>
+            <div className="text-[14px] text-[#3f3a4d]">免費／CORE／PRO／MAX，逐項功能比較。</div>
           </div>
           <ArrowRight className="h-5 w-5 text-[#6a4be0] group-hover:translate-x-1 transition-transform" />
         </Link>

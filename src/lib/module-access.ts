@@ -19,7 +19,7 @@ export async function hasModuleAccess(
 ): Promise<boolean> {
   const { data: profile, error } = await supabase
     .from('profiles')
-    .select('user_type, enabled_modules, email')
+    .select('user_type, enabled_modules, email, company_id')
     .eq('id', userId)
     .single()
   // 查詢失敗與「查無此人」都會 return false、API 一律回拒，兩者要分得出來。
@@ -27,6 +27,18 @@ export async function hasModuleAccess(
   if (error) console.error('[module-access] profiles 查詢失敗', { userId, moduleId, error })
   if (!profile) return false
   if (profile.user_type === 'admin' || isSuperAdminEmail(profile.email)) return true
-  const enabled: string[] = profile.enabled_modules ?? ['chat', 'marketing', 'cs', 'leads', 'resume', 'booking']
+  // 與 middleware.ts 的頁面守門同一套規則：屬於公司時以公司的 enabled_modules 為準，
+  // 否則頁面擋得住、直接打 API 卻能用到公司沒開通的模組。
+  let companyModules: string[] | undefined
+  if (profile.company_id) {
+    const { data: company, error: companyErr } = await supabase
+      .from('companies')
+      .select('enabled_modules')
+      .eq('id', profile.company_id)
+      .single()
+    if (companyErr) console.error('[module-access] companies 查詢失敗', { userId, companyId: profile.company_id, error: companyErr })
+    companyModules = company?.enabled_modules ?? undefined
+  }
+  const enabled: string[] = companyModules ?? profile.enabled_modules ?? ['chat', 'marketing', 'cs', 'leads', 'resume', 'booking']
   return enabled.includes(moduleId)
 }

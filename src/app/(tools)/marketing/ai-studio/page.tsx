@@ -145,7 +145,7 @@ export default function AiStudioPage() {
     <PlanGate
       allowed={info => info.features.aiStudio !== 'none' && info.features.aiStudio != null}
       featureName="AI 視覺工坊"
-      requiredPlan="TEAM 以上"
+      requiredPlan="PRO 以上"
     >
       <AiStudioContent />
     </PlanGate>

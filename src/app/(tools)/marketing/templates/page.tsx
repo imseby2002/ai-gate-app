@@ -330,7 +330,7 @@ ${selectedVideoTemplate.rawScript}
       const data = await res.json()
       if (!res.ok) {
         if (res.status === 403) {
-          throw new Error(data.error || '目前方案未開放影片產出，請升級至 TEAM 以上方案')
+          throw new Error(data.error || '目前方案未開放影片產出，請升級至 PRO 以上方案')
         }
         throw new Error(data.error || '影片任務提交失敗')
       }

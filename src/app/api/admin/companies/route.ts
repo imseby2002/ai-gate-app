@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { validateCompanySlug } from '@/lib/company/subdomain'
 
 async function checkIsAdmin() {
   const supabase = await createClient()
@@ -34,7 +35,7 @@ export async function GET() {
     admin.from('companies').select('*').order('created_at', { ascending: false }),
     admin.from('company_members').select('*').order('created_at', { ascending: true }),
     admin.from('profiles').select('id, email, full_name'),
-    admin.from('company_subscriptions').select('company_id, plan, current_period_end'),
+    admin.from('company_subscriptions').select('company_id, plan, current_period_end, erp_seats, retail_stores, custom_domain'),
   ])
 
   if (compErr) return NextResponse.json({ error: compErr.message }, { status: 500 })
@@ -53,6 +54,14 @@ export async function GET() {
     membersByCompany.set(m.company_id, list)
   }
 
+  // 公司錢包餘額（本月贈點＋儲值），每間公司一次 RPC
+  const walletEntries = await Promise.all((companies ?? []).map(async c => {
+    const { data } = await admin.rpc('get_company_credit_balance', { p_company_id: c.id })
+    const row = Array.isArray(data) ? data[0] : data
+    return [c.id, { gift: Number(row?.gift ?? 0), paid: Number(row?.paid ?? 0) }] as const
+  }))
+  const walletMap = new Map(walletEntries)
+
   const result = (companies ?? []).map(c => {
     const compMembers = membersByCompany.get(c.id) ?? []
     const ownerMember = compMembers.find(m => m.role === 'owner' && m.status === 'active')
@@ -67,6 +76,11 @@ export async function GET() {
       pendingCount: compMembers.filter(m => m.status === 'pending').length,
       members: compMembers,
       plan: planMap.get(c.id)?.plan ?? 'free',
+      currentPeriodEnd: planMap.get(c.id)?.current_period_end ?? null,
+      erpSeats: planMap.get(c.id)?.erp_seats ?? 0,
+      retailStores: planMap.get(c.id)?.retail_stores ?? 0,
+      customDomain: planMap.get(c.id)?.custom_domain ?? false,
+      wallet: walletMap.get(c.id) ?? { gift: 0, paid: 0 },
     }
   })
 
@@ -178,7 +192,7 @@ export async function PATCH(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { id, name, enabledModules, bnbOwnerId, ownerId, itId, feedbackFree, freeFeatureQuotaMonthly, plan } = body as {
+    const { id, name, enabledModules, bnbOwnerId, ownerId, itId, feedbackFree, freeFeatureQuotaMonthly, plan, erpSeats, retailStores, customDomain, creditTopUpUsd, slug } = body as {
       id: string
       name?: string
       enabledModules?: string[] | null
@@ -187,7 +201,12 @@ export async function PATCH(req: NextRequest) {
       itId?: string
       feedbackFree?: boolean
       freeFeatureQuotaMonthly?: number | null
-      plan?: 'free' | 'core' | 'pro' | 'max'
+      plan?: 'free' | 'core' | 'pro' | 'max' | 'company'
+      erpSeats?: number
+      retailStores?: number
+      customDomain?: boolean
+      creditTopUpUsd?: number
+      slug?: string | null
     }
 
     if (!id) {
@@ -204,18 +223,45 @@ export async function PATCH(req: NextRequest) {
       patch.bnb_owner_id = ownerId
     }
     if (feedbackFree !== undefined) patch.feedback_free_features = feedbackFree
+    if (slug !== undefined) {
+      const normalized = (slug ?? '').trim().toLowerCase()
+      if (normalized) {
+        const slugErr = validateCompanySlug(normalized)
+        if (slugErr) return NextResponse.json({ error: slugErr }, { status: 400 })
+      }
+      patch.slug = normalized || null
+    }
     if (freeFeatureQuotaMonthly !== undefined) patch.free_feature_quota_monthly = freeFeatureQuotaMonthly
 
     if (Object.keys(patch).length > 0) {
       const { error: updateErr } = await admin.from('companies').update(patch).eq('id', id)
+      if (updateErr?.code === '23505') return NextResponse.json({ error: '這個子網域已被其他公司使用' }, { status: 409 })
       if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 })
     }
 
-    if (plan !== undefined) {
+    // 方案與公司方案計價設定（ERP 人數、門市數、自訂網域）；只寫入有傳的欄位
+    const subPatch: Record<string, unknown> = {}
+    if (plan !== undefined) { subPatch.plan = plan; subPatch.status = 'active' }
+    if (erpSeats !== undefined) subPatch.erp_seats = Math.max(0, Math.floor(Number(erpSeats) || 0))
+    if (retailStores !== undefined) subPatch.retail_stores = Math.max(0, Math.floor(Number(retailStores) || 0))
+    if (customDomain !== undefined) subPatch.custom_domain = !!customDomain
+    if (Object.keys(subPatch).length > 0) {
       const { error: planErr } = await admin
         .from('company_subscriptions')
-        .upsert({ company_id: id, plan, status: 'active' }, { onConflict: 'company_id' })
+        .upsert({ company_id: id, ...subPatch }, { onConflict: 'company_id' })
       if (planErr) return NextResponse.json({ error: planErr.message }, { status: 500 })
+    }
+
+    // 管理員手動為公司錢包加值（寫入儲值桶）
+    if (creditTopUpUsd !== undefined && Number(creditTopUpUsd) > 0) {
+      const { error: topUpErr } = await admin.rpc('add_company_credits', {
+        p_company_id: id,
+        p_user_id: auth.user!.id,
+        p_amount: Number(creditTopUpUsd),
+        p_type: 'admin',
+        p_description: '管理員加值',
+      })
+      if (topUpErr) return NextResponse.json({ error: topUpErr.message }, { status: 500 })
     }
 
     // 若變更負責人

@@ -9,6 +9,8 @@ import {
   ExternalLink, ChevronRight, UserCheck, Crown, RefreshCw, Copy
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { calcCompanyMonthlyPrice, YEARLY_MONTHS } from '@/lib/company/pricing'
+import { validateCompanySlug } from '@/lib/company/subdomain'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -38,10 +40,15 @@ export interface CompanyItem {
   name: string
   created_by: string
   enabled_modules: string[] | null
+  slug?: string | null
   bnb_owner_id: string | null
   feedback_free_features: boolean
   free_feature_quota_monthly: number | null
-  plan?: 'free' | 'core' | 'pro' | 'max'
+  plan?: 'free' | 'core' | 'pro' | 'max' | 'company'
+  erpSeats?: number
+  retailStores?: number
+  customDomain?: boolean
+  wallet?: { gift: number; paid: number }
   created_at: string
   creator: { id: string; email: string; full_name: string | null } | null
   owner: { id: string; email: string; full_name: string | null } | null
@@ -124,7 +131,12 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
   const [formModules, setFormModules] = useState<string[]>([])
   const [formFeedbackFree, setFormFeedbackFree] = useState(false)
   const [formFeedbackQuota, setFormFeedbackQuota] = useState('')
-  const [formPlan, setFormPlan] = useState<'free' | 'core' | 'pro' | 'max'>('free')
+  const [formPlan, setFormPlan] = useState<'free' | 'core' | 'pro' | 'max' | 'company'>('free')
+  const [formErpSeats, setFormErpSeats] = useState('0')
+  const [formRetailStores, setFormRetailStores] = useState('0')
+  const [formCustomDomain, setFormCustomDomain] = useState(false)
+  const [formTopUp, setFormTopUp] = useState('')
+  const [formSlug, setFormSlug] = useState('')
 
   // Member Management state
   const [selectedUserToAdd, setSelectedUserToAdd] = useState('')
@@ -240,6 +252,11 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
     setFormFeedbackFree(company.feedback_free_features ?? false)
     setFormFeedbackQuota(company.free_feature_quota_monthly != null ? String(company.free_feature_quota_monthly) : '')
     setFormPlan(company.plan ?? 'free')
+    setFormErpSeats(String(company.erpSeats ?? 0))
+    setFormRetailStores(String(company.retailStores ?? 0))
+    setFormCustomDomain(company.customDomain ?? false)
+    setFormTopUp('')
+    setFormSlug(company.slug ?? '')
   }
 
   const handleSaveEdit = async () => {
@@ -259,6 +276,11 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
           feedbackFree: formFeedbackFree,
           freeFeatureQuotaMonthly: formFeedbackQuota.trim() === '' ? null : Number(formFeedbackQuota),
           plan: formPlan,
+          erpSeats: Number(formErpSeats) || 0,
+          retailStores: Number(formRetailStores) || 0,
+          customDomain: formCustomDomain,
+          creditTopUpUsd: Number(formTopUp) > 0 ? Number(formTopUp) : undefined,
+          slug: formSlug.trim().toLowerCase(),
         }),
       })
       const d = await res.json()
@@ -1009,6 +1031,18 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
               </div>
 
               <div>
+                <label htmlFor="company-slug" className="font-bold text-slate-800 block mb-1.5">專屬子網域</label>
+                <div className="flex items-center gap-1.5">
+                  <input id="company-slug" value={formSlug} onChange={e => setFormSlug(e.target.value)} placeholder="feelingtea"
+                    className="flex-1 h-10 px-3 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500" />
+                  <span className="text-sm text-slate-500">.im-tourist.com</span>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">
+                  {formSlug.trim() ? (validateCompanySlug(formSlug.trim().toLowerCase()) ?? `成員登入後由 ${formSlug.trim().toLowerCase()}.im-tourist.com 進入公司 ERP`) : '留空 = 不使用專屬子網域'}
+                </p>
+              </div>
+
+              <div>
                 <label className="font-bold text-slate-800 block mb-1.5">公司會員方案</label>
                 <select
                   value={formPlan}
@@ -1019,9 +1053,61 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
                   <option value="core">CORE — 每月免費功能修改 1 次</option>
                   <option value="pro">PRO — 每月免費功能修改 3 次</option>
                   <option value="max">MAX — 每月免費功能修改 10 次</option>
+                  <option value="company">公司方案（模組化計價）— 每月免費功能修改 1 次</option>
                 </select>
                 <p className="text-xs text-slate-500 mt-1">下面「每月免費次數上限」若有手動填寫，會蓋過方案的預設次數</p>
               </div>
+
+              {formPlan === 'company' && (() => {
+                const price = calcCompanyMonthlyPrice({
+                  modules: formModules,
+                  erpSeats: Number(formErpSeats) || 0,
+                  retailStores: Number(formRetailStores) || 0,
+                  customDomain: formCustomDomain,
+                })
+                return (
+                  <div className="p-3 rounded-xl border border-indigo-200 bg-indigo-50/40 space-y-3">
+                    <div className="text-sm font-bold text-slate-800">公司方案計價設定</div>
+                    <p className="text-xs text-slate-500">上方勾選的 CS／訂房／行銷模組會以 MAX 等級計費並開通給全體成員。</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <label className="text-xs text-slate-600 space-y-1">
+                        <span className="block">ERP 人數（0 = 不開通）</span>
+                        <input id="company-erp-seats" type="number" min={0} value={formErpSeats} onChange={e => setFormErpSeats(e.target.value)}
+                          className="w-full h-9 px-2 rounded-lg border border-slate-200 bg-white text-sm" />
+                      </label>
+                      <label className="text-xs text-slate-600 space-y-1">
+                        <span className="block">門市零售包門市數</span>
+                        <input id="company-retail-stores" type="number" min={0} value={formRetailStores} onChange={e => setFormRetailStores(e.target.value)}
+                          className="w-full h-9 px-2 rounded-lg border border-slate-200 bg-white text-sm" />
+                      </label>
+                    </div>
+                    <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer select-none">
+                      <input id="company-custom-domain" type="checkbox" checked={formCustomDomain} onChange={e => setFormCustomDomain(e.target.checked)}
+                        className="rounded border-slate-300 h-4 w-4" />
+                      自訂網域
+                    </label>
+                    <div className="text-xs text-slate-600 space-y-1">
+                      <div className="tabular-nums">
+                        公司錢包：本月贈點 ${editingCompany?.wallet?.gift ?? 0}・儲值 ${editingCompany?.wallet?.paid ?? 0}
+                      </div>
+                      <label className="flex items-center gap-2">
+                        <span className="shrink-0">加值（美元）</span>
+                        <input id="company-credit-topup" type="number" min={0} step="0.01" value={formTopUp} onChange={e => setFormTopUp(e.target.value)}
+                          placeholder="0" className="w-28 h-8 px-2 rounded-lg border border-slate-200 bg-white text-sm" />
+                        <span className="text-slate-400">儲存時寫入</span>
+                      </label>
+                    </div>
+                    <div className="text-xs text-slate-600 space-y-0.5 tabular-nums">
+                      {price.lines.map(l => (
+                        <div key={l.label} className="flex justify-between"><span>{l.label}</span><span>${l.usd}</span></div>
+                      ))}
+                      <div className="flex justify-between font-bold text-slate-800 border-t border-indigo-200 pt-1 mt-1">
+                        <span>每月合計</span><span>${price.monthlyUsd}（年繳 ${price.monthlyUsd * YEARLY_MONTHS}）</span>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })()}
 
               <div className="p-3 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3">
                 <label className="flex items-center gap-2.5 cursor-pointer select-none">

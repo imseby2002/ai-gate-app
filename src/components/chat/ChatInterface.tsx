@@ -113,6 +113,16 @@ export function ChatInterface({
           }])
           return
         }
+        if (err.error === 'daily_limit_reached') {
+          setStreaming(null)
+          setMessages(prev => [...prev, {
+            ...userMessage,
+            id: crypto.randomUUID(),
+            role: 'assistant',
+            content: `⚠️ 今日對話已達上限（${err.limit ?? ''} 則），明天會自動恢復。`,
+          }])
+          return
+        }
         if (res.status === 401) throw new Error('尚未登入或登入已過期，請重新登入')
         if (res.status === 403) throw new Error('帳號已停用，請聯絡管理員')
         throw new Error(err.error ?? `請求失敗（${res.status}）`)

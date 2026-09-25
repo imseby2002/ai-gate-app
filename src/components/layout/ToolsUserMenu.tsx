@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import { LogOut, ChevronDown, Settings, Wallet, LayoutDashboard, Building2 } from 'lucide-react'
 import { useTranslations, useLocale } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
-import { systemForPath, SUBDOMAIN_SYSTEM } from '@/lib/systems'
+import { systemForPath, systemForHost } from '@/lib/systems'
 import { IdentitySwitcherMenu } from './IdentitySwitcherMenu'
 
 export function ToolsUserMenu({ displayName, hasCompany }: { displayName: string; hasCompany?: boolean }) {
@@ -29,8 +29,7 @@ export function ToolsUserMenu({ displayName, hasCompany }: { displayName: string
   const handleSignOut = async () => {
     const supabase = createClient()
     await supabase.auth.signOut()
-    const sub = window.location.hostname.split('.')[0]
-    const sys = SUBDOMAIN_SYSTEM[sub] ?? systemForPath(pathname ?? '')
+    const sys = systemForHost(window.location.hostname) ?? systemForPath(pathname ?? '')
     router.push(sys ? `/login/${sys}` : '/login')
   }
 

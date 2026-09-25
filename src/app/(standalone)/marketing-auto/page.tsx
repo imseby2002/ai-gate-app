@@ -5094,11 +5094,11 @@ export default function MarketingAutoPage() {
   const mf = planInfo?.features
   // 尚未載入（planInfo=null）時不鎖，避免閃爍；載入後依權限判斷
   const unitLockRequires: Record<number, string | null> = {
-    6:  mf && !mf.imageGen ? 'PRO 以上' : null,
-    8:  mf && !mf.videoGen ? 'TEAM 以上' : null,
-    9:  mf && !mf.uploadPlatforms ? 'PRO 以上' : null,
-    10: mf && !mf.aiCallEmail && mf.prospectMarketing === 'collectOnly' ? 'PRO 以上' : null,
-    11: mf && !mf.avatarMarketing ? '企業' : null,
+    6:  mf && !mf.imageGen ? 'CORE 以上' : null,
+    8:  mf && !mf.videoGen ? 'PRO 以上' : null,
+    9:  mf && !mf.uploadPlatforms ? 'CORE 以上' : null,
+    10: mf && !mf.aiCallEmail && mf.prospectMarketing === 'collectOnly' ? 'CORE 以上' : null,
+    11: mf && !mf.avatarMarketing ? 'MAX' : null,
   }
 
   const [unitStatuses, setUnitStatuses] = useState<Record<number, UnitStatus>>({})

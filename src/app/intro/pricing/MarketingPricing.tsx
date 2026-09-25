@@ -6,7 +6,7 @@ import { GRAD, DarkHeader, FinalCta, IntroFooter, GradText } from '../_ui'
 
 export const marketingPricingMetadata: Metadata = {
   title: '方案比較｜AI GATE 行銷中心',
-  description: 'AI GATE 行銷中心免費／PRO／TEAM／企業方案價格與功能逐項比較。',
+  description: 'AI GATE 行銷中心免費／CORE／PRO／MAX方案價格與功能逐項比較。',
 }
 
 const FIT: Record<string, string> = {
@@ -82,9 +82,9 @@ export function MarketingPricing() {
               <tr className="bg-[#faf9fc] text-[#3f3a4d]">
                 <th className="text-left font-bold py-3 px-4 sticky left-0 bg-[#faf9fc]">功能</th>
                 <th className="text-center font-bold py-3 px-3">免費</th>
-                <th className="text-center font-bold py-3 px-3">PRO</th>
-                <th className="text-center font-bold py-3 px-3 text-[#6a4be0]">TEAM</th>
-                <th className="text-center font-bold py-3 px-3">企業</th>
+                <th className="text-center font-bold py-3 px-3">CORE</th>
+                <th className="text-center font-bold py-3 px-3 text-[#6a4be0]">PRO</th>
+                <th className="text-center font-bold py-3 px-3">MAX</th>
               </tr>
             </thead>
             <tbody>

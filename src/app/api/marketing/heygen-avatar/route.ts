@@ -138,7 +138,7 @@ export async function POST(req: NextRequest) {
 
   const { plan, features } = await getMarketingEntitlements(supabase, user.id)
   if (!features.avatarMarketing) {
-    return NextResponse.json({ error: '目前方案未開放主播行銷，請升級至企業方案', plan }, { status: 403 })
+    return NextResponse.json({ error: '目前方案未開放主播行銷，請升級至 MAX 方案', plan }, { status: 403 })
   }
 
   const billable = await isBillableUser(user.id)

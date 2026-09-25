@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { systemForPath, SUBDOMAIN_SYSTEM, SYSTEM_SUBDOMAIN, isPathAllowedForScope } from '@/lib/systems'
+import { companySlugFromHost } from '@/lib/company/subdomain'
 import { detectLocaleFromAcceptLanguage } from '@/i18n/request'
 
 
@@ -57,7 +58,9 @@ export async function middleware(request: NextRequest) {
       www:       '/dashboard',     // owner 主控台
       esim:      '/esim',          // eSIM 出國上網商城
     }
-    const subHome = SUBDOMAIN_HOME[sub]
+    // 公司專屬子網域（<slug>.im-tourist.com）：首頁為該公司的 ERP（/office）
+    const companySlug = companySlugFromHost(host)
+    const subHome = SUBDOMAIN_HOME[sub] ?? (companySlug ? '/office' : undefined)
     const rawPath = request.nextUrl.pathname
     // 子域名根路徑才改寫；其餘路徑（含 /api、/_next、/cs/* 等）維持原樣
     const needSubRewrite = !!subHome && rawPath === '/'
@@ -189,11 +192,49 @@ export async function middleware(request: NextRequest) {
       const redirectUrl = request.nextUrl.clone()
       // 導向登入頁：優先依「子域名」決定系統（避免 /marketing-auto 路徑反查歧義），
       // 無對應子域時才退回依路徑反查；都無則導向系統選擇頁
-      const sys = SUBDOMAIN_SYSTEM[sub] ?? systemForPath(pathname)
+      const sys = SUBDOMAIN_SYSTEM[sub] ?? (companySlug ? 'office' : systemForPath(pathname))
       redirectUrl.pathname = sys ? `/login/${sys}` : '/login'
       redirectUrl.search = ''
       redirectUrl.searchParams.set('redirectedFrom', pathname)
       return attachLocaleCookie(NextResponse.redirect(redirectUrl))
+    }
+
+    // 公司專屬子網域：只允許該公司成員（與總管理員）進入。
+    // companies 的 RLS 只讓同公司成員讀得到自己公司，查不到即代表不是成員（或子網域不存在）。
+    if (companySlug && !pathname.startsWith('/api')) {
+      const { data: tenant, error: tenantErr } = await supabase.from('companies').select('id').eq('slug', companySlug).maybeSingle()
+      if (tenantErr) console.error('[middleware] 公司子網域查詢失敗', { companySlug, userId: user.id, error: tenantErr })
+      if (!tenant) {
+        const { data: viewer, error: viewerErr } = await supabase.from('profiles').select('user_type').eq('id', user.id).single()
+        if (viewerErr) console.error('[middleware] profiles 查詢失敗', { userId: user.id, pathname, error: viewerErr })
+        if (viewer?.user_type !== 'admin') {
+          const url = request.nextUrl.clone()
+          url.hostname = 'www.im-tourist.com'
+          url.port = ''
+          url.pathname = '/apps'
+          url.search = ''
+          return attachLocaleCookie(NextResponse.redirect(url))
+        }
+      }
+    }
+
+    // 舊的共用 ERP 網址（office／work.im-tourist.com）：員工所屬公司已設定專屬子網域時，
+    // 轉到 <slug>.im-tourist.com 的同一頁，舊書籤與連結不用改。總管理員不轉址（需跨公司管理）。
+    if ((sub === 'office' || sub === 'work') && cookieDomain && !pathname.startsWith('/api')) {
+      const { data: viewer, error: viewerErr } = await supabase
+        .from('profiles').select('user_type, company_id').eq('id', user.id).single()
+      if (viewerErr) console.error('[middleware] profiles 查詢失敗', { userId: user.id, pathname, error: viewerErr })
+      if (viewer?.company_id && viewer.user_type !== 'admin') {
+        const { data: ownCompany, error: ownErr } = await supabase
+          .from('companies').select('slug').eq('id', viewer.company_id).maybeSingle()
+        if (ownErr) console.error('[middleware] companies 查詢失敗', { companyId: viewer.company_id, error: ownErr })
+        if (ownCompany?.slug) {
+          const url = request.nextUrl.clone()
+          url.hostname = `${ownCompany.slug}.im-tourist.com`
+          url.port = ''
+          return attachLocaleCookie(NextResponse.redirect(url))
+        }
+      }
     }
 
     // scope guard 已移至 client-side ScopeManager（sessionStorage per-tab）
