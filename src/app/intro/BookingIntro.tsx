@@ -1,9 +1,11 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import {
-  BedDouble, Globe, Zap, Tag, Percent, LayoutGrid, ClipboardList, Mail, Star, BarChart2,
+  Globe, Zap, Tag, Percent, LayoutGrid, ClipboardList, Mail, Star, BarChart2,
   Download, Headphones, ArrowRight, Shield, Check,
 } from 'lucide-react'
+import { BkNav, BkFooter, BkPrimaryCta, BkGradText as GradText, BK_GRAD as GRAD, BALANCE } from './_booking/ui'
+import { BK_PLANS, PLAN_NAME, PLAN_HIGHLIGHTS, planPrice } from './_booking/data'
 
 export const bookingMetadata: Metadata = {
   title: 'IMT 智能訂房系統｜民宿官網、訂單、定價與通路同步一站搞定',
@@ -27,29 +29,6 @@ const FEATURES = [
   { Icon: Headphones, title: '串接 AI 客服', desc: '與 IMT 智能客服連動，旅客問訂單、入住資訊由 AI 直接查詢回覆。' },
 ]
 
-const PLANS = [
-  { name: 'FREE', price: 0, highlight: false, items: ['1 房源（不可加購）', '官網 AI 設計', 'iCal 同步'] },
-  { name: 'CORE', price: 8, highlight: false, items: ['5 房源（+$4/房源）', '1 位協作者', '動態定價規則', '優惠碼', 'Email 同步（OTA 信件轉單）'] },
-  { name: 'PRO', price: 29, highlight: true, items: ['5 房源（+$3/房源）', '2 位協作者', '即時同步 60+ 平台（秒級防超賣）', '與 CS 串接（訂單密碼連動）', '每月 1 次免費協助設定'] },
-  { name: 'MAX', price: 49, highlight: false, items: ['15 房源（+$2/房源）', '無上限協作者', '動態定價客製規則', '優惠碼', '每月 2 次免費協助設定'] },
-]
-
-const GRAD = 'linear-gradient(100deg,#f59e0b,#ef4444 50%,#6366f1)'
-const BALANCE = { textWrap: 'balance' } as React.CSSProperties
-
-function GradText({ children }: { children: React.ReactNode }) {
-  return <span style={{ background: GRAD, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>{children}</span>
-}
-
-function PrimaryCta() {
-  return (
-    <Link href="/register" className="inline-flex items-center gap-2 font-bold text-[15px] px-6 py-3 rounded-xl text-white transition-transform hover:-translate-y-0.5"
-      style={{ background: GRAD, boxShadow: '0 10px 26px rgba(239,68,68,.30)' }}>
-      免費開始 <ArrowRight className="h-4 w-4" />
-    </Link>
-  )
-}
-
 export function BookingIntro() {
   return (
     <div className="min-h-screen bg-[#f7f5f2] text-[#1a1612]">
@@ -60,13 +39,7 @@ export function BookingIntro() {
           style={{ background: 'radial-gradient(60% 100% at 25% 0,rgba(245,158,11,.34),transparent 70%),radial-gradient(50% 100% at 85% 10%,rgba(99,102,241,.32),transparent 70%)' }}
         />
         <div className="relative max-w-5xl mx-auto px-6">
-          <nav className="flex items-center gap-3 pt-6 pb-10">
-            <span className="grid place-items-center w-8 h-8 rounded-lg text-white shrink-0" style={{ background: GRAD }}>
-              <BedDouble className="h-4 w-4" />
-            </span>
-            <b className="font-black tracking-wide">IMT 智能訂房系統</b>
-            <Link href="/login" className="ml-auto text-[13px] text-[#b9ab9c] hover:text-white">登入</Link>
-          </nav>
+          <BkNav />
 
           <div className="pb-16 sm:pb-20">
             <div className="font-mono text-[12px] tracking-[0.22em] uppercase text-[#fcc97a]">民宿 · 旅宿 PMS</div>
@@ -78,7 +51,7 @@ export function BookingIntro() {
               AI 幫你做好民宿官網，旅客直接線上訂房；各平台訂單自動匯入同一張空房表，房況即時同步不超賣。
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <PrimaryCta />
+              <BkPrimaryCta />
               <a href="#features" className="inline-flex items-center gap-2 font-bold text-[15px] px-6 py-3 rounded-xl text-[#f7f1ea] border border-[#3a2f27] bg-white/5 transition-transform hover:-translate-y-0.5">
                 看它能做什麼
               </a>
@@ -118,6 +91,9 @@ export function BookingIntro() {
             </div>
           ))}
         </div>
+        <Link href="/intro/features" className="mt-6 inline-flex items-center gap-1.5 font-bold text-[14px] text-[#c2410c] hover:underline">
+          看每個功能的詳細說明 <ArrowRight className="h-4 w-4" />
+        </Link>
       </section>
 
       {/* PRICING */}
@@ -131,24 +107,30 @@ export function BookingIntro() {
           </h2>
           <p className="text-[#b9ab9c] max-w-[54ch] mb-7">美元計價，年繳限時 7 折；付款後立即生效，不自動續訂。</p>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {PLANS.map(p => (
-              <div key={p.name} className={`relative rounded-2xl border p-5 ${p.highlight ? 'border-[#f59e0b] bg-[#241a12]' : 'border-[#3a2f27] bg-[#1f1813]'}`}>
-                {p.highlight && <span className="absolute -top-2.5 right-4 text-[11px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: GRAD }}>推薦</span>}
-                <div className="font-mono text-[13px] tracking-widest text-[#e5d9cc]">{p.name}</div>
-                <div className="mt-2 mb-4">
-                  <span className="text-[34px] font-black">${p.price}</span>
-                  <span className="text-[13px] text-[#b9ab9c]"> 美元/月</span>
+            {BK_PLANS.map(p => {
+              const hi = p === 'pro'
+              return (
+                <div key={p} className={`relative rounded-2xl border p-5 ${hi ? 'border-[#f59e0b] bg-[#241a12]' : 'border-[#3a2f27] bg-[#1f1813]'}`}>
+                  {hi && <span className="absolute -top-2.5 right-4 text-[11px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: GRAD }}>推薦</span>}
+                  <div className="font-mono text-[13px] tracking-widest text-[#e5d9cc]">{PLAN_NAME[p]}</div>
+                  <div className="mt-2 mb-4">
+                    <span className="text-[34px] font-black">${planPrice(p, 'monthly')}</span>
+                    <span className="text-[13px] text-[#b9ab9c]"> 美元/月</span>
+                  </div>
+                  <ul className="space-y-1.5">
+                    {PLAN_HIGHLIGHTS[p].map(i => (
+                      <li key={i} className="flex gap-2 text-[13px] text-[#e5d9cc]">
+                        <Check className="h-4 w-4 shrink-0 mt-0.5 text-[#f59e0b]" />{i}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-                <ul className="space-y-1.5">
-                  {p.items.map(i => (
-                    <li key={i} className="flex gap-2 text-[13px] text-[#e5d9cc]">
-                      <Check className="h-4 w-4 shrink-0 mt-0.5 text-[#f59e0b]" />{i}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+              )
+            })}
           </div>
+          <Link href="/intro/pricing" className="mt-6 inline-flex items-center gap-1.5 font-bold text-[14px] text-[#fcc97a] hover:underline">
+            看各方案功能逐項比較 <ArrowRight className="h-4 w-4" />
+          </Link>
         </div>
       </section>
 
@@ -159,7 +141,7 @@ export function BookingIntro() {
           今天就開好你的<br />民宿官網與訂房系統。
         </h2>
         <div className="flex flex-wrap gap-3 justify-center">
-          <PrimaryCta />
+          <BkPrimaryCta />
           <Link href="/login" className="inline-flex items-center gap-2 font-bold text-[15px] px-6 py-3 rounded-xl text-[#1a1612] border border-[#d9d0c5] bg-white transition-transform hover:-translate-y-0.5">
             我已有帳號
           </Link>
@@ -169,10 +151,7 @@ export function BookingIntro() {
         </p>
       </section>
 
-      <footer className="text-center text-[#8a7d70] text-[12px] py-7 border-t border-[#e7e1d9] flex items-center justify-center gap-3 flex-wrap">
-        <span className="flex items-center gap-2"><BedDouble className="h-3.5 w-3.5" /> IMT 智能訂房系統 · booking.im-tourist.com</span>
-        <Link href="/privacy" className="hover:text-[#4a4038]">隱私權政策</Link>
-      </footer>
+      <BkFooter />
     </div>
   )
 }

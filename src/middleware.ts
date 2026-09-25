@@ -83,8 +83,8 @@ export async function middleware(request: NextRequest) {
 
     // 介紹頁依子網域提供：
     // - /intro 在系統子網域（cs、booking…）由 page.tsx 依子網域顯示各自廣告頁；非系統網域（www、主網域）導到 marketing
-    // - /intro/*（功能、方案）目前只有 marketing 與 cs 有自己的版本，其他子網域導到 marketing
-    const INTRO_SUBPAGE_SUBS = ['marketing', 'cs']
+    // - /intro/*（功能、方案）目前只有 marketing、cs、booking 有自己的版本，其他子網域導到 marketing
+    const INTRO_SUBPAGE_SUBS = ['marketing', 'cs', 'booking']
     const isMarketingIntroPath = (pathname.startsWith('/intro/') && !INTRO_SUBPAGE_SUBS.includes(sub)) || (pathname === '/intro' && !SUBDOMAIN_SYSTEM[sub])
     if (cookieDomain && sub !== 'marketing' && isMarketingIntroPath) {
       const url = request.nextUrl.clone()
