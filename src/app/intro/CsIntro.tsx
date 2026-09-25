@@ -24,7 +24,7 @@ const PLATFORMS = [
 ]
 
 const STATS = [
-  { v: '不限', l: '訊息則數，價格固定' },
+  { v: '不限', l: 'AI 回覆則數，免費版也一樣' },
   { v: `${PLATFORMS.length}`, l: '個通訊平台可串接' },
   { v: '6', l: '種行業模板一鍵套用' },
   { v: '$0', l: '免費方案即可開始' },
@@ -62,7 +62,7 @@ const GUARDS = [
 const INDUSTRIES = ['民宿／旅遊', '電商／零售', '餐廳／餐飲', '診所／醫美', '美容／美髮／SPA', '教育／補習班']
 
 const FAQ = [
-  { q: '真的不限訊息則數嗎？', a: '是。所有方案都不限則數，對話量再大方案價格都固定，不會因為用量爆表被加價。' },
+  { q: '免費版真的也不限回答數量？', a: '是。FREE 到 MAX 所有方案 AI 回覆都不限則數，對話量再大價格都固定，不會因為用量爆表被加價。方案差別只在平台數、協作人數與進階功能。' },
   { q: '不會設定怎麼辦？', a: '後台有一步步的設定教學；也可以直接按「找人幫我設定」由我們代為串接。PRO 每月 1 次、MAX 每月 2 次免費，新升級 CORE 首次免費。' },
   { q: 'AI 回錯了怎麼辦？', a: '在「AI 回答修正」貼上情境、錯誤回覆與正確做法，送出後立即生效，AI 之後遇到類似情境會照規則回答。' },
   { q: '可以隨時由真人接手嗎？', a: '可以。收件匣裡每個對話都能切換「AI 自動回覆」或「真人接管」。' },
@@ -128,6 +128,20 @@ export function CsIntro() {
           </div>
         </div>
       </header>
+
+      {/* FREE 不限則數 */}
+      <div className="relative overflow-hidden text-white" style={{ background: CS_GRAD }}>
+        <div className="max-w-5xl mx-auto px-6 py-6 sm:py-7 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
+          <div className="shrink-0 font-black leading-none text-[clamp(26px,5vw,40px)] tracking-tight">免費版也不限則數</div>
+          <div className="text-[14px] sm:text-[15px] text-white/90 leading-relaxed">
+            市場常見的 AI 客服免費版每月只給 50–100 則，用完就停、想繼續就加價。
+            這裡 <b className="text-white">FREE 方案 AI 回答數量不設上限</b>，客人問幾次、AI 就回幾次，一毛不用多付。
+          </div>
+          <Link href="/register" className="sm:ml-auto shrink-0 self-start sm:self-center inline-flex items-center gap-1.5 font-bold text-[14px] rounded-xl bg-white text-[#1d4ed8] px-4 py-2 hover:bg-white/90">
+            免費開始 <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+      </div>
 
       {/* STATS */}
       <div className="border-b border-[#dde5ea] bg-white">
