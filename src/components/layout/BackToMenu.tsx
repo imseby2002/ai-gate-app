@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { useTranslations, useLocale } from 'next-intl'
 import { Zap } from 'lucide-react'
-import { SYSTEMS, SCOPE_SESSION_KEY, SUBDOMAIN_SYSTEM, isSystemKey, systemForPath, getLocalizedSystemDef } from '@/lib/systems'
+import { SYSTEMS, SCOPE_SESSION_KEY, systemForHost, isSystemKey, systemForPath, getLocalizedSystemDef } from '@/lib/systems'
 
 export function BackToMenu() {
   const pathname = usePathname()
@@ -59,8 +59,7 @@ export function BackToMenu() {
     // 路徑無法判別（如 /team、/apps 等共用頁）時，
     // 優先依「目前子域」回該系統首頁，確保停留在所在子域，不跳到通用 /apps。
     try {
-      const sub = window.location.hostname.split('.')[0]
-      const bySub = SUBDOMAIN_SYSTEM[sub]
+      const bySub = systemForHost(window.location.hostname)
       if (bySub) {
         const targetHome = SYSTEMS[bySub].home === '/work' ? '/office' : SYSTEMS[bySub].home
         setHref(targetHome)

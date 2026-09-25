@@ -69,6 +69,26 @@ export const SUBDOMAIN_SYSTEM: Record<string, SystemKey> = {
   agent:     'agent',
 }
 
+// 系統既有子網域與常見基礎設施名稱：公司專屬子網域不可使用（見 lib/company/subdomain.ts）
+export const RESERVED_SUBDOMAINS = new Set<string>([
+  ...Object.keys(SUBDOMAIN_SYSTEM),
+  'www', 'esim', 'app', 'api', 'admin', 'auth', 'login', 'mail', 'smtp', 'ftp', 'static', 'cdn', 'assets',
+  'img', 'images', 'docs', 'help', 'support', 'status', 'blog', 'dev', 'test', 'staging', 'preview', 'intro',
+])
+
+/** 由 host 取出公司專屬子網域（<slug>.im-tourist.com）；非公司子網域回傳 null */
+export function companySlugFromHost(host: string): string | null {
+  const labels = host.split('.')
+  if (!host.endsWith('.im-tourist.com') || labels.length !== 3) return null
+  return RESERVED_SUBDOMAINS.has(labels[0]) ? null : labels[0]
+}
+
+/** 由 host 推導所屬系統：系統子網域照對照表；公司專屬子網域一律視為 ERP（office） */
+export function systemForHost(host: string): SystemKey | undefined {
+  const sub = host.split('.')[0]
+  return SUBDOMAIN_SYSTEM[sub] ?? (companySlugFromHost(host) ? 'office' : undefined)
+}
+
 // 系統 → 子域名（OAuth callback 後讓功能頁落回對應子域，避免停在 www）
 export const SYSTEM_SUBDOMAIN: Partial<Record<SystemKey, string>> = {
   cs:        'cs',

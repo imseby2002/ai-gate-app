@@ -3,7 +3,7 @@ import { headers } from 'next/headers'
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 import { createClient, getCachedUser } from '@/lib/supabase/server'
-import { SUBDOMAIN_SYSTEM } from '@/lib/systems'
+import { systemForHost } from '@/lib/systems'
 import {
   MessageSquare, Bot, BarChart3, TrendingUp, Lock,
   ArrowRight, Sparkles, ChevronRight, Zap,
@@ -38,8 +38,7 @@ export default async function AppsPage({ searchParams }: { searchParams: Promise
 
   // 子域 scope：chat.im-tourist.com 等子域只屬於單一系統，主頁僅顯示該系統模組（與左側選單一致）
   const host = (await headers()).get('host')?.split(':')[0].toLowerCase() ?? ''
-  const sub = host.split('.')[0]
-  const scope = SUBDOMAIN_SYSTEM[sub]
+  const scope = systemForHost(host)
 
   // 潛在客戶已歸類至行銷中心，不在選單格單獨顯示（權限模組仍保留於 MODULES）
   // 內部員工（employee / admin）享有完整系統功能；付費外部用戶依 enabled_modules 判斷

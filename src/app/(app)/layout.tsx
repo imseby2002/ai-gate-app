@@ -3,7 +3,7 @@ import { headers } from 'next/headers'
 import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { getLocale } from 'next-intl/server'
 import { AppShell } from '@/components/layout/AppShell'
-import { SUBDOMAIN_SYSTEM } from '@/lib/systems'
+import { systemForHost } from '@/lib/systems'
 import { getBalance } from '@/lib/skills/billing'
 
 export const dynamic = 'force-dynamic'
@@ -58,8 +58,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   //   若不在此處推導，側邊欄會退回 enabled_modules 而列出所有模組。）
   const hdrs = await headers()
   const host = (hdrs.get('host') || '').split(':')[0].toLowerCase()
-  const sub = host.split('.')[0]
-  const subScope = SUBDOMAIN_SYSTEM[sub]
+  const subScope = systemForHost(host)
 
   // 公司的 enabled_modules 分開查，不用 PostgREST 的 embed：companies 與 profiles 之間
   // 有三條外鍵（profiles.company_id、companies.bnb_owner_id、companies.created_by），
