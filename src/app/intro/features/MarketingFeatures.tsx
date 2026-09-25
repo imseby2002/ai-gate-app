@@ -3,7 +3,8 @@ import type { Metadata } from 'next'
 import {
   Sparkles, Share2, Megaphone, Wand2, Search, GitBranch, Phone, BarChart3, Target, Layers, Brain, ArrowRight,
 } from 'lucide-react'
-import { DarkHeader, FinalCta, IntroFooter, GradText } from '../_ui'
+import { GRAD, DarkHeader, FinalCta, IntroFooter, GradText } from '../_ui'
+import { VisualStyleShowcase } from '../VisualStyleShowcase'
 
 export const marketingFeaturesMetadata: Metadata = {
   title: '功能詳解｜AI GATE 行銷中心',
@@ -30,12 +31,6 @@ const GROUPS: Array<{ id: string; n: string; title: string; sub: string; items: 
         desc: 'AI 自動生成行銷策略、內容組合、市場分析與 SEO 內容策略，不用自己想切角。',
         points: ['行銷策略規劃', '內容組合', '市場分析', 'SEO 內容策略'],
         plan: 'CORE 起（策略＋文案）· PRO 全開',
-      },
-      {
-        id: 'templates', Icon: Sparkles, title: '視覺風格與廣告創作',
-        lead: '不用會寫提示詞，選「感覺」就能出圖。',
-        desc: '85 種視覺風格、185 款行銷短影音分鏡模板，選好呈現方式即產出專業圖文與短影音。',
-        points: ['85 款呈現風格', '商品擬人／黏土風', '大促／折扣／免運主題', '一鍵組裝 Prompt', '高畫質商用圖'],
       },
       {
         id: 'studio', Icon: Wand2, title: 'AI 視覺工坊',
@@ -133,6 +128,9 @@ export function MarketingFeatures() {
 
       <div className="sticky top-0 z-10 bg-[#f5f3f8]/90 backdrop-blur border-b border-[#e6e2ee]">
         <div className="max-w-5xl mx-auto px-6 py-3 flex gap-2 overflow-x-auto text-[14px] font-bold">
+          <a href="#templates" className="shrink-0 rounded-full border border-transparent px-3 py-1 text-white" style={{ background: GRAD }}>
+            ★ 視覺風格與廣告創作
+          </a>
           {GROUPS.map(g => (
             <a key={g.id} href={`#${g.id}`} className="shrink-0 rounded-full border border-[#e6e2ee] bg-white px-3 py-1 hover:border-[#6a4be0] hover:text-[#6a4be0]">
               {g.n} {g.title}
@@ -140,6 +138,8 @@ export function MarketingFeatures() {
           ))}
         </div>
       </div>
+
+      <div className="pt-14"><VisualStyleShowcase id="templates" showDetailLink={false} /></div>
 
       {GROUPS.map(g => (
         <section key={g.id} id={g.id} className="max-w-5xl mx-auto px-6 pt-14 scroll-mt-16">
