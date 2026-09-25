@@ -5,7 +5,8 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SupabaseClient = any
 
-export type CompanyPlan = 'free' | 'core' | 'pro' | 'max'
+// 'company' 為模組化計價方案（見 lib/company/pricing.ts）；core/pro/max 保留給既有訂閱
+export type CompanyPlan = 'free' | 'core' | 'pro' | 'max' | 'company'
 
 export interface CompanyPlanFeatures {
   /** 意見反映系統：每月免費「功能新增/調整」次數，超過才需要老闆審核計費 */
@@ -17,6 +18,8 @@ export const COMPANY_PLAN_FEATURES: Record<CompanyPlan, CompanyPlanFeatures> = {
   core: { freeFeatureQuotaMonthly: 1 },
   pro:  { freeFeatureQuotaMonthly: 3 },
   max:  { freeFeatureQuotaMonthly: 10 },
+  // 公司基本費含每月 1 次免費微調
+  company: { freeFeatureQuotaMonthly: 1 },
 }
 
 /**
@@ -50,4 +53,30 @@ export async function getCompanyEntitlements(
   const features: CompanyPlanFeatures = { ...COMPANY_PLAN_FEATURES[plan], ...overrides }
 
   return { plan, features }
+}
+
+/**
+ * ownerId 是否因所屬公司的 'company' 方案而取得某模組的 MAX 權益。
+ * 條件：公司訂閱為 active 的 'company' 方案、未到期，且該模組在 companies.enabled_modules 內。
+ * CS／訂房／行銷的 entitlements 會呼叫這裡，公司成員不必再各自購買模組方案。
+ */
+export async function hasCompanyModuleGrant(ownerId: string, moduleId: string): Promise<boolean> {
+  const { createAdminClient } = await import('@/lib/supabase/admin')
+  const admin = createAdminClient()
+  try {
+    const { data: profile } = await admin.from('profiles').select('company_id').eq('id', ownerId).maybeSingle()
+    if (!profile?.company_id) return false
+
+    const [{ data: sub }, { data: company }] = await Promise.all([
+      admin.from('company_subscriptions').select('plan, status, current_period_end').eq('company_id', profile.company_id).maybeSingle(),
+      admin.from('companies').select('enabled_modules').eq('id', profile.company_id).maybeSingle(),
+    ])
+    if (sub?.plan !== 'company' || sub.status !== 'active') return false
+    if (sub.current_period_end && new Date(sub.current_period_end).getTime() < Date.now()) return false
+    return (company?.enabled_modules ?? []).includes(moduleId)
+  } catch (err) {
+    // 查詢失敗視同沒有公司權益（安全預設），並記錄
+    console.error('[company entitlements] module grant lookup failed', { ownerId, moduleId, err })
+    return false
+  }
 }

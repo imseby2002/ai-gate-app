@@ -149,9 +149,12 @@ export async function getCsEntitlements(
   // 視為不到期（管理員手動指定的長期方案）。
   const expired = !!data?.current_period_end && new Date(data.current_period_end).getTime() < Date.now()
 
-  const plan: CsPlan = (data?.status === 'active' && !expired && data?.plan && data.plan in CS_PLAN_FEATURES)
+  const personalPlan: CsPlan = (data?.status === 'active' && !expired && data?.plan && data.plan in CS_PLAN_FEATURES)
     ? (data.plan as CsPlan)
     : 'free'
+  // 所屬公司開通 CS 模組（'company' 方案）→ 一律 MAX
+  const { hasCompanyModuleGrant } = await import('@/lib/company/entitlements')
+  const plan: CsPlan = personalPlan !== 'max' && await hasCompanyModuleGrant(ownerId, 'cs') ? 'max' : personalPlan
 
   // 過期訂閱連帶失效 feature_overrides（客製加開的功能不應在到期後繼續生效）；
   // 未過期時照常疊加，包括管理員對免費帳號手動加開的功能。

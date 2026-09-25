@@ -9,6 +9,7 @@ import {
   ExternalLink, ChevronRight, UserCheck, Crown, RefreshCw, Copy
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { calcCompanyMonthlyPrice, YEARLY_MONTHS } from '@/lib/company/pricing'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -41,7 +42,10 @@ export interface CompanyItem {
   bnb_owner_id: string | null
   feedback_free_features: boolean
   free_feature_quota_monthly: number | null
-  plan?: 'free' | 'core' | 'pro' | 'max'
+  plan?: 'free' | 'core' | 'pro' | 'max' | 'company'
+  erpSeats?: number
+  retailStores?: number
+  customDomain?: boolean
   created_at: string
   creator: { id: string; email: string; full_name: string | null } | null
   owner: { id: string; email: string; full_name: string | null } | null
@@ -124,7 +128,10 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
   const [formModules, setFormModules] = useState<string[]>([])
   const [formFeedbackFree, setFormFeedbackFree] = useState(false)
   const [formFeedbackQuota, setFormFeedbackQuota] = useState('')
-  const [formPlan, setFormPlan] = useState<'free' | 'core' | 'pro' | 'max'>('free')
+  const [formPlan, setFormPlan] = useState<'free' | 'core' | 'pro' | 'max' | 'company'>('free')
+  const [formErpSeats, setFormErpSeats] = useState('0')
+  const [formRetailStores, setFormRetailStores] = useState('0')
+  const [formCustomDomain, setFormCustomDomain] = useState(false)
 
   // Member Management state
   const [selectedUserToAdd, setSelectedUserToAdd] = useState('')
@@ -240,6 +247,9 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
     setFormFeedbackFree(company.feedback_free_features ?? false)
     setFormFeedbackQuota(company.free_feature_quota_monthly != null ? String(company.free_feature_quota_monthly) : '')
     setFormPlan(company.plan ?? 'free')
+    setFormErpSeats(String(company.erpSeats ?? 0))
+    setFormRetailStores(String(company.retailStores ?? 0))
+    setFormCustomDomain(company.customDomain ?? false)
   }
 
   const handleSaveEdit = async () => {
@@ -259,6 +269,9 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
           feedbackFree: formFeedbackFree,
           freeFeatureQuotaMonthly: formFeedbackQuota.trim() === '' ? null : Number(formFeedbackQuota),
           plan: formPlan,
+          erpSeats: Number(formErpSeats) || 0,
+          retailStores: Number(formRetailStores) || 0,
+          customDomain: formCustomDomain,
         }),
       })
       const d = await res.json()
@@ -1019,9 +1032,50 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
                   <option value="core">CORE — 每月免費功能修改 1 次</option>
                   <option value="pro">PRO — 每月免費功能修改 3 次</option>
                   <option value="max">MAX — 每月免費功能修改 10 次</option>
+                  <option value="company">公司方案（模組化計價）— 每月免費功能修改 1 次</option>
                 </select>
                 <p className="text-xs text-slate-500 mt-1">下面「每月免費次數上限」若有手動填寫，會蓋過方案的預設次數</p>
               </div>
+
+              {formPlan === 'company' && (() => {
+                const price = calcCompanyMonthlyPrice({
+                  modules: formModules,
+                  erpSeats: Number(formErpSeats) || 0,
+                  retailStores: Number(formRetailStores) || 0,
+                  customDomain: formCustomDomain,
+                })
+                return (
+                  <div className="p-3 rounded-xl border border-indigo-200 bg-indigo-50/40 space-y-3">
+                    <div className="text-sm font-bold text-slate-800">公司方案計價設定</div>
+                    <p className="text-xs text-slate-500">上方勾選的 CS／訂房／行銷模組會以 MAX 等級計費並開通給全體成員。</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <label className="text-xs text-slate-600 space-y-1">
+                        <span className="block">ERP 人數（0 = 不開通）</span>
+                        <input id="company-erp-seats" type="number" min={0} value={formErpSeats} onChange={e => setFormErpSeats(e.target.value)}
+                          className="w-full h-9 px-2 rounded-lg border border-slate-200 bg-white text-sm" />
+                      </label>
+                      <label className="text-xs text-slate-600 space-y-1">
+                        <span className="block">門市零售包門市數</span>
+                        <input id="company-retail-stores" type="number" min={0} value={formRetailStores} onChange={e => setFormRetailStores(e.target.value)}
+                          className="w-full h-9 px-2 rounded-lg border border-slate-200 bg-white text-sm" />
+                      </label>
+                    </div>
+                    <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer select-none">
+                      <input id="company-custom-domain" type="checkbox" checked={formCustomDomain} onChange={e => setFormCustomDomain(e.target.checked)}
+                        className="rounded border-slate-300 h-4 w-4" />
+                      自訂網域
+                    </label>
+                    <div className="text-xs text-slate-600 space-y-0.5 tabular-nums">
+                      {price.lines.map(l => (
+                        <div key={l.label} className="flex justify-between"><span>{l.label}</span><span>${l.usd}</span></div>
+                      ))}
+                      <div className="flex justify-between font-bold text-slate-800 border-t border-indigo-200 pt-1 mt-1">
+                        <span>每月合計</span><span>${price.monthlyUsd}（年繳 ${price.monthlyUsd * YEARLY_MONTHS}）</span>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })()}
 
               <div className="p-3 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3">
                 <label className="flex items-center gap-2.5 cursor-pointer select-none">

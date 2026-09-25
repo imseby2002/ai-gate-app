@@ -34,7 +34,7 @@ export async function GET() {
     admin.from('companies').select('*').order('created_at', { ascending: false }),
     admin.from('company_members').select('*').order('created_at', { ascending: true }),
     admin.from('profiles').select('id, email, full_name'),
-    admin.from('company_subscriptions').select('company_id, plan, current_period_end'),
+    admin.from('company_subscriptions').select('company_id, plan, current_period_end, erp_seats, retail_stores, custom_domain'),
   ])
 
   if (compErr) return NextResponse.json({ error: compErr.message }, { status: 500 })
@@ -67,6 +67,10 @@ export async function GET() {
       pendingCount: compMembers.filter(m => m.status === 'pending').length,
       members: compMembers,
       plan: planMap.get(c.id)?.plan ?? 'free',
+      currentPeriodEnd: planMap.get(c.id)?.current_period_end ?? null,
+      erpSeats: planMap.get(c.id)?.erp_seats ?? 0,
+      retailStores: planMap.get(c.id)?.retail_stores ?? 0,
+      customDomain: planMap.get(c.id)?.custom_domain ?? false,
     }
   })
 
@@ -178,7 +182,7 @@ export async function PATCH(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { id, name, enabledModules, bnbOwnerId, ownerId, itId, feedbackFree, freeFeatureQuotaMonthly, plan } = body as {
+    const { id, name, enabledModules, bnbOwnerId, ownerId, itId, feedbackFree, freeFeatureQuotaMonthly, plan, erpSeats, retailStores, customDomain } = body as {
       id: string
       name?: string
       enabledModules?: string[] | null
@@ -187,7 +191,10 @@ export async function PATCH(req: NextRequest) {
       itId?: string
       feedbackFree?: boolean
       freeFeatureQuotaMonthly?: number | null
-      plan?: 'free' | 'core' | 'pro' | 'max'
+      plan?: 'free' | 'core' | 'pro' | 'max' | 'company'
+      erpSeats?: number
+      retailStores?: number
+      customDomain?: boolean
     }
 
     if (!id) {
@@ -211,10 +218,16 @@ export async function PATCH(req: NextRequest) {
       if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 })
     }
 
-    if (plan !== undefined) {
+    // 方案與公司方案計價設定（ERP 人數、門市數、自訂網域）；只寫入有傳的欄位
+    const subPatch: Record<string, unknown> = {}
+    if (plan !== undefined) { subPatch.plan = plan; subPatch.status = 'active' }
+    if (erpSeats !== undefined) subPatch.erp_seats = Math.max(0, Math.floor(Number(erpSeats) || 0))
+    if (retailStores !== undefined) subPatch.retail_stores = Math.max(0, Math.floor(Number(retailStores) || 0))
+    if (customDomain !== undefined) subPatch.custom_domain = !!customDomain
+    if (Object.keys(subPatch).length > 0) {
       const { error: planErr } = await admin
         .from('company_subscriptions')
-        .upsert({ company_id: id, plan, status: 'active' }, { onConflict: 'company_id' })
+        .upsert({ company_id: id, ...subPatch }, { onConflict: 'company_id' })
       if (planErr) return NextResponse.json({ error: planErr.message }, { status: 500 })
     }
 
