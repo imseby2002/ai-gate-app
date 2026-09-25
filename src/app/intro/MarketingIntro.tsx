@@ -5,6 +5,7 @@ import {
 } from 'lucide-react'
 import { PLAN_CARDS } from '@/lib/marketing/plan-compare'
 import { GRAD, BALANCE, GradText, IntroNav, PrimaryCta, GhostCta, FinalCta, IntroFooter } from './_ui'
+import { VisualStyleShowcase } from './VisualStyleShowcase'
 
 export const marketingMetadata: Metadata = {
   title: 'AI GATE 行銷中心｜一個人就是一整個行銷部',
@@ -206,6 +207,9 @@ export function MarketingIntro() {
           ))}
         </div>
       </section>
+
+      {/* 視覺風格與廣告創作 */}
+      <VisualStyleShowcase />
 
       {/* KILLER */}
       <section className="relative overflow-hidden bg-[#120c1c] text-[#f4f0fb]">
