@@ -5,6 +5,7 @@ import { getLocale } from 'next-intl/server'
 import { AppShell } from '@/components/layout/AppShell'
 import { systemForHost } from '@/lib/systems'
 import { getBalance } from '@/lib/skills/billing'
+import { getCompanyBillingContext } from '@/lib/company/entitlements'
 
 export const dynamic = 'force-dynamic'
 
@@ -37,6 +38,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     .limit(20)
   // 失敗時側邊欄只是空的、畫面不會壞，但看起來就像「對話紀錄不見了」，要查得到原因。
   if (conversationsErr) console.error('[app-layout] conversations 查詢失敗', conversationsErr)
+
+  // 專屬客製-企業版：付費客戶也開放生圖／影片入口
+  const mediaEnabled = profile.user_type === 'external' ? !!(await getCompanyBillingContext(user.id))?.enterprise : false
 
   // Get credit balance for external users
   let creditBalance: number | undefined
@@ -86,6 +90,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       conversations={conversations ?? []}
       profile={profile}
       creditBalance={creditBalance}
+      mediaEnabled={mediaEnabled}
       locale={locale}
     >
       {children}

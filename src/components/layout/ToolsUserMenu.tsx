@@ -16,7 +16,7 @@ export function ToolsUserMenu({ displayName, hasCompany }: { displayName: string
 
   const labels = {
     settings: t('settings') || (locale === 'vi' ? 'Cài đặt tài khoản' : '帳號設定'),
-    plan: locale === 'vi' ? 'Gói công ty' : locale === 'en' ? 'Company Plan' : '公司方案',
+    plan: locale === 'vi' ? 'Gói công ty' : locale === 'en' ? 'Company Plan' : '公司版',
     credits: locale === 'vi' ? 'Nạp điểm' : locale === 'en' ? 'Buy Credits' : '儲值點數',
     csHub: locale === 'vi' ? 'Về trang CS' : locale === 'en' ? 'Back to CS' : '返回客服統整頁',
     signOut: t('signOut') || (locale === 'vi' ? 'Đăng xuất' : '登出'),

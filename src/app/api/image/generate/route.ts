@@ -1,14 +1,18 @@
 ﻿import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getCompanyBillingContext } from '@/lib/company/entitlements'
+import { checkEnterpriseCostAlert } from '@/lib/company/enterprise'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  // CHAT 不提供生圖／影片給付費客戶（成本高且不扣點），僅內部帳號（admin／employee）可用
+  // CHAT 不提供生圖／影片給一般付費客戶（成本高且不扣點）；內部帳號（admin／employee）與
+  // 專屬客製-企業版可用，企業版用量計入成本警示
   const { data: profile } = await supabase.from('profiles').select('user_type').eq('id', user.id).single()
-  if (!profile || profile.user_type === 'external') {
+  const companyCtx = profile?.user_type === 'external' ? await getCompanyBillingContext(user.id) : null
+  if (!profile || (profile.user_type === 'external' && !companyCtx?.enterprise)) {
     return NextResponse.json({ error: '此功能未開放，請改用行銷中心的圖片／影片產出' }, { status: 403 })
   }
 
@@ -85,6 +89,7 @@ export async function POST(req: NextRequest) {
       cost_usd: costPerImage,
       image_urls: [imageUrl],
     })
+    if (companyCtx?.enterprise) void checkEnterpriseCostAlert(companyCtx.companyId)
 
     return NextResponse.json({ imageUrl })
   } catch (error) {

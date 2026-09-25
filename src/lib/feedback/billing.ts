@@ -3,7 +3,7 @@ import { getCompanyEntitlements } from '@/lib/company/entitlements'
 
 // 錯誤回報（bug/ai_error）一律免費；功能新增/調整（feature/text_change）預設要
 // 計費。公司的每月免費額度，優先順序：
-// 1. feedback_free_features=true：完全免費、不限次數（手動覆寫，最優先）
+// 1. feedback_free_features=true 或專屬客製-企業版：完全免費、不限次數（最優先）
 // 2. companies.free_feature_quota_monthly：手動覆寫的每月次數（有設定就蓋過方案預設）
 // 3. 公司會員方案（company_subscriptions，free/core/pro/max）的預設每月次數
 const PAID_TYPES = new Set(['feature', 'text_change'])
@@ -35,6 +35,10 @@ export async function resolveFeedbackBilling(
     .single()
 
   if (company?.feedback_free_features) return { isPaid: false, initialStatus: 'pending' }
+
+  // 專屬客製-企業版：功能新增／調整不限次數、不計費
+  const { data: enterprise } = await admin.rpc('company_enterprise_active', { p_company_id: companyId })
+  if (enterprise) return { isPaid: false, initialStatus: 'pending' }
 
   // 手動覆寫次數優先於方案預設；沒有手動覆寫才吃會員方案的預設額度
   let quotaLimit = company?.free_feature_quota_monthly

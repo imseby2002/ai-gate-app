@@ -15,6 +15,8 @@ import { ConversationItem } from './ConversationItem'
 import { SCOPE_SESSION_KEY, isSystemKey } from '@/lib/systems'
 
 interface SidebarProps {
+  /** 付費客戶是否可用生圖／影片（專屬客製-企業版） */
+  mediaEnabled?: boolean
   userType?: string
   enabledModules?: string[]
   scope?: string
@@ -58,7 +60,7 @@ const ADMIN_NAV: NavItem[] = [
 ]
 
 
-export function Sidebar({ userType, enabledModules, scope: scopeProp, conversations = [] }: SidebarProps) {
+export function Sidebar({ userType, enabledModules, scope: scopeProp, conversations = [], mediaEnabled = false }: SidebarProps) {
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
   const [scope, setScope] = useState<string | undefined>(scopeProp)
@@ -90,7 +92,7 @@ export function Sidebar({ userType, enabledModules, scope: scopeProp, conversati
   const isVisible = (item: NavItem) => {
     if (item.alwaysShow) return true
     if (item.adminOnly) return isAdmin
-    if (item.internalOnly && userType === 'external') return false
+    if (item.internalOnly && userType === 'external' && !mediaEnabled) return false
     
     // module 為 null 代表不綁定任何系統的共用連結（例如 dashboard, feedback），恆顯示
     if (scope) return item.module === null || item.module === scope

@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
   // 公司錢包只在公司方案有效時被使用，未啟用前先擋下，避免儲值後用不到
   const admin = createAdminClient()
   const { data: active } = await admin.rpc('company_plan_active', { p_company_id: company.companyId })
-  if (!active) return NextResponse.json({ error: '請先啟用公司方案再儲值公司錢包' }, { status: 400 })
+  if (!active) return NextResponse.json({ error: '請先啟用公司版再儲值公司錢包' }, { status: 400 })
 
   const config = getEcpayConfig()
   const tradeNo = generateTradeNo(company.companyId)
