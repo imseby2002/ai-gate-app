@@ -10,7 +10,7 @@ import {
   resolvePayReturn,
 } from '@/lib/ecpay/client'
 import { usdToTwdInteger } from '@/lib/fx'
-import { calcCompanyPrice } from '@/lib/company/pricing'
+import { calcCompanyPrice, YEARLY_MONTHS } from '@/lib/company/pricing'
 
 // POST /api/billing/create-company-plan-checkout
 // 公司負責人／IT 管理員支付公司方案（模組化計價，見 lib/company/pricing.ts）。
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
   const admin = createAdminClient()
   const [{ data: companyRow }, { data: currentSub }] = await Promise.all([
     admin.from('companies').select('enabled_modules').eq('id', company.companyId).single(),
-    admin.from('company_subscriptions').select('erp_seats, retail_stores, custom_domain').eq('company_id', company.companyId).maybeSingle(),
+    admin.from('company_subscriptions').select('erp_seats, retail_stores, custom_domain, enterprise, enterprise_monthly_usd').eq('company_id', company.companyId).maybeSingle(),
   ])
   const pricingConfig = {
     modules: companyRow?.enabled_modules ?? [],
@@ -44,8 +44,19 @@ export async function POST(req: NextRequest) {
     retailStores: currentSub?.retail_stores ?? 0,
     customDomain: currentSub?.custom_domain ?? false,
   }
-  const { lines, totalUsd } = calcCompanyPrice(pricingConfig, cycle)
-  const label = `公司方案（${cycle === 'yearly' ? '年繳' : '月繳'}）`
+  const cycleLabel = cycle === 'yearly' ? '年繳' : '月繳'
+  let lines, totalUsd, label
+  if (currentSub?.enterprise) {
+    // 專屬客製-企業版：以管理者填入的議價月費計價
+    const fee = Number(currentSub.enterprise_monthly_usd ?? 0)
+    if (fee <= 0) return NextResponse.json({ error: '企業版月費尚未設定，請聯繫我們' }, { status: 400 })
+    lines = [{ label: '專屬客製-企業版', usd: fee }]
+    totalUsd = cycle === 'yearly' ? fee * YEARLY_MONTHS : fee
+    label = `專屬客製-企業版（${cycleLabel}）`
+  } else {
+    ({ lines, totalUsd } = calcCompanyPrice(pricingConfig, cycle))
+    label = `公司版（${cycleLabel}）`
+  }
 
   const config = getEcpayConfig()
   const tradeNo = generateTradeNo(company.companyId)

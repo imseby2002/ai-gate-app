@@ -49,6 +49,10 @@ export interface CompanyItem {
   retailStores?: number
   customDomain?: boolean
   wallet?: { gift: number; paid: number }
+  enterprise?: boolean
+  enterpriseMonthlyUsd?: number | null
+  costAlertRatio?: number
+  enterpriseUsage?: { pointsUsd: number; chatUsd: number; totalUsd: number } | null
   created_at: string
   creator: { id: string; email: string; full_name: string | null } | null
   owner: { id: string; email: string; full_name: string | null } | null
@@ -131,7 +135,10 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
   const [formModules, setFormModules] = useState<string[]>([])
   const [formFeedbackFree, setFormFeedbackFree] = useState(false)
   const [formFeedbackQuota, setFormFeedbackQuota] = useState('')
-  const [formPlan, setFormPlan] = useState<'free' | 'core' | 'pro' | 'max' | 'company'>('free')
+  // 'enterprise' 只是表單值：儲存時送 plan='company' + enterprise=true
+  const [formPlan, setFormPlan] = useState<'free' | 'core' | 'pro' | 'max' | 'company' | 'enterprise'>('free')
+  const [formEnterpriseFee, setFormEnterpriseFee] = useState('')
+  const [formAlertRatio, setFormAlertRatio] = useState('50')
   const [formErpSeats, setFormErpSeats] = useState('0')
   const [formRetailStores, setFormRetailStores] = useState('0')
   const [formCustomDomain, setFormCustomDomain] = useState(false)
@@ -251,7 +258,9 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
     setFormModules(company.enabled_modules ?? ALL_MODULES.map(m => m.id))
     setFormFeedbackFree(company.feedback_free_features ?? false)
     setFormFeedbackQuota(company.free_feature_quota_monthly != null ? String(company.free_feature_quota_monthly) : '')
-    setFormPlan(company.plan ?? 'free')
+    setFormPlan(company.enterprise ? 'enterprise' : (company.plan ?? 'free'))
+    setFormEnterpriseFee(company.enterpriseMonthlyUsd != null ? String(company.enterpriseMonthlyUsd) : '')
+    setFormAlertRatio(String(Math.round((company.costAlertRatio ?? 0.5) * 100)))
     setFormErpSeats(String(company.erpSeats ?? 0))
     setFormRetailStores(String(company.retailStores ?? 0))
     setFormCustomDomain(company.customDomain ?? false)
@@ -275,7 +284,10 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
           enabledModules: formModules,
           feedbackFree: formFeedbackFree,
           freeFeatureQuotaMonthly: formFeedbackQuota.trim() === '' ? null : Number(formFeedbackQuota),
-          plan: formPlan,
+          plan: formPlan === 'enterprise' ? 'company' : formPlan,
+          enterprise: formPlan === 'enterprise',
+          enterpriseMonthlyUsd: formEnterpriseFee.trim() === '' ? null : Number(formEnterpriseFee),
+          costAlertRatio: Number(formAlertRatio) > 0 ? Number(formAlertRatio) / 100 : undefined,
           erpSeats: Number(formErpSeats) || 0,
           retailStores: Number(formRetailStores) || 0,
           customDomain: formCustomDomain,
@@ -1053,12 +1065,38 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
                   <option value="core">CORE — 每月免費功能修改 1 次</option>
                   <option value="pro">PRO — 每月免費功能修改 3 次</option>
                   <option value="max">MAX — 每月免費功能修改 10 次</option>
-                  <option value="company">公司方案（模組化計價）— 每月免費功能修改 1 次</option>
+                  <option value="company">公司版（模組化計價）— 每月免費功能修改 1 次</option>
+                  <option value="enterprise">專屬客製-企業版（隱藏方案）— 不扣點、功能修改不限次數</option>
                 </select>
                 <p className="text-xs text-slate-500 mt-1">下面「每月免費次數上限」若有手動填寫，會蓋過方案的預設次數</p>
               </div>
 
-              {formPlan === 'company' && (() => {
+              {formPlan === 'enterprise' && (
+                <div className="p-3 rounded-xl border border-amber-200 bg-amber-50/50 space-y-3">
+                  <div className="text-sm font-bold text-slate-800">專屬客製-企業版</div>
+                  <p className="text-xs text-slate-500">成員使用點數功能不扣點；CHAT 開放高階模型與生圖／影片；功能新增／調整不限次數。用量照常記錄。</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="text-xs text-slate-600 space-y-1">
+                      <span className="block">議價月費（美元）</span>
+                      <input id="company-enterprise-fee" type="number" min={0} value={formEnterpriseFee} onChange={e => setFormEnterpriseFee(e.target.value)}
+                        className="w-full h-9 px-2 rounded-lg border border-slate-200 bg-white text-sm" />
+                    </label>
+                    <label className="text-xs text-slate-600 space-y-1">
+                      <span className="block">成本警示（用量達月費的 %）</span>
+                      <input id="company-alert-ratio" type="number" min={1} value={formAlertRatio} onChange={e => setFormAlertRatio(e.target.value)}
+                        className="w-full h-9 px-2 rounded-lg border border-slate-200 bg-white text-sm" />
+                    </label>
+                  </div>
+                  {editingCompany?.enterpriseUsage && (
+                    <div className="text-xs text-slate-600 tabular-nums space-y-0.5">
+                      <div>本月用量（以點數計）：<span className="font-bold">${editingCompany.enterpriseUsage.totalUsd.toFixed(2)}</span>{Number(formEnterpriseFee) > 0 ? `（月費的 ${Math.round(editingCompany.enterpriseUsage.totalUsd / Number(formEnterpriseFee) * 100)}%）` : ''}</div>
+                      <div>點數功能 ${editingCompany.enterpriseUsage.pointsUsd.toFixed(2)}・CHAT／生圖／影片 ${editingCompany.enterpriseUsage.chatUsd.toFixed(2)}</div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {(formPlan === 'company' || formPlan === 'enterprise') && (() => {
                 const price = calcCompanyMonthlyPrice({
                   modules: formModules,
                   erpSeats: Number(formErpSeats) || 0,
@@ -1067,7 +1105,7 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
                 })
                 return (
                   <div className="p-3 rounded-xl border border-indigo-200 bg-indigo-50/40 space-y-3">
-                    <div className="text-sm font-bold text-slate-800">公司方案計價設定</div>
+                    <div className="text-sm font-bold text-slate-800">{formPlan === 'enterprise' ? '開通內容（企業版以議價月費計，下方試算僅供參考）' : '公司版計價設定'}</div>
                     <p className="text-xs text-slate-500">上方勾選的 CS／訂房／行銷模組會以 MAX 等級計費並開通給全體成員。</p>
                     <div className="grid grid-cols-2 gap-3">
                       <label className="text-xs text-slate-600 space-y-1">

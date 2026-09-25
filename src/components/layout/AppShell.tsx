@@ -6,6 +6,7 @@ import { Header } from './Header'
 import type { Profile } from '@/types/database'
 
 interface AppShellProps {
+  mediaEnabled?: boolean
   userType?: string
   enabledModules?: string[]
   scope?: string
@@ -16,7 +17,7 @@ interface AppShellProps {
   children: React.ReactNode
 }
 
-export function AppShell({ children, userType, enabledModules, scope, conversations, profile, creditBalance, locale }: AppShellProps) {
+export function AppShell({ children, userType, enabledModules, scope, conversations, profile, creditBalance, locale, mediaEnabled }: AppShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const pathname = usePathname()
 
@@ -26,14 +27,14 @@ export function AppShell({ children, userType, enabledModules, scope, conversati
     <div className="flex h-[100dvh] overflow-hidden">
       {/* Desktop sidebar */}
       <div className="hidden md:flex flex-col shrink-0">
-        <Sidebar userType={userType} enabledModules={enabledModules} scope={scope} conversations={conversations} />
+        <Sidebar userType={userType} enabledModules={enabledModules} scope={scope} conversations={conversations} mediaEnabled={mediaEnabled} />
       </div>
 
       {/* Mobile sidebar drawer */}
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 z-50 flex">
           <div className="w-[280px] h-full bg-card border-r overflow-y-auto flex flex-col">
-            <Sidebar userType={userType} enabledModules={enabledModules} scope={scope} conversations={conversations} />
+            <Sidebar userType={userType} enabledModules={enabledModules} scope={scope} conversations={conversations} mediaEnabled={mediaEnabled} />
           </div>
           <div className="flex-1 bg-black/40" onClick={() => setMobileOpen(false)} />
         </div>

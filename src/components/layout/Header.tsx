@@ -83,7 +83,7 @@ export function Header({ profile, creditBalance, locale, onMenuClick }: HeaderPr
           >
             <CreditCard className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
             <span className="font-semibold text-emerald-700 dark:text-emerald-300 text-xs sm:text-sm">
-              ${creditBalance?.toFixed(2)}
+              {Number.isFinite(creditBalance) ? `$${creditBalance?.toFixed(2)}` : '不限'}
             </span>
             <span className="hidden sm:inline text-emerald-600/70 dark:text-emerald-400/70 text-xs">{t('balance')}</span>
           </a>
@@ -144,7 +144,7 @@ export function Header({ profile, creditBalance, locale, onMenuClick }: HeaderPr
                       className="flex items-center gap-2.5 w-full px-3 py-2 text-sm rounded-lg hover:bg-accent transition-colors"
                     >
                       <Building2 className="h-4 w-4 text-muted-foreground" />
-                      公司方案
+                      公司版
                     </button>
                   )}
                   {profile.user_type === 'admin' && (

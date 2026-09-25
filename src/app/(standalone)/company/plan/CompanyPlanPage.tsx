@@ -14,6 +14,7 @@ interface PlanData {
   price: { lines: CompanyPriceLine[]; monthlyUsd: number }
   wallet: { gift: number; paid: number }
   canTopUp: boolean
+  enterprise: boolean
 }
 
 // 公司方案為模組化計價：開通內容（模組、ERP 人數、門市數、自訂網域）由平台設定，
@@ -90,18 +91,20 @@ export function CompanyPlanPage({ isOwnerOrAdmin }: { isOwnerOrAdmin: boolean })
         <div className="rounded-2xl bg-gradient-to-r from-primary to-violet-600 px-5 py-4 text-white">
           <div className="flex items-center gap-2 text-lg sm:text-xl font-extrabold">
             <Building2 className="h-5 w-5 shrink-0" />
-            {data.companyName || '公司'} · 公司方案
+            {data.companyName || '公司'} · {data.enterprise ? '專屬客製-企業版' : '公司版'}
           </div>
           <p className="text-white/85 text-xs sm:text-sm mt-1">
-            成員不限人數；開通的客服、訂房、行銷模組皆為 MAX 等級。含 CHAT 免費對話與每月 1 次免費功能微調。
+            {data.enterprise
+              ? '成員不限人數；開通模組皆為 MAX 等級；點數功能不限用量；CHAT 開放全部模型與生圖／影片；功能新增／調整不限次數。'
+              : '成員不限人數；開通的客服、訂房、行銷模組皆為 MAX 等級。含 CHAT 免費對話與每月 1 次免費功能微調。'}
           </p>
         </div>
 
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="text-sm">
             {active
-              ? <span className="flex items-center gap-1 text-green-600 font-medium"><Check className="h-4 w-4" />公司方案使用中{endDate ? `，到期日 ${endDate}` : ''}</span>
-              : <span className="text-muted-foreground">尚未啟用公司方案</span>}
+              ? <span className="flex items-center gap-1 text-green-600 font-medium"><Check className="h-4 w-4" />{data.enterprise ? '企業版' : '公司版'}使用中{endDate ? `，到期日 ${endDate}` : ''}</span>
+              : <span className="text-muted-foreground">尚未啟用公司版</span>}
           </div>
           <div className="flex gap-1 text-xs">
             <button onClick={() => setCycle('yearly')}
@@ -142,6 +145,12 @@ export function CompanyPlanPage({ isOwnerOrAdmin }: { isOwnerOrAdmin: boolean })
           <p className="text-[11px] text-muted-foreground">開通模組、ERP 人數與門市數由平台依合約設定，如需調整請聯繫我們。</p>
         </div>
 
+        {data.enterprise ? (
+          <div className="rounded-xl border bg-card p-4 text-sm">
+            <div className="font-semibold text-foreground">點數</div>
+            <p className="text-muted-foreground mt-1">企業版不限點數，成員使用點數功能不會扣點。</p>
+          </div>
+        ) : (
         <div className="rounded-xl border bg-card p-4 space-y-1 text-sm">
           <div className="font-semibold text-foreground">公司錢包</div>
           <div className="flex justify-between text-muted-foreground tabular-nums"><span>本月贈點（每月 ${COMPANY_MONTHLY_GIFT_USD}，不累積）</span><span>${data.wallet.gift.toFixed(2)}</span></div>
@@ -159,10 +168,11 @@ export function CompanyPlanPage({ isOwnerOrAdmin }: { isOwnerOrAdmin: boolean })
             </div>
           ) : (
             <p className="text-[11px] text-muted-foreground pt-1">
-              {active ? '儲值需由負責人、管理員、經理或財務人員操作。' : '啟用公司方案後即可儲值公司錢包。'}
+              {active ? '儲值需由負責人、管理員、經理或財務人員操作。' : '啟用公司版後即可儲值公司錢包。'}
             </p>
           )}
         </div>
+        )}
 
         <button
           onClick={pay}

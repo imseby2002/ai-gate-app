@@ -20,7 +20,7 @@ export async function GET() {
   const admin = createAdminClient()
   const [{ data: companyRow }, { data: sub }] = await Promise.all([
     admin.from('companies').select('enabled_modules').eq('id', company.companyId).single(),
-    admin.from('company_subscriptions').select('erp_seats, retail_stores, custom_domain, current_period_end').eq('company_id', company.companyId).maybeSingle(),
+    admin.from('company_subscriptions').select('erp_seats, retail_stores, custom_domain, current_period_end, enterprise, enterprise_monthly_usd').eq('company_id', company.companyId).maybeSingle(),
   ])
   const { data: walletData } = await admin.rpc('get_company_credit_balance', { p_company_id: company.companyId })
   const walletRow = Array.isArray(walletData) ? walletData[0] : walletData
@@ -38,7 +38,11 @@ export async function GET() {
     isOwnerOrAdmin: company.role === 'owner' || company.role === 'admin',
     currentPeriodEnd: sub?.current_period_end ?? null,
     config,
-    price: calcCompanyMonthlyPrice(config),
+    // 專屬客製-企業版以議價月費計，不顯示模組明細
+    price: sub?.enterprise
+      ? { lines: [{ label: '專屬客製-企業版', usd: Number(sub.enterprise_monthly_usd ?? 0) }], monthlyUsd: Number(sub.enterprise_monthly_usd ?? 0) }
+      : calcCompanyMonthlyPrice(config),
+    enterprise: !!sub?.enterprise,
     wallet: { gift: Number(walletRow?.gift ?? 0), paid: Number(walletRow?.paid ?? 0) },
     canTopUp: !!(await canTopUpCompanyWallet(user.id)),
   })

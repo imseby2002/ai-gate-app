@@ -81,18 +81,33 @@ export async function hasCompanyModuleGrant(ownerId: string, moduleId: string): 
   }
 }
 
+export interface CompanyBillingContext {
+  companyId: string
+  /** 專屬客製-企業版：不扣點、CHAT 完全開放、功能修改不限次數 */
+  enterprise: boolean
+}
+
 /**
- * userId 所屬公司若有有效的 'company' 方案，回傳公司 id（扣點改走公司錢包）；否則 null。
+ * userId 所屬公司若有有效的公司版（'company' 方案），回傳公司 id 與是否為專屬客製-企業版；否則 null。
+ * 扣點（lib/skills/billing.ts）、CHAT 限制、意見反映計費都依此判斷。
  */
-export async function getBillingCompanyId(userId: string): Promise<string | null> {
+export async function getCompanyBillingContext(userId: string): Promise<CompanyBillingContext | null> {
   const { createAdminClient } = await import('@/lib/supabase/admin')
   const admin = createAdminClient()
   const { data: profile } = await admin.from('profiles').select('company_id').eq('id', userId).maybeSingle()
   if (!profile?.company_id) return null
-  const { data: active, error } = await admin.rpc('company_plan_active', { p_company_id: profile.company_id })
-  if (error) {
-    console.error('[company entitlements] company_plan_active 查詢失敗', { userId, error })
+  const [{ data: active, error }, { data: enterprise, error: entErr }] = await Promise.all([
+    admin.rpc('company_plan_active', { p_company_id: profile.company_id }),
+    admin.rpc('company_enterprise_active', { p_company_id: profile.company_id }),
+  ])
+  if (error || entErr) {
+    console.error('[company entitlements] 公司方案狀態查詢失敗', { userId, error: error ?? entErr })
     return null
   }
-  return active ? profile.company_id : null
+  return active ? { companyId: profile.company_id, enterprise: !!enterprise } : null
+}
+
+/** 扣點改走公司錢包時的公司 id（有效公司版才有）；否則 null */
+export async function getBillingCompanyId(userId: string): Promise<string | null> {
+  return (await getCompanyBillingContext(userId))?.companyId ?? null
 }

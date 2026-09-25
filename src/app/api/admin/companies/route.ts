@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { validateCompanySlug } from '@/lib/company/subdomain'
+import { getEnterpriseMonthUsage } from '@/lib/company/enterprise'
 
 async function checkIsAdmin() {
   const supabase = await createClient()
@@ -35,7 +36,7 @@ export async function GET() {
     admin.from('companies').select('*').order('created_at', { ascending: false }),
     admin.from('company_members').select('*').order('created_at', { ascending: true }),
     admin.from('profiles').select('id, email, full_name'),
-    admin.from('company_subscriptions').select('company_id, plan, current_period_end, erp_seats, retail_stores, custom_domain'),
+    admin.from('company_subscriptions').select('company_id, plan, current_period_end, erp_seats, retail_stores, custom_domain, enterprise, enterprise_monthly_usd, cost_alert_ratio'),
   ])
 
   if (compErr) return NextResponse.json({ error: compErr.message }, { status: 500 })
@@ -62,6 +63,11 @@ export async function GET() {
   }))
   const walletMap = new Map(walletEntries)
 
+  // 專屬客製-企業版：本月用量（以點數計），供後台對照議價月費
+  const usageEntries = await Promise.all((subscriptions ?? []).filter(s => s.enterprise).map(async s =>
+    [s.company_id, await getEnterpriseMonthUsage(s.company_id)] as const))
+  const usageMap = new Map(usageEntries)
+
   const result = (companies ?? []).map(c => {
     const compMembers = membersByCompany.get(c.id) ?? []
     const ownerMember = compMembers.find(m => m.role === 'owner' && m.status === 'active')
@@ -81,6 +87,10 @@ export async function GET() {
       retailStores: planMap.get(c.id)?.retail_stores ?? 0,
       customDomain: planMap.get(c.id)?.custom_domain ?? false,
       wallet: walletMap.get(c.id) ?? { gift: 0, paid: 0 },
+      enterprise: planMap.get(c.id)?.enterprise ?? false,
+      enterpriseMonthlyUsd: planMap.get(c.id)?.enterprise_monthly_usd ?? null,
+      costAlertRatio: planMap.get(c.id)?.cost_alert_ratio ?? 0.5,
+      enterpriseUsage: usageMap.get(c.id) ?? null,
     }
   })
 
@@ -192,7 +202,7 @@ export async function PATCH(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { id, name, enabledModules, bnbOwnerId, ownerId, itId, feedbackFree, freeFeatureQuotaMonthly, plan, erpSeats, retailStores, customDomain, creditTopUpUsd, slug } = body as {
+    const { id, name, enabledModules, bnbOwnerId, ownerId, itId, feedbackFree, freeFeatureQuotaMonthly, plan, erpSeats, retailStores, customDomain, creditTopUpUsd, slug, enterprise, enterpriseMonthlyUsd, costAlertRatio } = body as {
       id: string
       name?: string
       enabledModules?: string[] | null
@@ -207,6 +217,9 @@ export async function PATCH(req: NextRequest) {
       customDomain?: boolean
       creditTopUpUsd?: number
       slug?: string | null
+      enterprise?: boolean
+      enterpriseMonthlyUsd?: number | null
+      costAlertRatio?: number
     }
 
     if (!id) {
@@ -245,6 +258,13 @@ export async function PATCH(req: NextRequest) {
     if (erpSeats !== undefined) subPatch.erp_seats = Math.max(0, Math.floor(Number(erpSeats) || 0))
     if (retailStores !== undefined) subPatch.retail_stores = Math.max(0, Math.floor(Number(retailStores) || 0))
     if (customDomain !== undefined) subPatch.custom_domain = !!customDomain
+    // 專屬客製-企業版建立在公司版之上：開啟時一併設為 'company' 方案
+    if (enterprise !== undefined) {
+      subPatch.enterprise = !!enterprise
+      if (enterprise) { subPatch.plan = 'company'; subPatch.status = 'active' }
+    }
+    if (enterpriseMonthlyUsd !== undefined) subPatch.enterprise_monthly_usd = enterpriseMonthlyUsd == null ? null : Math.max(0, Number(enterpriseMonthlyUsd) || 0)
+    if (costAlertRatio !== undefined && Number(costAlertRatio) > 0) subPatch.cost_alert_ratio = Number(costAlertRatio)
     if (Object.keys(subPatch).length > 0) {
       const { error: planErr } = await admin
         .from('company_subscriptions')

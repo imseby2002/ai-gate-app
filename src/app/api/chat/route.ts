@@ -14,6 +14,8 @@ import { streamFreeLlm } from '@/lib/ai/providers/free-llm'
 import { streamByChain } from '@/lib/ai/proxy-fallback'
 import { calculateModelCosts, detectSourceChannel, cleanModelId, type SourceChannel } from '@/lib/ai/token-cost-tracker'
 import { isChatModelAllowed, getChatDailyUsage } from '@/lib/ai/chat-policy'
+import { getCompanyBillingContext } from '@/lib/company/entitlements'
+import { checkEnterpriseCostAlert } from '@/lib/company/enterprise'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -34,9 +36,12 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: 'Account suspended' }), { status: 403 })
   }
 
-  // CHAT 對付費客戶免費（不扣點、不檢查餘額），改以每日則數上限控制成本（見 lib/ai/chat-policy.ts）
+  // CHAT 對付費客戶免費（不扣點、不檢查餘額），改以每日則數上限與模型白名單控制成本（見 lib/ai/chat-policy.ts）。
+  // 專屬客製-企業版不受限制：開放全部模型、無每日上限，用量計入成本警示。
   const isExternal = profile.user_type === 'external'
-  if (isExternal) {
+  const companyCtx = isExternal ? await getCompanyBillingContext(user.id) : null
+  const chatRestricted = isExternal && !companyCtx?.enterprise
+  if (chatRestricted) {
     const { used, limit } = await getChatDailyUsage(supabase, user.id, !!profile.company_id)
     if (used >= limit) {
       return new Response(JSON.stringify({ error: 'daily_limit_reached', limit }), { status: 429 })
@@ -94,9 +99,9 @@ export async function POST(req: NextRequest) {
   // Detect intent + resolve model
   const intent = detectIntent(message, !!imageBase64, assistant?.routing_tags ?? undefined)
   // 付費客戶只能指定免費／低價模型；指定其他模型時改走自動路由
-  const allowedModelOverride = isExternal && !isChatModelAllowed(modelOverride) ? undefined : modelOverride
+  const allowedModelOverride = chatRestricted && !isChatModelAllowed(modelOverride) ? undefined : modelOverride
   const assistantModel = assistant?.default_model
-  const allowedAssistantModel = isExternal && !isChatModelAllowed(assistantModel) ? undefined : assistantModel
+  const allowedAssistantModel = chatRestricted && !isChatModelAllowed(assistantModel) ? undefined : assistantModel
   const modelId = resolveModel(intent, allowedModelOverride ?? allowedAssistantModel)
   const provider = getProviderFromModel(modelId)
 
@@ -195,7 +200,7 @@ export async function POST(req: NextRequest) {
     // ── Proxy fallback chain (free first, paid last) ─────────────────────────
     // analysis／legal 鏈的最後一步是付費的 Claude Sonnet，付費客戶改走 finance 鏈（最後一步為 DeepSeek）
     const baseChain = !allowedModelOverride ? INTENT_CHAIN[intent] : undefined
-    const chainName = isExternal && (baseChain === 'analysis' || baseChain === 'legal') ? 'finance' : baseChain
+    const chainName = chatRestricted && (baseChain === 'analysis' || baseChain === 'legal') ? 'finance' : baseChain
 
     if (chainName && intent !== 'vision') {
       // Use fallback chain: CLI Proxy → FreeLLMAPI → Direct paid API
@@ -325,6 +330,9 @@ export async function POST(req: NextRequest) {
               finish_reason: finishReasonMeta,
             })
           }
+
+          // 企業版用量不扣點，但計入成本警示
+          if (companyCtx?.enterprise) void checkEnterpriseCostAlert(companyCtx.companyId)
 
           controller.enqueue(encoder.encode(
             `data: ${JSON.stringify({
