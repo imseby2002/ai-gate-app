@@ -134,7 +134,9 @@ export async function getBnbContext(
     // 若在 bnb_members 未找到，再檢查公司身分（company_members）。
     // 已加入公司的員工，預設一律是公司的業務——不是個人帳號，跟有沒有自己的房源/客戶
     // 無關（不像上面純協作者才需要用「自己有沒有資料」去猜要不要自動代入）；
-    // 除非本人自己手動切換 cookie，才會改成別的。
+    // 除非本人自己手動切換 cookie，才會改成別的。角色直接讀 company_members，不必
+    // 另外寫一份到 bnb_members 才生效——RLS（accessible_owner_ids／settings_owner_ids）
+    // 已改為直接認 company_members，bnb_members 只保留給真正的外部協作者。
     const admin = createAdminClient()
     const { data: profile } = await admin.from('profiles').select('company_id, user_type').eq('id', user.id).maybeSingle()
     const isSuperAdmin = profile?.user_type === 'admin'
@@ -149,19 +151,6 @@ export async function getBnbContext(
       if (companyOwnerId && companyOwnerId !== user.id && cm) {
         const role = (cm.role === 'owner' ? 'admin' : cm.role) as BnbRole
         const canCorrectAi = role === 'admin' || role === 'manager'
-
-        // 背景確保同步至 bnb_members（以利 Postgres RLS accessible_owner_ids 順利放行）
-        admin.from('bnb_members').upsert({
-          owner_id: companyOwnerId,
-          member_id: user.id,
-          invited_email: user.email,
-          role,
-          status: 'active',
-          scope,
-          can_correct_ai: canCorrectAi,
-          accepted_at: new Date().toISOString(),
-        }, { onConflict: 'owner_id,invited_email,scope' }).then(() => {}, () => {})
-
         return memberCtx(companyOwnerId, role, canCorrectAi)
       }
     }
@@ -199,19 +188,6 @@ export async function getBnbContext(
     if (companyOwnerId === requested && cm) {
       const role = (cm.role === 'owner' ? 'admin' : cm.role) as BnbRole
       const canCorrectAi = role === 'admin' || role === 'manager'
-
-      // 背景確保同步至 bnb_members
-      admin.from('bnb_members').upsert({
-        owner_id: companyOwnerId,
-        member_id: user.id,
-        invited_email: user.email,
-        role,
-        status: 'active',
-        scope,
-        can_correct_ai: canCorrectAi,
-        accepted_at: new Date().toISOString(),
-      }, { onConflict: 'owner_id,invited_email,scope' }).then(() => {}, () => {})
-
       return memberCtx(requested, role, canCorrectAi)
     }
   }
