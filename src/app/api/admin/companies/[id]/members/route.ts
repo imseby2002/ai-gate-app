@@ -127,12 +127,14 @@ export async function POST(
     }
 
     if (targetUserId) {
-      // 既有用戶直接加入為 active 成員（一人一公司：先移除該用戶所有舊的 active 記錄）
-      await admin.from('company_members').delete().eq('member_id', targetUserId)
-
+      // 既有用戶直接加入為 active 成員。一個人現在可以同時是多家公司的一般成員
+      // （owner 角色除外，DB 唯一索引 company_members_one_active_owner_per_member
+      // 仍限一人一家）——不能像以前那樣先清空這個人在「所有」公司的 company_members，
+      // 那會把他在其他公司的員工身分也一起砍掉。改成只 upsert 這家公司這個人的
+      // 那一列（company_id, invited_email 唯一），不動其他公司的列。
       const { data: newMember, error: insertErr } = await admin
         .from('company_members')
-        .insert({
+        .upsert({
           company_id: companyId,
           member_id: targetUserId,
           invited_email: targetEmail!,
@@ -140,7 +142,7 @@ export async function POST(
           status: 'active',
           invited_by: auth.user!.id,
           accepted_at: new Date().toISOString(),
-        })
+        }, { onConflict: 'company_id,invited_email' })
         .select('*')
         .single()
 

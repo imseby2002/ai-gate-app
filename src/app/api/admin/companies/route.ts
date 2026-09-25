@@ -120,9 +120,10 @@ export async function POST(req: NextRequest) {
         .single()
 
       if (ownerProfile) {
-        await admin.from('company_members').delete().eq('member_id', ownerId)
-
-        const { error: memErr } = await admin.from('company_members').insert({
+        // 一個人可以同時是多家公司的一般成員；owner 角色仍是一人限一家
+        // （DB 唯一索引 company_members_one_active_owner_per_member 會擋），
+        // 所以這裡只 upsert 這家公司這個人的那一列，不去動他在其他公司的列。
+        const { error: memErr } = await admin.from('company_members').upsert({
           company_id: company.id,
           member_id: ownerProfile.id,
           invited_email: (ownerProfile.email ?? '').toLowerCase(),
@@ -130,7 +131,7 @@ export async function POST(req: NextRequest) {
           status: 'active',
           invited_by: auth.user!.id,
           accepted_at: new Date().toISOString(),
-        })
+        }, { onConflict: 'company_id,invited_email' })
 
         if (memErr) {
           console.error('[admin/companies] Failed to assign owner:', memErr)
@@ -147,9 +148,8 @@ export async function POST(req: NextRequest) {
         .single()
 
       if (itProfile) {
-        await admin.from('company_members').delete().eq('member_id', itId)
-
-        const { error: itErr } = await admin.from('company_members').insert({
+        // 同上：只 upsert 這家公司這個人的那一列，不動他在其他公司的成員身分
+        const { error: itErr } = await admin.from('company_members').upsert({
           company_id: company.id,
           member_id: itProfile.id,
           invited_email: (itProfile.email ?? '').toLowerCase(),
@@ -157,7 +157,7 @@ export async function POST(req: NextRequest) {
           status: 'active',
           invited_by: auth.user!.id,
           accepted_at: new Date().toISOString(),
-        })
+        }, { onConflict: 'company_id,invited_email' })
 
         if (itErr) {
           console.error('[admin/companies] Failed to assign IT:', itErr)
@@ -227,18 +227,18 @@ export async function PATCH(req: NextRequest) {
         .single()
 
       if (ownerProfile) {
-        // 先將原 owner 降為 manager（若有）
+        // 先將原 owner 降為 manager（若有，僅限這家公司）
         await admin
           .from('company_members')
           .update({ role: 'manager' })
           .eq('company_id', id)
           .eq('role', 'owner')
 
-        // 移除新 owner 先前的公司成員紀錄
-        await admin.from('company_members').delete().eq('member_id', ownerId)
-
-        // 寫入新 owner
-        await admin.from('company_members').insert({
+        // 寫入/更新新 owner——只 upsert 這家公司這個人的那一列，不能像以前那樣
+        // 先清空他在「所有」公司的 company_members，那會連他在其他公司的員工
+        // 身分都一起砍掉。owner 角色本身仍受 DB 唯一索引限制一人一家，若這個人
+        // 已經是別家公司的 owner，這裡會直接報錯，不會靜默覆蓋。
+        const { error: newOwnerErr } = await admin.from('company_members').upsert({
           company_id: id,
           member_id: ownerProfile.id,
           invited_email: (ownerProfile.email ?? '').toLowerCase(),
@@ -246,7 +246,8 @@ export async function PATCH(req: NextRequest) {
           status: 'active',
           invited_by: auth.user!.id,
           accepted_at: new Date().toISOString(),
-        })
+        }, { onConflict: 'company_id,invited_email' })
+        if (newOwnerErr) return NextResponse.json({ error: newOwnerErr.message }, { status: 500 })
       }
     }
 
@@ -267,18 +268,15 @@ export async function PATCH(req: NextRequest) {
           .single()
 
         if (itProfile) {
-          // 先將原 IT 降為 manager
+          // 先將原 IT 降為 manager（僅限這家公司）
           await admin
             .from('company_members')
             .update({ role: 'manager' })
             .eq('company_id', id)
             .eq('role', 'admin')
 
-          // 移除新 IT 先前的記錄
-          await admin.from('company_members').delete().eq('member_id', itId)
-
-          // 寫入新 IT
-          await admin.from('company_members').insert({
+          // 寫入/更新新 IT——同上，只 upsert 這家公司這個人的那一列
+          const { error: newItErr } = await admin.from('company_members').upsert({
             company_id: id,
             member_id: itProfile.id,
             invited_email: (itProfile.email ?? '').toLowerCase(),
@@ -286,7 +284,8 @@ export async function PATCH(req: NextRequest) {
             status: 'active',
             invited_by: auth.user!.id,
             accepted_at: new Date().toISOString(),
-          })
+          }, { onConflict: 'company_id,invited_email' })
+          if (newItErr) return NextResponse.json({ error: newItErr.message }, { status: 500 })
         }
       }
     }
