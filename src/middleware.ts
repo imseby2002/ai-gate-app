@@ -81,6 +81,14 @@ export async function middleware(request: NextRequest) {
       }
     }
 
+    // 行銷中心介紹頁（/intro/*）只在 marketing 子網域提供，其他 im-tourist 網域一律導過去
+    if (cookieDomain && sub !== 'marketing' && (pathname === '/intro' || pathname.startsWith('/intro/'))) {
+      const url = request.nextUrl.clone()
+      url.hostname = 'marketing.im-tourist.com'
+      url.port = ''
+      return attachLocaleCookie(NextResponse.redirect(url, 308))
+    }
+
     // Public routes
     const isPublic =
       pathname === '/' ||

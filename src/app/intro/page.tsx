@@ -1,119 +1,126 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
-import { Zap, Sparkles, Users, BarChart3, ArrowRight } from 'lucide-react'
+import { Sparkles, Users, BarChart3, ArrowRight, Check, X } from 'lucide-react'
+import { PLAN_CARDS } from '@/lib/marketing/plan-compare'
+import { GRAD, BALANCE, GradText, IntroNav, PrimaryCta, GhostCta, FinalCta, IntroFooter } from './_ui'
 
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
   title: 'AI GATE 行銷中心｜一個人就是一整個行銷部',
-  description: '找客、產內容、自動投放、盯口碑，一站搞定。AI GATE 行銷中心整合 11+ 行銷功能與 13 位 AI 專家。',
+  description: '上傳一張產品圖，AI 寫文案、做圖、出短影音腳本、找名單、自動發送。AI GATE 行銷中心整合 11 大行銷功能與 13 項 AI 專家技能，免費開始。',
 }
 
 const PILLARS = [
   {
-    n: '01', Icon: Sparkles, title: '內容不用自己做',
-    one: '上傳一張產品圖，文案、配圖、短影音腳本自動生好。',
-    chips: ['產品設計師', 'AI 視覺工坊', '短影音爆款', 'GEO 內容', '13 位 AI 專家'],
+    id: 'content', n: '01', Icon: Sparkles, title: '內容，AI 幫你做',
+    one: '上傳一張產品圖，行銷策略、文案、配圖、短影音分鏡一次產出。85 種視覺風格直接套用，不用會寫提示詞。',
+    chips: ['AI 產品行銷設計師', '視覺風格與廣告創作', 'AI 視覺工坊', 'GEO 內容寫手', '13 項 AI 專家技能'],
   },
   {
-    n: '02', Icon: Users, title: '自動找客、主動觸及',
-    one: 'AI 幫你挖名單、分類，電話／Email／簡訊自動發，社群自動養號發文。',
-    chips: ['潛在客戶行銷', 'AI 語音外撥', '簡訊批次', '社群矩陣養號'],
+    id: 'reach', n: '02', Icon: Users, title: '客人，AI 幫你找',
+    one: 'AI 自動蒐集潛在客戶、篩選分類，再用電話／Email／簡訊主動聯繫；社群帳號也能矩陣化自動發文。',
+    chips: ['潛在客戶行銷', 'AI 電訪', 'Email／簡訊', '社群矩陣與自動養號'],
   },
   {
-    n: '03', Icon: BarChart3, title: '看懂市場與口碑',
-    one: '對手在幹嘛、客人在罵什麼、怎麼被 AI 搜尋看到，一眼掌握。',
-    chips: ['7 種市場分析', '口碑體檢', '客群模擬', 'GEO 引用優化'],
+    id: 'insight', n: '03', Icon: BarChart3, title: '市場，AI 幫你看',
+    one: '對手在做什麼、客人在意什麼、哪種受眾最可能買單——SWOT、競品、客群模擬，決策前先看清楚。',
+    chips: ['市場競品分析', '目標客群模擬', 'GEO 引用優化', '品牌資料庫'],
   },
 ]
 
-const FLOW = ['蒐集資訊', '分析＋口碑', '文案', '圖片', '爆款影片 🔥', '自動上架', '開發客戶']
-
-const HOOKS = [
-  { title: '測你的口碑健康度', desc: '輸入店名，AI 抓 Google 評論，給你負評主題與改善方向。' },
-  { title: '生一支爆款短影音腳本', desc: '填主題，30 秒產出前 3 秒鉤子＋分鏡＋CTA。' },
-  { title: 'GEO 文章健檢', desc: '看看你的內容能不能被 ChatGPT／Google AIO 引用。' },
+const COMPARE = [
+  { before: '找設計、找寫手、找剪輯，等好幾天', after: '上傳產品圖，AI 當場產出文案與素材' },
+  { before: '每天手動發文、換帳號、怕被封', after: '社群矩陣排程發文，防重複文案' },
+  { before: '陌生開發靠人力一通通打', after: 'AI 蒐集名單、篩選，自動電訪與寄信' },
+  { before: '十幾個工具、十幾組帳密', after: '一個後台，一套點數，全部串起來' },
 ]
 
-const TIERS = [
-  { t: 'FREE', d: '單點工具試用，體驗核心 aha moment。', tag: '個人試玩', hi: false },
-  { t: 'PRO', d: '完整內容製作＋分析＋潛客開發，一個人扛整個行銷。', tag: '小店 / 個人品牌', hi: false },
-  { t: 'TEAM+', d: '自製專家訓練、專屬知識庫、流水線全自動排程。', tag: '團隊 / 企業', hi: true },
+const FLOW = ['蒐集資訊', '競品＋客群分析', '文案', '圖片', '爆款短影音 🔥', '自動上架', '開發客戶']
+
+const FREE_ITEMS = [
+  '1 個完整行銷案（資料蒐集／分析／文案）',
+  'GEO 內容寫手每月 1 篇',
+  '潛在客戶自動蒐集＋AI 篩選',
+  '13 項 AI 專家技能（依點數使用）',
 ]
 
-const GRAD = 'linear-gradient(100deg,#7b5cf0,#a34be0 42%,#e0479b)'
+const FAQ = [
+  { q: '免費方案真的能用嗎？', a: '可以。免費帳號就能建立 1 個行銷案、每月寫 1 篇 GEO 文章、蒐集與篩選潛在客戶，覺得好用再升級。' },
+  { q: '訂閱費之外還要付什麼？', a: '圖片、影片、主播影片、電訪、Email 等生成成本以儲值點數另計，用多少扣多少。' },
+  { q: '會自動續訂嗎？', a: '不會。付款後方案立即生效，到期不自動扣款，需要延續再自行購買。' },
+  { q: '年繳划算嗎？', a: '年繳約 8 折，例如 PRO 月繳 $29，年繳 $278（平均每月約 $23）。' },
+]
 
 export default function MarketingIntroPage() {
   return (
     <div className="min-h-screen bg-[#f5f3f8] text-[#17131f]">
       {/* HERO */}
       <header className="relative overflow-hidden bg-[#161020] text-[#f4f0fb]">
-        <div
-          className="pointer-events-none absolute -top-1/3 inset-x-0 h-[70%]"
-          style={{ background: 'radial-gradient(60% 100% at 30% 0,rgba(123,92,240,.42),transparent 70%),radial-gradient(50% 100% at 85% 10%,rgba(224,71,155,.30),transparent 70%)' }}
-        />
+        <div className="pointer-events-none absolute -top-1/3 inset-x-0 h-[70%]"
+          style={{ background: 'radial-gradient(60% 100% at 30% 0,rgba(123,92,240,.42),transparent 70%),radial-gradient(50% 100% at 85% 10%,rgba(224,71,155,.30),transparent 70%)' }} />
         <div className="relative max-w-5xl mx-auto px-6">
-          <nav className="flex items-center gap-3 pt-6 pb-10">
-            <span className="grid place-items-center w-8 h-8 rounded-lg text-white font-black shrink-0" style={{ background: GRAD }}>⚡</span>
-            <b className="font-black tracking-wide">AI GATE 行銷中心</b>
-            <span className="ml-auto text-xs text-[#b3aac6] font-mono">marketing.im-tourist.com</span>
-          </nav>
-
+          <IntroNav />
           <div className="pb-16 sm:pb-20">
             <div className="font-mono text-[12px] tracking-[0.22em] uppercase text-[#c9b7ff]">AI · 行銷自動化平台</div>
-            <h1 className="mt-4 font-black leading-[1.02] tracking-tight text-[clamp(38px,8.5vw,72px)]" style={{ textWrap: 'balance' } as React.CSSProperties}>
-              一個人，<br />就是一整個
-              <span style={{ background: GRAD, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>行銷部</span>。
+            <h1 className="mt-4 font-black leading-[1.02] tracking-tight text-[clamp(38px,8.5vw,72px)]" style={BALANCE}>
+              一個人，<br />就是一整個<GradText>行銷部</GradText>。
             </h1>
-            <p className="mt-5 text-[#b3aac6] text-[clamp(16px,2.4vw,20px)] max-w-[46ch]">
-              找客、產內容、自動投放、盯口碑——本來要一整組人做的事，AI GATE 一站幫你搞定。
+            <p className="mt-5 text-[#b3aac6] text-[clamp(16px,2.4vw,20px)] max-w-[48ch]">
+              上傳一張產品圖，AI 寫文案、做圖、排短影音、找名單、自動發送。<span className="text-[#f4f0fb]">你只負責按「確認」。</span>
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/register" className="inline-flex items-center gap-2 font-bold text-[15px] px-6 py-3 rounded-xl text-white transition-transform hover:-translate-y-0.5"
-                style={{ background: GRAD, boxShadow: '0 10px 26px rgba(123,92,240,.4)' }}>
-                免費開始 <ArrowRight className="h-4 w-4" />
-              </Link>
-              <a href="#pillars" className="inline-flex items-center gap-2 font-bold text-[15px] px-6 py-3 rounded-xl text-[#f4f0fb] border border-[#2c2440] bg-white/5 transition-transform hover:-translate-y-0.5">
-                看它能做什麼
-              </a>
+              <PrimaryCta />
+              <GhostCta href="/intro/features">看完整功能</GhostCta>
             </div>
             <div className="mt-9 flex flex-wrap gap-6 text-[13px] text-[#b3aac6]">
-              <span><b className="text-[#f4f0fb] font-extrabold">11</b> 大功能一站整合</span>
-              <span><b className="text-[#f4f0fb] font-extrabold">13</b> 位內建 AI 專家</span>
-              <span>電話 · Email · 簡訊 · 社群 <b className="text-[#f4f0fb] font-extrabold">全通路</b></span>
+              <span><b className="text-[#f4f0fb] font-extrabold">11</b> 大行銷功能一站整合</span>
+              <span><b className="text-[#f4f0fb] font-extrabold">13</b> 項 AI 專家技能</span>
+              <span><b className="text-[#f4f0fb] font-extrabold">85</b> 種視覺風格 · <b className="text-[#f4f0fb] font-extrabold">185</b> 款短影音分鏡</span>
             </div>
           </div>
         </div>
       </header>
 
-      {/* PAIN */}
-      <div className="border-b border-[#e6e2ee]">
-        <div className="max-w-5xl mx-auto px-6 py-7">
-          <p className="text-[clamp(17px,2.6vw,22px)] font-medium leading-snug" style={{ textWrap: 'balance' } as React.CSSProperties}>
-            你不需要學會 20 個工具。
-            <span className="text-[#938da3]"> 你只需要結果：客人變多、內容不用自己做、對手在幹嘛你都知道。</span>
-          </p>
+      {/* BEFORE / AFTER */}
+      <section className="max-w-5xl mx-auto px-6 py-14">
+        <div className="font-mono text-[12px] tracking-[0.16em] uppercase text-[#6a4be0] mb-2">差別在哪</div>
+        <h2 className="text-[clamp(24px,4vw,34px)] font-black tracking-tight mb-7" style={BALANCE}>你不缺工具，你缺的是時間。</h2>
+        <div className="rounded-2xl border border-[#e6e2ee] bg-white overflow-hidden">
+          <div className="grid grid-cols-2 text-[12px] font-bold tracking-wide text-[#938da3] bg-[#faf9fc] border-b border-[#e6e2ee]">
+            <div className="px-4 py-2.5">以前</div>
+            <div className="px-4 py-2.5 text-[#6a4be0]">用 AI GATE</div>
+          </div>
+          {COMPARE.map(c => (
+            <div key={c.before} className="grid grid-cols-2 border-b last:border-b-0 border-[#efecf5] text-[14px]">
+              <div className="px-4 py-3.5 flex gap-2 text-[#938da3]"><X className="h-4 w-4 shrink-0 mt-0.5" />{c.before}</div>
+              <div className="px-4 py-3.5 flex gap-2 font-medium"><Check className="h-4 w-4 shrink-0 mt-0.5 text-[#0f9d6e]" />{c.after}</div>
+            </div>
+          ))}
         </div>
-      </div>
+      </section>
 
       {/* PILLARS */}
-      <section id="pillars" className="max-w-5xl mx-auto px-6 py-14">
+      <section id="pillars" className="max-w-5xl mx-auto px-6 pb-14">
         <div className="font-mono text-[12px] tracking-[0.16em] uppercase text-[#6a4be0] mb-2">它幫你做三件事</div>
-        <h2 className="text-[clamp(24px,4vw,34px)] font-black tracking-tight mb-1">複雜的功能，其實只解決三個問題</h2>
-        <p className="text-[#615c70] text-[15px] max-w-[56ch] mb-7">每一根支柱都對應你真正在意的結果，底下才是實現它的工具。</p>
+        <h2 className="text-[clamp(24px,4vw,34px)] font-black tracking-tight mb-1">做內容、找客人、看市場</h2>
+        <p className="text-[#615c70] text-[15px] max-w-[56ch] mb-7">每一件都對應你真正在意的結果，工具只是手段。</p>
         <div className="grid gap-3.5 sm:grid-cols-3">
           {PILLARS.map(p => (
-            <div key={p.n} className="flex flex-col gap-3 rounded-2xl border border-[#e6e2ee] bg-white p-5 transition-transform hover:-translate-y-1 hover:shadow-[0_16px_40px_rgba(60,40,120,0.12)]">
+            <Link key={p.n} href={`/intro/features#${p.id}`} className="group flex flex-col gap-3 rounded-2xl border border-[#e6e2ee] bg-white p-5 transition-transform hover:-translate-y-1 hover:shadow-[0_16px_40px_rgba(60,40,120,0.12)]">
               <div className="flex items-center justify-between">
                 <p.Icon className="h-5 w-5 text-[#6a4be0]" />
                 <span className="font-mono font-extrabold text-[13px] text-[#e0479b]">{p.n}</span>
               </div>
               <h3 className="font-black text-[20px] tracking-tight">{p.title}</h3>
               <div className="text-[14px] font-medium">{p.one}</div>
-              <div className="mt-auto flex flex-wrap gap-1.5 pt-1">
+              <div className="flex flex-wrap gap-1.5 pt-1">
                 {p.chips.map(c => <span key={c} className="text-[11.5px] text-[#615c70] bg-[#efecf5] rounded-md px-2 py-0.5">{c}</span>)}
               </div>
-            </div>
+              <span className="mt-auto pt-2 inline-flex items-center gap-1 text-[13px] font-bold text-[#6a4be0] group-hover:gap-2 transition-all">
+                詳細說明 <ArrowRight className="h-3.5 w-3.5" />
+              </span>
+            </Link>
           ))}
         </div>
       </section>
@@ -124,12 +131,11 @@ export default function MarketingIntroPage() {
           style={{ bottom: '-40%', background: 'radial-gradient(50% 100% at 70% 100%,rgba(224,71,155,.28),transparent 70%),radial-gradient(50% 100% at 20% 100%,rgba(123,92,240,.30),transparent 70%)' }} />
         <div className="relative max-w-5xl mx-auto px-6 py-14">
           <div className="font-mono text-[12px] tracking-[0.22em] uppercase text-[#ffb3da]">最強差異</div>
-          <h2 className="mt-2 mb-2 text-[clamp(24px,4.4vw,38px)] font-black tracking-tight" style={{ textWrap: 'balance' } as React.CSSProperties}>
-            把這三件事，串成
-            <span style={{ background: GRAD, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>一鍵全自動</span>
+          <h2 className="mt-2 mb-2 text-[clamp(24px,4.4vw,38px)] font-black tracking-tight" style={BALANCE}>
+            三件事串起來，<GradText>一鍵跑完</GradText>
           </h2>
           <p className="text-[#b3aac6] max-w-[54ch] mb-6">
-            行銷流水線：從蒐集資料到發佈上架，整條流程一次跑完，還能定時排程、Telegram 審核。影片腳本自動套用「短影音爆款」方法論。
+            行銷流水線：從蒐集資料到發佈上架，整條流程自動接力，可定時排程，每一步都能用 Telegram 審核後再放行。
           </p>
           <div className="flex flex-wrap items-center gap-2">
             {FLOW.map((s, i) => (
@@ -144,64 +150,83 @@ export default function MarketingIntroPage() {
               </span>
             ))}
           </div>
+          <Link href="/intro/features#pipeline" className="mt-7 inline-flex items-center gap-1 text-[13px] font-bold text-[#c9b7ff] hover:gap-2 transition-all">
+            流水線怎麼運作 <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
         </div>
       </section>
 
-      {/* FREE HOOKS */}
+      {/* FREE */}
       <section className="max-w-5xl mx-auto px-6 py-14">
-        <div className="font-mono text-[12px] tracking-[0.16em] uppercase text-[#6a4be0] mb-2">先免費體驗，再決定</div>
-        <h2 className="text-[clamp(24px,4vw,34px)] font-black tracking-tight mb-1">30 秒，產出你的第一個成品</h2>
-        <p className="text-[#615c70] text-[15px] max-w-[56ch] mb-7">不用先付費、不用學設定，先感受「原來這麼省事」的那一刻。</p>
-        <div className="grid gap-3.5 sm:grid-cols-3">
-          {HOOKS.map(h => (
-            <div key={h.title} className="flex flex-col gap-2 rounded-2xl border border-dashed border-[#d9d3e6] bg-white p-5">
-              <span className="self-start text-[11px] font-bold tracking-wide text-[#0f9d6e] rounded-full px-2.5 py-0.5" style={{ background: 'rgba(15,157,110,.12)' }}>免費</span>
-              <h4 className="font-extrabold text-[16px]">{h.title}</h4>
-              <p className="text-[13px] text-[#615c70]">{h.desc}</p>
-            </div>
-          ))}
+        <div className="grid gap-6 sm:grid-cols-[1fr_1.1fr] items-center">
+          <div>
+            <div className="font-mono text-[12px] tracking-[0.16em] uppercase text-[#6a4be0] mb-2">先免費用，再決定</div>
+            <h2 className="text-[clamp(24px,4vw,34px)] font-black tracking-tight mb-2" style={BALANCE}>註冊就能開始，不用先付錢</h2>
+            <p className="text-[#615c70] text-[15px] max-w-[46ch]">先跑完一個行銷案，親眼看 AI 產出什麼，覺得值得再升級。</p>
+          </div>
+          <div className="rounded-2xl border border-dashed border-[#d9d3e6] bg-white p-5">
+            <span className="inline-block text-[11px] font-bold tracking-wide text-[#0f9d6e] rounded-full px-2.5 py-0.5 mb-3" style={{ background: 'rgba(15,157,110,.12)' }}>免費方案包含</span>
+            <ul className="space-y-2">
+              {FREE_ITEMS.map(f => (
+                <li key={f} className="flex gap-2 text-[14px]"><Check className="h-4 w-4 shrink-0 mt-0.5 text-[#0f9d6e]" />{f}</li>
+              ))}
+            </ul>
+          </div>
         </div>
       </section>
 
       {/* PRICING */}
       <section className="max-w-5xl mx-auto px-6 pb-14">
         <div className="font-mono text-[12px] tracking-[0.16em] uppercase text-[#6a4be0] mb-2">方案</div>
-        <h2 className="text-[clamp(24px,4vw,34px)] font-black tracking-tight mb-7">從單點免費，到一條龍全自動</h2>
-        <div className="grid gap-3 sm:grid-cols-3">
-          {TIERS.map(t => (
-            <div key={t.t} className={`rounded-2xl bg-white p-5 border ${t.hi ? 'border-[#6a4be0] shadow-[inset_0_0_0_1px_#6a4be0]' : 'border-[#e6e2ee]'}`}>
-              <div className="font-extrabold tracking-widest text-[14px]">{t.t}</div>
-              <div className="text-[#615c70] text-[13px] mt-1.5">{t.d}</div>
-              <span className="inline-block mt-2 text-[11px] font-bold text-[#6a4be0]">{t.tag}</span>
+        <div className="flex items-end justify-between flex-wrap gap-3 mb-7">
+          <h2 className="text-[clamp(24px,4vw,34px)] font-black tracking-tight">從免費，到一條龍全自動</h2>
+          <Link href="/intro/pricing" className="inline-flex items-center gap-1 text-[14px] font-bold text-[#6a4be0] hover:gap-2 transition-all">
+            完整功能比較 <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-2xl bg-white p-5 border border-[#e6e2ee] flex flex-col">
+            <div className="font-extrabold tracking-widest text-[14px]">FREE</div>
+            <div className="mt-2 text-[26px] font-black">$0</div>
+            <div className="text-[#615c70] text-[13px] mt-1.5">先體驗一個完整行銷案。</div>
+            <span className="mt-auto pt-3 text-[11px] font-bold text-[#6a4be0]">個人試用</span>
+          </div>
+          {PLAN_CARDS.map(c => {
+            const hi = c.plan === 'team'
+            return (
+              <div key={c.plan} className={`relative rounded-2xl bg-white p-5 border flex flex-col ${hi ? 'border-[#6a4be0] shadow-[inset_0_0_0_1px_#6a4be0]' : 'border-[#e6e2ee]'}`}>
+                {hi && <span className="absolute -top-2.5 left-5 text-[10.5px] font-bold text-white rounded-full px-2 py-0.5" style={{ background: GRAD }}>推薦</span>}
+                <div className="font-extrabold tracking-widest text-[14px]">{c.name}</div>
+                <div className="mt-2 text-[26px] font-black">${c.monthlyUsd}<span className="text-[13px] font-medium text-[#938da3]"> 美元/月</span></div>
+                <div className="text-[11.5px] text-[#0f9d6e] font-bold">年繳 ${c.yearlyUsd}（約 8 折）</div>
+                <ul className="mt-3 space-y-1 text-[13px] text-[#615c70]">
+                  {c.features.slice(0, 4).map(f => <li key={f}>· {f}</li>)}
+                </ul>
+                <span className="mt-auto pt-3 text-[11px] font-bold text-[#6a4be0]">
+                  {c.plan === 'pro' ? '小店 / 個人品牌' : c.plan === 'team' ? '團隊 / 全自動' : '企業 / 客製'}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+        <p className="mt-3 text-[12px] text-[#938da3]">圖片、影片、電訪、Email 等生成成本以儲值點數另計。</p>
+      </section>
+
+      {/* FAQ */}
+      <section className="max-w-5xl mx-auto px-6 pb-16">
+        <h2 className="text-[clamp(22px,3.6vw,30px)] font-black tracking-tight mb-5">常見問題</h2>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {FAQ.map(f => (
+            <div key={f.q} className="rounded-2xl border border-[#e6e2ee] bg-white p-5">
+              <h3 className="font-extrabold text-[15px]">{f.q}</h3>
+              <p className="mt-1.5 text-[13.5px] text-[#615c70]">{f.a}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* FINAL CTA */}
-      <section className="relative overflow-hidden bg-[#161020] text-[#f4f0fb]">
-        <div className="pointer-events-none absolute -top-1/3 inset-x-0 h-[70%]"
-          style={{ background: 'radial-gradient(60% 100% at 50% 0,rgba(123,92,240,.34),transparent 70%)' }} />
-        <div className="relative max-w-5xl mx-auto px-6 py-16 text-center">
-          <div className="font-mono text-[12px] tracking-[0.22em] uppercase text-[#c9b7ff]">準備好了嗎</div>
-          <h2 className="mt-3 mb-6 text-[clamp(26px,5vw,42px)] font-black tracking-tight" style={{ textWrap: 'balance' } as React.CSSProperties}>
-            今天就讓 AI<br />當你的行銷部。
-          </h2>
-          <div className="flex flex-wrap gap-3 justify-center">
-            <Link href="/register" className="inline-flex items-center gap-2 font-bold text-[15px] px-6 py-3 rounded-xl text-white transition-transform hover:-translate-y-0.5"
-              style={{ background: GRAD, boxShadow: '0 10px 26px rgba(123,92,240,.4)' }}>
-              免費開始 <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link href="/login" className="inline-flex items-center gap-2 font-bold text-[15px] px-6 py-3 rounded-xl text-[#f4f0fb] border border-[#2c2440] bg-white/5 transition-transform hover:-translate-y-0.5">
-              我已有帳號
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      <footer className="text-center text-[#938da3] text-[12px] py-7 flex items-center justify-center gap-2">
-        <Zap className="h-3.5 w-3.5" /> AI GATE 行銷中心 · marketing.im-tourist.com · IMT
-      </footer>
+      <FinalCta title={<>今天就讓 AI<br />當你的行銷部。</>} />
+      <IntroFooter />
     </div>
   )
 }
