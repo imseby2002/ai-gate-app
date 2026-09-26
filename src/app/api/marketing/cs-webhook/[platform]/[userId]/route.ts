@@ -1335,7 +1335,7 @@ async function saveConfirmedFacts(
   } catch { /* 不中斷主流程 */ }
 }
 
-async function queryDataSources(userId: string, message: string, bookingFlowEnabled = false, sheetOpts: SheetQueryOpts = {}): Promise<string> {
+async function queryDataSources(userId: string, message: string, bookingFlowEnabled = false, sheetOpts: SheetQueryOpts = {}, hasImage = false): Promise<string> {
   const supabase = getServiceClient()
   let sources: Array<{ type: string; name: string; config: unknown }> | null = null
   try {
@@ -1359,8 +1359,10 @@ async function queryDataSources(userId: string, message: string, bookingFlowEnab
   if (faqSource?.config) {
     const items = (faqSource.config as { items?: { q: string; a: string; keywords: string[] }[] }).items ?? []
     const msgLower = message.toLowerCase()
+    // 客人只傳照片時沒有文字可比對關鍵字，改帶入問題描述有標註「照片」的條目（例如傳水壺、周邊環境照片）
     const matched = items.filter(item =>
-      item.keywords?.some(kw => kw.trim() && msgLower.includes(kw.trim().toLowerCase()))
+      item.keywords?.some(kw => kw.trim() && msgLower.includes(kw.trim().toLowerCase())) ||
+      (hasImage && item.q?.includes('照片'))
     )
     if (matched.length > 0) {
       results.push(`【FAQ 知識庫（以下是經過人工確認的標準答案，遇到類似問題時直接引用）】\n` +
@@ -2012,7 +2014,7 @@ async function getAIReply(
     }
 
     let externalDataSection = userId
-      ? await queryDataSources(userId, message, knowledge.bookingFlowEnabled, { conversationText: convUserText, verifyName })
+      ? await queryDataSources(userId, message, knowledge.bookingFlowEnabled, { conversationText: convUserText, verifyName }, !!(imageBuffer && imageMimeType))
       : ''
 
     // 真實案例：管家人工提示客人「輸入『帳號』二字取得付款資訊」（民宿慣用的付款觸發詞，
