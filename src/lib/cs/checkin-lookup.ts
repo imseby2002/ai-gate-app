@@ -521,6 +521,18 @@ async function formatBookingsWithPassword(supabase: any, userId: string, rows: M
 // 依手機號碼查訂單（比對末 9 碼，容忍 +886 / 0 開頭等格式差異）。
 // 手機號碼視為與訂單號碼同等強度的身份憑證——比對到「唯一一筆」訂單即可在到達入住時間後給密碼；
 // 未到入住日或未到 15:00 嚴禁給密碼；比對到多筆時只列清單不給密碼。
+// 多筆訂單是否屬於同一位客人的同一次住宿（多房型）：姓名（忽略大小寫與空白）、入住日、退房日皆相同，且沒有任何一筆已取消
+function isSameStay(rows: Array<{ guest_name?: string | null; check_in?: string | null; check_out?: string | null; status?: string | null }>): boolean {
+  const norm = (v?: string | null) => (v ?? '').toLowerCase().replace(/\s+/g, '')
+  const first = rows[0]
+  if (!norm(first.guest_name)) return false
+  return rows.every(r =>
+    r.status !== 'cancelled' &&
+    norm(r.guest_name) === norm(first.guest_name) &&
+    r.check_in === first.check_in &&
+    r.check_out === first.check_out)
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function queryBookingByPhone(supabase: any, userId: string, rawPhone: string): Promise<string | null> {
   const { features } = await getBookingEntitlements(supabase, userId)
@@ -559,7 +571,11 @@ export async function queryBookingByPhone(supabase: any, userId: string, rawPhon
 
   const { checkinTime, nowHHMM } = await checkBeforeCheckin(supabase, userId)
 
-  if (matched.length > 1) {
+  // 同一位客人一次訂多間房（同名、同入住退房日、皆未取消）是同一筆住宿，不是「比對到多位客人」，
+  // 照單筆流程處理：到入住時間後逐一列出各房型密碼（formatBookingsWithPassword 本來就支援多房型）。
+  // 真實案例：客人用同一支電話訂了 201、202 兩間，被當成多筆要求重報姓名，AI 還自己編了
+  // 「權限有限查不到密碼」的說法。姓名或日期不同、或有任何一筆已取消時，維持先請客人指認。
+  if (matched.length > 1 && !isSameStay(matched)) {
     const lines = [`【入住資訊查詢結果】`, `找到 ${matched.length} 筆與電話「${rawPhone}」相符的訂單，請客人提供訂房姓名或訂單號碼以確認是哪一筆：`]
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     for (const b of matched.slice(0, 5)) lines.push(`・${b.guest_name ?? '（無姓名）'}｜入住 ${b.check_in} 退房 ${b.check_out}｜狀態：${b.status}`)
