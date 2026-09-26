@@ -82,11 +82,11 @@ INSERT INTO public.agent_roles
 VALUES (
   'digital-marketer',
   '網路行銷專員',
-  '只需給目標與預算（例如：1 個月內 10,000 人認識品牌、3 個月 100,000 人，或網路帶動業績成長 30%），自動盤點 marketing.im-tourist.com 既有資源、產出計畫書；按下執行後自主產出內容、排程、建立活動、追蹤 KPI。內部資源不足時會找外部廠商並提出預算申請，核准後才動用。',
+  '只需給目標與預算（例如：1 個月內 10,000 人認識品牌、3 個月 100,000 人，或網路帶動業績成長 30%），自動盤點 marketing.im-tourist.com 既有資源、產出計畫書；按下執行後自主產出內容、排程、追蹤 KPI。內部資源不足時會找外部廠商並提出預算申請，核准後才動用。',
   'marketing',
   'creative',
   ARRAY['web_search','collect_market_data','analyze_market','draft_marketing_copy','plan_image_content','plan_video_content',
-        'list_marketing_resources','get_marketing_snapshot','create_content_set','schedule_content','create_marketing_campaign',
+        'list_marketing_resources','get_marketing_snapshot','create_content_set','schedule_content',
         'report_mission_progress','request_external_purchase','schedule_next_check',
         'get_company_context','read_role_memory','write_memory','notify_human','request_human_approval','finish_run'],
   ARRAY['external_purchase','human_action_required','send_external_comms'],
@@ -99,7 +99,6 @@ INSERT INTO public.agent_tools (id, label, description, category, default_requir
   ('get_marketing_snapshot',   '行銷成效快照', '讀取行銷成效彙整（外送營收、行銷支出、內容產出量）',                     'marketing', false, 'low'),
   ('create_content_set',       '產出整套內容', '依品牌守則產出多平台文案、短影音腳本、生圖提示、GEO 文章',               'marketing', false, 'low'),
   ('schedule_content',         '排入內容行事曆', '把內容排入行銷行事曆',                                               'marketing', false, 'low'),
-  ('create_marketing_campaign','建立行銷活動', '在行銷中心建立活動（含預算、期間）',                                     'marketing', false, 'medium'),
   ('report_mission_progress',  '回報任務進度', '更新目標任務的 KPI 實際值與進度紀錄',                                   'core',      false, 'low'),
   ('request_external_purchase','外部採購申請', '內部資源不足時，向真人申請動用預算採購外部資源（需核准）',               'core',      false, 'high'),
   ('schedule_next_check',      '排定下次檢查', '暫停到指定時間再繼續執行（長期任務用）',                                 'core',      false, 'low')

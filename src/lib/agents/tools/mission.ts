@@ -27,8 +27,6 @@ async function ownerForRun(ctx: AgentRunContext): Promise<string> {
 
 const CONTENT_CHANNELS = ['fb', 'ig', 'tiktok', 'zalo', 'line']
 const CALENDAR_CHANNELS = ['fb', 'ig', 'tiktok', 'zalo', 'line', 'store', 'other']
-const CAMPAIGN_CHANNELS = ['offline', 'online', 'hybrid']
-const CAMPAIGN_CATEGORIES = ['material', 'event', 'outdoor', 'partner', 'social_promo', 'delivery_promo', 'member_exclusive']
 
 export const listMarketingResourcesTool: AgentToolDef = {
   id: 'list_marketing_resources',
@@ -113,50 +111,6 @@ export const scheduleContentTool: AgentToolDef = {
     }).select('id').single()
     if (error) throw new Error(error.message)
     return { calendarId: data.id }
-  },
-}
-
-interface CreateCampaignInput {
-  title: string; channel_type?: string; category?: string; start_date?: string; end_date?: string
-  budget?: number; note?: string; ai_brief?: string
-}
-
-export const createMarketingCampaignTool: AgentToolDef = {
-  id: 'create_marketing_campaign',
-  description: '在行銷中心建立行銷活動（期間、通路、類型、預算）。預算只是登記，實際對外付款仍需 request_external_purchase 核准。',
-  inputSchema: {
-    type: 'object',
-    properties: {
-      title: { type: 'string' },
-      channel_type: { type: 'string', enum: CAMPAIGN_CHANNELS },
-      category: { type: 'string', enum: CAMPAIGN_CATEGORIES },
-      start_date: { type: 'string', description: 'YYYY-MM-DD' },
-      end_date: { type: 'string', description: 'YYYY-MM-DD' },
-      budget: { type: 'number' },
-      note: { type: 'string' },
-      ai_brief: { type: 'string', description: '活動企劃摘要' },
-    },
-    required: ['title'],
-  },
-  async execute(rawInput, ctx) {
-    const input = rawInput as unknown as CreateCampaignInput
-    const admin = createAdminClient()
-    const budget = Number(input.budget) > 0 ? Number(input.budget) : 0
-    const { data, error } = await admin.from('mkt_campaigns').insert({
-      owner_id: await ownerForRun(ctx),
-      title: input.title,
-      channel_type: CAMPAIGN_CHANNELS.includes(input.channel_type ?? '') ? input.channel_type : 'online',
-      category: CAMPAIGN_CATEGORIES.includes(input.category ?? '') ? input.category : 'social_promo',
-      status: 'planned',
-      start_date: input.start_date || null,
-      end_date: input.end_date || null,
-      budget,
-      actual_spend: 0,
-      note: input.note ?? '',
-      ai_brief: input.ai_brief ?? '',
-    }).select('id').single()
-    if (error) throw new Error(error.message)
-    return { campaignId: data.id }
   },
 }
 
@@ -304,5 +258,4 @@ export const MARKETING_EXECUTION_TOOLS: Record<string, AgentToolDef> = {
   [getMarketingSnapshotTool.id]: getMarketingSnapshotTool,
   [createContentSetTool.id]: createContentSetTool,
   [scheduleContentTool.id]: scheduleContentTool,
-  [createMarketingCampaignTool.id]: createMarketingCampaignTool,
 }

@@ -59,23 +59,21 @@ export async function loadMission(admin: Admin, missionId: string): Promise<Miss
 /** 盤點 marketing.im-tourist.com 既有資源（給計畫書與 list_marketing_resources 工具共用） */
 export async function buildMarketingInventory(admin: Admin, ownerId: string): Promise<Record<string, unknown>> {
   const today = new Date().toISOString().slice(0, 10)
-  const [brand, products, contentTotal, contentApproved, calendar, campaigns, delivery, companyData] = await Promise.all([
+  const [brand, contentTotal, contentApproved, calendar, offline, delivery, companyData] = await Promise.all([
     admin.from('mkt_brand').select('name, slogan, tagline, tone, audience, selling_points').eq('owner_id', ownerId).maybeSingle(),
-    admin.from('mkt_product_profiles').select('name, price, category').eq('owner_id', ownerId).limit(30),
     admin.from('mkt_content').select('id', { count: 'exact', head: true }).eq('owner_id', ownerId),
     admin.from('mkt_content').select('id', { count: 'exact', head: true }).eq('owner_id', ownerId).eq('status', 'approved'),
     admin.from('mkt_calendar').select('title, channel, scheduled_date, status').eq('owner_id', ownerId).gte('scheduled_date', today).order('scheduled_date').limit(30),
-    admin.from('mkt_campaigns').select('title, channel_type, category, status, start_date, end_date, budget').eq('owner_id', ownerId).in('status', ['planned', 'active']).limit(20),
+    admin.from('mkt_offline').select('type, budget, status').eq('owner_id', ownerId).limit(20),
     admin.from('mkt_delivery').select('platform, status, monthly_orders, monthly_revenue').eq('owner_id', ownerId).limit(30),
     admin.from('company_data').select('compiled_md').eq('user_id', ownerId).maybeSingle(),
   ])
 
   return {
     brand: brand.data ?? null,
-    products: products.data ?? [],
     content: { total: contentTotal.count ?? 0, approved: contentApproved.count ?? 0 },
     upcoming_calendar: calendar.data ?? [],
-    active_campaigns: campaigns.data ?? [],
+    offline_marketing: offline.data ?? [],
     delivery_channels: delivery.data ?? [],
     company_knowledge_chars: (companyData.data?.compiled_md as string | undefined)?.length ?? 0,
     // marketing.im-tourist.com 可由 Agent 直接操作的內部能力（對應 agent 工具）
@@ -84,13 +82,12 @@ export async function buildMarketingInventory(admin: Admin, ownerId: string): Pr
       '市場與競品分析（analyze_market）',
       '多平台整套內容產出：FB/IG/TikTok/Zalo/LINE 文案＋短影音腳本＋生圖提示＋GEO 文章（create_content_set）',
       '內容行事曆排程（schedule_content）',
-      '行銷活動建立與預算登記（create_marketing_campaign）',
       '行銷成效快照：外送營收、行銷支出、內容產出（get_marketing_snapshot）',
       '配圖/短影音腳本規劃（plan_image_content / plan_video_content）',
     ],
     // 目前沒有自動化串接、需真人操作或外部資源的項目
     not_automated: [
-      '實際發佈到 FB/IG/TikTok 等官方帳號（無官方 API 串接，需真人依排程發佈或另行串接）',
+      '實際發佈到 FB/IG/Threads/LINE VOOM/Zalo/TikTok 等官方帳號：行銷中心「行銷自動化」可用已連結帳號一鍵上傳，但 Agent 不自行發佈，排程後由真人在行銷自動化按上傳',
       '付費廣告投放（Meta/Google/TikTok Ads 帳戶未串接，需走外部採購申請＋真人操作）',
       'KOL/媒體/外包廠商付款',
     ],
