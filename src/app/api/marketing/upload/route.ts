@@ -17,6 +17,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
+import { getBnbContext } from '@/lib/bnb/context'
 
 interface PlatformResult {
   platform: string
@@ -521,11 +522,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '目前方案未開放自動上傳平台，請升級至 PRO 以上', plan }, { status: 403 })
   }
 
-  // Load all credentials for this user
+  // 憑證屬於「民宿擁有者」（與 /api/social/credentials 儲存時相同的 ownerId）
+  const ctx = await getBnbContext(supabase, 'cs')
+  const credOwnerId = ctx?.ownerId ?? user.id
   const { data: credRows } = await supabase
     .from('social_platform_credentials')
     .select('platform, credentials, is_connected')
-    .eq('user_id', user.id)
+    .eq('user_id', credOwnerId)
 
   const credMap: Record<string, Record<string, string>> = {}
   for (const row of credRows ?? []) {
