@@ -19,18 +19,20 @@ export async function GET(req: NextRequest) {
   const meta = { is_admin: isAdmin, lease_quota: quota, lease_used: used, usd_twd_rate: await getUsdToTwdRate() }
 
   try {
-    const supabase = await createClient()
-
-    // 1. Fetch official proxies from DB
-    const { data: dbOfficial, error: offErr } = await supabase
-      .from('marketing_official_proxies')
-      .select('*')
-      .order('created_at', { ascending: false })
+    // 官方 IP 表不開放一般用戶直接讀取（RLS），一律由伺服器以 service role 查詢；
+    // 非管理員只看得到上架中的 IP，且不回傳連線帳密（租用後才注入自己的代理池）
+    const admin = createAdminClient()
+    const offCols = isAdmin
+      ? '*'
+      : 'id, name, proxy_type, protocol, host, port, country, city, isp, latency_ms, monthly_price_twd, max_tenants, current_tenants_count, status, is_active, notes, created_at, updated_at'
+    let offQuery = admin.from('marketing_official_proxies').select(offCols).order('created_at', { ascending: false })
+    if (!isAdmin) offQuery = offQuery.eq('is_active', true)
+    const { data: dbOfficial, error: offErr } = await offQuery
 
     // 2. Fetch user's active leases
-    const { data: dbLeases, error: leaseErr } = await supabase
+    const { data: dbLeases } = await admin
       .from('marketing_proxy_leases')
-      .select('*, official_proxy:marketing_official_proxies(*)')
+      .select('*, official_proxy:marketing_official_proxies(id, name, proxy_type, country, city, isp, monthly_price_twd)')
       .eq('user_id', authUser.id)
       .eq('status', 'active')
 
