@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { createClient } from '@/lib/supabase/server'
 import { BOOKING_PLAN_FEATURES, type BookingPlan } from '@/lib/booking/entitlements'
+import { getCompanyGrantsForUsers } from '@/lib/company/entitlements'
 
 const VALID_PLANS = Object.keys(BOOKING_PLAN_FEATURES) as BookingPlan[]
 
@@ -37,7 +38,9 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ users: data })
+  // 所屬公司開通此模組（公司版／專屬客製-企業版）時，實際生效為 MAX
+  const grants = await getCompanyGrantsForUsers((data ?? []).map(u => u.id), 'booking')
+  return NextResponse.json({ users: (data ?? []).map(u => ({ ...u, company_grant: grants.get(u.id) ?? null })) })
 }
 
 // PATCH { userId, plan, currentPeriodEnd? }

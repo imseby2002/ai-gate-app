@@ -12,6 +12,7 @@ interface Row {
   email: string | null
   full_name: string | null
   cs_subscriptions: { plan: CsPlan; billing_cycle: string; status: string; current_period_end: string | null }[] | null
+  company_grant?: { source: 'company' | 'enterprise'; companyName: string } | null
 }
 
 export function CsPlansTable() {
@@ -38,6 +39,15 @@ export function CsPlansTable() {
   const subOf = (r: Row) => {
     const v = r.cs_subscriptions as unknown
     return (Array.isArray(v) ? v[0] : v) as NonNullable<Row['cs_subscriptions']>[number] | undefined
+  }
+  // 實際生效方案：所屬公司開通此模組（公司版／專屬客製-企業版）→ MAX；否則為帳號自訂方案（到期或非 active 視為 FREE）
+  const effectiveOf = (r: Row): { plan: CsPlan; via: string | null } => {
+    if (r.company_grant) {
+      return { plan: 'max', via: `${r.company_grant.source === 'enterprise' ? '專屬客製-企業版' : '公司版'}・${r.company_grant.companyName}` }
+    }
+    const sub = subOf(r)
+    const active = sub?.status === 'active' && (!sub.current_period_end || new Date(sub.current_period_end).getTime() > Date.now())
+    return { plan: active ? sub!.plan : 'free', via: null }
   }
   const currentPlan = (r: Row): CsPlan => pending[r.id] ?? subOf(r)?.plan ?? 'free'
 
@@ -78,7 +88,8 @@ export function CsPlansTable() {
               <tr className="text-left text-xs text-gray-500 border-b bg-gray-50">
                 <th className="px-4 py-2.5 font-medium">Email</th>
                 <th className="px-4 py-2.5 font-medium">姓名</th>
-                <th className="px-4 py-2.5 font-medium">CS 方案</th>
+                <th className="px-4 py-2.5 font-medium">帳號自訂方案</th>
+                <th className="px-4 py-2.5 font-medium">實際生效</th>
                 <th className="px-4 py-2.5 font-medium">到期日</th>
                 <th className="px-4 py-2.5 font-medium"></th>
               </tr>
@@ -87,6 +98,7 @@ export function CsPlansTable() {
               {rows.map(r => {
                 const plan = currentPlan(r)
                 const sub = subOf(r)
+                const eff = effectiveOf(r)
                 const dirty = pending[r.id] && pending[r.id] !== (sub?.plan ?? 'free')
                 return (
                   <tr key={r.id} className="border-b last:border-0">
@@ -100,6 +112,10 @@ export function CsPlansTable() {
                       >
                         {PLANS.map(p => <option key={p} value={p}>{PLAN_LABEL[p]}</option>)}
                       </select>
+                    </td>
+                    <td className="px-4 py-2.5 text-xs">
+                      <span className="font-semibold">{PLAN_LABEL[eff.plan]}</span>
+                      {eff.via && <span className="block text-[11px] text-indigo-600">來自 {eff.via}</span>}
                     </td>
                     <td className="px-4 py-2.5 text-xs text-gray-400">
                       {sub?.current_period_end ? new Date(sub.current_period_end).toLocaleDateString('zh-TW') : '—（不到期）'}

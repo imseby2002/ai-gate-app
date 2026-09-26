@@ -111,3 +111,44 @@ export async function getCompanyBillingContext(userId: string): Promise<CompanyB
 export async function getBillingCompanyId(userId: string): Promise<string | null> {
   return (await getCompanyBillingContext(userId))?.companyId ?? null
 }
+
+export interface CompanyGrantInfo {
+  /** 'company' = 公司版；'enterprise' = 專屬客製-企業版 */
+  source: 'company' | 'enterprise'
+  companyName: string
+}
+
+/**
+ * 批次查詢多位使用者是否因所屬公司而取得某模組的 MAX 權益（admin 方案管理頁顯示「實際生效方案」用）。
+ * 條件與 hasCompanyModuleGrant 相同：公司版有效（plan='company'、active、未到期）且模組在 enabled_modules 內。
+ */
+export async function getCompanyGrantsForUsers(userIds: string[], moduleId: string): Promise<Map<string, CompanyGrantInfo>> {
+  const result = new Map<string, CompanyGrantInfo>()
+  if (userIds.length === 0) return result
+  const { createAdminClient } = await import('@/lib/supabase/admin')
+  const admin = createAdminClient()
+
+  const { data: profiles } = await admin.from('profiles').select('id, company_id').in('id', userIds)
+  const companyIds = [...new Set((profiles ?? []).map(p => p.company_id).filter(Boolean))] as string[]
+  if (companyIds.length === 0) return result
+
+  const [{ data: companies }, { data: subs }] = await Promise.all([
+    admin.from('companies').select('id, name, enabled_modules').in('id', companyIds),
+    admin.from('company_subscriptions').select('company_id, plan, status, current_period_end, enterprise').in('company_id', companyIds),
+  ])
+  const subMap = new Map((subs ?? []).map(s => [s.company_id, s]))
+  const grantByCompany = new Map<string, CompanyGrantInfo>()
+  for (const c of companies ?? []) {
+    const s = subMap.get(c.id)
+    const active = s?.plan === 'company' && s.status === 'active'
+      && (!s.current_period_end || new Date(s.current_period_end).getTime() > Date.now())
+    if (active && (c.enabled_modules ?? []).includes(moduleId)) {
+      grantByCompany.set(c.id, { source: s!.enterprise ? 'enterprise' : 'company', companyName: c.name })
+    }
+  }
+  for (const p of profiles ?? []) {
+    const g = p.company_id ? grantByCompany.get(p.company_id) : undefined
+    if (g) result.set(p.id, g)
+  }
+  return result
+}

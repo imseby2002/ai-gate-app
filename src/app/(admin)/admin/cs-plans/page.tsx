@@ -5,7 +5,7 @@ export default function AdminCsPlansPage() {
     <div className="px-8 py-8 space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">CS 方案管理</h1>
-        <p className="text-gray-500 text-sm mt-1">手動設定帳號的客服模組方案（銀行轉帳、優惠贈送等場合使用）</p>
+        <p className="text-gray-500 text-sm mt-1">手動設定帳號的客服模組方案（銀行轉帳、優惠贈送等場合使用）。所屬公司開通客服模組（公司版／專屬客製-企業版）時，「實際生效」一律為 MAX，與帳號自訂方案取較高者。</p>
       </div>
       <CsPlansTable />
     </div>
