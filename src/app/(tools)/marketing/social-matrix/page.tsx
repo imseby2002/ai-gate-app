@@ -57,6 +57,7 @@ function SocialMatrixContent() {
   const [leases, setLeases] = useState<ProxyLease[]>([])
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false)
   const [leaseQuota, setLeaseQuota] = useState<{ quota: number; used: number } | null>(null)
+  const [usdTwdRate, setUsdTwdRate] = useState<number | null>(null)
   const [isAddOfficialOpen, setIsAddOfficialOpen] = useState(false)
   const [isEditOfficialOpen, setIsEditOfficialOpen] = useState(false)
   const [editingOfficial, setEditingOfficial] = useState<OfficialRentableProxy | null>(null)
@@ -143,6 +144,7 @@ function SocialMatrixContent() {
       if (offRes.leases) setLeases(offRes.leases)
       setIsPlatformAdmin(offRes.is_admin === true)
       if (typeof offRes.lease_quota === 'number') setLeaseQuota({ quota: offRes.lease_quota, used: offRes.lease_used ?? 0 })
+      if (typeof offRes.usd_twd_rate === 'number') setUsdTwdRate(offRes.usd_twd_rate)
 
       // Merge with browser local storage backup so user configurations are never lost
       if (typeof window !== 'undefined') {
@@ -297,7 +299,15 @@ function SocialMatrixContent() {
   }
 
   // 1.2 Official Proxies Actions (官方 IP 租用、退租與管理者維護)
+  // 附贈額度用完後，額外 IP 以點數購買（點數＝美金，依匯率換算 monthly_price_twd；與後端 twdToCredits 同算法）
+  const hasFreeQuota = isPlatformAdmin || (leaseQuota != null && leaseQuota.used < leaseQuota.quota)
+  const creditsFor = (twd: number) => usdTwdRate ? Math.ceil((twd / usdTwdRate) * 100) / 100 : null
+
   const handleLeaseOfficial = async (offProxy: OfficialRentableProxy) => {
+    if (!hasFreeQuota) {
+      const credits = creditsFor(offProxy.monthly_price_twd)
+      if (!confirm(`附贈額度已用完，將扣 ${credits ?? '—'} 點租用此 IP 30 天，到期自動續扣（點數不足時到期釋放）。確定購買？`)) return
+    }
     setIsLeasingId(offProxy.id)
     try {
       const res = await fetch('/api/marketing/social-matrix/official-proxies', {
@@ -992,7 +1002,7 @@ function SocialMatrixContent() {
                     <BadgeCheck className="h-4 w-4 text-emerald-600 shrink-0" />
                     <span className="font-semibold text-emerald-900 dark:text-emerald-200">
                       方案附贈官方 IP：{leaseQuota.quota} 個（已使用 {Math.min(leaseQuota.used, leaseQuota.quota)} 個）
-                      {leaseQuota.used >= leaseQuota.quota && '，額外 IP 需另行購買，請聯繫客服'}
+                      {leaseQuota.used >= leaseQuota.quota && '；額外 IP 以點數購買，每 30 天扣點、到期自動續扣'}
                     </span>
                   </div>
                 )}
@@ -1120,6 +1130,9 @@ function SocialMatrixContent() {
                               </span>
                               <span className="text-xs text-muted-foreground">/ 月</span>
                             </div>
+                            {creditsFor(offProxy.monthly_price_twd) != null && (
+                              <span className="text-[11px] font-semibold text-muted-foreground">≈ {creditsFor(offProxy.monthly_price_twd)} 點 / 30 天</span>
+                            )}
                           </div>
 
                           <div>
@@ -1138,7 +1151,7 @@ function SocialMatrixContent() {
                                 className="flex items-center gap-1.5 px-5 py-2.5 text-xs font-bold rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-violet-700 hover:from-indigo-700 hover:to-violet-800 text-white shadow-md hover:shadow-indigo-500/25 active:scale-95 transition-all disabled:opacity-50"
                               >
                                 <Zap className={`h-4 w-4 text-amber-300 ${isLeasing ? 'animate-spin' : ''}`} />
-                                <span>{isLeasing ? '正在開通專屬 IP...' : '⚡ 一鍵立即租用'}</span>
+                                <span>{isLeasing ? '正在開通專屬 IP...' : hasFreeQuota ? '🎁 領取方案附贈 IP' : `⚡ 以 ${creditsFor(offProxy.monthly_price_twd) ?? '—'} 點租用`}</span>
                               </button>
                             ) : (
                               <button

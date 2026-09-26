@@ -28,7 +28,7 @@ export async function requirePlatformAdmin(user: CronUser): Promise<NextResponse
     : NextResponse.json({ error: '僅平台管理員可維護官方 IP 庫存' }, { status: 403 })
 }
 
-// 官方 IP 附贈額度：方案附贈數 vs 目前有效租用數（管理員不限）
+// 官方 IP 附贈額度：方案附贈數 vs 目前使用中的附贈租用數（付費加購不計；管理員不限）
 export async function getOfficialProxyQuota(user: CronUser, fallbackActiveCount: number) {
   const isAdmin = await isPlatformAdmin(user)
   const { features } = await getMarketingEntitlements(null, user.id)
@@ -37,6 +37,7 @@ export async function getOfficialProxyQuota(user: CronUser, fallbackActiveCount:
     .select('id', { count: 'exact', head: true })
     .eq('user_id', user.id)
     .eq('status', 'active')
+    .eq('is_paid', false)
   const used = error || count == null ? fallbackActiveCount : count
   return { isAdmin, quota: features.officialProxyQuota, used }
 }

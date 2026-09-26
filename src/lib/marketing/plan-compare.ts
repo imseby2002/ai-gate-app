@@ -33,7 +33,7 @@ export const COMPARISON_ROWS: Array<{ label: string; values: [string, string, st
   { label: '圖片產出（點數扣款）', values: ['—', '✓', '✓', '✓'] },
   { label: '一鍵主動推文（11 個社群平台）', values: ['—', '✓', '✓', '✓'] },
   { label: '社群矩陣自動發文＋養號', values: ['—', '—', '✓', '✓'] },
-  { label: '官方發文 IP（亦可自備）', values: ['—', '—', '附贈 1 個', '附贈 1 個'] },
+  { label: '官方發文 IP（亦可自備）', values: ['—', '—', '附贈 1 個＋點數加購', '附贈 1 個＋點數加購'] },
   { label: '影片產出（點數扣款）', values: ['—', '—', '✓', '✓'] },
   { label: 'AI 電訪＋Email（點數扣款）', values: ['—', 'Email', '✓', '✓'] },
   { label: '主播行銷 HeyGen（點數扣款）', values: ['—', '—', '—', '✓'] },
