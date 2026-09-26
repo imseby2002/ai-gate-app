@@ -33,7 +33,13 @@ export function CsPlansTable() {
 
   useEffect(() => { load('') }, [load])
 
-  const currentPlan = (r: Row): CsPlan => pending[r.id] ?? r.cs_subscriptions?.[0]?.plan ?? 'free'
+  // cs_subscriptions 以 user_id 為主鍵（一對一），PostgREST 內嵌時回傳單一物件而不是陣列；
+  // 之前一律用 [0] 取值，所有帳號都被顯示成 FREE。兩種形狀都相容。
+  const subOf = (r: Row) => {
+    const v = r.cs_subscriptions as unknown
+    return (Array.isArray(v) ? v[0] : v) as NonNullable<Row['cs_subscriptions']>[number] | undefined
+  }
+  const currentPlan = (r: Row): CsPlan => pending[r.id] ?? subOf(r)?.plan ?? 'free'
 
   const save = async (r: Row) => {
     setSaving(r.id)
@@ -80,7 +86,7 @@ export function CsPlansTable() {
             <tbody>
               {rows.map(r => {
                 const plan = currentPlan(r)
-                const sub = r.cs_subscriptions?.[0]
+                const sub = subOf(r)
                 const dirty = pending[r.id] && pending[r.id] !== (sub?.plan ?? 'free')
                 return (
                   <tr key={r.id} className="border-b last:border-0">
