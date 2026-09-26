@@ -8,8 +8,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
+import MissionsPanel from './MissionsPanel'
 
-type Tab = 'roles' | 'runs' | 'approvals'
+type Tab = 'missions' | 'roles' | 'runs' | 'approvals'
 
 interface AgentRole {
   id: string
@@ -41,6 +42,7 @@ interface AgentApproval {
 
 export default function AgentPage() {
   const t = useTranslations('AgentPage')
+  const tm = useTranslations('AgentMission')
   const locale = useLocale()
   const dateLocale = locale === 'vi' ? 'vi-VN' : locale === 'en' ? 'en-US' : 'zh-TW'
   const STATUS_LABEL: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'success' | 'warning' }> = {
@@ -53,7 +55,7 @@ export default function AgentPage() {
     failed: { label: t('statusFailed'), variant: 'destructive' },
     cancelled: { label: t('statusCancelled'), variant: 'secondary' },
   }
-  const [tab, setTab] = useState<Tab>('roles')
+  const [tab, setTab] = useState<Tab>('missions')
   const [roles, setRoles] = useState<AgentRole[]>([])
   const [runs, setRuns] = useState<AgentRun[]>([])
   const [approvals, setApprovals] = useState<AgentApproval[]>([])
@@ -129,6 +131,7 @@ export default function AgentPage() {
 
       <div className="flex gap-2 border-b">
         {([
+          ['missions', tm('tabMissions')],
           ['roles', t('tabRoles')],
           ['runs', t('tabRuns')],
           ['approvals', approvals.length ? t('tabApprovalsCount', { n: approvals.length }) : t('tabApprovals')],
@@ -147,6 +150,8 @@ export default function AgentPage() {
 
       {loading ? (
         <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+      ) : tab === 'missions' ? (
+        <MissionsPanel roles={roles.filter(r => r.userRole?.enabled).map(r => ({ id: r.id, label: r.label }))} />
       ) : tab === 'roles' ? (
         <div className="space-y-4">
           {roles.length === 0 && <p className="text-sm text-muted-foreground">{t('noRoles')}</p>}

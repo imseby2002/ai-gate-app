@@ -9,6 +9,8 @@ import { CORE_AGENT_TOOLS } from './tools'
 import { getToolsForRole } from './roles'
 import { getBalance } from '@/lib/skills/billing'
 import { calculateCost } from '@/lib/ai/router'
+import { MISSION_CORE_TOOLS } from './tools/mission'
+import { MISSION_MAX_TICKS, buildMissionPrompt, loadMission, syncMissionExpenses, type MissionRow } from './missions'
 import type { AgentToolDef } from './types'
 
 const MAX_STEPS_PER_TICK = 4
@@ -19,7 +21,7 @@ const MAX_ATTEMPTS = 3
 const MAX_TOTAL_TICKS = 50
 const TICK_MODEL_ID = 'claude-sonnet-4-6'
 // 這兩個工具本身就是「請求核准/結束」的機制，不需要再被硬性核准關卡包一層
-const SELF_SUSPENDING_TOOL_IDS = new Set(['request_human_approval', 'finish_run'])
+const SELF_SUSPENDING_TOOL_IDS = new Set(['request_human_approval', 'finish_run', 'request_external_purchase', 'schedule_next_check'])
 
 export interface AgentRunRow {
   id: string
@@ -31,6 +33,7 @@ export interface AgentRunRow {
   attempt_count: number
   tick_count: number
   trigger_type: string
+  mission_id?: string | null
 }
 
 async function loadRole(admin: ReturnType<typeof createAdminClient>, roleId: string) {
@@ -40,6 +43,12 @@ async function loadRole(admin: ReturnType<typeof createAdminClient>, roleId: str
 
 async function unlock(admin: ReturnType<typeof createAdminClient>, runId: string, patch: Record<string, unknown>) {
   await admin.from('agent_runs').update({ ...patch, locked_at: null, locked_by: null }).eq('id', runId)
+}
+
+// run 被暫停/失敗時，同步把綁定的目標任務標為暫停，前台才看得到原因
+async function pauseMission(admin: ReturnType<typeof createAdminClient>, missionId: string | null | undefined, reason: string) {
+  if (!missionId) return
+  await admin.from('agent_missions').update({ status: 'paused', last_error: reason }).eq('id', missionId).eq('status', 'executing')
 }
 
 // 硬性核准關卡：查此角色每個工具是否需要核准（agent_role_tools 覆蓋值優先，否則用 agent_tools 的全站預設）。
@@ -69,14 +78,17 @@ export async function tickRun(run: AgentRunRow): Promise<void> {
 
   // 總 tick 次數上限：在花任何 LLM 成本之前就先擋，避免一直不收斂的 run 無限期跑下去
   const tickCount = (run.tick_count ?? 0) + 1
-  if (tickCount > MAX_TOTAL_TICKS) {
+  // 目標任務（1–3 個月的長期執行）可帶較高的 tick 上限，但仍有硬上限
+  const maxTicks = Math.min(Number((run.input as { maxTicks?: number })?.maxTicks) || MAX_TOTAL_TICKS, MISSION_MAX_TICKS)
+  if (tickCount > maxTicks) {
     const ctx = createAgentContext(run.user_id, run.role_id, run.id)
     await ctx.notifyHuman({
       title: '⚠️ Agent 執行已達上限',
-      body: `角色「${run.role_id}」已執行 ${MAX_TOTAL_TICKS} 輪仍未完成，為避免無限消耗點數已自動暫停，請至 agent.im-tourist.com 檢查執行紀錄後手動繼續或結束。`,
+      body: `角色「${run.role_id}」已執行 ${maxTicks} 輪仍未完成，為避免無限消耗點數已自動暫停，請至 agent.im-tourist.com 檢查執行紀錄後手動繼續或結束。`,
       severity: 'warning',
     })
     await unlock(admin, run.id, { status: 'paused', last_error: 'MAX_TICKS_EXCEEDED', tick_count: tickCount })
+    await pauseMission(admin, run.mission_id, 'MAX_TICKS_EXCEEDED')
     return
   }
   await admin.from('agent_runs').update({ tick_count: tickCount }).eq('id', run.id)
@@ -91,12 +103,29 @@ export async function tickRun(run: AgentRunRow): Promise<void> {
       severity: 'warning',
     })
     await unlock(admin, run.id, { status: 'failed', last_error: 'INSUFFICIENT_CREDITS' })
+    await pauseMission(admin, run.mission_id, 'INSUFFICIENT_CREDITS')
     return
+  }
+
+  // 目標任務：真人已暫停/取消 mission 時，不再花任何 LLM 成本
+  let mission: MissionRow | null = null
+  if (run.mission_id) {
+    await syncMissionExpenses(admin, run.mission_id)
+    mission = await loadMission(admin, run.mission_id)
+    if (!mission || mission.status !== 'executing') {
+      const stopped = mission?.status === 'cancelled' || !mission ? 'cancelled' : 'paused'
+      await unlock(admin, run.id, { status: stopped })
+      return
+    }
   }
 
   const ctx = createAgentContext(run.user_id, run.role_id, run.id)
   const role = await loadRole(admin, run.role_id)
-  const roleTools: Record<string, AgentToolDef> = { ...CORE_AGENT_TOOLS, ...getToolsForRole(run.role_id) }
+  const roleTools: Record<string, AgentToolDef> = {
+    ...CORE_AGENT_TOOLS,
+    ...getToolsForRole(run.role_id),
+    ...(mission ? MISSION_CORE_TOOLS : {}),
+  }
   const approvalRequirements = await loadApprovalRequirements(admin, run.role_id, Object.keys(roleTools))
 
   let log = run.state?.log ?? []
@@ -223,7 +252,8 @@ export async function tickRun(run: AgentRunRow): Promise<void> {
       'actionType 設為 human_action_required；真人實際完成後回來核准，你才會收到「已核准」的結果繼續下一步。' +
       '若真人一直沒回應，系統會每 24 小時自動提醒一次，不需要你自己重複呼叫。\n' +
       '6. 完成任務、或已無法再推進時，務必呼叫 finish_run 並附上總結報告。\n' +
-      '7. 回覆使用繁體中文。'
+      '7. 回覆使用繁體中文。' +
+      (mission ? buildMissionPrompt(mission) : '')
 
     const prompt =
       `任務目標：${run.goal}\n\n` +
@@ -267,13 +297,23 @@ export async function tickRun(run: AgentRunRow): Promise<void> {
     ].filter(Boolean).join('\n')
 
     const allToolNames = (result.steps ?? []).flatMap(s => (s.toolCalls ?? []).map(tc => tc.toolName))
-    const calledExplicitApproval = allToolNames.includes('request_human_approval')
+    // 外部採購申請只有在「真的送出核准」時才暫停；超出預算被工具直接拒絕的不算
+    const externalPurchaseAwaiting = (result.steps ?? []).some(s =>
+      (s.toolResults ?? []).some(tr =>
+        tr.toolName === 'request_external_purchase' &&
+        (tr.output as { status?: string } | undefined)?.status === 'awaiting_human_approval'))
+    const calledExplicitApproval = allToolNames.includes('request_human_approval') || externalPurchaseAwaiting
     const calledFinish = allToolNames.includes('finish_run')
     const finalLog = [...log, newLogEntry]
 
     if (calledFinish) {
       await admin.from('agent_runs').update({ state: { log: finalLog } }).eq('id', run.id)
       await unlock(admin, run.id, { status: 'completed', completed_at: new Date().toISOString() })
+      if (mission) {
+        await admin.from('agent_missions')
+          .update({ status: 'completed', completed_at: new Date().toISOString() })
+          .eq('id', mission.id)
+      }
       return
     }
 
@@ -281,6 +321,22 @@ export async function tickRun(run: AgentRunRow): Promise<void> {
       await unlock(admin, run.id, {
         status: 'waiting_approval',
         state: { log: finalLog, pendingToolCalls: gatedCallsThisTick },
+      })
+      return
+    }
+
+    // Agent 主動排定下次檢查（長期任務等曝光累積/下一階段）：延後到指定時間再由 cron 撿起
+    const nextCheck = (result.steps ?? [])
+      .flatMap(s => s.toolCalls ?? [])
+      .filter(tc => tc.toolName === 'schedule_next_check')
+      .pop()
+    if (nextCheck) {
+      const hours = Math.min(336, Math.max(1, Number((nextCheck.input as { hours?: number })?.hours) || 24))
+      await unlock(admin, run.id, {
+        status: 'running',
+        state: { log: finalLog, pendingToolCalls: [] },
+        attempt_count: 0,
+        next_tick_at: new Date(Date.now() + hours * 3600_000).toISOString(),
       })
       return
     }
@@ -304,6 +360,7 @@ export async function tickRun(run: AgentRunRow): Promise<void> {
         severity: 'critical',
       })
       await unlock(admin, run.id, { status: 'paused', last_error: message, attempt_count: attempts })
+      await pauseMission(admin, run.mission_id, message)
     } else {
       const backoffMinutes = attempts * 2
       await unlock(admin, run.id, {
