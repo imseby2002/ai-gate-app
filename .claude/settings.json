@@ -1,12 +1,8 @@
 {
     "permissions": {
         "allow": [
-            "mcp__Supabase__execute_sql",
-            "mcp__Supabase__list_tables",
-            "mcp__Supabase__get_advisors",
-            "mcp__Supabase__list_migrations",
-            "mcp__Supabase__list_projects",
-            "mcp__Supabase__get_project",
+            "mcp__Supabase",
+            "mcp__Supabase__*",
             "Bash(git status)",
             "Bash(git status:*)",
             "Bash(git diff:*)",
