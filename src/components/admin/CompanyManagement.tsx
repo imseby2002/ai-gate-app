@@ -764,7 +764,7 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
       {/* ── Modal: 建立獨立公司 ── */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
-          <Card className="w-full max-w-xl bg-white p-6 sm:p-7 rounded-2xl shadow-2xl border border-slate-200 space-y-5 animate-in zoom-in-95">
+          <Card className="w-full max-w-xl bg-white p-6 sm:p-7 rounded-2xl shadow-2xl border border-slate-200 space-y-5 animate-in zoom-in-95 max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div className="flex items-center gap-2.5">
                 <div className="h-9 w-9 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
@@ -917,7 +917,7 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
       {/* ── Modal: 公司設定 (編輯) ── */}
       {editingCompany && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
-          <Card className="w-full max-w-xl bg-white p-6 sm:p-7 rounded-2xl shadow-2xl border border-slate-200 space-y-5 animate-in zoom-in-95">
+          <Card className="w-full max-w-xl bg-white p-6 sm:p-7 rounded-2xl shadow-2xl border border-slate-200 space-y-5 animate-in zoom-in-95 max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div className="flex items-center gap-2.5">
                 <div className="h-9 w-9 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
@@ -1045,7 +1045,7 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
               <div>
                 <label htmlFor="company-slug" className="font-bold text-slate-800 block mb-1.5">專屬子網域</label>
                 <div className="flex items-center gap-1.5">
-                  <input id="company-slug" value={formSlug} onChange={e => setFormSlug(e.target.value)} placeholder="feelingtea"
+                  <input id="company-slug" value={formSlug} onChange={e => setFormSlug(e.target.value)} placeholder="公司英文代號（小寫）"
                     className="flex-1 h-10 px-3 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500" />
                   <span className="text-sm text-slate-500">.im-tourist.com</span>
                 </div>
