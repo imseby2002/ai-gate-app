@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { requireSocialMatrix, requirePlatformAdmin, getOfficialProxyQuota } from '@/lib/social-matrix/access'
 import { StorageService } from '@/lib/social-matrix/storage'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getUsdToTwdRate } from '@/lib/fx'
+import { isBillableUser } from '@/lib/marketing/billing'
+import { deductCredits } from '@/lib/skills/billing'
+import { officialProxyCredits, nextExpiry } from '@/lib/social-matrix/lease-billing'
 import { ProxyType, ProxyProtocol } from '@/lib/social-matrix/types'
 
 export async function GET(req: NextRequest) {
@@ -10,7 +15,8 @@ export async function GET(req: NextRequest) {
   const authUser = guard.user
   const activeInMemory = () => StorageService.getLeases(authUser.id).filter(l => l.status === 'active').length
   const { isAdmin, quota, used } = await getOfficialProxyQuota(authUser, activeInMemory())
-  const meta = { is_admin: isAdmin, lease_quota: quota, lease_used: used }
+  // usd_twd_rate：前端用來把 monthly_price_twd 換算成點數顯示（點數＝美金）
+  const meta = { is_admin: isAdmin, lease_quota: quota, lease_used: used, usd_twd_rate: await getUsdToTwdRate() }
 
   try {
     const supabase = await createClient()
@@ -161,61 +167,113 @@ export async function POST(req: NextRequest) {
 
       const activeInMemory = StorageService.getLeases(authUser.id).filter(l => l.status === 'active').length
       const { isAdmin, quota, used } = await getOfficialProxyQuota(authUser, activeInMemory)
-      if (!isAdmin && used >= quota) {
-        return NextResponse.json({
-          error: quota > 0
-            ? `方案附贈的 ${quota} 個官方 IP 已使用完畢，額外 IP 需另行購買，請聯繫客服`
-            : '目前方案未附贈官方 IP，請升級至 PRO 以上或自備 IP',
-        }, { status: 403 })
+      if (!isAdmin && quota <= 0) {
+        return NextResponse.json({ error: '目前方案未開放官方 IP，請升級至 PRO 以上或自備 IP' }, { status: 403 })
       }
 
-      let leasedResult: any = null
+      // 附贈額度內免費；超出以點數購買（每 30 天扣一次，到期自動續扣）
+      const admin = createAdminClient()
+      const isPaid = !isAdmin && used >= quota
+      const billable = await isBillableUser(authUser.id)
+      const charge = async (name: string, priceTwd: number) => {
+        const price = await officialProxyCredits(priceTwd)
+        if (!billable) return { ok: true as const, price }
+        const r = await deductCredits(authUser.id, price, `官方發文 IP 租用 30 天：${name}`)
+        return r.ok ? { ok: true as const, price } : { ok: false as const, price }
+      }
+      const successMessage = (price: number) => isPaid
+        ? `🎉 已扣 ${price} 點租用 30 天，到期自動續扣；已注入您的代理池，可立即綁定帳號使用。`
+        : '🎉 已領取方案附贈的官方 IP！已自動注入您的代理池，可立即前往帳號矩陣綁定使用。'
 
-      try {
-        // Execute storage lease first to validate availability and inject to proxy pool
-        leasedResult = StorageService.leaseOfficialProxy(authUser.id, official_proxy_id)
+      // 以資料庫為準：先確認名額，再扣點，最後寫入租用、代理池與名額
+      const { data: off } = await admin
+        .from('marketing_official_proxies')
+        .select('*')
+        .eq('id', official_proxy_id)
+        .maybeSingle()
 
-        // Try syncing to DB if tables exist
-        const supabase = await createClient()
-        await supabase
+      if (off) {
+        if (!off.is_active || off.status === 'maintenance') {
+          return NextResponse.json({ error: '該官方 IP 目前維護保養中，暫停租用' }, { status: 409 })
+        }
+        if ((off.current_tenants_count ?? 0) >= (off.max_tenants ?? 1)) {
+          return NextResponse.json({ error: '該官方 IP 目前已被其他客戶專屬租用中，暫無空位' }, { status: 409 })
+        }
+
+        let price = 0
+        if (isPaid) {
+          const c = await charge(off.name, off.monthly_price_twd)
+          if (!c.ok) return NextResponse.json({ error: '點數不足', required: c.price }, { status: 402 })
+          price = c.price
+        }
+
+        const { data: lease, error: leaseErr } = await admin
           .from('marketing_proxy_leases')
           .insert({
             user_id: authUser.id,
             official_proxy_id,
             status: 'active',
+            is_paid: isPaid,
+            price_credits: isPaid ? price : null,
+            expires_at: isPaid ? nextExpiry() : null,
           })
           .select()
           .single()
-
-        // Also add to marketing_proxies so standard proxy APIs see it
-        await supabase.from('marketing_proxies').insert({
-          user_id: authUser.id,
-          name: leasedResult.proxy.name,
-          proxy_type: leasedResult.proxy.proxy_type,
-          protocol: leasedResult.proxy.protocol,
-          host: leasedResult.proxy.host,
-          port: leasedResult.proxy.port,
-          username: leasedResult.proxy.username,
-          password: leasedResult.proxy.password,
-          country: leasedResult.proxy.country,
-          city: leasedResult.proxy.city,
-          isp: leasedResult.proxy.isp,
-          status: 'active',
-          latency_ms: leasedResult.proxy.latency_ms,
-          notes: leasedResult.proxy.notes,
-        })
-      } catch (err) {
-        // If storage lease succeeded, we consider it a success
-        if (!leasedResult) {
-          return NextResponse.json({ error: String(err) }, { status: 400 })
+        if (leaseErr || !lease) {
+          console.error('[official-proxies lease] insert failed after charge', { userId: authUser.id, official_proxy_id, price, leaseErr })
+          return NextResponse.json({ error: '租用紀錄建立失敗，請聯繫客服' }, { status: 500 })
         }
+
+        const { data: proxy } = await admin.from('marketing_proxies').insert({
+          user_id: authUser.id,
+          lease_id: lease.id,
+          name: `🏢 [官方租用] ${off.name}`,
+          proxy_type: off.proxy_type,
+          protocol: off.protocol,
+          host: off.host,
+          port: off.port,
+          username: off.username,
+          password: off.password,
+          country: off.country,
+          city: off.city,
+          isp: off.isp,
+          status: 'active',
+          latency_ms: off.latency_ms,
+          notes: off.notes,
+        }).select().single()
+
+        const tenants = (off.current_tenants_count ?? 0) + 1
+        await admin
+          .from('marketing_official_proxies')
+          .update({ current_tenants_count: tenants, status: tenants >= (off.max_tenants ?? 1) ? 'rented_out' : 'available', updated_at: new Date().toISOString() })
+          .eq('id', official_proxy_id)
+
+        return NextResponse.json({ success: true, lease, proxy, charged_credits: price, message: successMessage(price) })
       }
 
+      // 資料庫查無此 IP → 記憶體示範資料
+      let leasedResult: ReturnType<typeof StorageService.leaseOfficialProxy>
+      try {
+        leasedResult = StorageService.leaseOfficialProxy(authUser.id, official_proxy_id)
+      } catch (err) {
+        return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 400 })
+      }
+      let price = 0
+      if (isPaid) {
+        const offMem = StorageService.getOfficialProxies().find(p => p.id === official_proxy_id)
+        const c = await charge(offMem?.name ?? official_proxy_id, offMem?.monthly_price_twd ?? 0)
+        if (!c.ok) {
+          StorageService.releaseOfficialProxy(authUser.id, leasedResult.lease.id)
+          return NextResponse.json({ error: '點數不足', required: c.price }, { status: 402 })
+        }
+        price = c.price
+      }
       return NextResponse.json({
         success: true,
         lease: leasedResult.lease,
         proxy: leasedResult.proxy,
-        message: '🎉 官方專屬原生 IP 租用成功！已自動注入您的代理池，可立即前往帳號矩陣綁定使用。',
+        charged_credits: price,
+        message: successMessage(price),
       })
     }
 
