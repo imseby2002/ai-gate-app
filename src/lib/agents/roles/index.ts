@@ -8,6 +8,7 @@ import { listUncategorizedCashflowTool, updateCashflowCategoryTool } from '../to
 import { listCalendarEventsTool, createCalendarEventTool, summarizeInboxTool } from '../tools/secretary'
 import { readRepoFileTool, proposeCodeChangeTool } from '../tools/code_agent'
 import { listRecentUploadsTool, analyzeComplianceImageTool } from '../tools/compliance'
+import { MARKETING_EXECUTION_TOOLS } from '../tools/mission'
 import type { AgentToolDef } from '../types'
 
 const collectTool = createInternalApiTool(
@@ -117,6 +118,16 @@ export const ROLE_TOOL_SETS: Record<string, Record<string, AgentToolDef>> = {
     [copyTool.id]: copyTool,
     [imageScriptTool.id]: imageScriptTool,
     [videoScriptTool.id]: videoScriptTool,
+    ...MARKETING_EXECUTION_TOOLS,
+  },
+  // 網路行銷專員：目標任務（mission）主力角色，可直接操作 marketing.im-tourist.com 內部資源
+  'digital-marketer': {
+    [collectTool.id]: collectTool,
+    [analyzeTool.id]: analyzeTool,
+    [copyTool.id]: copyTool,
+    [imageScriptTool.id]: imageScriptTool,
+    [videoScriptTool.id]: videoScriptTool,
+    ...MARKETING_EXECUTION_TOOLS,
   },
   'cs-care': {
     [listDormantCustomersTool.id]: listDormantCustomersTool,
