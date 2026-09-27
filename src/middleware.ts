@@ -100,6 +100,7 @@ export async function middleware(request: NextRequest) {
     const isPublic =
       pathname === '/' ||
       pathname.startsWith('/intro') ||
+      pathname.startsWith('/privacy') ||
       pathname.startsWith('/esim') ||
       pathname.startsWith('/api/esim') ||
       pathname.startsWith('/book/') ||
