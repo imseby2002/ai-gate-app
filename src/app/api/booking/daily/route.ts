@@ -669,7 +669,8 @@ export async function PATCH(req: NextRequest) {
   return NextResponse.json(data)
 }
 
-// DELETE — 刪除單筆
+// DELETE — 刪除該房當天的訂單（取消連結的訂單並清空訂單欄位）。
+// 房間列本身由「房型管理」產生並與訂單串接，固定保留，不刪除；密碼也保留。
 export async function DELETE(req: NextRequest) {
   const supabase = await createClient()
   const ctx = await getBnbContext(supabase)
@@ -685,7 +686,9 @@ export async function DELETE(req: NextRequest) {
     .eq('user_id', ctx.ownerId)
     .maybeSingle()
 
-  if (rec?.booking_id) {
+  if (!rec) return NextResponse.json({ error: 'Record not found' }, { status: 404 })
+
+  if (rec.booking_id) {
     await supabase
       .from('bookings')
       .update({ status: 'cancelled', updated_at: new Date().toISOString() })
@@ -693,12 +696,17 @@ export async function DELETE(req: NextRequest) {
       .eq('user_id', ctx.ownerId)
   }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('bnb_daily_records')
-    .delete()
+    .update({
+      order_number: null, guest_name: null, price_total: null, platform: null,
+      deposit: null, paid: false, booking_id: null,
+      source: 'manual', updated_at: new Date().toISOString(),
+    })
     .eq('id', id)
     .eq('user_id', ctx.ownerId)
+    .select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ ok: true })
+  return NextResponse.json(data)
 }

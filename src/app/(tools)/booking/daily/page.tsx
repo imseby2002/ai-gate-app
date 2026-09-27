@@ -455,22 +455,32 @@ export default function DailyPage() {
       onContinueStay={continueStay} />
   )
 
-  async function deleteRow(id: string) {
-    setRows(prev => prev.filter(r => r.id !== id))
+  function hasOrder(row: DailyRecord) {
+    return !!(row.booking_id || row.order_number || row.guest_name || row.price_total != null || row.deposit != null || row.paid)
+  }
+
+  // 只刪除訂單（取消連結的訂單並清空訂單欄位），房號列固定保留
+  async function clearOrder(row: DailyRecord) {
+    if (!window.confirm(t('daily.confirmDeleteOrder', { room: row.room_name }))) return
+    setSaving(row.id)
     try {
       const res = await fetch('/api/booking/daily', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id }),
+        body: JSON.stringify({ id: row.id }),
       })
       const d = await res.json()
-      if (!res.ok && d?.error) {
-        alert(d.error)
+      if (!res.ok) {
+        if (d?.error) alert(d.error)
         load()
+        return
       }
+      setRows(prev => prev.map(r => r.id === row.id ? { ...r, ...d } : r))
     } catch (err) {
       console.error(err)
       load()
+    } finally {
+      setSaving(null)
     }
   }
 
@@ -551,10 +561,12 @@ export default function DailyPage() {
               {/* 標題：房號 */}
               <div className="flex items-center justify-between gap-2 px-4 py-2.5 bg-gray-50 border-b">
                 <span className="font-semibold text-gray-900 text-[15px] min-w-0 truncate">{row.room_name}</span>
-                <button onClick={() => deleteRow(row.id)}
-                  className="p-1 text-gray-300 hover:text-red-400 rounded shrink-0">
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                {hasOrder(row) && (
+                  <button onClick={() => clearOrder(row)} title={t('daily.deleteOrder')}
+                    className="p-1 text-gray-300 hover:text-red-400 rounded shrink-0">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
               </div>
 
               <div className="px-4 py-3 space-y-3">
@@ -649,10 +661,12 @@ export default function DailyPage() {
                 </div>
               ))}
               <div className="flex justify-center pr-1">
-                <button onClick={() => deleteRow(row.id)}
-                  className="p-1 text-gray-300 hover:text-red-400 rounded transition-colors opacity-0 group-hover:opacity-100 hover:opacity-100">
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+                {hasOrder(row) && (
+                  <button onClick={() => clearOrder(row)} title={t('daily.deleteOrder')}
+                    className="p-1 text-gray-300 hover:text-red-400 rounded transition-colors opacity-0 group-hover:opacity-100 hover:opacity-100">
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </div>
             </div>
           ))
