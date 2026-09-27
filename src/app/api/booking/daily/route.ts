@@ -669,8 +669,44 @@ export async function PATCH(req: NextRequest) {
   return NextResponse.json(data)
 }
 
-// DELETE — 每日入住的房間列由「房型管理」自動產生並與訂單串接，不可刪除。
-// 要移除入住資料請清空欄位（PATCH），要移除房間請到房型管理。
-export async function DELETE() {
-  return NextResponse.json({ error: '每日入住房間列由房型管理產生，不可刪除' }, { status: 405 })
+// DELETE — 刪除該房當天的訂單（取消連結的訂單並清空訂單欄位）。
+// 房間列本身由「房型管理」產生並與訂單串接，固定保留，不刪除；密碼也保留。
+export async function DELETE(req: NextRequest) {
+  const supabase = await createClient()
+  const ctx = await getBnbContext(supabase)
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { id } = await req.json()
+  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+
+  const { data: rec } = await supabase
+    .from('bnb_daily_records')
+    .select('booking_id')
+    .eq('id', id)
+    .eq('user_id', ctx.ownerId)
+    .maybeSingle()
+
+  if (!rec) return NextResponse.json({ error: 'Record not found' }, { status: 404 })
+
+  if (rec.booking_id) {
+    await supabase
+      .from('bookings')
+      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+      .eq('id', rec.booking_id)
+      .eq('user_id', ctx.ownerId)
+  }
+
+  const { data, error } = await supabase
+    .from('bnb_daily_records')
+    .update({
+      order_number: null, guest_name: null, price_total: null, platform: null,
+      deposit: null, paid: false, booking_id: null,
+      source: 'manual', updated_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+    .eq('user_id', ctx.ownerId)
+    .select().single()
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json(data)
 }

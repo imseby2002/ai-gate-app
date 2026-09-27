@@ -1243,6 +1243,8 @@
       "clickToFill": "Nhấn để nhập",
       "continueStay": "Ở tiếp",
       "continueStayHint": "Lấy dữ liệu khách của ngày hôm trước cho phòng này",
+      "deleteOrder": "Xóa đơn",
+      "confirmDeleteOrder": "Xóa đơn hôm nay của “{room}”? Đơn sẽ bị hủy, phòng vẫn giữ lại.",
       "autoTag": "Tự động",
       "orderTag": "Đơn",
       "editPlatform": "Nhấn để đổi nền tảng",
