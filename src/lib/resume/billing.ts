@@ -2,6 +2,10 @@
 // 比照 skills（api/skills/run）：模組權限 + 執行前餘額檢查，計價共用 skills/billing。
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { getBalance } from '@/lib/skills/billing'
+import {
+  getModuleEntitlements, planRequiredResponse, consumeMonthlyQuota, quotaExceededResponse,
+} from '@/lib/module-plans/entitlements'
+import { RESUME_TOOL_CATEGORY, RESUME_CATEGORY_LABEL, minPlanLabel } from '@/lib/module-plans/definitions'
 
 // 各工具固定扣點（單位與 credit_transactions.amount_usd 相同）
 export const RESUME_COSTS = {
@@ -59,4 +63,47 @@ export async function guardResumeAccess(
   }
 
   return { error: null, billable }
+}
+
+/**
+ * 職場助手方案檢查（lib/module-plans/definitions.ts）：工具分類是否開放、履歷優化／求職信每月次數。
+ * 在 guardResumeAccess 通過後、扣點前呼叫；回傳 Response 代表不允許。內部帳號為 MAX 不受限。
+ */
+export async function checkResumePlan(userId: string, toolId: string): Promise<Response | null> {
+  const { plan, features } = await getModuleEntitlements(userId, 'resume')
+
+  const category = RESUME_TOOL_CATEGORY[toolId]
+  if (!category) return json({ error: `未知的工具：${toolId}` }, 400)
+  if (!features.categories.includes(category)) {
+    return planRequiredResponse(
+      `「${RESUME_CATEGORY_LABEL[category]}」工具需職場助手 ${minPlanLabel('resume', f => f.categories.includes(category))}方案`,
+      plan,
+    )
+  }
+
+  const limit = toolId === 'resume-optimize' ? features.optimizeMonthlyLimit
+    : toolId === 'cover-letter' ? features.coverLetterMonthlyLimit
+    : Infinity
+  if (!await consumeMonthlyQuota(userId, 'resume', toolId, limit)) {
+    const name = toolId === 'resume-optimize' ? '履歷優化' : '求職信'
+    return quotaExceededResponse(`本月${name} ${limit} 次已用完，CORE 以上不限次數`, plan)
+  }
+  return null
+}
+
+/** 求職信模板是否在方案可用範圍內（依 sort_order 前 N 個；MAX 全部） */
+export async function allowedCoverLetterTemplateIds(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: SupabaseClient<any, any, any>,
+  userId: string,
+): Promise<Set<string> | null> {
+  const { features } = await getModuleEntitlements(userId, 'resume')
+  if (features.templateLimit === Infinity) return null
+  const { data } = await supabase
+    .from('cover_letter_templates')
+    .select('id')
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true })
+    .limit(features.templateLimit)
+  return new Set((data ?? []).map((t: { id: string }) => t.id))
 }

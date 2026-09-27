@@ -3,7 +3,7 @@ import { createAnthropic } from '@ai-sdk/anthropic'
 import { streamText } from 'ai'
 import { createClient } from '@/lib/supabase/server'
 import { deductCredits } from '@/lib/skills/billing'
-import { guardResumeAccess, RESUME_COSTS } from '@/lib/resume/billing'
+import { guardResumeAccess, checkResumePlan, RESUME_COSTS } from '@/lib/resume/billing'
 
 function sse(controller: ReadableStreamDefaultController, payload: object) {
   controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(payload)}\n\n`))
@@ -153,6 +153,8 @@ export async function POST(request: NextRequest) {
   const cost = RESUME_COSTS['worker-tools']
   const guard = await guardResumeAccess(supabase, user.id, cost)
   if (guard.error) return guard.error
+  const planError = await checkResumePlan(user.id, toolId)
+  if (planError) return planError
   if (guard.billable) {
     const deduct = await deductCredits(user.id, cost, `[resume] worker-tools:${toolId}`)
     if (!deduct.ok && deduct.reason === 'insufficient') {

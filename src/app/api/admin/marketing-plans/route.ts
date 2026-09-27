@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { createClient } from '@/lib/supabase/server'
-import { BOOKING_PLAN_FEATURES, type BookingPlan } from '@/lib/booking/entitlements'
+import { MARKETING_PLAN_FEATURES, type MarketingPlan } from '@/lib/marketing/entitlements'
 import { getCompanyPlansForUsers } from '@/lib/company/entitlements'
 
-const VALID_PLANS = Object.keys(BOOKING_PLAN_FEATURES) as BookingPlan[]
+const VALID_PLANS = Object.keys(MARKETING_PLAN_FEATURES) as MarketingPlan[]
 
 async function assertAdmin() {
   const supabase = await createClient()
@@ -20,7 +20,7 @@ async function assertAdmin() {
   return profile?.user_type === 'admin' ? user : null
 }
 
-// GET /api/admin/booking-plans?q=email 片段搜尋
+// GET /api/admin/marketing-plans?q=email 片段搜尋
 export async function GET(req: NextRequest) {
   const admin = await assertAdmin()
   if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabase
     .from('profiles')
-    .select('id, email, full_name, booking_subscriptions(plan, billing_cycle, status, current_period_end)')
+    .select('id, email, full_name, user_type, marketing_subscriptions(plan, billing_cycle, status, current_period_end)')
     .order('created_at', { ascending: false })
     .limit(50)
 
@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   // 外部公司成員隨公司：公司開通此模組（公司版／專屬客製-企業版）為 MAX，否則 FREE，個人方案不生效
-  const { members, grants } = await getCompanyPlansForUsers((data ?? []).map(u => u.id), 'booking')
+  const { members, grants } = await getCompanyPlansForUsers((data ?? []).map(u => u.id), 'marketing')
   return NextResponse.json({
     users: (data ?? []).map(u => ({
       ...u,
@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
 }
 
 // PATCH { userId, plan, currentPeriodEnd? }
-// 手動指定方案一律設為 active；currentPeriodEnd 不給＝不到期。extra_properties、feature_overrides 等其他欄位不動。
+// 手動指定方案一律設為 active；currentPeriodEnd 不給＝不到期。feature_overrides 等其他欄位不動。
 export async function PATCH(req: NextRequest) {
   const admin = await assertAdmin()
   if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
@@ -59,7 +59,7 @@ export async function PATCH(req: NextRequest) {
     userId?: string; plan?: string; currentPeriodEnd?: string | null
   }
   if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 })
-  if (!plan || !VALID_PLANS.includes(plan as BookingPlan)) return NextResponse.json({ error: '無效的方案' }, { status: 400 })
+  if (!plan || !VALID_PLANS.includes(plan as MarketingPlan)) return NextResponse.json({ error: '無效的方案' }, { status: 400 })
 
   const supabase = await createAdminClient()
   const { data: target } = await supabase.from('profiles').select('user_type, company_id').eq('id', userId).maybeSingle()
@@ -67,7 +67,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: '公司成員隨公司方案，請到公司管理調整' }, { status: 400 })
   }
   const { error } = await supabase
-    .from('booking_subscriptions')
+    .from('marketing_subscriptions')
     .upsert({
       user_id: userId,
       plan,

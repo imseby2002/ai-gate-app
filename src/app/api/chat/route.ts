@@ -15,6 +15,8 @@ import { streamByChain } from '@/lib/ai/proxy-fallback'
 import { calculateModelCosts, detectSourceChannel, cleanModelId, type SourceChannel } from '@/lib/ai/token-cost-tracker'
 import { isChatModelAllowed, getChatDailyUsage } from '@/lib/ai/chat-policy'
 import { getCompanyBillingContext } from '@/lib/company/entitlements'
+import { getModuleEntitlements, planRequiredResponse } from '@/lib/module-plans/entitlements'
+import { minPlanLabel } from '@/lib/module-plans/definitions'
 import { checkEnterpriseCostAlert } from '@/lib/company/enterprise'
 
 export async function POST(req: NextRequest) {
@@ -36,13 +38,18 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: 'Account suspended' }), { status: 403 })
   }
 
-  // CHAT 對付費客戶免費（不扣點、不檢查餘額），改以每日則數上限與模型白名單控制成本（見 lib/ai/chat-policy.ts）。
-  // 專屬客製-企業版不受限制：開放全部模型、無每日上限，用量計入成本警示。
+  // CHAT 對付費客戶免費（不扣點、不檢查餘額），改以方案控制成本（lib/module-plans/definitions.ts）：
+  // FREE 只開放免費／低價模型白名單（lib/ai/chat-policy.ts），各級有每日則數上限；
+  // 專屬客製-企業版、公司開通 chat、內部帳號一律視同 MAX（不限則數、全部模型）。
   const isExternal = profile.user_type === 'external'
-  const companyCtx = isExternal ? await getCompanyBillingContext(user.id) : null
-  const chatRestricted = isExternal && !companyCtx?.enterprise
-  if (chatRestricted) {
-    const { used, limit } = await getChatDailyUsage(supabase, user.id, !!profile.company_id)
+  const [companyCtx, chatEnt] = isExternal
+    ? await Promise.all([getCompanyBillingContext(user.id), getModuleEntitlements(user.id, 'chat')])
+    : [null, null]
+  const chatRestricted = !!chatEnt && !chatEnt.features.allModels
+  if (chatEnt && chatEnt.features.dailyMessageLimit !== Infinity) {
+    // FREE 的公司成員沿用既有的每日 100 則（CHAT_DAILY_LIMIT.company）
+    const limitOverride = chatEnt.plan === 'free' ? undefined : chatEnt.features.dailyMessageLimit
+    const { used, limit } = await getChatDailyUsage(supabase, user.id, !!profile.company_id, limitOverride)
     if (used >= limit) {
       return new Response(JSON.stringify({ error: 'daily_limit_reached', limit }), { status: 429 })
     }
@@ -73,6 +80,9 @@ export async function POST(req: NextRequest) {
   let expertContext = ''
 
   if (assistantId) {
+    if (chatEnt && !chatEnt.features.ragAssistants) {
+      return planRequiredResponse(`RAG 助理需 ${minPlanLabel('chat', f => f.ragAssistants)}方案`, chatEnt.plan)
+    }
     const { data: asst } = await supabase
       .from('assistants')
       .select('*')

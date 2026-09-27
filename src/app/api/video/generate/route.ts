@@ -1,22 +1,34 @@
 ﻿import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { getCompanyBillingContext } from '@/lib/company/entitlements'
-import { checkEnterpriseCostAlert } from '@/lib/company/enterprise'
+import { getModuleEntitlements, planRequiredResponse } from '@/lib/module-plans/entitlements'
+import { minPlanLabel } from '@/lib/module-plans/definitions'
+import { getBalance, deductCredits } from '@/lib/skills/billing'
+import { videoCost } from '@/lib/marketing/billing'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  // CHAT 不提供生圖／影片給一般付費客戶（成本高且不扣點）；內部帳號（admin／employee）與
-  // 專屬客製-企業版可用，企業版用量計入成本警示
-  const { data: profile } = await supabase.from('profiles').select('user_type').eq('id', user.id).single()
-  const companyCtx = profile?.user_type === 'external' ? await getCompanyBillingContext(user.id) : null
-  if (!profile || (profile.user_type === 'external' && !companyCtx?.enterprise)) {
-    return NextResponse.json({ error: '此功能未開放，請改用行銷中心的圖片／影片產出' }, { status: 403 })
+  // 影片生成依 AI 對話方案開放（lib/module-plans/definitions.ts）；付費客戶依 lib/marketing/billing.ts 的價格扣點
+  // （專屬客製-企業版由 deductCredits 記錄用量並檢查成本警示）。內部帳號（admin／employee）不計費。
+  const { data: profile } = await supabase.from('profiles').select('user_type, is_active').eq('id', user.id).single()
+  if (!profile) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (profile.is_active === false) return NextResponse.json({ error: '帳號已停用' }, { status: 403 })
+  const billable = profile.user_type === 'external'
+  if (billable) {
+    const ent = await getModuleEntitlements(user.id, 'chat')
+    if (!ent.features.videoGen) {
+      return planRequiredResponse(`影片生成需 AI 對話 ${minPlanLabel('chat', f => f.videoGen)}方案`, ent.plan)
+    }
   }
 
   const { prompt, model, duration = 5 } = await req.json()
+
+  const price = videoCost(model === 'kling-v2' ? 'kling-standard' : model, Number(duration) || 5)
+  if (billable && (await getBalance(user.id)) < price) {
+    return NextResponse.json({ error: '點數不足', required: price }, { status: 402 })
+  }
   if (!prompt) return NextResponse.json({ error: 'prompt required' }, { status: 400 })
 
   try {
@@ -74,7 +86,10 @@ export async function POST(req: NextRequest) {
       model_id: model,
       cost_usd: estimatedCost,
     })
-    if (companyCtx?.enterprise) void checkEnterpriseCostAlert(companyCtx.companyId)
+    if (billable) {
+      const deduct = await deductCredits(user.id, price, `[chat] 影片生成:${model}`)
+      if (!deduct.ok) console.error('[video/generate] 扣點失敗', { userId: user.id, model, reason: deduct.reason })
+    }
 
     return NextResponse.json({
       jobId,

@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { Zap, Users, BarChart3, Settings, Home, FileText, Link2, Headphones, LifeBuoy, Bot, Building2, MessageSquare, Bell, BedDouble } from 'lucide-react'
+import { Zap, Users, BarChart3, Settings, Home, FileText, Link2, Headphones, LifeBuoy, Bot, Building2, MessageSquare, Bell, BedDouble, Megaphone, Landmark, Scale, UserCog, Briefcase } from 'lucide-react'
 import Link from 'next/link'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -33,6 +33,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: '/admin/feedback', label: '意見反映（全模組）', icon: MessageSquare },
     { href: '/admin/cs-plans', label: 'CS 方案管理', icon: Headphones },
     { href: '/admin/booking-plans', label: '訂房方案管理', icon: BedDouble },
+    { href: '/admin/marketing-plans', label: '行銷方案管理', icon: Megaphone },
+    { href: '/admin/module-plans/chat', label: 'AI 對話方案管理', icon: MessageSquare },
+    { href: '/admin/module-plans/roundtable', label: '智慧圓桌方案管理', icon: Landmark },
+    { href: '/admin/module-plans/legal', label: '法律合規方案管理', icon: Scale },
+    { href: '/admin/module-plans/agent', label: 'AI Agent 方案管理', icon: UserCog },
+    { href: '/admin/module-plans/resume', label: '職場助手方案管理', icon: Briefcase },
     { href: '/admin/cs-setup-requests', label: 'CS 協助請求', icon: LifeBuoy },
     { href: '/admin/notify-settings', label: '通知設定', icon: Bell },
     { href: '/admin/agents', label: 'Agent 管理', icon: Bot },

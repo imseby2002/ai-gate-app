@@ -4430,6 +4430,7 @@
     "tabQa": "智能法律諮詢 (Q&A)",
     "tabProcedure": "開門市・公司審批引導 (DAG)",
     "tabImport": "各國進口原料與設備規定",
+    "planLocked": "此功能需升級法律合規方案（{plan} 以上）",
     "tabAmendment": "條文修法歷程溯源",
     "qaHeading": "輸入法律、稅務或行政申請問題（支援中文、英文、越南文）",
     "qaPlaceholder": "例如：外資在越南開一家手搖飲料店，需要辦什麼許可與文件？",

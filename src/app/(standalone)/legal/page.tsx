@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import {
   Scale, BookOpen, Clock, FileCheck, ArrowRight, ShieldCheck, AlertTriangle,
@@ -18,6 +18,22 @@ import { SEED_CROSS_BORDER_RULES } from '@/lib/legal/seeds'
 export default function LegalAssistantPage() {
   const t = useTranslations('Legal')
   const [activeTab, setActiveTab] = useState<'qa' | 'procedure' | 'import' | 'amendment'>('qa')
+
+  // 方案（lib/module-plans）：鎖定未開放的分頁、顯示 API 回傳的方案／額度訊息
+  const [planFeatures, setPlanFeatures] = useState<{ importRules: boolean } | null>(null)
+  const [planError, setPlanError] = useState<string | null>(null)
+  useEffect(() => {
+    fetch('/api/module-plans/me?module=legal')
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => { if (d?.features) setPlanFeatures(d.features) })
+      .catch(() => {})
+  }, [])
+  const readError = async (res: Response) => {
+    if (res.ok) { setPlanError(null); return false }
+    const data = await res.json().catch(() => ({}))
+    setPlanError(data.error ?? `HTTP ${res.status}`)
+    return true
+  }
 
   // QA Tab State
   const [queryInput, setQueryInput] = useState('')
@@ -55,6 +71,7 @@ export default function LegalAssistantPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: q }),
       })
+      if (await readError(res)) return
       const data = await res.json()
       if (data.success) {
         setAnswer(data.data)
@@ -79,6 +96,7 @@ export default function LegalAssistantPage() {
           province: procProvince,
         }),
       })
+      if (await readError(res)) return
       const data = await res.json()
       if (data.success) {
         setProcPlan(data.data)
@@ -97,6 +115,7 @@ export default function LegalAssistantPage() {
       const res = await fetch(
         `/api/legal/trace-amendment?document_number=${encodeURIComponent(traceDocNum)}&article=${encodeURIComponent(traceArticle)}`
       )
+      if (await readError(res)) return
       const data = await res.json()
       if (data.success) {
         setTraceResult(data)
@@ -561,7 +580,20 @@ export default function LegalAssistantPage() {
       {/* ───────────────────────────────────────────────────────────── */}
       {/* TAB 3: 跨國原料與設備進口規定                                   */}
       {/* ───────────────────────────────────────────────────────────── */}
-      {activeTab === 'import' && (
+      {planError && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-950/30 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+          {planError}
+        </div>
+      )}
+
+      {activeTab === 'import' && planFeatures && !planFeatures.importRules && (
+        <Card className="p-6 text-sm text-gray-600 dark:text-gray-300 flex items-center gap-2">
+          <AlertCircle className="h-4 w-4 text-amber-600" />
+          {t('planLocked', { plan: 'PRO' })}
+        </Card>
+      )}
+
+      {activeTab === 'import' && (!planFeatures || planFeatures.importRules) && (
         <div className="space-y-6">
           <Card className="p-6 space-y-4">
             <div className="flex items-center justify-between">

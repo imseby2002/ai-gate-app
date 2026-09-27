@@ -81,6 +81,20 @@ export async function hasCompanyModuleGrant(ownerId: string, moduleId: string): 
   }
 }
 
+/**
+ * 外部公司成員的模組方案「隨公司」：回傳 null 代表不是外部公司成員（照個人方案判斷）；
+ * 否則回傳公司是否給此模組 MAX（專屬客製-企業版，或公司版開通此模組）——false 即為 FREE，不看個人方案。
+ * CS／訂房／行銷與 AI 模組（lib/module-plans）的 entitlements 共用。
+ */
+export async function getCompanyMemberModuleMax(userId: string, moduleId: string): Promise<boolean | null> {
+  const { createAdminClient } = await import('@/lib/supabase/admin')
+  const admin = createAdminClient()
+  const { data: profile } = await admin.from('profiles').select('user_type, company_id').eq('id', userId).maybeSingle()
+  if (profile?.user_type !== 'external' || !profile.company_id) return null
+  const company = await getCompanyBillingContext(userId)
+  return !!company?.enterprise || await hasCompanyModuleGrant(userId, moduleId)
+}
+
 export interface CompanyBillingContext {
   companyId: string
   /** 專屬客製-企業版：不扣點、CHAT 完全開放、功能修改不限次數 */
@@ -119,36 +133,40 @@ export interface CompanyGrantInfo {
 }
 
 /**
- * 批次查詢多位使用者是否因所屬公司而取得某模組的 MAX 權益（admin 方案管理頁顯示「實際生效方案」用）。
- * 條件與 hasCompanyModuleGrant 相同：公司版有效（plan='company'、active、未到期）且模組在 enabled_modules 內。
+ * 批次查詢多位外部使用者的「隨公司」方案（admin 方案管理頁顯示用），與 getCompanyMemberModuleMax 同一套規則：
+ * 公司版有效（plan='company'、active、未到期）且為專屬客製-企業版或模組在 enabled_modules 內 → MAX。
+ * 回傳 members：所有外部公司成員（userId → 公司名稱，個人方案不生效）；grants：其中取得 MAX 的成員。
  */
-export async function getCompanyGrantsForUsers(userIds: string[], moduleId: string): Promise<Map<string, CompanyGrantInfo>> {
-  const result = new Map<string, CompanyGrantInfo>()
-  if (userIds.length === 0) return result
+export async function getCompanyPlansForUsers(userIds: string[], moduleId: string): Promise<{
+  members: Map<string, string>
+  grants: Map<string, CompanyGrantInfo>
+}> {
+  const members = new Map<string, string>()
+  const grants = new Map<string, CompanyGrantInfo>()
+  if (userIds.length === 0) return { members, grants }
   const { createAdminClient } = await import('@/lib/supabase/admin')
   const admin = createAdminClient()
 
-  const { data: profiles } = await admin.from('profiles').select('id, company_id').in('id', userIds)
-  const companyIds = [...new Set((profiles ?? []).map(p => p.company_id).filter(Boolean))] as string[]
-  if (companyIds.length === 0) return result
+  const { data: profiles } = await admin.from('profiles').select('id, company_id, user_type').in('id', userIds)
+  const external = (profiles ?? []).filter(p => p.user_type === 'external' && p.company_id)
+  const companyIds = [...new Set(external.map(p => p.company_id))] as string[]
+  if (companyIds.length === 0) return { members, grants }
 
   const [{ data: companies }, { data: subs }] = await Promise.all([
     admin.from('companies').select('id, name, enabled_modules').in('id', companyIds),
     admin.from('company_subscriptions').select('company_id, plan, status, current_period_end, enterprise').in('company_id', companyIds),
   ])
   const subMap = new Map((subs ?? []).map(s => [s.company_id, s]))
-  const grantByCompany = new Map<string, CompanyGrantInfo>()
-  for (const c of companies ?? []) {
-    const s = subMap.get(c.id)
+  const companyMap = new Map((companies ?? []).map(c => [c.id, c]))
+  for (const p of external) {
+    const c = companyMap.get(p.company_id)
+    members.set(p.id, c?.name ?? '')
+    const s = subMap.get(p.company_id)
     const active = s?.plan === 'company' && s.status === 'active'
       && (!s.current_period_end || new Date(s.current_period_end).getTime() > Date.now())
-    if (active && (c.enabled_modules ?? []).includes(moduleId)) {
-      grantByCompany.set(c.id, { source: s!.enterprise ? 'enterprise' : 'company', companyName: c.name })
+    if (active && c && (s!.enterprise || (c.enabled_modules ?? []).includes(moduleId))) {
+      grants.set(p.id, { source: s!.enterprise ? 'enterprise' : 'company', companyName: c.name })
     }
   }
-  for (const p of profiles ?? []) {
-    const g = p.company_id ? grantByCompany.get(p.company_id) : undefined
-    if (g) result.set(p.id, g)
-  }
-  return result
+  return { members, grants }
 }
