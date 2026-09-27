@@ -1243,8 +1243,6 @@
       "clickToFill": "Click to fill",
       "continueStay": "Continue stay",
       "continueStayHint": "Copy yesterday's guest data for this room",
-      "confirmDelete": "Delete the row for “{room}”?",
-      "confirmDeleteBooking": "The linked booking will also be cancelled.",
       "autoTag": "Auto",
       "orderTag": "Booking",
       "editPlatform": "Click to change platform",

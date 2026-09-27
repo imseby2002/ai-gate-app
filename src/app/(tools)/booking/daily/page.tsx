@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { Trash2, RefreshCw, ChevronLeft, ChevronRight, Eye, EyeOff, Check, ExternalLink } from 'lucide-react'
+import { RefreshCw, ChevronLeft, ChevronRight, Eye, EyeOff, Check, ExternalLink } from 'lucide-react'
 import { InstallDailyButton } from './InstallDailyButton'
 
 interface DailyRecord {
@@ -455,30 +455,6 @@ export default function DailyPage() {
       onContinueStay={continueStay} />
   )
 
-  async function deleteRow(id: string) {
-    const target = rows.find(r => r.id === id)
-    if (!target) return
-    const hasBooking = !!(target.booking_id || target.order_number || target.guest_name)
-    const msg = t('daily.confirmDelete', { room: target.room_name }) + (hasBooking ? `\n${t('daily.confirmDeleteBooking')}` : '')
-    if (!window.confirm(msg)) return
-    setRows(prev => prev.filter(r => r.id !== id))
-    try {
-      const res = await fetch('/api/booking/daily', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id }),
-      })
-      const d = await res.json()
-      if (!res.ok && d?.error) {
-        alert(d.error)
-        load()
-      }
-    } catch (err) {
-      console.error(err)
-      load()
-    }
-  }
-
   const isToday = date === todayTW()
 
   return (
@@ -556,10 +532,6 @@ export default function DailyPage() {
               {/* 標題：房號 */}
               <div className="flex items-center justify-between gap-2 px-4 py-2.5 bg-gray-50 border-b">
                 <span className="font-semibold text-gray-900 text-[15px] min-w-0 truncate">{row.room_name}</span>
-                <button onClick={() => deleteRow(row.id)}
-                  className="p-1 text-gray-300 hover:text-red-400 rounded shrink-0">
-                  <Trash2 className="h-4 w-4" />
-                </button>
               </div>
 
               <div className="px-4 py-3 space-y-3">
@@ -653,12 +625,7 @@ export default function DailyPage() {
                   />
                 </div>
               ))}
-              <div className="flex justify-center pr-1">
-                <button onClick={() => deleteRow(row.id)}
-                  className="p-1 text-gray-300 hover:text-red-400 rounded transition-colors opacity-0 group-hover:opacity-100 hover:opacity-100">
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              </div>
+              <div />
             </div>
           ))
         )}
