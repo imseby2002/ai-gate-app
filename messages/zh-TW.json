@@ -1243,6 +1243,8 @@
       "clickToFill": "點擊填入",
       "continueStay": "續住",
       "continueStayHint": "帶入前一天同房間的入住資料",
+      "confirmDelete": "確定刪除「{room}」這一列？",
+      "confirmDeleteBooking": "已連結的訂單也會一併取消。",
       "autoTag": "自動",
       "orderTag": "訂單",
       "editPlatform": "點擊修改平台",

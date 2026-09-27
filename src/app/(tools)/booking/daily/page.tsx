@@ -456,6 +456,11 @@ export default function DailyPage() {
   )
 
   async function deleteRow(id: string) {
+    const target = rows.find(r => r.id === id)
+    if (!target) return
+    const hasBooking = !!(target.booking_id || target.order_number || target.guest_name)
+    const msg = t('daily.confirmDelete', { room: target.room_name }) + (hasBooking ? `\n${t('daily.confirmDeleteBooking')}` : '')
+    if (!window.confirm(msg)) return
     setRows(prev => prev.filter(r => r.id !== id))
     try {
       const res = await fetch('/api/booking/daily', {
