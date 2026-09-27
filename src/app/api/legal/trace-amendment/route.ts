@@ -1,8 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { SEED_LEGAL_DOCUMENTS, SEED_LEGAL_NODES } from '@/lib/legal/seeds'
 import { TemporalValidityEngine } from '@/lib/legal/temporal'
+import { createClient } from '@/lib/supabase/server'
+import { getModuleEntitlements, planRequiredResponse } from '@/lib/module-plans/entitlements'
+import { minPlanLabel } from '@/lib/module-plans/definitions'
 
 export async function GET(req: NextRequest) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const ent = await getModuleEntitlements(user.id, 'legal')
+  if (!ent.features.amendmentTrace) {
+    return planRequiredResponse(`修法追溯需法律合規 ${minPlanLabel('legal', f => f.amendmentTrace)}方案`, ent.plan)
+  }
+
   try {
     const { searchParams } = new URL(req.url)
     const documentNumber = searchParams.get('document_number') || '15/2018/NĐ-CP'

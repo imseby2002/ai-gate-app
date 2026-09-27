@@ -64,16 +64,17 @@ export interface LegalPlanFeatures {
   /** 法規問答每月次數；Infinity = 不限 */
   qaMonthlyLimit: number
   procedures: boolean
-  documentImport: boolean
+  /** 跨國原料與設備進口規定（法律頁「進口規定」分頁） */
+  importRules: boolean
   amendmentTrace: boolean
   /** 可查詢的國家法規；'all' = 全部。目前法規資料只有越南（vn） */
   countries: string[] | 'all'
 }
 export const LEGAL_PLAN_FEATURES: Record<ModulePlan, LegalPlanFeatures> = {
-  free: { qaMonthlyLimit: 10,       procedures: false, documentImport: false, amendmentTrace: false, countries: ['vn'] },
-  core: { qaMonthlyLimit: Infinity, procedures: true,  documentImport: false, amendmentTrace: false, countries: ['vn'] },
-  pro:  { qaMonthlyLimit: Infinity, procedures: true,  documentImport: true,  amendmentTrace: true,  countries: ['vn'] },
-  max:  { qaMonthlyLimit: Infinity, procedures: true,  documentImport: true,  amendmentTrace: true,  countries: 'all' },
+  free: { qaMonthlyLimit: 10,       procedures: false, importRules: false, amendmentTrace: false, countries: ['vn'] },
+  core: { qaMonthlyLimit: Infinity, procedures: true,  importRules: false, amendmentTrace: false, countries: ['vn'] },
+  pro:  { qaMonthlyLimit: Infinity, procedures: true,  importRules: true,  amendmentTrace: true,  countries: ['vn'] },
+  max:  { qaMonthlyLimit: Infinity, procedures: true,  importRules: true,  amendmentTrace: true,  countries: 'all' },
 }
 
 // ── AI Agent ─────────────────────────────────────────────
@@ -158,7 +159,7 @@ export const MODULE_PLAN_SUMMARY: Record<PlanModuleId, Record<ModulePlan, string
   legal: {
     free: '法規問答每月 10 次',
     core: '法規問答不限＋行政程序',
-    pro: '＋文件匯入、修法追溯',
+    pro: '＋跨國進口規定、修法追溯',
     max: '＋多國法規',
   },
   agent: {

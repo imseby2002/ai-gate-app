@@ -4337,6 +4337,7 @@
     "tabQa": "Tư vấn pháp lý thông minh (Hỏi & Đáp)",
     "tabProcedure": "Hướng dẫn xin phép mở cửa hàng / thành lập công ty (DAG)",
     "tabImport": "Quy định nhập khẩu nguyên liệu & thiết bị theo từng nước",
+    "planLocked": "Tính năng này yêu cầu gói Pháp lý {plan} trở lên",
     "tabAmendment": "Truy vết lịch sử sửa đổi điều luật",
     "qaHeading": "Nhập câu hỏi pháp lý, thuế hoặc thủ tục hành chính (hỗ trợ tiếng Trung, tiếng Anh, tiếng Việt)",
     "qaPlaceholder": "Ví dụ: Doanh nghiệp nước ngoài mở một cửa hàng trà sữa tại Việt Nam cần xin những giấy phép và hồ sơ gì?",

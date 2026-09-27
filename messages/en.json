@@ -4430,6 +4430,7 @@
     "tabQa": "Smart Legal Q&A",
     "tabProcedure": "Store/Company Approval Guide (DAG)",
     "tabImport": "Import Rules for Materials & Equipment",
+    "planLocked": "This feature requires the Legal {plan} plan or higher",
     "tabAmendment": "Amendment History Tracer",
     "qaHeading": "Enter a legal, tax, or administrative question (Chinese, English, and Vietnamese supported)",
     "qaPlaceholder": "e.g. What licenses and documents are needed to open a foreign-invested bubble tea shop in Vietnam?",
