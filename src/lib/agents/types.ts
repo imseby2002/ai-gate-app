@@ -79,5 +79,9 @@ export interface AgentToolDef<TInput = Record<string, unknown>> {
   inputSchema: Record<string, unknown>
   // suspending tool：執行後 tick 直接中斷（等真人核准），不繼續下一輪 tool round-trip
   suspending?: boolean
+  // 動態核准關卡：依輸入/當下設定決定這次呼叫是否要先經真人核准（例如任務未開啟「自動發文」時）
+  requiresApproval?: (input: TInput, ctx: AgentRunContext) => Promise<boolean>
+  // 核准請求給真人看的內容（未提供時用工具描述）
+  approvalSummary?: (input: TInput) => string
   execute: (input: TInput, ctx: AgentRunContext) => Promise<unknown>
 }

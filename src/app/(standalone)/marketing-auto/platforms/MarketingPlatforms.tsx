@@ -22,11 +22,12 @@ type Platform = {
 const PLATFORMS: Platform[] = [
   {
     id: 'Facebook', name: 'Facebook 粉絲頁', color: '#1877F2',
-    note: '同時套用於 FB Reels。到 Meta for Developers 建立 App，申請 pages_manage_posts + pages_read_engagement + pages_show_list 權限後產生 Token。',
+    note: '同時套用於 FB Reels。到 Meta for Developers 建立 App，申請 pages_manage_posts + pages_read_engagement + pages_show_list 權限後產生 Token。要讓 AI Agent 投放 Meta 廣告：Token 使用具 ads_management 權限的 System User token，並填入廣告帳戶 ID。',
     docUrl: 'https://developers.facebook.com/docs/pages/getting-started',
     fields: [
       { key: 'page_access_token', label: 'Page Access Token', placeholder: 'EAA...', secret: true },
       { key: 'page_id', label: 'Page ID', placeholder: '1234567890', secret: false },
+      { key: 'ad_account_id', label: '廣告帳戶 ID（選填，Agent 投放廣告用）', placeholder: 'act_1234567890', secret: false },
     ],
   },
   {
