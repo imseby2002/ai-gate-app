@@ -11,5 +11,5 @@ export default async function CsChannelsPage() {
   if (!ctx) redirect('/booking')
 
   // 頻道憑證一律存在 ownerId 名下（/api/social/credentials）；負責人與管理員（IT）皆可設定。
-  return <CsChannels ownerId={ctx.ownerId} isOwner={ctx.isOwner} canSettings={ctx.canSettings} />
+  return <CsChannels ownerId={ctx.ownerId} canSettings={ctx.canSettings} />
 }

@@ -10,5 +10,5 @@ export default async function CsPlan() {
   const ctx = await getBnbContext(supabase, 'cs')
   if (!ctx) redirect('/booking')
 
-  return <CsPlanPage isOwner={ctx.isOwner} />
+  return <CsPlanPage canSettings={ctx.canSettings} />
 }

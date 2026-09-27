@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getBnbContext } from '@/lib/bnb/context'
 import {
   getEcpayConfig,
   generateCheckMac,
@@ -17,8 +18,12 @@ import { CS_PLAN_PACKAGES, type CsPlanPackageId } from '@/lib/ecpay/cs-plans'
 // 客戶自助升級 CS 方案：可勾選「自動於下一期扣款」走綠界定期定額，否則為一次性付款（到期前需自行再次購買延續）。
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  // 方案屬於「民宿擁有者」：負責人與管理員（IT）皆可代為升級，訂單一律記在 ownerId 名下
+  const ctx = await getBnbContext(supabase, 'cs')
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!ctx.canSettings) return NextResponse.json({ error: '沒有升級方案的權限' }, { status: 403 })
+  const ownerId = ctx.ownerId
+  const admin = createAdminClient()
 
   const { packageId, returnUrl, autoRenew } = await req.json() as { packageId: CsPlanPackageId; returnUrl?: string; autoRenew?: boolean }
   const pkg = CS_PLAN_PACKAGES.find(p => p.id === packageId)
@@ -27,10 +32,10 @@ export async function POST(req: NextRequest) {
   // 現有方案尚未到期時，禁止購買「較低」方案：付款回調會直接覆蓋訂閱，
   // 等於立刻降級且剩餘天數全部消失。同方案續購（延長）與升級不受限。
   const PLAN_RANK: Record<string, number> = { free: 0, core: 1, pro: 2, max: 3 }
-  const { data: currentSub } = await supabase
+  const { data: currentSub } = await admin
     .from('cs_subscriptions')
     .select('plan, status, current_period_end')
-    .eq('user_id', user.id)
+    .eq('user_id', ownerId)
     .maybeSingle()
   const subActive = currentSub?.status === 'active'
     && (!currentSub.current_period_end || new Date(currentSub.current_period_end).getTime() > Date.now())
@@ -44,7 +49,7 @@ export async function POST(req: NextRequest) {
   }
 
   const config = getEcpayConfig()
-  const tradeNo = generateTradeNo(user.id)
+  const tradeNo = generateTradeNo(ownerId)
   const tradeDate = formatEcpayTradeDate()
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL!
@@ -54,8 +59,8 @@ export async function POST(req: NextRequest) {
   const { twd: totalAmountTwd, rate } = await usdToTwdInteger(pkg.usdPrice)
 
   // 先建立待處理訂單，ecpay-return 回調時依 trade_no 找到這筆並升級方案
-  const { error: insertErr } = await supabase.from('cs_plan_purchases').insert({
-    user_id: user.id,
+  const { error: insertErr } = await admin.from('cs_plan_purchases').insert({
+    user_id: ownerId,
     trade_no: tradeNo,
     plan: pkg.plan,
     billing_cycle: pkg.cycle,
@@ -85,9 +90,8 @@ export async function POST(req: NextRequest) {
     Object.assign(params, buildPeriodicFields(totalAmountTwd, `${appUrl}/api/billing/ecpay-period-return`, pkg.cycle))
     const spec = periodicSpec(pkg.cycle)
 
-    const admin = createAdminClient()
     await admin.from('ecpay_periodic_orders').insert({
-      user_id: user.id,
+      user_id: ownerId,
       kind: 'cs_plan',
       reference_id: pkg.id,
       merchant_trade_no: tradeNo,

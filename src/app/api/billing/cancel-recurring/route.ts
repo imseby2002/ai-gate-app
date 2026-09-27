@@ -1,18 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { buildCancelPeriodicRequest } from '@/lib/ecpay/client'
+import { getBnbContext } from '@/lib/bnb/context'
+
+type Supabase = Awaited<ReturnType<typeof createClient>>
+
+// scope=cs：客服方案屬於民宿擁有者，負責人與管理員（IT）皆可查看／取消；其餘沿用登入者本人
+async function resolveBillingUserId(supabase: Supabase, scope: string | null): Promise<string | null> {
+  if (scope === 'cs') {
+    const ctx = await getBnbContext(supabase, 'cs')
+    return ctx?.canSettings ? ctx.ownerId : null
+  }
+  const { data: { user } } = await supabase.auth.getUser()
+  return user?.id ?? null
+}
 
 // 列出客戶目前生效中／待生效的定期定額訂單（點數自動續購／訂房或客服方案自動續訂）
-export async function GET() {
+export async function GET(req: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const billingUserId = await resolveBillingUserId(supabase, new URL(req.url).searchParams.get('scope'))
+  if (!billingUserId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const admin = await createAdminClient()
   const { data } = await admin
     .from('ecpay_periodic_orders')
     .select('id, kind, reference_id, period_amount_twd, usd_value, status, total_success_times, next_expected_at, created_at')
-    .eq('user_id', user.id)
+    .eq('user_id', billingUserId)
     .in('status', ['pending', 'active'])
     .order('created_at', { ascending: false })
 
@@ -22,10 +35,9 @@ export async function GET() {
 // 客戶主動取消自動續訂／自動續購（定期定額）
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const { orderId } = await req.json() as { orderId: string }
+  const { orderId, scope } = await req.json() as { orderId: string; scope?: string }
+  const billingUserId = await resolveBillingUserId(supabase, scope ?? null)
+  if (!billingUserId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   if (!orderId) return NextResponse.json({ error: '缺少 orderId' }, { status: 400 })
 
   const admin = await createAdminClient()
@@ -33,7 +45,7 @@ export async function POST(req: NextRequest) {
     .from('ecpay_periodic_orders')
     .select('*')
     .eq('id', orderId)
-    .eq('user_id', user.id)
+    .eq('user_id', billingUserId)
     .maybeSingle()
 
   if (error || !order) return NextResponse.json({ error: '找不到訂單' }, { status: 404 })

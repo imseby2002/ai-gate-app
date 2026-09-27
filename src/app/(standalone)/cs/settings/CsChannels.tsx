@@ -86,7 +86,7 @@ interface PlatformState {
   values: Record<string, string>
 }
 
-export function CsChannels({ ownerId, isOwner, canSettings }: { ownerId: string; isOwner: boolean; canSettings: boolean }) {
+export function CsChannels({ ownerId, canSettings }: { ownerId: string; canSettings: boolean }) {
   const t = useTranslations('CsChannels')
   const PLATFORMS = useMemo(() => getPlatforms(t), [t])
   const [status, setStatus] = useState<Record<string, PlatformState>>({})
@@ -209,7 +209,7 @@ export function CsChannels({ ownerId, isOwner, canSettings }: { ownerId: string;
           </Link>
         </div>
 
-        {isOwner && (
+        {canSettings && (
           <Link href="/cs/plan"
             className="mb-5 flex items-center gap-3 rounded-xl border bg-card p-4 hover:bg-muted/50 transition-colors">
             <Sparkles className="h-5 w-5 text-primary shrink-0" />

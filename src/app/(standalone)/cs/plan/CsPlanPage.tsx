@@ -42,7 +42,7 @@ const getComparisonRows = (t: (key: string) => string): Array<{ label: string; v
   { label: t('rowSetupHelp'), values: [t('setupHelpFree0'), t('setupHelpCore0'), t('setupHelp1x'), t('setupHelp2x')], market: t('marketConsultingFee') },
 ]
 
-export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
+export function CsPlanPage({ canSettings }: { canSettings: boolean }) {
   const t = useTranslations('CsPlanPage')
   const PLAN_META = getPlanMeta(t)
   const COMPARISON_ROWS = getComparisonRows(t)
@@ -65,7 +65,7 @@ export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
 
   const loadRecurringOrders = useCallback(async () => {
     try {
-      const res = await fetch('/api/billing/cancel-recurring')
+      const res = await fetch('/api/billing/cancel-recurring?scope=cs')
       const data = await res.json()
       if (res.ok) setRecurringOrders((data.orders ?? []).filter((o: { kind: string }) => o.kind === 'cs_plan'))
     } catch { /* ignore */ }
@@ -80,7 +80,7 @@ export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
       const res = await fetch('/api/billing/cancel-recurring', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId }),
+        body: JSON.stringify({ orderId, scope: 'cs' }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
@@ -163,7 +163,7 @@ export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
           </div>
         </div>
 
-        {!isOwner && (
+        {!canSettings && (
           <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/40 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
             <Lock className="h-4 w-4 mt-0.5 shrink-0" />
             <span>{t.rich('ownerOnlyNotice', { b: (chunks) => <strong>{chunks}</strong> })}</span>
@@ -239,7 +239,7 @@ export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
                     </label>
                     <button
                       onClick={() => upgrade(packageId!)}
-                      disabled={!isOwner || isCurrent || checkingOut === packageId}
+                      disabled={!canSettings || isCurrent || checkingOut === packageId}
                       className="w-full mt-1 py-2 rounded-lg text-xs font-semibold text-primary-foreground bg-primary hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
                     >
                       {checkingOut === packageId ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
