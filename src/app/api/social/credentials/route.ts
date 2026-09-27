@@ -20,6 +20,7 @@ const NON_SECRET_FIELDS = new Set([
   'whatsapp_personal_bridge_url',
   // marketing-auto 發文平台的 ID 類欄位（非機密，方便編輯時直接顯示既有值）
   'page_id',
+  'ad_account_id',
   'ig_user_id',
   'threads_user_id',
   'author_urn',

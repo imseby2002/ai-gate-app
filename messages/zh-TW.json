@@ -5007,7 +5007,12 @@
     "viewRun": "查看執行紀錄",
     "nextCheck": "下次檢查：{at}",
     "runStatus": "執行狀態：{status}",
-    "planFailed": "計畫書產出失敗"
+    "planFailed": "計畫書產出失敗",
+    "autoHint": "預設每篇發文、每筆 Meta 廣告都先送你審核；確認運作正常後再打開自動。",
+    "autoPublish": "自動發文（不再逐篇審核）",
+    "autoAds": "自動投放 Meta 廣告（不再逐筆審核，仍受預算上限控管）",
+    "autoPublishConfirm": "開啟後 Agent 會直接發文到已連結的社群帳號，不再逐篇請你審核。確定開啟？",
+    "autoAdsConfirm": "開啟後 Agent 會直接建立並上線 Meta 廣告（總花費不超過任務剩餘預算），不再逐筆請你審核。確定開啟？"
   },
   "Personnel": {
     "adminOnly": "僅管理者可使用人員資料",

@@ -35,6 +35,7 @@ interface Mission {
   id: string; role_id: string; objective: string; status: string
   budget_amount: number; budget_currency: string; budget_spent: number; deadline: string | null
   plan: Plan; kpis: Kpi[]; progress_log: { at: string; note: string }[]; last_error: string | null; run_id: string | null
+  auto_publish?: boolean; auto_ads?: boolean
 }
 interface Expense { id: string; vendor: string; description: string; amount: number; status: string; url: string | null; created_at: string }
 interface RunInfo { id: string; status: string; next_tick_at: string; total_credits_spent: number; waitingUntil?: string | null }
@@ -79,14 +80,14 @@ export default function MissionDetailPage({ params }: { params: Promise<{ missio
 
   useEffect(() => { load() }, [load])
 
-  const act = async (action: string, confirmText?: string) => {
+  const act = async (action: string, confirmText?: string, extra?: Record<string, unknown>) => {
     if (confirmText && !window.confirm(confirmText)) return
     setBusy(action)
     setError(null)
     const res = await fetch(`/api/agent/missions/${missionId}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, feedback }),
+      body: JSON.stringify({ action, feedback, ...extra }),
     })
     const data = await res.json().catch(() => ({}))
     if (!res.ok) setError(data.error ?? 'Error')
@@ -158,6 +159,32 @@ export default function MissionDetailPage({ params }: { params: Promise<{ missio
             <> · {t('nextCheck', { at: new Date(run.waitingUntil).toLocaleString(dateLocale) })}</>
           )}
         </p>
+      )}
+
+      {!['completed', 'cancelled'].includes(mission.status) && (
+        <Card>
+          <CardContent className="py-3 space-y-2 text-sm">
+            <p className="text-xs text-muted-foreground">{t('autoHint')}</p>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={!!mission.auto_publish}
+                disabled={!!busy}
+                onChange={e => act('settings', e.target.checked ? t('autoPublishConfirm') : undefined, { autoPublish: e.target.checked })}
+              />
+              {t('autoPublish')}
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={!!mission.auto_ads}
+                disabled={!!busy}
+                onChange={e => act('settings', e.target.checked ? t('autoAdsConfirm') : undefined, { autoAds: e.target.checked })}
+              />
+              {t('autoAds')}
+            </label>
+          </CardContent>
+        </Card>
       )}
 
       {['plan_ready', 'failed', 'paused'].includes(mission.status) && (

@@ -4,6 +4,10 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { buildMarketingInventory, loadMission, type MissionRow } from '../missions'
 import { generateContentSet } from '@/lib/mkt/generate'
 import { buildMktSnapshot } from '@/lib/mkt/analytics'
+import { publishToPlatforms, SUPPORTED_PLATFORMS, type CredentialRow } from '@/lib/marketing/publish'
+import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
+import { IMAGE_COSTS } from '@/lib/marketing/billing'
+import { createAwarenessCampaign, getAdAccount, getInsights, metaAdsCredsFrom, setStatus, type MetaAdsCreds } from '@/lib/marketing/meta-ads'
 import type { AgentRunContext, AgentToolDef } from '../types'
 
 async function missionForRun(ctx: AgentRunContext): Promise<MissionRow> {
@@ -25,7 +29,30 @@ async function ownerForRun(ctx: AgentRunContext): Promise<string> {
   return ctx.userId
 }
 
-const CONTENT_CHANNELS = ['fb', 'ig', 'tiktok', 'zalo', 'line']
+async function missionForRunOrNull(ctx: AgentRunContext): Promise<MissionRow | null> {
+  try { return await missionForRun(ctx) } catch { return null }
+}
+
+// 行銷自動化「平台設定」的憑證：先找本人，沒有再找公司 owner（與行銷中心同一份資料）
+async function loadCredentialRows(ctx: AgentRunContext): Promise<CredentialRow[]> {
+  const admin = createAdminClient()
+  const ownerId = await ownerForRun(ctx)
+  for (const uid of [ctx.userId, ownerId]) {
+    const { data } = await admin.from('social_platform_credentials').select('platform, credentials, is_connected').eq('user_id', uid)
+    if (data?.some(r => r.is_connected)) return data as CredentialRow[]
+  }
+  return []
+}
+
+async function loadMetaAdsCreds(ctx: AgentRunContext): Promise<MetaAdsCreds> {
+  const rows = await loadCredentialRows(ctx)
+  const fb = rows.find(r => r.platform === 'Facebook' && r.is_connected)
+  const creds = metaAdsCredsFrom(fb?.credentials)
+  if (!creds) throw new Error('行銷自動化「平台設定」的 Facebook 尚未填 Page Access Token／Page ID／廣告帳戶 ID，請用 request_human_approval 請真人補上')
+  return creds
+}
+
+const CONTENT_CHANNELS =['fb', 'ig', 'tiktok', 'zalo', 'line']
 const CALENDAR_CHANNELS = ['fb', 'ig', 'tiktok', 'zalo', 'line', 'store', 'other']
 
 export const listMarketingResourcesTool: AgentToolDef = {
@@ -247,6 +274,199 @@ export const scheduleNextCheckTool: AgentToolDef = {
   },
 }
 
+interface GenerateImageInput { prompt: string; aspect_ratio?: string }
+
+export const generateMarketingImageTool: AgentToolDef = {
+  id: 'generate_marketing_image',
+  description: '用 AI 生成行銷配圖（英文提示詞效果最好，可直接用 create_content_set 回傳的 image_prompt），回傳圖片網址，供發文或廣告素材使用。',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      prompt: { type: 'string', description: '英文生圖提示詞' },
+      aspect_ratio: { type: 'string', enum: ['1:1', '4:5', '9:16', '16:9'], description: 'FB/IG 貼文建議 1:1' },
+    },
+    required: ['prompt'],
+  },
+  async execute(rawInput, ctx) {
+    const input = rawInput as unknown as GenerateImageInput
+    const url = await ctx.generateImage(input.prompt, input.aspect_ratio ?? '1:1')
+    if (!url) throw new Error('圖片生成失敗')
+    await ctx.deductCredits(IMAGE_COSTS.flux, `agent-image:${ctx.runId}`)
+    return { imageUrl: url }
+  },
+}
+
+interface PublishInput { platforms: string[]; copy_text: string; image_urls?: string[]; video_url?: string; content_id?: string; calendar_id?: string }
+
+export const publishToSocialTool: AgentToolDef = {
+  id: 'publish_to_social',
+  description:
+    '用行銷自動化同一套上傳功能，發佈到「平台設定」已連結的社群帳號（Facebook、Instagram、Threads、LinkedIn、Twitter/X、LINE VOOM、Zalo、FB/IG Reels、YouTube Shorts、TikTok）。' +
+    '任務未開啟「自動發文」時，每篇會先送真人審核，核准後才發出。FB/IG 圖文需要圖片網址；Reels/Shorts/TikTok 需要影片網址。',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      platforms: { type: 'array', items: { type: 'string', enum: [...SUPPORTED_PLATFORMS] } },
+      copy_text: { type: 'string', description: '貼文文案（含 hashtags）' },
+      image_urls: { type: 'array', items: { type: 'string' } },
+      video_url: { type: 'string' },
+      content_id: { type: 'string', description: '對應內容庫 id（選填，成功後標記為已發佈）' },
+      calendar_id: { type: 'string', description: '對應行事曆 id（選填，成功後標記為已發佈）' },
+    },
+    required: ['platforms', 'copy_text'],
+  },
+  async requiresApproval(_input, ctx) {
+    const mission = await missionForRunOrNull(ctx)
+    return !mission?.auto_publish
+  },
+  approvalSummary(rawInput) {
+    const input = rawInput as unknown as PublishInput
+    return (
+      `📣 發文審核\n平台：${input.platforms.join('、')}\n\n${input.copy_text}\n` +
+      (input.image_urls?.length ? `\n圖片：\n${input.image_urls.join('\n')}\n` : '') +
+      (input.video_url ? `\n影片：${input.video_url}\n` : '') +
+      '\n核准後立即發出。確認沒問題後，可在任務頁開啟「自動發文」免逐篇審核。'
+    )
+  },
+  async execute(rawInput, ctx) {
+    const input = rawInput as unknown as PublishInput
+    const admin = createAdminClient()
+    const { features } = await getMarketingEntitlements(admin, ctx.userId)
+    if (!features.uploadPlatforms) return { ok: false, error: '目前行銷方案未開放自動上傳平台（需 PRO 以上）' }
+
+    const credRows = await loadCredentialRows(ctx)
+    const connected = credRows.filter(r => r.is_connected).map(r => r.platform)
+    if (!connected.length) return { ok: false, error: '行銷自動化「平台設定」尚未連結任何社群帳號' }
+
+    const results = await publishToPlatforms(credRows, input.platforms, input.image_urls ?? [], input.video_url ?? '', input.copy_text)
+    if (results.some(r => r.ok)) {
+      const ownerId = await ownerForRun(ctx)
+      const now = new Date().toISOString()
+      if (input.content_id) await admin.from('mkt_content').update({ status: 'published', updated_at: now }).eq('id', input.content_id).eq('owner_id', ownerId)
+      if (input.calendar_id) await admin.from('mkt_calendar').update({ status: 'published', updated_at: now }).eq('id', input.calendar_id).eq('owner_id', ownerId)
+    }
+    return { connectedPlatforms: connected, results }
+  },
+}
+
+interface AdsInsightsInput { object_id?: string; date_preset?: string; since?: string; until?: string }
+
+export const metaAdsInsightsTool: AgentToolDef = {
+  id: 'meta_ads_insights',
+  description: '讀取 Meta 廣告成效（觸及人數 reach、曝光、花費、點擊）。不帶 object_id 為整個廣告帳戶；可帶廣告活動 id。觸及類 KPI 以此為數據來源。',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      object_id: { type: 'string', description: '廣告活動 id（選填）' },
+      date_preset: { type: 'string', enum: ['today', 'yesterday', 'last_7d', 'last_14d', 'last_30d', 'last_90d', 'this_month', 'maximum'] },
+      since: { type: 'string', description: 'YYYY-MM-DD（與 until 一起用）' },
+      until: { type: 'string', description: 'YYYY-MM-DD' },
+    },
+    required: [],
+  },
+  async execute(rawInput, ctx) {
+    const input = rawInput as unknown as AdsInsightsInput
+    const creds = await loadMetaAdsCreds(ctx)
+    return getInsights(creds, { objectId: input.object_id, datePreset: input.date_preset, since: input.since, until: input.until })
+  },
+}
+
+interface AdsLaunchInput {
+  name: string; daily_budget: number; days: number; countries?: string[]; age_min?: number; age_max?: number
+  message: string; image_url: string; link?: string; reason: string
+}
+
+export const metaAdsLaunchTool: AgentToolDef = {
+  id: 'meta_ads_launch',
+  description:
+    '建立並上線 Meta（FB/IG）觸及型廣告：總花費＝每日預算×天數，不可超過任務剩餘預算。' +
+    '任務未開啟「自動投放廣告」時會先送真人審核，核准後才建立並上線。',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      name: { type: 'string' },
+      daily_budget: { type: 'number', description: '每日預算（任務幣別金額，需與廣告帳戶幣別相同）' },
+      days: { type: 'number', description: '投放天數 1–90' },
+      countries: { type: 'array', items: { type: 'string' }, description: 'ISO 國碼，如 ["TW"]' },
+      age_min: { type: 'number' },
+      age_max: { type: 'number' },
+      message: { type: 'string', description: '廣告文案' },
+      image_url: { type: 'string', description: '廣告圖片網址' },
+      link: { type: 'string', description: '點擊後連結（選填，預設粉專）' },
+      reason: { type: 'string', description: '為何投放、預期觸及' },
+    },
+    required: ['name', 'daily_budget', 'days', 'message', 'image_url', 'reason'],
+  },
+  async requiresApproval(_input, ctx) {
+    const mission = await missionForRunOrNull(ctx)
+    return !mission?.auto_ads
+  },
+  approvalSummary(rawInput) {
+    const i = rawInput as unknown as AdsLaunchInput
+    return (
+      `💰 Meta 廣告投放審核\n名稱：${i.name}\n每日預算：${i.daily_budget} × ${i.days} 天 = ${i.daily_budget * i.days}\n` +
+      `地區：${(i.countries ?? ['TW']).join('、')}；年齡：${i.age_min ?? 18}–${i.age_max ?? 65}\n理由：${i.reason}\n\n文案：\n${i.message}\n\n圖片：${i.image_url}\n` +
+      '\n核准後立即建立並上線。確認沒問題後，可在任務頁開啟「自動投放廣告」（仍受任務預算上限控管）。'
+    )
+  },
+  async execute(rawInput, ctx) {
+    const i = rawInput as unknown as AdsLaunchInput
+    const admin = createAdminClient()
+    const mission = await missionForRun(ctx)
+    const days = Math.min(90, Math.max(1, Math.round(Number(i.days) || 0)))
+    const daily = Number(i.daily_budget)
+    if (!Number.isFinite(daily) || daily <= 0) return { ok: false, error: '每日預算必須大於 0' }
+    const total = daily * days
+
+    const { data: pending } = await admin.from('agent_mission_expenses').select('amount').eq('mission_id', mission.id).eq('status', 'proposed')
+    const pendingTotal = (pending ?? []).reduce((t, e) => t + Number(e.amount), 0)
+    const remaining = Number(mission.budget_amount) - Number(mission.budget_spent) - pendingTotal
+    if (total > remaining) return { ok: false, error: `總花費 ${total} 超出剩餘預算 ${remaining} ${mission.budget_currency}` }
+
+    const creds = await loadMetaAdsCreds(ctx)
+    const account = await getAdAccount(creds)
+    if (account.currency.toUpperCase() !== mission.budget_currency.toUpperCase()) {
+      return { ok: false, error: `廣告帳戶幣別 ${account.currency} 與任務預算幣別 ${mission.budget_currency} 不同，請真人調整後再試` }
+    }
+
+    const ids = await createAwarenessCampaign(creds, {
+      name: i.name, dailyBudget: daily, days, countries: i.countries ?? ['TW'],
+      ageMin: i.age_min, ageMax: i.age_max, message: i.message, imageUrl: i.image_url, link: i.link,
+    }, account.currency)
+
+    // 先記帳（佔用預算）再上線；上線失敗時廣告維持暫停、不會花錢
+    await admin.from('agent_mission_expenses').insert({
+      mission_id: mission.id, vendor: 'Meta Ads', description: `${i.name}（${daily}×${days} 天）`,
+      amount: total, status: 'approved', note: `campaign ${ids.campaignId}`,
+    })
+    await admin.from('agent_missions').update({ budget_spent: Number(mission.budget_spent) + total }).eq('id', mission.id)
+
+    try {
+      await setStatus(creds, [ids.campaignId, ids.adsetId, ids.adId], 'ACTIVE')
+      return { ok: true, status: 'ACTIVE', ...ids }
+    } catch (e) {
+      return { ok: false, status: 'PAUSED', error: e instanceof Error ? e.message : String(e), ...ids }
+    }
+  },
+}
+
+interface AdsPauseInput { object_id: string; reason: string }
+
+export const metaAdsPauseTool: AgentToolDef = {
+  id: 'meta_ads_pause',
+  description: '暫停 Meta 廣告活動（成效不佳或已達標時用，停止花費）。',
+  inputSchema: {
+    type: 'object',
+    properties: { object_id: { type: 'string', description: '廣告活動 id' }, reason: { type: 'string' } },
+    required: ['object_id', 'reason'],
+  },
+  async execute(rawInput, ctx) {
+    const input = rawInput as unknown as AdsPauseInput
+    await setStatus(await loadMetaAdsCreds(ctx), [input.object_id], 'PAUSED')
+    return { ok: true, status: 'PAUSED' }
+  },
+}
+
 export const MISSION_CORE_TOOLS: Record<string, AgentToolDef> = {
   [reportMissionProgressTool.id]: reportMissionProgressTool,
   [requestExternalPurchaseTool.id]: requestExternalPurchaseTool,
@@ -258,4 +478,10 @@ export const MARKETING_EXECUTION_TOOLS: Record<string, AgentToolDef> = {
   [getMarketingSnapshotTool.id]: getMarketingSnapshotTool,
   [createContentSetTool.id]: createContentSetTool,
   [scheduleContentTool.id]: scheduleContentTool,
+  [generateMarketingImageTool.id]: generateMarketingImageTool,
+  [publishToSocialTool.id]: publishToSocialTool,
+  [metaAdsInsightsTool.id]: metaAdsInsightsTool,
+  // 需綁定目標任務（預算上限），非任務 run 呼叫會回錯誤
+  [metaAdsLaunchTool.id]: metaAdsLaunchTool,
+  [metaAdsPauseTool.id]: metaAdsPauseTool,
 }

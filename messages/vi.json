@@ -4914,7 +4914,12 @@
     "viewRun": "Xem nhật ký thực thi",
     "nextCheck": "Lần kiểm tra tới: {at}",
     "runStatus": "Trạng thái: {status}",
-    "planFailed": "Lập kế hoạch thất bại"
+    "planFailed": "Lập kế hoạch thất bại",
+    "autoHint": "Mặc định mỗi bài đăng và mỗi quảng cáo Meta đều gửi bạn duyệt trước; bật tự động khi đã chạy ổn.",
+    "autoPublish": "Tự động đăng bài (không duyệt từng bài)",
+    "autoAds": "Tự động chạy quảng cáo Meta (không duyệt từng mục, vẫn giới hạn theo ngân sách)",
+    "autoPublishConfirm": "Agent sẽ đăng bài trực tiếp lên các tài khoản đã kết nối mà không hỏi bạn từng lần. Bật?",
+    "autoAdsConfirm": "Agent sẽ tạo và chạy quảng cáo Meta trực tiếp (tổng chi không vượt ngân sách còn lại) mà không hỏi bạn từng lần. Bật?"
   },
   "Personnel": {
     "adminOnly": "Chỉ quản trị viên được sử dụng dữ liệu nhân sự",

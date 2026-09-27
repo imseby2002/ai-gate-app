@@ -42,6 +42,8 @@ export interface MissionRow {
   plan_feedback: string | null
   budget_spent: number
   run_id: string | null
+  auto_publish?: boolean
+  auto_ads?: boolean
 }
 
 /** 行銷資料歸屬帳號：所屬公司 owner；個人帳號＝自己 */
@@ -86,9 +88,13 @@ export async function buildMarketingInventory(admin: Admin, ownerId: string): Pr
       '配圖/短影音腳本規劃（plan_image_content / plan_video_content）',
     ],
     // 目前沒有自動化串接、需真人操作或外部資源的項目
+    publishing_and_ads: [
+      '社群發文（publish_to_social）：沿用行銷自動化的上傳功能與「平台設定」已連結帳號；任務未開「自動發文」時每篇先經真人審核',
+      'AI 配圖（generate_marketing_image）',
+      'Meta 廣告（meta_ads_insights / meta_ads_launch / meta_ads_pause）：沿用平台設定的 Facebook 憑證＋廣告帳戶 ID；任務未開「自動投放廣告」時每筆先經真人審核，且受任務預算上限控管',
+    ],
     not_automated: [
-      '實際發佈到 FB/IG/Threads/LINE VOOM/Zalo/TikTok 等官方帳號：行銷中心「行銷自動化」可用已連結帳號一鍵上傳，但 Agent 不自行發佈，排程後由真人在行銷自動化按上傳',
-      '付費廣告投放（Meta/Google/TikTok Ads 帳戶未串接，需走外部採購申請＋真人操作）',
+      'Google/TikTok 付費廣告（未串接，需走外部採購申請＋真人操作）',
       'KOL/媒體/外包廠商付款',
     ],
   }
@@ -260,6 +266,9 @@ export function buildMissionPrompt(mission: MissionRow): string {
     'C. executor=human 的任務，用 request_human_approval（actionType=human_action_required）把步驟寫清楚交給真人。\n' +
     'D. 每完成一批任務或取得新數據，呼叫 report_mission_progress 更新 KPI 實際值與進度；數字只能來自工具結果或真人回報，不可自行編造。\n' +
     'E. 當前階段該做的都做完、要等時間經過（例如內容曝光累積、下一階段開始）時，呼叫 schedule_next_check 指定下次檢查時間，不要空轉。\n' +
+    'G. 社群發文用 publish_to_social、Meta 廣告用 meta_ads_launch；這兩個工具會自動依任務設定決定是否先送真人審核，你只要照常呼叫。' +
+    `目前設定：自動發文 ${mission.auto_publish ? '開' : '關（逐篇審核）'}、自動投放廣告 ${mission.auto_ads ? '開' : '關（逐筆審核）'}。` +
+    '觸及人數 KPI 優先用 meta_ads_insights 的 reach 作為數據來源。\n' +
     'F. 期限到了或所有 KPI 都有結論時，呼叫 finish_run 附成果報告（達成/未達成、花費、學到的經驗），並先用 write_memory 記下經驗。\n'
   )
 }

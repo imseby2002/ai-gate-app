@@ -45,7 +45,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const mission = await loadMission(admin, id)
   if (!mission || mission.user_id !== a.user.id) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const { action, feedback } = await req.json().catch(() => ({}))
+  const { action, feedback, autoPublish, autoAds } = await req.json().catch(() => ({}))
 
   try {
     if (action === 'execute') {
@@ -90,6 +90,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         .update({ status: 'queued', attempt_count: 0, last_error: null, next_tick_at: new Date().toISOString() })
         .eq('id', mission.run_id)
         .in('status', ['paused', 'failed', 'cancelled'])
+      return NextResponse.json({ ok: true })
+    }
+
+    // 發文／廣告的「逐筆審核 → 自動」開關（隨時可切換，下一次呼叫即生效）
+    if (action === 'settings') {
+      const patch: Record<string, boolean> = {}
+      if (typeof autoPublish === 'boolean') patch.auto_publish = autoPublish
+      if (typeof autoAds === 'boolean') patch.auto_ads = autoAds
+      if (!Object.keys(patch).length) return NextResponse.json({ error: '沒有要更新的設定' }, { status: 400 })
+      await admin.from('agent_missions').update(patch).eq('id', id)
       return NextResponse.json({ ok: true })
     }
 

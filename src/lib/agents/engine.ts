@@ -212,10 +212,11 @@ export async function tickRun(run: AgentRunRow): Promise<void> {
         description: def.description,
         inputSchema: jsonSchema(def.inputSchema),
         execute: async (input: unknown) => {
-          if (needsApproval) {
+          const gated = needsApproval || !!(await def.requiresApproval?.(input as Record<string, unknown>, ctx))
+          if (gated) {
             const { approvalId } = await ctx.requestApproval({
               actionType: id,
-              summary: `Agent 想執行「${def.description}」，需要您核准後才會真正執行。`,
+              summary: def.approvalSummary?.(input as Record<string, unknown>) ?? `Agent 想執行「${def.description}」，需要您核准後才會真正執行。`,
               details: input as Record<string, unknown>,
               riskLevel: 'high',
             })
@@ -271,6 +272,7 @@ export async function tickRun(run: AgentRunRow): Promise<void> {
       tools: aiTools,
       stopWhen: ({ steps }) =>
         steps.length >= MAX_STEPS_PER_TICK ||
+        gatedCallsThisTick.length > 0 ||
         steps.some(s => s.toolCalls?.some(tc => suspendingIds.has(tc.toolName))),
     })
 

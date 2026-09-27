@@ -5007,7 +5007,12 @@
     "viewRun": "View execution log",
     "nextCheck": "Next check: {at}",
     "runStatus": "Run status: {status}",
-    "planFailed": "Plan generation failed"
+    "planFailed": "Plan generation failed",
+    "autoHint": "By default every post and every Meta ad goes to you for review first; turn on auto once it works well.",
+    "autoPublish": "Auto-publish posts (no per-post review)",
+    "autoAds": "Auto-launch Meta ads (no per-ad review, still capped by budget)",
+    "autoPublishConfirm": "The agent will post directly to connected social accounts without asking you each time. Turn on?",
+    "autoAdsConfirm": "The agent will create and launch Meta ads directly (total spend within the remaining mission budget) without asking you each time. Turn on?"
   },
   "Personnel": {
     "adminOnly": "Only admins can use personnel data",
