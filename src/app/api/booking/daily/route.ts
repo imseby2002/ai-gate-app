@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getBnbContext } from '@/lib/bnb/context'
 import { findOrCreateOrder } from '@/lib/booking/orders'
 
@@ -90,6 +91,11 @@ export async function GET(req: NextRequest) {
   const ctx = await getBnbContext(supabase)
   if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  // 每日入住列是依房型/訂單自動產生與校正的衍生資料，不是使用者手動寫入；
+  // 權限已由 getBnbContext 驗證過（ownerId 必為可存取的民宿），這裡用 admin client
+  // 寫入，避免唯讀協作者或公司員工當天第一個開頁時被 RLS 擋掉、整天沒有房間列。
+  const writer = createAdminClient()
+
   const date = req.nextUrl.searchParams.get('date')
     ?? new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Taipei' })
 
@@ -133,7 +139,7 @@ export async function GET(req: NextRequest) {
   const stale = existingList.filter(r => !validNames.has(r.room_name))
   const staleToDelete = stale.filter(r => !r.order_number && !r.guest_name && !r.booking_id && !r.room_password && !r.gate_password)
   if (staleToDelete.length > 0) {
-    await supabase.from('bnb_daily_records')
+    await writer.from('bnb_daily_records')
       .delete()
       .in('id', staleToDelete.map(r => r.id))
   }
@@ -156,7 +162,7 @@ export async function GET(req: NextRequest) {
       pwChanged = true
     }
     if (pwChanged) {
-      await supabase.from('bnb_daily_records').update({ ...pwPatch, updated_at: new Date().toISOString() }).eq('id', rec.id)
+      await writer.from('bnb_daily_records').update({ ...pwPatch, updated_at: new Date().toISOString() }).eq('id', rec.id)
     }
   }
 
@@ -203,7 +209,7 @@ export async function GET(req: NextRequest) {
         : validPropIds.has(prop.id)
     }
     if (stillValid) continue
-    await supabase.from('bnb_daily_records').update({
+    await writer.from('bnb_daily_records').update({
       order_number: null, guest_name: null, price_total: null, platform: null,
       deposit: null, paid: false, booking_id: null,
       source: 'manual', updated_at: new Date().toISOString(),
@@ -238,10 +244,11 @@ export async function GET(req: NextRequest) {
 
   let created: unknown[] = []
   if (missing.length > 0) {
-    const { data } = await supabase
+    const { data, error } = await writer
       .from('bnb_daily_records')
       .upsert(missing, { onConflict: 'user_id,date,room_name' })
       .select()
+    if (error) console.error('[booking/daily] auto-create rows failed:', error.message)
     created = data ?? []
   }
 
@@ -251,7 +258,7 @@ export async function GET(req: NextRequest) {
     if (!prop) continue
     const booking = bookingByPropId[prop.id]
     if (booking && !rec.order_number && !rec.guest_name) {
-      await supabase.from('bnb_daily_records').update({
+      await writer.from('bnb_daily_records').update({
         order_number: booking.platform_booking_id ?? null,
         guest_name: booking.guest_name ?? null,
         price_total: rec.price_total ?? booking.total_price ?? null,
@@ -662,7 +669,8 @@ export async function PATCH(req: NextRequest) {
   return NextResponse.json(data)
 }
 
-// DELETE — 刪除單筆
+// DELETE — 刪除該房當天的訂單（取消連結的訂單並清空訂單欄位）。
+// 房間列本身由「房型管理」產生並與訂單串接，固定保留，不刪除；密碼也保留。
 export async function DELETE(req: NextRequest) {
   const supabase = await createClient()
   const ctx = await getBnbContext(supabase)
@@ -678,7 +686,9 @@ export async function DELETE(req: NextRequest) {
     .eq('user_id', ctx.ownerId)
     .maybeSingle()
 
-  if (rec?.booking_id) {
+  if (!rec) return NextResponse.json({ error: 'Record not found' }, { status: 404 })
+
+  if (rec.booking_id) {
     await supabase
       .from('bookings')
       .update({ status: 'cancelled', updated_at: new Date().toISOString() })
@@ -686,12 +696,17 @@ export async function DELETE(req: NextRequest) {
       .eq('user_id', ctx.ownerId)
   }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('bnb_daily_records')
-    .delete()
+    .update({
+      order_number: null, guest_name: null, price_total: null, platform: null,
+      deposit: null, paid: false, booking_id: null,
+      source: 'manual', updated_at: new Date().toISOString(),
+    })
     .eq('id', id)
     .eq('user_id', ctx.ownerId)
+    .select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ ok: true })
+  return NextResponse.json(data)
 }

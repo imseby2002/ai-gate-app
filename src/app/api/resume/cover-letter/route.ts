@@ -3,7 +3,7 @@ import { createAnthropic } from '@ai-sdk/anthropic'
 import { createClient } from '@/lib/supabase/server'
 import { streamText } from 'ai'
 import { deductCredits } from '@/lib/skills/billing'
-import { guardResumeAccess, RESUME_COSTS } from '@/lib/resume/billing'
+import { guardResumeAccess, checkResumePlan, allowedCoverLetterTemplateIds, RESUME_COSTS } from '@/lib/resume/billing'
 
 function sse(controller: ReadableStreamDefaultController, payload: object) {
   const encoder = new TextEncoder()
@@ -40,6 +40,14 @@ export async function POST(req: NextRequest) {
   const cost = RESUME_COSTS['cover-letter']
   const guard = await guardResumeAccess(supabase, user.id, cost)
   if (guard.error) return guard.error
+  if (templateId) {
+    const allowed = await allowedCoverLetterTemplateIds(supabase, user.id)
+    if (allowed && !allowed.has(templateId)) {
+      return new Response(JSON.stringify({ error: '此求職信模板需職場助手 MAX 方案', code: 'plan_required' }), { status: 403 })
+    }
+  }
+  const planError = await checkResumePlan(user.id, 'cover-letter')
+  if (planError) return planError
   if (guard.billable) {
     const deduct = await deductCredits(user.id, cost, '[resume] cover-letter')
     if (!deduct.ok && deduct.reason === 'insufficient') {

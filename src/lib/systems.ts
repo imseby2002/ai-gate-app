@@ -64,7 +64,7 @@ export const SUBDOMAIN_SYSTEM: Record<string, SystemKey> = {
   booking:   'booking',
   marketing: 'marketing',
   chat:      'chat',
-  work:      'office',
+  work:      'resume',
   office:    'office',
   agent:     'agent',
 }

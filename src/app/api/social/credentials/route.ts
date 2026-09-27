@@ -71,6 +71,7 @@ export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const ctx = await getBnbContext(supabase, 'cs')
   if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!ctx.canSettings) return NextResponse.json({ error: '沒有修改設定的權限' }, { status: 403 })
   const ownerId = ctx.ownerId
 
   const { platform, credentials } = await req.json()
@@ -147,6 +148,7 @@ export async function DELETE(req: NextRequest) {
   const supabase = await createClient()
   const ctx = await getBnbContext(supabase, 'cs')
   if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!ctx.canSettings) return NextResponse.json({ error: '沒有修改設定的權限' }, { status: 403 })
 
   const platform = new URL(req.url).searchParams.get('platform')
   if (!platform) return NextResponse.json({ error: 'platform required' }, { status: 400 })

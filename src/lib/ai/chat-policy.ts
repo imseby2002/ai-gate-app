@@ -30,8 +30,10 @@ export async function getChatDailyUsage(
   supabase: SupabaseClient,
   userId: string,
   hasCompany: boolean,
+  /** 方案指定的每日上限（lib/module-plans）；不給則依個人／公司成員預設 */
+  limitOverride?: number,
 ): Promise<{ used: number; limit: number }> {
-  const limit = hasCompany ? CHAT_DAILY_LIMIT.company : CHAT_DAILY_LIMIT.personal
+  const limit = limitOverride ?? (hasCompany ? CHAT_DAILY_LIMIT.company : CHAT_DAILY_LIMIT.personal)
   // 以台灣／越南使用者為主，日界採 UTC+8 午夜
   const now = new Date()
   const shifted = new Date(now.getTime() + 8 * 3600_000)

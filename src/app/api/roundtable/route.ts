@@ -14,6 +14,8 @@ import {
 import { roundtableUsage } from '@/lib/ai/roundtable-usage'
 import { chargeRoundtable } from '@/lib/ai/roundtable-billing'
 import { getBalance } from '@/lib/skills/billing'
+import { getModuleEntitlements } from '@/lib/module-plans/entitlements'
+import { clampRoundtableBody } from '@/lib/module-plans/roundtable'
 
 export const maxDuration = 300
 
@@ -43,7 +45,9 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const body = await req.json()
+  // 依智慧圓桌方案收斂參數（內部帳號為 MAX，不受影響）
+  const { features: planFeatures } = await getModuleEntitlements(user.id, 'roundtable')
+  const body = clampRoundtableBody(await req.json(), planFeatures)
   const {
     instruction,
     domain,

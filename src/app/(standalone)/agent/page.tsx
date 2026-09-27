@@ -101,6 +101,10 @@ export default function AgentPage() {
     if (res.ok) {
       setGoalDrafts(d => ({ ...d, [roleId]: '' }))
       setTab('runs')
+    } else {
+      // 方案不足／額度用完等錯誤要讓使用者看到，不能靜默失敗
+      const data = await res.json().catch(() => ({}))
+      window.alert(data.error ?? `建立任務失敗（HTTP ${res.status}）`)
     }
     await loadAll()
     setBusy(null)

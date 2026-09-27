@@ -28,7 +28,7 @@ interface ResumeForm {
   skills: string; languages: string
   portfolio: string; selfIntro: string; other: string
 }
-interface Template { id: string; name: string; description: string; category: string }
+interface Template { id: string; name: string; description: string; category: string; locked?: boolean }
 
 type FieldType = 'textarea' | 'input' | 'select'
 interface ToolField { key: string; label: string; type: FieldType; placeholder?: string; required?: boolean; options?: string[] }
@@ -676,12 +676,13 @@ function CoverLetterView() {
                     <div className="text-xs text-gray-400 mt-0.5">{t('cover.freeformDesc')}</div>
                   </button>
                   {templates.map(t => (
-                    <button key={t.id} type="button" onClick={() => setTpl(t.id)}
-                      className="text-left px-3 py-2.5 rounded-xl border-2 transition-all"
+                    <button key={t.id} type="button" onClick={() => setTpl(t.id)} disabled={t.locked}
+                      className="text-left px-3 py-2.5 rounded-xl border-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       style={selectedTemplate === t.id ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 5%, transparent)' } : {}}>
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium">{t.name}</span>
                         <span className={`text-xs px-1.5 py-0.5 rounded-full ${CATEGORY_COLORS[t.category] ?? 'bg-gray-100 text-gray-600'}`}>{t.category}</span>
+                        {t.locked && <span className="text-xs text-gray-400">🔒 MAX</span>}
                       </div>
                       {t.description && <div className="text-xs text-gray-400 mt-0.5 truncate">{t.description}</div>}
                     </button>
