@@ -10,5 +10,5 @@ export default async function MarketingPlatformsPage() {
   const ctx = await getBnbContext(supabase, 'cs')
   if (!ctx) redirect('/marketing-auto')
 
-  return <MarketingPlatforms isOwner={ctx.isOwner} />
+  return <MarketingPlatforms canSettings={ctx.canSettings} />
 }

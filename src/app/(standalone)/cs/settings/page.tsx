@@ -10,7 +10,6 @@ export default async function CsChannelsPage() {
   const ctx = await getBnbContext(supabase, 'cs')
   if (!ctx) redirect('/booking')
 
-  // 頻道憑證以登入者 user.id 為鍵儲存（/api/social/credentials），
-  // 而客服送訊讀的是 ownerId；唯有擁有者本人綁定時兩者一致才會生效。
-  return <CsChannels ownerId={ctx.ownerId} isOwner={ctx.isOwner} />
+  // 頻道憑證一律存在 ownerId 名下（/api/social/credentials）；負責人與管理員（IT）皆可設定。
+  return <CsChannels ownerId={ctx.ownerId} isOwner={ctx.isOwner} canSettings={ctx.canSettings} />
 }

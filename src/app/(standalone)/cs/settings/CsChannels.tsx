@@ -86,7 +86,7 @@ interface PlatformState {
   values: Record<string, string>
 }
 
-export function CsChannels({ ownerId, isOwner }: { ownerId: string; isOwner: boolean }) {
+export function CsChannels({ ownerId, isOwner, canSettings }: { ownerId: string; isOwner: boolean; canSettings: boolean }) {
   const t = useTranslations('CsChannels')
   const PLATFORMS = useMemo(() => getPlatforms(t), [t])
   const [status, setStatus] = useState<Record<string, PlatformState>>({})
@@ -116,7 +116,7 @@ export function CsChannels({ ownerId, isOwner }: { ownerId: string; isOwner: boo
   }, [])
 
   const toggleFollowup = async () => {
-    if (!isOwner || followupSaving) return
+    if (!canSettings || followupSaving) return
     const next = !followupOn
     setFollowupSaving(true)
     setFollowupOn(next)  // 樂觀更新
@@ -221,7 +221,7 @@ export function CsChannels({ ownerId, isOwner }: { ownerId: string; isOwner: boo
           </Link>
         )}
 
-        {!isOwner && (
+        {!canSettings && (
           <div className="mb-5 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/40 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
             <Lock className="h-4 w-4 mt-0.5 shrink-0" />
             <span>{t.rich('ownerOnlyNotice', { b: (chunks) => <strong>{chunks}</strong> })}</span>
@@ -295,14 +295,14 @@ export function CsChannels({ ownerId, isOwner }: { ownerId: string; isOwner: boo
               type="button"
               role="switch"
               aria-checked={followupOn}
-              disabled={!isOwner || followupSaving}
+              disabled={!canSettings || followupSaving}
               onClick={toggleFollowup}
               className={`relative shrink-0 h-6 w-11 rounded-full transition-colors disabled:opacity-50 ${followupOn ? 'bg-primary' : 'bg-muted-foreground/30'}`}
             >
               <span className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${followupOn ? 'translate-x-5' : ''}`} />
             </button>
           </div>
-          {!isOwner && <p className="text-[11px] text-amber-600 mt-2">{t('ownerOnlyToggleNote')}</p>}
+          {!canSettings && <p className="text-[11px] text-amber-600 mt-2">{t('ownerOnlyToggleNote')}</p>}
         </div>
 
         {loading ? (
@@ -360,7 +360,7 @@ export function CsChannels({ ownerId, isOwner }: { ownerId: string; isOwner: boo
                           <input
                             type={f.secret ? 'password' : 'text'}
                             autoComplete="off"
-                            disabled={!isOwner}
+                            disabled={!canSettings}
                             value={inputs[p.id]?.[f.key] ?? ''}
                             onChange={e => setField(p.id, f.key, e.target.value)}
                             placeholder={ph}
@@ -372,7 +372,7 @@ export function CsChannels({ ownerId, isOwner }: { ownerId: string; isOwner: boo
                   </div>
 
                   {/* 儲存 */}
-                  {isOwner && (
+                  {canSettings && (
                     <div className="mt-4">
                       <button onClick={() => save(p.id)} disabled={saving === p.id}
                         className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50 hover:opacity-90 transition-opacity">
