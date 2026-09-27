@@ -52,7 +52,7 @@ export async function middleware(request: NextRequest) {
       booking:   '/booking',       // 訂房系統
       marketing: '/marketing',     // 行銷中心（多工具入口，非單一自動化行銷頁）
       chat:      '/apps',          // 對話系統（功能選單）
-      work:      '/office',        // 公司辦公系統（首頁為 /office，絕不到 /work）
+      work:      '/resume',        // 職場助手
       office:    '/office',        // 辦公系統
       agent:     '/agent',         // AI Agent 系統
       www:       '/dashboard',     // owner 主控台
@@ -218,9 +218,9 @@ export async function middleware(request: NextRequest) {
       }
     }
 
-    // 舊的共用 ERP 網址（office／work.im-tourist.com）：員工所屬公司已設定專屬子網域時，
+    // 舊的共用 ERP 網址（office.im-tourist.com）：員工所屬公司已設定專屬子網域時，
     // 轉到 <slug>.im-tourist.com 的同一頁，舊書籤與連結不用改。總管理員不轉址（需跨公司管理）。
-    if ((sub === 'office' || sub === 'work') && cookieDomain && !pathname.startsWith('/api')) {
+    if (sub === 'office' && cookieDomain && !pathname.startsWith('/api')) {
       const { data: viewer, error: viewerErr } = await supabase
         .from('profiles').select('user_type, company_id').eq('id', user.id).single()
       if (viewerErr) console.error('[middleware] profiles 查詢失敗', { userId: user.id, pathname, error: viewerErr })
