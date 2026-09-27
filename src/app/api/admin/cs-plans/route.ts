@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { createClient } from '@/lib/supabase/server'
 import type { CsPlan } from '@/lib/cs/entitlements'
-import { getCompanyPlansForUsers } from '@/lib/company/entitlements'
+import { getCompanyGrantsForUsers } from '@/lib/company/entitlements'
 
 const VALID_PLANS: CsPlan[] = ['free', 'core', 'pro', 'max']
 
@@ -38,15 +38,9 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  // 外部公司成員隨公司：公司開通此模組（公司版／專屬客製-企業版）為 MAX，否則 FREE，個人方案不生效
-  const { members, grants } = await getCompanyPlansForUsers((data ?? []).map(u => u.id), 'cs')
-  return NextResponse.json({
-    users: (data ?? []).map(u => ({
-      ...u,
-      company_grant: grants.get(u.id) ?? null,
-      company_name: members.get(u.id) ?? null,
-    })),
-  })
+  // 所屬公司開通此模組（公司版／專屬客製-企業版）時，實際生效為 MAX
+  const grants = await getCompanyGrantsForUsers((data ?? []).map(u => u.id), 'cs')
+  return NextResponse.json({ users: (data ?? []).map(u => ({ ...u, company_grant: grants.get(u.id) ?? null })) })
 }
 
 // PATCH { userId, plan, billingCycle?, currentPeriodEnd? }
@@ -61,10 +55,6 @@ export async function PATCH(req: NextRequest) {
   if (!plan || !VALID_PLANS.includes(plan as CsPlan)) return NextResponse.json({ error: '無效的方案' }, { status: 400 })
 
   const supabase = await createAdminClient()
-  const { data: target } = await supabase.from('profiles').select('user_type, company_id').eq('id', userId).maybeSingle()
-  if (target?.user_type === 'external' && target.company_id) {
-    return NextResponse.json({ error: '公司成員隨公司方案，請到公司管理調整' }, { status: 400 })
-  }
   const { error } = await supabase
     .from('cs_subscriptions')
     .upsert({

@@ -131,14 +131,6 @@ export async function getCsEntitlements(
     return { plan: 'max', features: CS_PLAN_FEATURES.max }
   }
 
-  // 外部公司成員隨公司：公司開通 CS（或專屬客製-企業版）為 MAX，否則 FREE，不看個人方案
-  const { getCompanyMemberModuleMax } = await import('@/lib/company/entitlements')
-  const companyMax = await getCompanyMemberModuleMax(ownerId, 'cs')
-  if (companyMax !== null) {
-    const p: CsPlan = companyMax ? 'max' : 'free'
-    return { plan: p, features: CS_PLAN_FEATURES[p] }
-  }
-
   let data: { plan?: string; status?: string; feature_overrides?: Partial<CsPlanFeatures>; current_period_end?: string | null } | null = null
   try {
     const res = await admin
@@ -157,10 +149,12 @@ export async function getCsEntitlements(
   // 視為不到期（管理員手動指定的長期方案）。
   const expired = !!data?.current_period_end && new Date(data.current_period_end).getTime() < Date.now()
 
-  // 非公司成員：個人方案（公司成員已在上方隨公司處理）
-  const plan: CsPlan = (data?.status === 'active' && !expired && data?.plan && data.plan in CS_PLAN_FEATURES)
+  const personalPlan: CsPlan = (data?.status === 'active' && !expired && data?.plan && data.plan in CS_PLAN_FEATURES)
     ? (data.plan as CsPlan)
     : 'free'
+  // 所屬公司開通 CS 模組（'company' 方案）→ 一律 MAX
+  const { hasCompanyModuleGrant } = await import('@/lib/company/entitlements')
+  const plan: CsPlan = personalPlan !== 'max' && await hasCompanyModuleGrant(ownerId, 'cs') ? 'max' : personalPlan
 
   // 過期訂閱連帶失效 feature_overrides（客製加開的功能不應在到期後繼續生效）；
   // 未過期時照常疊加，包括管理員對免費帳號手動加開的功能。
