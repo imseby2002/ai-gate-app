@@ -11,6 +11,8 @@ interface Row {
   user_type: 'admin' | 'employee' | 'external' | null
   subscription: { plan: ModulePlan; billing_cycle: string; status: string; current_period_end: string | null } | null
   company_grant: { source: 'company' | 'enterprise'; companyName: string } | null
+  /** 公司成員：方案隨公司，不可個別設定 */
+  company_name: string | null
 }
 
 export function ModulePlansTable({ moduleId }: { moduleId: PlanModuleId }) {
@@ -46,6 +48,8 @@ export function ModulePlansTable({ moduleId }: { moduleId: PlanModuleId }) {
     if (r.company_grant) {
       return { plan: 'max', via: `${r.company_grant.source === 'enterprise' ? '專屬客製-企業版' : '公司版'}・${r.company_grant.companyName}` }
     }
+    // 公司成員隨公司：公司未開通此模組即為 FREE
+    if (r.company_name !== null) return { plan: 'free', via: `隨公司・${r.company_name}` }
     const sub = r.subscription
     const active = sub?.status === 'active' && (!sub.current_period_end || new Date(sub.current_period_end).getTime() > Date.now())
     return { plan: active ? sub!.plan : 'free', via: null }
@@ -113,6 +117,9 @@ export function ModulePlansTable({ moduleId }: { moduleId: PlanModuleId }) {
                     <td className="px-4 py-2.5">{r.email}</td>
                     <td className="px-4 py-2.5 text-gray-500">{r.full_name ?? '—'}</td>
                     <td className="px-4 py-2.5">
+                      {r.company_name !== null ? (
+                        <span className="text-xs text-gray-400">隨公司</span>
+                      ) : (
                       <select
                         value={plan}
                         onChange={e => setPending(p => ({ ...p, [r.id]: e.target.value as ModulePlan }))}
@@ -120,6 +127,7 @@ export function ModulePlansTable({ moduleId }: { moduleId: PlanModuleId }) {
                       >
                         {MODULE_PLANS.map(p => <option key={p} value={p}>{MODULE_PLAN_LABEL[p]}</option>)}
                       </select>
+                      )}
                     </td>
                     <td className="px-4 py-2.5 text-xs">
                       <span className="font-semibold">{MODULE_PLAN_LABEL[eff.plan]}</span>

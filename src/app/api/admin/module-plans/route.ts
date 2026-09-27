@@ -70,6 +70,8 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     users: (data ?? []).map(({ company_id, ...u }) => ({
       ...u,
+      // 公司成員隨公司方案，個人方案不生效（lib/module-plans/entitlements.ts）
+      company_name: company_id ? companyName.get(company_id) ?? '' : null,
       subscription: subMap.get(u.id) ?? null,
       company_grant: grants.get(u.id)
         ?? (company_id && enterpriseCompanies.has(company_id)
@@ -93,6 +95,9 @@ export async function PATCH(req: NextRequest) {
   if (!plan || !MODULE_PLANS.includes(plan as ModulePlan)) return NextResponse.json({ error: '無效的方案' }, { status: 400 })
 
   const supabase = await createAdminClient()
+  const { data: target } = await supabase.from('profiles').select('company_id').eq('id', userId).maybeSingle()
+  if (target?.company_id) return NextResponse.json({ error: '公司成員隨公司方案，請到公司管理調整' }, { status: 400 })
+
   const { error } = await supabase
     .from('module_subscriptions')
     .upsert({
