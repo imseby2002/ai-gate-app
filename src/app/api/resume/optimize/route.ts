@@ -4,7 +4,7 @@ import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText, streamText } from 'ai'
 import { createClient } from '@/lib/supabase/server'
 import { deductCredits } from '@/lib/skills/billing'
-import { guardResumeAccess, RESUME_COSTS } from '@/lib/resume/billing'
+import { guardResumeAccess, checkResumePlan, RESUME_COSTS } from '@/lib/resume/billing'
 
 // ── SSE helper ───────────────────────────────────────────────────
 function sse(controller: ReadableStreamDefaultController, payload: object) {
@@ -176,6 +176,8 @@ export async function POST(req: NextRequest) {
   const cost = RESUME_COSTS['resume-optimize']
   const guard = await guardResumeAccess(supabase, user.id, cost)
   if (guard.error) return guard.error
+  const planError = await checkResumePlan(user.id, 'resume-optimize')
+  if (planError) return planError
 
   // ── 在 stream 外層先執行分析（確保 fallback 邏輯完整執行）──────
   let analysis = ''
