@@ -110,7 +110,7 @@ interface PlatformState {
   values: Record<string, string>
 }
 
-export function MarketingPlatforms({ isOwner }: { isOwner: boolean }) {
+export function MarketingPlatforms({ canSettings }: { canSettings: boolean }) {
   const [status, setStatus] = useState<Record<string, PlatformState>>({})
   const [inputs, setInputs] = useState<Record<string, Record<string, string>>>({})
   const [loading, setLoading] = useState(true)
@@ -166,10 +166,10 @@ export function MarketingPlatforms({ isOwner }: { isOwner: boolean }) {
           <h1 className="text-lg sm:text-xl font-bold">發文平台連結</h1>
         </div>
 
-        {!isOwner && (
+        {!canSettings && (
           <div className="mb-5 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/40 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
             <Lock className="h-4 w-4 mt-0.5 shrink-0" />
-            <span>平台連結需由<strong>民宿擁有者本人</strong>操作才會生效（憑證以登入帳號儲存，協作者綁定不會套用到此民宿）。如需綁定請改用擁有者帳號登入。</span>
+            <span>平台連結需由<strong>負責人或管理員（IT）</strong>設定。如需綁定請洽負責人開通管理員權限。</span>
           </div>
         )}
 
@@ -214,7 +214,7 @@ export function MarketingPlatforms({ isOwner }: { isOwner: boolean }) {
                           <input
                             type={f.secret ? 'password' : 'text'}
                             autoComplete="off"
-                            disabled={!isOwner}
+                            disabled={!canSettings}
                             value={inputs[p.id]?.[f.key] ?? ''}
                             onChange={e => setField(p.id, f.key, e.target.value)}
                             placeholder={ph}
@@ -225,7 +225,7 @@ export function MarketingPlatforms({ isOwner }: { isOwner: boolean }) {
                     })}
                   </div>
 
-                  {isOwner && (
+                  {canSettings && (
                     <div className="mt-4">
                       <button onClick={() => save(p.id)} disabled={saving === p.id}
                         className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50 hover:opacity-90 transition-opacity">
