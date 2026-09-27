@@ -99,15 +99,6 @@ export async function getBookingEntitlements(
     return { plan: 'enterprise', features, extraProperties: 0, propertyLimit: Infinity }
   }
 
-  // 外部公司成員隨公司：公司開通訂房（或專屬客製-企業版）為 MAX，否則 FREE，不看個人方案與加購房源
-  const { getCompanyMemberModuleMax } = await import('@/lib/company/entitlements')
-  const companyMax = await getCompanyMemberModuleMax(ownerId, 'booking')
-  if (companyMax !== null) {
-    const p: BookingPlan = companyMax ? 'enterprise' : 'free'
-    const f = BOOKING_PLAN_FEATURES[p]
-    return { plan: p, features: f, extraProperties: 0, propertyLimit: f.propertyBaseLimit }
-  }
-
   const { data } = await admin
     .from('booking_subscriptions')
     .select('plan, status, extra_properties, feature_overrides, current_period_end')
@@ -119,10 +110,12 @@ export async function getBookingEntitlements(
   // current_period_end 為 null 視為不到期（管理員手動指定的長期方案）。
   const expired = !!data?.current_period_end && new Date(data.current_period_end).getTime() < Date.now()
 
-  // 非公司成員：個人方案（公司成員已在上方隨公司處理）
-  const plan: BookingPlan = (data?.status === 'active' && !expired && data?.plan && data.plan in BOOKING_PLAN_FEATURES)
+  const personalPlan: BookingPlan = (data?.status === 'active' && !expired && data?.plan && data.plan in BOOKING_PLAN_FEATURES)
     ? (data.plan as BookingPlan)
     : 'free'
+  // 所屬公司開通訂房模組（'company' 方案）→ 一律 MAX（enterprise）
+  const { hasCompanyModuleGrant } = await import('@/lib/company/entitlements')
+  const plan: BookingPlan = personalPlan !== 'enterprise' && await hasCompanyModuleGrant(ownerId, 'booking') ? 'enterprise' : personalPlan
 
   // 過期訂閱連帶失效 feature_overrides；未過期時照常疊加（包括管理員對免費帳號手動加開的功能）
   const overrides = (!expired ? data?.feature_overrides ?? {} : {}) as Partial<BookingPlanFeatures>
