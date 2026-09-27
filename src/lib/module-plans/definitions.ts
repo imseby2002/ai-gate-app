@@ -78,8 +78,8 @@ export const LEGAL_PLAN_FEATURES: Record<ModulePlan, LegalPlanFeatures> = {
 }
 
 // ── AI Agent ─────────────────────────────────────────────
-/** 研發程式角色（讀 repo、提出程式修改），限 MAX */
-export const AGENT_CODE_ROLE_ID = 'rnd'
+/** 軟體開發專員角色（讀 repo、提出程式修改），限 MAX */
+export const AGENT_CODE_ROLE_ID = 'code-agent'
 export interface AgentPlanFeatures {
   enabled: boolean
   /** 每月可使用的不同角色數；Infinity = 全部 */
@@ -164,9 +164,9 @@ export const MODULE_PLAN_SUMMARY: Record<PlanModuleId, Record<ModulePlan, string
   },
   agent: {
     free: '不開放',
-    core: '1 個角色、每月 20 次任務',
+    core: '1 個角色、每月 20 次任務（不含軟體開發專員）',
     pro: '全部角色、同時 1 個任務',
-    max: '全部角色、同時 5 個任務、研發程式角色',
+    max: '全部角色、同時 5 個任務、軟體開發專員角色',
   },
   resume: {
     free: '求職類（履歷優化、求職信每月各 1 次）',
