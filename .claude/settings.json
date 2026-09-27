@@ -29,7 +29,16 @@
             "mcp__Claude_Code_Remote__delete_trigger",
             "mcp__Claude_Code_Remote__get_trigger",
             "mcp__Vercel__get_runtime_logs",
-            "mcp__Vercel__get_runtime_errors"
+            "mcp__Vercel__get_runtime_errors",
+            "Edit(src/lib/agents/**)",
+            "Edit(src/lib/marketing/**)",
+            "Edit(src/app/api/marketing/upload/**)",
+            "Edit(src/app/api/agent/**)",
+            "Edit(src/app/api/social/**)",
+            "Edit(src/app/*/agent/**)",
+            "Edit(src/app/*/marketing-auto/**)",
+            "Edit(supabase/migrations/**)",
+            "Edit(messages/**)"
         ],
         "deny": [],
         "defaultMode": "bypassPermissions"
