@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { createClient } from '@/lib/supabase/server'
 import { MODULE_PLANS, isPlanModule, type ModulePlan } from '@/lib/module-plans/definitions'
-import { getCompanyGrantsForUsers } from '@/lib/company/entitlements'
+import { getCompanyPlansForUsers } from '@/lib/company/entitlements'
 
 async function assertAdmin() {
   const supabase = await createClient()
@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabase
     .from('profiles')
-    .select('id, email, full_name, user_type, company_id')
+    .select('id, email, full_name, user_type')
     .order('created_at', { ascending: false })
     .limit(50)
 
@@ -40,43 +40,24 @@ export async function GET(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   const ids = (data ?? []).map(u => u.id)
 
-  const companyIds = [...new Set((data ?? []).map(u => u.company_id).filter(Boolean))] as string[]
-
-  const [{ data: subs, error: subErr }, grants, { data: companySubs }, { data: companies }] = await Promise.all([
+  const [{ data: subs, error: subErr }, { members, grants }] = await Promise.all([
     ids.length
       ? supabase.from('module_subscriptions').select('user_id, plan, billing_cycle, status, current_period_end').eq('module', moduleId).in('user_id', ids)
       : Promise.resolve({ data: [], error: null }),
-    // 所屬公司開通此模組（公司版／專屬客製-企業版）時，實際生效為 MAX
-    getCompanyGrantsForUsers(ids, moduleId),
-    // 專屬客製-企業版不論模組一律 MAX（與 lib/module-plans/entitlements.ts 一致）
-    companyIds.length
-      ? supabase.from('company_subscriptions').select('company_id, plan, status, enterprise, current_period_end').in('company_id', companyIds)
-      : Promise.resolve({ data: [] }),
-    companyIds.length
-      ? supabase.from('companies').select('id, name').in('id', companyIds)
-      : Promise.resolve({ data: [] }),
+    // 外部公司成員隨公司：公司開通此模組（公司版／專屬客製-企業版）為 MAX，否則 FREE
+    getCompanyPlansForUsers(ids, moduleId),
   ])
   if (subErr) return NextResponse.json({ error: subErr.message }, { status: 500 })
 
   const subMap = new Map((subs ?? []).map(s => [s.user_id, s]))
-  const companyName = new Map((companies ?? []).map(c => [c.id, c.name as string]))
-  const enterpriseCompanies = new Set(
-    (companySubs ?? [])
-      .filter(s => s.plan === 'company' && s.status === 'active' && s.enterprise
-        && (!s.current_period_end || new Date(s.current_period_end).getTime() > Date.now()))
-      .map(s => s.company_id as string),
-  )
 
   return NextResponse.json({
-    users: (data ?? []).map(({ company_id, ...u }) => ({
+    users: (data ?? []).map(u => ({
       ...u,
-      // 公司成員隨公司方案，個人方案不生效（lib/module-plans/entitlements.ts）
-      company_name: company_id ? companyName.get(company_id) ?? '' : null,
       subscription: subMap.get(u.id) ?? null,
-      company_grant: grants.get(u.id)
-        ?? (company_id && enterpriseCompanies.has(company_id)
-          ? { source: 'enterprise' as const, companyName: companyName.get(company_id) ?? '' }
-          : null),
+      company_grant: grants.get(u.id) ?? null,
+      // 公司成員隨公司方案，個人方案不生效（lib/module-plans/entitlements.ts）
+      company_name: members.get(u.id) ?? null,
     })),
   })
 }
@@ -95,8 +76,8 @@ export async function PATCH(req: NextRequest) {
   if (!plan || !MODULE_PLANS.includes(plan as ModulePlan)) return NextResponse.json({ error: '無效的方案' }, { status: 400 })
 
   const supabase = await createAdminClient()
-  const { data: target } = await supabase.from('profiles').select('company_id').eq('id', userId).maybeSingle()
-  if (target?.company_id) return NextResponse.json({ error: '公司成員隨公司方案，請到公司管理調整' }, { status: 400 })
+  const { data: target } = await supabase.from('profiles').select('user_type, company_id').eq('id', userId).maybeSingle()
+  if (target?.user_type === 'external' && target.company_id) return NextResponse.json({ error: '公司成員隨公司方案，請到公司管理調整' }, { status: 400 })
 
   const { error } = await supabase
     .from('module_subscriptions')

@@ -3,7 +3,7 @@
 // 公司成員一律隨公司：專屬客製-企業版或公司版開通此模組 → MAX，否則 FREE（不看個人方案）；
 // 外部個人帳號才看 module_subscriptions（到期或非 active 視同 FREE）。
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getCompanyBillingContext, hasCompanyModuleGrant } from '@/lib/company/entitlements'
+import { getCompanyMemberModuleMax } from '@/lib/company/entitlements'
 import {
   MODULE_PLAN_FEATURES, MODULE_PLANS, MODULE_PLAN_LABEL,
   type ModuleFeatureMap, type ModulePlan, type PlanModuleId,
@@ -35,10 +35,10 @@ export async function getModuleEntitlements<K extends PlanModuleId>(
     return { plan: 'max', features: table.max, internal: true, hasCompany }
   }
 
-  // 公司成員隨公司方案，不另外套用個人方案
-  if (hasCompany) {
-    const company = await getCompanyBillingContext(userId)
-    const plan: ModulePlan = company?.enterprise || await hasCompanyModuleGrant(userId, module) ? 'max' : 'free'
+  // 外部公司成員隨公司方案，不另外套用個人方案
+  const companyMax = await getCompanyMemberModuleMax(userId, module)
+  if (companyMax !== null) {
+    const plan: ModulePlan = companyMax ? 'max' : 'free'
     return { plan, features: table[plan], internal: false, hasCompany }
   }
 
