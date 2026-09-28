@@ -117,6 +117,27 @@ export function MarketingPlatforms({ canSettings }: { canSettings: boolean }) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
+  const [adsTesting, setAdsTesting] = useState(false)
+  const [adsResult, setAdsResult] = useState<{ ok: boolean; text: string } | null>(null)
+
+  // 唯讀測試：讀廣告帳戶資訊與近 30 天成效，不建立廣告、不花錢
+  const testMetaAds = async () => {
+    setAdsTesting(true); setAdsResult(null)
+    try {
+      const res = await fetch('/api/agent/meta-ads-test')
+      const d = await res.json()
+      if (d.account) {
+        const i = d.insights_last_30d ?? {}
+        setAdsResult({
+          ok: !!d.ok,
+          text: `${d.adAccountId}｜${d.account.name}｜${d.account.currency}｜狀態：${d.account.status_label}｜近 30 天觸及 ${i.reach ?? 0}、曝光 ${i.impressions ?? 0}、花費 ${i.spend ?? 0}`,
+        })
+      } else {
+        setAdsResult({ ok: false, text: `${d.adAccountId ? d.adAccountId + '：' : ''}${d.error ?? '測試失敗'}` })
+      }
+    } catch { setAdsResult({ ok: false, text: '網路錯誤' }) }
+    finally { setAdsTesting(false) }
+  }
 
   const load = useCallback(async () => {
     try {
@@ -233,6 +254,21 @@ export function MarketingPlatforms({ canSettings }: { canSettings: boolean }) {
                         {saving === p.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                         儲存
                       </button>
+                    </div>
+                  )}
+
+                  {p.id === 'Facebook' && connected && (
+                    <div className="mt-3 space-y-2">
+                      <button onClick={testMetaAds} disabled={adsTesting}
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-lg border text-sm font-medium disabled:opacity-50 hover:bg-accent transition-colors">
+                        {adsTesting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wifi className="h-4 w-4" />}
+                        測試 Meta 廣告連線（唯讀，不會花錢）
+                      </button>
+                      {adsResult && (
+                        <p className={`text-xs rounded-lg px-3 py-2 ${adsResult.ok ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400' : 'bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-400'}`}>
+                          {adsResult.text}
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
