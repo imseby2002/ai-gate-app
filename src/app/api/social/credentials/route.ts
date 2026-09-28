@@ -26,6 +26,7 @@ const NON_SECRET_FIELDS = new Set([
   'author_urn',
   'oa_id',
   'client_id',
+  'property_id',
 ])
 
 export async function GET() {
@@ -98,7 +99,8 @@ export async function POST(req: NextRequest) {
   const is_connected = Object.values(merged).some(v => String(v).trim() !== '')
 
   // 方案的平台數上限：只在「新增一個尚未連線的平台」時檢查，已連線平台可以繼續編輯憑證
-  if (is_connected && !alreadyConnected) {
+  // GA4 是唯讀數據來源，不是發文/客服平台，不佔方案的平台數
+  if (is_connected && !alreadyConnected && platform !== 'GA4') {
     const { features } = await getCsEntitlements(supabase, ownerId)
     // WhatsApp 個人版僅 PRO 以上可用（wa-bridge 已擋，這裡是憑證儲存層的防呆）
     if (platform === 'whatsapp_personal' && !features.whatsappPersonal) {
@@ -113,6 +115,7 @@ export async function POST(req: NextRequest) {
         .select('id', { count: 'exact', head: true })
         .eq('user_id', ownerId)
         .eq('is_connected', true)
+        .neq('platform', 'GA4')
       if ((count ?? 0) >= features.platformLimit) {
         return NextResponse.json(
           { error: `目前方案最多可綁定 ${features.platformLimit} 個平台，請升級方案或先取消其他平台的綁定。` },

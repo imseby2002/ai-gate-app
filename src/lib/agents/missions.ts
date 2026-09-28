@@ -92,11 +92,12 @@ export async function buildMarketingInventory(admin: Admin, ownerId: string): Pr
       '社群發文（publish_to_social）：沿用行銷自動化的上傳功能與「平台設定」已連結帳號；任務未開「自動發文」時每篇先經真人審核',
       'AI 配圖（generate_marketing_image）',
       'Meta 廣告（meta_ads_insights / meta_ads_launch / meta_ads_pause）：沿用平台設定的 Facebook 憑證＋廣告帳戶 ID；任務未開「自動投放廣告」時每筆先經真人審核，且受任務預算上限控管',
+      'GA4 官網流量（get_ga4_metrics）：sessions／使用者數／新使用者數／瀏覽量，唯讀；需在平台設定填 GA4 資源 ID 與服務帳戶金鑰',
     ],
     not_automated: [
       'Google/TikTok 付費廣告（未串接，需走外部採購申請＋真人操作）',
       'KOL/媒體/外包廠商付款',
-      'GA4 / 官網流量與會員數（未串接，需真人提供數字）',
+      '「會員數」尚未定義資料來源（未串接，需真人提供數字或先定義會員＝哪個名單）',
     ],
   }
 }
@@ -297,7 +298,7 @@ export function buildMissionPrompt(mission: MissionRow): string {
     'E. 當前階段該做的都做完、要等時間經過（例如內容曝光累積、下一階段開始）時，呼叫 schedule_next_check 指定下次檢查時間，不要空轉。\n' +
     'G. 社群發文用 publish_to_social、Meta 廣告用 meta_ads_launch；這兩個工具會自動依任務設定決定是否先送真人審核，你只要照常呼叫。' +
     `目前設定：自動發文 ${mission.auto_publish ? '開' : '關（逐篇審核）'}、自動投放廣告 ${mission.auto_ads ? '開' : '關（逐筆審核）'}。` +
-    '觸及人數 KPI 優先用 meta_ads_insights 的 reach 作為數據來源。\n' +
+    '觸及人數 KPI 優先用 meta_ads_insights 的 reach 作為數據來源；官網流量／瀏覽率 KPI 用 get_ga4_metrics（未設定時才請真人提供）。\n' +
     'F. 期限到了或所有 KPI 都有結論時，呼叫 finish_run 附成果報告（達成/未達成、花費、學到的經驗），並先用 write_memory 記下經驗。\n'
   )
 }
