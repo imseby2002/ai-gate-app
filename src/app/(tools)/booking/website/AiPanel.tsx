@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { Send, Loader2, X, Sparkles, ChevronDown, ChevronUp, Check } from 'lucide-react'
+import { Send, Loader2, X, Sparkles, ChevronDown, ChevronUp, Check, ImagePlus } from 'lucide-react'
 
 interface WebForm {
   slug: string; name?: string; template_id: string; theme_color: string
@@ -27,9 +27,30 @@ interface Props {
   form: WebForm
   onApply: (updates: Updates) => void
   onClose: () => void
+  onImagesUploaded?: () => void
 }
 
-export default function AiPanel({ form, onApply, onClose }: Props) {
+// 手機原圖常超過 Vercel 4.5MB 請求上限，上傳前先縮到最長邊 1920 並轉 JPEG
+function compressImage(file: File): Promise<Blob> {
+  return new Promise(resolve => {
+    const url = URL.createObjectURL(file)
+    const img = new Image()
+    img.onload = () => {
+      const scale = Math.min(1, 1920 / Math.max(img.width, img.height))
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.round(img.width * scale)
+      canvas.height = Math.round(img.height * scale)
+      const ctx = canvas.getContext('2d')
+      if (!ctx) { URL.revokeObjectURL(url); resolve(file); return }
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+      canvas.toBlob(b => { URL.revokeObjectURL(url); resolve(b ?? file) }, 'image/jpeg', 0.85)
+    }
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file) }
+    img.src = url
+  })
+}
+
+export default function AiPanel({ form, onApply, onClose, onImagesUploaded }: Props) {
   const t = useTranslations('Booking')
   const FIELD_LABELS: Record<string, string> = {
     template_id: t('website.ai.fields.template_id'),
@@ -61,6 +82,8 @@ export default function AiPanel({ form, onApply, onClose }: Props) {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [expandedUpdates, setExpandedUpdates] = useState<number[]>([])
+  const [uploading, setUploading] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
@@ -111,6 +134,39 @@ export default function AiPanel({ form, onApply, onClose }: Props) {
     } finally {
       setLoading(false)
       inputRef.current?.focus()
+    }
+  }
+
+  async function uploadImages(files: FileList | null) {
+    const list = Array.from(files ?? []).filter(f => f.type.startsWith('image/'))
+    if (!list.length || uploading) return
+    setUploading(true)
+    try {
+      const urls: string[] = []
+      for (const f of list) {
+        const fd = new FormData()
+        fd.append('file', new File([await compressImage(f)], `${Date.now()}.jpg`, { type: 'image/jpeg' }))
+        const r = await fetch('/api/booking/photos', { method: 'POST', body: fd })
+        const d = await r.json().catch(() => ({}))
+        if (!r.ok || !d.url) throw new Error(d.error || 'upload failed')
+        urls.push(d.url)
+      }
+      // 直接寫回官網照片（images），不經過編輯器表單，避免之後按儲存時被舊資料蓋掉；
+      // name 一併帶回，因為 profile PUT 的 upsert 預設會把沒給的 name 寫成空字串
+      const cur = await fetch('/api/booking/profile').then(r => r.json())
+      const p = cur.profile ?? {}
+      const res = await fetch('/api/booking/profile', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: p.name ?? '', images: [...((p.images as string[] | null) ?? []), ...urls] }),
+      })
+      if (!res.ok) throw new Error('save failed')
+      setMessages(prev => [...prev, { role: 'assistant', content: t('website.ai.uploaded', { count: urls.length }) }])
+      onImagesUploaded?.()
+    } catch {
+      setMessages(prev => [...prev, { role: 'assistant', content: t('website.ai.uploadFailed') }])
+    } finally {
+      setUploading(false)
+      if (fileRef.current) fileRef.current.value = ''
     }
   }
 
@@ -234,6 +290,13 @@ export default function AiPanel({ form, onApply, onClose }: Props) {
 
       {/* Input */}
       <div className="border-t px-3 py-2.5 flex items-end gap-2 shrink-0">
+        <input ref={fileRef} type="file" accept="image/*" multiple className="hidden"
+          onChange={e => uploadImages(e.target.files)} />
+        <button onClick={() => fileRef.current?.click()} disabled={uploading}
+          title={uploading ? t('website.ai.uploading') : t('website.ai.uploadImage')}
+          className="p-2.5 rounded-xl border text-gray-500 hover:text-indigo-600 hover:border-indigo-300 disabled:opacity-40 transition-colors shrink-0">
+          {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
+        </button>
         <textarea
           ref={inputRef}
           value={input}

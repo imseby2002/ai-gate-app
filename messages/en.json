@@ -633,6 +633,10 @@
         "applyBtn": "Apply to Website",
         "writing": "AI writing…",
         "inputPlaceholder": "Describe your needs, e.g. write a family-friendly property story…",
+        "uploadImage": "Upload photos",
+        "uploading": "Uploading…",
+        "uploaded": "Uploaded {count} photo(s) to your website. They now appear in the preview (right of \"About us\" on the home page).",
+        "uploadFailed": "Photo upload failed, please try again",
         "customDesignGenerated": "Custom design generated",
         "fields": {
           "template_id": "🎨 Template",

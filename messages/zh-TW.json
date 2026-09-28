@@ -633,6 +633,10 @@
         "applyBtn": "套用到官網",
         "writing": "AI 撰寫中…",
         "inputPlaceholder": "描述你的需求，例：幫我寫一個適合親子的民宿故事…",
+        "uploadImage": "上傳照片",
+        "uploading": "上傳中…",
+        "uploaded": "已上傳 {count} 張照片到官網，已顯示在預覽中（首頁「關於我們」右側）。",
+        "uploadFailed": "照片上傳失敗，請稍後再試",
         "customDesignGenerated": "已生成專屬視覺設計",
         "fields": {
           "template_id": "🎨 視覺模板",
