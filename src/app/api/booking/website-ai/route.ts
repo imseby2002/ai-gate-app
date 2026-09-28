@@ -4,6 +4,8 @@ import { generateText } from 'ai'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { CUSTOM_HEADING_FONTS, sanitizeCustomDesign } from '@/lib/booking/templates'
 
+export const maxDuration = 120
+
 const FONT_LIST = CUSTOM_HEADING_FONTS
   .map((f, i) => `  ${i}: ${f.label}`)
   .join('\n')
@@ -96,18 +98,29 @@ SEO 標題：${profile.seo_title || '（未填）'}`
       role: m.role === 'user' ? 'user' : 'assistant',
       content: m.content,
     })),
-    maxOutputTokens: 2500,
+    // 一次產出多個長文案欄位（故事、FAQ…）很容易超過 2500，被截斷後 </updates> 不見、整段 JSON 直接露在對話裡
+    maxOutputTokens: 8000,
   })
 
-  const updatesMatch = raw.match(/<updates>([\s\S]*?)<\/updates>/)
+  // <updates> 之後的內容一律不顯示在對話裡；即使被截斷（沒有結尾標籤）或包了 ```json 也盡量解析
+  const openIdx = raw.indexOf('<updates>')
   let updates: Record<string, unknown> | null = null
   let text = raw
 
-  if (updatesMatch) {
-    try {
-      updates = JSON.parse(updatesMatch[1].trim())
-      text = raw.replace(/<updates>[\s\S]*?<\/updates>/, '').trim()
-    } catch { /* ignore parse error */ }
+  if (openIdx >= 0) {
+    text = raw.slice(0, openIdx).trim()
+    const block = raw.slice(openIdx + '<updates>'.length).replace(/<\/updates>[\s\S]*$/, '')
+    const json = block.replace(/```(?:json)?/g, '').trim()
+    const start = json.indexOf('{')
+    const end = json.lastIndexOf('}')
+    if (start >= 0 && end > start) {
+      try {
+        updates = JSON.parse(json.slice(start, end + 1))
+      } catch { /* 下方統一提示 */ }
+    }
+    if (!updates) {
+      text = `${text}\n\n⚠ 這次產出的內容太長或格式不完整，無法自動套用。請再傳一次，或縮小範圍（例如「只改 FAQ」）。`.trim()
+    }
   }
 
   // 自由生成模式的 custom_design 一定要通過驗證才能套用，避免壞掉的色碼/字體索引存進資料庫。
