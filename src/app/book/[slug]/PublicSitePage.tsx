@@ -227,6 +227,13 @@ export default function PublicHomePage({
                   了解更多 <ChevronRight className="h-4 w-4" />
                 </Link>
               </div>
+              {images.length === 1 && (
+                // 只有一張照片時也放在右側，避免「關於我們」右半邊整片空白
+                <div className={`aspect-[4/3] overflow-hidden ${profile.template_id === 'boutique' ? '' : 'rounded-xl'}`}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={images[0]} alt="" className="w-full h-full object-cover" />
+                </div>
+              )}
               {images.length > 1 && (
                 <div className="grid grid-cols-2 gap-2">
                   {images.slice(1, 5).map((src, i) => (
