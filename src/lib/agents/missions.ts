@@ -137,7 +137,8 @@ export async function generateMissionPlan(missionId: string): Promise<MissionRow
       '4. 只能用合法、符合平台規範的做法：不可使用假帳號、洗讚、買粉、垃圾訊息、冒用他人身分。\n' +
       '5. 需要真人身分驗證或 Agent 無法自動化的步驟（開帳號、實際發文、廣告帳戶操作、付款）標記 executor 為 human。\n' +
       '6. KPI 要可量測，說明資料來源（例如：粉專後台觸及、GA 使用者數、外送平台訂單、POS 營收）。\n' +
-      '7. 只輸出 JSON，不要 markdown 圍欄或其他文字。'
+      '7. 只輸出 JSON，不要 markdown 圍欄或其他文字；字串內不可出現未跳脫的雙引號（改用「」）。\n' +
+      '8. 保持精簡：phases 最多 4 個、每個 phase 的 tasks 最多 6 個，每個欄位文字盡量一兩句。'
 
     const shape = `{
   "title": "計畫名稱",
@@ -172,18 +173,43 @@ export async function generateMissionPlan(missionId: string): Promise<MissionRow
       `\n請依下列 JSON 結構輸出計畫書：\n${shape}`
 
     const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+    const charge = async (u: unknown) => {
+      const usage = (u ?? {}) as Record<string, number | undefined>
+      const cost = calculateCost(MISSION_PLANNER_MODEL, usage.inputTokens ?? 0, usage.outputTokens ?? 0)
+      if (cost > 0) await deductCredits(mission.user_id, cost, `agent-mission-plan:${mission.id}`)
+    }
+
     const res = await generateText({
       model: anthropic(MISSION_PLANNER_MODEL),
       system,
-      maxOutputTokens: 8000,
+      maxOutputTokens: 16000,
       messages: [{ role: 'user', content: user }],
     })
+    await charge(res.usage)
 
-    const usage = (res.usage ?? {}) as unknown as Record<string, number | undefined>
-    const cost = calculateCost(MISSION_PLANNER_MODEL, usage.inputTokens ?? 0, usage.outputTokens ?? 0)
-    if (cost > 0) await deductCredits(mission.user_id, cost, `agent-mission-plan:${mission.id}`)
-
-    const plan = extractJson(res.text)
+    let plan: Record<string, unknown>
+    try {
+      plan = extractJson(res.text)
+    } catch (parseErr) {
+      // 產出被截斷或 JSON 格式錯誤：請模型依同一內容修正成合法且精簡的 JSON
+      const truncated = res.finishReason === 'length'
+      const fix = await generateText({
+        model: anthropic(MISSION_PLANNER_MODEL),
+        system: '你是 JSON 修正器。只輸出一個合法 JSON 物件，不要 markdown 圍欄或其他文字；字串內的雙引號改用「」。',
+        maxOutputTokens: 16000,
+        messages: [{
+          role: 'user',
+          content:
+            `下列計畫書 JSON 無法解析（${parseErr instanceof Error ? parseErr.message : String(parseErr)}）` +
+            (truncated ? '，且內容在結尾被截斷' : '') +
+            `。請保留原本內容與結構，修正語法${truncated ? '並補完缺少的部分' : ''}；` +
+            'phases 最多 4 個、每個 phase 的 tasks 最多 6 個，文字精簡。\n\n' +
+            `結構：\n${shape}\n\n原始輸出：\n${res.text}`,
+        }],
+      })
+      await charge(fix.usage)
+      plan = extractJson(fix.text)
+    }
     const kpis: MissionKpi[] = Array.isArray(plan.kpis)
       ? (plan.kpis as Record<string, unknown>[]).map((k, i) => ({
           key: String(k.key ?? `kpi_${i + 1}`),
