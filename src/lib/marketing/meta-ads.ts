@@ -10,10 +10,11 @@ export interface MetaAdsCreds { token: string; adAccountId: string; pageId: stri
 
 export function metaAdsCredsFrom(creds: Record<string, string> | null | undefined): MetaAdsCreds | null {
   const token = creds?.page_access_token?.trim()
-  const rawAccount = creds?.ad_account_id?.trim()
+  // 廣告帳戶 ID 容錯：act_123、act=123、123 都只取數字部分
+  const accountDigits = creds?.ad_account_id?.replace(/\D/g, '')
   const pageId = creds?.page_id?.trim()
-  if (!token || !rawAccount || !pageId) return null
-  return { token, adAccountId: rawAccount.startsWith('act_') ? rawAccount : `act_${rawAccount}`, pageId }
+  if (!token || !accountDigits || !pageId) return null
+  return { token, adAccountId: `act_${accountDigits}`, pageId }
 }
 
 async function graph(path: string, token: string, params: Record<string, unknown> = {}, method: 'GET' | 'POST' = 'GET') {
