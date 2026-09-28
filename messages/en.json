@@ -7613,7 +7613,7 @@
     "currentPlanLabel": "Current: ",
     "yearlyBilling": "Annual (~20% off)",
     "monthlyBilling": "Monthly",
-    "ownerOnlyNotice": "Plan upgrades must be done by <b>the homestay owner themselves</b>. Please log in with the owner account to upgrade.",
+    "ownerOnlyNotice": "Plan upgrades require the <b>owner or an admin (IT)</b>. Ask the owner to grant you admin access.",
     "coreUpgradeGiftHint": "Upgrade to CORE and get your first setup assistance free as a new member (once per account, monthly or yearly)",
     "featFree1": "3 platform connections",
     "featFree2": "Unlimited messages",
