@@ -148,6 +148,37 @@ async function isDuplicateEvent(platform: string, eventId: string): Promise<bool
   return false
 }
 
+// 同一位客人連發兩則訊息時，LINE 會分成兩個 webhook 請求幾乎同時打進來，兩邊各自
+// loadHistory 都看不到對方那則，AI 只能對著「上一則 AI 訊息」回答——真實案例：客人連發
+// 「悠遊付已經轉帳，麻煩確認」「需要截圖嗎？」，後者被拿去接上一則停車回覆，AI 回「不用
+// 截圖，告訴我們車牌號碼即可」；且兩邊最後 saveHistory 互相覆蓋，其中一輪對話直接遺失。
+// 借用 cs_processed_events 的唯一鍵當每位客人的互斥鎖：一次只處理一則，後到的等前一則
+// 回完、存好歷史，再重新讀取歷史處理。鎖超過 90 秒視為殘留（函式中途掛掉）直接搶走；
+// 等超過 25 秒就放棄等待照常處理，寧可少了上下文，也不能讓 reply token 過期漏回客人。
+const CUSTOMER_LOCK_PLATFORM = 'customer-lock'
+async function acquireCustomerLock(userId: string, customerId: string): Promise<() => Promise<void>> {
+  const supabase = getServiceClient()
+  const key = `${userId}:${customerId}`
+  const release = async () => {
+    await supabase.from('cs_processed_events').delete().eq('platform', CUSTOMER_LOCK_PLATFORM).eq('event_id', key)
+  }
+  const deadline = Date.now() + 25_000
+  while (Date.now() < deadline) {
+    const { error } = await supabase.from('cs_processed_events').insert({ platform: CUSTOMER_LOCK_PLATFORM, event_id: key })
+    if (!error) return release
+    if (error.code !== '23505') {
+      console.error('[cs-webhook] acquireCustomerLock insert failed:', error)
+      return async () => {}
+    }
+    await supabase.from('cs_processed_events').delete()
+      .eq('platform', CUSTOMER_LOCK_PLATFORM).eq('event_id', key)
+      .lt('created_at', new Date(Date.now() - 90_000).toISOString())
+    await new Promise(r => setTimeout(r, 700))
+  }
+  console.error('[cs-webhook] acquireCustomerLock timed out:', key)
+  return async () => {}
+}
+
 // ── 一般意圖分類（沒有命中任何已知情境時的兜底分類）───────────────────────
 // 手動模式切換、人工客服、退換貨、圖片降級等「已知情境」在各自的判斷分支已經確定
 // 屬於哪一類，直接把寫死的字串當 intent 存，不需要另外呼叫 AI；只有一般 AI 回覆
@@ -2332,7 +2363,10 @@ async function getAIReply(
      - 【嚴禁每次回覆都強推賞鯨／出海行程】：
        - 只有當客人「主動主動詢問」賞鯨、登島、龜山島等行程，或客人「正在預訂出海行程」時，才能討論行程！
        - 若客人是在處理【訂房、國旅卡、付款連結、匯款、停車、入住時間、自付額、退款】等純住宿事務，【絕對嚴禁】在每次回答句尾硬塞或主動提及「是否需要賞鯨行程」、「烏石港搭船提醒」、「船班行程費用需全額預付」！客人沒有問行程就絕口不提行程，嚴禁像牛皮癬一樣每次回覆都反覆追問客人要不要賞鯨！
-  4. 【唯一的追問例外】：
+  4. 【處理付款/帳務時禁止岔題，簡短問句要對照整段對話判斷】：
+     - 客人正在處理付款方式、匯款/轉帳、對帳、訂單查詢等帳務事務時，客人沒問就【絕對禁止】主動提停車、WiFi、早餐、交通等無關資訊，也禁止問「是否需要提供停車資訊」。
+     - 客人問「需要截圖嗎？」「要給你什麼嗎？」這類沒有明講對象的簡短問句，要看整段對話客人最近在辦的事（例如剛說已轉帳/已付款，就是指付款截圖），不能只接上一則 AI 訊息的話題。真實案例：客人說「悠遊付已經轉帳」「需要截圖嗎？」，AI 卻因為上一則在講停車，回「不用截圖，告知車牌號碼即可」。付款後問要不要截圖，請回答「方便的話請提供付款截圖，管家對帳會更快」。
+  5. 【唯一的追問例外】：
      - 只有在「客人明確處於預訂資料收集流程，且該必填欄位尚未提供」時，才能詢問下一個未填欄位；若預訂資料已收集齊全，立即提供匯款帳號要求付款，嚴禁再節外生枝詢問其他無關問題！
 - 禁止使用 Markdown 語法（禁用 **粗體**、*斜體*、# 標題、--- 分隔線）
 - 網址（http/https 開頭）後面一定要換行才能接續寫其他文字或標點，絕對不可以緊接著句子、標點符號或說明文字寫在同一行——真實案例：AI 回覆「...請參考：https://ciaohome.net/parkingread。日後若需要查詢...」，通訊軟體的超連結偵測會把句點後面的文字也吃進同一個超連結裡，變成一個打不開的錯誤網址；只要網址後面還有其他要講的話，一律先換行，網址單獨成一行
@@ -2704,66 +2738,71 @@ export async function POST(
 
       const replyToken: string = event.replyToken
       const customerId: string = event.source?.userId ?? event.source?.groupId ?? 'unknown'
-      const { history, gapNote } = await loadHistory(userId, customerId)
+      const releaseLock = await acquireCustomerLock(userId, customerId)
+      try {
+        const { history, gapNote } = await loadHistory(userId, customerId)
 
-      let text = msgType === 'text' ? (event.message.text as string) : ''
+        let text = msgType === 'text' ? (event.message.text as string) : ''
 
-      // Agent 核准回覆：老闆用自己的 LINE 帳號回覆待核准的 Agent 動作，優先於一般客服邏輯處理
-      if (msgType === 'text' && text.trim()) {
-        const pendingApprovalId = await findLatestPendingApproval(userId, 'line', customerId)
-        if (pendingApprovalId) {
-          const outcome = detectAgentApprovalOutcome(text)
-          const result = await resumeRunAfterApproval(pendingApprovalId, outcome, outcome === 'feedback' ? text : undefined)
-          if (token && replyToken) {
-            await replyLine(
-              replyToken,
-              result.ok
-                ? (outcome === 'approved' ? '✅ 已核准，Agent 將繼續執行。' : outcome === 'rejected' ? '❌ 已拒絕，Agent 將停止此動作。' : `🔄 已收到您的意見，Agent 將依此調整。`)
-                : `⚠️ ${result.error ?? '處理失敗'}`,
-              token,
-            )
+        // Agent 核准回覆：老闆用自己的 LINE 帳號回覆待核准的 Agent 動作，優先於一般客服邏輯處理
+        if (msgType === 'text' && text.trim()) {
+          const pendingApprovalId = await findLatestPendingApproval(userId, 'line', customerId)
+          if (pendingApprovalId) {
+            const outcome = detectAgentApprovalOutcome(text)
+            const result = await resumeRunAfterApproval(pendingApprovalId, outcome, outcome === 'feedback' ? text : undefined)
+            if (token && replyToken) {
+              await replyLine(
+                replyToken,
+                result.ok
+                  ? (outcome === 'approved' ? '✅ 已核准，Agent 將繼續執行。' : outcome === 'rejected' ? '❌ 已拒絕，Agent 將停止此動作。' : `🔄 已收到您的意見，Agent 將依此調整。`)
+                  : `⚠️ ${result.error ?? '處理失敗'}`,
+                token,
+              )
+            }
+            continue
           }
-          continue
         }
-      }
 
-      // 專員綁定：個人 LINE 加 OA 後輸入指令即登記 / 解除訂單通知
-      if (msgType === 'text') {
-        const t = text.trim()
-        if (/^(綁定專員|專員綁定|#專員|加入通知)/.test(t)) {
-          const list = await getNotifyLineRecipients(userId)
-          if (!list.includes(customerId)) await setNotifyLineRecipients(userId, [...list, customerId], knowledge.industry)
-          if (token && replyToken) await replyLine(replyToken, '✅ 已將您加入訂單通知名單，之後有客人確認訂單會即時通知您。輸入「解除專員」可取消。', token)
-          continue
+        // 專員綁定：個人 LINE 加 OA 後輸入指令即登記 / 解除訂單通知
+        if (msgType === 'text') {
+          const t = text.trim()
+          if (/^(綁定專員|專員綁定|#專員|加入通知)/.test(t)) {
+            const list = await getNotifyLineRecipients(userId)
+            if (!list.includes(customerId)) await setNotifyLineRecipients(userId, [...list, customerId], knowledge.industry)
+            if (token && replyToken) await replyLine(replyToken, '✅ 已將您加入訂單通知名單，之後有客人確認訂單會即時通知您。輸入「解除專員」可取消。', token)
+            continue
+          }
+          if (/^(解除專員|取消專員|#取消專員|解除通知)/.test(t)) {
+            const list = await getNotifyLineRecipients(userId)
+            await setNotifyLineRecipients(userId, list.filter(id => id !== customerId), knowledge.industry)
+            if (token && replyToken) await replyLine(replyToken, '已將您移出訂單通知名單。', token)
+            continue
+          }
+          // 已綁定的專員 → OA 不對其做 AI 客服對話（不把專員當客人）
+          if ((await getNotifyLineRecipients(userId)).includes(customerId)) continue
         }
-        if (/^(解除專員|取消專員|#取消專員|解除通知)/.test(t)) {
-          const list = await getNotifyLineRecipients(userId)
-          await setNotifyLineRecipients(userId, list.filter(id => id !== customerId), knowledge.industry)
-          if (token && replyToken) await replyLine(replyToken, '已將您移出訂單通知名單。', token)
-          continue
+
+        let imgBuf: Buffer | undefined; let imgMime: string | undefined
+        if (msgType === 'image' && token) {
+          const img = await fetchLineImage(event.message.id, token)
+          if (img) { imgBuf = img.buffer; imgMime = img.mimeType }
+          else text = '（客人傳送了一張圖片，但無法讀取）'
         }
-        // 已綁定的專員 → OA 不對其做 AI 客服對話（不把專員當客人）
-        if ((await getNotifyLineRecipients(userId)).includes(customerId)) continue
-      }
 
-      let imgBuf: Buffer | undefined; let imgMime: string | undefined
-      if (msgType === 'image' && token) {
-        const img = await fetchLineImage(event.message.id, token)
-        if (img) { imgBuf = img.buffer; imgMime = img.mimeType }
-        else text = '（客人傳送了一張圖片，但無法讀取）'
+        const fromName = token ? await resolveLineDisplayName(userId, customerId, token) : undefined
+        const reply = await replyToCustomer(userId, platform, customerId, knowledge, history, text, gapNote, fromName, imgBuf, imgMime)
+        if (reply && token && replyToken) {
+          await replyLine(replyToken, reply, token, {
+            name: knowledge.aiSenderName,
+            iconUrl: knowledge.aiSenderIconUrl,
+          })
+        }
+        // reply token 省額度：AI 已回覆 → token 已用完，清除；AI 靜音（真人接管）→ 暫存供收件匣免費回覆
+        void persistLineReplyToken(userId, platform, customerId, reply ? '' : replyToken)
+        await saveHistory(userId, customerId, withTurn(history, text || '【圖片】', reply))
+      } finally {
+        await releaseLock()
       }
-
-      const fromName = token ? await resolveLineDisplayName(userId, customerId, token) : undefined
-      const reply = await replyToCustomer(userId, platform, customerId, knowledge, history, text, gapNote, fromName, imgBuf, imgMime)
-      if (reply && token && replyToken) {
-        await replyLine(replyToken, reply, token, {
-          name: knowledge.aiSenderName,
-          iconUrl: knowledge.aiSenderIconUrl,
-        })
-      }
-      // reply token 省額度：AI 已回覆 → token 已用完，清除；AI 靜音（真人接管）→ 暫存供收件匣免費回覆
-      void persistLineReplyToken(userId, platform, customerId, reply ? '' : replyToken)
-      await saveHistory(userId, customerId, withTurn(history, text || '【圖片】', reply))
     }
     return NextResponse.json({ ok: true })
   }
