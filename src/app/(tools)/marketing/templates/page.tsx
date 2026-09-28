@@ -146,8 +146,23 @@ export default function VisualTemplatesPage() {
     setUploadingImage(true)
     const reader = new FileReader()
     reader.onload = ev => {
-      setUploadedImage(ev.target?.result as string)
-      setUploadingImage(false)
+      // 手機原圖 base64 常超過 Vercel 4.5MB 請求上限（回傳純文字 Request Entity Too Large），先縮圖壓成 JPEG
+      const src = ev.target?.result as string
+      const img = new Image()
+      img.onload = () => {
+        const MAX = 1536
+        const scale = Math.min(1, MAX / Math.max(img.width, img.height))
+        const canvas = document.createElement('canvas')
+        canvas.width = Math.round(img.width * scale)
+        canvas.height = Math.round(img.height * scale)
+        const ctx = canvas.getContext('2d')
+        if (!ctx) { setUploadedImage(src); setUploadingImage(false); return }
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+        setUploadedImage(canvas.toDataURL('image/jpeg', 0.85))
+        setUploadingImage(false)
+      }
+      img.onerror = () => { setUploadedImage(src); setUploadingImage(false) }
+      img.src = src
     }
     reader.readAsDataURL(file)
     e.target.value = ''
@@ -186,7 +201,11 @@ export default function VisualTemplatesPage() {
         }),
       })
 
-      const data = await res.json()
+      const raw = await res.text()
+      let data: any = {}
+      try { data = JSON.parse(raw) } catch {
+        throw new Error(res.status === 413 ? '參考圖片太大，請換一張較小的圖片' : '生成失敗，請稍後再試')
+      }
       if (!res.ok) throw new Error(data.error || '生成失敗，請稍後再試')
 
       setGeneratedImgResult({
