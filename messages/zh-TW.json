@@ -633,10 +633,14 @@
         "applyBtn": "套用到官網",
         "writing": "AI 撰寫中…",
         "inputPlaceholder": "描述你的需求，例：幫我寫一個適合親子的民宿故事…",
-        "uploadImage": "上傳照片",
-        "uploading": "上傳中…",
-        "uploaded": "已上傳 {count} 張照片到官網，已顯示在預覽中（首頁「關於我們」右側）。",
-        "uploadFailed": "照片上傳失敗，請稍後再試",
+        "attachImage": "附加截圖給 AI 看",
+        "attachHint": "圖片只會傳給 AI 參考，不會放到官網。官網照片請到「照片管理」上傳。",
+        "imageOnlyPrompt": "請看我附上的圖片。",
+        "styles": {
+          "title": "風格庫",
+          "pickMsg": "套用「{name}」風格",
+          "pickReply": "已套用風格庫 #{no} {name}（{desc}）的配色、字體、圓角與留白。按「套用到官網」後再儲存即可生效；想微調可以直接告訴我，例如「主色改成深綠」。"
+        },
         "customDesignGenerated": "已生成專屬視覺設計",
         "fields": {
           "template_id": "🎨 視覺模板",

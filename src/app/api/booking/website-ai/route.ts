@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { generateText } from 'ai'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { CUSTOM_HEADING_FONTS, sanitizeCustomDesign } from '@/lib/booking/templates'
+import { uiStylesPromptList } from '@/lib/booking/uiStyles'
 
 export const maxDuration = 120
 
@@ -50,6 +51,11 @@ ${FONT_LIST}
   - 自然／溫暖調性：cardRadius/btnRadius 選 lg 或 full、shadow 選 soft、headingUppercase 為 false
   - 不要為了「特別」而犧牲可讀性，文字對比永遠優先於美觀
 
+【風格庫（模式 B 的現成起點，取自 UI 風格展示集 joshhu/uitest）】
+使用者提到下列風格名稱、編號，或描述接近某一種風格時，用 "template_id":"custom"，並以該風格的 custom_design 為基礎
+（可依民宿特色微調顏色，但要保留該風格的圓角、陰影、字重、留白特徵），回覆時說明用了哪個風格：
+${uiStylesPromptList()}
+
 【可控制的文案欄位】
 - tagline: 首頁 Hero 副標語（一句有感染力的話）
 - about: 民宿故事（關於頁主文，2-4 段，有情感深度）
@@ -70,7 +76,9 @@ ${FONT_LIST}
 </updates>
 3. 僅回答問題或討論時，不需要 <updates> 區塊
 4. 設計和文案要整體一致——模板/自訂設計、顏色、語氣要搭配
-5. 繁體中文，語氣溫暖有質感`
+5. 繁體中文，語氣溫暖有質感
+6. 使用者可能附上官網截圖或參考圖，那只是讓你看目前畫面或想要的風格；你無法把圖片放上官網，也不要假裝已經放上。
+   若問題需要照片才能解決（例如某區塊因沒有照片而空白），請說明並請使用者到「照片管理」上傳民宿照片`
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -94,10 +102,21 @@ SEO 標題：${profile.seo_title || '（未填）'}`
   const { text: raw } = await generateText({
     model: anthropic('claude-sonnet-4-6'),
     system: systemWithProfile,
-    messages: messages.map((m: { role: string; content: string }) => ({
-      role: m.role === 'user' ? 'user' : 'assistant',
-      content: m.content,
-    })),
+    messages: (messages as { role: string; content: string; images?: unknown }[]).map(m => {
+      if (m.role !== 'user') return { role: 'assistant' as const, content: m.content }
+      // 使用者附的截圖/參考圖只給 AI 看，只接受前端壓縮過的 JPEG/PNG/WebP data URL
+      const images = Array.isArray(m.images)
+        ? m.images.filter((u): u is string => typeof u === 'string' && /^data:image\/(jpeg|png|webp);base64,/.test(u)).slice(0, 3)
+        : []
+      if (!images.length) return { role: 'user' as const, content: m.content }
+      return {
+        role: 'user' as const,
+        content: [
+          ...images.map(image => ({ type: 'image' as const, image })),
+          { type: 'text' as const, text: m.content },
+        ],
+      }
+    }),
     // 一次產出多個長文案欄位（故事、FAQ…）很容易超過 2500，被截斷後 </updates> 不見、整段 JSON 直接露在對話裡
     maxOutputTokens: 8000,
   })

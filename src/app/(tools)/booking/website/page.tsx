@@ -193,7 +193,6 @@ export default function WebsiteEditorPage() {
                 if (!updates.theme_color && typeof accent === 'string') set('theme_color', accent)
               }}
               onClose={() => setAiOpen(false)}
-              onImagesUploaded={() => setPreviewKey(k => k + 1)}
             />
           )}
 
