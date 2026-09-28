@@ -24,9 +24,18 @@ export interface BnbDesign {
   shadow: string
   heroLayout: 'overlay-left' | 'centered' | 'minimal'
   sectionPaddingY: string
+  // 整頁底色；深色風格（Dark Mode、Cyberpunk…）靠它讓頁面其餘寫死的淺色 class 一併換成深色，見 siteThemeVars()
+  pageBg: string
+  // 主色按鈕上的文字色：主色太亮（霓虹、螢光）時用深色字，否則白字；由 accent 自動算出
+  onAccent: string
+  // 捲動進場動畫
+  animation: SiteAnimation
 }
 
-export interface BnbTemplate extends BnbDesign {
+export type SiteAnimation = 'none' | 'fade' | 'rise' | 'zoom' | 'slide'
+const SITE_ANIMATIONS = new Set<SiteAnimation>(['none', 'fade', 'rise', 'zoom', 'slide'])
+
+export interface BnbTemplate extends Omit<BnbDesign, 'pageBg' | 'onAccent' | 'animation'> {
   id: string
   name: string
   desc: string
@@ -88,6 +97,10 @@ export function getTemplate(id?: string | null): BnbTemplate {
   return TEMPLATES.find(t => t.id === id) ?? TEMPLATES[0]
 }
 
+function templateDesign(t: BnbTemplate): BnbDesign {
+  return { ...t, pageBg: '#ffffff', onAccent: onAccentFor(t.accent), animation: 'none' }
+}
+
 // ── AI 自由生成的自訂設計：只接受受限的語意選項 + hex 色碼，
 // 不接受任意 CSS 字串，避免 AI 產生壞掉的樣式或格式不明的值。
 export const CUSTOM_HEADING_FONTS = [
@@ -125,11 +138,33 @@ export interface CustomDesignInput {
   shadow?: 'none' | 'soft' | 'medium'
   heroLayout?: 'overlay-left' | 'centered' | 'minimal'
   sectionPaddingScale?: 'compact' | 'comfortable' | 'spacious'
+  pageBg?: string
+  animation?: SiteAnimation
 }
 
 function hexToRgb(hex: string) {
   const n = parseInt(hex.slice(1), 16)
   return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 }
+}
+
+function luminance(hex: string) {
+  const { r, g, b } = hexToRgb(hex)
+  const lin = (c: number) => { const v = c / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4 }
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b)
+}
+
+function contrast(a: string, b: string) {
+  const x = luminance(a), y = luminance(b)
+  return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05)
+}
+
+export function onAccentFor(accent: string) {
+  if (!HEX_RE.test(accent)) return '#ffffff'
+  return contrast(accent, '#ffffff') >= contrast(accent, '#111111') ? '#ffffff' : '#111111'
+}
+
+export function isDarkBg(hex: string) {
+  return HEX_RE.test(hex) && luminance(hex) < 0.2
 }
 
 function shadowFromInk(ink: string, level: 'none' | 'soft' | 'medium'): string {
@@ -172,6 +207,9 @@ export function sanitizeCustomDesign(input: unknown): BnbDesign | null {
     shadow: shadowFromInk(ink, d.shadow ?? 'soft'),
     heroLayout,
     sectionPaddingY: PADDING_SCALE[d.sectionPaddingScale ?? 'comfortable'] ?? PADDING_SCALE.comfortable,
+    pageBg: d.pageBg && HEX_RE.test(d.pageBg) ? d.pageBg : '#ffffff',
+    onAccent: onAccentFor(accent),
+    animation: d.animation && SITE_ANIMATIONS.has(d.animation) ? d.animation : 'none',
   }
 }
 
@@ -184,9 +222,33 @@ export function resolveDesign(profile: {
   theme_color?: string | null
 }): BnbDesign {
   const base = profile.template_id === 'custom'
-    ? sanitizeCustomDesign(profile.custom_design) ?? getTemplate('natural')
-    : getTemplate(profile.template_id)
-  return profile.theme_color ? { ...base, accent: profile.theme_color } : base
+    ? sanitizeCustomDesign(profile.custom_design) ?? templateDesign(getTemplate('natural'))
+    : templateDesign(getTemplate(profile.template_id))
+  return profile.theme_color && HEX_RE.test(profile.theme_color)
+    ? { ...base, accent: profile.theme_color, onAccent: onAccentFor(profile.theme_color) }
+    : base
+}
+
+// 公開官網外層的 CSS 變數。頁面裡寫死的 bg-white 已改成 bg-[var(--bnb-page)]；
+// 深色風格另外把 Tailwind v4 的 gray 色階（utilities 都是 var(--color-gray-N)）
+// 重新對應到「頁面底色 → 文字色」的漸層，讓 text-gray-600、bg-gray-50 等寫死的 class 自動變成深色版本，
+// 不必逐一改每個頁面。淺色風格維持 Tailwind 原本的灰階，既有網站外觀不變。
+const GRAY_MIX: [number, number][] = [
+  [50, 5], [100, 9], [200, 16], [300, 28], [400, 45], [500, 58], [600, 70], [700, 80], [800, 88], [900, 94],
+]
+export function siteThemeVars(d: BnbDesign): Record<string, string> {
+  const vars: Record<string, string> = {
+    '--bnb-page': d.pageBg,
+    '--bnb-ink': d.ink,
+    '--bnb-muted': d.muted,
+    '--bnb-accent': d.accent,
+    '--bnb-on-accent': d.onAccent,
+  }
+  if (isDarkBg(d.pageBg)) {
+    for (const [n, pct] of GRAY_MIX) vars[`--color-gray-${n}`] = `color-mix(in srgb, ${d.ink} ${pct}%, ${d.pageBg})`
+    vars['--border'] = d.cardBorder
+  }
+  return vars
 }
 
 // 標題文字的共用 style：色彩、字體、字距、大小寫，各頁面統一使用避免各寫一套

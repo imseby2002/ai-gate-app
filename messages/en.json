@@ -639,7 +639,15 @@
         "styles": {
           "title": "Style library",
           "pickMsg": "Apply the \"{name}\" style",
-          "pickReply": "Here is style #{no} {name} ({desc}): colors, fonts, corner radius and spacing. Click \"Apply to Website\", then save. Tell me if you want tweaks, e.g. \"make the main color dark green\"."
+          "pickReply": "Here is style #{no} {name} ({desc}): colors, fonts, corner radius, spacing and scroll animation. Click \"Apply to Website\", then save. Tell me if you want tweaks, e.g. \"make the main color dark green\".",
+          "filters": {
+            "all": "All",
+            "general": "General",
+            "landing": "Landing",
+            "modern": "Modern",
+            "bi": "Dashboard (colors only)",
+            "dark": "Dark"
+          }
         },
         "customDesignGenerated": "Custom design generated",
         "fields": {

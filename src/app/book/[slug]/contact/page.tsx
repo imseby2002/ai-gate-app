@@ -45,7 +45,7 @@ export default async function ContactPage({ params }: { params: Promise<{ slug: 
 
       {/* Contact cards */}
       {contacts.length > 0 && (
-        <section className="grid sm:grid-cols-2 gap-3">
+        <section data-reveal className="grid sm:grid-cols-2 gap-3">
           {contacts.map((item, i) => {
             const Icon = item.icon
             return (
@@ -67,7 +67,7 @@ export default async function ContactPage({ params }: { params: Promise<{ slug: 
 
       {/* Business hours */}
       {(profile.check_in_time || profile.check_out_time) && (
-        <section className="rounded-xl p-4 space-y-2" style={{ backgroundColor: design.sectionBg }}>
+        <section data-reveal className="rounded-xl p-4 space-y-2" style={{ backgroundColor: design.sectionBg }}>
           <h2 className="text-sm font-semibold" style={{ color: design.ink }}>入住時間</h2>
           <div className="grid grid-cols-2 gap-3 text-sm">
             {profile.check_in_time && (
@@ -88,7 +88,7 @@ export default async function ContactPage({ params }: { params: Promise<{ slug: 
 
       {/* Social links */}
       {(social.facebook || social.instagram || social.youtube) && (
-        <section className="space-y-3">
+        <section data-reveal className="space-y-3">
           <h2 className="text-sm font-semibold text-gray-700">社群媒體</h2>
           <div className="flex flex-wrap gap-2">
             {social.facebook && (
@@ -115,7 +115,7 @@ export default async function ContactPage({ params }: { params: Promise<{ slug: 
 
       {/* Map embed */}
       {mapEmbed && (
-        <section className="space-y-3">
+        <section data-reveal className="space-y-3">
           <h2 className="text-sm font-semibold text-gray-700">地圖</h2>
           <div className="w-full rounded-xl overflow-hidden border aspect-[16/9]">
             <iframe

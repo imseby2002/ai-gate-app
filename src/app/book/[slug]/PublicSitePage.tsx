@@ -43,6 +43,8 @@ export default function PublicHomePage({
   const images = (profile.images as string[] | null) ?? []
   const heroImg = images[0]
   const ctaText = profile.hero_cta_text || '立即訂房'
+  // 有照片時文字壓在暗化遮罩上一律白字；沒照片時 Hero 底色是主色，文字要跟主色按鈕用同一個對比色
+  const heroFg = heroImg ? '#ffffff' : design.onAccent
 
   const heroContent = (
     <div className={`relative z-10 max-w-5xl mx-auto px-4 w-full
@@ -50,30 +52,33 @@ export default function PublicHomePage({
       ${design.heroLayout === 'centered' ? 'flex flex-col items-center text-center' : 'flex flex-col items-start text-left'}`}>
       {profile.name && (
         <h1 className={`leading-tight ${design.headingUppercase ? 'text-3xl sm:text-4xl' : 'text-4xl sm:text-5xl'}`}
-          style={headingCss(design, '#fff')}>
+          style={headingCss(design, heroFg)}>
           {profile.name}
         </h1>
       )}
       {profile.tagline && (
         // 不限窄欄寬，避免一句標語在大螢幕被硬折成兩行；手機寬度不夠時才自然換行
-        <p className={`${profile.name ? 'mt-3' : ''} text-lg sm:text-xl text-white/80`}>{profile.tagline}</p>
+        <p className={`${profile.name ? 'mt-3' : ''} text-lg sm:text-xl opacity-80`} style={{ color: heroFg }}>{profile.tagline}</p>
       )}
       {profile.address && (
-        <p className="mt-2 text-sm text-white/60 flex items-center gap-1">
+        <p className="mt-2 text-sm opacity-60 flex items-center gap-1" style={{ color: heroFg }}>
           <MapPin className="h-3.5 w-3.5" />
           {profile.city ? `${profile.city} · ` : ''}{profile.address}
         </p>
       )}
       <div className="flex flex-wrap gap-3 mt-6">
         <Link href={`${base}/booking`}
-          className="px-6 py-3 text-sm font-bold text-white hover:opacity-90 transition-opacity"
-          style={{ ...aStyle, ...btnStyle }}>
+          className="px-6 py-3 text-sm font-bold hover:opacity-90 transition-opacity"
+          // 沒照片時 Hero 本身就是主色底，主色按鈕會跟背景融在一起，改成反色
+          style={heroImg
+            ? { ...aStyle, ...btnStyle, color: design.onAccent }
+            : { ...btnStyle, backgroundColor: design.onAccent, color: accent }}>
           {ctaText}
         </Link>
         {properties.length > 0 && (
           <Link href={`${base}/rooms`}
-            className="px-6 py-3 text-sm font-semibold border-2 text-white hover:bg-white/10 transition-colors"
-            style={btnStyle}>
+            className="px-6 py-3 text-sm font-semibold border-2 hover:bg-white/10 transition-colors"
+            style={{ ...btnStyle, color: heroFg, borderColor: heroFg }}>
             查看房型
           </Link>
         )}
@@ -105,12 +110,12 @@ export default function PublicHomePage({
         {design.heroLayout === 'minimal' ? (
           <div className="relative z-10 flex flex-col h-full" style={{ minHeight: '50vh' }}>
             <div className="flex-1" />
-            <div className="bg-white/90 backdrop-blur max-w-5xl mx-auto w-full px-4 py-6 sm:py-8">
+            <div className="bg-[color-mix(in_srgb,var(--bnb-page)_90%,transparent)] backdrop-blur max-w-5xl mx-auto w-full px-4 py-6 sm:py-8">
               <h1 className="text-3xl sm:text-4xl" style={headingStyle}>{profile.name}</h1>
               {profile.tagline && <p className="mt-1" style={mutedStyle}>{profile.tagline}</p>}
               <div className="flex flex-wrap gap-3 mt-4">
                 <Link href={`${base}/booking`}
-                  className="px-6 py-2.5 text-sm font-bold text-white hover:opacity-90"
+                  className="px-6 py-2.5 text-sm font-bold text-[var(--bnb-on-accent)] hover:opacity-90"
                   style={{ ...aStyle, ...btnStyle }}>
                   {ctaText}
                 </Link>
@@ -128,7 +133,7 @@ export default function PublicHomePage({
       </section>
 
       {/* ── Quick badges ── */}
-      <section className="bg-white border-b">
+      <section className="bg-[var(--bnb-page)] border-b">
         <div className="max-w-5xl mx-auto px-4 py-3 flex flex-wrap gap-2">
           {profile.check_in_time && (
             <span className="inline-flex items-center gap-1 text-xs bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full">
@@ -157,7 +162,7 @@ export default function PublicHomePage({
       {properties.length > 0 && (
         <section style={{ backgroundColor: design.sectionBg, paddingTop: design.sectionPaddingY, paddingBottom: design.sectionPaddingY }}>
           <div className="max-w-5xl mx-auto px-4">
-            <div className="flex items-end justify-between mb-6">
+            <div data-reveal className="flex items-end justify-between mb-6">
               <h2 className={design.headingUppercase ? 'text-xl' : 'text-2xl'} style={headingStyle}>
                 精選房型
               </h2>
@@ -166,11 +171,11 @@ export default function PublicHomePage({
               </Link>
             </div>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {properties.slice(0, 3).map(prop => {
+              {properties.slice(0, 3).map((prop, i) => {
                 const img = (prop.images as string[] | null)?.[0]
                 return (
-                  <div key={prop.id} className="overflow-hidden border"
-                    style={{ backgroundColor: design.cardBg, borderColor: design.cardBorder, borderRadius: design.cardRadius, boxShadow: design.shadow || undefined }}>
+                  <div key={prop.id} data-reveal className="overflow-hidden border"
+                    style={{ ['--reveal-delay' as string]: `${i * 90}ms`, backgroundColor: design.cardBg, borderColor: design.cardBorder, borderRadius: design.cardRadius, boxShadow: design.shadow || undefined }}>
                     <div className="aspect-[4/3] overflow-hidden bg-gray-100">
                       {img ? (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -198,7 +203,7 @@ export default function PublicHomePage({
                         <Users className="h-3.5 w-3.5" />最多 {prop.max_guests ?? 2} 人
                       </div>
                       <Link href={`${base}/booking?room=${prop.id}`}
-                        className="block w-full text-center py-2 text-white text-sm font-semibold hover:opacity-90 transition-opacity"
+                        className="block w-full text-center py-2 text-[var(--bnb-on-accent)] text-sm font-semibold hover:opacity-90 transition-opacity"
                         style={{ ...aStyle, ...btnStyle }}>
                         選擇此房型
                       </Link>
@@ -215,7 +220,7 @@ export default function PublicHomePage({
       {(profile.about || profile.description) && (
         <section style={{ paddingTop: design.sectionPaddingY, paddingBottom: design.sectionPaddingY }}>
           <div className="max-w-5xl mx-auto px-4">
-            <div className="grid sm:grid-cols-2 gap-8 items-center">
+            <div data-reveal className="grid sm:grid-cols-2 gap-8 items-center">
               <div className="space-y-4">
                 <h2 className={design.headingUppercase ? 'text-xl' : 'text-2xl'} style={headingStyle}>
                   關於我們
@@ -257,19 +262,19 @@ export default function PublicHomePage({
             <div className="flex flex-wrap gap-3">
               {profile.phone && (
                 <a href={`tel:${profile.phone}`}
-                  className="flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900 bg-white border rounded-lg px-3 py-2 hover:shadow-sm transition-shadow">
+                  className="flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900 bg-[var(--bnb-page)] border rounded-lg px-3 py-2 hover:shadow-sm transition-shadow">
                   <Phone className="h-4 w-4" style={aText} />{profile.phone}
                 </a>
               )}
               {profile.email && (
                 <a href={`mailto:${profile.email}`}
-                  className="flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900 bg-white border rounded-lg px-3 py-2 hover:shadow-sm transition-shadow">
+                  className="flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900 bg-[var(--bnb-page)] border rounded-lg px-3 py-2 hover:shadow-sm transition-shadow">
                   <Mail className="h-4 w-4" style={aText} />{profile.email}
                 </a>
               )}
               {profile.line_id && (
                 <a href={`https://line.me/ti/p/~${profile.line_id}`} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900 bg-white border rounded-lg px-3 py-2 hover:shadow-sm transition-shadow">
+                  className="flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900 bg-[var(--bnb-page)] border rounded-lg px-3 py-2 hover:shadow-sm transition-shadow">
                   <MessageCircle className="h-4 w-4" style={aText} />LINE
                 </a>
               )}

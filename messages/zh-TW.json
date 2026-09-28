@@ -639,7 +639,15 @@
         "styles": {
           "title": "風格庫",
           "pickMsg": "套用「{name}」風格",
-          "pickReply": "已套用風格庫 #{no} {name}（{desc}）的配色、字體、圓角與留白。按「套用到官網」後再儲存即可生效；想微調可以直接告訴我，例如「主色改成深綠」。"
+          "pickReply": "已套用風格庫 #{no} {name}（{desc}）的配色、字體、圓角、留白與進場動畫。按「套用到官網」後再儲存即可生效；想微調可以直接告訴我，例如「主色改成深綠」。",
+          "filters": {
+            "all": "全部",
+            "general": "一般",
+            "landing": "形象頁",
+            "modern": "現代",
+            "bi": "儀表板（僅配色）",
+            "dark": "深色"
+          }
         },
         "customDesignGenerated": "已生成專屬視覺設計",
         "fields": {

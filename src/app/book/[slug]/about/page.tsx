@@ -56,7 +56,7 @@ export default async function AboutPage({ params }: { params: Promise<{ slug: st
 
         {/* ── 故事 ── */}
         {(profile.about || profile.description) && (
-          <section className="space-y-4">
+          <section data-reveal className="space-y-4">
             <h2 className="text-xl border-b pb-2" style={{ ...headingStyle, borderColor: accent }}>
               民宿故事
             </h2>
@@ -68,7 +68,7 @@ export default async function AboutPage({ params }: { params: Promise<{ slug: st
 
         {/* ── 主人介紹 ── */}
         {profile.owner_intro && (
-          <section className="rounded-2xl p-6 space-y-3" style={{ backgroundColor: design.sectionBg }}>
+          <section data-reveal className="rounded-2xl p-6 space-y-3" style={{ backgroundColor: design.sectionBg }}>
             <h2 style={headingStyle}>主人介紹</h2>
             <p className="leading-relaxed whitespace-pre-wrap text-[15px]" style={bodyStyle}>{profile.owner_intro}</p>
           </section>
@@ -76,7 +76,7 @@ export default async function AboutPage({ params }: { params: Promise<{ slug: st
 
         {/* ── 相片 ── */}
         {images.length > 1 && (
-          <section className="space-y-4">
+          <section data-reveal className="space-y-4">
             <h2 className="text-xl border-b pb-2" style={{ ...headingStyle, borderColor: accent }}>
               民宿相片
             </h2>
@@ -93,7 +93,7 @@ export default async function AboutPage({ params }: { params: Promise<{ slug: st
 
         {/* ── 設施 ── */}
         {amenities.length > 0 && (
-          <section className="space-y-4">
+          <section data-reveal className="space-y-4">
             <h2 className="text-xl border-b pb-2" style={{ ...headingStyle, borderColor: accent }}>
               設施與服務
             </h2>
@@ -112,7 +112,7 @@ export default async function AboutPage({ params }: { params: Promise<{ slug: st
 
         {/* ── 住宿規則 ── */}
         {profile.house_rules && (
-          <section className="space-y-4">
+          <section data-reveal className="space-y-4">
             <h2 className="text-xl border-b pb-2" style={{ ...headingStyle, borderColor: accent }}>
               住宿規則
             </h2>
@@ -125,7 +125,7 @@ export default async function AboutPage({ params }: { params: Promise<{ slug: st
 
         {/* ── FAQ ── */}
         {faq.length > 0 && (
-          <section className="space-y-4">
+          <section data-reveal className="space-y-4">
             <h2 className="text-xl border-b pb-2" style={{ ...headingStyle, borderColor: accent }}>
               常見問題
             </h2>
