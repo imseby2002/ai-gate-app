@@ -9,6 +9,7 @@ import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
 import { IMAGE_COSTS } from '@/lib/marketing/billing'
 import { createAwarenessCampaign, getAdAccount, getInsights, metaAdsCredsFrom, setStatus, type MetaAdsCreds } from '@/lib/marketing/meta-ads'
 import { ga4CredsFrom, getGa4Report } from '@/lib/marketing/ga4'
+import { getLineFollowers, getSiteMemberCounts, lineTokenFrom, memberJoinKey, memberJoinUrl } from '@/lib/marketing/members'
 import type { AgentRunContext, AgentToolDef } from '../types'
 
 async function missionForRun(ctx: AgentRunContext): Promise<MissionRow> {
@@ -492,6 +493,34 @@ export const ga4MetricsTool: AgentToolDef = {
   },
 }
 
+interface MemberCountsInput { since?: string }
+
+export const memberCountsTool: AgentToolDef = {
+  id: 'get_member_counts',
+  description:
+    '讀取「會員數」KPI（唯讀）：① LINE 官方帳號好友數（昨日，LINE 官方統計）② 官網會員總數與 since 之後新增數（依來源 utm_source 分組）。' +
+    '同時回傳官網「加入會員」連結 join_url——發文、廣告、LINE 推播導流時請附此連結並加上 ?utm_source=渠道（例如 fb、ig、line）以便追蹤成效。',
+  inputSchema: {
+    type: 'object',
+    properties: { since: { type: 'string', description: '計算新增官網會員的起日 YYYY-MM-DD（選填，通常用任務開始日）' } },
+    required: [],
+  },
+  async execute(rawInput, ctx) {
+    const input = rawInput as unknown as MemberCountsInput
+    const admin = createAdminClient()
+    const ownerId = await ownerForRun(ctx)
+    const rows = await loadCredentialRows(ctx)
+    const token = lineTokenFrom(rows)
+
+    let line: unknown = { error: '尚未綁定 LINE 官方帳號（客服頻道或平台設定的 LINE VOOM），無法讀取好友數' }
+    if (token) {
+      try { line = await getLineFollowers(token) } catch (e) { line = { error: e instanceof Error ? e.message : String(e) } }
+    }
+    const site = await getSiteMemberCounts(admin, ownerId, input.since)
+    return { line_friends: line, site_members: site, join_url: memberJoinUrl(await memberJoinKey(admin, ownerId)) }
+  },
+}
+
 export const MISSION_CORE_TOOLS: Record<string, AgentToolDef> = {
   [reportMissionProgressTool.id]: reportMissionProgressTool,
   [requestExternalPurchaseTool.id]: requestExternalPurchaseTool,
@@ -507,6 +536,7 @@ export const MARKETING_EXECUTION_TOOLS: Record<string, AgentToolDef> = {
   [publishToSocialTool.id]: publishToSocialTool,
   [metaAdsInsightsTool.id]: metaAdsInsightsTool,
   [ga4MetricsTool.id]: ga4MetricsTool,
+  [memberCountsTool.id]: memberCountsTool,
   // 需綁定目標任務（預算上限），非任務 run 呼叫會回錯誤
   [metaAdsLaunchTool.id]: metaAdsLaunchTool,
   [metaAdsPauseTool.id]: metaAdsPauseTool,
