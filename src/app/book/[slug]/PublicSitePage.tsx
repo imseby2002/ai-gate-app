@@ -45,14 +45,18 @@ export default function PublicHomePage({
   const ctaText = profile.hero_cta_text || '立即訂房'
 
   const heroContent = (
-    <div className={`relative z-10 max-w-5xl mx-auto px-4 py-16 sm:py-24 w-full
+    <div className={`relative z-10 max-w-5xl mx-auto px-4 w-full
+      ${heroImg ? 'py-16 sm:py-24' : 'py-10 sm:py-14'}
       ${design.heroLayout === 'centered' ? 'flex flex-col items-center text-center' : 'flex flex-col items-start text-left'}`}>
-      <h1 className={`leading-tight ${design.headingUppercase ? 'text-3xl sm:text-4xl' : 'text-4xl sm:text-5xl'}`}
-        style={headingCss(design, '#fff')}>
-        {profile.name}
-      </h1>
+      {profile.name && (
+        <h1 className={`leading-tight ${design.headingUppercase ? 'text-3xl sm:text-4xl' : 'text-4xl sm:text-5xl'}`}
+          style={headingCss(design, '#fff')}>
+          {profile.name}
+        </h1>
+      )}
       {profile.tagline && (
-        <p className="mt-3 text-lg sm:text-xl text-white/80 max-w-xl">{profile.tagline}</p>
+        // 不限窄欄寬，避免一句標語在大螢幕被硬折成兩行；手機寬度不夠時才自然換行
+        <p className={`${profile.name ? 'mt-3' : ''} text-lg sm:text-xl text-white/80`}>{profile.tagline}</p>
       )}
       {profile.address && (
         <p className="mt-2 text-sm text-white/60 flex items-center gap-1">
