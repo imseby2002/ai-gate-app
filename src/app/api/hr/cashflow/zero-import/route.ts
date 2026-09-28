@@ -172,6 +172,23 @@ export async function POST(req: NextRequest) {
     const batchId = crypto.randomUUID()
     const fileName = path.split('/').pop() || 'MymoneyData.mdb'
 
+    // 先建立匯入紀錄（hr_cashflow.import_batch_id 外鍵指向此筆），包含批次 ID 與狀態
+    const { error: logError } = await supabase.from('fin_import_logs').insert({
+      id: batchId,
+      owner_id: user.id,
+      account_book: parsed.bookName || 'FT',
+      filename: fileName,
+      total_rows: parsed.transactions.length + parsed.skipped,
+      success_count: 0,
+      error_count: parsed.errorCount,
+      warning_count: parsed.warningCount,
+      subjects_created: subjectsCreated,
+      date_range: parsed.dateRange ? `${parsed.dateRange[0]} ~ ${parsed.dateRange[1]}` : '',
+      errors: parsed.errors,
+      status: 'active',
+    })
+    if (logError) return NextResponse.json({ error: `建立匯入紀錄失敗：${logError.message}` }, { status: 500 })
+
     let imported = 0
     for (let i = 0; i < newTransactions.length; i += CHUNK) {
       const chunk = newTransactions.slice(i, i + CHUNK)
@@ -194,25 +211,14 @@ export async function POST(req: NextRequest) {
         import_batch_id: batchId,
       }))
       const { error, count } = await supabase.from('hr_cashflow').insert(rows)
-      if (error) return NextResponse.json({ error: `匯入中斷（已匯入 ${imported} 筆）：${error.message}` }, { status: 500 })
+      if (error) {
+        await supabase.from('fin_import_logs').update({ success_count: imported }).eq('id', batchId)
+        return NextResponse.json({ error: `匯入中斷（已匯入 ${imported} 筆）：${error.message}` }, { status: 500 })
+      }
       imported += count ?? rows.length
     }
 
-    // 儲存詳細匯入紀錄與錯誤日誌，包含批次 ID 與狀態
-    await supabase.from('fin_import_logs').insert({
-      id: batchId,
-      owner_id: user.id,
-      account_book: parsed.bookName || 'FT',
-      filename: fileName,
-      total_rows: parsed.transactions.length + parsed.skipped,
-      success_count: imported,
-      error_count: parsed.errorCount,
-      warning_count: parsed.warningCount,
-      subjects_created: subjectsCreated,
-      date_range: parsed.dateRange ? `${parsed.dateRange[0]} ~ ${parsed.dateRange[1]}` : '',
-      errors: parsed.errors,
-      status: 'active',
-    })
+    await supabase.from('fin_import_logs').update({ success_count: imported }).eq('id', batchId)
 
     await supabase.storage.from(BUCKET).remove([path]).catch(() => {})
 
