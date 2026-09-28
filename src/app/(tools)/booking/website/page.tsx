@@ -187,6 +187,10 @@ export default function WebsiteEditorPage() {
                 Object.entries(updates).forEach(([k, v]) => {
                   if (v !== undefined) set(k as keyof typeof form, v as never)
                 })
+                // resolveDesign() 會用 theme_color 覆蓋 accent；AI 給了新的自訂設計卻沒給 theme_color 時，
+                // 舊主色會把整套新配色蓋掉，看起來就像「套用後沒變」
+                const accent = (updates.custom_design as { accent?: unknown } | null | undefined)?.accent
+                if (!updates.theme_color && typeof accent === 'string') set('theme_color', accent)
               }}
               onClose={() => setAiOpen(false)}
             />
