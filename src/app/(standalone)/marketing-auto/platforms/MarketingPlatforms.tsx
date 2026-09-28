@@ -103,6 +103,15 @@ const PLATFORMS: Platform[] = [
       { key: 'access_token', label: 'Access Token', placeholder: '...', secret: true },
     ],
   },
+  {
+    id: 'GA4', name: 'Google Analytics 4（官網流量，唯讀）', color: '#F9AB00',
+    note: '讓 AI Agent 讀取官網 sessions／使用者數。步驟：① Google Cloud Console 啟用「Google Analytics Data API」② 建立服務帳戶並下載 JSON 金鑰 ③ GA4「管理 → 資源存取管理」把服務帳戶 email 加為「檢視者」④ 資源 ID 在「管理 → 資源設定」。不佔方案平台數。',
+    docUrl: 'https://developers.google.com/analytics/devguides/reporting/data/v1/quickstart-client-libraries',
+    fields: [
+      { key: 'property_id', label: 'GA4 資源 ID', placeholder: '123456789', secret: false },
+      { key: 'service_account_json', label: '服務帳戶 JSON 金鑰（整份檔案內容貼上）', placeholder: '{"type":"service_account", ...}', secret: true },
+    ],
+  },
 ]
 
 interface PlatformState {
@@ -137,6 +146,24 @@ export function MarketingPlatforms({ canSettings }: { canSettings: boolean }) {
       }
     } catch { setAdsResult({ ok: false, text: '網路錯誤' }) }
     finally { setAdsTesting(false) }
+  }
+
+  const [ga4Testing, setGa4Testing] = useState(false)
+  const [ga4Result, setGa4Result] = useState<{ ok: boolean; text: string } | null>(null)
+
+  const testGa4 = async () => {
+    setGa4Testing(true); setGa4Result(null)
+    try {
+      const res = await fetch('/api/agent/ga4-test')
+      const d = await res.json()
+      if (d.ok) {
+        const t = d.totals_last_7d ?? {}
+        setGa4Result({ ok: true, text: `資源 ${d.propertyId}｜近 7 天 sessions ${t.sessions ?? 0}、使用者 ${t.totalUsers ?? 0}、新使用者 ${t.newUsers ?? 0}、瀏覽量 ${t.screenPageViews ?? 0}` })
+      } else {
+        setGa4Result({ ok: false, text: `${d.serviceAccount ? d.serviceAccount + '：' : ''}${d.error ?? '測試失敗'}` })
+      }
+    } catch { setGa4Result({ ok: false, text: '網路錯誤' }) }
+    finally { setGa4Testing(false) }
   }
 
   const load = useCallback(async () => {
@@ -254,6 +281,21 @@ export function MarketingPlatforms({ canSettings }: { canSettings: boolean }) {
                         {saving === p.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                         儲存
                       </button>
+                    </div>
+                  )}
+
+                  {p.id === 'GA4' && connected && (
+                    <div className="mt-3 space-y-2">
+                      <button onClick={testGa4} disabled={ga4Testing}
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-lg border text-sm font-medium disabled:opacity-50 hover:bg-accent transition-colors">
+                        {ga4Testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wifi className="h-4 w-4" />}
+                        測試 GA4 連線（唯讀）
+                      </button>
+                      {ga4Result && (
+                        <p className={`text-xs rounded-lg px-3 py-2 ${ga4Result.ok ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400' : 'bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-400'}`}>
+                          {ga4Result.text}
+                        </p>
+                      )}
                     </div>
                   )}
 

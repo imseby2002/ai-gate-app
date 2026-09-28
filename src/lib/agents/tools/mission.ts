@@ -8,6 +8,7 @@ import { publishToPlatforms, SUPPORTED_PLATFORMS, type CredentialRow } from '@/l
 import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
 import { IMAGE_COSTS } from '@/lib/marketing/billing'
 import { createAwarenessCampaign, getAdAccount, getInsights, metaAdsCredsFrom, setStatus, type MetaAdsCreds } from '@/lib/marketing/meta-ads'
+import { ga4CredsFrom, getGa4Report } from '@/lib/marketing/ga4'
 import type { AgentRunContext, AgentToolDef } from '../types'
 
 async function missionForRun(ctx: AgentRunContext): Promise<MissionRow> {
@@ -467,6 +468,30 @@ export const metaAdsPauseTool: AgentToolDef = {
   },
 }
 
+interface Ga4Input { start_date?: string; end_date?: string }
+
+export const ga4MetricsTool: AgentToolDef = {
+  id: 'get_ga4_metrics',
+  description:
+    '讀取官網 GA4 流量（唯讀）：sessions（造訪次數）、totalUsers（使用者數）、newUsers（新使用者數）、screenPageViews（瀏覽量），含期間合計與每日明細。' +
+    '瀏覽率／網站流量類 KPI 以此為數據來源。日期可用 YYYY-MM-DD、today、yesterday、NdaysAgo，預設近 28 天。',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      start_date: { type: 'string', description: '起日，例如 2026-09-01 或 28daysAgo' },
+      end_date: { type: 'string', description: '迄日，例如 today' },
+    },
+    required: [],
+  },
+  async execute(rawInput, ctx) {
+    const input = rawInput as unknown as Ga4Input
+    const rows = await loadCredentialRows(ctx)
+    const creds = ga4CredsFrom(rows.find(r => r.platform === 'GA4' && r.is_connected)?.credentials)
+    if (!creds) throw new Error('行銷自動化「平台設定」的 GA4 尚未填資源 ID 與服務帳戶金鑰，請用 request_human_approval 請真人補上')
+    return getGa4Report(creds, input.start_date || '28daysAgo', input.end_date || 'today')
+  },
+}
+
 export const MISSION_CORE_TOOLS: Record<string, AgentToolDef> = {
   [reportMissionProgressTool.id]: reportMissionProgressTool,
   [requestExternalPurchaseTool.id]: requestExternalPurchaseTool,
@@ -481,6 +506,7 @@ export const MARKETING_EXECUTION_TOOLS: Record<string, AgentToolDef> = {
   [generateMarketingImageTool.id]: generateMarketingImageTool,
   [publishToSocialTool.id]: publishToSocialTool,
   [metaAdsInsightsTool.id]: metaAdsInsightsTool,
+  [ga4MetricsTool.id]: ga4MetricsTool,
   // 需綁定目標任務（預算上限），非任務 run 呼叫會回錯誤
   [metaAdsLaunchTool.id]: metaAdsLaunchTool,
   [metaAdsPauseTool.id]: metaAdsPauseTool,
