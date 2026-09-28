@@ -19,6 +19,7 @@ type Updates = Partial<Omit<WebForm, 'slug' | 'contact_map_embed' | 'social_link
 interface Message {
   role: 'user' | 'assistant'
   content: string
+  images?: string[]
   updates?: Record<string, unknown>
   applied?: boolean
 }
@@ -27,30 +28,33 @@ interface Props {
   form: WebForm
   onApply: (updates: Updates) => void
   onClose: () => void
-  onImagesUploaded?: () => void
 }
 
-// 手機原圖常超過 Vercel 4.5MB 請求上限，上傳前先縮到最長邊 1920 並轉 JPEG
-function compressImage(file: File): Promise<Blob> {
+const MAX_ATTACHMENTS = 3
+
+// 附圖只給 AI 看（截圖、參考圖），不會存成官網照片——官網照片請到「照片管理」上傳。
+// 以 data URL 夾在請求裡，Vercel 請求上限 4.5MB，先縮到最長邊 1280 並轉 JPEG
+function imageToDataUrl(file: File): Promise<string | null> {
   return new Promise(resolve => {
     const url = URL.createObjectURL(file)
     const img = new Image()
     img.onload = () => {
-      const scale = Math.min(1, 1920 / Math.max(img.width, img.height))
+      const scale = Math.min(1, 1280 / Math.max(img.width, img.height))
       const canvas = document.createElement('canvas')
       canvas.width = Math.round(img.width * scale)
       canvas.height = Math.round(img.height * scale)
       const ctx = canvas.getContext('2d')
-      if (!ctx) { URL.revokeObjectURL(url); resolve(file); return }
+      URL.revokeObjectURL(url)
+      if (!ctx) { resolve(null); return }
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-      canvas.toBlob(b => { URL.revokeObjectURL(url); resolve(b ?? file) }, 'image/jpeg', 0.85)
+      resolve(canvas.toDataURL('image/jpeg', 0.8))
     }
-    img.onerror = () => { URL.revokeObjectURL(url); resolve(file) }
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(null) }
     img.src = url
   })
 }
 
-export default function AiPanel({ form, onApply, onClose, onImagesUploaded }: Props) {
+export default function AiPanel({ form, onApply, onClose }: Props) {
   const t = useTranslations('Booking')
   const FIELD_LABELS: Record<string, string> = {
     template_id: t('website.ai.fields.template_id'),
@@ -82,7 +86,7 @@ export default function AiPanel({ form, onApply, onClose, onImagesUploaded }: Pr
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [expandedUpdates, setExpandedUpdates] = useState<number[]>([])
-  const [uploading, setUploading] = useState(false)
+  const [attachments, setAttachments] = useState<string[]>([])
   const fileRef = useRef<HTMLInputElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -92,11 +96,13 @@ export default function AiPanel({ form, onApply, onClose, onImagesUploaded }: Pr
   }, [messages])
 
   async function send(text?: string) {
-    const msg = (text ?? input).trim()
+    const images = text === undefined ? attachments : []
+    const msg = (text ?? input).trim() || (images.length ? t('website.ai.imageOnlyPrompt') : '')
     if (!msg || loading) return
     setInput('')
+    if (images.length) setAttachments([])
 
-    const userMsg: Message = { role: 'user', content: msg }
+    const userMsg: Message = { role: 'user', content: msg, ...(images.length ? { images } : {}) }
     const history = [...messages, userMsg]
     setMessages(history)
     setLoading(true)
@@ -108,7 +114,11 @@ export default function AiPanel({ form, onApply, onClose, onImagesUploaded }: Pr
         body: JSON.stringify({
           messages: history
             .filter(m => m.role === 'user' || (m.role === 'assistant' && m !== messages[0]))
-            .map(m => ({ role: m.role, content: m.content })),
+            // 只帶最後一則訊息的附圖，避免歷史圖片累積超過請求大小上限
+            .map((m, i, arr) => ({
+              role: m.role, content: m.content,
+              ...(i === arr.length - 1 && m.images?.length ? { images: m.images } : {}),
+            })),
           profile: {
             name: form.name ?? '',
             template_id: form.template_id,
@@ -137,37 +147,14 @@ export default function AiPanel({ form, onApply, onClose, onImagesUploaded }: Pr
     }
   }
 
-  async function uploadImages(files: FileList | null) {
+  async function attachImages(files: FileList | null) {
     const list = Array.from(files ?? []).filter(f => f.type.startsWith('image/'))
-    if (!list.length || uploading) return
-    setUploading(true)
-    try {
-      const urls: string[] = []
-      for (const f of list) {
-        const fd = new FormData()
-        fd.append('file', new File([await compressImage(f)], `${Date.now()}.jpg`, { type: 'image/jpeg' }))
-        const r = await fetch('/api/booking/photos', { method: 'POST', body: fd })
-        const d = await r.json().catch(() => ({}))
-        if (!r.ok || !d.url) throw new Error(d.error || 'upload failed')
-        urls.push(d.url)
-      }
-      // 直接寫回官網照片（images），不經過編輯器表單，避免之後按儲存時被舊資料蓋掉；
-      // name 一併帶回，因為 profile PUT 的 upsert 預設會把沒給的 name 寫成空字串
-      const cur = await fetch('/api/booking/profile').then(r => r.json())
-      const p = cur.profile ?? {}
-      const res = await fetch('/api/booking/profile', {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: p.name ?? '', images: [...((p.images as string[] | null) ?? []), ...urls] }),
-      })
-      if (!res.ok) throw new Error('save failed')
-      setMessages(prev => [...prev, { role: 'assistant', content: t('website.ai.uploaded', { count: urls.length }) }])
-      onImagesUploaded?.()
-    } catch {
-      setMessages(prev => [...prev, { role: 'assistant', content: t('website.ai.uploadFailed') }])
-    } finally {
-      setUploading(false)
-      if (fileRef.current) fileRef.current.value = ''
-    }
+      .slice(0, Math.max(0, MAX_ATTACHMENTS - attachments.length))
+    if (fileRef.current) fileRef.current.value = ''
+    if (!list.length) return
+    const urls = (await Promise.all(list.map(imageToDataUrl))).filter((u): u is string => !!u)
+    setAttachments(prev => [...prev, ...urls].slice(0, MAX_ATTACHMENTS))
+    inputRef.current?.focus()
   }
 
   function applyUpdates(msgIdx: number, updates: Record<string, unknown>) {
@@ -205,6 +192,14 @@ export default function AiPanel({ form, onApply, onClose, onImagesUploaded }: Pr
                 ${msg.role === 'user'
                   ? 'bg-indigo-600 text-white rounded-br-sm'
                   : 'bg-gray-100 text-gray-800 rounded-bl-sm'}`}>
+                {msg.images && msg.images.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {msg.images.map((src, i) => (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img key={i} src={src} alt="" className="h-16 w-16 object-cover rounded-lg border border-white/40" />
+                    ))}
+                  </div>
+                )}
                 {msg.content}
               </div>
             </div>
@@ -288,14 +283,33 @@ export default function AiPanel({ form, onApply, onClose, onImagesUploaded }: Pr
         </div>
       )}
 
+      {/* Attachments（只給 AI 看，不會存成官網照片） */}
+      {attachments.length > 0 && (
+        <div className="border-t px-3 pt-2 shrink-0">
+          <div className="flex flex-wrap gap-1.5">
+            {attachments.map((src, i) => (
+              <div key={i} className="relative">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={src} alt="" className="h-14 w-14 object-cover rounded-lg border" />
+                <button onClick={() => setAttachments(prev => prev.filter((_, j) => j !== i))}
+                  className="absolute -top-1.5 -right-1.5 bg-gray-700 text-white rounded-full p-0.5">
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+          <p className="text-[11px] text-gray-400 mt-1">{t('website.ai.attachHint')}</p>
+        </div>
+      )}
+
       {/* Input */}
-      <div className="border-t px-3 py-2.5 flex items-end gap-2 shrink-0">
+      <div className={`${attachments.length ? '' : 'border-t '}px-3 py-2.5 flex items-end gap-2 shrink-0`}>
         <input ref={fileRef} type="file" accept="image/*" multiple className="hidden"
-          onChange={e => uploadImages(e.target.files)} />
-        <button onClick={() => fileRef.current?.click()} disabled={uploading}
-          title={uploading ? t('website.ai.uploading') : t('website.ai.uploadImage')}
+          onChange={e => attachImages(e.target.files)} />
+        <button onClick={() => fileRef.current?.click()} disabled={loading || attachments.length >= MAX_ATTACHMENTS}
+          title={t('website.ai.attachImage')}
           className="p-2.5 rounded-xl border text-gray-500 hover:text-indigo-600 hover:border-indigo-300 disabled:opacity-40 transition-colors shrink-0">
-          {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
+          <ImagePlus className="h-4 w-4" />
         </button>
         <textarea
           ref={inputRef}
@@ -306,7 +320,7 @@ export default function AiPanel({ form, onApply, onClose, onImagesUploaded }: Pr
           rows={2}
           className="flex-1 text-sm border rounded-xl px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300"
         />
-        <button onClick={() => send()} disabled={!input.trim() || loading}
+        <button onClick={() => send()} disabled={(!input.trim() && !attachments.length) || loading}
           className="p-2.5 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 transition-colors shrink-0">
           <Send className="h-4 w-4" />
         </button>

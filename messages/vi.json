@@ -633,10 +633,9 @@
         "applyBtn": "Áp dụng vào website",
         "writing": "AI đang viết…",
         "inputPlaceholder": "Mô tả nhu cầu của bạn, VD: viết câu chuyện nhà nghỉ phù hợp gia đình…",
-        "uploadImage": "Tải ảnh lên",
-        "uploading": "Đang tải lên…",
-        "uploaded": "Đã tải {count} ảnh lên website, đã hiển thị trong bản xem trước (bên phải mục \"Về chúng tôi\" ở trang chủ).",
-        "uploadFailed": "Tải ảnh thất bại, vui lòng thử lại",
+        "attachImage": "Đính kèm ảnh chụp màn hình cho AI",
+        "attachHint": "Ảnh chỉ gửi cho AI tham khảo, không đưa lên website. Ảnh website vui lòng tải lên tại mục Ảnh.",
+        "imageOnlyPrompt": "Vui lòng xem ảnh tôi đính kèm.",
         "customDesignGenerated": "Đã tạo thiết kế riêng",
         "fields": {
           "template_id": "🎨 Mẫu",

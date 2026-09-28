@@ -633,10 +633,9 @@
         "applyBtn": "Apply to Website",
         "writing": "AI writing…",
         "inputPlaceholder": "Describe your needs, e.g. write a family-friendly property story…",
-        "uploadImage": "Upload photos",
-        "uploading": "Uploading…",
-        "uploaded": "Uploaded {count} photo(s) to your website. They now appear in the preview (right of \"About us\" on the home page).",
-        "uploadFailed": "Photo upload failed, please try again",
+        "attachImage": "Attach a screenshot for the AI",
+        "attachHint": "Images are only shown to the AI for reference and are not added to your website. Upload website photos in Photos.",
+        "imageOnlyPrompt": "Please look at the attached image.",
         "customDesignGenerated": "Custom design generated",
         "fields": {
           "template_id": "🎨 Template",
