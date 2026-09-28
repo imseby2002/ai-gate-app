@@ -50,7 +50,7 @@ export default async function RoomsPage({ params }: { params: Promise<{ slug: st
             const imgs = (prop.images as string[] | null) ?? []
             const amenities = (prop.amenities as string[] | null) ?? []
             return (
-              <div key={prop.id} className="overflow-hidden border"
+              <div key={prop.id} data-reveal className="overflow-hidden border"
                 style={{ backgroundColor: design.cardBg, borderColor: design.cardBorder, borderRadius: design.cardRadius, boxShadow: design.shadow || undefined }}>
                 {/* Image */}
                 <div className="aspect-[16/7] overflow-hidden bg-gray-100">
@@ -126,7 +126,7 @@ export default async function RoomsPage({ params }: { params: Promise<{ slug: st
 
                   {/* CTA */}
                   <Link href={`${base}/booking?room=${prop.id}`}
-                    className="inline-flex items-center gap-1.5 px-6 py-2.5 text-white text-sm font-bold hover:opacity-90 transition-opacity"
+                    className="inline-flex items-center gap-1.5 px-6 py-2.5 text-[var(--bnb-on-accent)] text-sm font-bold hover:opacity-90 transition-opacity"
                     style={{ ...aStyle, ...btnStyle }}>
                     立即訂房 <ChevronRight className="h-4 w-4" />
                   </Link>

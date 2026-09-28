@@ -639,7 +639,15 @@
         "styles": {
           "title": "Thư viện phong cách",
           "pickMsg": "Áp dụng phong cách \"{name}\"",
-          "pickReply": "Đây là phong cách #{no} {name} ({desc}): màu sắc, phông chữ, bo góc và khoảng cách. Nhấn \"Áp dụng vào website\" rồi lưu. Muốn chỉnh thêm cứ nói với tôi, VD: \"đổi màu chính sang xanh đậm\"."
+          "pickReply": "Đây là phong cách #{no} {name} ({desc}): màu sắc, phông chữ, bo góc, khoảng cách và hiệu ứng cuộn. Nhấn \"Áp dụng vào website\" rồi lưu. Muốn chỉnh thêm cứ nói với tôi, VD: \"đổi màu chính sang xanh đậm\".",
+          "filters": {
+            "all": "Tất cả",
+            "general": "Cơ bản",
+            "landing": "Trang giới thiệu",
+            "modern": "Hiện đại",
+            "bi": "Dashboard (chỉ màu)",
+            "dark": "Tối"
+          }
         },
         "customDesignGenerated": "Đã tạo thiết kế riêng",
         "fields": {

@@ -2,7 +2,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Send, Loader2, X, Sparkles, ChevronDown, ChevronUp, Check, ImagePlus, Palette, ExternalLink } from 'lucide-react'
-import { UI_STYLE_PRESETS, UI_STYLES_REPO, type UiStylePreset } from '@/lib/booking/uiStyles'
+import { UI_STYLE_PRESETS, UI_STYLES_REPO, type UiStylePreset, type UiStyleCategory } from '@/lib/booking/uiStyles'
+
+const STYLE_FILTERS: ('all' | 'dark' | UiStyleCategory)[] = ['all', 'general', 'landing', 'modern', 'bi', 'dark']
 
 interface WebForm {
   slug: string; name?: string; template_id: string; theme_color: string
@@ -89,6 +91,9 @@ export default function AiPanel({ form, onApply, onClose }: Props) {
   const [expandedUpdates, setExpandedUpdates] = useState<number[]>([])
   const [attachments, setAttachments] = useState<string[]>([])
   const [stylesOpen, setStylesOpen] = useState(false)
+  const [styleFilter, setStyleFilter] = useState<(typeof STYLE_FILTERS)[number]>('all')
+  const shownStyles = UI_STYLE_PRESETS.filter(s =>
+    styleFilter === 'all' ? true : styleFilter === 'dark' ? s.dark : s.category === styleFilter)
   const fileRef = useRef<HTMLInputElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -302,7 +307,7 @@ export default function AiPanel({ form, onApply, onClose }: Props) {
 
       {/* 風格庫 */}
       {stylesOpen && (
-        <div className="border-t px-3 py-2 shrink-0 max-h-60 overflow-y-auto">
+        <div className="border-t px-3 py-2 shrink-0 max-h-72 overflow-y-auto">
           <div className="flex items-center justify-between mb-1.5">
             <span className="text-xs font-semibold text-gray-700">{t('website.ai.styles.title')}</span>
             <a href={UI_STYLES_REPO} target="_blank" rel="noreferrer"
@@ -310,12 +315,22 @@ export default function AiPanel({ form, onApply, onClose }: Props) {
               joshhu/uitest <ExternalLink className="h-3 w-3" />
             </a>
           </div>
+          <div className="flex flex-wrap gap-1 mb-2">
+            {STYLE_FILTERS.map(f => (
+              <button key={f} onClick={() => setStyleFilter(f)}
+                className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${styleFilter === f
+                  ? 'bg-indigo-600 text-white border-indigo-600'
+                  : 'text-gray-500 hover:border-indigo-300'}`}>
+                {t(`website.ai.styles.filters.${f}`)}
+              </button>
+            ))}
+          </div>
           <div className="grid grid-cols-2 gap-1.5">
-            {UI_STYLE_PRESETS.map(s => (
+            {shownStyles.map(s => (
               <button key={s.id} onClick={() => pickStyle(s)} disabled={loading}
                 className="text-left rounded-lg border px-2 py-1.5 hover:border-indigo-300 hover:bg-indigo-50/50 disabled:opacity-40 transition-colors">
                 <div className="flex items-center gap-1 mb-0.5">
-                  {[s.design.accent, s.design.ink, s.design.sectionBg].map((c, i) => (
+                  {[s.design.pageBg, s.design.accent, s.design.ink].map((c, i) => (
                     <span key={i} className="inline-block w-3 h-3 rounded-full border border-gray-200" style={{ backgroundColor: c }} />
                   ))}
                   <span className="text-[10px] text-gray-400 ml-auto">#{s.no}</span>

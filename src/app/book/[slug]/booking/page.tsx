@@ -192,7 +192,7 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
 
       {/* ── Done ── */}
       {step === 'done' && confirmation && (
-        <div className="bg-white rounded-2xl border p-8 text-center space-y-4">
+        <div className="bg-[var(--bnb-page)] rounded-2xl border p-8 text-center space-y-4">
           <CheckCircle className="h-14 w-14 mx-auto text-emerald-500" />
           <h3 className="text-xl font-bold text-gray-900">訂房申請已送出！</h3>
           <p className="text-sm text-gray-500">確認碼：<span className="font-mono font-bold text-gray-900 text-base">{confirmation.code}</span></p>
@@ -220,7 +220,7 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
             業者確認後會寄確認信至 <strong>{form.guest_email}</strong>
           </p>
           <button onClick={() => { setStep('select'); setForm({ ...EMPTY_FORM }); setSelectedProp(null); setPromoValid(null) }}
-            className="px-6 py-2 text-white text-sm font-medium hover:opacity-90"
+            className="px-6 py-2 text-[var(--bnb-on-accent)] text-sm font-medium hover:opacity-90"
             style={{ ...aStyle, ...btnStyle }}>再訂一間</button>
         </div>
       )}
@@ -245,7 +245,7 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
             </div>
           )}
 
-          <div className="bg-white rounded-2xl border p-5 space-y-4">
+          <div className="bg-[var(--bnb-page)] rounded-2xl border p-5 space-y-4">
             <h3 className="font-semibold text-gray-900">入住資訊</h3>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
@@ -300,7 +300,7 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
             )}
           </div>
 
-          <div className="bg-white rounded-2xl border p-5 space-y-4">
+          <div className="bg-[var(--bnb-page)] rounded-2xl border p-5 space-y-4">
             <h3 className="font-semibold text-gray-900">聯絡資料</h3>
             {[
               { key: 'guest_name'  as const, label: '姓名 *', type: 'text' },
@@ -320,7 +320,7 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl border p-5 space-y-3">
+          <div className="bg-[var(--bnb-page)] rounded-2xl border p-5 space-y-3">
             <h3 className="font-semibold text-gray-900 flex items-center gap-1.5"><Tag className="h-4 w-4" />優惠碼</h3>
             <div className="flex gap-2">
               <input value={form.promo_code}
@@ -339,7 +339,7 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
 
           <button onClick={submit}
             disabled={submitting || dateBlocked || overCapacity || !form.guest_name || !form.guest_email || !form.check_in || !form.check_out}
-            className="w-full py-3.5 font-bold text-white text-sm disabled:opacity-50 hover:opacity-90 transition-opacity"
+            className="w-full py-3.5 font-bold text-[var(--bnb-on-accent)] text-sm disabled:opacity-50 hover:opacity-90 transition-opacity"
             style={{ ...aStyle, ...btnStyle }}>
             {submitting ? '送出中…' : '確認訂房申請'}
           </button>
@@ -369,7 +369,7 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
                   const img = (prop.images as string[] | null)?.[0]
                   return (
                     <div key={prop.id}
-                      className="bg-white rounded-xl border p-4 flex items-center justify-between gap-4 hover:shadow-sm transition-shadow">
+                      className="bg-[var(--bnb-page)] rounded-xl border p-4 flex items-center justify-between gap-4 hover:shadow-sm transition-shadow">
                       <div className="flex items-center gap-3 min-w-0">
                         {img && (
                           // eslint-disable-next-line @next/next/no-img-element
@@ -384,7 +384,7 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
                         </div>
                       </div>
                       <button onClick={() => { setSelectedProp(prop); setStep('form') }}
-                        className="shrink-0 px-4 py-2 text-white text-sm font-medium hover:opacity-90 transition-opacity"
+                        className="shrink-0 px-4 py-2 text-[var(--bnb-on-accent)] text-sm font-medium hover:opacity-90 transition-opacity"
                         style={{ ...aStyle, ...btnStyle }}>
                         選擇
                       </button>

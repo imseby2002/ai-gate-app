@@ -34,7 +34,7 @@ export default function BnbPublicNav({ profile }: { profile: NavProfile }) {
   }
 
   return (
-    <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b shadow-sm">
+    <nav className="sticky top-0 z-50 bg-[color-mix(in_srgb,var(--bnb-page)_95%,transparent)] backdrop-blur border-b shadow-sm">
       <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
         <Link href={base} className="font-bold text-sm truncate max-w-[140px] sm:max-w-xs"
           style={headingCss(design)}>
@@ -57,7 +57,7 @@ export default function BnbPublicNav({ profile }: { profile: NavProfile }) {
 
         <div className="flex items-center gap-2">
           <Link href={`${base}/booking`}
-            className="px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
+            className="px-4 py-2 text-sm font-semibold text-[var(--bnb-on-accent)] hover:opacity-90 transition-opacity"
             style={{ backgroundColor: accent, borderRadius: design.btnRadius }}>
             立即訂房
           </Link>
@@ -70,7 +70,7 @@ export default function BnbPublicNav({ profile }: { profile: NavProfile }) {
 
       {/* Mobile dropdown */}
       {open && (
-        <div className="sm:hidden border-t bg-white px-4 py-2 flex flex-col gap-0.5">
+        <div className="sm:hidden border-t bg-[var(--bnb-page)] px-4 py-2 flex flex-col gap-0.5">
           {NAV_ITEMS.map(item => (
             <Link key={item.path} href={base + item.path} onClick={() => setOpen(false)}
               className={`px-3 py-2.5 rounded-xl text-sm transition-colors

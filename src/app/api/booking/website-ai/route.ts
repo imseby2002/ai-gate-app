@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { generateText } from 'ai'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { CUSTOM_HEADING_FONTS, sanitizeCustomDesign } from '@/lib/booking/templates'
-import { uiStylesPromptList } from '@/lib/booking/uiStyles'
+import { getUiStyle, uiStylesPromptList } from '@/lib/booking/uiStyles'
 
 export const maxDuration = 120
 
@@ -40,7 +40,9 @@ ${FONT_LIST}
     "btnRadius": "none"|"sm"|"md"|"lg"|"full"（按鈕圓角程度）,
     "shadow": "none"|"soft"|"medium"（陰影強度，精品極簡風格常用 none）,
     "heroLayout": "overlay-left"|"centered"|"minimal"（首頁 Hero 版型）,
-    "sectionPaddingScale": "compact"|"comfortable"|"spacious"（區塊留白節奏，質感越高留白通常越大）
+    "sectionPaddingScale": "compact"|"comfortable"|"spacious"（區塊留白節奏，質感越高留白通常越大）,
+    "pageBg": "#RRGGBB"（選填，整頁底色，預設白色；深色風格用深色底，此時 ink/muted 要用淺色、sectionBg/cardBg 用深色層次）,
+    "animation": "none"|"fade"|"rise"|"zoom"|"slide"（選填，區塊捲動進場動畫：淡入／上浮／放大／側滑，預設 none）
   }
 
   設計原則（決定色彩與留白時務必遵守）：
@@ -51,9 +53,10 @@ ${FONT_LIST}
   - 自然／溫暖調性：cardRadius/btnRadius 選 lg 或 full、shadow 選 soft、headingUppercase 為 false
   - 不要為了「特別」而犧牲可讀性，文字對比永遠優先於美觀
 
-【風格庫（模式 B 的現成起點，取自 UI 風格展示集 joshhu/uitest）】
-使用者提到下列風格名稱、編號，或描述接近某一種風格時，用 "template_id":"custom"，並以該風格的 custom_design 為基礎
-（可依民宿特色微調顏色，但要保留該風格的圓角、陰影、字重、留白特徵），回覆時說明用了哪個風格：
+【風格庫（57 種現成設計，取自 UI 風格展示集 joshhu/uitest）】
+使用者提到下列風格名稱、編號，或描述接近某一種風格時，在 <updates> 裡放 "ui_style":"<風格 id>"，系統會自動帶入該風格的完整設計；
+想微調時再加 "custom_design":{只寫要改的欄位}（例如 {"accent":"#1f6f4a"}），其餘沿用該風格。回覆時說明用了哪個風格。
+標示「僅配色」的是儀表板風格，只有配色能用在官網：
 ${uiStylesPromptList()}
 
 【可控制的文案欄位】
@@ -140,6 +143,19 @@ SEO 標題：${profile.seo_title || '（未填）'}`
     if (!updates) {
       text = `${text}\n\n⚠ 這次產出的內容太長或格式不完整，無法自動套用。請再傳一次，或縮小範圍（例如「只改 FAQ」）。`.trim()
     }
+  }
+
+  // 風格庫：AI 只給風格 id（加上想微調的欄位），完整設計由這裡展開，避免把 57 組設計全塞進每次的提示
+  if (updates && typeof updates.ui_style === 'string') {
+    const style = getUiStyle(updates.ui_style)
+    if (style) {
+      const overrides = updates.custom_design && typeof updates.custom_design === 'object' ? updates.custom_design : {}
+      const design = { ...style.design, ...overrides }
+      updates.template_id = 'custom'
+      updates.custom_design = design
+      updates.theme_color = design.accent
+    }
+    delete updates.ui_style
   }
 
   // 自由生成模式的 custom_design 一定要通過驗證才能套用，避免壞掉的色碼/字體索引存進資料庫。
