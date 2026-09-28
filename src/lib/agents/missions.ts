@@ -96,6 +96,7 @@ export async function buildMarketingInventory(admin: Admin, ownerId: string): Pr
     not_automated: [
       'Google/TikTok 付費廣告（未串接，需走外部採購申請＋真人操作）',
       'KOL/媒體/外包廠商付款',
+      'GA4 / 官網流量與會員數（未串接，需真人提供數字）',
     ],
   }
 }
@@ -135,7 +136,9 @@ export async function generateMissionPlan(missionId: string): Promise<MissionRow
       '2. 所有外部花費總和（含預備金）不可超過預算；預算為 0 時只能用內部資源與免費管道。\n' +
       '3. 觸及人數、轉換率等數字都是估計，必須寫出估算依據與假設；目標不切實際時要明說，並提出可達成的修正目標，不可虛報。\n' +
       '4. 只能用合法、符合平台規範的做法：不可使用假帳號、洗讚、買粉、垃圾訊息、冒用他人身分。\n' +
-      '5. 需要真人身分驗證或 Agent 無法自動化的步驟（開帳號、實際發文、廣告帳戶操作、付款）標記 executor 為 human。\n' +
+      '5. executor 只有在 Agent 工具確實做不到時才標 human（開帳號、付款、拍攝/錄製真人影片、LINE/Zalo 群組私訊、提供未串接的後台數字）。' +
+      '社群發文（publish_to_social，含 FB/IG/Threads/LINE VOOM/Zalo/TikTok/Reels）、AI 配圖、Meta 廣告都由 Agent 執行，標 agent；' +
+      '真人審核由系統自動處理，不要因為需要審核就標 human。\n' +
       '6. KPI 要可量測，說明資料來源（例如：粉專後台觸及、GA 使用者數、外送平台訂單、POS 營收）。\n' +
       '7. 只輸出 JSON，不要 markdown 圍欄或其他文字；字串內不可出現未跳脫的雙引號（改用「」）。\n' +
       '8. 保持精簡：phases 最多 4 個、每個 phase 的 tasks 最多 6 個，每個欄位文字盡量一兩句。'
