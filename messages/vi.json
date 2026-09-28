@@ -636,6 +636,11 @@
         "attachImage": "Đính kèm ảnh chụp màn hình cho AI",
         "attachHint": "Ảnh chỉ gửi cho AI tham khảo, không đưa lên website. Ảnh website vui lòng tải lên tại mục Ảnh.",
         "imageOnlyPrompt": "Vui lòng xem ảnh tôi đính kèm.",
+        "styles": {
+          "title": "Thư viện phong cách",
+          "pickMsg": "Áp dụng phong cách \"{name}\"",
+          "pickReply": "Đây là phong cách #{no} {name} ({desc}): màu sắc, phông chữ, bo góc và khoảng cách. Nhấn \"Áp dụng vào website\" rồi lưu. Muốn chỉnh thêm cứ nói với tôi, VD: \"đổi màu chính sang xanh đậm\"."
+        },
         "customDesignGenerated": "Đã tạo thiết kế riêng",
         "fields": {
           "template_id": "🎨 Mẫu",

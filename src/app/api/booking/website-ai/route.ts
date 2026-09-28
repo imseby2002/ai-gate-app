@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { generateText } from 'ai'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { CUSTOM_HEADING_FONTS, sanitizeCustomDesign } from '@/lib/booking/templates'
+import { uiStylesPromptList } from '@/lib/booking/uiStyles'
 
 export const maxDuration = 120
 
@@ -49,6 +50,11 @@ ${FONT_LIST}
   - 精品／極簡調性：cardRadius/btnRadius 選 none 或 sm、shadow 選 none、sectionPaddingScale 選 spacious、headingUppercase 可搭配 wider 字距
   - 自然／溫暖調性：cardRadius/btnRadius 選 lg 或 full、shadow 選 soft、headingUppercase 為 false
   - 不要為了「特別」而犧牲可讀性，文字對比永遠優先於美觀
+
+【風格庫（模式 B 的現成起點，取自 UI 風格展示集 joshhu/uitest）】
+使用者提到下列風格名稱、編號，或描述接近某一種風格時，用 "template_id":"custom"，並以該風格的 custom_design 為基礎
+（可依民宿特色微調顏色，但要保留該風格的圓角、陰影、字重、留白特徵），回覆時說明用了哪個風格：
+${uiStylesPromptList()}
 
 【可控制的文案欄位】
 - tagline: 首頁 Hero 副標語（一句有感染力的話）

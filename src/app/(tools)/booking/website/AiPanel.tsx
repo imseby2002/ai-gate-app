@@ -1,7 +1,8 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { Send, Loader2, X, Sparkles, ChevronDown, ChevronUp, Check, ImagePlus } from 'lucide-react'
+import { Send, Loader2, X, Sparkles, ChevronDown, ChevronUp, Check, ImagePlus, Palette, ExternalLink } from 'lucide-react'
+import { UI_STYLE_PRESETS, UI_STYLES_REPO, type UiStylePreset } from '@/lib/booking/uiStyles'
 
 interface WebForm {
   slug: string; name?: string; template_id: string; theme_color: string
@@ -87,6 +88,7 @@ export default function AiPanel({ form, onApply, onClose }: Props) {
   const [loading, setLoading] = useState(false)
   const [expandedUpdates, setExpandedUpdates] = useState<number[]>([])
   const [attachments, setAttachments] = useState<string[]>([])
+  const [stylesOpen, setStylesOpen] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -155,6 +157,21 @@ export default function AiPanel({ form, onApply, onClose }: Props) {
     const urls = (await Promise.all(list.map(imageToDataUrl))).filter((u): u is string => !!u)
     setAttachments(prev => [...prev, ...urls].slice(0, MAX_ATTACHMENTS))
     inputRef.current?.focus()
+  }
+
+  // 風格庫直接產生一筆待套用的設計（不經 AI），和 AI 回覆的更新卡片走同一套「套用到官網」流程
+  function pickStyle(style: UiStylePreset) {
+    setStylesOpen(false)
+    setMessages([
+      ...messages,
+      { role: 'user', content: t('website.ai.styles.pickMsg', { name: style.name }) },
+      {
+        role: 'assistant',
+        content: t('website.ai.styles.pickReply', { no: style.no, name: style.name, desc: style.desc }),
+        updates: { template_id: 'custom', custom_design: style.design, theme_color: style.design.accent },
+      },
+    ])
+    setExpandedUpdates(prev => [...prev, messages.length + 1])
   }
 
   function applyUpdates(msgIdx: number, updates: Record<string, unknown>) {
@@ -283,6 +300,34 @@ export default function AiPanel({ form, onApply, onClose }: Props) {
         </div>
       )}
 
+      {/* 風格庫 */}
+      {stylesOpen && (
+        <div className="border-t px-3 py-2 shrink-0 max-h-60 overflow-y-auto">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-xs font-semibold text-gray-700">{t('website.ai.styles.title')}</span>
+            <a href={UI_STYLES_REPO} target="_blank" rel="noreferrer"
+              className="flex items-center gap-0.5 text-[11px] text-indigo-500 hover:underline">
+              joshhu/uitest <ExternalLink className="h-3 w-3" />
+            </a>
+          </div>
+          <div className="grid grid-cols-2 gap-1.5">
+            {UI_STYLE_PRESETS.map(s => (
+              <button key={s.id} onClick={() => pickStyle(s)} disabled={loading}
+                className="text-left rounded-lg border px-2 py-1.5 hover:border-indigo-300 hover:bg-indigo-50/50 disabled:opacity-40 transition-colors">
+                <div className="flex items-center gap-1 mb-0.5">
+                  {[s.design.accent, s.design.ink, s.design.sectionBg].map((c, i) => (
+                    <span key={i} className="inline-block w-3 h-3 rounded-full border border-gray-200" style={{ backgroundColor: c }} />
+                  ))}
+                  <span className="text-[10px] text-gray-400 ml-auto">#{s.no}</span>
+                </div>
+                <div className="text-[11px] font-medium text-gray-800 truncate">{s.name}</div>
+                <div className="text-[10px] text-gray-500 truncate">{s.desc}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Attachments（只給 AI 看，不會存成官網照片） */}
       {attachments.length > 0 && (
         <div className="border-t px-3 pt-2 shrink-0">
@@ -303,14 +348,22 @@ export default function AiPanel({ form, onApply, onClose }: Props) {
       )}
 
       {/* Input */}
-      <div className={`${attachments.length ? '' : 'border-t '}px-3 py-2.5 flex items-end gap-2 shrink-0`}>
+      <div className={`${attachments.length || stylesOpen ? '' : 'border-t '}px-3 py-2.5 flex items-end gap-2 shrink-0`}>
         <input ref={fileRef} type="file" accept="image/*" multiple className="hidden"
           onChange={e => attachImages(e.target.files)} />
+        <div className="flex flex-col gap-1.5 shrink-0">
+        <button onClick={() => setStylesOpen(o => !o)} title={t('website.ai.styles.title')}
+          className={`p-2.5 rounded-xl border transition-colors ${stylesOpen
+            ? 'text-indigo-600 border-indigo-300 bg-indigo-50'
+            : 'text-gray-500 hover:text-indigo-600 hover:border-indigo-300'}`}>
+          <Palette className="h-4 w-4" />
+        </button>
         <button onClick={() => fileRef.current?.click()} disabled={loading || attachments.length >= MAX_ATTACHMENTS}
           title={t('website.ai.attachImage')}
           className="p-2.5 rounded-xl border text-gray-500 hover:text-indigo-600 hover:border-indigo-300 disabled:opacity-40 transition-colors shrink-0">
           <ImagePlus className="h-4 w-4" />
         </button>
+        </div>
         <textarea
           ref={inputRef}
           value={input}
