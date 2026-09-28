@@ -2,6 +2,7 @@
 import Link from 'next/link'
 import { MapPin, Clock, Coffee, Users, ChevronRight, BedDouble, Phone, Mail, MessageCircle } from 'lucide-react'
 import { resolveDesign, headingCss } from '@/lib/booking/templates'
+import SplitText from './SplitText'
 
 interface BnbProfile {
   name: string; tagline?: string | null; description?: string | null; about?: string | null
@@ -53,7 +54,7 @@ export default function PublicHomePage({
       {profile.name && (
         <h1 className={`leading-tight ${design.headingUppercase ? 'text-3xl sm:text-4xl' : 'text-4xl sm:text-5xl'}`}
           style={headingCss(design, heroFg)}>
-          {profile.name}
+          <SplitText text={profile.name} enabled={design.textReveal} />
         </h1>
       )}
       {profile.tagline && (
@@ -94,7 +95,7 @@ export default function PublicHomePage({
         {heroImg ? (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={heroImg} alt={profile.name}
+            <img src={heroImg} alt={profile.name} data-parallax={design.parallax ? '' : undefined}
               className="absolute inset-0 w-full h-full object-cover" />
             <div className={`absolute inset-0
               ${design.heroLayout === 'overlay-left'
@@ -111,7 +112,7 @@ export default function PublicHomePage({
           <div className="relative z-10 flex flex-col h-full" style={{ minHeight: '50vh' }}>
             <div className="flex-1" />
             <div className="bg-[color-mix(in_srgb,var(--bnb-page)_90%,transparent)] backdrop-blur max-w-5xl mx-auto w-full px-4 py-6 sm:py-8">
-              <h1 className="text-3xl sm:text-4xl" style={headingStyle}>{profile.name}</h1>
+              <h1 className="text-3xl sm:text-4xl" style={headingStyle}><SplitText text={profile.name} enabled={design.textReveal} /></h1>
               {profile.tagline && <p className="mt-1" style={mutedStyle}>{profile.tagline}</p>}
               <div className="flex flex-wrap gap-3 mt-4">
                 <Link href={`${base}/booking`}
@@ -164,18 +165,18 @@ export default function PublicHomePage({
           <div className="max-w-5xl mx-auto px-4">
             <div data-reveal className="flex items-end justify-between mb-6">
               <h2 className={design.headingUppercase ? 'text-xl' : 'text-2xl'} style={headingStyle}>
-                精選房型
+                <SplitText text="精選房型" enabled={design.textReveal} />
               </h2>
               <Link href={`${base}/rooms`} className="text-sm hover:underline flex items-center gap-1" style={aText}>
                 查看全部 <ChevronRight className="h-4 w-4" />
               </Link>
             </div>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {properties.slice(0, 3).map((prop, i) => {
+              {properties.slice(0, 3).map(prop => {
                 const img = (prop.images as string[] | null)?.[0]
                 return (
-                  <div key={prop.id} data-reveal className="overflow-hidden border"
-                    style={{ ['--reveal-delay' as string]: `${i * 90}ms`, backgroundColor: design.cardBg, borderColor: design.cardBorder, borderRadius: design.cardRadius, boxShadow: design.shadow || undefined }}>
+                  <div key={prop.id} data-reveal data-card className="overflow-hidden border"
+                    style={{ backgroundColor: design.cardBg, borderColor: design.cardBorder, borderRadius: design.cardRadius, boxShadow: design.shadow || undefined }}>
                     <div className="aspect-[4/3] overflow-hidden bg-gray-100">
                       {img ? (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -223,7 +224,7 @@ export default function PublicHomePage({
             <div data-reveal className="grid sm:grid-cols-2 gap-8 items-center">
               <div className="space-y-4">
                 <h2 className={design.headingUppercase ? 'text-xl' : 'text-2xl'} style={headingStyle}>
-                  關於我們
+                  <SplitText text="關於我們" enabled={design.textReveal} />
                 </h2>
                 <p className="leading-relaxed line-clamp-5" style={mutedStyle}>
                   {profile.about || profile.description}

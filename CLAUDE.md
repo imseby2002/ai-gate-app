@@ -14,6 +14,8 @@
 - 禁止執行 find / rg / grep 掃描整個專案
 
 > 例外：`worker/` 目錄為獨立自動化 worker（在另一台 VM 執行，非本 app 部署），允許使用 Playwright/瀏覽器自動化並於該目錄內安裝套件。此例外僅限 `worker/`，主 app（`src/`）仍不得引入瀏覽器自動化或新套件。
+>
+> 例外：主 app 已核准使用動畫套件 `motion`（Motion，MIT），用於公開官網進階動畫。除此之外主 app 仍不得引入新套件。
 
 ## 模型設定
 - 優先使用最新的 Claude 模型（claude-sonnet-4-6、claude-opus-4-8）

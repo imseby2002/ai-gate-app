@@ -5,14 +5,11 @@ import BnbPublicNav from './nav'
 import SiteMotion from './SiteMotion'
 import { resolveDesign, siteThemeVars, isDarkBg } from '@/lib/booking/templates'
 
-// 進場動畫樣式：只在 SiteMotion 加上 motion-ready 後才先隱藏，避免沒有 JS 時內容看不到
+// 進場動畫：只在 SiteMotion 加上 motion-ready 後才先隱藏，實際動畫由 Motion 執行；沒有 JS 時內容照常顯示
 const MOTION_CSS = `
-.bnb-site.motion-ready [data-reveal]{opacity:0;transition:opacity .7s ease,transform .7s cubic-bezier(.2,.7,.2,1);transition-delay:var(--reveal-delay,0ms)}
-.bnb-site.motion-ready[data-anim=rise] [data-reveal]{transform:translateY(28px)}
-.bnb-site.motion-ready[data-anim=zoom] [data-reveal]{transform:scale(.94)}
-.bnb-site.motion-ready[data-anim=slide] [data-reveal]{transform:translateX(-36px)}
-.bnb-site.motion-ready [data-reveal].is-visible{opacity:1;transform:none}
-@media (prefers-reduced-motion: reduce){.bnb-site [data-reveal]{opacity:1!important;transform:none!important;transition:none!important}}
+.bnb-site.motion-ready [data-reveal]:not(.is-visible){opacity:0}
+.bnb-site.motion-ready [data-split] [data-split-char]{opacity:0}
+@media (prefers-reduced-motion: reduce){.bnb-site [data-reveal],.bnb-site [data-split-char]{opacity:1!important;transform:none!important}}
 `
 
 export async function generateMetadata(
@@ -66,8 +63,8 @@ export default async function BnbPublicLayout({
   return (
     <div className="bnb-site min-h-screen bg-[var(--bnb-page)] text-[var(--bnb-ink)] flex flex-col"
       data-anim={design.animation} style={{ ...siteThemeVars(design), colorScheme: isDarkBg(design.pageBg) ? 'dark' : 'light' } as React.CSSProperties}>
-      {design.animation !== 'none' && <style>{MOTION_CSS}</style>}
-      <SiteMotion animation={design.animation} />
+      {(design.animation !== 'none' || design.textReveal) && <style>{MOTION_CSS}</style>}
+      <SiteMotion animation={design.animation} parallax={design.parallax} textReveal={design.textReveal} />
       {/* 只載入這個模板/自訂設計需要的中文標題字型，不讓每種字型都塞進每個網站 */}
       <link rel="stylesheet" href={design.headingFontHref} />
       <BnbPublicNav profile={{ name: profile.name, theme_color: profile.theme_color, template_id: profile.template_id, custom_design: profile.custom_design, slug: profile.slug }} />
