@@ -1,5 +1,5 @@
 /**
- * GET /api/cron/refresh-tokens（Vercel Cron，每小時）
+ * GET /api/cron/refresh-tokens（Vercel Cron，每 30 分鐘；Zalo access token 可能只有 1 小時效期）
  * 自動更新會過期的平台權杖（Zalo、TikTok、Threads、LinkedIn），細節見 src/lib/marketing/token-refresh.ts
  */
 import { NextResponse } from 'next/server'
