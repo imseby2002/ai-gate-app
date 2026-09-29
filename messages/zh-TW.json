@@ -722,7 +722,7 @@
         "6": "週日"
       },
       "roomLabel": "房型：",
-      "weekendNote": "（粉紅底為週五～日；國定假日請於「定價規則」另設）",
+      "weekendNote": "（粉紅底＝週末晚、橘底＝假日，依「定價規則」設定；房型需開啟動態定價才會顯示實際價）",
       "quickFill": "快速填入",
       "applyMonth": "套用全月",
       "usingCurrency": "使用貨幣：{currency} 新台幣",

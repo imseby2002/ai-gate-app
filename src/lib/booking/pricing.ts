@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { applyCalendarRules, fetchHolidayCalendar, ruleCountries, type CalendarDay, type CalendarRule } from './holidays'
 
 export interface StayQuote {
   nights: number
@@ -138,6 +139,18 @@ export async function computeStayPrice(
     for (const d of nights) occByDate.set(d, Math.min(1, (occupied.get(d) ?? 0) / roomCount))
   }
 
+  // 假日規則用到的國定假日行事曆（含下一年，連假前一晚可能跨年）
+  const calendars: Record<string, CalendarDay[]> = {}
+  if (prop.dynamic_pricing_enabled) {
+    const years = [...new Set([nights[0].slice(0, 4), nights[nights.length - 1].slice(0, 4)])].map(Number)
+    years.push(years[years.length - 1] + 1)
+    for (const country of ruleCountries(sortedRules as CalendarRule[])) {
+      const lists = await Promise.all([...new Set(years)].map(y => fetchHolidayCalendar(country, y)))
+      calendars[country] = lists.flat()
+    }
+  }
+  const holidayCache = new Map<CalendarRule, Map<string, string>>()
+
   const todayMs = taipeiTodayMs()
   const perNight: { date: string; amount: number }[] = []
   const basePerNight: { date: string; amount: number }[] = []
@@ -157,29 +170,17 @@ export async function computeStayPrice(
     let promoDailyPrice = rawPrice
 
     if (prop.dynamic_pricing_enabled) {
-      const dow = new Date(`${date}T00:00:00Z`).getUTCDay()
-      const mmdd = date.slice(5)
       const daysUntil = Math.round((new Date(`${date}T00:00:00Z`).getTime() - todayMs) / 86400000)
       const occ = occByDate.get(date) ?? 0
 
       // 1. 標準日曆與需求定價（週末／假日／季節／住房率）：構成當日官方牌價／定價
+      baseDailyPrice = applyCalendarRules(baseDailyPrice, sortedRules as CalendarRule[], date, propertyId, calendars, holidayCache).price
       for (const rule of sortedRules) {
-        const c = rule.conditions ?? {}
-        let applies = false
-        switch (rule.rule_type) {
-          case 'weekend':   applies = dow === 0 || dow === 6; break
-          case 'holiday':   applies = ((c.dates as string[]) ?? []).includes(date); break
-          case 'seasonal': {
-            const s = c.start_mmdd as string, e = c.end_mmdd as string
-            applies = !!(s && e && mmdd >= s && mmdd <= e); break
-          }
-          case 'occupancy': applies = occ >= ((c.threshold as number) ?? 0.8); break
-        }
-        if (applies) {
-          baseDailyPrice = rule.adjustment_type === 'percent'
-            ? baseDailyPrice * (1 + Number(rule.adjustment_value) / 100)
-            : baseDailyPrice + Number(rule.adjustment_value)
-        }
+        if (rule.rule_type !== 'occupancy') continue
+        if (occ < (((rule.conditions ?? {}).threshold as number) ?? 0.8)) continue
+        baseDailyPrice = rule.adjustment_type === 'percent'
+          ? baseDailyPrice * (1 + Number(rule.adjustment_value) / 100)
+          : baseDailyPrice + Number(rule.adjustment_value)
       }
       baseDailyPrice = Math.max(0, Math.round(baseDailyPrice))
       promoDailyPrice = baseDailyPrice
