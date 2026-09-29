@@ -438,6 +438,9 @@
       "other": "Other"
     },
     "calendar": {
+      "closeRoom": "Close",
+      "openRoom": "Open",
+      "closed": "Closed",
       "allProperties": "All Properties",
       "full": "Full",
       "emptyLabel": "Avail",

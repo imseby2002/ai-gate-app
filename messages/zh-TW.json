@@ -438,6 +438,9 @@
       "other": "其他"
     },
     "calendar": {
+      "closeRoom": "關房",
+      "openRoom": "開房",
+      "closed": "已關閉",
       "allProperties": "全部房源",
       "full": "滿",
       "emptyLabel": "空",
