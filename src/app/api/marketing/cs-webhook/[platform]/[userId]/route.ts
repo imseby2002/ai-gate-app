@@ -14,7 +14,7 @@ import { buildDeterministicQuote } from '@/lib/cs/quote'
 import { buildBookingModuleQuote } from '@/lib/cs/booking-quote'
 import { formatPricingForAI, queryJsonPricing, type PricingConfig } from '@/lib/cs/pricing'
 import { queryGoogleSheet, type SheetConfig, type SheetQueryOpts } from '@/lib/cs/sheet-lookup'
-import { buildBookingSystemPrompt, type BookingFlowDef } from '@/lib/cs/booking-prompt'
+import { buildBookingSystemPrompt, BOOKING_HUMAN_CONFIRM_NOTICE, type BookingFlowDef } from '@/lib/cs/booking-prompt'
 import { sendTicketNotification, type NotifyWebhook } from '@/lib/cs/ticket-notify'
 import { buildSellSection, type CsCustomerRow } from '@/lib/cs/sell-section'
 import { queryBnbCheckin, checkBeforeCheckin, queryBookingByGuestName, queryBookingByPhone, noDataFoundSuffix, NAME_VERIFY_ASK_RE, wrapImageDerivedResultForConfirm, looksLikeGuestName, isAffirmativeReply, detectBookingPlatform, stripPlatformMention, orderLookupAltMethods, platformReplyGuidance } from '@/lib/cs/checkin-lookup'
@@ -1615,7 +1615,7 @@ function detectBookingCompletion(flows: BookingFlowDef[], history: HistoryMsg[],
     const done = userTurns >= requiredStepCount && flow.steps.every(s => det[s] ? det[s]() : true)
     if (done) {
       const payment = (flow.paymentInfo || defaultPayment || '').trim()
-      return `\n\n【系統偵測：所有預訂步驟已完成——立即執行】\n你的下一則回覆必須：\n第一行「好的！以下是您的預訂確認：」\n接著逐行列出所有已收集資料與總金額\n接著原文輸出以下付款資訊（禁止修改或省略）：\n${payment || '（付款方式請聯繫工作人員確認）'}\n最後一行「以上資訊是否正確？」`
+      return `\n\n【系統偵測：所有預訂步驟已完成——立即執行】\n你的下一則回覆必須：\n第一行「好的！以下是您的預訂確認：」\n接著逐行列出所有已收集資料與總金額\n接著原文輸出以下付款資訊（禁止修改或省略）：\n${payment || '（付款方式請聯繫工作人員確認）'}\n接著一行「以上資訊是否正確？」\n最後一行「${BOOKING_HUMAN_CONFIRM_NOTICE}」`
     }
   }
   return ''
