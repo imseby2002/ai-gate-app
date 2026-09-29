@@ -722,7 +722,7 @@
         "6": "CN"
       },
       "roomLabel": "Loại phòng:",
-      "weekendNote": "(Nền hồng = T6–CN; ngày lễ quốc gia đặt riêng trong \"Quy tắc giá\")",
+      "weekendNote": "(Nền hồng = đêm cuối tuần, nền cam = ngày lễ, theo \"Quy tắc giá\"; bật giá động cho loại phòng để xem giá thực tế)",
       "quickFill": "Điền nhanh",
       "applyMonth": "Áp dụng cả tháng",
       "usingCurrency": "Tiền tệ: {currency} (TWD)",

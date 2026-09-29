@@ -5,6 +5,7 @@ import { useTranslations, useLocale } from 'next-intl'
 import { ChevronLeft, ChevronRight, Plus, Trash2, Edit2, X, Zap, CalendarRange } from 'lucide-react'
 import { createPortal } from 'react-dom'
 import DailyPricingCalendar from './DailyPricingCalendar'
+import { applyCalendarRules, HOLIDAY_COUNTRIES, ruleHolidayNights, weekendDays, type CalendarDay } from '@/lib/booking/holidays'
 
 // ── Types ────────────────────────────────────────────────────
 type BookingStatus = 'open' | 'closed' | 'admin_only'
@@ -57,33 +58,18 @@ function getDateRange(from: string, to: string, dows: number[]): string[] {
   return dates
 }
 
+// 與後端 computeStayPrice 同一套週末／假日／季節規則（住房率、早鳥等依實際訂況，不在此預覽）
 function computeEffectivePrice(
   basePrice: number | null,
   rules: PricingRule[],
   date: string,
   dynamicEnabled: boolean,
+  propertyId: string,
+  calendars: Record<string, CalendarDay[]>,
 ): number | null {
   if (basePrice == null) return null
   if (!dynamicEnabled) return basePrice
-  const dow = new Date(date + 'T00:00:00').getDay()
-  const mmdd = date.slice(5)
-  let price = basePrice
-  for (const rule of rules.filter(r => r.enabled).sort((a, b) => b.priority - a.priority)) {
-    let applies = false
-    if (rule.rule_type === 'weekend') applies = [0, 6].includes(dow)
-    else if (rule.rule_type === 'holiday') applies = ((rule.conditions.dates as string[]) ?? []).includes(date)
-    else if (rule.rule_type === 'seasonal') {
-      const s = rule.conditions.start_mmdd as string
-      const e = rule.conditions.end_mmdd as string
-      applies = !!(s && e && mmdd >= s && mmdd <= e)
-    }
-    if (applies) {
-      price = rule.adjustment_type === 'percent'
-        ? price * (1 + rule.adjustment_value / 100)
-        : price + rule.adjustment_value
-    }
-  }
-  return Math.round(price)
+  return applyCalendarRules(basePrice, rules.filter(r => r.enabled), date, propertyId, calendars).price
 }
 
 // ── Page ─────────────────────────────────────────────────────
@@ -332,6 +318,21 @@ function PricingContent() {
 
   useEffect(() => { fetchData() }, [fetchData])
 
+  // 國定假日行事曆（預覽假日規則用）：假日規則用到的國家，抓當年與下一年
+  const [calendars, setCalendars] = useState<Record<string, CalendarDay[]>>({})
+  const modalCountry = ruleModal?.rule_type === 'holiday' ? (ruleModal.conditions?.country as string | undefined) : undefined
+  const calendarCountries = [...new Set([...rules
+    .filter(r => r.rule_type === 'holiday' && typeof r.conditions?.country === 'string' && r.conditions.country)
+    .map(r => r.conditions.country as string), ...(modalCountry ? [modalCountry] : [])])].sort().join(',')
+  useEffect(() => {
+    if (!calendarCountries) return
+    let cancelled = false
+    Promise.all(calendarCountries.split(',').map(c =>
+      fetch(`/api/booking/holiday-calendar?country=${c}&years=${year},${year + 1}`).then(r => r.json()).then(d => [c, d.days ?? []] as const),
+    )).then(entries => { if (!cancelled) setCalendars(Object.fromEntries(entries)) }).catch(() => {})
+    return () => { cancelled = true }
+  }, [calendarCountries, year])
+
   useEffect(() => {
     if (!showBatch) return
     const cacheKey = `booking_holidays_${year}`
@@ -577,6 +578,7 @@ function PricingContent() {
           onPrev={prevMonth} onNext={nextMonth}
           properties={properties}
           tab={tab} onTabChange={setTab}
+          rules={rules} calendars={calendars}
         />
       ) : tab === 'calendar' ? (
         /* ── Tab 1: 房間 × 日期格狀視圖 ── */
@@ -678,9 +680,8 @@ function PricingContent() {
                           const cellKey = `${p.id}:${ds}`
                           const setting = getSetting(ds, p.id)
                           const status = setting.booking_status
-                          const relevantRules = rules.filter(r => r.property_id == null || r.property_id === p.id)
-                          const dynamicPrice = computeEffectivePrice(p.base_price, relevantRules, ds, p.dynamic_pricing_enabled)
-                          const displayPrice = setting.price_override ?? dynamicPrice
+                          // 手填價仍會再套週末／假日規則（與實際報價一致）
+                          const displayPrice = computeEffectivePrice(setting.price_override ?? p.base_price, rules, ds, p.dynamic_pricing_enabled, p.id, calendars)
                           const isSelected = selectedCells.has(cellKey)
                           const hasOverride = setting.price_override != null
 
@@ -1439,7 +1440,16 @@ function PricingContent() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-gray-600 block mb-1">{t('pricing.ruleTypeLabel')}</label>
-                  <select value={ruleModal.rule_type ?? ''} onChange={e => setRuleModal(p => ({ ...p, rule_type: e.target.value as RuleType }))}
+                  <select value={ruleModal.rule_type ?? ''} onChange={e => {
+                    const rule_type = e.target.value as RuleType
+                    setRuleModal(p => {
+                      const c = { ...(p?.conditions ?? {}) } as Record<string, unknown>
+                      // 新規則預設：週末＝週五、週六晚；假日＝台灣行事曆＋放假前一晚
+                      if (rule_type === 'weekend' && !Array.isArray(c.weekend_days)) c.weekend_days = [5, 6]
+                      if (rule_type === 'holiday' && c.country === undefined) { c.country = 'TW'; c.include_eve = true; c.include_last_night = false }
+                      return { ...p, rule_type, conditions: c }
+                    })
+                  }}
                     className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300">
                     <option value="">{t('pricing.selectType')}</option>
                     {(Object.keys(RULE_TYPE_ICON) as RuleType[]).map(k => <option key={k} value={k}>{RULE_TYPE_ICON[k]} {t(`pricing.ruleTypes.${k}`)}</option>)}
@@ -1486,19 +1496,122 @@ function PricingContent() {
                   </div>
                 </div>
               )}
-              {ruleModal.rule_type === 'holiday' && (
+              {ruleModal.rule_type === 'weekend' && (
                 <div>
-                  <label className="text-xs font-medium text-gray-600 block mb-1">{t('pricing.specifyDates')}</label>
-                  <textarea rows={4}
-                    value={((ruleModal.conditions as Record<string, string[]>)?.dates ?? []).join(', ')}
-                    onChange={e => {
-                      const dates = e.target.value.split(/[,\n]/).map(s => s.trim()).filter(Boolean)
-                      setRuleModal(p => ({ ...p, conditions: { ...p?.conditions, dates } }))
-                    }}
-                    placeholder="2025-01-25, 2025-01-26"
-                    className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
+                  <label className="text-xs font-medium text-gray-600 block mb-1">週末晚（以入住當晚計）</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[1, 2, 3, 4, 5, 6, 0].map(d => {
+                      const days = weekendDays({ rule_type: 'weekend', adjustment_type: 'fixed', adjustment_value: 0, conditions: ruleModal.conditions ?? null, property_id: null, priority: 0 })
+                      const on = days.includes(d)
+                      return (
+                        <button key={d} type="button"
+                          onClick={() => setRuleModal(p => ({ ...p, conditions: { ...p?.conditions, weekend_days: on ? days.filter(x => x !== d) : [...days, d] } }))}
+                          className={`px-2.5 py-1 rounded-lg text-xs border ${on ? 'bg-indigo-600 text-white border-indigo-600' : 'text-gray-600 hover:bg-gray-50'}`}>
+                          {t(`roomgrid.day.${d}`)}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <p className="text-[11px] text-gray-400 mt-1">例：勾「五、六」＝週五晚、週六晚入住套用週末價。與假日規則同一晚時只套假日價。</p>
                 </div>
               )}
+              {ruleModal.rule_type === 'holiday' && (() => {
+                const c = (ruleModal.conditions ?? {}) as Record<string, unknown>
+                const country = (c.country as string) ?? ''
+                const setC = (patch: Record<string, unknown>) => setRuleModal(p => ({ ...p, conditions: { ...p?.conditions, ...patch } }))
+                const preview = [...ruleHolidayNights(
+                  { rule_type: 'holiday', adjustment_type: 'fixed', adjustment_value: 0, conditions: c, property_id: null, priority: 0, name: ruleModal.name },
+                  calendars,
+                ).entries()].filter(([d]) => d.startsWith(String(year)) || d.startsWith(String(year + 1))).sort(([a], [b]) => a.localeCompare(b))
+                return (
+                  <div className="space-y-2.5">
+                    <div>
+                      <label className="text-xs font-medium text-gray-600 block mb-1">國定假日行事曆</label>
+                      <select value={country} onChange={e => setC({ country: e.target.value })}
+                        className="w-full text-sm border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-sky-300">
+                        <option value="">不使用（只用手動日期）</option>
+                        {HOLIDAY_COUNTRIES.map(h => <option key={h.code} value={h.code}>{h.label}（政府辦公日曆表）</option>)}
+                      </select>
+                    </div>
+                    {country && (
+                      <div className="space-y-1">
+                        <p className="text-[11px] text-gray-400">連假期間（第一天～最後一天前一晚）一律套用，以下兩晚自行決定：</p>
+                        <label className="flex items-center gap-2 text-xs text-gray-700">
+                          <input type="checkbox" checked={c.include_eve !== false} onChange={e => setC({ include_eve: e.target.checked })} />
+                          包含放假前一晚（例：10/10 國慶連假前的 10/8 晚）
+                        </label>
+                        <label className="flex items-center gap-2 text-xs text-gray-700">
+                          <input type="checkbox" checked={c.include_last_night === true} onChange={e => setC({ include_last_night: e.target.checked })} />
+                          包含連假最後一晚（隔天上班日）
+                        </label>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-xs font-medium text-gray-600 block mb-1">手動加入日期</label>
+                        <textarea rows={2}
+                          value={((c.dates as string[]) ?? []).join(', ')}
+                          onChange={e => setC({ dates: e.target.value.split(/[,\n]/).map(s => s.trim()).filter(Boolean) })}
+                          placeholder="2026-07-04"
+                          className="w-full text-xs border rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-sky-300" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-600 block mb-1">排除日期</label>
+                        <textarea rows={2}
+                          value={((c.exclude_dates as string[]) ?? []).join(', ')}
+                          onChange={e => setC({ exclude_dates: e.target.value.split(/[,\n]/).map(s => s.trim()).filter(Boolean) })}
+                          placeholder="2026-10-08"
+                          className="w-full text-xs border rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-sky-300" />
+                      </div>
+                    </div>
+                    <div className="bg-gray-50 border rounded-lg p-2 max-h-32 overflow-y-auto">
+                      <div className="text-[11px] font-semibold text-gray-500 mb-1">套用的晚（{year}–{year + 1}，共 {preview.length} 晚）</div>
+                      {country && !calendars[country] ? (
+                        <div className="text-[11px] text-gray-400">行事曆載入中…</div>
+                      ) : preview.length === 0 ? (
+                        <div className="text-[11px] text-gray-400">無</div>
+                      ) : (
+                        <div className="flex flex-wrap gap-1">
+                          {preview.map(([d, n]) => (
+                            <span key={d} title={n} className="text-[10px] px-1.5 py-0.5 rounded bg-white border text-gray-600">{d.slice(5)} {n}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })()}
+              {['weekend', 'holiday', 'seasonal'].includes(ruleModal.rule_type ?? '') && !ruleModal.property_id && properties.length > 0 && (() => {
+                const per: Record<string, { type: AdjType; value: number | null }> =
+                  (((ruleModal.conditions ?? {}) as Record<string, unknown>).property_adjustments as Record<string, { type: AdjType; value: number | null }> | undefined) ?? {}
+                const setPer = (pid: string, patch: Partial<{ type: AdjType; value: number | null }>) => setRuleModal(p => {
+                  const cur = (((p?.conditions ?? {}) as Record<string, unknown>).property_adjustments ?? {}) as Record<string, { type: AdjType; value: number | null }>
+                  const next = { ...cur, [pid]: { type: cur[pid]?.type ?? p?.adjustment_type ?? 'percent', value: cur[pid]?.value ?? null, ...patch } }
+                  return { ...p, conditions: { ...p?.conditions, property_adjustments: next } }
+                })
+                return (
+                  <div>
+                    <label className="text-xs font-medium text-gray-600 block mb-1">各房型加價（留空＝用上方預設值）</label>
+                    <div className="border rounded-lg divide-y">
+                      {properties.map(p => (
+                        <div key={p.id} className="flex items-center gap-2 px-2.5 py-1.5">
+                          <span className="flex-1 text-xs text-gray-700 truncate">{p.name}</span>
+                          <select value={per[p.id]?.type ?? ruleModal.adjustment_type ?? 'percent'}
+                            onChange={e => setPer(p.id, { type: e.target.value as AdjType })}
+                            className="text-xs border rounded px-1.5 py-1 bg-white">
+                            <option value="percent">%</option>
+                            <option value="fixed">{t('pricing.adjustFixed')}</option>
+                          </select>
+                          <input type="number" value={per[p.id]?.value ?? ''}
+                            placeholder={String(ruleModal.adjustment_value ?? 0)}
+                            onChange={e => setPer(p.id, { value: e.target.value === '' ? null : parseFloat(e.target.value) })}
+                            className="w-20 text-xs border rounded px-2 py-1" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })()}
               {ruleModal.rule_type === 'occupancy' && (
                 <div>
                   <label className="text-xs font-medium text-gray-600 block mb-1">{t('pricing.occupancyThreshold')}</label>

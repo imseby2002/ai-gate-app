@@ -722,7 +722,7 @@
         "6": "Sun"
       },
       "roomLabel": "Room:",
-      "weekendNote": "(Pink = Fri–Sun; set public holidays separately in \"Pricing Rules\")",
+      "weekendNote": "(Pink = weekend nights, amber = holidays, per \"Pricing Rules\"; enable dynamic pricing on the room type to see the final price)",
       "quickFill": "Quick Fill",
       "applyMonth": "Apply to Month",
       "usingCurrency": "Currency: {currency} (TWD)",

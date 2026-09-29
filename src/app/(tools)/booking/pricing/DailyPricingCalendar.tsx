@@ -2,9 +2,11 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { ChevronLeft, ChevronRight, Save, Check } from 'lucide-react'
+import { applyCalendarRules, ruleHolidayNights, weekendDays, type CalendarDay, type CalendarRule } from '@/lib/booking/holidays'
 
 interface Property {
   id: string; name: string; base_price: number | null; currency: string
+  dynamic_pricing_enabled?: boolean
 }
 interface DayPricing {
   price: string; deposit: string; extra_person: string
@@ -36,9 +38,12 @@ interface Props {
   properties: Property[]
   tab: TabType
   onTabChange: (t: TabType) => void
+  /** 已啟用的定價規則與國定假日行事曆，用來顯示套用規則後的實際房價 */
+  rules?: (CalendarRule & { enabled?: boolean })[]
+  calendars?: Record<string, CalendarDay[]>
 }
 
-export default function DailyPricingCalendar({ year, month, onPrev, onNext, properties, tab, onTabChange }: Props) {
+export default function DailyPricingCalendar({ year, month, onPrev, onNext, properties, tab, onTabChange, rules = [], calendars = {} }: Props) {
   const t = useTranslations('Booking')
   const locale = useLocale()
   const DOW_LABELS = [0,1,2,3,4,5,6].map(i => t(`pricing.weekdays.${i}`))
@@ -65,6 +70,16 @@ export default function DailyPricingCalendar({ year, month, onPrev, onNext, prop
   const daysInMonth = getDaysInMonth(year, month)
   const allDates: string[] = Array.from({ length: daysInMonth }, (_, i) => toDateStr(year, month, i + 1))
   const selectedProp = properties.find(p => p.id === propId)
+
+  // 此房型適用的啟用中規則；週末欄位的粉紅底依使用者設定的週末晚，而非寫死
+  const propRules = rules.filter(r => r.enabled !== false && (r.property_id == null || r.property_id === propId))
+  const weekendRules = propRules.filter(r => r.rule_type === 'weekend')
+  const weekendDowSet = new Set(weekendRules.length ? weekendRules.flatMap(weekendDays) : [5, 6, 0])
+  const holidayNightMap = new Map<string, string>()
+  for (const r of propRules.filter(r => r.rule_type === 'holiday')) {
+    for (const [d, n] of ruleHolidayNights(r, calendars)) holidayNightMap.set(d, n)
+  }
+  const isWeekendCol = (di: number) => weekendDowSet.has((di + 1) % 7)
 
   const load = useCallback(async () => {
     if (!propId) return
@@ -250,7 +265,7 @@ export default function DailyPricingCalendar({ year, month, onPrev, onNext, prop
                 <th className="border border-sky-400 px-2 py-2 w-12 text-center font-medium">{t('pricing.unitTwd')}</th>
                 {DOW_LABELS.map((d, i) => (
                   <th key={i} className={`border border-sky-400 px-1 py-2 text-center font-medium
-                    ${i >= 4 ? 'bg-red-400' : ''}`}
+                    ${isWeekendCol(i) ? 'bg-red-400' : ''}`}
                     style={{ minWidth: 130 }}>
                     {d}
                   </th>
@@ -265,14 +280,20 @@ export default function DailyPricingCalendar({ year, month, onPrev, onNext, prop
                   </td>
                   {week.map((date, di) => {
                     if (!date) {
-                      return <td key={di} className={`border border-gray-200 ${di >= 4 ? 'bg-pink-50' : 'bg-white'}`} />
+                      return <td key={di} className={`border border-gray-200 ${isWeekendCol(di) ? 'bg-pink-50' : 'bg-white'}`} />
                     }
                     const e = edits[date] ?? EMPTY
                     const isToday  = date === today
-                    const isWkend  = di >= 4
+                    const holidayName = holidayNightMap.get(date)
+                    const isWkend  = isWeekendCol(di) || holidayName != null
                     const isClosed = e.status === 'closed'
-                    const bgCls    = isClosed ? 'bg-red-100' : isWkend ? 'bg-pink-50' : 'bg-white'
+                    const bgCls    = isClosed ? 'bg-red-100' : holidayName ? 'bg-amber-50' : isWkend ? 'bg-pink-50' : 'bg-white'
                     const day      = parseInt(date.slice(8))
+                    // 套用週末／假日／季節規則後的實際房價（與報價一致）
+                    const basePrice = e.price !== '' ? Number(e.price) : selectedProp?.base_price ?? null
+                    const final = selectedProp?.dynamic_pricing_enabled && basePrice != null
+                      ? applyCalendarRules(basePrice, propRules, date, propId, calendars)
+                      : null
 
                     return (
                       <td key={date} className={`border border-gray-200 ${bgCls} align-top p-1.5`}>
@@ -281,7 +302,14 @@ export default function DailyPricingCalendar({ year, month, onPrev, onNext, prop
                           ${isToday ? 'text-sky-600' : isWkend ? 'text-red-500' : 'text-gray-700'}`}>
                           {day}
                           {isClosed && <span className="text-[10px] text-red-500 font-medium">{t('pricing.closedTag')}</span>}
+                          {holidayName && <span className="text-[10px] text-amber-600 font-medium truncate" title={holidayName}>{holidayName}</span>}
                         </div>
+                        {final && final.applied.length > 0 && (
+                          <div className="text-[10px] text-indigo-600 font-semibold mb-0.5 truncate"
+                            title={final.applied.map(a => `${a.name} ${a.value > 0 ? '+' : ''}${a.value}${a.type === 'percent' ? '%' : ''}`).join('、')}>
+                            實際 {final.price.toLocaleString()}（{final.applied.map(a => `${a.value > 0 ? '+' : ''}${a.value}${a.type === 'percent' ? '%' : ''}`).join(' ')}）
+                          </div>
+                        )}
 
                         {/* Price fields */}
                         {FIELDS.map(({ key, label }) => (
