@@ -50,11 +50,53 @@ export async function DELETE(req: NextRequest) {
       .eq('owner_id', user.id)
       .eq('status', 'active')
 
+    // 一併移除 MDB 匯入建立之帳戶（仍被手動帳目引用者保留）
+    const { data: zeroAccounts } = await supabase
+      .from('hr_accounts')
+      .select('id')
+      .eq('owner_id', user.id)
+      .eq('note', '匯入自 Zero')
+    const zeroIds = (zeroAccounts ?? []).map((a: { id: string }) => a.id)
+    let deletedAccounts = 0
+    if (zeroIds.length > 0) {
+      const removable: string[] = []
+      for (const id of zeroIds) {
+        const { count, error: refErr } = await supabase
+          .from('hr_cashflow')
+          .select('id', { count: 'exact', head: true })
+          .or(`account_id.eq.${id},to_account_id.eq.${id}`)
+        if (refErr) return NextResponse.json({ error: refErr.message }, { status: 500 })
+        if (!count) removable.push(id)
+      }
+      if (removable.length > 0) {
+        const { data: delAcc, error: accErr } = await supabase
+          .from('hr_accounts')
+          .delete()
+          .eq('owner_id', user.id)
+          .in('id', removable)
+          .select('id')
+        if (accErr) return NextResponse.json({ error: accErr.message }, { status: 500 })
+        deletedAccounts = delAcc?.length ?? 0
+      }
+    }
+
+    // 一併移除 MDB 匯入建立之科目主檔
+    const { data: delSubj, error: subjErr } = await supabase
+      .from('fin_subjects')
+      .delete()
+      .eq('owner_id', user.id)
+      .eq('source', 'zero_import')
+      .select('id')
+    if (subjErr) return NextResponse.json({ error: subjErr.message }, { status: 500 })
+    const deletedSubjects = delSubj?.length ?? 0
+
     return NextResponse.json({
       ok: true,
       action: 'revert_all',
       deleted_count: delRows?.length ?? 0,
-      message: `已成功清空所有 MDB 匯入交易（共 ${delRows?.length ?? 0} 筆），手動建立之帳目已完整保留。`,
+      deleted_accounts: deletedAccounts,
+      deleted_subjects: deletedSubjects,
+      message: `已成功清空所有 MDB 匯入資料（交易 ${delRows?.length ?? 0} 筆、帳戶 ${deletedAccounts} 個、科目 ${deletedSubjects} 個），手動建立之帳目已完整保留。`,
     })
   }
 
