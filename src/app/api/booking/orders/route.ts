@@ -22,12 +22,14 @@ export async function POST(req: NextRequest) {
     guest_name, guest_email, guest_phone,
     check_in, check_out, currency = 'TWD', status = 'confirmed',
     special_requests, notes, source = 'manual',
+    deposit_amount = null, is_paid = false,
     rooms,
   } = body as {
     platform?: string; platform_booking_id?: string | null
     guest_name?: string; guest_email?: string; guest_phone?: string
     check_in?: string; check_out?: string; currency?: string; status?: string
     special_requests?: string; notes?: string; source?: string
+    deposit_amount?: number | null; is_paid?: boolean
     rooms?: RoomInput[]
   }
 
@@ -66,6 +68,7 @@ export async function POST(req: NextRequest) {
 
   const orderId = await findOrCreateOrder(supabase, ctx.ownerId, platform, pbid, {
     guest_name, guest_email, guest_phone, currency, special_requests, notes, source,
+    deposit_amount, is_paid,
   })
 
   const created: unknown[] = []
@@ -75,7 +78,7 @@ export async function POST(req: NextRequest) {
       user_id: ctx.ownerId, order_id: orderId, property_id: r.property_id, platform, platform_booking_id: pbid,
       guest_name, guest_email, guest_phone,
       check_in, check_out, num_guests: r.num_guests ?? 1, total_price: r.total_price ?? null, currency,
-      status, special_requests, notes, source,
+      status, special_requests, notes, source, deposit_amount, is_paid,
       extra_beds: r.extra_beds ?? 0,
     }
     const { data, error } = existingIds[i]
