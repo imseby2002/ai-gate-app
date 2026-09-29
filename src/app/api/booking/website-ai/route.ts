@@ -42,7 +42,9 @@ ${FONT_LIST}
     "heroLayout": "overlay-left"|"centered"|"minimal"（首頁 Hero 版型）,
     "sectionPaddingScale": "compact"|"comfortable"|"spacious"（區塊留白節奏，質感越高留白通常越大）,
     "pageBg": "#RRGGBB"（選填，整頁底色，預設白色；深色風格用深色底，此時 ink/muted 要用淺色、sectionBg/cardBg 用深色層次）,
-    "animation": "none"|"fade"|"rise"|"zoom"|"slide"（選填，區塊捲動進場動畫：淡入／上浮／放大／側滑，預設 none）
+    "animation": "none"|"fade"|"rise"|"zoom"|"slide"|"blur"|"spring"（選填，區塊捲動進場動畫：淡入／上浮／放大／側滑／模糊漸清／彈性上浮，預設 none）,
+    "parallax": true|false（選填，首頁與關於頁大圖跟著捲動做視差，適合有好照片的網站）,
+    "textReveal": true|false（選填，大標題逐字浮現，適合動感、年輕、科技調性；沉穩精品風格少用）
   }
 
   設計原則（決定色彩與留白時務必遵守）：

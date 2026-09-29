@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { notFound } from 'next/navigation'
 import { resolveDesign, headingCss } from '@/lib/booking/templates'
+import SplitText from '../SplitText'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import AboutFaq from './AboutFaq'
 
@@ -37,7 +38,7 @@ export default async function AboutPage({ params }: { params: Promise<{ slug: st
       {images[0] && (
         <div className="w-full aspect-[21/6] overflow-hidden relative">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={images[0]} alt={profile.name} className="w-full h-full object-cover" />
+          <img src={images[0]} alt={profile.name} data-parallax={design.parallax ? '' : undefined} className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-black/40 flex items-end">
             <div className="max-w-5xl mx-auto px-4 pb-6 w-full">
               <h1 className="text-2xl sm:text-3xl font-bold text-white">關於我們</h1>
@@ -50,7 +51,7 @@ export default async function AboutPage({ params }: { params: Promise<{ slug: st
       <div className="max-w-5xl mx-auto px-4 py-10 space-y-12">
         {!images[0] && (
           <h1 className={h1Size} style={headingStyle}>
-            關於我們
+            <SplitText text="關於我們" enabled={design.textReveal} />
           </h1>
         )}
 

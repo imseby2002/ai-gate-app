@@ -30,12 +30,16 @@ export interface BnbDesign {
   onAccent: string
   // 捲動進場動畫
   animation: SiteAnimation
+  // 首頁／關於頁大圖跟著捲動做視差位移
+  parallax: boolean
+  // 大標題逐字浮現
+  textReveal: boolean
 }
 
-export type SiteAnimation = 'none' | 'fade' | 'rise' | 'zoom' | 'slide'
-const SITE_ANIMATIONS = new Set<SiteAnimation>(['none', 'fade', 'rise', 'zoom', 'slide'])
+export type SiteAnimation = 'none' | 'fade' | 'rise' | 'zoom' | 'slide' | 'blur' | 'spring'
+const SITE_ANIMATIONS = new Set<SiteAnimation>(['none', 'fade', 'rise', 'zoom', 'slide', 'blur', 'spring'])
 
-export interface BnbTemplate extends Omit<BnbDesign, 'pageBg' | 'onAccent' | 'animation'> {
+export interface BnbTemplate extends Omit<BnbDesign, 'pageBg' | 'onAccent' | 'animation' | 'parallax' | 'textReveal'> {
   id: string
   name: string
   desc: string
@@ -98,7 +102,7 @@ export function getTemplate(id?: string | null): BnbTemplate {
 }
 
 function templateDesign(t: BnbTemplate): BnbDesign {
-  return { ...t, pageBg: '#ffffff', onAccent: onAccentFor(t.accent), animation: 'none' }
+  return { ...t, pageBg: '#ffffff', onAccent: onAccentFor(t.accent), animation: 'none', parallax: false, textReveal: false }
 }
 
 // ── AI 自由生成的自訂設計：只接受受限的語意選項 + hex 色碼，
@@ -140,6 +144,8 @@ export interface CustomDesignInput {
   sectionPaddingScale?: 'compact' | 'comfortable' | 'spacious'
   pageBg?: string
   animation?: SiteAnimation
+  parallax?: boolean
+  textReveal?: boolean
 }
 
 function hexToRgb(hex: string) {
@@ -210,6 +216,8 @@ export function sanitizeCustomDesign(input: unknown): BnbDesign | null {
     pageBg: d.pageBg && HEX_RE.test(d.pageBg) ? d.pageBg : '#ffffff',
     onAccent: onAccentFor(accent),
     animation: d.animation && SITE_ANIMATIONS.has(d.animation) ? d.animation : 'none',
+    parallax: d.parallax === true,
+    textReveal: d.textReveal === true,
   }
 }
 

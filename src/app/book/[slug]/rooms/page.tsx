@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { BedDouble, Users, ChevronRight } from 'lucide-react'
 import { resolveDesign, headingCss } from '@/lib/booking/templates'
+import SplitText from '../SplitText'
 
 function fmt(n: number) { return n.toLocaleString('zh-TW') }
 
@@ -39,7 +40,7 @@ export default async function RoomsPage({ params }: { params: Promise<{ slug: st
       {/* Header */}
       <div className="mb-8">
         <h1 className={h1Size} style={headingStyle}>
-          房型介紹
+          <SplitText text="房型介紹" enabled={design.textReveal} />
         </h1>
         <p className="text-sm mt-1" style={mutedStyle}>選擇最適合您的房型，直接線上預訂</p>
       </div>
@@ -50,7 +51,7 @@ export default async function RoomsPage({ params }: { params: Promise<{ slug: st
             const imgs = (prop.images as string[] | null) ?? []
             const amenities = (prop.amenities as string[] | null) ?? []
             return (
-              <div key={prop.id} data-reveal className="overflow-hidden border"
+              <div key={prop.id} data-reveal data-card className="overflow-hidden border"
                 style={{ backgroundColor: design.cardBg, borderColor: design.cardBorder, borderRadius: design.cardRadius, boxShadow: design.shadow || undefined }}>
                 {/* Image */}
                 <div className="aspect-[16/7] overflow-hidden bg-gray-100">

@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { notFound } from 'next/navigation'
 import { Phone, Mail, MessageCircle, Globe, MapPin } from 'lucide-react'
 import { resolveDesign, headingCss } from '@/lib/booking/templates'
+import SplitText from '../SplitText'
 
 export default async function ContactPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
@@ -36,7 +37,7 @@ export default async function ContactPage({ params }: { params: Promise<{ slug: 
     <div className="max-w-3xl mx-auto px-4 py-10 space-y-10">
       <div>
         <h1 className={h1Size} style={headingStyle}>
-          聯絡我們
+          <SplitText text="聯絡我們" enabled={design.textReveal} />
         </h1>
         {contactNote && (
           <p className="mt-3 text-sm leading-relaxed" style={mutedStyle}>{contactNote}</p>
