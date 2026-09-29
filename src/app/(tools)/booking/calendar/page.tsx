@@ -50,6 +50,7 @@ interface QuickForm {
   guest_name: string; guest_phone: string; guest_email: string
   platform_booking_id: string
   check_in: string; check_out: string; platform: string
+  deposit_amount: string; is_paid: boolean; notes: string
   rooms: RoomLine[]
 }
 
@@ -80,7 +81,8 @@ export default function CalendarPage() {
   const [quickForm, setQuickForm]   = useState<QuickForm>({
     guest_name: '', guest_phone: '', guest_email: '',
     platform_booking_id: '',
-    check_in: '', check_out: '', platform: 'direct', rooms: [],
+    check_in: '', check_out: '', platform: 'direct',
+    deposit_amount: '', is_paid: false, notes: '', rooms: [],
   })
   const [saving, setSaving] = useState(false)
   const [orderTotal, setOrderTotal] = useState('')
@@ -160,6 +162,7 @@ export default function CalendarPage() {
       guest_name: '', guest_phone: '', guest_email: '',
       platform_booking_id: '',
       check_in: ds, check_out: addDays(ds, 1), platform: 'direct',
+      deposit_amount: '', is_paid: false, notes: '',
       rooms: [{ property_id: p.id, property_name: p.name, total_price: p.base_price ? String(p.base_price) : '', num_guests: defaultGuests, extra_beds: 0 }],
     })
   }
@@ -210,6 +213,9 @@ export default function CalendarPage() {
           platform_booking_id: quickForm.platform_booking_id || null,
           check_in: quickForm.check_in, check_out: quickForm.check_out,
           platform: quickForm.platform,
+          deposit_amount: quickForm.deposit_amount ? parseFloat(quickForm.deposit_amount) : null,
+          is_paid: quickForm.is_paid,
+          notes: quickForm.notes.trim() || null,
           source: 'manual',
           rooms: quickForm.rooms.map(r => ({
             property_id: r.property_id,
@@ -659,6 +665,26 @@ export default function CalendarPage() {
                 className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300">
                 {Object.entries(PLATFORM_NAMES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
               </select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-600">{t('detail.deposit')}</label>
+                <input type="number" value={quickForm.deposit_amount} onChange={e => setQuickForm(f => ({ ...f, deposit_amount: e.target.value }))}
+                  className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-600">{t('detail.isPaid')}</label>
+                <label className="flex items-center gap-2 text-sm text-gray-700 h-[38px]">
+                  <input type="checkbox" checked={quickForm.is_paid} onChange={e => setQuickForm(f => ({ ...f, is_paid: e.target.checked }))}
+                    className="h-4 w-4 rounded border-gray-300 text-sky-600 focus:ring-sky-300" />
+                  {t('detail.isPaid')}
+                </label>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-600">{t('detail.internalNotes')}</label>
+              <textarea value={quickForm.notes} rows={2} onChange={e => setQuickForm(f => ({ ...f, notes: e.target.value }))}
+                className="w-full text-sm border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-sky-300" />
             </div>
             <div className="flex gap-2 pt-1">
               <button onClick={() => setQuickOpen(false)}
