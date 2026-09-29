@@ -8,7 +8,7 @@ import { buildDeterministicQuote } from '@/lib/cs/quote'
 import { buildBookingModuleQuote } from '@/lib/cs/booking-quote'
 import { formatPricingForAI, queryJsonPricing, type PricingConfig } from '@/lib/cs/pricing'
 import { queryGoogleSheet, type SheetConfig } from '@/lib/cs/sheet-lookup'
-import { buildBookingSystemPrompt, type BookingFlowDef } from '@/lib/cs/booking-prompt'
+import { buildBookingSystemPrompt, BOOKING_HUMAN_CONFIRM_NOTICE, type BookingFlowDef } from '@/lib/cs/booking-prompt'
 import { sendTicketNotification, type NotifyWebhook } from '@/lib/cs/ticket-notify'
 import { buildSellSection, type CsCustomerRow } from '@/lib/cs/sell-section'
 import { queryBnbCheckin, checkBeforeCheckin } from '@/lib/cs/checkin-lookup'
@@ -206,7 +206,8 @@ async function handlePost(req: NextRequest) {
 接著計算並顯示總金額
 接著輸出以下付款資訊（逐行原文輸出，禁止修改或省略）：
 ${payment || '（付款方式請聯繫工作人員確認）'}
-最後一行：「以上資訊是否正確？」`
+接著一行：「以上資訊是否正確？」
+最後一行：「${BOOKING_HUMAN_CONFIRM_NOTICE}」`
         break
       }
     }
