@@ -34,12 +34,14 @@ export interface BnbDesign {
   parallax: boolean
   // 大標題逐字浮現
   textReveal: boolean
+  // 內容區塊（關於我們等）文字對齊；沒給時跟著 Hero：centered → 置中，其餘靠左
+  contentAlign: 'left' | 'center'
 }
 
 export type SiteAnimation = 'none' | 'fade' | 'rise' | 'zoom' | 'slide' | 'blur' | 'spring'
 const SITE_ANIMATIONS = new Set<SiteAnimation>(['none', 'fade', 'rise', 'zoom', 'slide', 'blur', 'spring'])
 
-export interface BnbTemplate extends Omit<BnbDesign, 'pageBg' | 'onAccent' | 'animation' | 'parallax' | 'textReveal'> {
+export interface BnbTemplate extends Omit<BnbDesign, 'pageBg' | 'onAccent' | 'animation' | 'parallax' | 'textReveal' | 'contentAlign'> {
   id: string
   name: string
   desc: string
@@ -102,7 +104,10 @@ export function getTemplate(id?: string | null): BnbTemplate {
 }
 
 function templateDesign(t: BnbTemplate): BnbDesign {
-  return { ...t, pageBg: '#ffffff', onAccent: onAccentFor(t.accent), animation: 'none', parallax: false, textReveal: false }
+  return {
+    ...t, pageBg: '#ffffff', onAccent: onAccentFor(t.accent), animation: 'none', parallax: false, textReveal: false,
+    contentAlign: t.heroLayout === 'centered' ? 'center' : 'left',
+  }
 }
 
 // ── AI 自由生成的自訂設計：只接受受限的語意選項 + hex 色碼，
@@ -146,6 +151,7 @@ export interface CustomDesignInput {
   animation?: SiteAnimation
   parallax?: boolean
   textReveal?: boolean
+  contentAlign?: 'left' | 'center'
 }
 
 function hexToRgb(hex: string) {
@@ -218,6 +224,9 @@ export function sanitizeCustomDesign(input: unknown): BnbDesign | null {
     animation: d.animation && SITE_ANIMATIONS.has(d.animation) ? d.animation : 'none',
     parallax: d.parallax === true,
     textReveal: d.textReveal === true,
+    contentAlign: d.contentAlign === 'left' || d.contentAlign === 'center'
+      ? d.contentAlign
+      : heroLayout === 'centered' ? 'center' : 'left',
   }
 }
 

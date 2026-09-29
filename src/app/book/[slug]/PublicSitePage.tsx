@@ -218,42 +218,49 @@ export default function PublicHomePage({
       )}
 
       {/* ── 關於 teaser ── */}
-      {(profile.about || profile.description) && (
-        <section style={{ paddingTop: design.sectionPaddingY, paddingBottom: design.sectionPaddingY }}>
-          <div className="max-w-5xl mx-auto px-4">
-            <div data-reveal className="grid sm:grid-cols-2 gap-8 items-center">
-              <div className="space-y-4">
-                <h2 className={design.headingUppercase ? 'text-xl' : 'text-2xl'} style={headingStyle}>
-                  <SplitText text="關於我們" enabled={design.textReveal} />
-                </h2>
-                <p className="leading-relaxed line-clamp-5" style={mutedStyle}>
-                  {profile.about || profile.description}
-                </p>
-                <Link href={`${base}/about`} className="inline-flex items-center gap-1 text-sm font-semibold hover:underline" style={aText}>
-                  了解更多 <ChevronRight className="h-4 w-4" />
-                </Link>
+      {(profile.about || profile.description) && (() => {
+        const aboutImages = images.length === 1 ? images.slice(0, 1) : images.slice(1, 5)
+        const hasImages = aboutImages.length > 0
+        const centered = design.contentAlign === 'center'
+        const imgRadius = profile.template_id === 'boutique' ? '' : 'rounded-xl'
+        return (
+          <section style={{ paddingTop: design.sectionPaddingY, paddingBottom: design.sectionPaddingY }}>
+            <div className="max-w-5xl mx-auto px-4">
+              {/* 沒有照片時改成單欄，不再留一整片空白的右欄；對齊方式依設計的 contentAlign */}
+              <div data-reveal className={hasImages ? 'grid sm:grid-cols-2 gap-8 items-center' : 'max-w-3xl'}
+                style={!hasImages && centered ? { marginInline: 'auto' } : undefined}>
+                <div className={`space-y-4 ${centered ? 'text-center' : ''}`}>
+                  <h2 className={design.headingUppercase ? 'text-xl' : 'text-2xl'} style={headingStyle}>
+                    <SplitText text="關於我們" enabled={design.textReveal} />
+                  </h2>
+                  <p className="leading-relaxed line-clamp-5" style={mutedStyle}>
+                    {profile.about || profile.description}
+                  </p>
+                  <Link href={`${base}/about`} className="inline-flex items-center gap-1 text-sm font-semibold hover:underline" style={aText}>
+                    了解更多 <ChevronRight className="h-4 w-4" />
+                  </Link>
+                </div>
+                {aboutImages.length === 1 && (
+                  <div className={`aspect-[4/3] overflow-hidden ${imgRadius}`}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={aboutImages[0]} alt="" className="w-full h-full object-cover" />
+                  </div>
+                )}
+                {aboutImages.length > 1 && (
+                  <div className="grid grid-cols-2 gap-2">
+                    {aboutImages.map((src, i) => (
+                      <div key={i} className={`aspect-square overflow-hidden ${imgRadius}`}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={src} alt="" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-              {images.length === 1 && (
-                // 只有一張照片時也放在右側，避免「關於我們」右半邊整片空白
-                <div className={`aspect-[4/3] overflow-hidden ${profile.template_id === 'boutique' ? '' : 'rounded-xl'}`}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={images[0]} alt="" className="w-full h-full object-cover" />
-                </div>
-              )}
-              {images.length > 1 && (
-                <div className="grid grid-cols-2 gap-2">
-                  {images.slice(1, 5).map((src, i) => (
-                    <div key={i} className={`aspect-square overflow-hidden ${profile.template_id === 'boutique' ? '' : 'rounded-xl'}`}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={src} alt="" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
-          </div>
-        </section>
-      )}
+          </section>
+        )
+      })()}
 
       {/* ── 聯絡 strip ── */}
       <section className="py-8 border-t" style={{ backgroundColor: design.sectionBg }}>
