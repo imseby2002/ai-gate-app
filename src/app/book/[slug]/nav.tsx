@@ -56,6 +56,10 @@ export default function BnbPublicNav({ profile }: { profile: NavProfile }) {
         </div>
 
         <div className="flex items-center gap-2">
+          <Link href={`/join/${profile.slug}?utm_source=website`}
+            className="hidden sm:inline-block px-3 py-1.5 rounded-lg text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+            加入會員
+          </Link>
           <Link href={`${base}/booking`}
             className="px-4 py-2 text-sm font-semibold text-[var(--bnb-on-accent)] hover:opacity-90 transition-opacity"
             style={{ backgroundColor: accent, borderRadius: design.btnRadius }}>
@@ -81,6 +85,10 @@ export default function BnbPublicNav({ profile }: { profile: NavProfile }) {
               {item.label}
             </Link>
           ))}
+          <Link href={`/join/${profile.slug}?utm_source=website`} onClick={() => setOpen(false)}
+            className="px-3 py-2.5 rounded-xl text-sm text-gray-600 hover:bg-gray-100">
+            加入會員
+          </Link>
         </div>
       )}
     </nav>
