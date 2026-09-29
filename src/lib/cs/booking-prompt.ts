@@ -16,8 +16,7 @@ export interface BookingFlowDef {
   requirePassengerId?: boolean  // 表單是否要求身分證（幼兒永遠免填）
 }
 
-// TODO(暫時)：房況尚未與外部訂房系統即時同步，空房可能已被訂走。
-// 預訂完成時一律附上此句，待同步穩定後移除（連同引用處）。
+// 客服訂房模式為「人工最後確認」時（bnb_profiles.cs_booking_mode = 'manual'），預訂完成時附上此句。
 export const BOOKING_HUMAN_CONFIRM_NOTICE = '訂房成功與否，最後將會由真人客服回覆給您'
 
 export function buildStepLabels(dataHint?: string): Record<string, string> {
@@ -39,7 +38,7 @@ export function buildStepLabels(dataHint?: string): Record<string, string> {
   }
 }
 
-export function buildBookingSystemPrompt(_defaultPaymentInfo: string, flows: BookingFlowDef[]): string {
+export function buildBookingSystemPrompt(_defaultPaymentInfo: string, flows: BookingFlowDef[], mode: 'manual' | 'ai' = 'manual'): string {
   // Payment info is intentionally NOT embedded here — it is injected only via
   // detectBookingCompletion() / bookingCompletionInstruction after server-side
   // step completion is confirmed, so the AI cannot reveal account details early.
@@ -104,8 +103,7 @@ ${flowSection}
 
 情境5：所有欄位收集完畢
 正確做法：整理確認清單，計算總金額，告知付款方式
-客人確認預訂後（或預訂完成時），回覆最後必須加上一句：「${BOOKING_HUMAN_CONFIRM_NOTICE}」
-
+${mode === 'manual' ? `客人確認預訂後（或預訂完成時），回覆最後必須加上一句：「${BOOKING_HUMAN_CONFIRM_NOTICE}」\n` : ''}
 【回覆範例（情境1）】
 客人說：「請問你們有賞鯨行程」
 你的回覆：

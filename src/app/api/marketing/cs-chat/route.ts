@@ -9,6 +9,7 @@ import { buildBookingModuleQuote } from '@/lib/cs/booking-quote'
 import { formatPricingForAI, queryJsonPricing, type PricingConfig } from '@/lib/cs/pricing'
 import { queryGoogleSheet, type SheetConfig } from '@/lib/cs/sheet-lookup'
 import { buildBookingSystemPrompt, BOOKING_HUMAN_CONFIRM_NOTICE, type BookingFlowDef } from '@/lib/cs/booking-prompt'
+import { getCsBookingMode } from '@/lib/cs/booking-commit'
 import { sendTicketNotification, type NotifyWebhook } from '@/lib/cs/ticket-notify'
 import { buildSellSection, type CsCustomerRow } from '@/lib/cs/sell-section'
 import { queryBnbCheckin, checkBeforeCheckin } from '@/lib/cs/checkin-lookup'
@@ -109,6 +110,9 @@ async function handlePost(req: NextRequest) {
 
   const t0 = Date.now()
 
+  // 測試分頁不寫入訂房系統，只依客服訂房模式呈現對應話術
+  const csBookingMode = bookingFlowEnabled ? await getCsBookingMode(supabase, user.id) : 'manual'
+
   // ── Server-side booking detection ────────────────────────────────────────
   let bookingCompletionInstruction = ''
   if (bookingFlowEnabled && bookingFlows.length > 0) {
@@ -206,8 +210,7 @@ async function handlePost(req: NextRequest) {
 接著計算並顯示總金額
 接著輸出以下付款資訊（逐行原文輸出，禁止修改或省略）：
 ${payment || '（付款方式請聯繫工作人員確認）'}
-接著一行：「以上資訊是否正確？」
-最後一行：「${BOOKING_HUMAN_CONFIRM_NOTICE}」`
+${csBookingMode === 'manual' ? `接著一行：「以上資訊是否正確？」\n最後一行：「${BOOKING_HUMAN_CONFIRM_NOTICE}」` : '最後一行：「以上資訊是否正確？」'}`
         break
       }
     }
@@ -671,7 +674,7 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
   const baseInstructions = userSystemPrompt?.trim()
     ? userSystemPrompt.trim()
     : (bookingFlowEnabled
-        ? buildBookingSystemPrompt(paymentInfo, bookingFlows)
+        ? buildBookingSystemPrompt(paymentInfo, bookingFlows, csBookingMode)
         : `你是民宿的 AI 客服。直接回答客人問題，語氣親切自然。不確定的資訊請誠實說明，勿猜測。`)
 
   const taiwanTime = new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false })
