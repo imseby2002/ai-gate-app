@@ -8,10 +8,15 @@ import { computeStayPrice } from '@/lib/booking/pricing'
 import { confirmPublicBooking } from '@/lib/booking/public-booking-confirm'
 import { BOOKING_HUMAN_CONFIRM_NOTICE } from '@/lib/cs/booking-prompt'
 
-export type CsBookingMode = 'manual' | 'ai'
+// none＝未串接訂房系統（沒有建立任何房型，例如非住宿業）：不寫單、不附真人客服提示。
+export type CsBookingMode = 'manual' | 'ai' | 'none'
 
 export async function getCsBookingMode(supabase: SupabaseClient, userId: string): Promise<CsBookingMode> {
-  const { data } = await supabase.from('bnb_profiles').select('cs_booking_mode').eq('user_id', userId).maybeSingle()
+  const [{ count }, { data }] = await Promise.all([
+    supabase.from('properties').select('id', { count: 'exact', head: true }).eq('user_id', userId),
+    supabase.from('bnb_profiles').select('cs_booking_mode').eq('user_id', userId).maybeSingle(),
+  ])
+  if (!count) return 'none'
   return data?.cs_booking_mode === 'ai' ? 'ai' : 'manual'
 }
 
@@ -66,6 +71,7 @@ export async function commitCsRoomBooking(
   mode: CsBookingMode,
   sourceLabel: string,
 ): Promise<string> {
+  if (mode === 'none') return ''
   const { data: properties } = await supabase.from('properties').select('id, name').eq('user_id', userId)
   const props = (properties ?? []).filter(p => p.name)
   if (!props.length) return ''

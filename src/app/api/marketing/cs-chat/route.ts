@@ -111,7 +111,7 @@ async function handlePost(req: NextRequest) {
   const t0 = Date.now()
 
   // 測試分頁不寫入訂房系統，只依客服訂房模式呈現對應話術
-  const csBookingMode = bookingFlowEnabled ? await getCsBookingMode(supabase, user.id) : 'manual'
+  const csBookingMode = bookingFlowEnabled ? await getCsBookingMode(supabase, user.id) : 'none'
 
   // ── Server-side booking detection ────────────────────────────────────────
   let bookingCompletionInstruction = ''
