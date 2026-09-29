@@ -335,7 +335,7 @@ function PricingContent() {
 
   useEffect(() => {
     if (!showBatch) return
-    const cacheKey = `booking_holidays_${year}`
+    const cacheKey = `booking_holidays_official_${year}`
     const cached = sessionStorage.getItem(cacheKey)
     if (cached) { try { setHolidays(JSON.parse(cached)); return } catch {} }
     setHolidaysLoading(true)
