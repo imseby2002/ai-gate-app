@@ -27,6 +27,7 @@ const NON_SECRET_FIELDS = new Set([
   'oa_id',
   'client_id',
   'property_id',
+  'measurement_id',
 ])
 
 export async function GET() {

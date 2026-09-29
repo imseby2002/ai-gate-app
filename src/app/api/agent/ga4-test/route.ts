@@ -26,7 +26,7 @@ export async function GET() {
 
   try {
     const report = await getGa4Report(creds, '7daysAgo', 'today')
-    return NextResponse.json({ ok: true, propertyId: creds.propertyId, serviceAccount: creds.clientEmail, totals_last_7d: report.totals })
+    return NextResponse.json({ ok: true, propertyId: creds.propertyId, serviceAccount: creds.clientEmail, totals_last_7d: report.totals, by_host_last_7d: report.byHost })
   } catch (e) {
     return NextResponse.json({ ok: false, propertyId: creds.propertyId, serviceAccount: creds.clientEmail, error: e instanceof Error ? e.message : String(e) }, { status: 502 })
   }

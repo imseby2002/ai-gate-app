@@ -3,6 +3,8 @@ import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import BnbPublicNav from './nav'
 import SiteMotion from './SiteMotion'
+import Ga4Tag from '@/components/analytics/Ga4Tag'
+import { getGa4MeasurementId } from '@/lib/marketing/ga4'
 import { resolveDesign, siteThemeVars, isDarkBg } from '@/lib/booking/templates'
 
 // 進場動畫：只在 SiteMotion 加上 motion-ready 後才先隱藏，實際動畫由 Motion 執行；沒有 JS 時內容照常顯示
@@ -51,7 +53,7 @@ export default async function BnbPublicLayout({
   const admin = createAdminClient()
   const { data: profile, error } = await admin
     .from('bnb_profiles')
-    .select('name, theme_color, template_id, custom_design, slug')
+    .select('user_id, name, theme_color, template_id, custom_design, slug')
     .eq('slug', slug)
     .single()
   // 查詢失敗會讓實際存在的民宿對客人顯示成 404，跟「網址打錯」看起來一模一樣。
@@ -59,6 +61,7 @@ export default async function BnbPublicLayout({
 
   if (!profile) notFound()
   const design = resolveDesign(profile)
+  const gaId = await getGa4MeasurementId(profile.user_id as string)
 
   return (
     <div className="bnb-site min-h-screen bg-[var(--bnb-page)] text-[var(--bnb-ink)] flex flex-col"
@@ -67,6 +70,7 @@ export default async function BnbPublicLayout({
       <SiteMotion animation={design.animation} parallax={design.parallax} textReveal={design.textReveal} />
       {/* 只載入這個模板/自訂設計需要的中文標題字型，不讓每種字型都塞進每個網站 */}
       <link rel="stylesheet" href={design.headingFontHref} />
+      <Ga4Tag measurementId={gaId} />
       <BnbPublicNav profile={{ name: profile.name, theme_color: profile.theme_color, template_id: profile.template_id, custom_design: profile.custom_design, slug: profile.slug }} />
       <main className="flex-1">{children}</main>
       <footer className="border-t py-6 text-center text-xs text-gray-300">

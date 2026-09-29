@@ -474,7 +474,7 @@ interface Ga4Input { start_date?: string; end_date?: string }
 export const ga4MetricsTool: AgentToolDef = {
   id: 'get_ga4_metrics',
   description:
-    '讀取官網 GA4 流量（唯讀）：sessions（造訪次數）、totalUsers（使用者數）、newUsers（新使用者數）、screenPageViews（瀏覽量），含期間合計與每日明細。' +
+    '讀取官網 GA4 流量（唯讀）：sessions（造訪次數）、totalUsers（使用者數）、newUsers（新使用者數）、screenPageViews（瀏覽量），含期間合計、每日明細與依網站網域（byHost：外部官網／本平台民宿官網）分開的數字。' +
     '瀏覽率／網站流量類 KPI 以此為數據來源。日期可用 YYYY-MM-DD、today、yesterday、NdaysAgo，預設近 28 天。',
   inputSchema: {
     type: 'object',

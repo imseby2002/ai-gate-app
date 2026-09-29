@@ -2,6 +2,8 @@ import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { resolveJoinKey } from '@/lib/marketing/members'
+import { getGa4MeasurementId } from '@/lib/marketing/ga4'
+import Ga4Tag from '@/components/analytics/Ga4Tag'
 import JoinForm from './JoinForm'
 
 export async function generateMetadata({ params }: { params: Promise<{ key: string }> }): Promise<Metadata> {
@@ -20,6 +22,12 @@ export default async function JoinPage({ params, searchParams }: {
   const source = first(sp.utm_source) || first(sp.ref) || first(sp.src)
   const decoded = decodeURIComponent(key)
   const target = await resolveJoinKey(createAdminClient(), decoded)
-  if (!target) notFound()
-  return <JoinForm joinKey={decoded} name={target.name} source={source} />
+  if (!target) return notFound()
+  const gaId = await getGa4MeasurementId(target.ownerId)
+  return (
+    <>
+      <Ga4Tag measurementId={gaId} />
+      <JoinForm joinKey={decoded} name={target.name} source={source} />
+    </>
+  )
 }
