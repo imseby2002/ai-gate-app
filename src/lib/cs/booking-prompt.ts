@@ -38,7 +38,7 @@ export function buildStepLabels(dataHint?: string): Record<string, string> {
   }
 }
 
-export function buildBookingSystemPrompt(_defaultPaymentInfo: string, flows: BookingFlowDef[], mode: 'manual' | 'ai' = 'manual'): string {
+export function buildBookingSystemPrompt(_defaultPaymentInfo: string, flows: BookingFlowDef[], mode: 'manual' | 'ai' | 'none' = 'none'): string {
   // Payment info is intentionally NOT embedded here — it is injected only via
   // detectBookingCompletion() / bookingCompletionInstruction after server-side
   // step completion is confirmed, so the AI cannot reveal account details early.

@@ -951,7 +951,7 @@ async function replyToCustomer(
 
   // 客人確認訂房清單 → 依訂房系統設定的客服訂房模式寫入訂單（manual：待確認申請；ai：正式訂單待付款）
   let bookingCommitSection = ''
-  if (knowledge.bookingFlowEnabled && isOrderConfirmReply(history, text) && process.env.GOOGLE_AI_API_KEY) {
+  if (knowledge.bookingFlowEnabled && knowledge.csBookingMode !== 'none' && isOrderConfirmReply(history, text) && process.env.GOOGLE_AI_API_KEY) {
     try {
       const google = createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_AI_API_KEY })
       bookingCommitSection = await commitCsRoomBooking(
