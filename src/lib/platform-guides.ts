@@ -282,19 +282,22 @@ export const MARKETING_GUIDES: Record<string, PlatformGuide> = {
       {
         title: '取得 Access Token、Refresh Token、App ID、Secret Key、OA ID',
         steps: [
-          '開發者後台「Công cụ（工具）」→「API Explorer」，類型選「OA Access Token」，選你的應用程式與 OA →「Lấy Access Token（取得）」，結果會同時顯示 Access Token 與 Refresh Token，兩個都複製。',
-          '開發者後台點你的應用程式 →「Cài đặt（設定）」頁，複製「ID ứng dụng（App ID）」與「Khóa bí mật của ứng dụng（Secret Key）」。',
+          '開發者後台「Công cụ（工具）」→「API Explorer」（https://developers.zalo.me/tools/explorer/ ），類型選「OA Access Token」，選你的應用程式與 OA →「Lấy Access Token（取得）」，結果會同時顯示 Access Token 與 Refresh Token，兩個都複製。',
+          '開發者後台 https://developers.zalo.me/apps 點你的應用程式 →「Cài đặt（設定）」頁，複製 App ID（ID ứng dụng）與 Secret Key（Khóa bí mật của ứng dụng）。',
           'OA ID：OA 管理後台 https://oa.zalo.me/ →「Thông tin OA（OA 資訊）」頁面上的 ID。',
         ],
       },
-      { title: '填入本系統', steps: ['OA Access Token、OA ID、App ID、Secret Key、Refresh Token 全部貼上，按「儲存」。系統每小時檢查，到期前自動換新權杖，卡片上會顯示目前權杖到期時間。'] },
+      { title: '填入本系統', steps: ['OA Access Token、OA ID、App ID、Secret Key、Refresh Token 全部貼上，按「儲存」。系統每 30 分鐘檢查，到期前自動換新權杖，卡片上會顯示目前權杖到期時間。'] },
     ],
     warnings: [
-      'Access Token 約 25 小時到期，由系統自動更新；Refresh Token 約 3 個月有效，每次更新都會換一組新的。',
+      'Access Token 有效期依 Zalo 回傳（官方文件寫 25 小時，也有 1 小時的說法），系統依實際到期時間在到期前自動更新。',
+      'Refresh Token 只能用一次、每次更新都會換新一組；有效期官方寫 3 個月，Zalo 社群有回報被縮短的情況。長時間未更新或被撤銷時需重新授權。',
       '卡片出現「上次自動更新失敗」時，請重新到 API Explorer 取得並貼上 Refresh Token。',
     ],
     links: [
       { label: 'OA 授權與 Access Token', url: 'https://developers.zalo.me/docs/official-account/bat-dau/xac-thuc-va-uy-quyen-cho-ung-dung-new' },
+      { label: '用 API Explorer 取得 OA Access Token', url: 'https://developers.zalo.me/docs/api/official-account-api/xac-thuc-va-uy-quyen/cach-2-xac-thuc-voi-cong-cu-api-explorer/phuong-thuc-lay-oa-access-token-su-dung-cong-cu-api-explorer-post-5004' },
+      { label: '取得 App Secret Key', url: 'https://developers.zalo.me/docs/official-account/phu-luc/huong-dan-lay-khoa-bi-mat-cua-ung-dung' },
       { label: '發表文章 API', url: 'https://developers.zalo.me/docs/official-account/article' },
     ],
   },
@@ -368,15 +371,20 @@ export const MARKETING_GUIDES: Record<string, PlatformGuide> = {
         title: '取得 Access Token 與 Refresh Token',
         steps: [
           'TikTok 的權杖只能透過 Login Kit 的 OAuth 授權流程取得（授權後以 code 換取 token），回傳結果同時包含 access_token 與 refresh_token；沒有像 Meta 那樣的網頁工具可直接產生，這一步需要工程協助。',
-          'Access Token、Client Key、Client Secret、Refresh Token 全部貼上，按「儲存」。系統每小時檢查，到期前自動換新權杖。',
+          'Access Token、Client Key、Client Secret、Refresh Token 全部貼上，按「儲存」。系統每 30 分鐘檢查，到期前自動換新權杖。',
         ],
       },
     ],
     warnings: [
       'Access Token 約 24 小時到期，由系統用 Refresh Token 自動更新；Refresh Token 約 365 天有效，到期前需重新授權。',
-      '應用程式通過 TikTok 審核前，透過 API 發佈的影片只能設為「僅自己可見」。',
+      '應用程式通過 TikTok 審核（audit）前：發文的 TikTok 帳號必須設為「私人帳號」、影片只能「僅自己可見」、每 24 小時最多 5 位使用者可透過此 App 發文；審核通過後才能公開。',
+      '授權時使用者必須同意 video.publish 權限，否則無法用 Direct Post 發文。',
     ],
-    links: [{ label: 'Content Posting API 入門', url: 'https://developers.tiktok.com/doc/content-posting-api-get-started' }],
+    links: [
+      { label: 'Content Posting API 入門', url: 'https://developers.tiktok.com/docs/en/content-posting-api-get-started' },
+      { label: '權杖取得與更新', url: 'https://developers.tiktok.com/docs/en/oauth-user-access-token-management' },
+      { label: '內容發佈規範（審核限制）', url: 'https://developers.tiktok.com/docs/en/content-sharing-guidelines' },
+    ],
   },
 
   GA4: {
@@ -629,9 +637,9 @@ export const CS_GUIDES: Record<string, PlatformGuide> = {
       {
         title: '取得 Access Token、Refresh Token、App ID、Secret Key',
         steps: [
-          '開發者後台「Công cụ（工具）」→「API Explorer」，類型選「OA Access Token」，選應用程式與 OA →「Lấy Access Token（取得）」，Access Token 與 Refresh Token 都複製。',
-          '開發者後台點你的應用程式 →「Cài đặt（設定）」頁，複製「ID ứng dụng（App ID）」與「Khóa bí mật của ứng dụng（Secret Key）」。',
-          '四個值全部貼到本卡片，按「儲存」。系統每小時檢查，到期前自動換新權杖。',
+          '開發者後台「Công cụ（工具）」→「API Explorer」（https://developers.zalo.me/tools/explorer/ ），類型選「OA Access Token」，選應用程式與 OA →「Lấy Access Token（取得）」，Access Token 與 Refresh Token 都複製。',
+          '開發者後台 https://developers.zalo.me/apps 點你的應用程式 →「Cài đặt（設定）」頁，複製 App ID（ID ứng dụng）與 Secret Key（Khóa bí mật của ứng dụng）。',
+          '四個值全部貼到本卡片，按「儲存」。系統每 30 分鐘檢查，到期前自動換新權杖。',
         ],
       },
       {
@@ -643,11 +651,14 @@ export const CS_GUIDES: Record<string, PlatformGuide> = {
       },
     ],
     warnings: [
-      'Access Token 約 25 小時到期，由系統自動更新；Refresh Token 約 3 個月有效，每次更新都會換一組新的。',
+      'Access Token 有效期依 Zalo 回傳（官方文件寫 25 小時，也有 1 小時的說法），系統依實際到期時間在到期前自動更新。',
+      'Refresh Token 只能用一次、每次更新都會換新一組；有效期官方寫 3 個月，Zalo 社群有回報被縮短的情況。長時間未更新或被撤銷時需重新授權。',
       '卡片出現「上次自動更新失敗」時，請重新到 API Explorer 取得並貼上 Refresh Token。',
     ],
     links: [
       { label: 'OA 授權與 Access Token', url: 'https://developers.zalo.me/docs/official-account/bat-dau/xac-thuc-va-uy-quyen-cho-ung-dung-new' },
+      { label: '用 API Explorer 取得 OA Access Token', url: 'https://developers.zalo.me/docs/api/official-account-api/xac-thuc-va-uy-quyen/cach-2-xac-thuc-voi-cong-cu-api-explorer/phuong-thuc-lay-oa-access-token-su-dung-cong-cu-api-explorer-post-5004' },
+      { label: '取得 App Secret Key', url: 'https://developers.zalo.me/docs/official-account/phu-luc/huong-dan-lay-khoa-bi-mat-cua-ung-dung' },
       { label: 'Zalo OA 文件', url: 'https://developers.zalo.me/docs/official-account' },
     ],
   },
