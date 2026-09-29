@@ -6,6 +6,8 @@ import { useTranslations } from 'next-intl'
 import {
   ArrowLeft, Save, Loader2, Wifi, WifiOff, Copy, Check, ExternalLink, Lock, LifeBuoy, Send, Sparkles, ChevronRight,
 } from 'lucide-react'
+import PlatformGuidePanel from '@/components/PlatformGuidePanel'
+import { CS_GUIDES } from '@/lib/platform-guides'
 
 type Field = { key: string; label: string; placeholder: string; secret: boolean }
 type Platform = {
@@ -334,6 +336,8 @@ export function CsChannels({ ownerId, canSettings }: { ownerId: string; canSetti
                       {t('officialDocs')} <ExternalLink className="h-3 w-3" />
                     </a>
                   </p>
+
+                  <PlatformGuidePanel guide={CS_GUIDES[p.id]} />
 
                   {/* Webhook URL */}
                   {p.showWebhook && (

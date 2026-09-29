@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Save, Loader2, Wifi, WifiOff, ExternalLink, Lock } from 'lucide-react'
+import PlatformGuidePanel from '@/components/PlatformGuidePanel'
+import { MARKETING_GUIDES } from '@/lib/platform-guides'
 
 type Field = { key: string; label: string; placeholder: string; secret: boolean }
 type Platform = {
@@ -106,7 +108,7 @@ const PLATFORMS: Platform[] = [
   {
     id: 'GA4', name: 'Google Analytics 4（官網流量，唯讀）', color: '#F9AB00',
     note: '讓 AI Agent 讀取官網 sessions／使用者數。步驟：① Google Cloud Console 啟用「Google Analytics Data API」② 建立服務帳戶並下載 JSON 金鑰 ③ GA4「管理 → 資源存取管理」把服務帳戶 email 加為「檢視者」④ 資源 ID 在「管理 → 資源詳細資料」。填了「評估 ID」，本平台的民宿官網與加入會員頁會自動裝上追蹤碼；自己的外部網站請貼同一個評估 ID，並在 GA4 資料串流「設定網域」加入兩個網域做跨網域追蹤。不佔方案平台數。',
-    docUrl: 'https://developers.google.com/analytics/devguides/reporting/data/v1/quickstart-client-libraries',
+    docUrl: 'https://support.google.com/analytics/answer/9304153?hl=zh-Hant',
     fields: [
       { key: 'property_id', label: 'GA4 資源 ID', placeholder: '123456789', secret: false },
       { key: 'measurement_id', label: '評估 ID（本平台民宿官網自動裝追蹤碼用）', placeholder: 'G-XXXXXXXXXX', secret: false },
@@ -254,6 +256,8 @@ export function MarketingPlatforms({ canSettings }: { canSettings: boolean }) {
                       官方文件 <ExternalLink className="h-3 w-3" />
                     </a>
                   </p>
+
+                  <PlatformGuidePanel guide={MARKETING_GUIDES[p.id]} />
 
                   <div className="space-y-3">
                     {p.fields.map(f => {
