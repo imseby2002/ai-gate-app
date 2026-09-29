@@ -155,7 +155,7 @@ export const MARKETING_GUIDES: Record<string, PlatformGuide> = {
       },
       { title: '填入本系統', steps: ['Access Token、Threads User ID 各自貼上，按「儲存」。'] },
     ],
-    warnings: ['Threads 長期權杖約 60 天到期，到期前需重新產生並貼上。'],
+    warnings: ['Threads 長期權杖約 60 天到期，系統每 7 天自動換新一次；只要權杖沒有過期、沒被撤銷，就不用再手動處理。'],
     links: [{ label: 'Threads API 入門', url: 'https://developers.facebook.com/docs/threads/get-started' }],
   },
 
@@ -187,8 +187,15 @@ export const MARKETING_GUIDES: Record<string, PlatformGuide> = {
         ],
       },
       { title: '填入本系統', steps: ['Access Token、Author URN 各自貼上，按「儲存」。'] },
+      {
+        title: '（選填）自動更新權杖',
+        steps: [
+          'LinkedIn 只對部分應用程式開放 Refresh Token（Programmatic refresh tokens）；有開放時，產生權杖的結果會多一個 refresh_token。',
+          'App 的「Auth」分頁複製 Client ID 與 Primary Client Secret，連同 Refresh Token 貼到本卡片 →「儲存」，系統會在到期前 7 天自動換新。',
+        ],
+      },
     ],
-    warnings: ['LinkedIn 權杖約 60 天到期，到期需重新產生。', '發到公司頁必須先通過 Community Management API 審核。'],
+    warnings: ['沒有 Refresh Token 時，LinkedIn 權杖約 60 天到期，需重新產生並貼上。', '發到公司頁必須先通過 Community Management API 審核。'],
     links: [
       { label: 'Share on LinkedIn', url: 'https://learn.microsoft.com/en-us/linkedin/consumer/integrations/self-serve/share-on-linkedin' },
       { label: 'Token Generator', url: 'https://www.linkedin.com/developers/tools/oauth/token-generator' },
@@ -273,15 +280,19 @@ export const MARKETING_GUIDES: Record<string, PlatformGuide> = {
         ],
       },
       {
-        title: '取得 OA Access Token 與 OA ID',
+        title: '取得 Access Token、Refresh Token、App ID、Secret Key、OA ID',
         steps: [
-          '開發者後台「Công cụ（工具）」→「API Explorer」，類型選「OA Access Token」，選你的應用程式與 OA →「Lấy Access Token（取得）」→ 複製。',
+          '開發者後台「Công cụ（工具）」→「API Explorer」，類型選「OA Access Token」，選你的應用程式與 OA →「Lấy Access Token（取得）」，結果會同時顯示 Access Token 與 Refresh Token，兩個都複製。',
+          '開發者後台點你的應用程式 →「Cài đặt（設定）」頁，複製「ID ứng dụng（App ID）」與「Khóa bí mật của ứng dụng（Secret Key）」。',
           'OA ID：OA 管理後台 https://oa.zalo.me/ →「Thông tin OA（OA 資訊）」頁面上的 ID。',
         ],
       },
-      { title: '填入本系統', steps: ['OA Access Token、OA ID 各自貼上，按「儲存」。'] },
+      { title: '填入本系統', steps: ['OA Access Token、OA ID、App ID、Secret Key、Refresh Token 全部貼上，按「儲存」。系統每小時檢查，到期前自動換新權杖，卡片上會顯示目前權杖到期時間。'] },
     ],
-    warnings: ['Zalo OA Access Token 有效期很短（約 1 天），系統目前不會自動更新，過期後發文會失敗，需重新取得並貼上。'],
+    warnings: [
+      'Access Token 約 25 小時到期，由系統自動更新；Refresh Token 約 3 個月有效，每次更新都會換一組新的。',
+      '卡片出現「上次自動更新失敗」時，請重新到 API Explorer 取得並貼上 Refresh Token。',
+    ],
     links: [
       { label: 'OA 授權與 Access Token', url: 'https://developers.zalo.me/docs/official-account/bat-dau/xac-thuc-va-uy-quyen-cho-ung-dung-new' },
       { label: '發表文章 API', url: 'https://developers.zalo.me/docs/official-account/article' },
@@ -350,15 +361,19 @@ export const MARKETING_GUIDES: Record<string, PlatformGuide> = {
         ],
       },
       {
-        title: '取得 Access Token',
+        title: '取得 Client Key／Client Secret',
+        steps: ['「Manage apps」→ 點你的 App → 頁面上方「Client key」與「Client secret」→ 複製。'],
+      },
+      {
+        title: '取得 Access Token 與 Refresh Token',
         steps: [
-          'TikTok 的 Access Token 只能透過 Login Kit 的 OAuth 授權流程取得（授權後以 code 換取 token），沒有像 Meta 那樣的網頁工具可直接產生。',
-          '這一步需要工程協助；取得後把 access_token 貼到本系統並按「儲存」。',
+          'TikTok 的權杖只能透過 Login Kit 的 OAuth 授權流程取得（授權後以 code 換取 token），回傳結果同時包含 access_token 與 refresh_token；沒有像 Meta 那樣的網頁工具可直接產生，這一步需要工程協助。',
+          'Access Token、Client Key、Client Secret、Refresh Token 全部貼上，按「儲存」。系統每小時檢查，到期前自動換新權杖。',
         ],
       },
     ],
     warnings: [
-      'TikTok Access Token 約 24 小時到期，系統目前不會自動更新，過期後上傳會失敗。',
+      'Access Token 約 24 小時到期，由系統用 Refresh Token 自動更新；Refresh Token 約 365 天有效，到期前需重新授權。',
       '應用程式通過 TikTok 審核前，透過 API 發佈的影片只能設為「僅自己可見」。',
     ],
     links: [{ label: 'Content Posting API 入門', url: 'https://developers.tiktok.com/doc/content-posting-api-get-started' }],
@@ -612,9 +627,11 @@ export const CS_GUIDES: Record<string, PlatformGuide> = {
         ],
       },
       {
-        title: '取得 OA Access Token',
+        title: '取得 Access Token、Refresh Token、App ID、Secret Key',
         steps: [
-          '開發者後台「Công cụ（工具）」→「API Explorer」，類型選「OA Access Token」，選應用程式與 OA →「Lấy Access Token（取得）」→ 複製，貼到本卡片並按「儲存」。',
+          '開發者後台「Công cụ（工具）」→「API Explorer」，類型選「OA Access Token」，選應用程式與 OA →「Lấy Access Token（取得）」，Access Token 與 Refresh Token 都複製。',
+          '開發者後台點你的應用程式 →「Cài đặt（設定）」頁，複製「ID ứng dụng（App ID）」與「Khóa bí mật của ứng dụng（Secret Key）」。',
+          '四個值全部貼到本卡片，按「儲存」。系統每小時檢查，到期前自動換新權杖。',
         ],
       },
       {
@@ -625,7 +642,10 @@ export const CS_GUIDES: Record<string, PlatformGuide> = {
         ],
       },
     ],
-    warnings: ['Zalo OA Access Token 有效期很短（約 1 天），系統目前不會自動更新，過期後會無法回覆，需重新取得並貼上。'],
+    warnings: [
+      'Access Token 約 25 小時到期，由系統自動更新；Refresh Token 約 3 個月有效，每次更新都會換一組新的。',
+      '卡片出現「上次自動更新失敗」時，請重新到 API Explorer 取得並貼上 Refresh Token。',
+    ],
     links: [
       { label: 'OA 授權與 Access Token', url: 'https://developers.zalo.me/docs/official-account/bat-dau/xac-thuc-va-uy-quyen-cho-ung-dung-new' },
       { label: 'Zalo OA 文件', url: 'https://developers.zalo.me/docs/official-account' },

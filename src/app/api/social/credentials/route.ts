@@ -28,6 +28,13 @@ const NON_SECRET_FIELDS = new Set([
   'client_id',
   'property_id',
   'measurement_id',
+  // 權杖自動更新：應用程式 ID 類（非機密）與更新狀態
+  'app_id',
+  'zalo_app_id',
+  'client_key',
+  'token_expires_at',
+  'token_refreshed_at',
+  'last_refresh_error',
 ])
 
 export async function GET() {
