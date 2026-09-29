@@ -558,7 +558,8 @@ export default function FinancePage() {
   const todayExpense = useMemo(() => records.filter(r => r.type === 'expense' && r.date === todayStr).reduce((s, r) => s + r.amount, 0), [records, todayStr])
 
   // 最新匯入紀錄之錯誤
-  const latestLog = importLogs[0]
+  // 最新批次若已撤回（含一鍵清空），不再顯示其錯誤
+  const latestLog = importLogs[0]?.status === 'reverted' ? undefined : importLogs[0]
   const allErrors: MdbErrorInfo[] = latestLog?.errors || []
   const totalErrors = allErrors.length
 
