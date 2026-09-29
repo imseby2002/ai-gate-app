@@ -48,6 +48,7 @@ function d(t: Tuple, fx: Fx = {}): PresetDesign {
     headingFontIndex, headingWeight, headingLetterSpacing, headingUppercase, accent, ink, muted,
     pageBg, sectionBg, cardBg, cardBorder, cardRadius, btnRadius, shadow, heroLayout, sectionPaddingScale, animation,
     parallax: fx.parallax ?? false, textReveal: fx.textReveal ?? false,
+    contentAlign: heroLayout === 'centered' ? 'center' : 'left',
   }
 }
 

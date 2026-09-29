@@ -44,7 +44,8 @@ ${FONT_LIST}
     "pageBg": "#RRGGBB"（選填，整頁底色，預設白色；深色風格用深色底，此時 ink/muted 要用淺色、sectionBg/cardBg 用深色層次）,
     "animation": "none"|"fade"|"rise"|"zoom"|"slide"|"blur"|"spring"（選填，區塊捲動進場動畫：淡入／上浮／放大／側滑／模糊漸清／彈性上浮，預設 none）,
     "parallax": true|false（選填，首頁與關於頁大圖跟著捲動做視差，適合有好照片的網站）,
-    "textReveal": true|false（選填，大標題逐字浮現，適合動感、年輕、科技調性；沉穩精品風格少用）
+    "textReveal": true|false（選填，大標題逐字浮現，適合動感、年輕、科技調性；沉穩精品風格少用）,
+    "contentAlign": "left"|"center"（選填，首頁「關於我們」等內容區塊的文字對齊；沒給時 Hero 為 centered 就置中，否則靠左）
   }
 
   設計原則（決定色彩與留白時務必遵守）：
@@ -83,7 +84,9 @@ ${uiStylesPromptList()}
 4. 設計和文案要整體一致——模板/自訂設計、顏色、語氣要搭配
 5. 繁體中文，語氣溫暖有質感
 6. 使用者可能附上官網截圖或參考圖，那只是讓你看目前畫面或想要的風格；你無法把圖片放上官網，也不要假裝已經放上。
-   若問題需要照片才能解決（例如某區塊因沒有照片而空白），請說明並請使用者到「照片管理」上傳民宿照片`
+   若問題需要照片才能解決，請說明並請使用者到「照片管理」上傳民宿照片
+7. 版面只能透過上面列出的欄位調整（heroLayout、contentAlign、留白、圓角等）。使用者要求的版面改動若沒有對應欄位，
+   要老實說目前做不到，不要回覆「已修正」或假裝改好了`
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
