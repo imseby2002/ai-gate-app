@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Save, Loader2, Wifi, WifiOff, ExternalLink, Lock } from 'lucide-react'
 import PlatformGuidePanel from '@/components/PlatformGuidePanel'
+import TokenRefreshStatus from '@/components/TokenRefreshStatus'
 import { MARKETING_GUIDES } from '@/lib/platform-guides'
 
 type Field = { key: string; label: string; placeholder: string; secret: boolean }
@@ -57,6 +58,9 @@ const PLATFORMS: Platform[] = [
     fields: [
       { key: 'access_token', label: 'Access Token', placeholder: '...', secret: true },
       { key: 'author_urn', label: 'Author URN', placeholder: 'urn:li:organization:xxxx', secret: false },
+      { key: 'client_id', label: 'Client ID（選填，自動更新權杖用）', placeholder: '...', secret: false },
+      { key: 'client_secret', label: 'Client Secret（選填，自動更新權杖用）', placeholder: '...', secret: true },
+      { key: 'refresh_token', label: 'Refresh Token（選填，LinkedIn 有開放才有）', placeholder: '...', secret: true },
     ],
   },
   {
@@ -85,6 +89,9 @@ const PLATFORMS: Platform[] = [
     fields: [
       { key: 'access_token', label: 'OA Access Token', placeholder: '...', secret: true },
       { key: 'oa_id', label: 'OA ID', placeholder: '...', secret: false },
+      { key: 'app_id', label: 'App ID（自動更新權杖用）', placeholder: '...', secret: false },
+      { key: 'secret_key', label: 'Secret Key（自動更新權杖用）', placeholder: '...', secret: true },
+      { key: 'refresh_token', label: 'Refresh Token（自動更新權杖用）', placeholder: '...', secret: true },
     ],
   },
   {
@@ -103,6 +110,9 @@ const PLATFORMS: Platform[] = [
     docUrl: 'https://developers.tiktok.com/doc/content-posting-api-get-started/',
     fields: [
       { key: 'access_token', label: 'Access Token', placeholder: '...', secret: true },
+      { key: 'client_key', label: 'Client Key（自動更新權杖用）', placeholder: '...', secret: false },
+      { key: 'client_secret', label: 'Client Secret（自動更新權杖用）', placeholder: '...', secret: true },
+      { key: 'refresh_token', label: 'Refresh Token（自動更新權杖用）', placeholder: '...', secret: true },
     ],
   },
   {
@@ -258,6 +268,7 @@ export function MarketingPlatforms({ canSettings }: { canSettings: boolean }) {
                   </p>
 
                   <PlatformGuidePanel guide={MARKETING_GUIDES[p.id]} />
+                  <TokenRefreshStatus values={st?.values} />
 
                   <div className="space-y-3">
                     {p.fields.map(f => {
