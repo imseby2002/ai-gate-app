@@ -438,6 +438,9 @@
       "other": "Khác"
     },
     "calendar": {
+      "closeRoom": "Đóng",
+      "openRoom": "Mở",
+      "closed": "Đã đóng",
       "allProperties": "Tất cả nhà nghỉ",
       "full": "Hết",
       "emptyLabel": "Trống",

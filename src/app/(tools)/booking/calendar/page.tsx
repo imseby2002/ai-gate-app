@@ -88,6 +88,9 @@ export default function CalendarPage() {
   const [orderTotal, setOrderTotal] = useState('')
   // Mobile: toggle between calendar view and detail view
   const [mobileView, setMobileView] = useState<'calendar' | 'detail'>('calendar')
+  // 房東手動關房（blocked_dates, reason=owner_block），key = `${property_id}|${date}`
+  const [blocked, setBlocked] = useState<Set<string>>(new Set())
+  const [togglingBlock, setTogglingBlock] = useState<string | null>(null)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -96,11 +99,13 @@ export default function CalendarPage() {
     const to = `${year}-${String(month + 1).padStart(2, '0')}-${lastDay}`
     const params = new URLSearchParams({ from, to, limit: '500' })
     if (filterProp) params.set('property_id', filterProp)
-    const [bk, pr] = await Promise.all([
+    const [bk, pr, bl] = await Promise.all([
       fetch(`/api/booking/bookings?${params}`).then(r => r.json()),
       fetch('/api/booking/properties').then(r => r.json()),
+      fetch(`/api/booking/blocked?from=${from}&to=${to}`).then(r => r.json()),
     ])
     setBookings(bk.bookings ?? [])
+    setBlocked(new Set((bl.blocked ?? []).map((b: { property_id: string; date: string }) => `${b.property_id}|${b.date}`)))
     setProperties((pr.properties ?? []).filter((p: Property) => p.room_count > 0))
     setLoading(false)
   }, [year, month, filterProp])
@@ -129,8 +134,32 @@ export default function CalendarPage() {
     }
   }
 
+  function isClosed(propertyId: string, ds: string) {
+    return blocked.has(`${propertyId}|${ds}`)
+  }
+
   function availableCount(ds: string) {
-    return Math.max(0, totalRooms - (dateBookings[ds] ?? []).length)
+    const bks = dateBookings[ds] ?? []
+    return visibleProps.reduce((s, p) =>
+      isClosed(p.id, ds) ? s : s + Math.max(0, p.room_count - bks.filter(b => b.property_id === p.id).length), 0)
+  }
+
+  async function toggleClosed(propertyId: string, ds: string) {
+    const key = `${propertyId}|${ds}`
+    const closing = !blocked.has(key)
+    setTogglingBlock(key)
+    try {
+      const res = await fetch('/api/booking/blocked', {
+        method: closing ? 'POST' : 'DELETE', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ property_id: propertyId, dates: [ds] }),
+      })
+      if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.error ?? '儲存失敗'); return }
+      setBlocked(prev => {
+        const next = new Set(prev)
+        if (closing) next.add(key); else next.delete(key)
+        return next
+      })
+    } finally { setTogglingBlock(null) }
   }
 
   function selectDate(ds: string) {
@@ -358,20 +387,34 @@ export default function CalendarPage() {
             <tbody className="divide-y">
               {visibleProps.map(p => {
                 const bksThis = selectedBookings.filter(b => b.property_id === p.id)
-                const av = Math.max(0, p.room_count - bksThis.length)
+                const closed = isClosed(p.id, selected)
+                const av = closed ? 0 : Math.max(0, p.room_count - bksThis.length)
+                const toggling = togglingBlock === `${p.id}|${selected}`
                 return (
-                  <tr key={p.id} className={av === 0 ? 'opacity-40' : 'hover:bg-gray-50'}>
-                    <td className="px-4 py-3 font-medium text-gray-900">{p.name}</td>
+                  <tr key={p.id} className={closed ? 'bg-gray-50' : av === 0 ? 'opacity-40' : 'hover:bg-gray-50'}>
+                    <td className="px-4 py-3 font-medium text-gray-900">
+                      {p.name}
+                      {closed && <span className="ml-2 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-gray-200 text-gray-600">{t('calendar.closed')}</span>}
+                    </td>
                     <td className="px-3 py-3 text-center text-gray-700 text-xs">
                       {p.base_price ? Number(p.base_price).toLocaleString() : '—'}
                     </td>
-                    <td className="px-3 py-3 text-center font-bold text-emerald-600 text-base">{av}</td>
+                    <td className={`px-3 py-3 text-center font-bold text-base ${closed ? 'text-gray-400' : 'text-emerald-600'}`}>{av}</td>
                     <td className="px-3 py-3 text-center text-gray-500 hidden sm:table-cell">{bksThis.length}</td>
                     <td className="px-3 py-3 text-center">
-                      <button disabled={av === 0} onClick={() => openQuick(p, selected)}
-                        className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-500 text-white hover:bg-sky-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
-                        {t('calendar.add')}
-                      </button>
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button disabled={av === 0} onClick={() => openQuick(p, selected)}
+                          className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-500 text-white hover:bg-sky-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+                          {t('calendar.add')}
+                        </button>
+                        {(closed || bksThis.length < p.room_count) && (
+                          <button disabled={toggling} onClick={() => toggleClosed(p.id, selected)}
+                            className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-colors disabled:opacity-40
+                              ${closed ? 'border-emerald-300 text-emerald-600 hover:bg-emerald-50' : 'border-gray-300 text-gray-500 hover:bg-gray-100'}`}>
+                            {closed ? t('calendar.openRoom') : t('calendar.closeRoom')}
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 )
