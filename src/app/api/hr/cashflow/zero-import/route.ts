@@ -57,6 +57,7 @@ async function ensureSubjects(admin: Admin, ownerId: string, bookName: string, s
     style: s.style || '常態性',
     zero_view: s.zero_view !== false,
     is_account: s.is_account || false,
+    source: 'zero_import',
     updated_at: new Date().toISOString(),
   }))
 
