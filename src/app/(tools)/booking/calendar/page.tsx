@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
-import { ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, X, Trash2 } from 'lucide-react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 
@@ -181,6 +181,20 @@ export default function CalendarPage() {
     const g = bk.guest_name || PLATFORM_NAMES[bk.platform] || bk.platform
     if (showAllProps && bk.properties?.name) return `[${bk.properties.name.slice(0, 4)}] ${g}`
     return g
+  }
+
+  // Email 同步抓不到旅客資料的佔位訂單（guest_name = '(待補充)'），在日曆旁直接刪除
+  const isPlaceholder = (bk: Booking) => bk.guest_name === '(待補充)'
+  async function removeBooking(id: string) {
+    if (!window.confirm(t('bookings.toast.deleteConfirm'))) return
+    try {
+      const res = await fetch('/api/booking/bookings', {
+        method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      })
+      if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.error ?? t('bookings.toast.deleteFailed')); return }
+      setBookings(prev => prev.filter(b => b.id !== id))
+    } catch { alert(t('bookings.toast.networkError')) }
   }
 
   function openQuick(p: Property, ds: string) {
@@ -446,9 +460,17 @@ export default function CalendarPage() {
                       <Link href={`/booking/bookings/${bk.id}`} className="font-medium text-indigo-600 truncate">
                         {bk.guest_name || '—'}
                       </Link>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0 ${st?.color ?? 'bg-gray-100 text-gray-600'}`}>
-                        {st?.label ?? bk.status}
-                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${st?.color ?? 'bg-gray-100 text-gray-600'}`}>
+                          {st?.label ?? bk.status}
+                        </span>
+                        {isPlaceholder(bk) && (
+                          <button onClick={() => removeBooking(bk.id)} title={t('bookings.delete')}
+                            className="p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <div className="text-xs text-gray-500">
                       {bk.properties?.name ?? '—'} · {bk.guest_phone || '—'}
@@ -490,9 +512,17 @@ export default function CalendarPage() {
                       <td className="px-3 py-3 text-gray-500 text-xs">{bk.guest_phone || '—'}</td>
                       <td className="px-3 py-3 text-gray-500 text-xs">{PLATFORM_NAMES[bk.platform] ?? bk.platform}</td>
                       <td className="px-3 py-3">
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${st?.color ?? 'bg-gray-100 text-gray-600'}`}>
-                          {st?.label ?? bk.status}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${st?.color ?? 'bg-gray-100 text-gray-600'}`}>
+                            {st?.label ?? bk.status}
+                          </span>
+                          {isPlaceholder(bk) && (
+                            <button onClick={() => removeBooking(bk.id)} title={t('bookings.delete')}
+                              className="p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   )
