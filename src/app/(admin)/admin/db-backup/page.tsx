@@ -32,6 +32,9 @@ function DbBackupContent() {
 
   useEffect(() => { load() }, [load])
 
+  const [callbackUri, setCallbackUri] = useState('')
+  useEffect(() => { setCallbackUri(`${window.location.origin}/api/admin/db-backup/callback`) }, [])
+
   async function runNow() {
     setRunning(true)
     setMsg('')
@@ -103,6 +106,7 @@ function DbBackupContent() {
       <div className="bg-violet-50 dark:bg-violet-950/30 border border-violet-200 dark:border-violet-900 rounded-xl p-4 text-xs text-violet-800 dark:text-violet-300 space-y-1">
         <p>備份檔存於 Google Drive「AI-GATE 資料庫備份」資料夾，檔名 aigate-db-日期時間.json.gz。</p>
         <p>每天台灣時間 03:00 自動執行；超過 30 天的舊檔自動刪除。</p>
+        <p>Google Cloud Console 需登記的重新導向 URI：<code className="break-all">{callbackUri}</code></p>
       </div>
     </div>
   )
