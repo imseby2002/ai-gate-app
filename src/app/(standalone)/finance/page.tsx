@@ -468,24 +468,25 @@ export default function FinancePage() {
       map[`asset|銀行存款|${a.name}`] = a.balance ?? 0
     }
 
+    // 手動新增的帳目可能未帶 category_parent，依科目主檔補上父科目
+    const parentOf = new Map<string, string>()
+    for (const s of subjects) {
+      if (s.class === 'income' || s.class === 'expense') parentOf.set(`${s.class}|${s.name}`, s.parent_name || '')
+    }
+
     // 收支當月金額（來自當月 records）
     for (const r of records) {
       const amt = Number(r.amount) || 0
-      if (r.type === 'income') {
-        if (r.category) {
-          map[`income|${r.category_parent}|${r.category}`] = (map[`income|${r.category_parent}|${r.category}`] || 0) + amt
-          map[r.category] = (map[r.category] || 0) + amt
-        }
-      } else if (r.type === 'expense') {
-        if (r.category) {
-          map[`expense|${r.category_parent}|${r.category}`] = (map[`expense|${r.category_parent}|${r.category}`] || 0) + amt
-          map[r.category] = (map[r.category] || 0) + amt
-        }
+      if ((r.type === 'income' || r.type === 'expense') && r.category) {
+        const parent = r.category_parent || parentOf.get(`${r.type}|${r.category}`) || ''
+        const key = `${r.type}|${parent}|${r.category}`
+        map[key] = (map[key] || 0) + amt
+        map[r.category] = (map[r.category] || 0) + amt
       }
     }
 
     return map
-  }, [accounts, records])
+  }, [accounts, records, subjects])
 
   // 篩選後交易清單
   const filteredRecords = useMemo(() => {

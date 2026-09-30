@@ -49,10 +49,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '轉帳需指定不同的轉出與轉入帳戶' }, { status: 400 })
   }
 
+  // 未帶父科目時依科目主檔補上，讓左側科目樹能正確彙總
+  let categoryParent: string = body.category_parent ?? ''
+  if (!categoryParent && category && (type === 'income' || type === 'expense')) {
+    const { data: subj } = await supabase
+      .from('fin_subjects')
+      .select('parent_name')
+      .eq('owner_id', user.id)
+      .eq('class', type)
+      .eq('name', category)
+      .limit(1)
+      .maybeSingle()
+    categoryParent = subj?.parent_name ?? ''
+  }
+
   const { data, error } = await supabase
     .from('hr_cashflow')
     .insert({
-      owner_id: user.id, type, category: category ?? '',
+      owner_id: user.id, type, category: category ?? '', category_parent: categoryParent,
       amount: Number(amount), date,
       description: description ?? '', notes: notes ?? '',
       account_id: account_id || null,
