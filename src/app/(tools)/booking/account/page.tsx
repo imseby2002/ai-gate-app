@@ -3,6 +3,7 @@ import { getTranslations } from 'next-intl/server'
 import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { SettingsForm } from '@/components/settings/SettingsForm'
 import { CompanyMembershipSection } from '@/components/settings/CompanyMembershipSection'
+import CsBookingModeCard from './CsBookingModeCard'
 
 // 訂房系統專用的帳號設定：套用訂房側欄，不含聊天側欄與行銷用的平台／品牌素材設定
 export default async function BookingAccountPage() {
@@ -23,6 +24,7 @@ export default async function BookingAccountPage() {
         <h1 className="text-2xl font-bold">{t('title')}</h1>
         <p className="text-muted-foreground text-sm mt-1">{t('subtitle')}</p>
       </div>
+      <CsBookingModeCard />
       <SettingsForm profile={profile} creditBalance={creditBalance ?? 0} variant="basic" />
 
       <div>
