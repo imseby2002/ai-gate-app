@@ -41,9 +41,11 @@ interface Props {
   /** 已啟用的定價規則與國定假日行事曆，用來顯示套用規則後的實際房價 */
   rules?: (CalendarRule & { enabled?: boolean })[]
   calendars?: Record<string, CalendarDay[]>
+  /** 民宿設定的週末晚（JS getDay） */
+  weekendSetting?: number[]
 }
 
-export default function DailyPricingCalendar({ year, month, onPrev, onNext, properties, tab, onTabChange, rules = [], calendars = {} }: Props) {
+export default function DailyPricingCalendar({ year, month, onPrev, onNext, properties, tab, onTabChange, rules = [], calendars = {}, weekendSetting }: Props) {
   const t = useTranslations('Booking')
   const locale = useLocale()
   const DOW_LABELS = [0,1,2,3,4,5,6].map(i => t(`pricing.weekdays.${i}`))
@@ -78,10 +80,9 @@ export default function DailyPricingCalendar({ year, month, onPrev, onNext, prop
     if (!propId || !properties.some(p => p.id === propId)) setPropId(properties[0].id)
   }, [properties, propId])
 
-  // 此房型適用的啟用中規則；週末欄位的粉紅底依使用者設定的週末晚，而非寫死
+  // 此房型適用的啟用中規則；週末欄位的粉紅底依民宿設定的週末晚，而非寫死
   const propRules = rules.filter(r => r.enabled !== false && (r.property_id == null || r.property_id === propId))
-  const weekendRules = propRules.filter(r => r.rule_type === 'weekend')
-  const weekendDowSet = new Set(weekendRules.length ? weekendRules.flatMap(weekendDays) : [5, 6, 0])
+  const weekendDowSet = new Set(weekendDays(null, weekendSetting))
   const holidayNightMap = new Map<string, string>()
   for (const r of propRules.filter(r => r.rule_type === 'holiday')) {
     for (const [d, n] of ruleHolidayNights(r, calendars)) holidayNightMap.set(d, n)
@@ -299,7 +300,7 @@ export default function DailyPricingCalendar({ year, month, onPrev, onNext, prop
                     // 套用週末／假日／季節規則後的實際房價（與報價一致）
                     const basePrice = e.price !== '' ? Number(e.price) : selectedProp?.base_price ?? null
                     const final = selectedProp?.dynamic_pricing_enabled && basePrice != null
-                      ? applyCalendarRules(basePrice, propRules, date, propId, calendars)
+                      ? applyCalendarRules(basePrice, propRules, date, propId, calendars, undefined, weekendSetting)
                       : null
 
                     return (

@@ -5,7 +5,7 @@ import { useTranslations, useLocale } from 'next-intl'
 import { ChevronLeft, ChevronRight, Plus, Trash2, Edit2, X, Zap, CalendarRange } from 'lucide-react'
 import { createPortal } from 'react-dom'
 import DailyPricingCalendar from './DailyPricingCalendar'
-import { applyCalendarRules, HOLIDAY_COUNTRIES, ruleHolidayNights, weekendDays, type CalendarDay } from '@/lib/booking/holidays'
+import { applyCalendarRules, DEFAULT_WEEKEND_DAYS, HOLIDAY_COUNTRIES, ruleHolidayNights, type CalendarDay } from '@/lib/booking/holidays'
 
 // ── Types ────────────────────────────────────────────────────
 type BookingStatus = 'open' | 'closed' | 'admin_only'
@@ -66,10 +66,11 @@ function computeEffectivePrice(
   dynamicEnabled: boolean,
   propertyId: string,
   calendars: Record<string, CalendarDay[]>,
+  weekendSetting: number[],
 ): number | null {
   if (basePrice == null) return null
   if (!dynamicEnabled) return basePrice
-  return applyCalendarRules(basePrice, rules.filter(r => r.enabled), date, propertyId, calendars).price
+  return applyCalendarRules(basePrice, rules.filter(r => r.enabled), date, propertyId, calendars, undefined, weekendSetting).price
 }
 
 // ── Page ─────────────────────────────────────────────────────
@@ -317,6 +318,44 @@ function PricingContent() {
   }, [year, month])
 
   useEffect(() => { fetchData() }, [fetchData])
+
+  // 週末定義（民宿層級設定，所有週末規則與畫面底色共用）
+  const [weekendSetting, setWeekendSetting] = useState<number[]>(DEFAULT_WEEKEND_DAYS)
+  const [weekendSaving, setWeekendSaving] = useState(false)
+  useEffect(() => {
+    fetch('/api/booking/profile').then(r => r.json()).then(d => {
+      if (Array.isArray(d.profile?.weekend_days)) setWeekendSetting(d.profile.weekend_days)
+    }).catch(() => {})
+  }, [])
+  async function toggleWeekendDay(d: number) {
+    const prev = weekendSetting
+    const next = prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d].sort()
+    setWeekendSetting(next)
+    setWeekendSaving(true)
+    try {
+      const res = await fetch('/api/booking/profile', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ weekend_days: next }),
+      })
+      if (!res.ok) { setWeekendSetting(prev); const e = await res.json().catch(() => ({})); alert(e.error ?? '儲存失敗') }
+    } finally { setWeekendSaving(false) }
+  }
+  function WeekendEditor() {
+    return (
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <span className="text-xs font-medium text-gray-600 shrink-0">週末定義（入住當晚）</span>
+        {[1, 2, 3, 4, 5, 6, 0].map(d => {
+          const on = weekendSetting.includes(d)
+          return (
+            <button key={d} type="button" disabled={weekendSaving} onClick={() => toggleWeekendDay(d)}
+              className={`px-2 py-0.5 rounded-md text-xs border disabled:opacity-60 ${on ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+              {t(`roomgrid.day.${d}`)}
+            </button>
+          )
+        })}
+      </div>
+    )
+  }
 
   // 國定假日行事曆（預覽假日規則用）：假日規則用到的國家，抓當年與下一年
   const [calendars, setCalendars] = useState<Record<string, CalendarDay[]>>({})
@@ -578,7 +617,7 @@ function PricingContent() {
           onPrev={prevMonth} onNext={nextMonth}
           properties={properties}
           tab={tab} onTabChange={setTab}
-          rules={rules} calendars={calendars}
+          rules={rules} calendars={calendars} weekendSetting={weekendSetting}
         />
       ) : tab === 'calendar' ? (
         /* ── Tab 1: 房間 × 日期格狀視圖 ── */
@@ -641,7 +680,8 @@ function PricingContent() {
                       const ds = dateStr(day)
                       const dow = new Date(ds + 'T00:00:00').getDay()
                       const isToday = ds === todayStr
-                      const isSun = dow === 0; const isSat = dow === 6
+                      // 週末依民宿設定的週末晚標紅
+                      const isSun = weekendSetting.includes(dow); const isSat = false
                       const colAllSel = visibleProps.length > 0 && visibleProps.every(p => selectedCells.has(`${p.id}:${ds}`))
                       return (
                         <th key={ds} onClick={() => toggleDateColumn(ds)}
@@ -681,7 +721,7 @@ function PricingContent() {
                           const setting = getSetting(ds, p.id)
                           const status = setting.booking_status
                           // 手填價仍會再套週末／假日規則（與實際報價一致）
-                          const displayPrice = computeEffectivePrice(setting.price_override ?? p.base_price, rules, ds, p.dynamic_pricing_enabled, p.id, calendars)
+                          const displayPrice = computeEffectivePrice(setting.price_override ?? p.base_price, rules, ds, p.dynamic_pricing_enabled, p.id, calendars, weekendSetting)
                           const isSelected = selectedCells.has(cellKey)
                           const hasOverride = setting.price_override != null
 
@@ -773,6 +813,7 @@ function PricingContent() {
               <div>
                 <h2 className="font-bold text-gray-900">{t('nav.pricing')}</h2>
                 <p className="text-xs text-gray-400 mt-0.5">{t('pricing.rulesNote')}</p>
+                <div className="mt-2"><WeekendEditor /></div>
               </div>
               <div className="flex items-center gap-2">
                 {rules.some(r => r.rule_type === 'market') && (
@@ -1444,8 +1485,7 @@ function PricingContent() {
                     const rule_type = e.target.value as RuleType
                     setRuleModal(p => {
                       const c = { ...(p?.conditions ?? {}) } as Record<string, unknown>
-                      // 新規則預設：週末＝週五、週六晚；假日＝台灣行事曆＋放假前一晚
-                      if (rule_type === 'weekend' && !Array.isArray(c.weekend_days)) c.weekend_days = [5, 6]
+                      // 新假日規則預設：台灣行事曆＋放假前一晚
                       if (rule_type === 'holiday' && c.country === undefined) { c.country = 'TW'; c.include_eve = true; c.include_last_night = false }
                       return { ...p, rule_type, conditions: c }
                     })
@@ -1498,21 +1538,8 @@ function PricingContent() {
               )}
               {ruleModal.rule_type === 'weekend' && (
                 <div>
-                  <label className="text-xs font-medium text-gray-600 block mb-1">週末晚（以入住當晚計）</label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {[1, 2, 3, 4, 5, 6, 0].map(d => {
-                      const days = weekendDays({ rule_type: 'weekend', adjustment_type: 'fixed', adjustment_value: 0, conditions: ruleModal.conditions ?? null, property_id: null, priority: 0 })
-                      const on = days.includes(d)
-                      return (
-                        <button key={d} type="button"
-                          onClick={() => setRuleModal(p => ({ ...p, conditions: { ...p?.conditions, weekend_days: on ? days.filter(x => x !== d) : [...days, d] } }))}
-                          className={`px-2.5 py-1 rounded-lg text-xs border ${on ? 'bg-indigo-600 text-white border-indigo-600' : 'text-gray-600 hover:bg-gray-50'}`}>
-                          {t(`roomgrid.day.${d}`)}
-                        </button>
-                      )
-                    })}
-                  </div>
-                  <p className="text-[11px] text-gray-400 mt-1">例：勾「五、六」＝週五晚、週六晚入住套用週末價。與假日規則同一晚時只套假日價。</p>
+                  <WeekendEditor />
+                  <p className="text-[11px] text-gray-400 mt-1">全民宿共用的設定，點選立即儲存。例：選「五、六」＝週五晚、週六晚入住套用週末價。與假日規則同一晚時只套假日價。</p>
                 </div>
               )}
               {ruleModal.rule_type === 'holiday' && (() => {
