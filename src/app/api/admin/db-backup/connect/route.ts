@@ -1,10 +1,12 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { randomBytes } from 'crypto'
 import { createClient } from '@/lib/supabase/server'
 import { getBackupOAuthUrl } from '@/lib/backup/db-backup'
 
-export async function GET() {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL!
+export async function GET(req: NextRequest) {
+  // 用使用者當下所在網域組回傳網址：多子網域下 NEXT_PUBLIC_APP_URL 可能是別的子網域，
+  // 回傳後 state cookie 與登入狀態對不上
+  const appUrl = req.nextUrl.origin
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

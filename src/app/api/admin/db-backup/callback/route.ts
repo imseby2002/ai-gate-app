@@ -5,7 +5,7 @@ import { exchangeCode, getDriveUserEmail } from '@/lib/google-drive'
 import { BACKUP_SETTINGS_ID } from '@/lib/backup/db-backup'
 
 export async function GET(req: NextRequest) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL!
+  const appUrl = req.nextUrl.origin
   const back = (q: string) => NextResponse.redirect(`${appUrl}/admin/db-backup?${q}`)
   const { searchParams } = new URL(req.url)
   const code = searchParams.get('code')
