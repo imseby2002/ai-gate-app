@@ -11,9 +11,11 @@ import { PasswordSettings } from './PasswordSettings'
 interface SettingsFormProps {
   profile: Profile | null
   creditBalance: number
+  // basic：只留個人資料／點數／帳號資訊，給訂房等工具子網域使用（不顯示行銷用的 Telegram、社群平台設定）
+  variant?: 'full' | 'basic'
 }
 
-export function SettingsForm({ profile, creditBalance }: SettingsFormProps) {
+export function SettingsForm({ profile, creditBalance, variant = 'full' }: SettingsFormProps) {
   const t = useTranslations('Settings')
   const [fullName, setFullName] = useState(profile?.full_name ?? '')
   const [department, setDepartment] = useState(profile?.department ?? '')
@@ -162,6 +164,7 @@ export function SettingsForm({ profile, creditBalance }: SettingsFormProps) {
         </div>
       </a>
 
+      {variant === 'full' && (<>
       {/* Telegram Integration */}
       <div className="bg-card rounded-2xl border p-6 shadow-sm">
         <div className="flex items-center justify-between mb-1">
@@ -274,6 +277,7 @@ export function SettingsForm({ profile, creditBalance }: SettingsFormProps) {
         </p>
         <SocialPlatformSettings />
       </div>
+      </>)}
 
       {/* Account Info */}
       <div className="bg-card rounded-2xl border p-6 shadow-sm">

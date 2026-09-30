@@ -23,6 +23,8 @@ export function ToolsUserMenu({ displayName, hasCompany }: { displayName: string
   }
 
   // 儲值頁返回時要回到「進來的那個模組」，帶上目前路徑
+  // 訂房系統有自己的帳號設定頁（套訂房側欄、不含聊天側欄與行銷設定）
+  const settingsHref = pathname?.startsWith('/booking') ? '/booking/account' : '/settings'
   const creditsHref = `/credits?from=${encodeURIComponent(pathname || '/apps')}`
   const [open, setOpen] = useState(false)
 
@@ -59,7 +61,7 @@ export function ToolsUserMenu({ displayName, hasCompany }: { displayName: string
               </a>
             )}
             <a
-              href="/settings"
+              href={settingsHref}
               className="flex items-center gap-2 w-full px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
             >
               <Settings className="h-3.5 w-3.5 text-gray-400" />
