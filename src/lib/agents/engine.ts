@@ -45,6 +45,24 @@ async function unlock(admin: ReturnType<typeof createAdminClient>, runId: string
   await admin.from('agent_runs').update({ ...patch, locked_at: null, locked_by: null }).eq('id', runId)
 }
 
+// 改為 waiting_approval 之後再確認一次：真人可能在本輪 tick 結束前就已按下核准（例如 Telegram 秒回），
+// 當時 resumeRunAfterApproval 只會喚醒 waiting_approval 狀態的 run 而撲空；此時已無待回覆事項就直接續跑
+async function waitForApproval(admin: ReturnType<typeof createAdminClient>, runId: string, patch: Record<string, unknown>) {
+  await unlock(admin, runId, { ...patch, status: 'waiting_approval' })
+  const { count } = await admin
+    .from('agent_approvals')
+    .select('id', { count: 'exact', head: true })
+    .eq('run_id', runId)
+    .in('status', ['pending', 'awaiting_feedback'])
+  if (count === 0) {
+    await admin
+      .from('agent_runs')
+      .update({ status: 'running', trigger_type: 'followup_approval', next_tick_at: new Date().toISOString() })
+      .eq('id', runId)
+      .eq('status', 'waiting_approval')
+  }
+}
+
 // run 被暫停/失敗時，同步把綁定的目標任務標為暫停，前台才看得到原因
 async function pauseMission(admin: ReturnType<typeof createAdminClient>, missionId: string | null | undefined, reason: string) {
   if (!missionId) return
@@ -171,8 +189,7 @@ export async function tickRun(run: AgentRunRow): Promise<void> {
 
         // 還有工具的核准尚未回覆：先把已處理的部分寫回紀錄，繼續等，不急著花錢規劃下一步
         if (stillPending.length) {
-          await unlock(admin, run.id, {
-            status: 'waiting_approval',
+          await waitForApproval(admin, run.id, {
             state: { log, pendingToolCalls: stillPending },
           })
           return
@@ -320,8 +337,7 @@ export async function tickRun(run: AgentRunRow): Promise<void> {
     }
 
     if (calledExplicitApproval || gatedCallsThisTick.length) {
-      await unlock(admin, run.id, {
-        status: 'waiting_approval',
+      await waitForApproval(admin, run.id, {
         state: { log: finalLog, pendingToolCalls: gatedCallsThisTick },
       })
       return
