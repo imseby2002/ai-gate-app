@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
   }
 
   // 未帶父科目時依科目主檔補上，讓左側科目樹能正確彙總
-  let categoryParent: string = body.category_parent ?? ''
+  let categoryParent: string = body.category_parent || ''
   if (!categoryParent && category && (type === 'income' || type === 'expense')) {
     const { data: subj } = await supabase
       .from('fin_subjects')
@@ -86,6 +86,19 @@ export async function PATCH(req: NextRequest) {
   const body = await req.json()
   const { id, ...updates } = body
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+
+  // 編輯時父科目為空則依科目主檔補上，避免覆蓋成空白導致科目樹漏算
+  if (updates.category && !updates.category_parent && (updates.type === 'income' || updates.type === 'expense')) {
+    const { data: subj } = await supabase
+      .from('fin_subjects')
+      .select('parent_name')
+      .eq('owner_id', user.id)
+      .eq('class', updates.type)
+      .eq('name', updates.category)
+      .limit(1)
+      .maybeSingle()
+    if (subj?.parent_name) updates.category_parent = subj.parent_name
+  }
 
   const { data, error } = await supabase
     .from('hr_cashflow')
