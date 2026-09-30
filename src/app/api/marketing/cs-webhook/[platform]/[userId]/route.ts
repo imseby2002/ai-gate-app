@@ -21,7 +21,7 @@ import { queryBnbCheckin, checkBeforeCheckin, queryBookingByGuestName, queryBook
 import { getCsEntitlements } from '@/lib/cs/entitlements'
 import { commitCsRoomBooking, getCsBookingMode, type CsBookingMode } from '@/lib/cs/booking-commit'
 import { generateCsReplyL2, generateCsReplyL3, generateCsReplySearch, IMAGE_DOWNGRADE_REPLY, notifyOwnerUpgradeNudge } from '@/lib/cs/csReply'
-import { findLatestPendingApproval, resumeRunAfterApproval } from '@/lib/agents/approvals'
+import { findLatestPendingApproval, parseApprovalCallback, resumeRunAfterApproval } from '@/lib/agents/approvals'
 import type { CsFormField, CsFormNotifyTarget, CsFormPricingRule } from '@/app/api/marketing/cs-forms/route'
 import { formatFormSubmission, notifyFormSubmission } from '@/lib/cs/formNotify'
 import { isFormAvailableToday } from '@/lib/cs/formSchedule'
@@ -2929,6 +2929,62 @@ export async function POST(
     }
 
     const body          = await req.json()
+
+    // ── Agent 框架核准（callback_data = 'agent_approval:<uuid>:action'）─────────
+    // Agent 通知走 profiles.telegram_bot_token 那支 Bot；若該 Bot 的 webhook 指到這裡（客服端點），
+    // 按鈕與「修改意見」文字都要在這裡處理，否則會被當成客服訊息而沒有任何作用。
+    {
+      const agentSupabase = getServiceClient()
+      const { data: prof } = await agentSupabase.from('profiles').select('telegram_bot_token').eq('id', userId).maybeSingle()
+      const agentBotToken = (prof?.telegram_bot_token as string | null) || botToken
+      const cqAgent = body?.callback_query
+      const agentCb = typeof cqAgent?.data === 'string' ? parseApprovalCallback(cqAgent.data) : null
+      if (agentCb) {
+        const chatId = String(cqAgent.message?.chat?.id ?? '')
+        // 只處理屬於此 userId、且發到同一個聊天室的核准，避免他人偽造 callback
+        const { data: appr } = await agentSupabase.from('agent_approvals')
+          .select('id, user_id, channel_thread_id').eq('id', agentCb.approvalId).maybeSingle()
+        const owned = !!appr && appr.user_id === userId && (!appr.channel_thread_id || String(appr.channel_thread_id) === chatId)
+        let replyText: string
+        if (!owned) {
+          replyText = '⚠️ 找不到此核准請求'
+        } else if (agentCb.outcome === 'feedback') {
+          await agentSupabase.from('agent_approvals').update({ status: 'awaiting_feedback' })
+            .eq('id', agentCb.approvalId).in('status', ['pending', 'awaiting_feedback'])
+          replyText = '📝 請輸入您給 Agent 的修改意見：'
+        } else {
+          const result = await resumeRunAfterApproval(agentCb.approvalId, agentCb.outcome)
+          replyText = result.ok
+            ? (agentCb.outcome === 'approved' ? '✅ 已核准，Agent 將繼續執行。' : '❌ 已拒絕，Agent 將停止此動作。')
+            : `⚠️ ${result.error ?? '處理失敗'}`
+        }
+        if (agentBotToken) {
+          await fetch(`https://api.telegram.org/bot${agentBotToken}/answerCallbackQuery`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ callback_query_id: cqAgent.id, text: replyText.slice(0, 180) }),
+          }).catch(() => {})
+          await replyTelegram(chatId, replyText, agentBotToken)
+        }
+        return NextResponse.json({ ok: true })
+      }
+
+      // 按了「✏️ 修改意見」後的下一則文字 → 當作 Agent 修改意見
+      const agentMsg = body?.message
+      if (agentMsg?.text && !String(agentMsg.text).startsWith('/')) {
+        const chatId = String(agentMsg.chat?.id ?? '')
+        const { data: awaiting } = await agentSupabase.from('agent_approvals')
+          .select('id').eq('user_id', userId).eq('channel', 'telegram').eq('channel_thread_id', chatId)
+          .eq('status', 'awaiting_feedback').order('requested_at', { ascending: false }).limit(1).maybeSingle()
+        if (awaiting) {
+          const result = await resumeRunAfterApproval(awaiting.id, 'feedback', String(agentMsg.text))
+          if (agentBotToken) {
+            await replyTelegram(chatId, result.ok ? `🔄 已收到您的意見：「${agentMsg.text}」\n\nAgent 將依此繼續執行。` : `⚠️ ${result.error ?? '處理失敗'}`, agentBotToken)
+          }
+          return NextResponse.json({ ok: true })
+        }
+      }
+    }
 
     // ── Pipeline approval: inline button callback_query ────────────────────
     const cq = body?.callback_query
