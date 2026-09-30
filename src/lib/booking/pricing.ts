@@ -150,6 +150,12 @@ export async function computeStayPrice(
     }
   }
   const holidayCache = new Map<CalendarRule, Map<string, string>>()
+  // 週末定義（民宿層級設定）
+  let weekendSetting: number[] | null = null
+  if (prop.dynamic_pricing_enabled && sortedRules.some(r => r.rule_type === 'weekend')) {
+    const { data: bnb } = await supabase.from('bnb_profiles').select('weekend_days').eq('user_id', userId).maybeSingle()
+    weekendSetting = (bnb?.weekend_days as number[] | null) ?? null
+  }
 
   const todayMs = taipeiTodayMs()
   const perNight: { date: string; amount: number }[] = []
@@ -174,7 +180,7 @@ export async function computeStayPrice(
       const occ = occByDate.get(date) ?? 0
 
       // 1. 標準日曆與需求定價（週末／假日／季節／住房率）：構成當日官方牌價／定價
-      baseDailyPrice = applyCalendarRules(baseDailyPrice, sortedRules as CalendarRule[], date, propertyId, calendars, holidayCache).price
+      baseDailyPrice = applyCalendarRules(baseDailyPrice, sortedRules as CalendarRule[], date, propertyId, calendars, holidayCache, weekendSetting).price
       for (const rule of sortedRules) {
         if (rule.rule_type !== 'occupancy') continue
         if (occ < (((rule.conditions ?? {}).threshold as number) ?? 0.8)) continue

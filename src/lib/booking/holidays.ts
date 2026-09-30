@@ -130,10 +130,17 @@ export interface CalendarRule {
   name?: string
 }
 
-/** 週末晚的星期（JS getDay：0=日…6=六，以入住那晚的日期判斷）。舊規則沒設定時沿用原本的六、日。 */
-export function weekendDays(rule: CalendarRule): number[] {
-  const d = rule.conditions?.weekend_days
-  return Array.isArray(d) ? (d as number[]) : [0, 6]
+/** 民宿未設定時的預設週末晚：週五、週六晚 */
+export const DEFAULT_WEEKEND_DAYS = [5, 6]
+
+/**
+ * 週末晚的星期（JS getDay：0=日…6=六，以入住那晚的日期判斷）。
+ * 以民宿設定（bnb_profiles.weekend_days）為準；沒傳入時才看規則舊欄位，最後用預設。
+ */
+export function weekendDays(rule: CalendarRule | null, setting?: number[] | null): number[] {
+  if (Array.isArray(setting)) return setting
+  const d = rule?.conditions?.weekend_days
+  return Array.isArray(d) ? (d as number[]) : DEFAULT_WEEKEND_DAYS
 }
 
 /** 此規則對某房型的加價；全房型規則可在 conditions.property_adjustments 針對個別房型覆寫。 */
@@ -180,6 +187,7 @@ export function applyCalendarRules(
   propertyId: string,
   calendars: Record<string, CalendarDay[]>,
   holidayCache?: Map<CalendarRule, Map<string, string>>,
+  weekendSetting?: number[] | null,
 ): { price: number; applied: AppliedAdjustment[] } {
   const dow = new Date(`${date}T00:00:00Z`).getUTCDay()
   const mmdd = date.slice(5)
@@ -201,7 +209,7 @@ export function applyCalendarRules(
     let applies = false
     let label = rule.name ?? ''
     switch (rule.rule_type) {
-      case 'weekend': applies = !isHolidayNight && weekendDays(rule).includes(dow); break
+      case 'weekend': applies = !isHolidayNight && weekendDays(rule, weekendSetting).includes(dow); break
       case 'holiday': {
         const n = nightsOf(rule).get(date)
         applies = n != null
