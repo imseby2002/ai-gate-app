@@ -71,6 +71,13 @@ export default function DailyPricingCalendar({ year, month, onPrev, onNext, prop
   const allDates: string[] = Array.from({ length: daysInMonth }, (_, i) => toDateStr(year, month, i + 1))
   const selectedProp = properties.find(p => p.id === propId)
 
+  // 房型清單是父層非同步載入的：掛載時可能還是空陣列，propId 會停在 ''，
+  // 價格就一直不會載入。房型到位後自動選第一個。
+  useEffect(() => {
+    if (!properties.length) return
+    if (!propId || !properties.some(p => p.id === propId)) setPropId(properties[0].id)
+  }, [properties, propId])
+
   // 此房型適用的啟用中規則；週末欄位的粉紅底依使用者設定的週末晚，而非寫死
   const propRules = rules.filter(r => r.enabled !== false && (r.property_id == null || r.property_id === propId))
   const weekendRules = propRules.filter(r => r.rule_type === 'weekend')
