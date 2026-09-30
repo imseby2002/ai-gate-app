@@ -67,14 +67,18 @@ export async function POST(req: NextRequest) {
       .eq('user_id', ctx.ownerId)
       .eq('platform', platform)
       .eq('property_id', property_id)
-    q = pbid ? q.eq('platform_booking_id', pbid) : q.is('platform_booking_id', null)
-    const { data: existing } = await q.maybeSingle()
+    // 沒填單號時 DB 允許多筆（migration 140），只有「同房型同入住/退房日」才視為重複輸入
+    q = pbid
+      ? q.eq('platform_booking_id', pbid)
+      : q.is('platform_booking_id', null).eq('check_in', check_in).eq('check_out', check_out)
+    const { data: rows } = await q.limit(20)
+    const existing = rows?.find(b => b.status !== 'cancelled') ?? rows?.[0]
     if (existing) {
       if (existing.status !== 'cancelled') {
         return NextResponse.json({
           error: pbid
             ? `訂單號碼 ${pbid} 已存在（此房型），請確認是否重複輸入`
-            : '這個房型已經有一筆沒填訂單號碼的手動訂單了，請確認是否重複輸入，或幫其中一筆補上訂單號碼以便區分',
+            : '這個房型同一入住/退房日已經有一筆沒填訂單號碼的訂單了，請確認是否重複輸入，或補上訂單號碼以便區分',
         }, { status: 409 })
       }
       existingId = existing.id
