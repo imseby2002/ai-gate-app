@@ -266,7 +266,7 @@ export default function DailyPricingCalendar({ year, month, onPrev, onNext, prop
         ) : properties.length === 0 ? (
           <div className="flex items-center justify-center h-32 text-gray-400 text-sm">{t('pricing.noRooms')}</div>
         ) : (
-          <table className="border-collapse" style={{ minWidth: 900, width: '100%' }}>
+          <table className="border-collapse" style={{ minWidth: 900, width: '100%', tableLayout: 'fixed' }}>
             <thead>
               <tr className="bg-sky-500 text-white text-xs sticky top-0 z-10">
                 <th className="border border-sky-400 px-2 py-2 w-12 text-center font-medium">{t('pricing.unitTwd')}</th>
@@ -303,13 +303,13 @@ export default function DailyPricingCalendar({ year, month, onPrev, onNext, prop
                       : null
 
                     return (
-                      <td key={date} className={`border border-gray-200 ${bgCls} align-top p-1.5`}>
+                      <td key={date} className={`border border-gray-200 ${bgCls} align-top p-1.5 overflow-hidden`}>
                         {/* Day number */}
-                        <div className={`text-xs font-bold mb-1 flex items-center gap-1
+                        <div className={`text-xs font-bold mb-1 flex items-center gap-1 min-w-0
                           ${isToday ? 'text-sky-600' : isWkend ? 'text-red-500' : 'text-gray-700'}`}>
                           {day}
                           {isClosed && <span className="text-[10px] text-red-500 font-medium">{t('pricing.closedTag')}</span>}
-                          {holidayName && <span className="text-[10px] text-amber-600 font-medium truncate" title={holidayName}>{holidayName}</span>}
+                          {holidayName && <span className="text-[10px] text-amber-600 font-medium truncate min-w-0" title={holidayName}>{holidayName}</span>}
                         </div>
                         {final && final.applied.length > 0 && (
                           <div className="text-[10px] text-indigo-600 font-semibold mb-0.5 truncate"

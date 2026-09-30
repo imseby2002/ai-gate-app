@@ -15,6 +15,7 @@ export async function GET(request: Request) {
   const days = (await Promise.all([year, year + 1].map(y => fetchHolidayCalendar(country, y)))).flat()
   const holidays = holidayBlocks(days).map(b => {
     const main = b.names.find(n => n !== '補假') ?? b.names[0]
+    // names 已是簡稱（台灣光復、教師節…）
     const len = Math.round((Date.parse(b.end) - Date.parse(b.start)) / 86400000) + 1
     return { name: len >= 3 ? `${main}連假` : main, from: b.start, to: b.end, type: 'holiday' as const }
   })
