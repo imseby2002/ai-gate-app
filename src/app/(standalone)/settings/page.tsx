@@ -20,7 +20,7 @@ export default async function SettingsPage() {
   const { data: creditBalance } = await supabase.rpc('get_credit_balance', { p_user_id: user.id })
 
   return (
-    <div className="h-full overflow-y-auto bg-slate-50/50 dark:bg-background">
+    <div className="min-h-full bg-slate-50/50 dark:bg-background">
       <div className="max-w-2xl mx-auto px-6 py-8 space-y-12">
         <div className="mb-8">
           <h1 className="text-2xl font-bold">{t('title')}</h1>
