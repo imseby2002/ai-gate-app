@@ -70,7 +70,28 @@ export function holidayBlocks(days: CalendarDay[]): HolidayBlock[] {
     }
   }
   if (cur && cur.names.length) blocks.push(cur)
-  return blocks.map(b => ({ ...b, names: [...new Set(b.names)] }))
+  return blocks.map(b => ({ ...b, names: [...new Set(b.names.map(shortHolidayName))] }))
+}
+
+// 官方節日全名很長（例：臺灣光復暨金門古寧頭大捷紀念日），日曆格子放不下，顯示用簡稱
+const SHORT_NAMES: Record<string, string> = {
+  '開國紀念日': '元旦',
+  '中華民國開國紀念日': '元旦',
+  '農曆除夕': '除夕',
+  '和平紀念日': '228',
+  '兒童節': '兒童節',
+  '民族掃墓節': '清明',
+  '清明節': '清明',
+  '孔子誕辰紀念日/教師節': '教師節',
+  '臺灣光復暨金門古寧頭大捷紀念日': '台灣光復',
+  '行憲紀念日': '行憲',
+}
+
+export function shortHolidayName(name: string): string {
+  if (SHORT_NAMES[name]) return SHORT_NAMES[name]
+  // 其他未列名稱：取「暨」「/」前段、去掉「紀念日」，最多 5 字
+  const head = name.split(/[暨/／]/)[0].replace(/紀念日$/, '')
+  return head.length > 5 ? head.slice(0, 5) : head
 }
 
 export interface HolidayNightOptions {
@@ -87,7 +108,7 @@ export interface HolidayNightOptions {
 export function holidayNights(blocks: HolidayBlock[], opts: HolidayNightOptions): Map<string, string> {
   const nights = new Map<string, string>()
   for (const b of blocks) {
-    const name = b.names.join('、')
+    const name = b.names.join(' ')
     for (let d = b.start; d < b.end; d = addDays(d, 1)) nights.set(d, name)
     if (opts.include_eve) nights.set(addDays(b.start, -1), name)
     if (opts.include_last_night) nights.set(b.end, name)
