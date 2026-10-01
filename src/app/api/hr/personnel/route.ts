@@ -3,8 +3,8 @@ import { getUnitContext } from '@/lib/auth/unit-access'
 import { DOC_CATALOG, APPLY_BUCKET } from '@/lib/hr/apply'
 
 const s = (v: unknown) => String(v ?? '').trim()
-// 必備文件＝目錄中除「其他」外皆須備齊
-const REQUIRED_TYPES = DOC_CATALOG.filter(d => d.type !== 'other').map(d => d.type)
+// 必備文件＝目錄中除「其他」與選填項外皆須備齊
+const REQUIRED_TYPES = DOC_CATALOG.filter(d => d.type !== 'other' && !d.optional).map(d => d.type)
 
 // 人員可編輯的基本資料欄位
 const PERSON_FIELDS = ['name', 'gender', 'native_place', 'birthday', 'id_number', 'education', 'email', 'company_email', 'zalo_user_id', 'payroll_no', 'position', 'store', 'staff_category', 'address', 'phone'] as const
@@ -21,13 +21,20 @@ export async function GET(req: NextRequest) {
       .select('id, name, position, store, staff_category, stage, hired_employee_id, apply_token')
       .eq('user_id', ownerId).order('created_at', { ascending: false })
     const ids = (people ?? []).map(p => p.id)
-    const { data: docs } = ids.length
-      ? await admin.from('hr_candidate_documents').select('candidate_id, doc_type').in('candidate_id', ids)
-      : { data: [] }
+    const [{ data: docs }, { data: paper }] = ids.length
+      ? await Promise.all([
+        admin.from('hr_candidate_documents').select('candidate_id, doc_type').in('candidate_id', ids),
+        admin.from('hr_candidate_checklist').select('candidate_id, doc_key').in('candidate_id', ids).or('original_received.eq.true,copy_received.eq.true'),
+      ])
+      : [{ data: [] }, { data: [] }]
+    // 已上傳檔案或人事已勾選收到紙本，皆算已繳
     const byCand = new Map<string, Set<string>>()
-    for (const d of docs ?? []) { (byCand.get(d.candidate_id) ?? byCand.set(d.candidate_id, new Set()).get(d.candidate_id)!).add(d.doc_type) }
+    const add = (id: string, t: string) => { (byCand.get(id) ?? byCand.set(id, new Set()).get(id)!).add(t) }
+    for (const d of docs ?? []) add(d.candidate_id, d.doc_type)
+    for (const c of paper ?? []) add(c.candidate_id, c.doc_key)
     const list = (people ?? []).map(p => {
       const have = byCand.get(p.id) ?? new Set()
+      if (have.has('student_card')) have.add('diploma') // 學歷／學生證擇一即可
       const missing = REQUIRED_TYPES.filter(t => !have.has(t)).length
       return { ...p, doc_missing: missing, doc_total: REQUIRED_TYPES.length }
     })

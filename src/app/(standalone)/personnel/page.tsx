@@ -161,7 +161,7 @@ function PeopleList({ onOpen }: { onOpen: (id: string) => void }) {
                     <span className="font-medium">{p.name || t('unnamed')}</span>
                     <span className="text-xs text-gray-400">{p.position}{p.store ? `・${p.store}` : ''}</span>
                     <span className={`text-[11px] px-1.5 rounded ${!p.hired_employee_id ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-500'}`}>
-                      {p.staff_category === 'parttime' ? t('parttime') : p.staff_category === 'fulltime' ? t('fulltime') : p.hired_employee_id ? t('active') : t('applying')}
+                      {p.staff_category === 'parttime' || p.staff_category === 'hourly' ? t('parttime') : p.staff_category === 'fulltime' ? t('fulltime') : p.hired_employee_id ? t('active') : t('applying')}
                     </span>
                   </div>
                 </div>

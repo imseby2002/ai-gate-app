@@ -7,7 +7,7 @@ import { notifyApplicant, notifyHR } from '@/lib/hr/notify'
 
 type Admin = ReturnType<typeof createAdminClient>
 
-const CORE = DOC_CATALOG.filter(d => d.type !== 'other')
+const CORE = DOC_CATALOG.filter(d => d.type !== 'other' && !d.optional)
 const EDU = ['diploma', 'student_card']                              // 學歷／學生證：擇一即可
 const UPLOAD_REQ = CORE.filter(d => !EDU.includes(d.type))           // 需上傳（學歷組另計）
 const PAPER_REQ = CORE.filter(d => d.copy === 'original' || d.copy === 'both') // 需繳正本紙本
@@ -30,12 +30,16 @@ export async function runDocReminders(admin: Admin, ownerId?: string): Promise<{
   const ids = people.map(p => p.id)
   const [{ data: docs }, { data: checklist }] = await Promise.all([
     admin.from('hr_candidate_documents').select('candidate_id, doc_type').in('candidate_id', ids),
-    admin.from('hr_candidate_checklist').select('candidate_id, doc_key, original_received').in('candidate_id', ids),
+    admin.from('hr_candidate_checklist').select('candidate_id, doc_key, original_received, copy_received').in('candidate_id', ids),
   ])
   const haveBy = new Map<string, Set<string>>()
   for (const d of docs ?? []) (haveBy.get(d.candidate_id) ?? haveBy.set(d.candidate_id, new Set()).get(d.candidate_id)!).add(d.doc_type)
   const paperBy = new Map<string, Set<string>>() // 已收正本的 doc_key
-  for (const c of checklist ?? []) if (c.original_received) (paperBy.get(c.candidate_id) ?? paperBy.set(c.candidate_id, new Set()).get(c.candidate_id)!).add(c.doc_key)
+  for (const c of checklist ?? []) {
+    if (c.original_received) (paperBy.get(c.candidate_id) ?? paperBy.set(c.candidate_id, new Set()).get(c.candidate_id)!).add(c.doc_key)
+    // 人事已收到紙本（正本或影本）就不必再要求上傳
+    if (c.original_received || c.copy_received) (haveBy.get(c.candidate_id) ?? haveBy.set(c.candidate_id, new Set()).get(c.candidate_id)!).add(c.doc_key)
+  }
 
   const now = Date.now()
   const hrPending: string[] = []

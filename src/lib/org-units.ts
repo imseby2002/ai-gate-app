@@ -36,6 +36,7 @@ export const UNIT_AREAS: UnitArea[] = [
     description: '出納帳務・門市收支・物料定價與廠商管理',
     pages: [
       { href: '/finance', label: '出納總務', description: '出納流水帳、帳戶管理、財務損益報表與資料匯入' },
+      { href: '/finance/tax', label: '會計・個人稅', description: '員工個人稅號、扶養人登記、月扣繳試算與年度彙總（Thuế TNCN）' },
       { href: '/finance?tab=pricing', label: '物料定價', description: '原料、設備、耗材之工廠進貨價、門市價與經銷價（出納專責統籌管理）' },
       { href: '/store-expenses', label: '門市費用', description: '門市水電瓦斯冰塊費用管理、收支明細與廠商填報' },
       { href: '/vendors', label: '廠商資料', description: '供應商基本資料、採購紀錄、結帳日與專屬免登入填報端' },
@@ -144,6 +145,7 @@ export const UNIT_AREAS_VI: UnitArea[] = [
     description: 'Sổ quỹ thu chi, tài chính cửa hàng, định giá nguyên liệu & nhà cung cấp',
     pages: [
       { href: '/finance', label: 'Thủ quỹ & Hành chính', description: 'Thu chi tiền mặt, quản lý tài khoản, báo cáo lỗ lãi & nhập dữ liệu' },
+      { href: '/finance/tax', label: 'Kế toán・Thuế TNCN', description: 'MST nhân viên, người phụ thuộc, khấu trừ thuế tháng và tổng hợp năm' },
       { href: '/finance?tab=pricing', label: 'Định giá nguyên vật liệu', description: 'Giá nhập xưởng, giá bán chi nhánh và đại lý (Thủ quỹ quản lý chuyên trách)' },
       { href: '/store-expenses', label: 'Chi phí chi nhánh', description: 'Quản lý chi phí điện nước gas đá lạnh cửa hàng & kê khai từ nhà cung cấp' },
       { href: '/vendors', label: 'Nhà cung cấp', description: 'Thông tin nhà cung cấp, lịch sử mua hàng, ngày thanh toán & trang kê khai' },
@@ -252,6 +254,7 @@ export const UNIT_AREAS_EN: UnitArea[] = [
     description: 'Cashier accounts, store revenue/expenses, pricing & vendor management',
     pages: [
       { href: '/finance', label: 'Cashier & Admin', description: 'Cash ledger, accounts, P&L financial reports and data import' },
+      { href: '/finance/tax', label: 'Accounting · PIT', description: 'Employee tax codes, dependents, monthly withholding and annual summary' },
       { href: '/finance?tab=pricing', label: 'Material Pricing', description: 'Factory cost, store price, and distributor price (Cashier managed)' },
       { href: '/store-expenses', label: 'Store Expenses', description: 'Store utilities, expense breakdown, and vendor submissions' },
       { href: '/vendors', label: 'Vendor Directory', description: 'Supplier profiles, purchase history, billing dates, and vendor portal' },
