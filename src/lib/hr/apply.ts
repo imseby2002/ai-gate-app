@@ -18,6 +18,7 @@ export interface DocSpec {
   label: string
   copy: CopyKind          // 紙本需繳型態
   categories: DocCategory[] // 勞動 / 保險 / 所得稅
+  optional?: boolean      // 非人人必備（例：有扶養人才需要），不列入缺件
 }
 
 // 完整文件目錄（嚴格對接越南勞動法與門市必備 7 大文件清單＋常規檔案）
@@ -33,6 +34,11 @@ export const DOC_CATALOG: DocSpec[] = [
   { type: 'id_card', label: '身分證 (CCCD 正反面)', copy: 'copy', categories: ['recruit'] },
   { type: 'resume', label: '應徵履歷表 (CV)', copy: 'copy', categories: ['recruit'] },
   { type: 'diploma', label: '學歷／證照／成績單 (Bằng cấp)', copy: 'copy', categories: ['recruit'] },
+  // 對應公司人事檔案 HO SO 欄位
+  { type: 'application_letter', label: '求職申請書 (Đơn xin việc)', copy: 'original', categories: ['recruit'] },
+  { type: 'student_card', label: '學生證影本 (Thẻ sinh viên)', copy: 'copy', categories: ['recruit'], optional: true },
+  { type: 'vneid', label: 'VNeID 截圖 (Vneid photo)', copy: 'copy', categories: ['recruit', 'tax'] },
+  { type: 'dependent_docs', label: '扶養人資料 (Hồ sơ người phụ thuộc)', copy: 'copy', categories: ['tax'], optional: true },
   { type: 'other', label: '其他補充文書 (Khác)', copy: 'copy', categories: ['recruit'] },
 ]
 
