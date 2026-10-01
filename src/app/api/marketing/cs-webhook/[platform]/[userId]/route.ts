@@ -1234,7 +1234,8 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
     }
     // Company info text
     const info = [
-      cd.companyName ? `公司名稱：${cd.companyName}` : '',
+      cd.legalName ? `公司名稱：${cd.legalName}` : '',
+      cd.companyName ? `品牌名稱：${cd.companyName}` : '',
       cd.description ?? '',
       cd.products ? `主要產品 / 服務：\n${cd.products}` : '',
       cd.branches?.length ? `門市：\n${cd.branches.map(b => `- ${b.name}${b.address ? `：${b.address}` : ''}${b.notes ? `（${b.notes}）` : ''}`).join('\n')}` : '',

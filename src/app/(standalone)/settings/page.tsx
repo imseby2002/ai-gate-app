@@ -2,7 +2,8 @@ import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { SettingsForm } from '@/components/settings/SettingsForm'
-import { CompanyDataForm } from '@/components/settings/CompanyDataForm'
+import Link from 'next/link'
+import { Building2, ArrowRight } from 'lucide-react'
 import { CompanyMembershipSection } from '@/components/settings/CompanyMembershipSection'
 
 export default async function SettingsPage() {
@@ -39,16 +40,20 @@ export default async function SettingsPage() {
           <CompanyMembershipSection />
         </div>
 
-        {/* Company Data Section */}
-        <div>
-          <div className="mb-6">
-            <h2 className="text-lg font-bold">品牌與行銷資料庫</h2>
-            <p className="text-muted-foreground text-sm mt-1">
-              全公司共用一份公司 / 品牌 / 產品 / 門市資料，行銷、客服、AI Agent 即時讀取。
+        {/* Company Data — 公司資料統一在行銷中心「公司資料」編輯 */}
+        <Link href="/marketing/brand"
+          className="flex items-center gap-4 rounded-2xl border p-5 hover:bg-muted/50 transition-colors">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+            <Building2 className="h-5 w-5 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg font-bold">公司資料</h2>
+            <p className="text-muted-foreground text-sm mt-0.5">
+              基本資料、品牌、產品、門市、素材全公司共用一份，行銷、客服、AI Agent 即時讀取。
             </p>
           </div>
-          <CompanyDataForm />
-        </div>
+          <ArrowRight className="h-5 w-5 text-muted-foreground shrink-0" />
+        </Link>
       </div>
     </div>
   )

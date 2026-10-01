@@ -40,6 +40,7 @@ export interface CompanyProduct {
 
 /** 與舊版 company_data.data（Unit2Data）相同欄位，讓既有讀取端不必改 */
 export interface CompanyProfile {
+  legalName?: string
   companyName?: string
   industry?: string
   employees?: string
@@ -59,6 +60,7 @@ export interface CompanyProfile {
 
 /** 公司基本資料中可由「公司資料」表單寫入 mkt_brand 的欄位對照 */
 export const PROFILE_TO_BRAND: Record<string, string> = {
+  legalName: 'legal_name',
   companyName: 'name',
   industry: 'industry',
   employees: 'employees',
@@ -117,6 +119,7 @@ export async function loadCompanyProfile(admin: Admin, ownerId: string): Promise
 
   const platforms: Record<string, string> = (b.platforms && typeof b.platforms === 'object') ? b.platforms : {}
   return {
+    legalName: b.legal_name || undefined,
     companyName: b.name || undefined,
     industry: b.industry || undefined,
     employees: b.employees || undefined,
@@ -139,7 +142,8 @@ export function buildCompanyMd(d: CompanyProfile, brand?: { slogan?: string | nu
   const lines: string[] = ['# 公司資料（編譯版）', '']
 
   lines.push('## 基本資料')
-  if (d.companyName) lines.push(`- **公司名稱**：${d.companyName}`)
+  if (d.legalName)   lines.push(`- **公司名稱**：${d.legalName}`)
+  if (d.companyName && d.companyName !== d.legalName) lines.push(`- **品牌名稱**：${d.companyName}`)
   if (d.industry)    lines.push(`- **產業別**：${d.industry}`)
   if (d.employees)   lines.push(`- **員工人數**：${d.employees}`)
   if (d.capital)     lines.push(`- **資本額**：${d.capital}`)
@@ -221,6 +225,6 @@ export async function getCompanyContextMd(admin: Admin, ownerId: string): Promis
     loadCompanyProfile(admin, ownerId),
     admin.from('mkt_brand').select('slogan, tagline, banned_words').eq('owner_id', ownerId).maybeSingle(),
   ])
-  const hasAny = profile.companyName || profile.description || profile.productList?.length || profile.branches?.length || profile.files?.length
+  const hasAny = profile.legalName || profile.companyName || profile.description || profile.productList?.length || profile.branches?.length || profile.files?.length
   return hasAny ? buildCompanyMd(profile, brand) : ''
 }
