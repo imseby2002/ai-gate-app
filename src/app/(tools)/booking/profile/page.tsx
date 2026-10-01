@@ -740,7 +740,7 @@ export default function BnbProfilePage() {
             {(!form.slug || form.latitude == null || form.longitude == null) && (
               <p className="text-amber-600">請先設定 網址代稱(slug) 與 緯度/經度，feed 才會包含資料。</p>
             )}
-            <p className="text-gray-500">在 Google Hotel Center 設定以下兩個 feed 網址：</p>
+            <p className="text-gray-500">Google Hotel Center feed 網址：</p>
             {(['hotel-list', 'pricing'] as const).map(kind => {
               const url = typeof window !== 'undefined'
                 ? `${window.location.origin}/api/book/${form.slug || '<slug>'}/google/${kind}` : ''
@@ -756,10 +756,10 @@ export default function BnbProfilePage() {
                 </div>
               )
             })}
-            <p className="text-gray-400 leading-relaxed">
-              啟用後仍須到 hotelcenter.google.com 申請帳號、把民宿對應到 Google 商家檔案，並填入上方 feed 網址。
-              旅客在 Google 地圖點房價後會導回你的訂房頁完成預訂。
-            </p>
+            <ol className="text-gray-500 leading-relaxed list-decimal pl-4 space-y-0.5">
+              <li>商家檔案手動填房價：在 Google 商家檔案按「編輯房價」，自己輸入官方房價。</li>
+              <li>這兩個網址：需有整合合作廠商幫你開了 Hotel Center 帳號，再把網址交給對方設定。（無法單一民宿／飯店申請 hotelcenter.google.com 帳號）</li>
+            </ol>
           </div>
         )}
       </section>
