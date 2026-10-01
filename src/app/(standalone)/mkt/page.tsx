@@ -25,7 +25,14 @@ export default function MktPage() {
   const [allowed, setAllowed] = useState<boolean | null>(null)
   const [tab, setTab] = useState<Tab>('brand')
 
-  useEffect(() => { fetch('/api/mkt/brand').then(r => setAllowed(r.status !== 403)) }, [])
+  useEffect(() => {
+    fetch('/api/mkt/brand').then(r => {
+      setAllowed(r.status !== 403)
+      // 支援 /mkt?tab=products 直接開啟指定分頁（設定頁「公司資料」連結用）
+      const q = new URLSearchParams(window.location.search).get('tab')
+      if (q && ['brand', 'stores', 'products'].includes(q)) setTab(q as Tab)
+    })
+  }, [])
 
   if (allowed === false) return (
     <div className="flex h-full items-center justify-center p-8">

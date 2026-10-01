@@ -28,6 +28,8 @@ import { isFormAvailableToday } from '@/lib/cs/formSchedule'
 import { resolveTodaySubmission, verifyRoomCheckedInToday } from '@/lib/cs/formSubmitGuard'
 import { sendToCustomer } from '@/lib/cs/send'
 import { notifyUserMobile } from '@/lib/push/expo'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { dataOwnerOf, loadCompanyProfile } from '@/lib/company/profile'
 
 // Agent 核准請求走這個 webhook 通知老闆自己的 LINE（見 src/lib/agents/notify.ts），
 // 老闆用同一個 LINE 帳號回覆時走這裡辨識，不會被當成一般客服訊息處理。
@@ -1218,28 +1220,26 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
     .maybeSingle()
   const industry = (industryRow?.industry as string) ?? 'homestay'
 
-  // Load company data as fallback knowledge
+  // Load company data as fallback knowledge（公司資料主檔：mkt_brand / 門市 / 產品）
   const companyParts: string[] = []
-  const { data: companyRow } = await supabase
-    .from('company_data')
-    .select('data')
-    .eq('user_id', userId)
-    .single()
-
-  if (companyRow?.data) {
-    const cd = companyRow.data as Record<string, unknown>
+  {
+    const admin = createAdminClient()
+    const cd = await loadCompanyProfile(admin, await dataOwnerOf(admin, userId))
     // Company FAQ files
-    const files = (cd.files ?? []) as Array<{ name: string; textContent?: string }>
-    for (const f of files) {
+    for (const f of cd.files ?? []) {
       if (f.textContent && !seenFiles.has(f.name)) {
         seenFiles.add(f.name)
         companyParts.push(`【公司資料｜${f.name}】\n${f.textContent}`)
       }
     }
     // Company info text
-    if (cd.companyInfo) {
-      companyParts.push(`【公司簡介】\n${cd.companyInfo}`)
-    }
+    const info = [
+      cd.companyName ? `公司名稱：${cd.companyName}` : '',
+      cd.description ?? '',
+      cd.products ? `主要產品 / 服務：\n${cd.products}` : '',
+      cd.branches?.length ? `門市：\n${cd.branches.map(b => `- ${b.name}${b.address ? `：${b.address}` : ''}${b.notes ? `（${b.notes}）` : ''}`).join('\n')}` : '',
+    ].filter(Boolean).join('\n\n')
+    if (info) companyParts.push(`【公司簡介】\n${info}`)
   }
 
   // 組合知識庫：直接輸入的重點須知/公告永遠放最頂端且不截斷；其他文件給予充裕的 35,000 字上限

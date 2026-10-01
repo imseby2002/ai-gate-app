@@ -5,6 +5,7 @@ import { generateText } from 'ai'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { resolveCompanyOwner } from '@/lib/company/activeCompany'
+import { getCompanyContextMd } from '@/lib/company/profile'
 import { calculateCost } from '@/lib/ai/router'
 import { deductCredits } from '@/lib/skills/billing'
 
@@ -68,7 +69,7 @@ export async function buildMarketingInventory(admin: Admin, ownerId: string): Pr
     admin.from('mkt_calendar').select('title, channel, scheduled_date, status').eq('owner_id', ownerId).gte('scheduled_date', today).order('scheduled_date').limit(30),
     admin.from('mkt_offline').select('type, budget, status').eq('owner_id', ownerId).limit(20),
     admin.from('mkt_delivery').select('platform, status, monthly_orders, monthly_revenue').eq('owner_id', ownerId).limit(30),
-    admin.from('company_data').select('compiled_md').eq('user_id', ownerId).maybeSingle(),
+    getCompanyContextMd(admin, ownerId),
   ])
 
   return {
@@ -77,7 +78,7 @@ export async function buildMarketingInventory(admin: Admin, ownerId: string): Pr
     upcoming_calendar: calendar.data ?? [],
     offline_marketing: offline.data ?? [],
     delivery_channels: delivery.data ?? [],
-    company_knowledge_chars: (companyData.data?.compiled_md as string | undefined)?.length ?? 0,
+    company_knowledge_chars: companyData.length,
     // marketing.im-tourist.com 可由 Agent 直接操作的內部能力（對應 agent 工具）
     internal_capabilities: [
       '市場/競品/社群資料蒐集（collect_market_data）',
@@ -122,10 +123,10 @@ export async function generateMissionPlan(missionId: string): Promise<MissionRow
   await admin.from('agent_missions').update({ status: 'planning', last_error: null }).eq('id', missionId)
 
   try {
-    const [{ data: role }, inventory, { data: companyData }, { data: memory }] = await Promise.all([
+    const [{ data: role }, inventory, companyMd, { data: memory }] = await Promise.all([
       admin.from('agent_roles').select('label, description').eq('id', mission.role_id).maybeSingle(),
       buildMarketingInventory(admin, mission.owner_id),
-      admin.from('company_data').select('compiled_md').eq('user_id', mission.owner_id).maybeSingle(),
+      getCompanyContextMd(admin, mission.owner_id),
       admin.from('agent_memory_compiled').select('compiled_md').eq('user_id', mission.user_id).eq('role_id', mission.role_id).maybeSingle(),
     ])
 
@@ -171,7 +172,7 @@ export async function generateMissionPlan(missionId: string): Promise<MissionRow
       `預算：${mission.budget_amount} ${mission.budget_currency}\n` +
       `期限：${mission.deadline ?? '（未指定，請依目標自行建議）'}\n` +
       (mission.plan_feedback ? `\n老闆對上一版計畫的修改意見（務必採納）：${mission.plan_feedback}\n` : '') +
-      `\n公司知識庫：\n${(companyData?.compiled_md as string | undefined)?.slice(0, 6000) || '（尚未建立）'}\n` +
+      `\n公司知識庫：\n${companyMd.slice(0, 6000) || '（尚未建立）'}\n` +
       `\n過去經驗（角色記憶）：\n${(memory?.compiled_md as string | undefined)?.slice(0, 3000) || '（無）'}\n` +
       `\nmarketing.im-tourist.com 資源盤點：\n${JSON.stringify(inventory).slice(0, 8000)}\n` +
       `\n請依下列 JSON 結構輸出計畫書：\n${shape}`

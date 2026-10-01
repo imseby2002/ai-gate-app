@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import {
-  Plus, Map, Pencil, Trash2, Check, CheckCircle2, AlertCircle,
-  Loader2, FileText, Zap, Clock,
+  Plus, Map, Trash2, CheckCircle2, AlertCircle,
+  Loader2, FileText, Package, ExternalLink,
 } from 'lucide-react'
 
 interface Branch {
@@ -40,6 +40,7 @@ interface CompanyData {
   competitiveAdvantage?: string
   branches?: Branch[]
   files?: UploadedFile[]
+  productList?: { id: string; name: string; category: string; price: number }[]
 }
 
 const INDUSTRY_OPTIONS = [
@@ -97,16 +98,12 @@ export function CompanyDataForm() {
   const [form, setForm] = useState<CompanyData>({})
   const [files, setFiles] = useState<UploadedFile[]>([])
   const [branches, setBranches] = useState<Branch[]>([])
+  const [products, setProducts] = useState<NonNullable<CompanyData['productList']>>([])
+  const [saveError, setSaveError] = useState('')
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [uploadError, setUploadError] = useState('')
-  const [editingBranch, setEditingBranch] = useState<Branch | null>(null)
-  const [showBranchForm, setShowBranchForm] = useState(false)
-  const [compiling, setCompiling] = useState(false)
-  const [compiledAt, setCompiledAt] = useState<Date | null>(null)
-  const [compiledChars, setCompiledChars] = useState<number | null>(null)
-  const [compileError, setCompileError] = useState('')
   const [loading, setLoading] = useState(true)
 
   // Load existing data
@@ -115,14 +112,11 @@ export function CompanyDataForm() {
       .then(r => r.json())
       .then(d => {
         if (d.data && Object.keys(d.data).length > 0) {
-          const { files: f, branches: b, ...rest } = d.data as CompanyData
+          const { files: f, branches: b, productList: pl, products: _p, ...rest } = d.data as CompanyData
           setForm(rest)
           setFiles(f ?? [])
           setBranches(b ?? [])
-        }
-        if (d.compiled_md) {
-          setCompiledChars(d.compiled_md.length)
-          setCompiledAt(new Date()) // we don't have timestamp, just show it exists
+          setProducts(pl ?? [])
         }
       })
       .catch(() => {})
@@ -131,18 +125,6 @@ export function CompanyDataForm() {
 
   const set = (key: keyof CompanyData, value: string) =>
     setForm(prev => ({ ...prev, [key]: value }))
-
-  const emptyBranch = (): Branch => ({ id: crypto.randomUUID(), name: '', address: '', phone: '' })
-
-  const saveBranch = (b: Branch) => {
-    setBranches(prev => prev.find(x => x.id === b.id)
-      ? prev.map(x => x.id === b.id ? b : x)
-      : [...prev, b])
-    setEditingBranch(null)
-    setShowBranchForm(false)
-  }
-
-  const deleteBranch = (id: string) => setBranches(prev => prev.filter(b => b.id !== id))
 
   const handleUpload = async (file: File, category: UploadedFile['category']) => {
     setUploading(true); setUploadError('')
@@ -164,31 +146,17 @@ export function CompanyDataForm() {
   const handleRemove = (url: string) => setFiles(prev => prev.filter(f => f.url !== url))
 
   const handleSave = async () => {
-    setSaving(true)
-    const data: CompanyData = { ...form, files, branches }
-    await fetch('/api/marketing/company-data', {
+    setSaving(true); setSaveError('')
+    const data: CompanyData = { ...form, files }
+    const res = await fetch('/api/marketing/company-data', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     })
     setSaving(false)
+    if (!res.ok) { setSaveError(res.status === 403 ? '僅公司管理者或行銷權限可修改公司資料' : '儲存失敗'); return }
     setSaved(true)
     setTimeout(() => setSaved(false), 3000)
-  }
-
-  const handleCompile = async () => {
-    setCompiling(true); setCompileError('')
-    try {
-      const res = await fetch('/api/marketing/company-data/compile', { method: 'POST' })
-      const d = await res.json()
-      if (!res.ok) throw new Error(d.error)
-      setCompiledChars(d.chars)
-      setCompiledAt(new Date())
-    } catch (e) {
-      setCompileError(String(e))
-    } finally {
-      setCompiling(false)
-    }
   }
 
   const textField = (key: keyof CompanyData, label: string, placeholder: string, multiline?: boolean) => (
@@ -217,42 +185,9 @@ export function CompanyDataForm() {
   return (
     <div className="space-y-10">
 
-      {/* Compile status banner */}
-      <div className={`rounded-2xl border p-5 ${compiledChars ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <Zap className={`h-4 w-4 ${compiledChars ? 'text-green-600' : 'text-amber-600'}`} />
-              <span className={`text-sm font-semibold ${compiledChars ? 'text-green-800' : 'text-amber-800'}`}>
-                {compiledChars ? 'AI 快取已就緒' : '尚未編譯'}
-              </span>
-            </div>
-            <p className="text-xs text-gray-500">
-              {compiledChars
-                ? `已編譯 ${compiledChars.toLocaleString()} 字元的公司資料快取，行銷流水線讀取時直接使用，節省 Token 消耗。`
-                : '新增或修改公司資料後，點擊「一鍵轉檔」，行銷流水線模組將使用快取版本，無需每次重新讀取。'}
-            </p>
-            {compiledAt && (
-              <p className="text-[10px] text-gray-400 flex items-center gap-1 mt-1">
-                <Clock className="h-3 w-3" />
-                本次編譯：{compiledAt.toLocaleTimeString()}
-              </p>
-            )}
-            {compileError && (
-              <p className="text-xs text-red-600 mt-1">{compileError}</p>
-            )}
-          </div>
-          <button
-            onClick={handleCompile}
-            disabled={compiling}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white whitespace-nowrap disabled:opacity-60 shrink-0"
-            style={{ background: 'var(--primary)' }}>
-            {compiling
-              ? <><Loader2 className="h-4 w-4 animate-spin" />編譯中…</>
-              : <><Zap className="h-4 w-4" />一鍵轉檔</>}
-          </button>
-        </div>
-      </div>
+      <p className="rounded-xl border bg-gray-50 p-4 text-xs text-gray-500">
+        全公司共用一份資料：此處與行銷中心「品牌資料」、辦公室行銷「品牌中樞 / 門市 / 產品」為同一份，AI（行銷、客服、Agent）一律即時讀取，不需重複建置。
+      </p>
 
       {/* Basic Info */}
       <section>
@@ -289,7 +224,6 @@ export function CompanyDataForm() {
         <h3 className="text-sm font-bold text-gray-700 mb-4 pb-2 border-b">業務描述</h3>
         <div className="space-y-4">
           {textField('description', '公司簡介', '簡述公司背景、發展歷程、核心價值…', true)}
-          {textField('products', '主要產品 / 服務', '描述主要產品或服務項目、特色功能…', true)}
           {textField('targetAudience', '目標客群', '描述主要客戶群體、年齡層、消費習慣…', true)}
           {textField('competitiveAdvantage', '核心競爭優勢', '相較競爭對手，公司最大的優勢是…', true)}
         </div>
@@ -314,115 +248,47 @@ export function CompanyDataForm() {
         </div>
       </section>
 
-      {/* Branches */}
+      {/* Products — 主檔：mkt_product_profiles */}
+      <section>
+        <div className="flex items-center justify-between pb-2 border-b mb-4">
+          <h3 className="text-sm font-bold text-gray-700">主要產品 / 服務</h3>
+          <a href="/mkt?tab=products" className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium border hover:bg-gray-50 transition-colors">
+            <ExternalLink className="h-3.5 w-3.5" />管理產品
+          </a>
+        </div>
+        {products.length === 0
+          ? <p className="text-xs text-gray-400 py-4 text-center">尚未建立產品，請至「行銷 → 產品」新增（可一鍵匯入 POS 品項 / 研發配方）</p>
+          : <div className="flex flex-wrap gap-2">
+              {products.map(p => (
+                <span key={p.id} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border bg-gray-50 text-xs text-gray-700">
+                  <Package className="h-3.5 w-3.5 text-gray-400" />{p.name}{p.price ? <span className="text-gray-400">${p.price}</span> : null}
+                </span>
+              ))}
+            </div>}
+      </section>
+
+      {/* Branches — 主檔：fin_stores */}
       <section>
         <div className="flex items-center justify-between pb-2 border-b mb-4">
           <h3 className="text-sm font-bold text-gray-700">門市 / 分公司</h3>
-          <button type="button"
-            onClick={() => { setEditingBranch(emptyBranch()); setShowBranchForm(true) }}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium border hover:bg-gray-50 transition-colors">
-            <Plus className="h-3.5 w-3.5" />新增門市
-          </button>
+          <a href="/mkt?tab=stores" className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium border hover:bg-gray-50 transition-colors">
+            <ExternalLink className="h-3.5 w-3.5" />管理門市
+          </a>
         </div>
-
-        {branches.length === 0 && !showBranchForm && (
-          <p className="text-xs text-gray-400 py-4 text-center">尚未新增任何門市，點擊「新增門市」開始建立</p>
-        )}
-
-        <div className="space-y-2">
-          {branches.map(b => (
-            <div key={b.id} className="flex items-start gap-3 px-4 py-3 rounded-xl border bg-gray-50">
-              <Map className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-gray-800">{b.name}</div>
-                <div className="text-xs text-gray-500 mt-0.5">{b.address}</div>
-                {b.phone && <div className="text-xs text-gray-400">{b.phone}</div>}
-                {b.notes && <div className="text-xs text-gray-400 italic">{b.notes}</div>}
-              </div>
-              <div className="flex gap-1 flex-shrink-0">
-                <button type="button" onClick={() => { setEditingBranch(b); setShowBranchForm(true) }}
-                  className="p-1.5 rounded-lg hover:bg-gray-200 transition-colors text-gray-400 hover:text-gray-700">
-                  <Pencil className="h-3.5 w-3.5" />
-                </button>
-                <button type="button" onClick={() => deleteBranch(b.id)}
-                  className="p-1.5 rounded-lg hover:bg-red-50 transition-colors text-gray-400 hover:text-red-500">
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {showBranchForm && editingBranch && (
-          <div className="mt-3 p-4 rounded-xl border-2 border-dashed space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium mb-1">門市名稱 *</label>
-                <input value={editingBranch.name}
-                  onChange={e => setEditingBranch(prev => prev ? { ...prev, name: e.target.value } : prev)}
-                  placeholder="例如：台北信義門市"
-                  className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium mb-1">電話</label>
-                <input value={editingBranch.phone ?? ''}
-                  onChange={e => setEditingBranch(prev => prev ? { ...prev, phone: e.target.value } : prev)}
-                  placeholder="例如：02-1234-5678"
-                  className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
-              </div>
-            </div>
-            <div>
-              <label className="block text-xs font-medium mb-1">地址 *</label>
-              <input value={editingBranch.address}
-                onChange={e => setEditingBranch(prev => prev ? { ...prev, address: e.target.value } : prev)}
-                placeholder="例如：台北市信義區信義路五段7號"
-                className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium mb-1">緯度（選填）</label>
-                <input type="number" value={editingBranch.lat ?? ''}
-                  onChange={e => setEditingBranch(prev => prev ? { ...prev, lat: e.target.value ? Number(e.target.value) : undefined } : prev)}
-                  placeholder="25.033964"
-                  className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium mb-1">經度（選填）</label>
-                <input type="number" value={editingBranch.lng ?? ''}
-                  onChange={e => setEditingBranch(prev => prev ? { ...prev, lng: e.target.value ? Number(e.target.value) : undefined } : prev)}
-                  placeholder="121.564468"
-                  className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
-              </div>
-            </div>
-            <div>
-              <label className="block text-xs font-medium mb-1">備註</label>
-              <input value={editingBranch.notes ?? ''}
-                onChange={e => setEditingBranch(prev => prev ? { ...prev, notes: e.target.value } : prev)}
-                placeholder="例如：週末延長營業"
-                className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
-            </div>
-            <div className="flex gap-2 pt-1">
-              <button type="button"
-                onClick={() => { if (editingBranch.name && editingBranch.address) saveBranch(editingBranch) }}
-                disabled={!editingBranch.name || !editingBranch.address}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-40"
-                style={{ background: 'var(--primary)' }}>
-                <Check className="h-3.5 w-3.5" />儲存門市
-              </button>
-              <button type="button"
-                onClick={() => { setShowBranchForm(false); setEditingBranch(null) }}
-                className="px-4 py-2 rounded-lg text-sm border hover:bg-gray-50 transition-colors">
-                取消
-              </button>
-            </div>
-          </div>
-        )}
-
-        {branches.length > 0 && (
-          <p className="text-xs text-gray-400 mt-3">
-            共 {branches.length} 個門市。可輸入經緯度以啟用最近門市計算功能。
-          </p>
-        )}
+        {branches.length === 0
+          ? <p className="text-xs text-gray-400 py-4 text-center">尚未建立門市，請至門市主檔新增</p>
+          : <div className="space-y-2">
+              {branches.map(b => (
+                <div key={b.id} className="flex items-start gap-3 px-4 py-3 rounded-xl border bg-gray-50">
+                  <Map className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-gray-800">{b.name}</div>
+                    {b.address && <div className="text-xs text-gray-500 mt-0.5">{b.address}</div>}
+                    {b.notes && <div className="text-xs text-gray-400 italic">{b.notes}</div>}
+                  </div>
+                </div>
+              ))}
+            </div>}
       </section>
 
       {/* Files */}
@@ -460,9 +326,10 @@ export function CompanyDataForm() {
         </button>
         {saved && (
           <span className="text-sm text-green-600 flex items-center gap-1">
-            <CheckCircle2 className="h-4 w-4" />已儲存，請記得按「一鍵轉檔」更新快取
+            <CheckCircle2 className="h-4 w-4" />已儲存
           </span>
         )}
+        {saveError && <span className="text-sm text-red-600">{saveError}</span>}
       </div>
 
     </div>
