@@ -123,7 +123,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
         </div>
       ))}
 
-      {/* 設定型（一次性）：品牌資料、訂閱方案 */}
+      {/* 設定型（一次性）：公司資料、訂閱方案 */}
       <div className="mt-3 pt-3 border-t border-gray-100 flex flex-col gap-0.5">
         {!collapse && sectionLabel(t('section.settings'), 'mb-1')}
         {SETTINGS.map(item => renderItem(item, false, collapse))}
@@ -131,11 +131,11 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
 
       <div className="mt-auto pt-3 border-t border-gray-100 flex flex-col gap-1">
         {!collapse && sectionLabel(t('section.collab'))}
-        <Link href="/mkt" title={collapse ? '門市與產品資產庫' : undefined}
+        <Link href="/mkt" title={collapse ? 'ERP 行銷系統' : undefined}
           className={`flex items-center rounded-lg text-xs font-semibold text-pink-700 bg-pink-50 hover:bg-pink-100 transition-colors
             ${collapse ? 'justify-center py-2.5' : 'gap-2 px-3 py-2'}`}>
           <Megaphone className="h-3.5 w-3.5 shrink-0" />
-          {!collapse && <span>門市與產品資產庫 ↗</span>}
+          {!collapse && <span>ERP 行銷系統 ↗</span>}
         </Link>
         <Link href="/office" title={collapse ? 'IMT ERP' : undefined}
           className={`flex items-center rounded-lg text-xs font-medium text-gray-500 hover:bg-gray-100 transition-colors
