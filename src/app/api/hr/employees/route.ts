@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     name, email, phone, department, position, employment_type, hire_date, base_salary,
     bank_account, id_number, notes, status,
     staff_category, insurance_required, insurance_status, insurance_number, insurance_salary,
-    hourly_rate, attendance_no, store, bank_name,
+    hourly_rate, attendance_no, payroll_code, store, bank_name,
   } = body
   if (!name?.trim()) return NextResponse.json({ error: 'name required' }, { status: 400 })
 
@@ -51,6 +51,7 @@ export async function POST(req: NextRequest) {
       insurance_salary: insurance_salary ?? 0,
       hourly_rate: hourly_rate ?? 0,
       attendance_no: attendance_no ?? '',
+      payroll_code: payroll_code ?? '',
       store: store ?? '',
       bank_name: bank_name ?? '',
     })
