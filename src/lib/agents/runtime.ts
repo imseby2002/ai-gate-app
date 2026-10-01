@@ -3,6 +3,7 @@
 // （公司知識庫、角色記憶、跨管道通知/核准、內部 API 呼叫、逐步稽核紀錄、計費）。
 import { createSkillContext } from '@/lib/skills/runtime'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { dataOwnerOf, getCompanyContextMd } from '@/lib/company/profile'
 import { deductCredits as deductSkillCredits } from '@/lib/skills/billing'
 import { notifyHuman as notifyHumanChannel, requestHumanApproval } from './notify'
 import type { AgentRunContext, AgentRunStepInput } from './types'
@@ -21,12 +22,7 @@ export function createAgentContext(userId: string, roleId: string, runId: string
     storeFile: skillCtx.storeFile,
 
     async getCompanyContext() {
-      const { data } = await admin
-        .from('company_data')
-        .select('compiled_md')
-        .eq('user_id', userId)
-        .maybeSingle()
-      return data?.compiled_md ?? ''
+      return getCompanyContextMd(admin, await dataOwnerOf(admin, userId))
     },
 
     async getRoleMemory(limit = 20) {
