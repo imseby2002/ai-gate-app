@@ -37,6 +37,7 @@ interface Employee {
   insurance_salary: number
   hourly_rate: number
   attendance_no: string
+  payroll_code: string
   store: string
   bank_name: string
   created_at: string
@@ -73,7 +74,24 @@ interface Payroll {
   paid_at: string | null
   notes: string
   hr_employees: { name: string; department: string; position: string } | null
+  // 會計薪資表明細（匯入時填入）
+  payroll_code?: string
+  store?: string
+  position?: string
+  rank?: string
+  source?: string
+  [detail: string]: unknown
 }
+
+// 薪資明細欄位（對應越南會計薪資表 bảng lương）
+const PAYROLL_DETAIL_FIELDS = [
+  'ot_hours', 'insurance_salary', 'responsibility_pay', 'overtime_pay', 'meal_travel_allowance',
+  'monthly_bonus', 'responsibility_bonus', 'kpi_bonus', 'revenue_bonus', 'holiday_bonus', 'commission',
+  'gross_total', 'non_taxable_income', 'taxable_income',
+  'penalty', 'employee_insurance', 'union_fee', 'uniform_fee',
+  'personal_deduction', 'dependent_deduction', 'assessable_contract', 'assessable_casual', 'pit_contract', 'pit_casual',
+  'employer_insurance', 'employer_union',
+] as const
 
 interface Leave {
   id: string
@@ -102,7 +120,7 @@ const EMPTY_EMP: Omit<Employee, 'id' | 'created_at'> = {
   bank_account: '', id_number: '', notes: '', status: 'active',
   staff_category: 'fulltime', insurance_required: false, insurance_status: 'none',
   insurance_number: '', insurance_salary: 0,
-  hourly_rate: 0, attendance_no: '', store: '', bank_name: '',
+  hourly_rate: 0, attendance_no: '', payroll_code: '', store: '', bank_name: '',
 }
 
 const getLabels = (t: (key: string) => string): Record<string, string> => ({
@@ -272,6 +290,7 @@ function EmployeeForm({ initial, onSave, onCancel, saving, settings }: {
         <Field label={d.staff_category === 'hourly' ? t('hourlyRateStarLabel') : t('hourlyRateLabel')}><InputEl value={d.hourly_rate} onChange={v => set('hourly_rate', Number(v) || 0)} type="number" placeholder={t('hourlyRatePlaceholder')} disabled={saving} /></Field>
         <Field label={t('storeLabel')}><InputEl value={d.store} onChange={v => set('store', v)} placeholder={t('storePlaceholder')} disabled={saving} /></Field>
         <Field label={t('attendanceNoLabel')}><InputEl value={d.attendance_no} onChange={v => set('attendance_no', v)} placeholder={t('attendanceNoPlaceholder')} disabled={saving} /></Field>
+        <Field label={t('payrollCodeLabel')}><InputEl value={d.payroll_code ?? ''} onChange={v => set('payroll_code', v)} placeholder={t('payrollCodePlaceholder')} disabled={saving} /></Field>
         <Field label={t('bankAccountLabel')}><InputEl value={d.bank_account} onChange={v => set('bank_account', v)} placeholder={t('bankAccountPlaceholder')} disabled={saving} /></Field>
         <Field label={t('bankNameLabel')}><InputEl value={d.bank_name} onChange={v => set('bank_name', v)} placeholder={t('bankNamePlaceholder')} disabled={saving} /></Field>
         <Field label={t('idNumberLabel')}><InputEl value={d.id_number} onChange={v => set('id_number', v)} placeholder="A123456789" disabled={saving} /></Field>
@@ -695,6 +714,7 @@ function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: 
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
   const [payroll, setPayroll] = useState<Payroll[]>([])
+  const [detailId, setDetailId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Payroll | null>(null)
@@ -911,7 +931,10 @@ function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: 
                           return null
                         })()}
                       </div>
-                      <div className="text-xs text-gray-400">{p.hr_employees?.department} {p.hr_employees?.position}</div>
+                      <div className="text-xs text-gray-400">
+                        {p.payroll_code ? <span className="font-mono text-gray-500 mr-1" title={t('payrollCodeLabel')}>{p.payroll_code}</span> : null}
+                        {p.store || p.hr_employees?.department} {p.position || p.hr_employees?.position}
+                      </div>
                     </td>
                     <td className="text-right py-2.5 px-3 tabular-nums">{fmt(p.base_salary, locale)}</td>
                     <td className="text-right py-2.5 px-3 tabular-nums text-blue-600">{p.allowances > 0 ? `+${fmt(p.allowances, locale)}` : '—'}</td>
@@ -928,6 +951,11 @@ function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: 
                             <Check className="h-3 w-3 mr-1" />{t('markPaid')}
                           </Button>
                         )}
+                        {PAYROLL_DETAIL_FIELDS.some(f => Number(p[f]) !== 0) && (
+                          <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setDetailId(detailId === p.id ? null : p.id)}>
+                            {t('payrollDetailToggle')}
+                          </Button>
+                        )}
                         <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { setEditing(p); setShowForm(false) }}>
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
@@ -937,6 +965,17 @@ function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: 
                       </div>
                     </td>
                   </tr>
+                  {detailId === p.id && (
+                    <tr key={`${p.id}-detail`}><td colSpan={8} className="pb-3 pt-1">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-x-4 gap-y-1.5 rounded-lg bg-gray-50 p-3 text-xs">
+                        {p.rank ? <div><span className="text-gray-400">{t('payrollF_rank')}</span><div className="font-medium">{p.rank}</div></div> : null}
+                        {PAYROLL_DETAIL_FIELDS.filter(f => Number(p[f]) !== 0).map(f => (
+                          <div key={f}><span className="text-gray-400">{t(`payrollF_${f}`)}</span><div className="tabular-nums font-medium">{f === 'ot_hours' ? Number(p[f]) : fmt(Number(p[f]), locale)}</div></div>
+                        ))}
+                      </div>
+                      {p.source ? <p className="mt-1 text-[11px] text-gray-400">{t('payrollSourceLabel')}: {p.source.replace(/^import:/, '')}</p> : null}
+                    </td></tr>
+                  )}
                   {editing?.id === p.id && (
                     <tr key={`${p.id}-edit`}><td colSpan={8} className="pb-3 pt-1">
                       <PayrollForm employees={employees}

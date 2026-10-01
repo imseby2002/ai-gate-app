@@ -24,6 +24,7 @@ export async function GET(req: NextRequest) {
 }
 
 // 由該月 hr_payroll 產生／重算（保留已手動填的免稅所得、備註）
+// 由會計薪資表匯入的列（source = import:*）直接採用表上實際扣繳數字，不重算
 export async function POST(req: NextRequest) {
   const ctx = await getUnitContextAny(['finance', 'hr'])
   if (!ctx.ok) return deny(ctx.status)
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest) {
   if (!year || !month || month < 1 || month > 12) return NextResponse.json({ error: 'year, month required' }, { status: 400 })
 
   const [pay, emps, deps, set, existing] = await Promise.all([
-    admin.from('hr_payroll').select('employee_id, base_salary, allowances, bonus').eq('owner_id', ownerId).eq('year', year).eq('month', month),
+    admin.from('hr_payroll').select('employee_id, base_salary, allowances, bonus, source, gross_total, non_taxable_income, employee_insurance, personal_deduction, dependent_deduction, assessable_contract, assessable_casual, pit_contract, pit_casual').eq('owner_id', ownerId).eq('year', year).eq('month', month),
     admin.from('hr_employees').select('id, staff_category, pit_method, insurance_status, insurance_salary').eq('owner_id', ownerId),
     admin.from('hr_tax_dependents').select('employee_id, from_month, to_month').eq('owner_id', ownerId),
     admin.from('acc_pit_settings').select('*').eq('owner_id', ownerId).maybeSingle(),
@@ -52,6 +53,22 @@ export async function POST(req: NextRequest) {
     const e = empMap.get(p.employee_id)
     if (!e) return []
     const old = prev.get(p.employee_id)
+    if (p.source?.startsWith('import:')) {
+      const casual = n(p.pit_casual) > 0 || n(p.assessable_casual) > 0
+      const contract = n(p.pit_contract) > 0 || n(p.personal_deduction) > 0
+      const r = {
+        method: (casual ? 'flat10' : contract ? 'progressive' : 'none') as PitMethod,
+        gross_income: n(p.gross_total),
+        exempt_income: n(p.non_taxable_income),
+        insurance_deduction: n(p.employee_insurance),
+        dependents: s.dependent_deduction > 0 ? Math.round(n(p.dependent_deduction) / s.dependent_deduction) : 0,
+        personal_deduction: n(p.personal_deduction),
+        dependent_deduction: n(p.dependent_deduction),
+        taxable_income: n(p.assessable_contract) + n(p.assessable_casual),
+        tax_amount: Math.round(n(p.pit_contract) + n(p.pit_casual)),
+      }
+      return [{ owner_id: ownerId, employee_id: p.employee_id, year, month, ...r, note: old?.note ?? '', updated_at: new Date().toISOString() }]
+    }
     const r = computePit({
       method: (old?.method as PitMethod) ?? resolveMethod(e),
       gross_income: n(p.base_salary) + n(p.allowances) + n(p.bonus),
