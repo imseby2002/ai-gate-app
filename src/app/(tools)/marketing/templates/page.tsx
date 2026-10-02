@@ -148,7 +148,7 @@ export default function VisualTemplatesPage() {
     reader.onload = ev => {
       // 手機原圖 base64 常超過 Vercel 4.5MB 請求上限（回傳純文字 Request Entity Too Large），先縮圖壓成 JPEG
       const src = ev.target?.result as string
-      const img = new Image()
+      const img = new window.Image()
       img.onload = () => {
         const MAX = 1536
         const scale = Math.min(1, MAX / Math.max(img.width, img.height))
