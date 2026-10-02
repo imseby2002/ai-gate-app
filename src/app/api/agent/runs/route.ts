@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { resolveMissionOwner, otherCompanyMissionScope } from '@/lib/agents/missions'
 import { hasModuleAccess } from '@/lib/module-access'
 import {
   getModuleEntitlements, planRequiredResponse, quotaExceededResponse, currentPeriodStart,
@@ -22,6 +24,10 @@ export async function GET(req: NextRequest) {
     .order('created_at', { ascending: false })
     .limit(50)
   if (roleId) query = query.eq('role_id', roleId)
+  // 切換公司後，不顯示屬於其他公司目標任務的執行紀錄
+  const admin = createAdminClient()
+  const { missionIds } = await otherCompanyMissionScope(admin, user.id, await resolveMissionOwner(admin, user.id))
+  if (missionIds.length) query = query.or(`mission_id.is.null,mission_id.not.in.(${missionIds.join(',')})`)
 
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
