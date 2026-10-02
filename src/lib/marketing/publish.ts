@@ -210,13 +210,13 @@ async function uploadTwitter(creds: Record<string, string>, copyText: string): P
   }
 }
 
-// ─── LINE VOOM ─────────────────────────────────────────────────────────────────
+// ─── LINE 官方帳號群發（platform id 沿用 'LINE VOOM'） ─────────────────────────────────────────────────────────────────
 async function uploadLineVoom(creds: Record<string, string>, imageUrls: string[], copyText: string): Promise<PlatformResult> {
   try {
     const channel_access_token = creds.channel_access_token || creds.line_channel_access_token
-    if (!channel_access_token) return { platform: 'LINE VOOM', ok: false, error: '未設定 Channel Access Token' }
+    if (!channel_access_token) return { platform: 'LINE 官方帳號群發', ok: false, error: '未設定 Channel Access Token' }
 
-    // LINE VOOM Post (Timeline post via Messaging API)
+    // Messaging API broadcast：群發給所有好友
     const res = await fetch('https://api.line.me/v2/bot/message/broadcast', {
       method: 'POST',
       headers: {
@@ -236,11 +236,11 @@ async function uploadLineVoom(creds: Record<string, string>, imageUrls: string[]
     })
     if (!res.ok) {
       const err = await res.json()
-      throw new Error(err.message ?? 'LINE VOOM 發布失敗')
+      throw new Error(err.message ?? 'LINE 官方帳號群發失敗')
     }
-    return { platform: 'LINE VOOM', ok: true }
+    return { platform: 'LINE 官方帳號群發', ok: true }
   } catch (e) {
-    return { platform: 'LINE VOOM', ok: false, error: String(e) }
+    return { platform: 'LINE 官方帳號群發', ok: false, error: String(e) }
   }
 }
 

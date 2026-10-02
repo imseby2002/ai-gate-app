@@ -2769,7 +2769,7 @@ const IMAGE_UPLOAD_PLATFORMS = [
   { id: 'Facebook',   label: 'Facebook',   icon: '📘' },
   { id: 'Instagram',  label: 'Instagram',  icon: '📸' },
   { id: 'Threads',    label: 'Threads',    icon: '🧵' },
-  { id: 'LINE VOOM',  label: 'LINE VOOM',  icon: '💚' },
+  { id: 'LINE VOOM',  label: 'LINE 官方帳號群發',  icon: '💚' },
   { id: 'Zalo',       label: 'Zalo',       icon: '🟦' },
   { id: 'LinkedIn',   label: 'LinkedIn',   icon: '💼' },
   { id: 'Twitter/X',  label: 'Twitter/X',  icon: '🐦' },

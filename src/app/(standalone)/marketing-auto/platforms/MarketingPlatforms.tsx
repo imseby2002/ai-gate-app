@@ -75,8 +75,8 @@ const PLATFORMS: Platform[] = [
     ],
   },
   {
-    id: 'LINE VOOM', name: 'LINE VOOM', color: '#00B900',
-    note: '沿用 LINE 官方帳號的 Channel Access Token，以廣播訊息方式發文（非官方 VOOM 貼文 API）。與客服頻道綁定的 LINE 憑證分開儲存。',
+    id: 'LINE VOOM', name: 'LINE 官方帳號群發', color: '#00B900',
+    note: '沿用 LINE 官方帳號的 Channel Access Token，群發訊息給所有好友（依好友數計入每月訊息則數）。與客服頻道綁定的 LINE 憑證分開儲存。',
     docUrl: 'https://developers.line.biz/en/docs/messaging-api/',
     fields: [
       { key: 'channel_access_token', label: 'Channel Access Token', placeholder: '...', secret: true },
