@@ -120,13 +120,13 @@ const SOCIAL_PLATFORMS: PlatformItem[] = [
   },
   {
     id: 'LINE VOOM',
-    name: 'LINE 官方帳號 / VOOM',
+    name: 'LINE 官方帳號群發',
     credKey: 'LINE VOOM',
     color: '#00B900',
     badgeText: 'LINE',
     supportsImage: true,
     supportsVideo: false,
-    description: '以 LINE 官方帳號廣播圖文發布',
+    description: '以 LINE 官方帳號群發給所有好友（計入每月訊息則數）',
     guideUrl: 'https://developers.line.biz/en/docs/messaging-api/',
   },
   {
