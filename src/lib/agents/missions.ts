@@ -4,7 +4,7 @@
 import { generateText } from 'ai'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { resolveCompanyOwner } from '@/lib/company/activeCompany'
+import { resolveActiveCompanyId, resolveCompanyOwner } from '@/lib/company/activeCompany'
 import { getCompanyContextMd } from '@/lib/company/profile'
 import { calculateCost } from '@/lib/ai/router'
 import { deductCredits } from '@/lib/skills/billing'
@@ -48,10 +48,23 @@ export interface MissionRow {
 }
 
 /** 行銷資料歸屬帳號：所屬公司 owner；個人帳號＝自己 */
+// 依「目前切換的公司」（切換 cookie，未切換則 profiles.company_id）解析資料歸屬帳號；僅能在 request 內呼叫
 export async function resolveMissionOwner(admin: Admin, userId: string): Promise<string> {
-  const { data: profile } = await admin.from('profiles').select('company_id').eq('id', userId).maybeSingle()
-  const owner = await resolveCompanyOwner(admin, (profile?.company_id as string | null) ?? null)
+  const { data: profile } = await admin.from('profiles').select('company_id, user_type').eq('id', userId).maybeSingle()
+  const companyId = await resolveActiveCompanyId(
+    admin, userId, profile?.user_type === 'admin', (profile?.company_id as string | null) ?? null,
+  )
+  const owner = await resolveCompanyOwner(admin, companyId)
   return owner ?? userId
+}
+
+/** 此使用者建立、但屬於「其他公司」的目標任務 id 與其 run id（切換公司後列表要排除） */
+export async function otherCompanyMissionScope(admin: Admin, userId: string, ownerId: string): Promise<{ missionIds: string[]; runIds: string[] }> {
+  const { data: missions } = await admin.from('agent_missions').select('id').eq('user_id', userId).neq('owner_id', ownerId)
+  const missionIds = (missions ?? []).map(m => m.id as string)
+  if (!missionIds.length) return { missionIds, runIds: [] }
+  const { data: runs } = await admin.from('agent_runs').select('id').in('mission_id', missionIds)
+  return { missionIds, runIds: (runs ?? []).map(r => r.id as string) }
 }
 
 export async function loadMission(admin: Admin, missionId: string): Promise<MissionRow | null> {

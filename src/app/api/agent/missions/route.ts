@@ -15,10 +15,12 @@ export async function GET() {
     return NextResponse.json({ error: '尚未開通 Agent 模組' }, { status: 403 })
   }
 
+  const ownerId = await resolveMissionOwner(createAdminClient(), user.id)
   const { data, error } = await supabase
     .from('agent_missions')
     .select('id, role_id, objective, budget_amount, budget_currency, budget_spent, deadline, status, kpis, created_at, last_error')
     .eq('user_id', user.id)
+    .eq('owner_id', ownerId)
     .order('created_at', { ascending: false })
     .limit(50)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
