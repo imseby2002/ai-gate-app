@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import {
   X, Share2, Check, CheckCircle2, AlertCircle, XCircle,
@@ -411,7 +412,9 @@ export function SocialPublishModal({
   const successCount = uploadResults?.filter(r => r.ok).length ?? 0
   const failCount = uploadResults?.filter(r => !r.ok).length ?? 0
 
-  return (
+  // 以 portal 掛到 body：globals.css 的 `main > *` 進場動畫（transform, fill both）
+  // 會讓頁面根節點成為 fixed 的 containing block，modal 跑到捲動容器頂端、看起來沒反應
+  return createPortal(
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in-50 duration-200">
       <div
         className="relative bg-background border border-border/80 w-full max-w-4xl max-h-[92vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
@@ -819,6 +822,7 @@ export function SocialPublishModal({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
