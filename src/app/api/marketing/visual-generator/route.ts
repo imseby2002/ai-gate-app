@@ -55,6 +55,25 @@ Focus only on product subject, textures, appetizing or attractive details, and c
   }
 }
 
+// 參考圖模式：將風格骨架轉為 Kontext 編輯指令，以原圖為主體；模板預設的人像詞移除，避免取代原圖主體（使用者描述可自行要求加人物）
+// 模板中會指定/取代主體的片語（人像、情侶、紳士、表情臉、瓶罐盒等），參考圖模式下移除
+const REFERENCE_SUBJECT_TERMS = /\b(portrait|fashion|person|people|couple|gentleman|expressive face|box or bottle)\b/i
+
+function buildReferenceEditPrompt(stylePrompt: string, subject: string): string {
+  const style = stylePrompt
+    .split(',')
+    .map(s => s.trim())
+    .filter(s => s && !REFERENCE_SUBJECT_TERMS.test(s))
+    .join(', ')
+  return [
+    'Use the input image as the main subject: keep its subject, objects, scene, layout and camera angle.',
+    'Do not replace the original subject with a different one.',
+    `Restyle the image with this look: ${style}.`,
+    subject ? `Additional details: ${subject}.` : '',
+    'Preserve the original identity and structure of the photo, mainly change lighting, color grading, styling and add design space.',
+  ].filter(Boolean).join(' ')
+}
+
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -109,7 +128,10 @@ export async function POST(req: NextRequest) {
     let revisedPrompt = synthesizedPositive
 
     // 3. 圖片生成
-    if (imageUrl && model === 'flux' && process.env.FAL_AI_API_KEY) {
+    if (imageUrl) {
+      if (!process.env.FAL_AI_API_KEY) return NextResponse.json({ error: 'FAL_AI_API_KEY 未設定' }, { status: 500 })
+      const editPrompt = buildReferenceEditPrompt(template.positivePrompt, translatedSubject)
+      revisedPrompt = editPrompt
       // 支援圖生圖 / 參考圖修改 (FLUX Kontext)
       const falRes = await fetch('https://fal.run/fal-ai/flux-pro/kontext', {
         method: 'POST',
@@ -119,7 +141,7 @@ export async function POST(req: NextRequest) {
         },
         body: JSON.stringify({
           image_url: imageUrl,
-          prompt: synthesizedPositive,
+          prompt: editPrompt,
           guidance_scale: 3.5,
           num_images: 1,
           output_format: 'jpeg',
@@ -127,13 +149,18 @@ export async function POST(req: NextRequest) {
         }),
       })
 
-      if (falRes.ok) {
-        const falData = await falRes.json()
-        tempUrl = falData?.images?.[0]?.url ?? ''
+      if (!falRes.ok) {
+        const err = await falRes.json().catch(() => ({}))
+        const d = err?.detail
+        const msg = typeof d === 'string' ? d : Array.isArray(d) ? d.map((e: any) => e.msg ?? JSON.stringify(e)).join('; ') : '參考圖生成失敗'
+        return NextResponse.json({ error: msg }, { status: 500 })
       }
+      const falData = await falRes.json()
+      tempUrl = falData?.images?.[0]?.url ?? ''
+      if (!tempUrl) return NextResponse.json({ error: '參考圖生成失敗，請稍後再試' }, { status: 500 })
     }
 
-    // 若非圖生圖或 Kontext 失敗，走標準文生圖
+    // 無參考圖，走標準文生圖
     if (!tempUrl) {
       if (model === 'dalle3') {
         const apiKey = process.env.OPENAI_API_KEY
