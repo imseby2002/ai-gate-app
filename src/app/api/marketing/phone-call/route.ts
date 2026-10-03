@@ -4,7 +4,7 @@
  *
  * TTS：ElevenLabs（全區）
  * 撥打：依門號路由（getTelephonyProviderForPhone）
- * 扣點：TTS 固定；通話依實際分鐘數 × 國別費率 × 方案倍率
+ * 扣點：TTS 依字元數（ElevenLabs）；通話依實際分鐘數 × 國別費率 × 方案倍率
  *   - Twilio：通話結束後由 /api/ivr/webhook/twilio 依 Twilio 回報秒數扣點
  *   - 其他通道（無通話秒數回報）：撥出成功即以 1 分鐘計
  * VBEE：功能保留，待日後啟用
@@ -26,7 +26,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { getTelephonyProvider, getTelephonyProviderForPhone } from '@/lib/telephony'
-import { TTS_COST, chargeUsage, checkCredits, deductCredits, getCostMultiplier, isBillableUser, priceFromCost, voiceCostPerMinute } from '@/lib/marketing/billing'
+import { chargeUsage, checkCredits, getCostMultiplier, isBillableUser, priceFromCost, ttsCost, voiceCostPerMinute } from '@/lib/marketing/billing'
 import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
 
 type KeyMapping = { digit: string; channel: string; target_type?: string; join_url: string; label?: string }
@@ -155,7 +155,8 @@ export async function POST(req: NextRequest) {
   const dialList: string[] = action === 'batch' ? (phones as string[]).filter((p) => p?.trim())
     : action === 'call' && phone ? [phone] : []
   const callEstimateUsd = dialList.reduce((sum, p) => sum + voiceCostPerMinute(p, getTelephonyProviderForPhone(p, { collectDtmf }).name), 0)
-  const estimate = TTS_COST + (billable ? priceFromCost(callEstimateUsd, await getCostMultiplier(user.id)) : 0)
+  const ttsCostUsd = ttsCost(script, modelId)
+  const estimate = billable ? priceFromCost(ttsCostUsd + callEstimateUsd, await getCostMultiplier(user.id)) : 0
   const check = await checkCredits(user.id, estimate, billable)
   if (!check.ok) return NextResponse.json(check.payload, { status: 402 })
 
@@ -163,7 +164,7 @@ export async function POST(req: NextRequest) {
     // ── TTS only ─────────────────────────────────────────────────────────────
     if (action === 'tts') {
       const audioUrl = await elevenLabsTTS(script, voiceId, modelId, supabase, user.id)
-      await deductCredits(user.id, TTS_COST, '[marketing] 電話行銷 TTS 試聽', billable)
+      await chargeUsage(user.id, ttsCostUsd, '[marketing] 電話行銷 TTS 試聽')
       return NextResponse.json({ audioUrl, provider: 'ElevenLabs' })
     }
 
@@ -193,7 +194,7 @@ export async function POST(req: NextRequest) {
       const pProvider = getTelephonyProviderForPhone(phone, { collectDtmf })
       const result = await pProvider.call({ phone, audioUrl, callerId: finalCallerId, collectDtmf })
       await recordCall(phone, result.callId, pProvider.name)
-      await deductCredits(user.id, TTS_COST, '[marketing] 電話行銷 TTS', billable)
+      await chargeUsage(user.id, ttsCostUsd, '[marketing] 電話行銷 TTS')
       await chargeUpfrontCalls('[marketing] 電話行銷撥打 1 通（以 1 分鐘計）')
       return NextResponse.json({ ok: true, phone, callId: result.callId, audioUrl, provider: pProvider.name })
     }
@@ -220,7 +221,7 @@ export async function POST(req: NextRequest) {
       }
 
       const successCount = results.filter(r => r.ok).length
-      await deductCredits(user.id, TTS_COST, '[marketing] 電話行銷 TTS', billable)
+      await chargeUsage(user.id, ttsCostUsd, '[marketing] 電話行銷 TTS')
       await chargeUpfrontCalls(`[marketing] 電話行銷批次撥打（非 Twilio 通道以每通 1 分鐘計）`)
 
       return NextResponse.json({

@@ -124,10 +124,25 @@ export function llmCost(model: string, usage?: { inputTokens?: number; outputTok
   return ((usage.inputTokens ?? 0) * p.input + (usage.outputTokens ?? 0) * p.output) / 1_000_000
 }
 
-// HeyGen 虛擬主播影片（每支）
-export const HEYGEN_VIDEO_COST = 1.0
-// ElevenLabs TTS（每次合成）
-export const TTS_COST = 0.03
+// ElevenLabs TTS（每 1,000 字元）：Multilingual v2 $0.10；Flash／Turbo $0.05
+export function ttsCost(text: string, modelId = 'eleven_multilingual_v2'): number {
+  const rate = /flash|turbo/i.test(modelId) ? 0.05 : 0.1
+  return ([...text].length / 1000) * rate
+}
+
+// HeyGen API 虛擬主播（Avatar III，720p／1080p）：$1／分鐘，依影片秒數計
+export const HEYGEN_AVATAR_COST_PER_SEC = 1 / 60
+
+/** 依腳本估算朗讀秒數：中日韓字約每秒 4 字、其他語言約每秒 2.5 個字詞 */
+export function estimateSpeechSeconds(text: string): number {
+  const cjk = (text.match(/[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]/g) ?? []).length
+  const words = text.replace(/[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]/g, ' ').split(/\s+/).filter(Boolean).length
+  return Math.max(1, Math.ceil(cjk / 4 + words / 2.5))
+}
+
+export function heygenVideoCost(script: string): number {
+  return estimateSpeechSeconds(script) * HEYGEN_AVATAR_COST_PER_SEC
+}
 
 // ── 電話／簡訊／Email 供應商成本（USD），扣點＝成本 × 方案倍率 ────────────────
 export type TelcoCountry = 'TW' | 'VN' | 'US' | 'INTL'
