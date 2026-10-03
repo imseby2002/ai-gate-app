@@ -843,7 +843,7 @@ ${selectedVideoTemplate.rawScript}
                       <div className="grid grid-cols-2 gap-1.5">
                         {([
                           { id: 'flux', name: 'Nano Banana Pro', hint: '$0.20／張' },
-                          { id: 'ideogram', name: 'Ideogram v3', hint: '$0.09／張・實測' },
+                          { id: 'ideogram', name: 'Ideogram v3', hint: '$0.18／張・實測' },
                         ] as const).map(e => (
                           <button
                             key={e.id}

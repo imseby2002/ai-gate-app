@@ -35,8 +35,8 @@ export const NANO_BANANA_PRO_COST = 0.2
 // 參考圖模式另以 Claude 看圖撰寫美術指導指令（每次）
 export const NANO_BANANA_DIRECTOR_COST = 0.01
 
-// Ideogram v3 BALANCED（每張）：成本約 $0.06，比照 Nano Banana Pro 採「成本 ×1.5」
-export const IDEOGRAM_COST = 0.09
+// Ideogram v3 BALANCED（每張）：成本約 $0.06，依一般原則「成本 ×3」
+export const IDEOGRAM_COST = 0.18
 
 // 圖片生成（每張）；flux / nano 等舊模型 id 目前皆走 Nano Banana Pro
 export const IMAGE_COSTS: Record<string, number> = {
