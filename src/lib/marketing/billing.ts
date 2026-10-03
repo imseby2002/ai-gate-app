@@ -181,10 +181,20 @@ export function smsCost(phone: string, text: string): number {
 
 // Email（每封）：Resend 超量 $0.90／1,000 封
 export const EMAIL_SEND_COST = 0.0009
-// AI 視覺工坊「AI 建議」（Claude 看圖，每次）
-export const AI_STUDIO_SUGGEST_COST = 0.01
-// AI 視覺工坊節點執行的預估上限（實際依節點回報的 cost 扣）
-export const AI_STUDIO_MAX_ESTIMATE = 0.2
+// AI 視覺工坊 fal 節點成本（USD／次），扣點＝成本 × 方案倍率，Claude 依 token 另計
+// fal：FLUX Pro Fill $0.05、Kontext Pro $0.04、Nano Banana edit $0.04、FLUX dev img2img $0.035／MP（以 2MP 計）；
+// Aura SR、BiRefNet 未取得公開報價，沿用原保守值
+export const AI_STUDIO_FAL_COSTS = {
+  fill: 0.05,
+  kontext: 0.04,
+  nanoBananaEdit: 0.04,
+  fluxDevImg2Img: 0.07,
+  auraSr: 0.04,
+  birefnet: 0.02,
+} as const
+// 執行前餘額檢查用的預估成本（USD）
+export const AI_STUDIO_SUGGEST_ESTIMATE = 0.01
+export const AI_STUDIO_NODE_ESTIMATE = 0.1
 
 // 自製專家：建立來源（訓練）與問答的計價
 // 建立來源：網址每則 0.02；檔案／文字每 1000 字 0.01（萃取＋儲存成本）
