@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { VISUAL_TEMPLATES } from '@/lib/marketing/visual-templates'
+import { VISUAL_TEMPLATES, type VisualTemplate } from '@/lib/marketing/visual-templates'
 import { IMAGE_COSTS, checkCredits, deductCredits, isBillableUser } from '@/lib/marketing/billing'
 import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 
-export const maxDuration = 60
+export const maxDuration = 120
 
 const DALLE_SIZES: Record<string, string> = {
   '1:1':  '1024x1024',
@@ -40,7 +40,7 @@ async function translateOrEnrichSubject(userText: string): Promise<string> {
   try {
     const anthropic = createAnthropic({ apiKey })
     const { text } = await generateText({
-      model: anthropic('claude-3-5-haiku-latest'),
+      model: anthropic('claude-haiku-4-5'),
       messages: [{
         role: 'user',
         content: `Translate and describe the following product or marketing concept into concise, vivid English visual descriptors for an AI image prompt:
@@ -88,6 +88,58 @@ function buildMultiReferencePrompt(stylePrompt: string, subject: string, count: 
     `Style the composition with this look: ${style}.`,
     subject ? `Additional details: ${subject}.` : '',
   ].filter(Boolean).join(' ')
+}
+
+// 參考圖模式：由 Claude 看圖擔任美術指導，依風格類型（雜誌、海報、促銷卡…）寫出完整版面的 Kontext 編輯指令
+// 讓成品真正呈現該類型設計（版面重組、縮圖、背景處理、類型文案），而非只在原圖上疊字
+async function directReferenceEdit(
+  template: VisualTemplate,
+  userText: string,
+  images: string[],
+): Promise<string | null> {
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) return null
+  const isMulti = images.length > 1
+
+  try {
+    const anthropic = createAnthropic({ apiKey })
+    const { text } = await generateText({
+      model: anthropic('claude-sonnet-4-6'),
+      abortSignal: AbortSignal.timeout(25000),
+      system: `You are an art director writing ONE editing instruction for the FLUX Kontext image editing model, which edits the given input image(s).
+Goal: turn the input photo(s) into a finished design that unmistakably looks like the requested genre, not the original photo with text pasted on top.
+
+Rules:
+- First identify what the photo actually shows (e.g. hotel room, dish, product, person, storefront) and pick the fitting sub-genre (e.g. magazine: room/hotel -> travel & lifestyle magazine cover; person -> fashion cover with that person as cover model; food -> food magazine).
+- The real subject from the input image(s) must stay recognizable and be the hero. Never replace it with a different subject.
+- ${isMulti
+  ? 'Use ONLY the products shown in the input images, keeping their exact appearance. Do not add, invent or substitute any other products.'
+  : 'You may add genre-typical supporting elements (e.g. small inset photo panels of related scenes, graphic shapes, badges, stickers) as long as the input subject remains the main visual.'}
+- Be decisive about layout: say how to reframe the photo (full-bleed, cropped, scaled down into a panel, inset frames), how to treat the background (blur, tint, paper texture, color block), and where each design element goes.
+- Text: every text item must be quoted exactly, in English or numbers only, short (max 5 words each), at most 6 items, e.g. masthead "WANDER", cover lines "A QUIET STAY IN TOUCHENG". Derive text from the user's notes (romanize place names, e.g. 宜蘭頭城 -> Toucheng, Yilan); if there are no notes, write fitting generic text for the subject. Never use real trademarked magazine names.
+- Output only the instruction in English, max 130 words, no preamble.`,
+      messages: [{
+        role: 'user',
+        content: [
+          ...images.map(image => ({ type: 'image' as const, image })),
+          {
+            type: 'text' as const,
+            text: `Genre/style: ${template.title} — ${template.feeling}
+Typical use: ${template.applicability}
+Style keywords: ${template.positivePrompt}
+Layout advice: ${template.paramAdvice}
+User notes: ${userText?.trim() || '(none)'}`,
+          },
+        ],
+      }],
+      maxOutputTokens: 400,
+    })
+    const out = text.trim()
+    return out || null
+  } catch (e) {
+    console.warn('[visual-generator] 參考圖美術指導失敗，改用預設指令:', e)
+    return null
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -152,9 +204,9 @@ export async function POST(req: NextRequest) {
     if (refImages.length) {
       if (!process.env.FAL_AI_API_KEY) return NextResponse.json({ error: 'FAL_AI_API_KEY 未設定' }, { status: 500 })
       const isMulti = refImages.length > 1
-      const editPrompt = isMulti
+      const editPrompt = (await directReferenceEdit(template, userPrompt, refImages)) ?? (isMulti
         ? buildMultiReferencePrompt(template.positivePrompt, translatedSubject, refImages.length)
-        : buildReferenceEditPrompt(template.positivePrompt, translatedSubject)
+        : buildReferenceEditPrompt(template.positivePrompt, translatedSubject))
       revisedPrompt = editPrompt
       // 支援圖生圖 / 參考圖修改 (FLUX Kontext；多圖使用 Kontext Multi)
       const falRes = await fetch(isMulti ? 'https://fal.run/fal-ai/flux-pro/kontext/multi' : 'https://fal.run/fal-ai/flux-pro/kontext', {
