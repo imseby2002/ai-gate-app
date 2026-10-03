@@ -9,7 +9,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { HEYGEN_VIDEO_COST, checkCredits, deductCredits, isBillableUser } from '@/lib/marketing/billing'
+import { chargeUsage, estimateSpeechSeconds, heygenVideoCost, precheckUsage } from '@/lib/marketing/billing'
 import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
 
 const HEYGEN_BASE = 'https://api.heygen.com'
@@ -141,9 +141,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '目前方案未開放主播行銷，請升級至 MAX 方案', plan }, { status: 403 })
   }
 
-  const billable = await isBillableUser(user.id)
-  const check = await checkCredits(user.id, HEYGEN_VIDEO_COST, billable)
-  if (!check.ok) return NextResponse.json(check.payload, { status: 402 })
+  // 依腳本估算影片秒數 × HeyGen 每秒成本 × 方案倍率扣點
+  const costUsd = heygenVideoCost(script)
+  const insufficient = await precheckUsage(user.id, costUsd)
+  if (insufficient) return NextResponse.json(insufficient, { status: 402 })
 
   const dimensionMap: Record<string, { width: number; height: number }> = {
     '16:9': { width: 1280, height: 720 },
@@ -194,8 +195,8 @@ export async function POST(req: NextRequest) {
     const videoId: string = data?.data?.video_id ?? data?.video_id ?? ''
     if (!videoId) return NextResponse.json({ error: 'HeyGen 未回傳 video_id' }, { status: 500 })
 
-    await deductCredits(user.id, HEYGEN_VIDEO_COST, '[marketing] 主播行銷影片 HeyGen', billable)
-    return NextResponse.json({ videoId, status: 'processing', cost: HEYGEN_VIDEO_COST })
+    const cost = await chargeUsage(user.id, costUsd, `[marketing] 主播行銷影片 HeyGen 約 ${estimateSpeechSeconds(script)} 秒`)
+    return NextResponse.json({ videoId, status: 'processing', cost })
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 })
   }
