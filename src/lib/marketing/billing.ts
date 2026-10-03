@@ -29,13 +29,19 @@ export async function isBillableUser(userId: string): Promise<boolean> {
   return profile?.user_type === 'external'
 }
 
-// 圖片生成（每張）
+// Nano Banana Pro（每張）：成本較高，例外改採「成本 ×1.5」
+// 成本以 Google Gemini API 直連 1K/2K 每張約 $0.134 計（lib/ai/nano-banana.ts），0.134 × 1.5 ≈ 0.20
+export const NANO_BANANA_PRO_COST = 0.2
+// 參考圖模式另以 Claude 看圖撰寫美術指導指令（每次）
+export const NANO_BANANA_DIRECTOR_COST = 0.01
+
+// 圖片生成（每張）；flux / nano 等舊模型 id 目前皆走 Nano Banana Pro
 export const IMAGE_COSTS: Record<string, number> = {
   dalle3: 0.08,
-  flux: 0.05,
-  'flux-1-pro': 0.05,
-  nano: 0.02,
-  'nano-banana': 0.02,
+  flux: NANO_BANANA_PRO_COST,
+  'flux-1-pro': NANO_BANANA_PRO_COST,
+  nano: NANO_BANANA_PRO_COST,
+  'nano-banana': NANO_BANANA_PRO_COST,
 }
 
 // 影片生成（每 5 秒為一單位計）

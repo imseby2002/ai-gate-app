@@ -45,13 +45,12 @@ export async function POST(req: NextRequest) {
     if (!imageUrl) throw new Error('No image URL returned')
 
     // Track usage
-    const costPerImage = model === 'flux-1-pro' ? 0.05 : 0.02
     void supabase.from('messages').insert({
       user_id: user.id,
       role: 'assistant',
       content: `[圖片生成] ${prompt}`,
       model_id: model,
-      cost_usd: costPerImage,
+      cost_usd: price,
       image_urls: [imageUrl],
     })
     if (billable) {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { VISUAL_TEMPLATES, type VisualTemplate } from '@/lib/marketing/visual-templates'
-import { IMAGE_COSTS, checkCredits, deductCredits, isBillableUser } from '@/lib/marketing/billing'
+import { IMAGE_COSTS, NANO_BANANA_PRO_COST, NANO_BANANA_DIRECTOR_COST, checkCredits, deductCredits, isBillableUser } from '@/lib/marketing/billing'
 import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateNanoBanana } from '@/lib/ai/nano-banana'
@@ -186,7 +186,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '目前方案未開放圖片產出，請升級至 PRO 以上', plan }, { status: 403 })
     }
 
-    const cost = IMAGE_COSTS[model] ?? 0.05
+    // 有參考圖一律走 Nano Banana Pro，另加 Claude 美術指導；無參考圖依所選模型
+    const cost = refImages.length
+      ? NANO_BANANA_PRO_COST + NANO_BANANA_DIRECTOR_COST
+      : IMAGE_COSTS[model] ?? NANO_BANANA_PRO_COST
     const billable = await isBillableUser(user.id)
     const check = await checkCredits(user.id, cost, billable)
     if (!check.ok) return NextResponse.json(check.payload, { status: 402 })

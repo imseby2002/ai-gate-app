@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Loader2, Download, Wand2 } from 'lucide-react'
 
 const IMAGE_MODELS = [
-  { id: 'flux-1-pro', name: 'Nano Banana Pro', desc: '高品質、排版與文字清晰', cost: '$0.05/張' },
+  { id: 'flux-1-pro', name: 'Nano Banana Pro', desc: '高品質、排版與文字清晰', cost: '$0.20/張' },
 ]
 
 const ASPECT_RATIOS = ['1:1', '16:9', '9:16', '4:3', '3:4']

@@ -1395,7 +1395,7 @@ interface Unit6Data {
 type ImageModel = 'dalle3' | 'flux' | 'nano'
 
 const IMAGE_MODELS: { id: ImageModel; name: string; cost: string }[] = [
-  { id: 'flux',   name: 'Nano Banana Pro', cost: '$0.05' },
+  { id: 'flux',   name: 'Nano Banana Pro', cost: '$0.20' },
   { id: 'dalle3', name: 'DALL-E 3',     cost: '$0.08' },
 ]
 
