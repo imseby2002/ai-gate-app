@@ -105,7 +105,11 @@ const LLM_PRICES: Record<string, { input: number; output: number }> = {
   'gemini-2.5-flash': { input: 0.3, output: 2.5 },
   // DeepSeek 各來源報價不一，取較高者 $0.27／$1.10
   'deepseek-chat': { input: 0.27, output: 1.1 },
+  // Perplexity Sonar：token $1／$1，另有每次請求搜尋費（見 PERPLEXITY_SONAR_REQUEST_COST）
+  sonar: { input: 1, output: 1 },
 }
+// Perplexity Sonar 每次請求搜尋費（search_context_size 預設 low：$5／1,000 次）
+export const PERPLEXITY_SONAR_REQUEST_COST = 0.005
 
 // 外部資料來源（每次／每筆，USD）
 // Tavily advanced search：2 credits × $0.008；Outscraper：$3／1,000 筆（超過每月免費額度後，保守一律計入）
