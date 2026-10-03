@@ -110,7 +110,7 @@ async function directReferenceEdit(
 Goal: turn the input photo(s) into a finished design that unmistakably looks like the requested genre, not the original photo with text pasted on top.
 
 Rules:
-- First identify what the photo actually shows (e.g. hotel room, dish, product, person, storefront) and pick the fitting sub-genre (e.g. magazine: room/hotel -> travel & lifestyle magazine cover; person -> fashion cover with that person as cover model; food -> food magazine).
+- Sub-genre: if the user's notes name a specific type (e.g. 時尚雜誌 fashion, 旅遊雜誌 travel, 美食雜誌 food, 建築/室內設計雜誌 interior, 商業雜誌 business), you MUST use exactly that type. Only when the notes name no type, identify what the photo actually shows (e.g. hotel room, dish, product, person, storefront) and pick the fitting sub-genre (e.g. magazine: room/hotel -> travel & lifestyle magazine cover; person -> fashion cover with that person as cover model; food -> food magazine).
 - The real subject from the input image(s) must stay recognizable and be the hero. Never replace it with a different subject.
 - ${isMulti
   ? 'Use ONLY the products shown in the input images, keeping their exact appearance. Do not add, invent or substitute any other products.'
