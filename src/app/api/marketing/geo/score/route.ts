@@ -13,6 +13,8 @@ import { getKeywordProvider } from '@/lib/geo/providers'
 import { intentScore, searchSignal, opportunity, clampScarcity } from '@/lib/geo/scoring'
 import { createOpenAI } from '@ai-sdk/openai'
 import { generateText } from 'ai'
+import { PERPLEXITY_SONAR_REQUEST_COST, precheckUsage } from '@/lib/marketing/billing'
+import { setUsageUser, trackCost, trackLlm, withUsage } from '@/lib/marketing/usage'
 
 export const maxDuration = 120
 
@@ -29,7 +31,7 @@ async function fetchCompetition(
       baseURL: 'https://api.perplexity.ai',
     })
     const list = questions.map((q, i) => `${i + 1}. ${q.question}`).join('\n')
-    const { text } = await generateText({
+    const { text, usage } = await generateText({
       model: perplexity.chat('sonar'),
       messages: [{
         role: 'user',
@@ -40,6 +42,8 @@ ${list}`,
       }],
       maxOutputTokens: 800,
     })
+    trackLlm('sonar', usage)
+    trackCost(PERPLEXITY_SONAR_REQUEST_COST)
     const m = text.match(/\[[\s\S]*\]/)
     if (m) {
       const arr = JSON.parse(m[0]) as { n: number; sources: number }[]
@@ -54,10 +58,11 @@ ${list}`,
   return out
 }
 
-export async function POST(req: NextRequest) {
+async function handlePost(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  setUsageUser(user.id)
 
   const { projectId, location } = await req.json()
   if (!projectId) return NextResponse.json({ error: '缺少 projectId' }, { status: 400 })
@@ -75,6 +80,12 @@ export async function POST(req: NextRequest) {
     .eq('project_id', projectId)
   if (!questions || questions.length === 0) {
     return NextResponse.json({ error: '沒有問句可評分' }, { status: 404 })
+  }
+
+  // 依實際用量扣點：Perplexity 批次一次（token＋請求費）
+  if (process.env.PERPLEXITY_API_KEY) {
+    const insufficient = await precheckUsage(user.id, PERPLEXITY_SONAR_REQUEST_COST + 0.002)
+    if (insufficient) return NextResponse.json(insufficient, { status: 402 })
   }
 
   const locale = project.locale ?? 'zh-TW'
@@ -133,3 +144,5 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ questions: results })
 }
+
+export const POST = withUsage('[marketing] GEO 機會分數（Perplexity）', handlePost)

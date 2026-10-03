@@ -5,6 +5,8 @@
  */
 import { createOpenAI } from '@ai-sdk/openai'
 import { generateText } from 'ai'
+import { PERPLEXITY_SONAR_REQUEST_COST } from '@/lib/marketing/billing'
+import { trackCost, trackLlm } from '@/lib/marketing/usage'
 
 export interface TrackInput {
   id: string            // question id
@@ -36,7 +38,7 @@ async function checkOne(q: TrackInput, locale: string): Promise<TrackResult | nu
       apiKey: process.env.PERPLEXITY_API_KEY,
       baseURL: 'https://api.perplexity.ai',
     })
-    const { text } = await generateText({
+    const { text, usage } = await generateText({
       model: perplexity.chat('sonar'),
       messages: [{
         role: 'user',
@@ -46,6 +48,9 @@ async function checkOne(q: TrackInput, locale: string): Promise<TrackResult | nu
       }],
       maxOutputTokens: 900,
     })
+    // 手動觸發時依實際用量扣點（cron 不在 withUsage 範圍內，不記帳）
+    trackLlm('sonar', usage)
+    trackCost(PERPLEXITY_SONAR_REQUEST_COST)
     const m = text.match(/\{[\s\S]*"sources"[\s\S]*\}/)
     let sources: string[] = []
     if (m) {
