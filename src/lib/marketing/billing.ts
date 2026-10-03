@@ -102,7 +102,16 @@ const LLM_PRICES: Record<string, { input: number; output: number }> = {
   'claude-sonnet-4-6': { input: 3, output: 15 },
   'claude-haiku-4-5': { input: 1, output: 5 },
   'gemini-2.5-flash': { input: 0.3, output: 2.5 },
+  // DeepSeek 各來源報價不一，取較高者 $0.27／$1.10
+  'deepseek-chat': { input: 0.27, output: 1.1 },
 }
+
+// 外部資料來源（每次／每筆，USD）
+// Tavily advanced search：2 credits × $0.008；Outscraper：$3／1,000 筆（超過每月免費額度後，保守一律計入）
+export const TAVILY_ADVANCED_SEARCH_COST = 0.016
+export const OUTSCRAPER_RECORD_COST = 0.003
+// 一鍵發布：每個平台每則（固定扣點，不乘倍率）
+export const PUBLISH_PER_POST_CREDITS = 0.01
 /** 依實際 token 用量計算成本（usage 取自 AI SDK 回傳） */
 export function llmCost(model: string, usage?: { inputTokens?: number; outputTokens?: number } | null): number {
   const p = LLM_PRICES[model]
@@ -165,4 +174,32 @@ export async function deductCredits(
 ): Promise<{ ok: true; balance: number } | { ok: false; reason: 'insufficient' | 'error' }> {
   if (!billable) return { ok: true, balance: Infinity }
   return deductCreditsRaw(userId, amount, description)
+}
+
+/**
+ * 依用量計價功能的執行前檢查：預估成本 × 方案倍率，餘額不足時回傳 402 payload，足夠回傳 null。
+ * 非付費帳號（admin／employee／cron）一律放行。
+ */
+export async function precheckUsage(
+  userId: string,
+  estimateUsd: number,
+): Promise<{ error: string; balance: number; required: number } | null> {
+  const billable = await isBillableUser(userId)
+  if (!billable) return null
+  const required = priceFromCost(estimateUsd, await getCostMultiplier(userId))
+  const check = await checkCredits(userId, required, billable)
+  return check.ok ? null : check.payload
+}
+
+/**
+ * 依用量計價功能的執行後扣點：實際成本 × 方案倍率。扣點失敗只記錄、不影響已完成的結果。
+ * 回傳實際扣除的點數（非付費帳號為 0）。
+ */
+export async function chargeUsage(userId: string, costUsd: number, description: string): Promise<number> {
+  const billable = await isBillableUser(userId)
+  if (!billable || !(costUsd > 0)) return 0
+  const amount = priceFromCost(costUsd, await getCostMultiplier(userId))
+  const res = await deductCredits(userId, amount, description, billable)
+  if (!res.ok) console.error('[marketing billing] 扣點失敗', { userId, amount, description, reason: res.reason })
+  return amount
 }

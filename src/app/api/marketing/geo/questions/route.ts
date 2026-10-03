@@ -12,6 +12,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 import { outputLangInstruction } from '@/lib/ai/output-lang'
+import { setUsageUser, trackLlm, withUsage } from '@/lib/marketing/usage'
+import { precheckUsage } from '@/lib/marketing/billing'
 
 export const maxDuration = 60
 
@@ -30,10 +32,14 @@ const SYSTEM = `你是 GEO（Generative Engine Optimization）內容策略專家
 只回傳純 JSON，格式：
 { "questions": [ { "question": "問句", "intent": "info|local|compare|transact" } ] }`
 
-export async function POST(req: NextRequest) {
+export const POST = withUsage('[marketing] GEO 問題發想', async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  setUsageUser(user.id)
+  // 依實際用量 × 方案倍率扣點；執行前以預估成本檢查餘額
+  const usagePrecheck = await precheckUsage(user.id, 0.01)
+  if (usagePrecheck) return NextResponse.json(usagePrecheck, { status: 402 })
 
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({ error: 'ANTHROPIC_API_KEY 未設定' }, { status: 500 })
@@ -54,11 +60,12 @@ ${exclusiveFacts?.trim() ? `\n【獨家資訊／可用素材】\n${exclusiveFact
 
   let parsed: { question: string; intent: Intent }[]
   try {
-    const { text } = await generateText({
+    const { text, usage } = await generateText({
       model: anthropic('claude-haiku-4-5'),
       messages: [{ role: 'user', content: promptText }],
       maxOutputTokens: 1500,
     })
+    trackLlm('claude-haiku-4-5', usage)
 
     const jsonMatch = text.match(/\{[\s\S]*\}/)
     if (!jsonMatch) return NextResponse.json({ error: 'AI 回傳格式錯誤' }, { status: 500 })
@@ -115,4 +122,4 @@ ${exclusiveFacts?.trim() ? `\n【獨家資訊／可用素材】\n${exclusiveFact
   }
 
   return NextResponse.json({ projectId: project.id, questions: rows })
-}
+})

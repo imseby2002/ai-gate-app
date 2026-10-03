@@ -17,6 +17,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getCronOrUserAuth } from '@/lib/cron-auth'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
+import { setUsageUser, trackLlm, withUsage } from '@/lib/marketing/usage'
+import { precheckUsage } from '@/lib/marketing/billing'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -127,12 +129,13 @@ ${chunk}
 
 萃取所有組織，回傳 JSON 陣列。`
 
-  const { text } = await generateText({
+  const { text, usage } = await generateText({
     model: anthropic(EXTRACT_MODEL),
     system: systemPrompt,
     prompt: userPrompt,
     maxOutputTokens: 16000,
   })
+  trackLlm('claude-haiku-4-5', usage)
 
   // 嘗試提取 JSON 陣列（支援 markdown code block）
   const clean = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim()
@@ -202,9 +205,13 @@ async function aiParseOrgs(
 
 // ─── Main Handler ──────────────────────────────────────────────────────────────
 
-export async function POST(req: NextRequest) {
+export const POST = withUsage('[marketing] 潛在客戶篩選', async function POST(req: NextRequest) {
   const user = await getCronOrUserAuth(req)
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  setUsageUser(user.id)
+  // 依實際用量 × 方案倍率扣點；執行前以預估成本檢查餘額
+  const usagePrecheck = await precheckUsage(user.id, 0.1)
+  if (usagePrecheck) return NextResponse.json(usagePrecheck, { status: 402 })
 
   const body = await req.json()
   const {
@@ -294,4 +301,4 @@ export async function POST(req: NextRequest) {
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 })
   }
-}
+})

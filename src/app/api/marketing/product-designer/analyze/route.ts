@@ -9,6 +9,8 @@ import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { generateText } from 'ai'
 import { outputLangInstruction } from '@/lib/ai/output-lang'
+import { setUsageUser, trackLlm, withUsage } from '@/lib/marketing/usage'
+import { precheckUsage } from '@/lib/marketing/billing'
 
 export const maxDuration = 60
 
@@ -40,10 +42,14 @@ const DIRECTOR_PROMPT = `你是頂級行銷創意總監。根據提供的產品�
   ]
 }`
 
-export async function POST(req: NextRequest) {
+export const POST = withUsage('[marketing] 產品行銷設計師-analyze', async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  setUsageUser(user.id)
+  // 依實際用量 × 方案倍率扣點；執行前以預估成本檢查餘額
+  const usagePrecheck = await precheckUsage(user.id, 0.02)
+  if (usagePrecheck) return NextResponse.json(usagePrecheck, { status: 402 })
 
   const { plan: userPlan, features } = await getMarketingEntitlements(supabase, user.id)
   if (features.productDesigner === 'none') {
@@ -78,7 +84,7 @@ export async function POST(req: NextRequest) {
     : [{ role: 'user', content: promptText }]
 
   try {
-    const { text } = await generateText({
+    const { text, usage } = await generateText({
       model: google('gemini-2.5-flash'),
       providerOptions: {
         google: { thinkingConfig: { thinkingBudget: 0 } },
@@ -86,6 +92,7 @@ export async function POST(req: NextRequest) {
       messages,
       maxOutputTokens: 3000,
     })
+    trackLlm('gemini-2.5-flash', usage)
 
     const jsonMatch = text.match(/\{[\s\S]*\}/)
     if (!jsonMatch) return NextResponse.json({ error: 'AI 回傳格式錯誤' }, { status: 500 })
@@ -95,4 +102,4 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }
-}
+})

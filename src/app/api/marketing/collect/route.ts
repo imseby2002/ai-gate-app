@@ -19,6 +19,8 @@ import { createClient } from '@/lib/supabase/server'
 import { getCronOrUserAuth } from '@/lib/cron-auth'
 import { createOpenAI } from '@ai-sdk/openai'
 import { generateText } from 'ai'
+import { setUsageUser, trackCost, trackLlm, withUsage } from '@/lib/marketing/usage'
+import { OUTSCRAPER_RECORD_COST, TAVILY_ADVANCED_SEARCH_COST, precheckUsage } from '@/lib/marketing/billing'
 
 type CollectType =
   | 'map' | 'tiktok' | 'facebook' | 'instagram' | 'threads' | 'youtube'
@@ -39,6 +41,7 @@ async function tavilySearch(query: string, limit = 6): Promise<string> {
     }),
   })
   if (!res.ok) throw new Error(`Tavily error: ${res.statusText}`)
+  trackCost(TAVILY_ADVANCED_SEARCH_COST)
   const data = await res.json()
   const parts: string[] = []
   if (data.answer) parts.push(`📌 摘要：${data.answer}`)
@@ -98,6 +101,7 @@ async function mapSearch(
         if (res.ok) {
           const data = await res.json()
           const places = (data.data ?? []).flat() as typeof allPlaces
+          trackCost(places.length * OUTSCRAPER_RECORD_COST)
           // DEBUG: log first result's keys to identify actual field names
           if (places.length > 0 && allPlaces.length === 0) {
             console.log('[Outscraper debug] first place keys:', Object.keys(places[0]))
@@ -186,6 +190,7 @@ async function mapSearch(
           const reviews = (data.data ?? []).flat() as Array<{
             author_title?: string; review_text?: string; review_rating?: number; owner_answer?: string
           }>
+          trackCost(reviews.length * OUTSCRAPER_RECORD_COST)
           const lines = reviews.filter(r => r.review_text).slice(0, limit).map(r =>
             `⭐ ${r.review_rating ?? '-'} — ${r.author_title ?? '匿名'}\n「${r.review_text?.slice(0, 300) ?? ''}」`
           )
@@ -595,9 +600,13 @@ async function trendResearch(keywords: string, subOptions: string[]): Promise<st
 }
 
 // ─── Main Handler ─────────────────────────────────────────────────────────────
-export async function POST(req: NextRequest) {
+export const POST = withUsage('[marketing] 潛在客戶蒐集', async function POST(req: NextRequest) {
   const user = await getCronOrUserAuth(req)
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  setUsageUser(user.id)
+  // 依實際用量 × 方案倍率扣點；執行前以預估成本檢查餘額
+  const usagePrecheck = await precheckUsage(user.id, 0.2)
+  if (usagePrecheck) return NextResponse.json(usagePrecheck, { status: 402 })
   const supabase = await createClient()
 
   const {
@@ -710,7 +719,7 @@ export async function POST(req: NextRequest) {
   }
   const langName = LANG_NAMES[language] ?? '繁體中文'
 
-  const { text: summary } = await generateText({
+  const { text: summary, usage } = await generateText({
     model: deepseek.chat('deepseek-chat'),
     messages: [{
       role: 'system',
@@ -748,6 +757,7 @@ ${rawContent.slice(0, 12000)}
     }],
     maxOutputTokens: 3000,
   })
+  trackLlm('deepseek-chat', usage)
 
   return NextResponse.json({
     summary,
@@ -756,4 +766,4 @@ ${rawContent.slice(0, 12000)}
     keywords: kw,
     location,
   })
-}
+})

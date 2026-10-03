@@ -12,6 +12,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 import { outputLangInstruction } from '@/lib/ai/output-lang'
+import { setUsageUser, trackLlm, withUsage } from '@/lib/marketing/usage'
+import { precheckUsage } from '@/lib/marketing/billing'
 
 export const maxDuration = 60
 
@@ -24,10 +26,14 @@ const SYSTEM = `你是 GEO 內容架構師。把使用者的問句依「同一�
 { "clusters": [ { "title": "叢標題", "pillar": true|false, "questionIndexes": [題號整數...] } ] }
 題號用我提供清單的數字。`
 
-export async function POST(req: NextRequest) {
+export const POST = withUsage('[marketing] GEO 主題分群', async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  setUsageUser(user.id)
+  // 依實際用量 × 方案倍率扣點；執行前以預估成本檢查餘額
+  const usagePrecheck = await precheckUsage(user.id, 0.01)
+  if (usagePrecheck) return NextResponse.json(usagePrecheck, { status: 402 })
 
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({ error: 'ANTHROPIC_API_KEY 未設定' }, { status: 500 })
@@ -57,11 +63,12 @@ export async function POST(req: NextRequest) {
 
   let parsed: { title: string; pillar: boolean; questionIndexes: number[] }[]
   try {
-    const { text } = await generateText({
+    const { text, usage } = await generateText({
       model: anthropic('claude-haiku-4-5'),
       messages: [{ role: 'user', content: `${SYSTEM}${outputLangInstruction(project.locale)}\n\n【問句清單】\n${list}` }],
       maxOutputTokens: 1200,
     })
+    trackLlm('claude-haiku-4-5', usage)
     const m = text.match(/\{[\s\S]*\}/)
     if (!m) return NextResponse.json({ error: 'AI 回傳格式錯誤' }, { status: 500 })
     parsed = (JSON.parse(m[0]).clusters ?? []).filter(
@@ -101,4 +108,4 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ clusters: out })
-}
+})
