@@ -260,7 +260,7 @@ async function sendViaTwilio(phone: string, text: string): Promise<{ ok: boolean
 
   if (!creds || !fromNumber) {
     // 備援：若未設定 Twilio，嘗試以系統內建的 Bird 發送
-    if (birdProvider.isConfigured()) {
+    if (isBirdSmsConfigured()) {
       const ok = await birdProvider.sendSms({ phone, text })
       return ok ? { ok: true, messageId: 'bird-sent' } : { ok: false, error: 'Bird 國際 SMS 發送失敗' }
     }
