@@ -15,7 +15,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { getCronOrUserAuth } from '@/lib/cron-auth'
-import { EMAIL_COST, checkCredits, deductCredits, isBillableUser } from '@/lib/marketing/billing'
+import { EMAIL_SEND_COST, chargeUsage, precheckUsage } from '@/lib/marketing/billing'
 import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
 
 export async function POST(req: NextRequest) {
@@ -45,14 +45,14 @@ export async function POST(req: NextRequest) {
   // cron 觸發（isCron=true）沒有真實使用者 session，是系統內部動作，不受方案／點數限制
   // （比照這支 route 既有設計：cron 只呼叫已驗證過的既有排程，不需要重複驗證特定使用者）。
   // 互動觸發才走方案 gate ＋ 點數扣款；admin/employee 依全站慣例不計費。
-  const billable = !user.isCron && await isBillableUser(user.id)
   if (!user.isCron) {
     const { plan, features } = await getMarketingEntitlements(null, user.id)
     if (!features.aiCallEmail && features.prospectMarketing === 'collectOnly') {
       return NextResponse.json({ error: '目前方案未開放 Email 行銷，請升級至 PRO 以上', plan }, { status: 403 })
     }
-    const check = await checkCredits(user.id, EMAIL_COST * recipients.length, billable)
-    if (!check.ok) return NextResponse.json(check.payload, { status: 402 })
+    // 依實際寄送量扣點：Resend 每封成本 × 方案倍率
+    const insufficient = await precheckUsage(user.id, EMAIL_SEND_COST * recipients.length)
+    if (insufficient) return NextResponse.json(insufficient, { status: 402 })
   }
 
   const results: { email: string; group: string; ok: boolean; id?: string; error?: string }[] = []
@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
 
   const success = results.filter(r => r.ok).length
   if (success > 0 && !user.isCron) {
-    await deductCredits(user.id, EMAIL_COST * success, `[marketing] 行銷 Email 寄送 ${success} 封`, billable)
+    await chargeUsage(user.id, EMAIL_SEND_COST * success, `[marketing] 行銷 Email 寄送 ${success} 封`)
   }
   return NextResponse.json({ total: results.length, success, results })
 }

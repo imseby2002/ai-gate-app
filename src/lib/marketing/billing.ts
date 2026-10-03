@@ -124,12 +124,63 @@ export function llmCost(model: string, usage?: { inputTokens?: number; outputTok
 export const HEYGEN_VIDEO_COST = 1.0
 // ElevenLabs TTS（每次合成）
 export const TTS_COST = 0.03
-// 電話撥打（每通，內含通話費加成；TTS 另計）
-export const CALL_COST = 0.15
-// 行銷 Email（每封）
-export const EMAIL_COST = 0.002
-// 行銷 SMS 簡訊（每則，依通道成本加成，約合 NT$ 1）
-export const SMS_COST = 0.035
+
+// ── 電話／簡訊／Email 供應商成本（USD），扣點＝成本 × 方案倍率 ────────────────
+export type TelcoCountry = 'TW' | 'VN' | 'US' | 'INTL'
+
+/** 依門號判斷國別（+1 北美走 US） */
+export function detectTelcoCountry(rawPhone: string): TelcoCountry {
+  const cleaned = rawPhone.replace(/[^\d+]/g, '')
+  if (cleaned.startsWith('+886') || cleaned.startsWith('886')) return 'TW'
+  if (cleaned.startsWith('09') && cleaned.length === 10) return 'TW'
+  if (cleaned.startsWith('+84') || cleaned.startsWith('84')) return 'VN'
+  if (/^0[35789]\d{8}$/.test(cleaned)) return 'VN'
+  if (cleaned.startsWith('+1') || (cleaned.startsWith('1') && cleaned.length === 11)) return 'US'
+  return 'INTL'
+}
+
+function isTwMobile(rawPhone: string): boolean {
+  const d = rawPhone.replace(/\D/g, '')
+  return d.startsWith('8869') || d.startsWith('09')
+}
+
+// 語音（每分鐘，未滿 1 分鐘以 1 分鐘計，與 Twilio 計費方式一致）
+// Twilio 台灣：手機 $0.1985、市話 $0.1196；美國 $0.013；越南手機 $0.1777
+// Stringee 越南境內：約 NT$0.8~1.2／分，取 $0.04；其他國家未逐一建表，保守取 $0.20
+export function voiceCostPerMinute(phone: string, provider: string): number {
+  const country = detectTelcoCountry(phone)
+  if (country === 'TW') return isTwMobile(phone) ? 0.1985 : 0.1196
+  if (country === 'US') return 0.013
+  if (country === 'VN') return provider === 'stringee' ? 0.04 : 0.1777
+  return 0.2
+}
+
+export function callCost(phone: string, provider: string, durationSec: number): number {
+  if (!(durationSec > 0)) return 0
+  return Math.ceil(durationSec / 60) * voiceCostPerMinute(phone, provider)
+}
+
+// 簡訊（每段）：台灣 sms-get NT$0.86 ≈ $0.027；美國 Bird $0.0035；
+// 越南 Stringee 約 NT$0.55~0.8 ≈ $0.025；其他國家（Twilio）未逐一建表，保守取 $0.10
+const SMS_SEGMENT_COSTS: Record<TelcoCountry, number> = { TW: 0.027, US: 0.0035, VN: 0.025, INTL: 0.1 }
+
+// GSM-7 基本字元集（含常用符號）；出現其他字元（中文、emoji 等）即改 UCS-2
+const GSM7 = /^[@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !"#¤%&'()*+,\-./0-9:;<=>?¡A-ZÄÖÑÜ§¿a-zäöñüà^{}\\[~\]|€]*$/
+
+/** 簡訊分段數：GSM-7 單則 160／長簡訊每段 153；UCS-2 單則 70／每段 67 */
+export function smsSegments(text: string): number {
+  const len = [...text].length
+  if (len === 0) return 1
+  const [single, multi] = GSM7.test(text) ? [160, 153] : [70, 67]
+  return len <= single ? 1 : Math.ceil(len / multi)
+}
+
+export function smsCost(phone: string, text: string): number {
+  return smsSegments(text) * SMS_SEGMENT_COSTS[detectTelcoCountry(phone)]
+}
+
+// Email（每封）：Resend 超量 $0.90／1,000 封
+export const EMAIL_SEND_COST = 0.0009
 // AI 視覺工坊「AI 建議」（Claude 看圖，每次）
 export const AI_STUDIO_SUGGEST_COST = 0.01
 // AI 視覺工坊節點執行的預估上限（實際依節點回報的 cost 扣）
