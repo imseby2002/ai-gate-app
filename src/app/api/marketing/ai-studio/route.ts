@@ -18,10 +18,19 @@ import { createClient } from '@/lib/supabase/server'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 import zlib from 'node:zlib'
-import { AI_STUDIO_SUGGEST_COST, AI_STUDIO_MAX_ESTIMATE, checkCredits, deductCredits, isBillableUser } from '@/lib/marketing/billing'
+import { AI_STUDIO_SUGGEST_ESTIMATE, AI_STUDIO_NODE_ESTIMATE, AI_STUDIO_FAL_COSTS, precheckUsage } from '@/lib/marketing/billing'
+import { setUsageUser, trackCost, trackLlm, withUsage } from '@/lib/marketing/usage'
 import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
 
 const FAL_BASE = 'https://fal.run'
+const CLAUDE_MODEL = 'claude-sonnet-4-6'
+
+/** 呼叫 Claude 並記入本次請求用量（依實際 token 扣點） */
+async function claudeText(opts: Omit<Parameters<typeof generateText>[0], 'model'>, apiKey: string) {
+  const r = await generateText({ ...opts, model: createAnthropic({ apiKey })(CLAUDE_MODEL) } as Parameters<typeof generateText>[0])
+  trackLlm(CLAUDE_MODEL, r.usage)
+  return r
+}
 
 /**
  * Decode a canvas-produced PNG (8-bit RGBA, filter method 0) and report how many
@@ -111,12 +120,10 @@ async function toEnglishEditInstruction(
     : 'The user is inpainting a masked region of an image (e.g. a storefront signboard panel). Rewrite their request as a CONCRETE, visually specific English phrase describing what the masked region should become — always include a concrete material, color, finish and texture so an image model has something definite to render. If the user is vague (e.g. "a different material", "change the panel"), COMMIT to one specific realistic material that suits the context and describe it concretely, e.g. "a brushed dark-grey metal panel with subtle horizontal grain" or "polished black marble with white veining". Never output vague words like "different material". Do not mention anything outside the region. Output only the phrase, no quotes, no preamble.'
 
   try {
-    const anthropic = createAnthropic({ apiKey: anthropicKey })
-    const { text } = await generateText({
-      model: anthropic('claude-sonnet-4-6'),
+    const { text } = await claudeText({
       messages: [{ role: 'user', content: `${guide}\n\nUser request: ${userText}` }],
       maxOutputTokens: 200,
-    })
+    }, anthropicKey)
     return text.trim() || userText
   } catch {
     return userText
@@ -140,10 +147,11 @@ async function falPost(endpoint: string, body: Record<string, unknown>, apiKey: 
   return res.json()
 }
 
-export async function POST(req: NextRequest) {
+async function handlePost(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  setUsageUser(user.id)
 
   const apiKey = process.env.FAL_AI_API_KEY
   if (!apiKey) return NextResponse.json({ error: 'FAL_AI_API_KEY 未設定' }, { status: 500 })
@@ -162,10 +170,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '目前方案未開放 AI 視覺工坊，請升級至 PRO 以上', plan }, { status: 403 })
   }
 
-  // 執行前餘額檢查：suggest 為輕量呼叫，節點執行以上限預估、實際依節點 cost 扣
-  const billable = await isBillableUser(user.id)
-  const check = await checkCredits(user.id, type === 'suggest' ? AI_STUDIO_SUGGEST_COST : AI_STUDIO_MAX_ESTIMATE, billable)
-  if (!check.ok) return NextResponse.json(check.payload, { status: 402 })
+  // 執行前餘額檢查（預估成本 × 方案倍率）；實際依 fal 節點成本＋Claude token 用量扣點
+  const insufficient = await precheckUsage(user.id, type === 'suggest' ? AI_STUDIO_SUGGEST_ESTIMATE : AI_STUDIO_NODE_ESTIMATE)
+  if (insufficient) return NextResponse.json(insufficient, { status: 402 })
 
   // ── AI 建議：使用者沒方向時，讓 Claude 看圖提一個具體可套用的修改建議 ──
   if (type === 'suggest') {
@@ -184,8 +191,7 @@ export async function POST(req: NextRequest) {
         ? '使用者想請 AI 設計師「重新設計」這間店面，但沒有想法。請以專業店面設計師角度，看圖後提出一個完整的改造方向（門面材質、配色、燈光、招牌風格、整體氛圍），並明確保留 LOGO、招牌文字與整體格局，例如「保留 LOGO 與格局，門面改為溫潤原木與暖白燈光的日系極簡風，招牌底改霧黑金屬」。'
         : '使用者想用 AI 修改這張圖但沒有方向。請看圖後，提出一個「具體、有品味、能提升整體質感」的修改建議，明確說要改什麼、並保留招牌 LOGO 與文字，例如「把招牌背板換成深灰色拉絲金屬，保留 LOGO 與店名文字」。'
 
-      const { text } = await generateText({
-        model: createAnthropic({ apiKey: anthropicKey })('claude-sonnet-4-6'),
+      const { text } = await claudeText({
         messages: [{
           role: 'user',
           content: [
@@ -194,10 +200,9 @@ export async function POST(req: NextRequest) {
           ],
         }],
         maxOutputTokens: 150,
-      })
+      }, anthropicKey)
       const suggestion = text.trim()
       if (!suggestion) return NextResponse.json({ error: 'AI 無法產生建議，請再試一次' }, { status: 502 })
-      await deductCredits(user.id, AI_STUDIO_SUGGEST_COST, '[marketing] 視覺工坊 AI 建議', billable)
       return NextResponse.json({ suggestion })
     } catch (err) {
       return NextResponse.json({ error: String(err) }, { status: 500 })
@@ -205,7 +210,6 @@ export async function POST(req: NextRequest) {
   }
 
   let tempUrl = ''
-  let cost = 0.05
 
   try {
     if (type === 'inpaint') {
@@ -218,11 +222,9 @@ export async function POST(req: NextRequest) {
         const anthropicKey = process.env.ANTHROPIC_API_KEY
         if (!anthropicKey) return NextResponse.json({ error: 'ANTHROPIC_API_KEY 未設定' }, { status: 500 })
 
-        const anthropic = createAnthropic({ apiKey: anthropicKey })
         const mimeType = (referenceImageMimeType ?? 'image/jpeg') as 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif'
 
-        const { text: refDescription } = await generateText({
-          model: anthropic('claude-sonnet-4-6'),
+        const { text: refDescription } = await claudeText({
           messages: [{
             role: 'user',
             content: [
@@ -234,13 +236,12 @@ export async function POST(req: NextRequest) {
             ],
           }],
           maxOutputTokens: 200,
-        })
+        }, anthropicKey)
 
         // Combine reference description with any additional text from user
         finalPrompt = finalPrompt
           ? `${refDescription.trim()}, ${finalPrompt}`
           : refDescription.trim()
-        cost += 0.01 // small Claude cost
       }
 
       if (!finalPrompt) return NextResponse.json({ error: '請提供文字描述或參考圖片' }, { status: 400 })
@@ -280,7 +281,7 @@ export async function POST(req: NextRequest) {
         num_images: 1,
       }, apiKey)
       tempUrl = data?.images?.[0]?.url ?? ''
-      cost += 0.08
+      if (tempUrl) trackCost(AI_STUDIO_FAL_COSTS.fill)
 
     } else if (type === 'composite') {
       if (!maskDataUrl) return NextResponse.json({ error: '缺少主圖遮罩' }, { status: 400 })
@@ -290,11 +291,9 @@ export async function POST(req: NextRequest) {
       const anthropicKey = process.env.ANTHROPIC_API_KEY
       if (!anthropicKey) return NextResponse.json({ error: 'ANTHROPIC_API_KEY 未設定' }, { status: 500 })
 
-      const anthropic = createAnthropic({ apiKey: anthropicKey })
       const bMimeType = (sourceBMimeType ?? 'image/jpeg') as 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif'
 
-      const { text: bDescription } = await generateText({
-        model: anthropic('claude-sonnet-4-6'),
+      const { text: bDescription } = await claudeText({
         messages: [{
           role: 'user',
           content: [
@@ -306,13 +305,12 @@ export async function POST(req: NextRequest) {
           ],
         }],
         maxOutputTokens: 200,
-      })
+      }, anthropicKey)
 
       const finalPrompt = prompt?.trim()
         ? `${bDescription.trim()}, ${prompt.trim()}`
         : bDescription.trim()
 
-      cost += 0.01
 
       // Upload A's mask to Supabase
       const maskBase64 = maskDataUrl.replace(/^data:image\/[^;]+;base64,/, '')
@@ -338,7 +336,7 @@ export async function POST(req: NextRequest) {
         num_images: 1,
       }, apiKey)
       tempUrl = data?.images?.[0]?.url ?? ''
-      cost += 0.08
+      if (tempUrl) trackCost(AI_STUDIO_FAL_COSTS.fill)
 
     } else if (type === 'edit') {
       // FLUX.1 Kontext — instruction-based editing (keeps the rest of the image,
@@ -354,7 +352,7 @@ export async function POST(req: NextRequest) {
         safety_tolerance: '2',
       }, apiKey)
       tempUrl = data?.images?.[0]?.url ?? ''
-      cost = 0.08
+      if (tempUrl) trackCost(AI_STUDIO_FAL_COSTS.kontext)
 
     } else if (type === 'redesign') {
       // AI 設計師 — Gemini 2.5 Flash Image (Nano Banana). Strong at creative,
@@ -366,16 +364,14 @@ export async function POST(req: NextRequest) {
       const anthropicKey = process.env.ANTHROPIC_API_KEY
       if (anthropicKey) {
         try {
-          const { text } = await generateText({
-            model: createAnthropic({ apiKey: anthropicKey })('claude-sonnet-4-6'),
+          const { text } = await claudeText({
             messages: [{
               role: 'user',
               content: `You are an art director briefing an AI image editor (Gemini) to redesign a real photo of a shop/storefront. Turn the user's request into ONE detailed English instruction. ALWAYS preserve: the existing brand logo (exact shape, colors, text), all sign text/wording, and the overall layout, structure and proportions of the building — unless the user explicitly asks to change them. Redesign the requested aspects (materials, colors, lighting, signage style, decor, finish) to look premium and professionally designed, photorealistic, consistent perspective. Output only the instruction.\n\nUser request: ${prompt.trim()}`,
             }],
             maxOutputTokens: 300,
-          })
+          }, anthropicKey)
           if (text.trim()) brief = text.trim()
-          cost += 0.01
         } catch { /* fall back to raw prompt */ }
       }
 
@@ -386,7 +382,7 @@ export async function POST(req: NextRequest) {
         output_format: 'jpeg',
       }, apiKey)
       tempUrl = data?.images?.[0]?.url ?? ''
-      cost += 0.05
+      if (tempUrl) trackCost(AI_STUDIO_FAL_COSTS.nanoBananaEdit)
 
     } else if (type === 'style') {
       const stylePrompt = STYLE_PROMPTS[stylePreset ?? 'realistic'] ?? STYLE_PROMPTS.realistic
@@ -399,7 +395,7 @@ export async function POST(req: NextRequest) {
         num_images: 1,
       }, apiKey)
       tempUrl = data?.images?.[0]?.url ?? ''
-      cost = 0.06
+      if (tempUrl) trackCost(AI_STUDIO_FAL_COSTS.fluxDevImg2Img)
 
     } else if (type === 'enhance') {
       // Aura SR upscaling
@@ -409,7 +405,7 @@ export async function POST(req: NextRequest) {
         overlapping_tiles: true,
       }, apiKey)
       tempUrl = data?.image?.url ?? data?.url ?? ''
-      cost = 0.04
+      if (tempUrl) trackCost(AI_STUDIO_FAL_COSTS.auraSr)
 
     } else if (type === 'bg-remove') {
       // BiRefNet background removal
@@ -420,7 +416,7 @@ export async function POST(req: NextRequest) {
         output_format: 'png',
       }, apiKey)
       tempUrl = data?.image?.url ?? data?.url ?? ''
-      cost = 0.02
+      if (tempUrl) trackCost(AI_STUDIO_FAL_COSTS.birefnet)
 
     } else {
       return NextResponse.json({ error: '不支援的操作類型' }, { status: 400 })
@@ -452,6 +448,7 @@ export async function POST(req: NextRequest) {
 
   const { data: { publicUrl } } = supabase.storage.from('marketing-assets').getPublicUrl(fileName)
 
-  await deductCredits(user.id, cost, `[marketing] 視覺工坊節點 ${type}`, billable)
-  return NextResponse.json({ url: publicUrl, cost, type, generatedAt: new Date().toISOString() })
+  return NextResponse.json({ url: publicUrl, type, generatedAt: new Date().toISOString() })
 }
+
+export const POST = withUsage('[marketing] 視覺工坊', handlePost)
