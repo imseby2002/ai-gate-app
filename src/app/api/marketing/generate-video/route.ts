@@ -10,7 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { fal } from '@fal-ai/client'
-import { videoCost, checkCredits, deductCredits, isBillableUser } from '@/lib/marketing/billing'
+import { videoCost, checkCredits, deductCredits, isBillableUser, getCostMultiplier } from '@/lib/marketing/billing'
 import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
 
 const FAL_ENDPOINTS: Record<string, string> = {
@@ -55,7 +55,8 @@ export async function POST(req: NextRequest) {
   }
 
   // 影片生成成本高：提交前檢查點數，提交成功即扣點（供應商在提交後就會計費）
-  const cost = videoCost(model, parseInt(duration) || 5)
+  // 實際成本（依秒數）× 方案倍率
+  const cost = videoCost(model, parseInt(duration) || 5, await getCostMultiplier(user.id))
   const billable = await isBillableUser(user.id)
   const check = await checkCredits(user.id, cost, billable)
   if (!check.ok) return NextResponse.json(check.payload, { status: 402 })

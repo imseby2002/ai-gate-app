@@ -6,6 +6,7 @@
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { generateText } from 'ai'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { NANO_BANANA_PRO_GOOGLE_COST, NANO_BANANA_PRO_FAL_COST, NANO_BANANA_PRO_FAL_REF_IMAGE_COST } from '@/lib/marketing/billing'
 
 const GEMINI_IMAGE_MODEL = 'gemini-3-pro-image-preview'
 const STORAGE_BUCKET = 'marketing-assets'
@@ -79,18 +80,28 @@ async function generateViaFal({ prompt, aspectRatio, imageUrls }: BananaInput, a
   return url
 }
 
-export async function generateNanoBanana(input: BananaInput): Promise<string> {
+/** 生成並回傳實際走的供應商成本（USD），供依實際成本扣點 */
+export async function generateNanoBananaWithCost(input: BananaInput): Promise<{ url: string; costUsd: number }> {
   const googleKey = process.env.GOOGLE_AI_API_KEY
   const falKey = process.env.FAL_AI_API_KEY
   if (!googleKey && !falKey) throw new Error('GOOGLE_AI_API_KEY / FAL_AI_API_KEY 未設定')
 
   if (googleKey) {
     try {
-      return await generateViaGoogle(input, googleKey)
+      // 參考圖以 token 計，金額極小，未計入
+      return { url: await generateViaGoogle(input, googleKey), costUsd: NANO_BANANA_PRO_GOOGLE_COST }
     } catch (e) {
       if (!falKey) throw e
       console.warn('[nano-banana] Google 直連失敗，改走 fal:', e)
     }
   }
-  return generateViaFal(input, falKey!)
+  const refs = input.imageUrls?.length ?? 0
+  return {
+    url: await generateViaFal(input, falKey!),
+    costUsd: NANO_BANANA_PRO_FAL_COST + refs * NANO_BANANA_PRO_FAL_REF_IMAGE_COST,
+  }
+}
+
+export async function generateNanoBanana(input: BananaInput): Promise<string> {
+  return (await generateNanoBananaWithCost(input)).url
 }

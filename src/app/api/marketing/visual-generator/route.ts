@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { VISUAL_TEMPLATES, type VisualTemplate } from '@/lib/marketing/visual-templates'
-import { IMAGE_COSTS, NANO_BANANA_PRO_COST, NANO_BANANA_DIRECTOR_COST, checkCredits, deductCredits, isBillableUser } from '@/lib/marketing/billing'
+import { IMAGE_PROVIDER_COSTS, NANO_BANANA_PRO_FAL_COST, NANO_BANANA_PRO_FAL_REF_IMAGE_COST, checkCredits, deductCredits, getCostMultiplier, isBillableUser, llmCost, priceFromCost } from '@/lib/marketing/billing'
 import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
 import { createAnthropic } from '@ai-sdk/anthropic'
-import { generateNanoBanana } from '@/lib/ai/nano-banana'
+import { generateNanoBananaWithCost } from '@/lib/ai/nano-banana'
 import { generateIdeogram } from '@/lib/ai/ideogram'
 import { generateText } from 'ai'
 
@@ -19,7 +19,10 @@ const DALLE_SIZES: Record<string, string> = {
 }
 
 // 輔助將使用者的中文商品/促銷描述轉化為能與提示詞骨架無縫融合的英文細節
-async function translateOrEnrichSubject(userText: string): Promise<string> {
+// LLM 呼叫的實際成本累計（USD），供依實際用量扣點
+type Spend = { usd: number }
+
+async function translateOrEnrichSubject(userText: string, spend?: Spend): Promise<string> {
   const trimmed = userText?.trim()
   if (!trimmed) return ''
 
@@ -33,7 +36,7 @@ async function translateOrEnrichSubject(userText: string): Promise<string> {
 
   try {
     const anthropic = createAnthropic({ apiKey })
-    const { text } = await generateText({
+    const { text, usage } = await generateText({
       model: anthropic('claude-haiku-4-5'),
       messages: [{
         role: 'user',
@@ -43,6 +46,7 @@ Focus on product subject, textures, appetizing or attractive details, and clear 
       }],
       maxOutputTokens: 120,
     })
+    if (spend) spend.usd += llmCost('claude-haiku-4-5', usage)
     return text.trim() || trimmed
   } catch {
     return trimmed
@@ -90,6 +94,7 @@ async function directReferenceEdit(
   template: VisualTemplate,
   userText: string,
   images: string[],
+  spend?: Spend,
 ): Promise<string | null> {
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) return null
@@ -97,7 +102,7 @@ async function directReferenceEdit(
 
   try {
     const anthropic = createAnthropic({ apiKey })
-    const { text } = await generateText({
+    const { text, usage } = await generateText({
       model: anthropic('claude-sonnet-4-6'),
       abortSignal: AbortSignal.timeout(25000),
       system: `You are an art director writing ONE instruction for the Nano Banana Pro (Gemini) image model, which creates a new design from the given input image(s).
@@ -128,6 +133,7 @@ User notes: ${userText?.trim() || '(none)'}`,
       }],
       maxOutputTokens: 400,
     })
+    if (spend) spend.usd += llmCost('claude-sonnet-4-6', usage)
     const out = text.trim()
     return out || null
   } catch (e) {
@@ -161,7 +167,8 @@ export async function POST(req: NextRequest) {
       .slice(0, maxRefs)
 
     // 1. 智慧組裝正向與負向提示詞
-    const translatedSubject = await translateOrEnrichSubject(userPrompt)
+    const spend: Spend = { usd: 0 }
+    const translatedSubject = await translateOrEnrichSubject(userPrompt, spend)
     let synthesizedPositive = template.positivePrompt
     if (translatedSubject) {
       // 使用者描述放最前面，指定的類型／風格優先於模板預設
@@ -187,12 +194,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '目前方案未開放圖片產出，請升級至 PRO 以上', plan }, { status: 403 })
     }
 
-    // 有參考圖一律走 Nano Banana Pro，另加 Claude 美術指導；無參考圖依所選模型
-    const cost = refImages.length
-      ? NANO_BANANA_PRO_COST + NANO_BANANA_DIRECTOR_COST
-      : IMAGE_COSTS[model] ?? NANO_BANANA_PRO_COST
+    // 依實際成本 × 方案倍率扣點；執行前以最高可能成本預估（參考圖走 fal 備援 + 美術指導）
+    const multiplier = await getCostMultiplier(user.id)
+    const estimateUsd = refImages.length
+      ? NANO_BANANA_PRO_FAL_COST + refImages.length * NANO_BANANA_PRO_FAL_REF_IMAGE_COST + 0.02
+      : model === 'dalle3' ? 0.08 : IMAGE_PROVIDER_COSTS[model] ?? IMAGE_PROVIDER_COSTS.flux
     const billable = await isBillableUser(user.id)
-    const check = await checkCredits(user.id, cost, billable)
+    const check = await checkCredits(user.id, priceFromCost(estimateUsd, multiplier), billable)
     if (!check.ok) return NextResponse.json(check.payload, { status: 402 })
 
     let tempUrl = ''
@@ -200,15 +208,16 @@ export async function POST(req: NextRequest) {
 
     // 3. 圖片生成
     if (refImages.length) {
-      if (!process.env.FAL_AI_API_KEY) return NextResponse.json({ error: 'FAL_AI_API_KEY 未設定' }, { status: 500 })
       const isMulti = refImages.length > 1
-      const editPrompt = (await directReferenceEdit(template, userPrompt, refImages)) ?? (isMulti
+      const editPrompt = (await directReferenceEdit(template, userPrompt, refImages, spend)) ?? (isMulti
         ? buildMultiReferencePrompt(template.positivePrompt, translatedSubject, refImages.length)
         : buildReferenceEditPrompt(template.positivePrompt, translatedSubject))
       revisedPrompt = editPrompt
       // 參考圖生成改用 Nano Banana Pro（排版重組與文字能力較 Kontext 強，支援多圖）
       try {
-        tempUrl = await generateNanoBanana({ prompt: editPrompt, aspectRatio: chosenAspect, imageUrls: refImages })
+        const r = await generateNanoBananaWithCost({ prompt: editPrompt, aspectRatio: chosenAspect, imageUrls: refImages })
+        tempUrl = r.url
+        spend.usd += r.costUsd
       } catch (e) {
         return NextResponse.json({ error: e instanceof Error ? e.message : '參考圖生成失敗' }, { status: 500 })
       }
@@ -241,13 +250,20 @@ export async function POST(req: NextRequest) {
         const dalleData = await dalleRes.json()
         tempUrl = dalleData?.data?.[0]?.url ?? ''
         revisedPrompt = dalleData?.data?.[0]?.revised_prompt ?? synthesizedPositive
+        // DALL-E 3 standard：1024x1024 $0.04，直式／橫式 $0.08
+        spend.usd += (DALLE_SIZES[chosenAspect] ?? '1024x1024') === '1024x1024' ? 0.04 : 0.08
 
       } else {
         // 文字生圖：預設 Nano Banana Pro，可切換 Ideogram 實測（FLUX 僅用於修圖）
         try {
-          tempUrl = model === 'ideogram'
-            ? await generateIdeogram({ prompt: synthesizedPositive, aspectRatio: chosenAspect, negativePrompt: synthesizedNegative })
-            : await generateNanoBanana({ prompt: synthesizedPositive, aspectRatio: chosenAspect })
+          if (model === 'ideogram') {
+            tempUrl = await generateIdeogram({ prompt: synthesizedPositive, aspectRatio: chosenAspect, negativePrompt: synthesizedNegative })
+            spend.usd += IMAGE_PROVIDER_COSTS.ideogram
+          } else {
+            const r = await generateNanoBananaWithCost({ prompt: synthesizedPositive, aspectRatio: chosenAspect })
+            tempUrl = r.url
+            spend.usd += r.costUsd
+          }
         } catch (e) {
           return NextResponse.json({ error: e instanceof Error ? e.message : '圖片生成失敗' }, { status: 500 })
         }
@@ -278,7 +294,8 @@ export async function POST(req: NextRequest) {
       console.warn('[visual-generator] 轉存 Supabase Storage 失敗，使用原臨時 URL:', e)
     }
 
-    // 5. 扣點
+    // 5. 扣點（實際成本 × 方案倍率）
+    const cost = priceFromCost(spend.usd, multiplier)
     const deduct = await deductCredits(user.id, cost, `[marketing] 風格模板生成: ${template.title}`, billable)
 
     return NextResponse.json({
