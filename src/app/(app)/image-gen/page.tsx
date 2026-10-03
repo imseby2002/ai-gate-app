@@ -5,6 +5,7 @@ import { Loader2, Download, Wand2 } from 'lucide-react'
 
 const IMAGE_MODELS = [
   { id: 'flux-1-pro', name: 'Nano Banana Pro', desc: '高品質、排版與文字清晰', cost: '$0.20/張' },
+  { id: 'ideogram', name: 'Ideogram v3', desc: '文字排版強、成本較低（實測中）', cost: '$0.09/張' },
 ]
 
 const ASPECT_RATIOS = ['1:1', '16:9', '9:16', '4:3', '3:4']
@@ -42,7 +43,7 @@ export default function ImageGenPage() {
     <div className="h-full overflow-y-auto bg-slate-50/50 dark:bg-background px-4 py-4 sm:px-6 sm:py-6 space-y-5 sm:space-y-6">
       <div className="max-w-3xl mx-auto">
         <h1 className="text-xl sm:text-2xl font-bold">圖片生成</h1>
-        <p className="text-muted-foreground text-sm mt-1">使用 Nano Banana Pro 從文字生成圖片</p>
+        <p className="text-muted-foreground text-sm mt-1">使用 Nano Banana Pro 或 Ideogram 從文字生成圖片</p>
       </div>
 
       <div className="max-w-3xl mx-auto bg-card rounded-2xl border p-4 sm:p-6 shadow-sm space-y-5">

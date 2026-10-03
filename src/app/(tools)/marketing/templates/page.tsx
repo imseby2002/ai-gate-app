@@ -49,6 +49,8 @@ export default function VisualTemplatesPage() {
 
   const [imgUserPrompt, setImgUserPrompt] = useState('')
   const [uploadedImages, setUploadedImages] = useState<string[]>([])
+  // 文字生圖引擎（實測切換）：有參考圖時一律走 Nano Banana Pro
+  const [imgEngine, setImgEngine] = useState<'flux' | 'ideogram'>('flux')
   const [uploadingImage, setUploadingImage] = useState(false)
   const imgFileInputRef = useRef<HTMLInputElement>(null)
 
@@ -210,6 +212,8 @@ export default function VisualTemplatesPage() {
     reader.readAsDataURL(file)
   }
 
+  const engineLabel = !uploadedImages.length && imgEngine === 'ideogram' ? 'Ideogram v3' : 'Nano Banana Pro'
+
   // 即時計算圖片提示詞
   const previewSynthesizedImgPrompt = useMemo(() => {
     if (!imgUserPrompt.trim()) return selectedImgTemplate.positivePrompt
@@ -238,7 +242,7 @@ export default function VisualTemplatesPage() {
           userPrompt: imgUserPrompt.trim(),
           imageUrls: uploadedImages.length ? uploadedImages : undefined,
           aspectRatio: imgAspectRatio,
-          model: 'flux',
+          model: uploadedImages.length ? 'flux' : imgEngine,
           action: 'generate_image',
         }),
       })
@@ -830,6 +834,31 @@ ${selectedVideoTemplate.rawScript}
                     </div>
                   )}
 
+                  {/* 生成引擎（實測切換） */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-foreground">生成引擎</label>
+                    {uploadedImages.length ? (
+                      <p className="text-[11px] text-muted-foreground">有參考照片時固定使用 Nano Banana Pro（依原圖重新設計）</p>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {([
+                          { id: 'flux', name: 'Nano Banana Pro', hint: '$0.20／張' },
+                          { id: 'ideogram', name: 'Ideogram v3', hint: '$0.09／張・實測' },
+                        ] as const).map(e => (
+                          <button
+                            key={e.id}
+                            type="button"
+                            onClick={() => setImgEngine(e.id)}
+                            className={`rounded-lg border px-2 py-1.5 text-xs text-left transition-colors ${imgEngine === e.id ? 'border-primary bg-primary/5 font-semibold' : 'hover:bg-muted/40'}`}
+                          >
+                            <div>{e.name}</div>
+                            <div className="text-[10px] text-muted-foreground">{e.hint}</div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
                   {/* 生成按鈕 */}
                   <Button
                     onClick={handleGenerateImage}
@@ -839,12 +868,12 @@ ${selectedVideoTemplate.rawScript}
                     {generatingImage ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        <span>AI 正在渲染商業行銷圖 (Nano Banana Pro)...</span>
+                        <span>AI 正在渲染商業行銷圖 ({engineLabel})...</span>
                       </>
                     ) : (
                       <>
                         <Sparkles className="h-4 w-4" />
-                        <span>立即產生商業行銷圖 (Nano Banana Pro)</span>
+                        <span>立即產生商業行銷圖 ({engineLabel})</span>
                       </>
                     )}
                   </Button>

@@ -5,6 +5,7 @@ import { IMAGE_COSTS, NANO_BANANA_PRO_COST, NANO_BANANA_DIRECTOR_COST, checkCred
 import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateNanoBanana } from '@/lib/ai/nano-banana'
+import { generateIdeogram } from '@/lib/ai/ideogram'
 import { generateText } from 'ai'
 
 export const maxDuration = 120
@@ -242,11 +243,13 @@ export async function POST(req: NextRequest) {
         revisedPrompt = dalleData?.data?.[0]?.revised_prompt ?? synthesizedPositive
 
       } else {
-        // 文字生圖統一使用 Nano Banana Pro（FLUX 僅用於修圖）
+        // 文字生圖：預設 Nano Banana Pro，可切換 Ideogram 實測（FLUX 僅用於修圖）
         try {
-          tempUrl = await generateNanoBanana({ prompt: synthesizedPositive, aspectRatio: chosenAspect })
+          tempUrl = model === 'ideogram'
+            ? await generateIdeogram({ prompt: synthesizedPositive, aspectRatio: chosenAspect, negativePrompt: synthesizedNegative })
+            : await generateNanoBanana({ prompt: synthesizedPositive, aspectRatio: chosenAspect })
         } catch (e) {
-          return NextResponse.json({ error: e instanceof Error ? e.message : 'Nano Banana 生成失敗' }, { status: 500 })
+          return NextResponse.json({ error: e instanceof Error ? e.message : '圖片生成失敗' }, { status: 500 })
         }
       }
     }

@@ -5,6 +5,7 @@ import { minPlanLabel } from '@/lib/module-plans/definitions'
 import { getBalance, deductCredits } from '@/lib/skills/billing'
 import { IMAGE_COSTS } from '@/lib/marketing/billing'
 import { generateNanoBanana } from '@/lib/ai/nano-banana'
+import { generateIdeogram } from '@/lib/ai/ideogram'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -38,6 +39,8 @@ export async function POST(req: NextRequest) {
     if (model === 'flux-1-pro' || model === 'nano-banana') {
       // 文字生圖統一使用 Nano Banana Pro（FLUX 僅用於修圖）
       imageUrl = await generateNanoBanana({ prompt, aspectRatio })
+    } else if (model === 'ideogram') {
+      imageUrl = await generateIdeogram({ prompt, aspectRatio })
     } else {
       return NextResponse.json({ error: 'Unknown model' }, { status: 400 })
     }
