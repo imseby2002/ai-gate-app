@@ -3,6 +3,7 @@
 // run() 透過 ctx 取得模型呼叫與圖片生成能力，與既有 marketing 基礎一致。
 import pptxgen from 'pptxgenjs'
 import { getSkillKnowledge } from './knowledge'
+import { NANO_BANANA_PRO_COST } from '@/lib/marketing/billing'
 
 export type SkillCategory = 'copywriting' | 'video' | 'illustration' | 'research' | 'audio' | 'presentation' | 'social'
 
@@ -55,8 +56,8 @@ export interface SkillDef {
   run: (input: Record<string, unknown>, ctx: SkillRunContext) => Promise<SkillResult>
 }
 
-// 配圖每張成本（fal flux/dev，與 api/image/generate 一致）
-const IMAGE_UNIT_COST = 0.05
+// 配圖走 Nano Banana Pro，單價統一引用行銷計價
+const IMAGE_UNIT_COST = NANO_BANANA_PRO_COST
 
 function str(input: Record<string, unknown>, key: string, fallback = ''): string {
   const v = input[key]
