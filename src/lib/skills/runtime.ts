@@ -3,15 +3,10 @@ import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 import { fal } from '@fal-ai/client'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { generateNanoBanana } from '@/lib/ai/nano-banana'
 import type { SkillRunContext } from './registry'
 
 const STORAGE_BUCKET = 'marketing-assets'
-
-const FAL_IMAGE_SIZES: Record<string, { width: number; height: number }> = {
-  '1:1':  { width: 1024, height: 1024 },
-  '16:9': { width: 1344, height: 768 },
-  '9:16': { width: 768, height: 1344 },
-}
 
 // fal TTS 模型與音色（如需更換模型/音色，調整此處即可）
 const FAL_TTS_ENDPOINT = 'fal-ai/playai/tts/v3'
@@ -48,23 +43,8 @@ export function createSkillContext(userId?: string, knowledge?: string): SkillRu
     },
 
     async generateImage(prompt, aspectRatio = '16:9') {
-      if (!process.env.FAL_AI_API_KEY) throw new Error('FAL_AI_API_KEY 未設定')
-      const res = await fetch('https://fal.run/fal-ai/flux/dev', {
-        method: 'POST',
-        headers: {
-          Authorization: `Key ${process.env.FAL_AI_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          prompt,
-          image_size: FAL_IMAGE_SIZES[aspectRatio] ?? FAL_IMAGE_SIZES['16:9'],
-          num_inference_steps: 28,
-          num_images: 1,
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(typeof data?.detail === 'string' ? data.detail : 'fal image error')
-      return data.images?.[0]?.url ?? ''
+      // 文字生圖統一使用 Nano Banana Pro（FLUX 僅用於修圖）
+      return generateNanoBanana({ prompt, aspectRatio })
     },
 
     async generateAudio(text, voice = 'default') {

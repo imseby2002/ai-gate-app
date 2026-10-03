@@ -1,6 +1,6 @@
 ﻿/**
  * POST /api/marketing/generate-image
- * 圖片產出單元 — 支援 DALL-E 3 / FLUX.1 Pro / Nano Banana
+ * 圖片產出單元 — 支援 DALL-E 3 / Nano Banana Pro（flux、nano 皆走 Nano Banana Pro）
  *
  * Body: {
  *   prompt: string
@@ -15,17 +15,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { IMAGE_COSTS, checkCredits, deductCredits, isBillableUser } from '@/lib/marketing/billing'
 import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
+import { generateNanoBanana } from '@/lib/ai/nano-banana'
 
 // Size mapping per provider
 const DALLE_SIZES: Record<string, string> = {
   '1:1':  '1024x1024',
   '9:16': '1024x1792',
   '16:9': '1792x1024',
-}
-const FAL_SIZES: Record<string, { width: number; height: number }> = {
-  '1:1':  { width: 1024, height: 1024 },
-  '9:16': { width: 768,  height: 1344 },
-  '16:9': { width: 1344, height: 768  },
 }
 
 export async function POST(req: NextRequest) {
@@ -86,52 +82,13 @@ export async function POST(req: NextRequest) {
     tempUrl = dalleData?.data?.[0]?.url ?? ''
     revisedPrompt = dalleData?.data?.[0]?.revised_prompt ?? prompt
 
-  // ── FLUX.1 Pro ──────────────────────────────────────────────────────────────
-  } else if (model === 'flux') {
-    const apiKey = process.env.FAL_AI_API_KEY
-    if (!apiKey) return NextResponse.json({ error: 'FAL_AI_API_KEY 未設定' }, { status: 500 })
-
-    const falRes = await fetch('https://fal.run/fal-ai/flux/dev', {
-      method: 'POST',
-      headers: { Authorization: `Key ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        prompt: prompt.trim(),
-        image_size: FAL_SIZES[size] ?? { width: 1024, height: 1024 },
-        num_inference_steps: 28,
-        num_images: 1,
-      }),
-    })
-    if (!falRes.ok) {
-      const err = await falRes.json().catch(() => ({}))
-      const d = err?.detail
-      const msg = typeof d === 'string' ? d : Array.isArray(d) ? d.map((e: {msg?: string}) => e.msg ?? JSON.stringify(e)).join('; ') : 'FLUX 生成失敗'
-      return NextResponse.json({ error: msg }, { status: 500 })
+  // ── Nano Banana Pro（flux / nano 皆改用；FLUX 僅用於修圖）──────────────────
+  } else if (model === 'flux' || model === 'nano') {
+    try {
+      tempUrl = await generateNanoBanana({ prompt: prompt.trim(), aspectRatio: size })
+    } catch (e) {
+      return NextResponse.json({ error: e instanceof Error ? e.message : 'Nano Banana 生成失敗' }, { status: 500 })
     }
-    const falData = await falRes.json()
-    tempUrl = falData?.images?.[0]?.url ?? ''
-
-  // ── Nano Banana (Fast SDXL) ─────────────────────────────────────────────────
-  } else if (model === 'nano') {
-    const apiKey = process.env.FAL_AI_API_KEY
-    if (!apiKey) return NextResponse.json({ error: 'FAL_AI_API_KEY 未設定' }, { status: 500 })
-
-    const falRes = await fetch('https://fal.run/fal-ai/fast-sdxl', {
-      method: 'POST',
-      headers: { Authorization: `Key ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        prompt: prompt.trim(),
-        image_size: FAL_SIZES[size] ?? { width: 1024, height: 1024 },
-        num_images: 1,
-      }),
-    })
-    if (!falRes.ok) {
-      const err = await falRes.json().catch(() => ({}))
-      const d = err?.detail
-      const msg = typeof d === 'string' ? d : Array.isArray(d) ? d.map((e: {msg?: string}) => e.msg ?? JSON.stringify(e)).join('; ') : 'Nano Banana 生成失敗'
-      return NextResponse.json({ error: msg }, { status: 500 })
-    }
-    const falData = await falRes.json()
-    tempUrl = falData?.images?.[0]?.url ?? ''
 
   } else {
     return NextResponse.json({ error: '不支援的模型' }, { status: 400 })

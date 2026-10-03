@@ -839,12 +839,12 @@ ${selectedVideoTemplate.rawScript}
                     {generatingImage ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        <span>AI 正在渲染商業行銷圖 (FLUX)...</span>
+                        <span>AI 正在渲染商業行銷圖 (Nano Banana Pro)...</span>
                       </>
                     ) : (
                       <>
                         <Sparkles className="h-4 w-4" />
-                        <span>立即產生商業行銷圖 (FLUX)</span>
+                        <span>立即產生商業行銷圖 (Nano Banana Pro)</span>
                       </>
                     )}
                   </Button>
