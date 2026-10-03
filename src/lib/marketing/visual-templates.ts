@@ -23,6 +23,8 @@ export interface VisualTemplate {
   gradient: string
   tags: string[]
   previewUrl?: string
+  /** 可上傳的參考圖數量上限（預設 1） */
+  maxReferenceImages?: number
 }
 
 export const CATEGORIES: { key: TemplateCategory; label: string; icon: string; desc: string }[] = [
@@ -360,6 +362,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
   },
   {
     id: 'buymore',
+    maxReferenceImages: 4,
     title: '多件多折省錢卡',
     feeling: '階梯式價格牌・省錢試算・一眼看懂多買划算',
     category: 'promo',
@@ -389,6 +392,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
   },
   {
     id: 'giftwithpurchase',
+    maxReferenceImages: 4,
     title: '滿額加碼贈禮',
     feeling: '主商品＋精緻贈品同框・「FREE」標章・數量有限提醒',
     category: 'promo',
@@ -474,6 +478,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
   },
   {
     id: 'crosssell',
+    maxReferenceImages: 4,
     title: '絕佳搭配推薦',
     feeling: '2~3 件默契組合・「絕配組合」提示・情境感',
     category: 'promo',

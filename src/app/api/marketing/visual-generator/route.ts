@@ -74,6 +74,22 @@ function buildReferenceEditPrompt(stylePrompt: string, subject: string): string 
   ].filter(Boolean).join(' ')
 }
 
+// 多張參考圖：只能使用圖中出現的商品組合成畫面
+function buildMultiReferencePrompt(stylePrompt: string, subject: string, count: number): string {
+  const style = stylePrompt
+    .split(',')
+    .map(s => s.trim())
+    .filter(s => s && !REFERENCE_SUBJECT_TERMS.test(s))
+    .join(', ')
+  return [
+    `Combine the products from the ${count} input images into one composition.`,
+    'Use only the products shown in the input images and keep each product\'s exact appearance, shape, colors and packaging.',
+    'Do not add, invent or substitute any other products.',
+    `Style the composition with this look: ${style}.`,
+    subject ? `Additional details: ${subject}.` : '',
+  ].filter(Boolean).join(' ')
+}
+
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -85,6 +101,7 @@ export async function POST(req: NextRequest) {
       templateId,
       userPrompt = '',
       imageUrl,
+      imageUrls,
       aspectRatio,
       model = 'flux',
       action = 'generate_image', // 'synthesize_prompt' | 'generate_image'
@@ -92,6 +109,10 @@ export async function POST(req: NextRequest) {
 
     const template = VISUAL_TEMPLATES.find(t => t.id === templateId) || VISUAL_TEMPLATES[0]
     const chosenAspect = aspectRatio || template.defaultAspect || '1:1'
+    const maxRefs = template.maxReferenceImages ?? 1
+    const refImages: string[] = (Array.isArray(imageUrls) ? imageUrls : imageUrl ? [imageUrl] : [])
+      .filter((u: unknown): u is string => typeof u === 'string' && !!u)
+      .slice(0, maxRefs)
 
     // 1. 智慧組裝正向與負向提示詞
     const translatedSubject = await translateOrEnrichSubject(userPrompt)
@@ -128,19 +149,22 @@ export async function POST(req: NextRequest) {
     let revisedPrompt = synthesizedPositive
 
     // 3. 圖片生成
-    if (imageUrl) {
+    if (refImages.length) {
       if (!process.env.FAL_AI_API_KEY) return NextResponse.json({ error: 'FAL_AI_API_KEY 未設定' }, { status: 500 })
-      const editPrompt = buildReferenceEditPrompt(template.positivePrompt, translatedSubject)
+      const isMulti = refImages.length > 1
+      const editPrompt = isMulti
+        ? buildMultiReferencePrompt(template.positivePrompt, translatedSubject, refImages.length)
+        : buildReferenceEditPrompt(template.positivePrompt, translatedSubject)
       revisedPrompt = editPrompt
-      // 支援圖生圖 / 參考圖修改 (FLUX Kontext)
-      const falRes = await fetch('https://fal.run/fal-ai/flux-pro/kontext', {
+      // 支援圖生圖 / 參考圖修改 (FLUX Kontext；多圖使用 Kontext Multi)
+      const falRes = await fetch(isMulti ? 'https://fal.run/fal-ai/flux-pro/kontext/multi' : 'https://fal.run/fal-ai/flux-pro/kontext', {
         method: 'POST',
         headers: {
           Authorization: `Key ${process.env.FAL_AI_API_KEY}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          image_url: imageUrl,
+          ...(isMulti ? { image_urls: refImages, aspect_ratio: chosenAspect === '4:5' ? '3:4' : chosenAspect } : { image_url: refImages[0] }),
           prompt: editPrompt,
           guidance_scale: 3.5,
           num_images: 1,

@@ -48,7 +48,7 @@ export default function VisualTemplatesPage() {
   const [imgAspectRatio, setImgAspectRatio] = useState<'1:1' | '4:5' | '3:4' | '16:9' | '9:16'>(VISUAL_TEMPLATES[0].defaultAspect)
 
   const [imgUserPrompt, setImgUserPrompt] = useState('')
-  const [uploadedImage, setUploadedImage] = useState<string | null>(null)
+  const [uploadedImages, setUploadedImages] = useState<string[]>([])
   const [uploadingImage, setUploadingImage] = useState(false)
   const imgFileInputRef = useRef<HTMLInputElement>(null)
 
@@ -122,6 +122,7 @@ export default function VisualTemplatesPage() {
   const handleSelectImgTemplate = (tpl: VisualTemplate) => {
     setSelectedImgTemplate(tpl)
     setImgAspectRatio(tpl.defaultAspect)
+    setUploadedImages(prev => prev.slice(0, tpl.maxReferenceImages ?? 1))
   }
 
   // 選擇影片模板
@@ -135,37 +136,46 @@ export default function VisualTemplatesPage() {
 
   // 處理本機圖片上傳
   const handleImgFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const maxRefs = selectedImgTemplate.maxReferenceImages ?? 1
+    const files = Array.from(e.target.files ?? []).slice(0, Math.max(1, maxRefs - (maxRefs > 1 ? uploadedImages.length : 0)))
+    e.target.value = ''
+    if (!files.length) return
 
-    if (!file.type.startsWith('image/')) {
+    if (files.some(f => !f.type.startsWith('image/'))) {
       alert('請上傳 JPG、PNG 或 WebP 圖片格式')
       return
     }
 
+    // 單圖模板直接取代；多圖模板累加至上限
+    const addImage = (dataUrl: string) => setUploadedImages(prev => (maxRefs > 1 ? [...prev, dataUrl] : [dataUrl]).slice(0, maxRefs))
+    // 多圖時壓小一點，避免總請求超過 Vercel 4.5MB 上限
+    const MAX = maxRefs > 1 ? 1024 : 1536
+
     setUploadingImage(true)
-    const reader = new FileReader()
-    reader.onload = ev => {
-      // 手機原圖 base64 常超過 Vercel 4.5MB 請求上限（回傳純文字 Request Entity Too Large），先縮圖壓成 JPEG
-      const src = ev.target?.result as string
-      const img = new window.Image()
-      img.onload = () => {
-        const MAX = 1536
-        const scale = Math.min(1, MAX / Math.max(img.width, img.height))
-        const canvas = document.createElement('canvas')
-        canvas.width = Math.round(img.width * scale)
-        canvas.height = Math.round(img.height * scale)
-        const ctx = canvas.getContext('2d')
-        if (!ctx) { setUploadedImage(src); setUploadingImage(false); return }
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-        setUploadedImage(canvas.toDataURL('image/jpeg', 0.85))
-        setUploadingImage(false)
+    let pending = files.length
+    const done = () => { pending -= 1; if (pending <= 0) setUploadingImage(false) }
+    for (const file of files) {
+      const reader = new FileReader()
+      reader.onload = ev => {
+        // 手機原圖 base64 常超過 Vercel 4.5MB 請求上限（回傳純文字 Request Entity Too Large），先縮圖壓成 JPEG
+        const src = ev.target?.result as string
+        const img = new window.Image()
+        img.onload = () => {
+          const scale = Math.min(1, MAX / Math.max(img.width, img.height))
+          const canvas = document.createElement('canvas')
+          canvas.width = Math.round(img.width * scale)
+          canvas.height = Math.round(img.height * scale)
+          const ctx = canvas.getContext('2d')
+          if (!ctx) { addImage(src); done(); return }
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+          addImage(canvas.toDataURL('image/jpeg', 0.85))
+          done()
+        }
+        img.onerror = () => { addImage(src); done() }
+        img.src = src
       }
-      img.onerror = () => { setUploadedImage(src); setUploadingImage(false) }
-      img.src = src
+      reader.readAsDataURL(file)
     }
-    reader.readAsDataURL(file)
-    e.target.value = ''
   }
 
   // 即時計算圖片提示詞
@@ -194,7 +204,7 @@ export default function VisualTemplatesPage() {
         body: JSON.stringify({
           templateId: selectedImgTemplate.id,
           userPrompt: imgUserPrompt.trim(),
-          imageUrl: uploadedImage || undefined,
+          imageUrls: uploadedImages.length ? uploadedImages : undefined,
           aspectRatio: imgAspectRatio,
           model: 'flux',
           action: 'generate_image',
@@ -705,10 +715,12 @@ ${selectedVideoTemplate.rawScript}
                   {/* 參考圖片上傳 */}
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-foreground flex items-center justify-between">
-                      <span>參考商品照片 (選填，支援圖生圖)</span>
-                      {uploadedImage && (
+                      <span>
+                        參考商品照片 (選填，支援圖生圖{(selectedImgTemplate.maxReferenceImages ?? 1) > 1 ? `，最多 ${selectedImgTemplate.maxReferenceImages} 張` : ''})
+                      </span>
+                      {uploadedImages.length > 0 && (
                         <button
-                          onClick={() => setUploadedImage(null)}
+                          onClick={() => setUploadedImages([])}
                           className="text-[10px] text-destructive hover:underline"
                         >
                           移除圖片
@@ -716,24 +728,50 @@ ${selectedVideoTemplate.rawScript}
                       )}
                     </label>
 
-                    {uploadedImage ? (
+                    {uploadedImages.length > 0 && (
                       <div className="relative rounded-xl border p-2 bg-muted/20 flex items-center gap-3">
-                        <img src={uploadedImage} alt="Uploaded" className="w-12 h-12 object-cover rounded-lg border" />
+                        <div className="flex gap-1.5 flex-wrap">
+                          {uploadedImages.map((src, i) => (
+                            <div key={i} className="relative">
+                              <img src={src} alt={`Uploaded ${i + 1}`} className="w-12 h-12 object-cover rounded-lg border" />
+                              {uploadedImages.length > 1 && (
+                                <button
+                                  onClick={() => setUploadedImages(prev => prev.filter((_, idx) => idx !== i))}
+                                  className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-destructive text-white text-[10px] leading-none"
+                                >
+                                  ×
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
                         <div className="text-xs flex-1 truncate">
-                          <p className="font-semibold text-foreground">已載入參考照片</p>
-                          <p className="text-[10px] text-muted-foreground">AI 將依此形狀與構圖融合風格</p>
+                          <p className="font-semibold text-foreground">已載入 {uploadedImages.length} 張參考照片</p>
+                          <p className="text-[10px] text-muted-foreground">
+                            {uploadedImages.length > 1 ? 'AI 只會使用這些照片中的商品組合畫面' : 'AI 將依此形狀與構圖融合風格'}
+                          </p>
                         </div>
                       </div>
-                    ) : (
+                    )}
+                    {uploadedImages.length < (selectedImgTemplate.maxReferenceImages ?? 1) && (
                       <div
                         onClick={() => imgFileInputRef.current?.click()}
                         className="border border-dashed border-border/80 rounded-xl p-3 text-center cursor-pointer hover:bg-muted/30 transition-colors"
                       >
                         <Upload className="h-4 w-4 mx-auto text-muted-foreground mb-1" />
-                        <p className="text-xs text-muted-foreground">點擊上傳商品照片 (JPG / PNG)</p>
+                        <p className="text-xs text-muted-foreground">
+                          {uploadedImages.length > 0 ? '繼續加入商品照片' : '點擊上傳商品照片 (JPG / PNG)'}
+                        </p>
                       </div>
                     )}
-                    <input ref={imgFileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImgFileChange} />
+                    <input
+                      ref={imgFileInputRef}
+                      type="file"
+                      accept="image/*"
+                      multiple={(selectedImgTemplate.maxReferenceImages ?? 1) > 1}
+                      className="hidden"
+                      onChange={handleImgFileChange}
+                    />
                   </div>
 
                   {/* 提示詞預覽 */}
