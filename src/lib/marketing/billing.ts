@@ -8,6 +8,7 @@
 // lib/resume/billing.ts）。這條規則晚於行銷模組原始設計，這裡補齊。
 import { getBalance, deductCredits as deductCreditsRaw } from '@/lib/skills/billing'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getMarketingEntitlements, type MarketingPlan } from './entitlements'
 
 export { getBalance }
 
@@ -29,43 +30,84 @@ export async function isBillableUser(userId: string): Promise<boolean> {
   return profile?.user_type === 'external'
 }
 
-// Nano Banana Pro（每張）：成本較高，例外改採「成本 ×1.5」
-// 成本以 Google Gemini API 直連 1K/2K 每張約 $0.134 計（lib/ai/nano-banana.ts），0.134 × 1.5 ≈ 0.20
-export const NANO_BANANA_PRO_COST = 0.2
-// 參考圖模式另以 Claude 看圖撰寫美術指導指令（每次）
-export const NANO_BANANA_DIRECTOR_COST = 0.01
+// ── 等級倍率計價 ─────────────────────────────────────────────────────────────
+// 扣點 = 供應商實際成本（USD）× 方案倍率。付費方案的倍率套用在方案未內含的用量功能上。
+// FREE ×2、CORE ×1.8、PRO ×1.6、MAX ×1.4
+export const PLAN_COST_MULTIPLIER: Record<MarketingPlan, number> = {
+  free: 2,
+  pro: 1.8,
+  team: 1.6,
+  enterprise: 1.4,
+}
+// 非行銷模組（或無法判斷方案）時使用的倍率，等同 FREE
+export const DEFAULT_COST_MULTIPLIER = PLAN_COST_MULTIPLIER.free
 
-// Ideogram v3 BALANCED（每張）：成本約 $0.06，依一般原則「成本 ×3」
-export const IDEOGRAM_COST = 0.18
-
-// 圖片生成（每張）；flux / nano 等舊模型 id 目前皆走 Nano Banana Pro
-export const IMAGE_COSTS: Record<string, number> = {
-  dalle3: 0.08,
-  flux: NANO_BANANA_PRO_COST,
-  'flux-1-pro': NANO_BANANA_PRO_COST,
-  nano: NANO_BANANA_PRO_COST,
-  'nano-banana': NANO_BANANA_PRO_COST,
-  ideogram: IDEOGRAM_COST,
+/** 取得帳號目前方案對應的成本倍率（依 lib/marketing/entitlements 判斷方案） */
+export async function getCostMultiplier(userId: string): Promise<number> {
+  try {
+    const { plan } = await getMarketingEntitlements(null, userId)
+    return PLAN_COST_MULTIPLIER[plan] ?? DEFAULT_COST_MULTIPLIER
+  } catch {
+    return DEFAULT_COST_MULTIPLIER
+  }
 }
 
-// 影片生成（每 5 秒為一單位計）
-const VIDEO_COST_PER_5S: Record<string, number> = {
-  'kling-standard': 0.5,
-  'kling-pro': 1.0,
-  'kling-img2video': 0.5,
-}
-// 固定長度模型（veo3 約 25 秒、sora 約 60 秒）採單支計價
-const VIDEO_FLAT_COST: Record<string, number> = {
-  veo3: 2.5,
-  'veo3-img2video': 2.5,
-  sora: 5.0,
-  'sora-img2video': 5.0,
+/** 成本 × 倍率 → 扣點（四捨五入至小數第 4 位，最低 0.001） */
+export function priceFromCost(costUsd: number, multiplier: number): number {
+  if (!(costUsd > 0)) return 0
+  return Math.max(0.001, Math.round(costUsd * multiplier * 10000) / 10000)
 }
 
-export function videoCost(model: string, durationSeconds: number): number {
-  if (model in VIDEO_FLAT_COST) return VIDEO_FLAT_COST[model]
-  const per5s = VIDEO_COST_PER_5S[model] ?? 0.5
-  return per5s * Math.max(1, Math.ceil(durationSeconds / 5))
+// ── 供應商成本（USD）────────────────────────────────────────────────────────
+// 圖片（每張）。flux / nano 等舊模型 id 目前皆走 Nano Banana Pro（Google 直連 1K/2K $0.134）
+export const NANO_BANANA_PRO_GOOGLE_COST = 0.134
+export const NANO_BANANA_PRO_FAL_COST = 0.15
+export const NANO_BANANA_PRO_FAL_REF_IMAGE_COST = 0.067
+export const IMAGE_PROVIDER_COSTS: Record<string, number> = {
+  dalle3: 0.04,
+  flux: NANO_BANANA_PRO_GOOGLE_COST,
+  'flux-1-pro': NANO_BANANA_PRO_GOOGLE_COST,
+  nano: NANO_BANANA_PRO_GOOGLE_COST,
+  'nano-banana': NANO_BANANA_PRO_GOOGLE_COST,
+  ideogram: 0.06, // Ideogram v3 BALANCED
+}
+// 非行銷模組沿用的每張定價（成本 × FREE 倍率）
+export const IMAGE_COSTS: Record<string, number> = Object.fromEntries(
+  Object.entries(IMAGE_PROVIDER_COSTS).map(([k, v]) => [k, priceFromCost(v, DEFAULT_COST_MULTIPLIER)]),
+)
+// 舊常數名稱相容（Nano Banana Pro 每張，FREE 倍率）
+export const NANO_BANANA_PRO_COST = IMAGE_COSTS.flux
+
+// 影片（每秒）：Kling v1.6（fal）standard $0.056／pro $0.094；Veo 3.1 720p/1080p $0.40；Sora 2 Pro 1080p $0.70
+const VIDEO_COST_PER_SECOND: Record<string, number> = {
+  'kling-standard': 0.056,
+  'kling-img2video': 0.056,
+  'kling-pro': 0.094,
+  veo3: 0.4,
+  'veo3-img2video': 0.4,
+  sora: 0.7,
+  'sora-img2video': 0.7,
+}
+export function videoProviderCost(model: string, durationSeconds: number): number {
+  const perSec = VIDEO_COST_PER_SECOND[model] ?? VIDEO_COST_PER_SECOND['kling-standard']
+  return perSec * Math.max(1, Math.round(durationSeconds || 5))
+}
+/** 影片扣點（預設 FREE 倍率；行銷模組傳入方案倍率） */
+export function videoCost(model: string, durationSeconds: number, multiplier = DEFAULT_COST_MULTIPLIER): number {
+  return priceFromCost(videoProviderCost(model, durationSeconds), multiplier)
+}
+
+// LLM（每百萬 token，USD）：Claude 依 Anthropic 官方價；Gemini 2.5 Flash 依 Google 公開價
+const LLM_PRICES: Record<string, { input: number; output: number }> = {
+  'claude-sonnet-4-6': { input: 3, output: 15 },
+  'claude-haiku-4-5': { input: 1, output: 5 },
+  'gemini-2.5-flash': { input: 0.3, output: 2.5 },
+}
+/** 依實際 token 用量計算成本（usage 取自 AI SDK 回傳） */
+export function llmCost(model: string, usage?: { inputTokens?: number; outputTokens?: number } | null): number {
+  const p = LLM_PRICES[model]
+  if (!p || !usage) return 0
+  return ((usage.inputTokens ?? 0) * p.input + (usage.outputTokens ?? 0) * p.output) / 1_000_000
 }
 
 // HeyGen 虛擬主播影片（每支）

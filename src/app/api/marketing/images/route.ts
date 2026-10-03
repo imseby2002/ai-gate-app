@@ -2,9 +2,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { createOpenAI } from '@ai-sdk/openai'
 import { generateText } from 'ai'
-import { IMAGE_COSTS, checkCredits, deductCredits, isBillableUser } from '@/lib/marketing/billing'
+import { NANO_BANANA_PRO_FAL_COST, checkCredits, deductCredits, getCostMultiplier, isBillableUser, priceFromCost } from '@/lib/marketing/billing'
 import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
-import { generateNanoBanana } from '@/lib/ai/nano-banana'
+import { generateNanoBananaWithCost } from '@/lib/ai/nano-banana'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -19,9 +19,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '目前方案未開放圖片產出，請升級至 PRO 以上', plan }, { status: 403 })
   }
 
-  const costPerImage = IMAGE_COSTS[model] ?? 0.05
+  // 依實際成本 × 方案倍率扣點；執行前以 fal 備援成本預估
+  const multiplier = await getCostMultiplier(user.id)
   const billable = await isBillableUser(user.id)
-  const check = await checkCredits(user.id, costPerImage * count, billable)
+  const check = await checkCredits(user.id, priceFromCost(NANO_BANANA_PRO_FAL_COST * count, multiplier), billable)
   if (!check.ok) return NextResponse.json(check.payload, { status: 402 })
 
   // ── 1. GPT-4o-mini（via OpenRouter）產生圖片提示詞 ────────────────
@@ -83,11 +84,14 @@ Requirements:
   // ── 2. FAL AI 並行生成圖片 ────────────────────────────────────────
   // 文字生圖統一使用 Nano Banana Pro（FLUX 僅用於修圖）
   const results = await Promise.allSettled(
-    rawPrompts.map(async (prompt) => ({ url: await generateNanoBanana({ prompt, aspectRatio: '16:9' }), prompt }))
+    rawPrompts.map(async (prompt) => {
+      const r = await generateNanoBananaWithCost({ prompt, aspectRatio: '16:9' })
+      return { url: r.url, costUsd: r.costUsd, prompt }
+    })
   )
 
   const succeeded = results
-    .filter((r): r is PromiseFulfilledResult<{ url: string; prompt: string }> =>
+    .filter((r): r is PromiseFulfilledResult<{ url: string; costUsd: number; prompt: string }> =>
       r.status === 'fulfilled' && !!r.value.url
     )
     .map(r => r.value)
@@ -99,13 +103,14 @@ Requirements:
   const imageUrls = succeeded.map(s => s.url)
   const prompts = succeeded.map(s => s.prompt)
 
-  await deductCredits(user.id, succeeded.length * costPerImage, `[marketing] 行銷圖片生成 ${succeeded.length} 張`, billable)
+  const totalCost = priceFromCost(succeeded.reduce((sum, s) => sum + s.costUsd, 0), multiplier)
+  await deductCredits(user.id, totalCost, `[marketing] 行銷圖片生成 ${succeeded.length} 張`, billable)
   void supabase.from('messages').insert({
     user_id: user.id,
     role: 'assistant',
     content: `[行銷圖片生成] ${imageUrls.length} 張`,
     model_id: model,
-    cost_usd: imageUrls.length * costPerImage,
+    cost_usd: totalCost,
     image_urls: imageUrls,
   })
 

@@ -6,7 +6,7 @@ import { generateContentSet } from '@/lib/mkt/generate'
 import { buildMktSnapshot } from '@/lib/mkt/analytics'
 import { publishToPlatforms, SUPPORTED_PLATFORMS, type CredentialRow } from '@/lib/marketing/publish'
 import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
-import { IMAGE_COSTS } from '@/lib/marketing/billing'
+import { IMAGE_PROVIDER_COSTS, getCostMultiplier, priceFromCost } from '@/lib/marketing/billing'
 import { createAwarenessCampaign, getAdAccount, getInsights, metaAdsCredsFrom, setStatus, type MetaAdsCreds } from '@/lib/marketing/meta-ads'
 import { ga4CredsFrom, getGa4Report } from '@/lib/marketing/ga4'
 import { getLineFollowers, getSiteMemberCounts, lineTokenFrom, memberJoinKey, memberJoinUrl } from '@/lib/marketing/members'
@@ -293,7 +293,8 @@ export const generateMarketingImageTool: AgentToolDef = {
     const input = rawInput as unknown as GenerateImageInput
     const url = await ctx.generateImage(input.prompt, input.aspect_ratio ?? '1:1')
     if (!url) throw new Error('圖片生成失敗')
-    await ctx.deductCredits(IMAGE_COSTS.flux, `agent-image:${ctx.runId}`)
+    // Nano Banana Pro 成本 × 方案倍率
+    await ctx.deductCredits(priceFromCost(IMAGE_PROVIDER_COSTS.flux, await getCostMultiplier(ctx.userId)), `agent-image:${ctx.runId}`)
     return { imageUrl: url }
   },
 }
