@@ -55,7 +55,7 @@ Focus only on product subject, textures, appetizing or attractive details, and c
   }
 }
 
-// 參考圖模式：將風格骨架轉為 Kontext 編輯指令，保留原圖主體與構圖，移除會引入人物的詞
+// 參考圖模式：將風格骨架轉為 Kontext 編輯指令，以原圖為主體；模板預設的人像詞移除，避免取代原圖主體（使用者描述可自行要求加人物）
 function buildReferenceEditPrompt(stylePrompt: string, subject: string): string {
   const style = stylePrompt
     .split(',')
@@ -63,11 +63,11 @@ function buildReferenceEditPrompt(stylePrompt: string, subject: string): string 
     .filter(s => s && !/portrait|model|person|people|face|fashion/i.test(s))
     .join(', ')
   return [
-    'Keep the exact same subject, objects, scene, layout and camera angle of the input image.',
-    'Do not replace the subject, do not add people, models or faces.',
+    'Use the input image as the main subject: keep its subject, objects, scene, layout and camera angle.',
+    'Do not replace the original subject with a different one.',
     `Restyle the image with this look: ${style}.`,
-    subject ? `Subject details: ${subject}.` : '',
-    'Preserve the original identity and structure of everything in the photo, only change lighting, color grading, styling and add design space.',
+    subject ? `Additional details: ${subject}.` : '',
+    'Preserve the original identity and structure of the photo, mainly change lighting, color grading, styling and add design space.',
   ].filter(Boolean).join(' ')
 }
 
