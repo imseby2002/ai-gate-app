@@ -1,10 +1,12 @@
 /**
- * Bird (app.bird.com) provider：語音外撥 + SMS。
- * Docs: https://docs.bird.com
+ * Bird provider：語音外撥 + SMS。
+ * 語音仍為舊版 api.bird.com 流程（新版平台語音 API 待確認，目前路由不會優先選 Bird 撥打）；
+ * SMS 已改用新版平台 API。
  */
 import type { TelephonyProvider, VoiceCallParams, SmsParams } from './types'
 
 const BASE = 'https://api.bird.com'
+const SMS_BASE = 'https://us1.platform.bird.com/v1'
 
 function auth() {
   return {
@@ -55,18 +57,35 @@ export const birdProvider: TelephonyProvider = {
     return { callId: data?.id ?? data?.callId ?? null }
   },
 
+  // 新版 Bird 平台 SMS API：POST https://us1.platform.bird.com/v1/sms/messages（Bearer）
+  // 需 BIRD_API_KEY、BIRD_SMS_FROM（已驗證的美國號碼）；category 預設 marketing
   async sendSms({ phone, text }: SmsParams) {
-    const workspaceId = process.env.BIRD_WORKSPACE_ID
-    const channelId = process.env.BIRD_SMS_CHANNEL_ID
-    if (!process.env.BIRD_API_KEY || !workspaceId || !channelId) return false
-    const res = await fetch(`${BASE}/workspaces/${workspaceId}/channels/${channelId}/messages`, {
-      method: 'POST',
-      headers: auth(),
-      body: JSON.stringify({
-        receiver: { contacts: [{ identifierValue: phone }] },
-        body: { type: 'text', text: { text } },
-      }),
-    })
-    return res.ok
+    return (await sendBirdSms(phone, text)).ok
   },
+}
+
+export function isBirdSmsConfigured(): boolean {
+  return !!(process.env.BIRD_API_KEY && process.env.BIRD_SMS_FROM)
+}
+
+export async function sendBirdSms(
+  phone: string,
+  text: string,
+  category: 'marketing' | 'transactional' = 'marketing',
+): Promise<{ ok: boolean; messageId?: string; error?: string }> {
+  const apiKey = process.env.BIRD_API_KEY
+  const from = process.env.BIRD_SMS_FROM
+  if (!apiKey || !from) return { ok: false, error: 'Bird SMS 未設定（需 BIRD_API_KEY / BIRD_SMS_FROM）' }
+  try {
+    const res = await fetch(`${SMS_BASE}/sms/messages`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to: phone, text, from, category }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) return { ok: false, error: data?.message ?? data?.error ?? `Bird SMS 錯誤 (${res.status})` }
+    return { ok: true, messageId: data?.id ?? 'bird-sent' }
+  } catch (e) {
+    return { ok: false, error: `Bird SMS 連線失敗：${String(e)}` }
+  }
 }

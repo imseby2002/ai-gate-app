@@ -3,7 +3,10 @@
  * 電話行銷單元
  *
  * TTS：ElevenLabs（全區）
- * 撥打：Bird (app.bird.com)
+ * 撥打：依門號路由（getTelephonyProviderForPhone）
+ * 扣點：TTS 固定；通話依實際分鐘數 × 國別費率 × 方案倍率
+ *   - Twilio：通話結束後由 /api/ivr/webhook/twilio 依 Twilio 回報秒數扣點
+ *   - 其他通道（無通話秒數回報）：撥出成功即以 1 分鐘計
  * VBEE：功能保留，待日後啟用
  *
  * action: 'tts'   → 生成語音試聽（回傳音頻 URL）
@@ -23,7 +26,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { getTelephonyProvider, getTelephonyProviderForPhone } from '@/lib/telephony'
-import { TTS_COST, CALL_COST, checkCredits, deductCredits, isBillableUser } from '@/lib/marketing/billing'
+import { TTS_COST, chargeUsage, checkCredits, deductCredits, getCostMultiplier, isBillableUser, priceFromCost, voiceCostPerMinute } from '@/lib/marketing/billing'
 import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
 
 type KeyMapping = { digit: string; channel: string; target_type?: string; join_url: string; label?: string }
@@ -144,11 +147,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '目前方案未開放電話撥打，請升級至 PRO 以上', plan }, { status: 403 })
   }
 
-  // 執行前餘額檢查：TTS 一次 + 依撥打通數估算；實際依成功數扣點
+  // 執行前餘額檢查：TTS 一次 + 每通以 1 分鐘估算；通話費實際依分鐘數扣點
   const billable = await isBillableUser(user.id)
-  const phoneCount = action === 'batch' ? (phones as string[]).filter((p) => p?.trim()).length
-    : action === 'call' ? 1 : 0
-  const estimate = TTS_COST + CALL_COST * phoneCount
+  const dialList: string[] = action === 'batch' ? (phones as string[]).filter((p) => p?.trim())
+    : action === 'call' && phone ? [phone] : []
+  const callEstimateUsd = dialList.reduce((sum, p) => sum + voiceCostPerMinute(p, getTelephonyProviderForPhone(p).name), 0)
+  const estimate = TTS_COST + (billable ? priceFromCost(callEstimateUsd, await getCostMultiplier(user.id)) : 0)
   const check = await checkCredits(user.id, estimate, billable)
   if (!check.ok) return NextResponse.json(check.payload, { status: 402 })
 
@@ -163,16 +167,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ audioUrl, provider: 'ElevenLabs' })
     }
 
-    // 有按鍵加入社群設定 → 建立/更新活動，撥打後記錄通話供 webhook 對應
+    // 有按鍵加入社群設定 → 建立/更新活動；每通都記錄，供 webhook 對應按鍵與通話秒數扣點
     const campaignId = collectDtmf ? await ensureIvrCampaign(supabase, user.id, mappings) : null
-    const admin = campaignId ? await createAdminClient() : null
+    const admin = await createAdminClient()
+    // Twilio 需有 NEXT_PUBLIC_APP_URL 才會回報通話結束；沒有回報的通道撥出即以 1 分鐘計
+    const billedOnCallback = (providerName: string) => providerName === 'twilio' && !!process.env.NEXT_PUBLIC_APP_URL
+    let upfrontCallCostUsd = 0
     const recordCall = async (p: string, callId: string | null, providerName: string) => {
-      if (!admin || !campaignId || !callId) return
+      const later = billedOnCallback(providerName) && !!callId
+      const costUsd = later ? 0 : voiceCostPerMinute(p, providerName)
+      upfrontCallCostUsd += costUsd
+      if (!callId) return
       await admin.from('ivr_calls').insert({
         user_id: user.id, campaign_id: campaignId, phone: p,
         provider: providerName, provider_call_id: callId, status: 'dialing',
+        ...(later ? {} : { billed_at: new Date().toISOString() }),
       })
     }
+    const chargeUpfrontCalls = (desc: string) => chargeUsage(user.id, upfrontCallCostUsd, desc)
 
     // ── Single call ───────────────────────────────────────────────────────────
     if (action === 'call') {
@@ -181,7 +193,8 @@ export async function POST(req: NextRequest) {
       const pProvider = getTelephonyProviderForPhone(phone)
       const result = await pProvider.call({ phone, audioUrl, callerId: finalCallerId, collectDtmf })
       await recordCall(phone, result.callId, pProvider.name)
-      await deductCredits(user.id, TTS_COST + CALL_COST, '[marketing] 電話行銷撥打 1 通', billable)
+      await deductCredits(user.id, TTS_COST, '[marketing] 電話行銷 TTS', billable)
+      await chargeUpfrontCalls('[marketing] 電話行銷撥打 1 通（以 1 分鐘計）')
       return NextResponse.json({ ok: true, phone, callId: result.callId, audioUrl, provider: pProvider.name })
     }
 
@@ -207,12 +220,8 @@ export async function POST(req: NextRequest) {
       }
 
       const successCount = results.filter(r => r.ok).length
-      await deductCredits(
-        user.id,
-        TTS_COST + CALL_COST * successCount,
-        `[marketing] 電話行銷批次撥打 ${successCount} 通`,
-        billable,
-      )
+      await deductCredits(user.id, TTS_COST, '[marketing] 電話行銷 TTS', billable)
+      await chargeUpfrontCalls(`[marketing] 電話行銷批次撥打（非 Twilio 通道以每通 1 分鐘計）`)
 
       return NextResponse.json({
         results,
