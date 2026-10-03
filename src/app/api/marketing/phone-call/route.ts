@@ -147,17 +147,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '目前方案未開放電話撥打，請升級至 PRO 以上', plan }, { status: 403 })
   }
 
+  const mappings: KeyMapping[] = Array.isArray(keyMappings) ? keyMappings : []
+  const collectDtmf = mappings.some((m) => m?.digit && m?.join_url)
+
   // 執行前餘額檢查：TTS 一次 + 每通以 1 分鐘估算；通話費實際依分鐘數扣點
   const billable = await isBillableUser(user.id)
   const dialList: string[] = action === 'batch' ? (phones as string[]).filter((p) => p?.trim())
     : action === 'call' && phone ? [phone] : []
-  const callEstimateUsd = dialList.reduce((sum, p) => sum + voiceCostPerMinute(p, getTelephonyProviderForPhone(p).name), 0)
+  const callEstimateUsd = dialList.reduce((sum, p) => sum + voiceCostPerMinute(p, getTelephonyProviderForPhone(p, { collectDtmf }).name), 0)
   const estimate = TTS_COST + (billable ? priceFromCost(callEstimateUsd, await getCostMultiplier(user.id)) : 0)
   const check = await checkCredits(user.id, estimate, billable)
   if (!check.ok) return NextResponse.json(check.payload, { status: 402 })
-
-  const mappings: KeyMapping[] = Array.isArray(keyMappings) ? keyMappings : []
-  const collectDtmf = mappings.some((m) => m?.digit && m?.join_url)
 
   try {
     // ── TTS only ─────────────────────────────────────────────────────────────
@@ -190,7 +190,7 @@ export async function POST(req: NextRequest) {
     if (action === 'call') {
       if (!phone) return NextResponse.json({ error: '請提供電話號碼' }, { status: 400 })
       const audioUrl = await elevenLabsTTS(script, voiceId, modelId, supabase, user.id)
-      const pProvider = getTelephonyProviderForPhone(phone)
+      const pProvider = getTelephonyProviderForPhone(phone, { collectDtmf })
       const result = await pProvider.call({ phone, audioUrl, callerId: finalCallerId, collectDtmf })
       await recordCall(phone, result.callId, pProvider.name)
       await deductCredits(user.id, TTS_COST, '[marketing] 電話行銷 TTS', billable)
@@ -208,7 +208,7 @@ export async function POST(req: NextRequest) {
 
       const results: { phone: string; ok: boolean; id?: string; provider?: string; error?: string }[] = []
       for (const p of list) {
-        const pProvider = getTelephonyProviderForPhone(p)
+        const pProvider = getTelephonyProviderForPhone(p, { collectDtmf })
         try {
           const r = await pProvider.call({ phone: p, audioUrl, callerId: finalCallerId, collectDtmf })
           await recordCall(p, r.callId, pProvider.name)

@@ -145,12 +145,12 @@ function isTwMobile(rawPhone: string): boolean {
 }
 
 // 語音（每分鐘，未滿 1 分鐘以 1 分鐘計，與 Twilio 計費方式一致）
-// Twilio 台灣：手機 $0.1985、市話 $0.1196；美國 $0.013；越南手機 $0.1777
+// Twilio 台灣：手機 $0.1985、市話 $0.1196；美國 $0.013（Bird $0.0049）；越南手機 $0.1777
 // Stringee 越南境內：約 NT$0.8~1.2／分，取 $0.04；其他國家未逐一建表，保守取 $0.20
 export function voiceCostPerMinute(phone: string, provider: string): number {
   const country = detectTelcoCountry(phone)
   if (country === 'TW') return isTwMobile(phone) ? 0.1985 : 0.1196
-  if (country === 'US') return 0.013
+  if (country === 'US') return provider === 'bird' ? 0.0049 : 0.013
   if (country === 'VN') return provider === 'stringee' ? 0.04 : 0.1777
   return 0.2
 }
