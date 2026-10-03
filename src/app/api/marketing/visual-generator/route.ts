@@ -56,11 +56,14 @@ Focus only on product subject, textures, appetizing or attractive details, and c
 }
 
 // 參考圖模式：將風格骨架轉為 Kontext 編輯指令，以原圖為主體；模板預設的人像詞移除，避免取代原圖主體（使用者描述可自行要求加人物）
+// 模板中會指定/取代主體的片語（人像、情侶、紳士、表情臉、瓶罐盒等），參考圖模式下移除
+const REFERENCE_SUBJECT_TERMS = /\b(portrait|fashion|person|people|couple|gentleman|expressive face|box or bottle)\b/i
+
 function buildReferenceEditPrompt(stylePrompt: string, subject: string): string {
   const style = stylePrompt
     .split(',')
     .map(s => s.trim())
-    .filter(s => s && !/portrait|model|person|people|face|fashion/i.test(s))
+    .filter(s => s && !REFERENCE_SUBJECT_TERMS.test(s))
     .join(', ')
   return [
     'Use the input image as the main subject: keep its subject, objects, scene, layout and camera angle.',
