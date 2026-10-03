@@ -1,22 +1,27 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Loader2, Check, Sparkles } from 'lucide-react'
+import { Loader2, Check, Sparkles, Gift } from 'lucide-react'
 import { PLAN_CARDS, COMPARISON_ROWS } from '@/lib/marketing/plan-compare'
+import { createClient } from '@/lib/supabase/client'
 
 type MarketingPlan = 'free' | 'pro' | 'team' | 'enterprise'
 type Cycle = 'monthly' | 'yearly'
+type MonthlyGift = { planAllowance: number; allowance: number; remaining: number; emailVerified: boolean }
 
 export function MarketingPlanUpgrade() {
   const [plan, setPlan] = useState<MarketingPlan | null>(null)
   const [cycle, setCycle] = useState<Cycle>('yearly')
   const [checkingOut, setCheckingOut] = useState<string | null>(null)
+  const [gift, setGift] = useState<MonthlyGift | null>(null)
+  const [resend, setResend] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
 
   const load = useCallback(async () => {
     try {
       const res = await fetch('/api/marketing/plan')
       const data = await res.json()
       setPlan(data.plan ?? 'free')
+      setGift(data.monthlyGift ?? null)
     } catch { setPlan('free') }
   }, [])
 
@@ -54,6 +59,24 @@ export function MarketingPlanUpgrade() {
     }
   }
 
+  // FREE 需 Email 驗證才發放每月贈點：重寄註冊驗證信
+  const resendVerification = async () => {
+    setResend('sending')
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user?.email) throw new Error('no email')
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: user.email,
+        options: { emailRedirectTo: `${window.location.origin}/callback` },
+      })
+      setResend(error ? 'error' : 'sent')
+    } catch {
+      setResend('error')
+    }
+  }
+
   if (plan == null) return null
 
   return (
@@ -80,6 +103,31 @@ export function MarketingPlanUpgrade() {
           </button>
         </div>
       </div>
+
+      {gift && gift.planAllowance > 0 && (gift.allowance > 0 || !gift.emailVerified) && (
+        <div className="flex items-center gap-2.5 flex-wrap rounded-lg bg-muted/50 px-4 py-3 text-sm">
+          <Gift className="h-4 w-4 text-primary shrink-0" />
+          {gift.allowance > 0 ? (
+            <span>
+              本月贈點剩餘 <span className="font-semibold">{gift.remaining.toFixed(2)}</span> / {gift.allowance} 點
+              <span className="text-muted-foreground">（當月用完即止，不累積；扣點時優先使用）</span>
+            </span>
+          ) : (
+            <>
+              <span>完成 Email 驗證即可領取每月 {gift.planAllowance} 點贈點</span>
+              <button
+                onClick={resendVerification}
+                disabled={resend === 'sending' || resend === 'sent'}
+                className="px-3 py-1 rounded-lg text-xs font-semibold text-primary-foreground bg-primary disabled:opacity-50 flex items-center gap-1"
+              >
+                {resend === 'sending' && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                {resend === 'sent' ? '已寄出，請至信箱點擊連結' : '重寄驗證信'}
+              </button>
+              {resend === 'error' && <span className="text-xs text-red-600">寄送失敗，請稍後再試</span>}
+            </>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {PLAN_CARDS.map(c => {
