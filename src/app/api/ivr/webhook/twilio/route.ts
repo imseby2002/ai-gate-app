@@ -135,7 +135,7 @@ export async function POST(req: NextRequest) {
       // 建立 join event + 短連結
       const token = generateShortToken()
       const shortUrl = buildShortUrl(token)
-      const { deliveryMethod, delivered } = await dispatchJoinLink({
+      const { deliveryMethod, delivered, costUsd } = await dispatchJoinLink({
         channel: mapping.channel as DispatchChannel,
         phone: call.phone,
         shortUrl,
@@ -152,6 +152,8 @@ export async function POST(req: NextRequest) {
         short_token: token,
         delivered_at: delivered ? new Date().toISOString() : null,
       })
+      // 加入連結簡訊依實際通道成本 × 方案倍率扣點（扣發起通話的帳號）
+      await chargeUsage(call.user_id, costUsd, '[marketing] 電話按鍵加入連結簡訊')
     }
   }
 
