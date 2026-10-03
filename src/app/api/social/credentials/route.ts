@@ -17,6 +17,7 @@ const NON_SECRET_FIELDS = new Set([
   'telegram_admin_chat_id',
   'wechat_app_id',
   'zalo_oa_id',
+  'zns_template_id',
   'whatsapp_personal_bridge_url',
   // marketing-auto 發文平台的 ID 類欄位（非機密，方便編輯時直接顯示既有值）
   'page_id',

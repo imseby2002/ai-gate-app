@@ -19,6 +19,8 @@ export interface SmsSendOptions {
   name?: string
   zaloTemplateId?: string
   zaloTemplateData?: Record<string, unknown>
+  /** 使用者自己的 Zalo OA Access Token（見 zalo-zns.ts）；未給則用系統 env */
+  zaloAccessToken?: string
 }
 
 export interface SmsSendResult {
@@ -223,8 +225,9 @@ async function sendViaZaloZns(
   phone: string,
   templateId?: string,
   templateData?: Record<string, unknown>,
+  accessToken?: string,
 ): Promise<{ ok: boolean; messageId?: string; error?: string }> {
-  const token = process.env.ZALO_ZNS_ACCESS_TOKEN || process.env.ZALO_OA_ACCESS_TOKEN
+  const token = accessToken || process.env.ZALO_ZNS_ACCESS_TOKEN || process.env.ZALO_OA_ACCESS_TOKEN
   if (!token || !templateId) {
     return { ok: false, error: 'Zalo ZNS 權杖或範本 ID 未設定' }
   }
@@ -295,7 +298,7 @@ async function sendViaTwilio(phone: string, text: string): Promise<{ ok: boolean
 
 // ── 核心發送單則簡訊（智慧分流） ──────────────────────────────────────────────
 export async function sendSmsMessage(options: SmsSendOptions): Promise<SmsSendResult> {
-  const { phone: rawPhone, text, zaloTemplateId, zaloTemplateData } = options
+  const { phone: rawPhone, text, zaloTemplateId, zaloTemplateData, zaloAccessToken } = options
   const country = detectSmsCountry(rawPhone)
   const normalizedPhone = normalizePhoneForCountry(rawPhone, country)
 
@@ -315,8 +318,8 @@ export async function sendSmsMessage(options: SmsSendOptions): Promise<SmsSendRe
 
   // 🇻🇳 越南號碼 ── 優先嘗試 Zalo ZNS，若無則走 Stringee
   if (country === 'VN') {
-    if (zaloTemplateId && (process.env.ZALO_ZNS_ACCESS_TOKEN || process.env.ZALO_OA_ACCESS_TOKEN)) {
-      const znsRes = await sendViaZaloZns(normalizedPhone, zaloTemplateId, zaloTemplateData)
+    if (zaloTemplateId && (zaloAccessToken || process.env.ZALO_ZNS_ACCESS_TOKEN || process.env.ZALO_OA_ACCESS_TOKEN)) {
+      const znsRes = await sendViaZaloZns(normalizedPhone, zaloTemplateId, zaloTemplateData, zaloAccessToken)
       if (znsRes.ok) {
         return {
           phone: rawPhone,
@@ -370,6 +373,7 @@ export async function sendBatchSms(
   defaultText: string,
   groupTexts?: Record<string, string>,
   zaloTemplateId?: string,
+  zaloAccessToken?: string,
 ): Promise<{
   total: number
   success: number
@@ -392,6 +396,7 @@ export async function sendBatchSms(
       text: personalizedText,
       name: item.name,
       zaloTemplateId,
+      zaloAccessToken,
     })
 
     results.push(res)
