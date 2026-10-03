@@ -1859,8 +1859,8 @@ const VIDEO_TYPES: { id: string }[] = [
 const DURATION_OPTIONS = [
   { value: '5',  hint: 'KLING' },
   { value: '10', hint: 'KLING' },
+  { value: '12', hint: 'SORA' },
   { value: '25', hint: 'Google VEO3' },
-  { value: '60', hint: 'SORA' },
 ]
 
 function Unit7VideoScript({
@@ -2248,7 +2248,7 @@ function Unit7VideoScript({
 // ─── Unit 8: 影片產出 ─────────────────────────────────────────────────────────
 
 type VideoModel = 'kling-standard' | 'kling-pro' | 'kling-img2video' | 'veo3' | 'veo3-img2video' | 'sora' | 'sora-img2video'
-type VideoDuration = '5' | '10' | '25' | '60'
+type VideoDuration = '5' | '10' | '12' | '25'
 
 interface GeneratedVideo {
   scriptId: number
@@ -2273,8 +2273,8 @@ interface Unit8Data {
 const DURATION_CARDS: { duration: VideoDuration; provider: string }[] = [
   { duration: '5',  provider: 'KLING' },
   { duration: '10', provider: 'KLING' },
+  { duration: '12', provider: 'SORA' },
   { duration: '25', provider: 'Google VEO3' },
-  { duration: '60', provider: 'SORA' },
 ]
 
 function resolveModel(duration: VideoDuration, klingQuality: 'standard' | 'pro', useImg2Video: boolean): VideoModel {

@@ -79,15 +79,15 @@ export const IMAGE_COSTS: Record<string, number> = Object.fromEntries(
 // 舊常數名稱相容（Nano Banana Pro 每張，FREE 倍率）
 export const NANO_BANANA_PRO_COST = IMAGE_COSTS.flux
 
-// 影片（每秒）：Kling v1.6（fal）standard $0.056／pro $0.094；Veo 3.1 720p/1080p $0.40；Sora 2 Pro 1080p $0.70
+// 影片（每秒）：Kling v1.6（fal）standard $0.056／pro $0.094；Veo 3.1 720p/1080p $0.40；Sora 2（720p）$0.10
 const VIDEO_COST_PER_SECOND: Record<string, number> = {
   'kling-standard': 0.056,
   'kling-img2video': 0.056,
   'kling-pro': 0.094,
   veo3: 0.4,
   'veo3-img2video': 0.4,
-  sora: 0.7,
-  'sora-img2video': 0.7,
+  sora: 0.1,
+  'sora-img2video': 0.1,
 }
 export function videoProviderCost(model: string, durationSeconds: number): number {
   const perSec = VIDEO_COST_PER_SECOND[model] ?? VIDEO_COST_PER_SECOND['kling-standard']
