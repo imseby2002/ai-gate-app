@@ -7,6 +7,7 @@
 // credits for external users」、lib/skills/billing.ts 的 skills/run route、
 // lib/resume/billing.ts）。這條規則晚於行銷模組原始設計，這裡補齊。
 import { getBalance, deductCredits as deductCreditsRaw } from '@/lib/skills/billing'
+import { getCompanyBillingContext } from '@/lib/company/entitlements'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getMarketingEntitlements, type MarketingPlan } from './entitlements'
 
@@ -145,8 +146,45 @@ export function expertSourceCost(type: 'url' | 'file' | 'text', charCount: numbe
 // 問答：知識庫塞進 context，input token 偏高，每次固定 0.05
 export const EXPERT_QUERY_COST = 0.05
 
+// ── 每月贈點（當月用完即止、不累積；見 supabase/migrations/20261003_marketing_monthly_gift.sql）──
+// FREE 需完成 Email 驗證才發放；公司方案成員改用公司錢包，不另給個人贈點
+export const MONTHLY_GIFT_CREDITS: Record<MarketingPlan, number> = {
+  free: 1,
+  pro: 10,
+  team: 20,
+  enterprise: 35,
+}
+
+async function isEmailVerified(userId: string): Promise<boolean> {
+  try {
+    const { data } = await createAdminClient().auth.admin.getUserById(userId)
+    return !!data?.user?.email_confirmed_at
+  } catch {
+    return false
+  }
+}
+
+/** 本月可領的贈點額度（依方案；FREE 未驗證 Email 為 0） */
+export async function getMonthlyGiftAllowance(userId: string): Promise<number> {
+  if (await getCompanyBillingContext(userId)) return 0
+  const { plan } = await getMarketingEntitlements(null, userId)
+  if (plan === 'free' && !(await isEmailVerified(userId))) return 0
+  return MONTHLY_GIFT_CREDITS[plan] ?? 0
+}
+
+/** 本月剩餘贈點 */
+export async function getMonthlyGiftRemaining(userId: string): Promise<number> {
+  const allowance = await getMonthlyGiftAllowance(userId)
+  const { data, error } = await createAdminClient().rpc('get_marketing_gift', { p_user_id: userId, p_allowance: allowance })
+  if (error) {
+    console.error('[marketing billing] 讀取每月贈點失敗', { userId, error })
+    return 0
+  }
+  return Number(data ?? 0)
+}
+
 /**
- * 執行前餘額檢查。不足時回傳 402 的 payload（餘額、需要多少），
+ * 執行前餘額檢查（本月贈點 + 個人餘額）。不足時回傳 402 的 payload（餘額、需要多少），
  * route 直接 `return NextResponse.json(check.payload, { status: 402 })`。
  * billable=false（admin/employee/cron）一律放行，不查餘額。
  */
@@ -156,15 +194,16 @@ export async function checkCredits(
   billable: boolean,
 ): Promise<{ ok: true; balance: number } | { ok: false; payload: { error: string; balance: number; required: number } }> {
   if (!billable) return { ok: true, balance: Infinity }
-  const balance = await getBalance(userId)
-  if (balance < estimate) {
-    return { ok: false, payload: { error: '點數不足', balance, required: estimate } }
+  const [balance, gift] = await Promise.all([getBalance(userId), getMonthlyGiftRemaining(userId)])
+  const total = balance + gift
+  if (total < estimate) {
+    return { ok: false, payload: { error: '點數不足', balance: total, required: estimate } }
   }
-  return { ok: true, balance }
+  return { ok: true, balance: total }
 }
 
 /**
- * 成功後扣點。billable=false（admin/employee/cron）一律略過，不寫入 credit_transactions。
+ * 成功後扣點：先扣本月贈點，不足再扣個人餘額。billable=false（admin/employee/cron）一律略過。
  */
 export async function deductCredits(
   userId: string,
@@ -173,7 +212,25 @@ export async function deductCredits(
   billable: boolean,
 ): Promise<{ ok: true; balance: number } | { ok: false; reason: 'insufficient' | 'error' }> {
   if (!billable) return { ok: true, balance: Infinity }
-  return deductCreditsRaw(userId, amount, description)
+  let fromGift = 0
+  if (amount > 0) {
+    const allowance = await getMonthlyGiftAllowance(userId)
+    if (allowance > 0) {
+      const { data, error } = await createAdminClient().rpc('consume_marketing_gift', {
+        p_user_id: userId,
+        p_allowance: allowance,
+        p_amount: amount,
+        p_description: description,
+      })
+      if (error) console.error('[marketing billing] 扣每月贈點失敗，改扣個人餘額', { userId, error })
+      else fromGift = Number(data ?? 0)
+    }
+  }
+  const rest = Math.round((amount - fromGift) * 10000) / 10000
+  if (rest <= 0) {
+    return { ok: true, balance: (await getBalance(userId)) + (await getMonthlyGiftRemaining(userId)) }
+  }
+  return deductCreditsRaw(userId, rest, description)
 }
 
 /**
