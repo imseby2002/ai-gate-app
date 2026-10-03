@@ -181,7 +181,7 @@ export default function VisualTemplatesPage() {
   // 即時計算圖片提示詞
   const previewSynthesizedImgPrompt = useMemo(() => {
     if (!imgUserPrompt.trim()) return selectedImgTemplate.positivePrompt
-    return `${selectedImgTemplate.positivePrompt}, featuring ${imgUserPrompt.trim()}, high quality, commercial photography, stunning details`
+    return `${imgUserPrompt.trim()}, ${selectedImgTemplate.positivePrompt}, high quality, commercial photography, stunning details`
   }, [selectedImgTemplate, imgUserPrompt])
 
   // 複製圖片提示詞

@@ -45,7 +45,7 @@ async function translateOrEnrichSubject(userText: string): Promise<string> {
         role: 'user',
         content: `Translate and describe the following product or marketing concept into concise, vivid English visual descriptors for an AI image prompt:
 "${trimmed}"
-Focus only on product subject, textures, appetizing or attractive details, and clear visual features. Output only the English phrase, no preamble or quotes.`,
+Focus on product subject, textures, appetizing or attractive details, and clear visual features. If the text names a specific style, genre or type (e.g. 時尚雜誌, 復古海報, 日系, 聖誕節, 卡通), keep it explicitly at the start of the phrase. Output only the English phrase, no preamble or quotes.`,
       }],
       maxOutputTokens: 120,
     })
@@ -110,7 +110,7 @@ async function directReferenceEdit(
 Goal: turn the input photo(s) into a finished design that unmistakably looks like the requested genre, not the original photo with text pasted on top.
 
 Rules:
-- Sub-genre: if the user's notes name a specific type (e.g. 時尚雜誌 fashion, 旅遊雜誌 travel, 美食雜誌 food, 建築/室內設計雜誌 interior, 商業雜誌 business), you MUST use exactly that type. Only when the notes name no type, identify what the photo actually shows (e.g. hotel room, dish, product, person, storefront) and pick the fitting sub-genre (e.g. magazine: room/hotel -> travel & lifestyle magazine cover; person -> fashion cover with that person as cover model; food -> food magazine).
+- Sub-type: if the user's notes name a specific type, variant, era, mood or theme for this style (e.g. magazine: 時尚 fashion / 旅遊 travel / 美食 food / 室內設計 interior / 商業 business; poster or promo: 復古 retro / 極簡 minimal / 日系 Japanese / 韓系 Korean / 美式 American; 3D or clay: 卡通 cartoon / 寫實 realistic; seasonal: 聖誕 / 中秋 / 新年; color mood: 黑金 / 粉嫩 / 大地色), you MUST use exactly that type. Only when the notes name no type, identify what the photo actually shows (e.g. hotel room, dish, product, person, storefront) and pick the fitting sub-type (e.g. magazine: room/hotel -> travel & lifestyle magazine cover; person -> fashion cover with that person as cover model; food -> food magazine).
 - The real subject from the input image(s) must stay recognizable and be the hero. Never replace it with a different subject.
 - ${isMulti
   ? 'Use ONLY the products shown in the input images, keeping their exact appearance. Do not add, invent or substitute any other products.'
@@ -170,7 +170,8 @@ export async function POST(req: NextRequest) {
     const translatedSubject = await translateOrEnrichSubject(userPrompt)
     let synthesizedPositive = template.positivePrompt
     if (translatedSubject) {
-      synthesizedPositive = `${template.positivePrompt}, featuring ${translatedSubject}, ultra high quality, commercial photography, stunning details`
+      // 使用者描述放最前面，指定的類型／風格優先於模板預設
+      synthesizedPositive = `${translatedSubject}, ${template.positivePrompt}, ultra high quality, commercial photography, stunning details`
     }
     const synthesizedNegative = template.negativePrompt
 
