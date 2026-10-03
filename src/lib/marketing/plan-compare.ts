@@ -13,15 +13,15 @@ export const PLAN_CARDS: Array<{
 }> = [
   {
     plan: 'pro', name: 'CORE', monthlyId: 'pro_monthly', yearlyId: 'pro_yearly', monthlyUsd: 29, yearlyUsd: 278,
-    features: ['10 個行銷案', '圖片產出＋一鍵發布 11 個社群平台', 'AI 產品行銷設計師（策略＋文案）', 'GEO 產文無限', 'Email 行銷'],
+    features: ['10 個行銷案', '1 位協作人員', '用量扣點 ×1.8（FREE 為 ×2）', '所有生成功能依用量扣點'],
   },
   {
     plan: 'team', name: 'PRO', monthlyId: 'team_monthly', yearlyId: 'team_yearly', monthlyUsd: 49, yearlyUsd: 470,
-    features: ['包含 CORE 全部功能', '行銷案無上限', '影片產出＋AI 電訪', '社群矩陣＋附贈 1 個官方發文 IP', 'AI 視覺工坊', '行銷流水線', '可建立自製專家'],
+    features: ['包含 CORE 全部功能', '行銷案、協作人員無上限', '用量扣點 ×1.6', '行銷流水線（全自動）', '社群矩陣＋附贈 1 個官方發文 IP'],
   },
   {
     plan: 'enterprise', name: 'MAX', monthlyId: 'enterprise_monthly', yearlyId: 'enterprise_yearly', monthlyUsd: 79, yearlyUsd: 758,
-    features: ['包含 PRO 全部功能', '主播行銷（HeyGen）', 'AI 視覺工坊全節點', '企業客製功能'],
+    features: ['包含 PRO 全部功能', '用量扣點 ×1.4', '企業客製功能'],
   },
 ]
 
@@ -29,19 +29,20 @@ export const PLAN_CARDS: Array<{
 export const COMPARISON_ROWS: Array<{ label: string; values: [string, string, string, string] }> = [
   { label: '行銷案數', values: ['1 個', '10 個', '無限', '無限'] },
   { label: '協作人員', values: ['不可邀請', '1 位', '無限', '無限'] },
-  { label: '資料蒐集／分析／文案', values: ['基本', '✓', '✓', '✓'] },
-  { label: '圖片產出（點數扣款）', values: ['—', '✓', '✓', '✓'] },
-  { label: '一鍵主動推文（11 個社群平台）', values: ['—', '✓', '✓', '✓'] },
+  { label: '用量扣點倍率（實際成本 ×）', values: ['×2', '×1.8', '×1.6', '×1.4'] },
+  { label: '資料蒐集／分析／文案（依用量扣點）', values: ['✓', '✓', '✓', '✓'] },
+  { label: '圖片產出（依用量扣點）', values: ['✓', '✓', '✓', '✓'] },
+  { label: '一鍵主動推文（11 個社群平台，每則 0.01 點）', values: ['✓', '✓', '✓', '✓'] },
+  { label: '影片產出（依用量扣點）', values: ['✓', '✓', '✓', '✓'] },
+  { label: 'AI 電訪＋Email（依用量扣點）', values: ['✓', '✓', '✓', '✓'] },
+  { label: '主播行銷 HeyGen（依用量扣點）', values: ['✓', '✓', '✓', '✓'] },
+  { label: 'AI 產品行銷設計師（依用量扣點）', values: ['✓', '✓', '✓', '✓'] },
+  { label: 'AI 視覺工坊（依用量扣點）', values: ['✓', '✓', '✓', '✓'] },
+  { label: 'GEO 內容寫手（依用量扣點）', values: ['✓', '✓', '✓', '✓'] },
+  { label: '潛在客戶行銷（依用量扣點）', values: ['✓', '✓', '✓', '✓'] },
+  { label: '專家技能（點數扣款）', values: ['✓', '✓', '✓', '✓'] },
+  { label: '自製專家（依用量扣點）', values: ['✓', '✓', '✓', '✓'] },
+  { label: '行銷流水線（全自動）', values: ['—', '—', '✓', '✓'] },
   { label: '社群矩陣自動發文＋養號', values: ['—', '—', '✓', '✓'] },
   { label: '官方發文 IP（亦可自備）', values: ['—', '—', '附贈 1 個＋點數加購', '附贈 1 個＋點數加購'] },
-  { label: '影片產出（點數扣款）', values: ['—', '—', '✓', '✓'] },
-  { label: 'AI 電訪＋Email（點數扣款）', values: ['—', 'Email', '✓', '✓'] },
-  { label: '主播行銷 HeyGen（點數扣款）', values: ['—', '—', '—', '✓'] },
-  { label: 'AI 產品行銷設計師', values: ['—', '策略＋文案', '全開', '全開'] },
-  { label: 'AI 視覺工坊', values: ['—', '—', '基礎節點', '全節點'] },
-  { label: 'GEO 內容寫手', values: ['每月 1 篇', '無限', '無限', '無限'] },
-  { label: '行銷流水線', values: ['—', '—', '✓', '✓'] },
-  { label: '潛在客戶行銷', values: ['蒐集＋篩選', '+Email', '+電話撥打', '全開'] },
-  { label: '專家技能（點數扣款）', values: ['✓', '✓', '✓', '✓'] },
-  { label: '自製專家', values: ['僅使用', '僅使用', '可建立', '可建立'] },
 ]

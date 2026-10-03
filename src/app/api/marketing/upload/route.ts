@@ -18,6 +18,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
 import { publishToPlatforms } from '@/lib/marketing/publish'
+import { PUBLISH_PER_POST_CREDITS, checkCredits, deductCredits, isBillableUser } from '@/lib/marketing/billing'
 import { getBnbContext } from '@/lib/bnb/context'
 
 // ─── Main Handler ──────────────────────────────────────────────────────────────
@@ -47,6 +48,15 @@ export async function POST(req: NextRequest) {
     .select('platform, credentials, is_connected')
     .eq('user_id', credOwnerId)
 
+  const billable = await isBillableUser(user.id)
+  const check = await checkCredits(user.id, PUBLISH_PER_POST_CREDITS * platforms.length, billable)
+  if (!check.ok) return NextResponse.json(check.payload, { status: 402 })
+
   const results = await publishToPlatforms(credRows ?? [], platforms, imageUrls, videoUrl, copyText)
+  // 一鍵發布：每個平台每則成功發布扣 0.01（固定，不乘倍率）
+  const okCount = results.filter(r => r.ok).length
+  if (okCount > 0) {
+    await deductCredits(user.id, PUBLISH_PER_POST_CREDITS * okCount, `[marketing] 一鍵發布 ${okCount} 則`, billable)
+  }
   return NextResponse.json({ results })
 }
