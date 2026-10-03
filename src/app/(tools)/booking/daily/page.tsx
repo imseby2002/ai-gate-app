@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { Trash2, RefreshCw, ChevronLeft, ChevronRight, Eye, EyeOff, Check, ExternalLink } from 'lucide-react'
 import { InstallDailyButton } from './InstallDailyButton'
+import MonthPicker from './MonthPicker'
 
 interface DailyRecord {
   id: string
@@ -487,7 +488,7 @@ export default function DailyPage() {
   const isToday = date === todayTW()
 
   return (
-    <div className="p-4 sm:p-6 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-[1500px] mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
         <div>
@@ -510,6 +511,12 @@ export default function DailyPage() {
         </div>
       </div>
 
+      {/* 桌機：左側月曆選日期（每天顯示空房數／客滿），右側當日入住表 */}
+      <div className="lg:grid lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-5 lg:items-start">
+        <div className="hidden lg:block lg:sticky lg:top-4">
+          <MonthPicker date={date} onSelect={setDate} today={todayTW()} />
+        </div>
+        <div className="min-w-0">
       {/* Date nav */}
       <div className="flex items-center gap-2 mb-4">
         <button onClick={() => setDate(d => addDays(d, -1))}
@@ -718,6 +725,8 @@ export default function DailyPage() {
           </p>
         </div>
       )}
+        </div>
+      </div>
     </div>
   )
 }
