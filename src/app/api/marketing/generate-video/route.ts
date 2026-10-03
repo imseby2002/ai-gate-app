@@ -70,7 +70,16 @@ export async function POST(req: NextRequest) {
       if (!endpoint) return NextResponse.json({ error: '不支援的模型' }, { status: 400 })
       fal.config({ credentials: apiKey })
       const input: Record<string, unknown> = { prompt: prompt.trim(), duration, aspect_ratio: aspectRatio }
-      if (model === 'kling-img2video' && imageUrl) input.image_url = imageUrl
+      if (model === 'kling-img2video') {
+        if (!imageUrl) return NextResponse.json({ error: '圖生影片需要參考圖片' }, { status: 400 })
+        // base64 參考圖先上傳至 fal storage 取得 URL
+        if (typeof imageUrl === 'string' && imageUrl.startsWith('data:')) {
+          const blob = await (await fetch(imageUrl)).blob()
+          input.image_url = await fal.storage.upload(blob)
+        } else {
+          input.image_url = imageUrl
+        }
+      }
       const { request_id } = await fal.queue.submit(endpoint, { input })
       await charge()
       return NextResponse.json({ requestId: request_id, model, scriptId, endpoint, cost, submittedAt: new Date().toISOString() })

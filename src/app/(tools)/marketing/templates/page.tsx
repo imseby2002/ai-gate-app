@@ -72,6 +72,8 @@ export default function VisualTemplatesPage() {
   const [videoAspect, setVideoAspect] = useState<'9:16' | '16:9' | '1:1' | '4:5'>(VIDEO_TEMPLATES[0].defaultAspect)
   const [videoProductName, setVideoProductName] = useState('')
   const [videoKeyPoint, setVideoKeyPoint] = useState('')
+  const [videoRefImage, setVideoRefImage] = useState<string | null>(null)
+  const videoFileInputRef = useRef<HTMLInputElement>(null)
   
   const [generatingVideo, setGeneratingVideo] = useState(false)
   const [videoPollStatus, setVideoPollStatus] = useState<string | null>(null)
@@ -176,6 +178,36 @@ export default function VisualTemplatesPage() {
       }
       reader.readAsDataURL(file)
     }
+  }
+
+  // 影片參考圖上傳（圖生影片，縮圖壓成 JPEG 避免超過 Vercel 4.5MB 請求上限）
+  const handleVideoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      alert('請上傳 JPG、PNG 或 WebP 圖片格式')
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = ev => {
+      const src = ev.target?.result as string
+      const img = new window.Image()
+      img.onload = () => {
+        const MAX = 1536
+        const scale = Math.min(1, MAX / Math.max(img.width, img.height))
+        const canvas = document.createElement('canvas')
+        canvas.width = Math.round(img.width * scale)
+        canvas.height = Math.round(img.height * scale)
+        const ctx = canvas.getContext('2d')
+        if (!ctx) { setVideoRefImage(src); return }
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+        setVideoRefImage(canvas.toDataURL('image/jpeg', 0.85))
+      }
+      img.onerror = () => setVideoRefImage(src)
+      img.src = src
+    }
+    reader.readAsDataURL(file)
   }
 
   // 即時計算圖片提示詞
@@ -343,6 +375,8 @@ ${selectedVideoTemplate.rawScript}
     setVideoErrorMsg(null)
     setVideoResultUrl(null)
     setVideoPollStatus('正在向 AI 影片引擎提交任務...')
+    // 有參考圖走圖生影片
+    const videoModel = videoRefImage ? 'kling-img2video' : 'kling-standard'
 
     try {
       const res = await fetch('/api/marketing/generate-video', {
@@ -350,9 +384,10 @@ ${selectedVideoTemplate.rawScript}
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: synthesizedVideoPrompt,
-          model: 'kling-standard',
+          model: videoModel,
           duration: String(Math.min(selectedVideoTemplate.recommendedSeconds, 10)),
           aspectRatio: videoAspect,
+          imageUrl: videoRefImage || undefined,
         }),
       })
 
@@ -377,7 +412,7 @@ ${selectedVideoTemplate.rawScript}
         setVideoPollStatus(`AI 影片渲染中 (進度 ${Math.min(15 + i * 2, 95)}%)...`)
 
         try {
-          const pollRes = await fetch(`/api/marketing/generate-video?requestId=${requestId}&model=kling-standard`)
+          const pollRes = await fetch(`/api/marketing/generate-video?requestId=${requestId}&model=${videoModel}`)
           const pollData = await pollRes.json()
 
           if (pollData.status === 'completed' && pollData.url) {
@@ -1083,6 +1118,40 @@ ${selectedVideoTemplate.rawScript}
                         onChange={e => setVideoKeyPoint(e.target.value)}
                         className="h-8 text-xs rounded-lg"
                       />
+                    </div>
+
+                    {/* 參考圖片（圖生影片） */}
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-foreground flex items-center justify-between">
+                        <span>參考照片 (選填，以此圖生成影片)</span>
+                        {videoRefImage && (
+                          <button
+                            type="button"
+                            onClick={() => setVideoRefImage(null)}
+                            className="text-[10px] text-destructive hover:underline"
+                          >
+                            移除圖片
+                          </button>
+                        )}
+                      </label>
+                      {videoRefImage ? (
+                        <div className="rounded-lg border p-2 bg-muted/20 flex items-center gap-3">
+                          <img src={videoRefImage} alt="Video reference" className="w-12 h-12 object-cover rounded-lg border" />
+                          <div className="text-xs flex-1 truncate">
+                            <p className="font-semibold text-foreground">已載入參考照片</p>
+                            <p className="text-[10px] text-muted-foreground">影片將以此照片為畫面主體與第一幀</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div
+                          onClick={() => videoFileInputRef.current?.click()}
+                          className="border border-dashed border-border/80 rounded-lg p-2.5 text-center cursor-pointer hover:bg-muted/30 transition-colors"
+                        >
+                          <Upload className="h-4 w-4 mx-auto text-muted-foreground mb-1" />
+                          <p className="text-xs text-muted-foreground">點擊上傳商品／場景照片 (JPG / PNG)</p>
+                        </div>
+                      )}
+                      <input ref={videoFileInputRef} type="file" accept="image/*" className="hidden" onChange={handleVideoFileChange} />
                     </div>
 
                     {/* 影片比例 */}
