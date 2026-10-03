@@ -106,7 +106,7 @@ async function directReferenceEdit(
     const { text } = await generateText({
       model: anthropic('claude-sonnet-4-6'),
       abortSignal: AbortSignal.timeout(25000),
-      system: `You are an art director writing ONE editing instruction for the FLUX Kontext image editing model, which edits the given input image(s).
+      system: `You are an art director writing ONE instruction for the Nano Banana Pro (Gemini) image model, which creates a new design from the given input image(s).
 Goal: turn the input photo(s) into a finished design that unmistakably looks like the requested genre, not the original photo with text pasted on top.
 
 Rules:
@@ -116,7 +116,7 @@ Rules:
   ? 'Use ONLY the products shown in the input images, keeping their exact appearance. Do not add, invent or substitute any other products.'
   : 'You may add genre-typical supporting elements (e.g. small inset photo panels of related scenes, graphic shapes, badges, stickers) as long as the input subject remains the main visual.'}
 - Be decisive about layout: say how to reframe the photo (full-bleed, cropped, scaled down into a panel, inset frames), how to treat the background (blur, tint, paper texture, color block), and where each design element goes.
-- Text: every text item must be quoted exactly, in English or numbers only, short (max 5 words each), at most 6 items, e.g. masthead "WANDER", cover lines "A QUIET STAY IN TOUCHENG". Derive text from the user's notes (romanize place names, e.g. 宜蘭頭城 -> Toucheng, Yilan); if there are no notes, write fitting generic text for the subject. Never use real trademarked magazine names.
+- Text: every text item must be quoted exactly and kept short (max 8 characters/words each), at most 6 items, e.g. masthead "WANDER", cover lines "宜蘭頭城・慢旅宿". Use Traditional Chinese when the user's notes are in Chinese (keep place/brand names exactly as written, e.g. 喬民宿, 宜蘭頭城), English masthead is fine; if there are no notes, write fitting generic text for the subject. Never use real trademarked magazine names.
 - Output only the instruction in English, max 130 words, no preamble.`,
       messages: [{
         role: 'user',
@@ -209,20 +209,20 @@ export async function POST(req: NextRequest) {
         ? buildMultiReferencePrompt(template.positivePrompt, translatedSubject, refImages.length)
         : buildReferenceEditPrompt(template.positivePrompt, translatedSubject))
       revisedPrompt = editPrompt
-      // 支援圖生圖 / 參考圖修改 (FLUX Kontext；多圖使用 Kontext Multi)
-      const falRes = await fetch(isMulti ? 'https://fal.run/fal-ai/flux-pro/kontext/multi' : 'https://fal.run/fal-ai/flux-pro/kontext', {
+      // 參考圖生成改用 Nano Banana Pro（排版重組與文字能力較 Kontext 強，支援多圖）
+      const falRes = await fetch('https://fal.run/fal-ai/nano-banana-pro/edit', {
         method: 'POST',
         headers: {
           Authorization: `Key ${process.env.FAL_AI_API_KEY}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ...(isMulti ? { image_urls: refImages, aspect_ratio: chosenAspect === '4:5' ? '3:4' : chosenAspect } : { image_url: refImages[0] }),
+          image_urls: refImages,
           prompt: editPrompt,
-          guidance_scale: 3.5,
+          aspect_ratio: chosenAspect,
           num_images: 1,
           output_format: 'jpeg',
-          safety_tolerance: '2',
+          resolution: '1K',
         }),
       })
 
