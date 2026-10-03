@@ -18,6 +18,7 @@ import { getCronOrUserAuth } from '@/lib/cron-auth'
 import { SMS_COST, checkCredits, deductCredits, isBillableUser } from '@/lib/marketing/billing'
 import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
 import { sendBatchSms, querySmsGetCredit } from '@/lib/telephony/sms-service'
+import { getZaloZnsConfig } from '@/lib/telephony/zalo-zns'
 
 export async function POST(req: NextRequest) {
   const user = await getCronOrUserAuth(req)
@@ -60,12 +61,16 @@ export async function POST(req: NextRequest) {
     if (gVal?.text) groupTexts[gName] = gVal.text
   }
 
+  // 越南號碼的 ZNS：用使用者自己在平台設定填的 OA 權杖與範本 ID（body 有帶範本 ID 時以 body 為準）
+  const zns = await getZaloZnsConfig(user.isCron ? null : user.id)
+
   // 執行批次智慧分流發送
   const { total, success, results } = await sendBatchSms(
     validRecipients.map(r => ({ phone: r.phone!, name: r.name, group: r.group })),
     defaultText,
     groupTexts,
-    zaloTemplateId,
+    zaloTemplateId || zns.templateId,
+    zns.accessToken,
   )
 
   // 成功發送才依成功數量扣點
