@@ -252,7 +252,7 @@ export default function VisualTemplatesPage() {
 
       setGeneratedImgResult({
         url: data.url,
-        positivePrompt: data.positivePrompt || previewSynthesizedImgPrompt,
+        positivePrompt: data.revisedPrompt || data.positivePrompt || previewSynthesizedImgPrompt,
         negativePrompt: data.negativePrompt || selectedImgTemplate.negativePrompt,
         aspectRatio: data.aspectRatio || imgAspectRatio,
       })
