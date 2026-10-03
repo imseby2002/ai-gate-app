@@ -4,7 +4,7 @@
  *
  * Body: {
  *   count: number
- *   duration: '5' | '10' | '25' | '60'
+ *   duration: '5' | '10' | '12' | '25'
  *   videoTypes: string[]
  *   platforms: string[]
  *   userInstructions?: string
