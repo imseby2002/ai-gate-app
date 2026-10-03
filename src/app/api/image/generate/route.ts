@@ -4,6 +4,7 @@ import { getModuleEntitlements, planRequiredResponse } from '@/lib/module-plans/
 import { minPlanLabel } from '@/lib/module-plans/definitions'
 import { getBalance, deductCredits } from '@/lib/skills/billing'
 import { IMAGE_COSTS } from '@/lib/marketing/billing'
+import { generateNanoBanana } from '@/lib/ai/nano-banana'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -31,60 +32,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '點數不足', required: price }, { status: 402 })
   }
 
-  const imageSizes: Record<string, { width: number; height: number }> = {
-    '1:1':  { width: 1024, height: 1024 },
-    '16:9': { width: 1344, height: 768  },
-    '9:16': { width: 768,  height: 1344 },
-    '4:3':  { width: 1152, height: 864  },
-    '3:4':  { width: 864,  height: 1152 },
-  }
-
   try {
     let imageUrl: string
 
-    if (model === 'flux-1-pro') {
-      // FAL AI - FLUX.1 Pro
-      const res = await fetch('https://fal.run/fal-ai/flux/dev', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Key ${process.env.FAL_AI_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          prompt,
-          image_size: imageSizes[aspectRatio] ?? { width: 1024, height: 1024 },
-          num_inference_steps: 28,
-          num_images: 1,
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        const d = data.detail
-        throw new Error(typeof d === 'string' ? d : Array.isArray(d) ? d.map((e: {msg?: string}) => e.msg ?? JSON.stringify(e)).join('; ') : JSON.stringify(data))
-      }
-      imageUrl = data.images?.[0]?.url
-
-    } else if (model === 'nano-banana') {
-      // FAL AI - Fast SDXL (Nano Banana equivalent)
-      const res = await fetch('https://fal.run/fal-ai/fast-sdxl', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Key ${process.env.FAL_AI_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          prompt,
-          image_size: imageSizes[aspectRatio] ?? { width: 1024, height: 1024 },
-          num_images: 1,
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        const d = data.detail
-        throw new Error(typeof d === 'string' ? d : Array.isArray(d) ? d.map((e: {msg?: string}) => e.msg ?? JSON.stringify(e)).join('; ') : JSON.stringify(data))
-      }
-      imageUrl = data.images?.[0]?.url
-
+    if (model === 'flux-1-pro' || model === 'nano-banana') {
+      // 文字生圖統一使用 Nano Banana Pro（FLUX 僅用於修圖）
+      imageUrl = await generateNanoBanana({ prompt, aspectRatio })
     } else {
       return NextResponse.json({ error: 'Unknown model' }, { status: 400 })
     }

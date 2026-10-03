@@ -4,6 +4,7 @@ import { VISUAL_TEMPLATES, type VisualTemplate } from '@/lib/marketing/visual-te
 import { IMAGE_COSTS, checkCredits, deductCredits, isBillableUser } from '@/lib/marketing/billing'
 import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
 import { createAnthropic } from '@ai-sdk/anthropic'
+import { generateNanoBanana } from '@/lib/ai/nano-banana'
 import { generateText } from 'ai'
 
 export const maxDuration = 120
@@ -14,14 +15,6 @@ const DALLE_SIZES: Record<string, string> = {
   '3:4':  '1024x1792',
   '9:16': '1024x1792',
   '16:9': '1792x1024',
-}
-
-const FAL_SIZES: Record<string, { width: number; height: number }> = {
-  '1:1':  { width: 1024, height: 1024 },
-  '4:5':  { width: 896,  height: 1120 },
-  '3:4':  { width: 864,  height: 1152 },
-  '9:16': { width: 768,  height: 1344 },
-  '16:9': { width: 1344, height: 768  },
 }
 
 // 輔助將使用者的中文商品/促銷描述轉化為能與提示詞骨架無縫融合的英文細節
@@ -210,31 +203,11 @@ export async function POST(req: NextRequest) {
         : buildReferenceEditPrompt(template.positivePrompt, translatedSubject))
       revisedPrompt = editPrompt
       // 參考圖生成改用 Nano Banana Pro（排版重組與文字能力較 Kontext 強，支援多圖）
-      const falRes = await fetch('https://fal.run/fal-ai/nano-banana-pro/edit', {
-        method: 'POST',
-        headers: {
-          Authorization: `Key ${process.env.FAL_AI_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          image_urls: refImages,
-          prompt: editPrompt,
-          aspect_ratio: chosenAspect,
-          num_images: 1,
-          output_format: 'jpeg',
-          resolution: '1K',
-        }),
-      })
-
-      if (!falRes.ok) {
-        const err = await falRes.json().catch(() => ({}))
-        const d = err?.detail
-        const msg = typeof d === 'string' ? d : Array.isArray(d) ? d.map((e: any) => e.msg ?? JSON.stringify(e)).join('; ') : '參考圖生成失敗'
-        return NextResponse.json({ error: msg }, { status: 500 })
+      try {
+        tempUrl = await generateNanoBanana({ prompt: editPrompt, aspectRatio: chosenAspect, imageUrls: refImages })
+      } catch (e) {
+        return NextResponse.json({ error: e instanceof Error ? e.message : '參考圖生成失敗' }, { status: 500 })
       }
-      const falData = await falRes.json()
-      tempUrl = falData?.images?.[0]?.url ?? ''
-      if (!tempUrl) return NextResponse.json({ error: '參考圖生成失敗，請稍後再試' }, { status: 500 })
     }
 
     // 無參考圖，走標準文生圖
@@ -266,30 +239,12 @@ export async function POST(req: NextRequest) {
         revisedPrompt = dalleData?.data?.[0]?.revised_prompt ?? synthesizedPositive
 
       } else {
-        // FLUX (預設)
-        const apiKey = process.env.FAL_AI_API_KEY
-        if (!apiKey) return NextResponse.json({ error: 'FAL_AI_API_KEY 未設定' }, { status: 500 })
-
-        const endpoint = model === 'nano' ? 'https://fal.run/fal-ai/fast-sdxl' : 'https://fal.run/fal-ai/flux/dev'
-        const falRes = await fetch(endpoint, {
-          method: 'POST',
-          headers: { Authorization: `Key ${apiKey}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            prompt: synthesizedPositive,
-            image_size: FAL_SIZES[chosenAspect] ?? { width: 1024, height: 1024 },
-            num_inference_steps: 28,
-            num_images: 1,
-          }),
-        })
-
-        if (!falRes.ok) {
-          const err = await falRes.json().catch(() => ({}))
-          const d = err?.detail
-          const msg = typeof d === 'string' ? d : Array.isArray(d) ? d.map((e: any) => e.msg ?? JSON.stringify(e)).join('; ') : 'FLUX 生成失敗'
-          return NextResponse.json({ error: msg }, { status: 500 })
+        // 文字生圖統一使用 Nano Banana Pro（FLUX 僅用於修圖）
+        try {
+          tempUrl = await generateNanoBanana({ prompt: synthesizedPositive, aspectRatio: chosenAspect })
+        } catch (e) {
+          return NextResponse.json({ error: e instanceof Error ? e.message : 'Nano Banana 生成失敗' }, { status: 500 })
         }
-        const falData = await falRes.json()
-        tempUrl = falData?.images?.[0]?.url ?? ''
       }
     }
 

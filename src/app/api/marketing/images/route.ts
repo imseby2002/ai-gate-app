@@ -4,6 +4,7 @@ import { createOpenAI } from '@ai-sdk/openai'
 import { generateText } from 'ai'
 import { IMAGE_COSTS, checkCredits, deductCredits, isBillableUser } from '@/lib/marketing/billing'
 import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
+import { generateNanoBanana } from '@/lib/ai/nano-banana'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -80,27 +81,9 @@ Requirements:
   }
 
   // ── 2. FAL AI 並行生成圖片 ────────────────────────────────────────
-  const falEndpoint = model === 'nano-banana' ? 'fal-ai/fast-sdxl' : 'fal-ai/flux/dev'
-
+  // 文字生圖統一使用 Nano Banana Pro（FLUX 僅用於修圖）
   const results = await Promise.allSettled(
-    rawPrompts.map(async (prompt) => {
-      const res = await fetch(`https://fal.run/${falEndpoint}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Key ${process.env.FAL_AI_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          prompt,
-          image_size: '1344x768',
-          num_inference_steps: 28,
-          num_images: 1,
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.detail ?? 'Generation failed')
-      return { url: data.images?.[0]?.url as string, prompt }
-    })
+    rawPrompts.map(async (prompt) => ({ url: await generateNanoBanana({ prompt, aspectRatio: '16:9' }), prompt }))
   )
 
   const succeeded = results
