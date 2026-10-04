@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto'
 import { resolveSelection, toOrderLines } from './cart'
 import { mockMenu } from './mock'
+import { applyTranslations } from './translate'
 import type {
   FtCategory,
   FtChild,
@@ -16,17 +17,20 @@ import type {
 // 只在伺服器端使用：點單機一律經過會員 APP 後端，不直接呼叫 iPOS。
 //
 // 環境變數：
-//   FT_API_BASE_URL   會員 APP 後端網址（未設定 → 假資料模式）
-//   FT_KIOSK_DEVICES  JSON：{ "<device_key>": { storeId, storeNo, storeName, userToken } }
-//     storeId   會員 APP 的 Store.id（下單 delivery_info.store_id 用）
-//     storeNo   iPOS pos_id，也是菜單 item_categories?store_id= 的值
-//     userToken 門市帳號登入後的 X-USER-TOKEN
+//   FT_API_BASE_URL          會員 APP 後端網址（未設定 → 展示模式）
+//   FT_KIOSK_LOGIN_PHONE     門市帳號電話（下單用，會自動登入取得 token）
+//   FT_KIOSK_LOGIN_PASSWORD  門市帳號密碼
+//   FT_KIOSK_DEVICES         JSON：{ "<device_key>": { "storeNo": "<iPOS pos_id>" } }
+//     其餘欄位可省略：storeId / storeName 會用 storeNo 向會員 APP 查；
+//     loginPhone / loginPassword 可覆蓋全域門市帳號；userToken 可直接指定固定 token
 
 export interface FtDeviceConfig {
-  storeId: string
   storeNo: string
-  storeName: string
-  userToken: string
+  storeId?: string
+  storeName?: string
+  loginPhone?: string
+  loginPassword?: string
+  userToken?: string
 }
 
 export type FtDevice = { mock: true } | { mock: false; config: FtDeviceConfig }
@@ -51,7 +55,7 @@ export function resolveDevice(key: string | null): FtDevice | null {
     return null
   }
   const config = devices[key]
-  return config ? { mock: false, config } : null
+  return config?.storeNo ? { mock: false, config: { ...config, storeNo: String(config.storeNo) } } : null
 }
 
 export function deviceKeyFrom(req: Request) {
@@ -81,6 +85,70 @@ async function callFt<T>(path: string, init: RequestInit & { token?: string } = 
     throw new FtError(code, res.status === 400 ? 400 : 502)
   }
   return body as T
+}
+
+// ── 門市帳號 token（自動登入、過期重登）────────────────
+
+const tokenCache = new Map<string, string>()
+
+function credentials(config: FtDeviceConfig) {
+  const phone = config.loginPhone || process.env.FT_KIOSK_LOGIN_PHONE || ''
+  const password = config.loginPassword || process.env.FT_KIOSK_LOGIN_PASSWORD || ''
+  return phone && password ? { phone, password } : null
+}
+
+async function login(phone: string, password: string): Promise<string> {
+  try {
+    const user = await callFt<{ token?: string }>('/app/api/v2/login', {
+      method: 'POST',
+      body: JSON.stringify({ data: phone, password }),
+    })
+    if (!user?.token) throw new FtError('KIOSK_LOGIN_FAILED')
+    return user.token
+  } catch (err) {
+    if (err instanceof FtError && err.code === 'FT_UNREACHABLE') throw err
+    throw new FtError('KIOSK_LOGIN_FAILED')
+  }
+}
+
+async function getToken(config: FtDeviceConfig, force = false): Promise<string> {
+  const cred = credentials(config)
+  if (!cred) {
+    if (config.userToken) return config.userToken
+    throw new FtError('KIOSK_LOGIN_NOT_CONFIGURED')
+  }
+  const key = `${cred.phone}\n${cred.password}`
+  const cached = tokenCache.get(key)
+  if (cached && !force) return cached
+  const token = await login(cred.phone, cred.password)
+  tokenCache.set(key, token)
+  return token
+}
+
+/** 用門市帳號 token 呼叫；token 過期（PERMISSION_ERROR）時重新登入再試一次 */
+async function withToken<T>(config: FtDeviceConfig, run: (token: string) => Promise<T>): Promise<T> {
+  const token = await getToken(config)
+  try {
+    return await run(token)
+  } catch (err) {
+    if (!(err instanceof FtError) || err.code !== 'PERMISSION_ERROR' || !credentials(config)) throw err
+    return run(await getToken(config, true))
+  }
+}
+
+const storeCache = new Map<string, { id: string; name: string }>()
+
+/** 用 storeNo 查會員 APP 的 Store.id 與名稱（/app/api/v1/store 不需登入） */
+async function storeInfo(config: FtDeviceConfig) {
+  if (config.storeId && config.storeName) return { id: config.storeId, name: config.storeName }
+  let info = storeCache.get(config.storeNo)
+  if (!info) {
+    const res = await callFt<{ data: Raw | null }>(`/app/api/v1/store?store_no=${encodeURIComponent(config.storeNo)}`)
+    if (!res?.data?.id) throw new FtError('STORE_NOT_FOUND')
+    info = { id: str(res.data.id), name: str(res.data.store_name) }
+    storeCache.set(config.storeNo, info)
+  }
+  return { id: config.storeId || info.id, name: config.storeName || info.name || config.storeNo }
 }
 
 // ── 菜單 ────────────────────────────────────────────────
@@ -144,9 +212,10 @@ function mapItem(i: Raw): FtItem {
 export async function fetchMenu(device: FtDevice): Promise<FtMenu> {
   if (device.mock) return mockMenu()
   const { config } = device
-  const raw = await callFt<Raw[]>(
-    `/app/api/v1/item_categories?store_id=${encodeURIComponent(config.storeNo)}`
-  )
+  const [raw, store] = await Promise.all([
+    callFt<Raw[]>(`/app/api/v1/item_categories?store_id=${encodeURIComponent(config.storeNo)}`),
+    storeInfo(config),
+  ])
   const categories: FtCategory[] = arr(raw)
     .map(c => ({
       id: str(c.id),
@@ -157,7 +226,14 @@ export async function fetchMenu(device: FtDevice): Promise<FtMenu> {
       items: arr(c.items).map(mapItem).sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0)),
     }))
     .filter(c => c.items.length > 0)
-  return { storeName: config.storeName, categories, mock: false }
+  return { storeName: store.name, categories, mock: false }
+}
+
+/** 菜單 + 套用中英文翻譯；回傳尚未翻譯的原文，交給 after() 背景補齊 */
+export async function fetchTranslatedMenu(device: FtDevice): Promise<{ menu: FtMenu; missing: string[] }> {
+  const menu = await fetchMenu(device)
+  if (menu.mock) return { menu, missing: [] }
+  return { menu, missing: await applyTranslations(menu) }
 }
 
 // ── 會員 ────────────────────────────────────────────────
@@ -218,29 +294,31 @@ export async function placeOrder(device: FtDevice, req: FtOrderRequest): Promise
   if (!cash) throw new FtError('CASH_METHOD_NOT_FOUND')
 
   const phone = req.phone || ''
-  const check = await callFt<CheckResponse>('/api/v1.0/order/check', {
-    method: 'POST',
-    token: config.userToken,
-    body: JSON.stringify({
-      order_type: 'PICK',
-      time_order_type: 'now',
-      delivery_info: {
-        store_id: config.storeId,
-        time_order: Math.floor(now / 1000),
-        contact_phone: phone,
-        contact_name: '',
-      },
-      vouchers: [],
-      note: DINE_NOTE[req.dineOption],
-      items,
-      payment_methods: [{ method_id: cash.id, method: cash.method, name: cash.name, amount: 0 }],
-    }),
-  })
-
-  const booking = await callFt<BookingResponse>('/api/v1.0/order/booking', {
-    method: 'POST',
-    token: config.userToken,
-    body: JSON.stringify({ ...check.data, time_order_type: check.data.type_order_time }),
+  const store = await storeInfo(config)
+  const booking = await withToken(config, async token => {
+    const check = await callFt<CheckResponse>('/api/v1.0/order/check', {
+      method: 'POST',
+      token,
+      body: JSON.stringify({
+        order_type: 'PICK',
+        time_order_type: 'now',
+        delivery_info: {
+          store_id: store.id,
+          time_order: Math.floor(now / 1000),
+          contact_phone: phone,
+          contact_name: '',
+        },
+        vouchers: [],
+        note: DINE_NOTE[req.dineOption],
+        items,
+        payment_methods: [{ method_id: cash.id, method: cash.method, name: cash.name, amount: 0 }],
+      }),
+    })
+    return callFt<BookingResponse>('/api/v1.0/order/booking', {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ ...check.data, time_order_type: check.data.type_order_time }),
+    })
   })
 
   return { orderNo: booking.data.order_no, amount: booking.data.amount, mock: false }

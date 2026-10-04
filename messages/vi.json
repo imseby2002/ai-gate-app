@@ -4192,7 +4192,11 @@
       "CART_INVALID": "Dữ liệu đơn không hợp lệ, vui lòng đặt lại",
       "SIZE_REQUIRED": "Vui lòng chọn kích cỡ",
       "OPTION_INVALID": "Tùy chọn không hợp lệ, vui lòng chọn lại",
-      "ITEM_NOT_FOUND": "Món đã ngừng bán, vui lòng đặt lại"
+      "ITEM_NOT_FOUND": "Món đã ngừng bán, vui lòng đặt lại",
+      "KIOSK_LOGIN_FAILED": "Kiosk đăng nhập thất bại, vui lòng liên hệ nhân viên",
+      "KIOSK_LOGIN_NOT_CONFIGURED": "Kiosk chưa được cài tài khoản cửa hàng, vui lòng liên hệ nhân viên",
+      "STORE_NOT_FOUND": "Không tìm thấy cửa hàng, vui lòng liên hệ nhân viên",
+      "CASH_METHOD_NOT_FOUND": "Chưa hỗ trợ thanh toán tại quầy, vui lòng liên hệ nhân viên"
     }
   },
   "Apply": {

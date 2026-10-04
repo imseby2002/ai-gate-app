@@ -4285,7 +4285,11 @@
       "CART_INVALID": "Order data is invalid. Please start again",
       "SIZE_REQUIRED": "Please choose a size",
       "OPTION_INVALID": "Invalid options. Please choose again",
-      "ITEM_NOT_FOUND": "An item is no longer available. Please start again"
+      "ITEM_NOT_FOUND": "An item is no longer available. Please start again",
+      "KIOSK_LOGIN_FAILED": "Kiosk login failed. Please ask our staff",
+      "KIOSK_LOGIN_NOT_CONFIGURED": "Kiosk account is not set up. Please ask our staff",
+      "STORE_NOT_FOUND": "Store not found. Please ask our staff",
+      "CASH_METHOD_NOT_FOUND": "Pay at counter is not available. Please ask our staff"
     }
   },
   "Apply": {

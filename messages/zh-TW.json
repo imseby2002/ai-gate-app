@@ -4285,7 +4285,11 @@
       "CART_INVALID": "購物車內容有誤，請重新點餐",
       "SIZE_REQUIRED": "請選擇尺寸",
       "OPTION_INVALID": "選項有誤，請重新選擇",
-      "ITEM_NOT_FOUND": "商品已下架，請重新點餐"
+      "ITEM_NOT_FOUND": "商品已下架，請重新點餐",
+      "KIOSK_LOGIN_FAILED": "點單機登入失敗，請洽櫃台人員",
+      "KIOSK_LOGIN_NOT_CONFIGURED": "點單機尚未設定門市帳號，請洽櫃台人員",
+      "STORE_NOT_FOUND": "找不到門市資料，請洽櫃台人員",
+      "CASH_METHOD_NOT_FOUND": "門市未開放櫃台付款，請洽櫃台人員"
     }
   },
   "Apply": {

@@ -235,11 +235,18 @@ data.list_special_combo[] → 套餐（目前程式沒使用）
 
 | 變數 | 說明 |
 |---|---|
-| `FT_API_BASE_URL` | 會員 APP 後端網址。**未設定 = 展示模式**（假菜單、不送單，任何 key 都可用） |
-| `FT_KIOSK_DEVICES` | JSON，每台點單機一筆：`{"<device_key>":{"storeId":"<Store.id>","storeNo":"<iPOS pos_id>","storeName":"<顯示名稱>","userToken":"<門市帳號 X-USER-TOKEN>"}}` |
+| `FT_API_BASE_URL` | 會員 APP 後端網址。**未設定 = 展示模式**（假菜單、不送單，任何 key 都可用）。舊程式碼中正式機為 `https://feelingtea.gonapp.net`、測試機 `https://feelingteadev.gonapp.net`（`feelingtea-mobile-app/src/constants/env.js`） |
+| `FT_KIOSK_LOGIN_PHONE` / `FT_KIOSK_LOGIN_PASSWORD` | 門市帳號（需在會員 APP 設好密碼）。伺服器自動呼叫 `/app/api/v2/login` 取得 token，過期（`PERMISSION_ERROR`）時自動重新登入 |
+| `FT_KIOSK_DEVICES` | JSON，每台點單機一筆：`{"<device_key>":{"storeNo":"<iPOS pos_id>"}}`。Store.id 與門市名稱會用 storeNo 自動查；可選 `storeName`（覆蓋顯示名稱）、`loginPhone`/`loginPassword`（該門市用不同帳號） |
+
+storeNo 查法：瀏覽器打開 `<FT_API_BASE_URL>/app/api/v1/store`，每間門市的 `store_no` 就是 storeNo。
+
+### 菜單翻譯
+- Supabase 表 `ft_menu_translations`：以 iPOS 越南文原文為 key，存 `zh_tw`、`en`
+- 載入菜單時，沒有翻譯的字串會在回應後背景用 Claude 翻譯並寫入，下次載入就有中英文
+- 要人工修正：直接改該列的 `zh_tw` / `en`，並把 `manual` 設為 true
 
 ### 上線前待確認
-1. 會員 APP 後端正式網址
-2. 每間門市的門市帳號與 token（token 是 Redis session，會過期；過期時點單機顯示「登入已過期」）
+1. 會員 APP 後端正式網址（打開 `/app/api/v1/store` 能看到門市 JSON 就是對的）
+2. 建一個門市帳號並設定密碼
 3. 實測：`contact_phone` 留空能否送單、帶會員電話時 iPOS 是否累積點數
-4. 菜單多語系：目前只有展示資料有翻譯，正式菜單會顯示 iPOS 的越南文名稱
