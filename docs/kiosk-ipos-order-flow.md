@@ -217,3 +217,29 @@ data.list_special_combo[] → 套餐（目前程式沒使用）
 3. 訂單先 commit 才送 iPOS 預檢，失敗後只能軟刪除
 4. iPOS 回傳 100 時的 MoMo 退款只寫了 `pass`（`payment_controller.py:130`）
 5. Token 放在 query string 並寫進 log
+
+---
+
+## 5. 自助點單機（本專案實作）
+
+- 頁面：`/pos/kiosk/ft?key=<device_key>`（`src/app/(kiosk)/pos/kiosk/ft/page.tsx`），key 會存在 localStorage
+- 伺服器端轉接：`/api/pos/ft/menu`、`/api/pos/ft/member`、`/api/pos/ft/order`（`src/lib/ft-kiosk/server.ts`）
+  - 一律經過會員 APP 後端，不直接呼叫 iPOS
+  - 前端只送「選了哪些品項 id」，價格與 min/max 由伺服器依菜單重算
+- 流程：選語言 → 內用/外帶 → 菜單 → 購物車 → 輸入會員電話（可略過，`check_user` 確認）→ 櫃台付款 → 取餐號碼
+- 付款：只有櫃台付款，送 `CASH`（iPOS 收到 `COD`），客人到櫃台用現金或 FABI 上的 VNPAY 付款
+- 內用/外帶寫在訂單備註（`Kiosk - Ăn tại chỗ` / `Kiosk - Mang đi`），`order_type` 固定 `PICK`
+- 閒置 120 秒自動回首頁，完成頁 30 秒後回首頁並切回越南文
+
+### 環境變數
+
+| 變數 | 說明 |
+|---|---|
+| `FT_API_BASE_URL` | 會員 APP 後端網址。**未設定 = 展示模式**（假菜單、不送單，任何 key 都可用） |
+| `FT_KIOSK_DEVICES` | JSON，每台點單機一筆：`{"<device_key>":{"storeId":"<Store.id>","storeNo":"<iPOS pos_id>","storeName":"<顯示名稱>","userToken":"<門市帳號 X-USER-TOKEN>"}}` |
+
+### 上線前待確認
+1. 會員 APP 後端正式網址
+2. 每間門市的門市帳號與 token（token 是 Redis session，會過期；過期時點單機顯示「登入已過期」）
+3. 實測：`contact_phone` 留空能否送單、帶會員電話時 iPOS 是否累積點數
+4. 菜單多語系：目前只有展示資料有翻譯，正式菜單會顯示 iPOS 的越南文名稱
