@@ -239,6 +239,8 @@ data.list_special_combo[] → 套餐（目前程式沒使用）
 | `FT_KIOSK_LOGIN_PHONE` / `FT_KIOSK_LOGIN_PASSWORD` | 門市帳號（需在會員 APP 設好密碼）。伺服器自動呼叫 `/app/api/v2/login` 取得 token，過期（`PERMISSION_ERROR`）時自動重新登入 |
 | `FT_KIOSK_DEVICES` | JSON，每台點單機一筆：`{"<device_key>":{"storeNo":"<iPOS pos_id>"}}`。Store.id 與門市名稱會用 storeNo 自動查；可選 `storeName`（覆蓋顯示名稱）、`loginPhone`/`loginPassword`（該門市用不同帳號） |
 
+| `FT_KIOSK_MENU_STORE_NO` | 選填。本門市在會員 APP 沒有菜單（新門市還沒同步）時，改用這間門市的菜單顯示，訂單仍送到本門市。單台可在 `FT_KIOSK_DEVICES` 用 `menuStoreNo` 覆蓋 |
+
 storeNo 查法：瀏覽器打開 `<FT_API_BASE_URL>/app/api/v1/store`，每間門市的 `store_no` 就是 storeNo。
 
 ### 菜單翻譯

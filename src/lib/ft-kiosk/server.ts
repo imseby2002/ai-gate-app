@@ -23,11 +23,14 @@ import type {
 //   FT_KIOSK_DEVICES         JSON：{ "<device_key>": { "storeNo": "<iPOS pos_id>" } }
 //     其餘欄位可省略：storeId / storeName 會用 storeNo 向會員 APP 查；
 //     loginPhone / loginPassword 可覆蓋全域門市帳號；userToken 可直接指定固定 token
+//     menuStoreNo：本門市菜單是空的時改用這間門市的菜單
+//   FT_KIOSK_MENU_STORE_NO   全域的 menuStoreNo
 
 export interface FtDeviceConfig {
   storeNo: string
   storeId?: string
   storeName?: string
+  menuStoreNo?: string
   loginPhone?: string
   loginPassword?: string
   userToken?: string
@@ -55,7 +58,16 @@ export function resolveDevice(key: string | null): FtDevice | null {
     return null
   }
   const config = devices[key]
-  return config?.storeNo ? { mock: false, config: { ...config, storeNo: String(config.storeNo) } } : null
+  return config?.storeNo
+    ? {
+        mock: false,
+        config: {
+          ...config,
+          storeNo: String(config.storeNo),
+          menuStoreNo: config.menuStoreNo ? String(config.menuStoreNo) : undefined,
+        },
+      }
+    : null
 }
 
 export function deviceKeyFrom(req: Request) {
@@ -209,14 +221,9 @@ function mapItem(i: Raw): FtItem {
   }
 }
 
-export async function fetchMenu(device: FtDevice): Promise<FtMenu> {
-  if (device.mock) return mockMenu()
-  const { config } = device
-  const [raw, store] = await Promise.all([
-    callFt<Raw[]>(`/app/api/v1/item_categories?store_id=${encodeURIComponent(config.storeNo)}`),
-    storeInfo(config),
-  ])
-  const categories: FtCategory[] = arr(raw)
+async function fetchCategories(storeNo: string): Promise<FtCategory[]> {
+  const raw = await callFt<Raw[]>(`/app/api/v1/item_categories?store_id=${encodeURIComponent(storeNo)}`)
+  return arr(raw)
     .map(c => ({
       id: str(c.id),
       category_no: str(c.category_no),
@@ -226,6 +233,21 @@ export async function fetchMenu(device: FtDevice): Promise<FtMenu> {
       items: arr(c.items).map(mapItem).sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0)),
     }))
     .filter(c => c.items.length > 0)
+}
+
+/**
+ * 會員 APP 每間門市各存一份菜單；新門市還沒同步時是空的。
+ * 這時改用 menuStoreNo（或 FT_KIOSK_MENU_STORE_NO）那間門市的菜單顯示，訂單仍送到本門市。
+ */
+export async function fetchMenu(device: FtDevice): Promise<FtMenu> {
+  if (device.mock) return mockMenu()
+  const { config } = device
+  const [own, store] = await Promise.all([fetchCategories(config.storeNo), storeInfo(config)])
+  let categories = own
+  const fallback = config.menuStoreNo || process.env.FT_KIOSK_MENU_STORE_NO
+  if (categories.length === 0 && fallback && fallback !== config.storeNo) {
+    categories = await fetchCategories(fallback)
+  }
   return { storeName: store.name, categories, mock: false }
 }
 
