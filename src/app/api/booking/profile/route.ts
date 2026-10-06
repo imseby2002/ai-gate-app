@@ -30,7 +30,7 @@ export async function PUT(req: NextRequest) {
     'template_id','custom_design','hero_cta_text','booking_instructions','cancellation_policy',
     'contact_map_embed','contact_note','owner_intro',
     'competitor_watchlist',
-    'latitude','longitude','country','google_feed_enabled','auto_confirm_bookings','cs_booking_mode',
+    'latitude','longitude','country','google_feed_enabled','auto_confirm_bookings','cs_booking_mode','early_gate_access',
     'weekend_days',
   ]
   const updates: Record<string, unknown> = {}

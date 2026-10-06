@@ -2225,7 +2225,7 @@ async function getAIReply(
       // 客人之前已提供過訂單號碼或手機（儲存於 customerFacts），若本輪對話提出入住或詢問密碼需求（例如「我到了」「我要辦理入住」「請問密碼」），
       // 自動引用已知身分查詢入住資訊；若已到入住日 15:00 後自動給密碼，若未到入住日/時間則自動提醒，免去客人重複打同一組號碼的困擾。
       if (!orderLookupDone && !passwordFromDatasource && customerFacts) {
-        const hasCheckinIntent = /入住|密碼|房號|開門|check\s*in|鑰匙|門鎖|進房|辦理入住|到(了|門口|現場)/i.test(message)
+        const hasCheckinIntent = /入住|密碼|房號|開門|check\s*in|鑰匙|門鎖|進房|辦理入住|到(了|門口|現場)|行李|寄放|提早|提前到|先進去|休息/i.test(message)
         if (hasCheckinIntent) {
           if (customerFacts.orderNumber) {
             try {
