@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { randomBytes } from 'crypto'
 import { getUnitContext } from '@/lib/auth/unit-access'
+import { hashPin } from '@/lib/hr/portal'
+import { VENDOR_SLUG_PATTERN } from '@/lib/fin/vendor-portal'
+import { companySlugForOwner } from '@/lib/company/fromHost'
 
 async function getAdminUser() {
   const ctx = await getUnitContext('finance')
@@ -30,11 +33,14 @@ export async function GET() {
   const { user, supabase , status } = await getAdminUser()
   if (!user) return NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
   const [{ data: vendors }, { data: stores }] = await Promise.all([
-    supabase.from('fin_vendors').select('id, name, service, regions, fill_token, active, tax_id, address, phone, contact, products, pay_terms, billing_cycle, billing_day').eq('owner_id', user.id).order('service').order('name'),
+    supabase.from('fin_vendors').select('id, name, service, regions, fill_token, active, tax_id, address, phone, contact, products, pay_terms, billing_cycle, billing_day, link_slug, pin_hash').eq('owner_id', user.id).order('service').order('name'),
     supabase.from('fin_stores').select('region').eq('owner_id', user.id).eq('active', true),
   ])
   const regions = [...new Set((stores ?? []).map(s => s.region).filter(Boolean))].sort()
-  return NextResponse.json({ vendors: vendors ?? [], regions })
+  // 不回傳密碼雜湊，只回傳是否已設定
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const list = (vendors ?? []).map(({ pin_hash, ...v }) => ({ ...v, has_pin: !!pin_hash }))
+  return NextResponse.json({ vendors: list, regions, company_slug: await companySlugForOwner(user.id) })
 }
 
 export async function POST(req: NextRequest) {
@@ -66,8 +72,19 @@ export async function PATCH(req: NextRequest) {
   if (b.regions !== undefined) upd.regions = cleanRegions(b.regions)
   if (b.active !== undefined) upd.active = !!b.active
   if (['electric', 'water'].includes(upd.service as string)) upd.regions = []
+  // 好記網址代號（<公司子網域>/v/<代號>）與公司設定的密碼
+  if (b.link_slug !== undefined) {
+    const slug = String(b.link_slug ?? '').trim().toLowerCase()
+    if (slug && !VENDOR_SLUG_PATTERN.test(slug)) return NextResponse.json({ error: '網址代號只能用小寫英文、數字與連字號' }, { status: 400 })
+    upd.link_slug = slug || null
+  }
+  if (b.new_pin !== undefined && String(b.new_pin).trim()) {
+    const pin = String(b.new_pin).trim()
+    if (pin.length < 6) return NextResponse.json({ error: '密碼至少 6 碼' }, { status: 400 })
+    Object.assign(upd, { pin_hash: hashPin(pin), pin_failed: 0, pin_locked_until: null })
+  }
   const { error } = await supabase.from('fin_vendors').update(upd).eq('id', id).eq('owner_id', user.id)
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+  if (error) return NextResponse.json({ error: error.code === '23505' ? '網址代號已被其他廠商使用' : error.message }, { status: 400 })
   return NextResponse.json({ ok: true })
 }
 

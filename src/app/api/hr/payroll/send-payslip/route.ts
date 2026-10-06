@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { randomBytes } from 'crypto'
 import { getUnitContext } from '@/lib/auth/unit-access'
 import { notifyApplicant } from '@/lib/hr/notify'
+import { portalUrlForEmployee } from '@/lib/hr/portal'
 
 async function getAdminUser() {
   const ctx = await getUnitContext('hr')
@@ -25,7 +26,7 @@ export async function POST(req: NextRequest) {
       id, year, month, net_pay, payslip_token,
       employee_id,
       hr_employees (
-        id, name, email, phone, store
+        id, name, email, phone, store, attendance_no
       )
     `)
     .in('id', payroll_ids)
@@ -49,7 +50,10 @@ export async function POST(req: NextRequest) {
       await supabase.from('hr_payroll').update({ payslip_token: token }).eq('id', r.id)
     }
 
-    const payslipUrl = `${host}/payslip/${token}`
+    // 有公司子網域與打卡編號時改發員工專區連結（生日登入、自設密碼），否則沿用單月連結
+    const portalUrl = await portalUrlForEmployee(user.id, emp.attendance_no ?? null)
+    const payslipUrl = portalUrl ?? `${host}/payslip/${token}`
+    const loginHint = portalUrl ? '\n(Lần đầu đăng nhập bằng ngày sinh DDMMYYYY, sau đó tự đặt mật khẩu.)' : ''
 
     // 取得應徵者資料以查詢 zalo_user_id
     const { data: cand } = await supabase
@@ -59,7 +63,7 @@ export async function POST(req: NextRequest) {
       .maybeSingle()
 
     const subject = `【Phiếu Lương】薪資條通知 - Tháng ${r.month}/${r.year} (${emp.name})`
-    const message = `Xin chào ${emp.name},\n\nPhiếu lương tháng ${r.month}/${r.year} của bạn đã được phát hành.\nThực lĩnh: ${Number(r.net_pay).toLocaleString()} VND\n\nVui lòng truy cập đường dẫn dưới đây để xem chi tiết và xác nhận phiếu lương trực tuyến:\n${payslipUrl}\n\nTrân trọng,\nPhòng Nhân Sự`
+    const message = `Xin chào ${emp.name},\n\nPhiếu lương tháng ${r.month}/${r.year} của bạn đã được phát hành.\nThực lĩnh: ${Number(r.net_pay).toLocaleString()} VND\n\nVui lòng truy cập đường dẫn dưới đây để xem chi tiết và xác nhận phiếu lương trực tuyến:\n${payslipUrl}${loginHint}\n\nTrân trọng,\nPhòng Nhân Sự`
 
     const channel = cand?.notify_channel === 'zalo' ? 'zalo' : 'email'
     const target = {
