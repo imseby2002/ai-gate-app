@@ -42,6 +42,8 @@ export default function PublicBookingsPage() {
   const [autoConfirmSaving, setAutoConfirmSaving] = useState(false)
   const [csMode, setCsMode]             = useState<'manual' | 'ai'>('manual')
   const [csModeSaving, setCsModeSaving] = useState(false)
+  const [earlyGate, setEarlyGate]             = useState(false)
+  const [earlyGateSaving, setEarlyGateSaving] = useState(false)
 
   useEffect(() => {
     fetch('/api/booking/public-bookings')
@@ -54,6 +56,7 @@ export default function PublicBookingsPage() {
       .then(d => {
         setAutoConfirm(!!d.profile?.auto_confirm_bookings)
         setCsMode(d.profile?.cs_booking_mode === 'ai' ? 'ai' : 'manual')
+        setEarlyGate(!!d.profile?.early_gate_access)
       })
       .catch(() => {})
   }, [])
@@ -89,6 +92,22 @@ export default function PublicBookingsPage() {
       setCsMode(prev)
       notify(false, t('bookings.toast.networkError'))
     } finally { setCsModeSaving(false) }
+  }
+
+  async function toggleEarlyGate() {
+    const next = !earlyGate
+    setEarlyGate(next)
+    setEarlyGateSaving(true)
+    try {
+      const res = await fetch('/api/booking/profile', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ early_gate_access: next }),
+      })
+      if (!res.ok) { setEarlyGate(!next); notify(false, t('public.actionFailed')) }
+    } catch {
+      setEarlyGate(!next)
+      notify(false, t('bookings.toast.networkError'))
+    } finally { setEarlyGateSaving(false) }
   }
 
   function notify(ok: boolean, text: string) {
@@ -196,6 +215,23 @@ export default function PublicBookingsPage() {
             </button>
           ))}
         </div>
+      </div>
+
+      <div className="flex items-center justify-between gap-3 bg-white border rounded-xl px-4 py-3">
+        <div>
+          <div className="text-sm font-medium text-gray-800">{t('public.earlyGateLabel')}</div>
+          <div className="text-xs text-gray-400 mt-0.5">
+            {earlyGate ? t('public.earlyGateOnHint') : t('public.earlyGateOffHint')}
+          </div>
+        </div>
+        <button
+          onClick={toggleEarlyGate}
+          disabled={earlyGateSaving}
+          role="switch"
+          aria-checked={earlyGate}
+          className={`relative shrink-0 w-11 h-6 rounded-full transition-colors disabled:opacity-50 ${earlyGate ? 'bg-emerald-500' : 'bg-gray-300'}`}>
+          <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${earlyGate ? 'translate-x-5' : ''}`} />
+        </button>
       </div>
 
       {flash && (
