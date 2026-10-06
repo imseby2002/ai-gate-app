@@ -38,16 +38,27 @@ export default function AuditAiPage() {
   const [photoPreview, setPhotoPreview] = useState<string>('')
   const [summarizing, setSummarizing] = useState(false)
   const [logNotice, setLogNotice] = useState('')
+  // 從稽核平台帶入的原料耗用分析期間（有值時每次提問都附上該門市當月 IPOS／IVT 差異）
+  const [period, setPeriod] = useState<{ year: number; month: number } | null>(null)
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
+    // 稽核平台「帶入稽核 AI 討論」：?store=&year=&month=&q=
+    const qs = new URLSearchParams(window.location.search)
+    const qStore = qs.get('store') ?? ''
+    const qYear = parseInt(qs.get('year') ?? '')
+    const qMonth = parseInt(qs.get('month') ?? '')
+    if (qYear && qMonth >= 1 && qMonth <= 12) setPeriod({ year: qYear, month: qMonth })
+    if (qs.get('q')) setInput(qs.get('q') ?? '')
+
     // 取得門市清單
     fetch('/api/inv/stores').then(r => r.ok ? r.json() : null).then(d => {
       if (d?.stores) {
         setStores(d.stores)
-        if (d.stores[0]) setStore(d.stores[0])
+        if (qStore) setStore(qStore)
+        else if (d.stores[0]) setStore(d.stores[0])
       }
     }).catch(() => {})
 
@@ -123,6 +134,11 @@ export default function AuditAiPage() {
       photo_url: photoSending,
     }])
 
+    const analysis = period && store
+      ? await fetch(`/api/inv/variance?store=${encodeURIComponent(store)}&year=${period.year}&month=${period.month}`)
+          .then(r => r.ok ? r.json() : null).catch(() => null)
+      : null
+
     const res = await fetch('/api/audit/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -133,6 +149,7 @@ export default function AuditAiPage() {
         mode,
         suggest,
         photo_url: photoSending,
+        analysis,
       })
     })
 
@@ -318,6 +335,13 @@ export default function AuditAiPage() {
               <Lightbulb className="h-3.5 w-3.5 text-amber-500" />
               建議答案區 {suggest ? '已開啟 (1/3)' : '已關閉'}
             </button>
+
+            {period && (
+              <span className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium border border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-900/50 dark:bg-indigo-950/40 dark:text-indigo-300">
+                已帶入 {store || '門市'} {period.year}/{String(period.month).padStart(2, '0')} 原料耗用數據
+                <button onClick={() => setPeriod(null)} title="不再附上耗用數據"><X className="h-3 w-3" /></button>
+              </span>
+            )}
 
             {chatId && messages.length >= 2 && (
               <Button

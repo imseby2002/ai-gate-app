@@ -6284,6 +6284,7 @@
     "rawLossLabel": "Raw Apparent Loss",
     "adjustedLossLabel": "Composition-Adjusted Loss",
     "tabMaterial": "📊 Material Consumption Engine",
+    "openAuditAi": "Discuss in Audit AI",
     "tabCopilot": "🤖 Audit Copilot",
     "fourModes": "4 Modes",
     "tabRules": "⚖️ Human-AI Rule Engine",

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslations, useLocale } from 'next-intl'
 import {
@@ -44,22 +44,11 @@ import type {
   AuditRuleStatus,
   AuditRuleVersion,
   MaterialConsumptionRow,
-  CopilotMode,
-  AuditSuggestionCard,
   AuditKnowledgeLog,
   AuditPlatformOverview,
 } from '@/lib/types/audit-platform'
 
-type PlatformTab = 'material' | 'copilot' | 'rules' | 'composition' | 'modules' | 'logs'
-
-interface ChatMessage {
-  id: string
-  role: 'user' | 'assistant'
-  content: string
-  mode: CopilotMode
-  timestamp: string
-  suggestion?: AuditSuggestionCard
-}
+type PlatformTab = 'material' | 'rules' | 'composition' | 'modules' | 'logs'
 
 export default function AuditPlatformPage() {
   const t = useTranslations('AuditPlatform')
@@ -85,29 +74,10 @@ export default function AuditPlatformPage() {
   const [ruleStatusFilter, setRuleStatusFilter] = useState<string>('all')
   const [selectedRuleForHistory, setSelectedRuleForHistory] = useState<AuditRule | null>(null)
 
-  // Copilot 資料
-  const [copilotMode, setCopilotMode] = useState<CopilotMode>('discuss')
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    {
-      id: 'init-1',
-      role: 'assistant',
-      content: `您好！我是企業稽核智慧平台的「稽核副駕駛 (Audit Copilot)」。
-
-請先在上方選擇要分析的門市與年月，點擊「重新計算推算引擎」載入該門市當月的 IPOS 銷量與 IVT 實耗，我再跟您一起討論原料耗用異常的可能成因。`,
-      mode: 'discuss',
-      timestamp: '',
-    },
-  ])
-  const [inputMsg, setInputMsg] = useState('')
-  const [sendingMsg, setSendingMsg] = useState(false)
-  const [currentSuggestion, setCurrentSuggestion] = useState<AuditSuggestionCard | null>(null)
-
   // 稽核日誌與模組概況
   const [logs, setLogs] = useState<AuditKnowledgeLog[]>([])
   const [overview, setOverview] = useState<AuditPlatformOverview | null>(null)
   const [jetsonInfo, setJetsonInfo] = useState<any>(null)
-
-  const chatEndRef = useRef<HTMLDivElement>(null)
 
   // 初始載入
   useEffect(() => {
@@ -123,10 +93,6 @@ export default function AuditPlatformPage() {
     if (targetStore) fetchCalculation()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [targetStore, year, month])
-
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [chatMessages])
 
   const loadStores = async () => {
     try {
@@ -220,63 +186,12 @@ export default function AuditPlatformPage() {
     }
   }
 
-  // 發送 Copilot 對話
-  const handleSendMessage = async (customPrompt?: string) => {
-    const textToSend = customPrompt || inputMsg
-    if (!textToSend.trim() || sendingMsg) return
-
-    const userMsg: ChatMessage = {
-      id: `user-${Date.now()}`,
-      role: 'user',
-      content: textToSend,
-      mode: copilotMode,
-      timestamp: new Date().toLocaleTimeString(locale === 'vi' ? 'vi-VN' : locale === 'en' ? 'en-US' : 'zh-TW', { hour: '2-digit', minute: '2-digit' }),
-    }
-
-    setChatMessages(prev => [...prev, userMsg])
-    setInputMsg('')
-    setSendingMsg(true)
-
-    try {
-      const res = await fetch('/api/audit/platform/copilot', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: textToSend,
-          mode: copilotMode,
-          history: chatMessages.map(m => ({ role: m.role, content: m.content })),
-          contextData: {
-            targetStore,
-            year,
-            month,
-            isSampleData,
-            materialRows: materialRows.slice(0, 5),
-            totalRawLoss,
-            totalAdjustedLoss,
-            activeRulesCount: rules.length,
-          },
-        }),
-      })
-      const data = await res.json()
-      if (data.success) {
-        const assistantMsg: ChatMessage = {
-          id: `ai-${Date.now()}`,
-          role: 'assistant',
-          content: data.reply,
-          mode: copilotMode,
-          timestamp: new Date().toLocaleTimeString(locale === 'vi' ? 'vi-VN' : locale === 'en' ? 'en-US' : 'zh-TW', { hour: '2-digit', minute: '2-digit' }),
-          suggestion: data.suggestion_card,
-        }
-        setChatMessages(prev => [...prev, assistantMsg])
-        if (data.suggestion_card) {
-          setCurrentSuggestion(data.suggestion_card)
-        }
-      }
-    } catch (e) {
-      console.error('Copilot send error:', e)
-    } finally {
-      setSendingMsg(false)
-    }
+  // 稽核對話統一在「稽核討論 AI」進行（對話會存檔），並帶入目前門市／年月的原料耗用數據
+  const openAuditAi = (question?: string) => {
+    const q = new URLSearchParams({ year: String(year), month: String(month) })
+    if (targetStore) q.set('store', targetStore)
+    if (question) q.set('q', question)
+    window.location.href = `/audit-ai?${q.toString()}`
   }
 
   // 篩選規則
@@ -437,16 +352,12 @@ export default function AuditPlatformPage() {
           </button>
 
           <button
-            onClick={() => setActiveTab('copilot')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
-              activeTab === 'copilot'
-                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-            }`}
+            onClick={() => openAuditAi()}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
           >
             <Bot className="w-4 h-4" />
-            <span>{t('tabCopilot')}</span>
-            <span className="text-xs px-1.5 py-0.2 rounded bg-indigo-500/30 text-indigo-200">{t('fourModes')}</span>
+            <span>{t('openAuditAi')}</span>
+            <ArrowRight className="w-3.5 h-3.5" />
           </button>
 
           <button
@@ -609,8 +520,7 @@ export default function AuditPlatformPage() {
                               size="sm"
                               variant="outline"
                               onClick={() => {
-                                setActiveTab('copilot')
-                                handleSendMessage(t('deepAnalysisPrompt', { name: row.material_name, pct: row.diff_pct ?? 0, loss: row.money_loss }))
+                                openAuditAi(t('deepAnalysisPrompt', { name: row.material_name, pct: row.diff_pct ?? 0, loss: row.money_loss }))
                               }}
                               className="text-xs h-7 bg-slate-800/80 hover:bg-indigo-600 hover:text-white text-indigo-300 border-indigo-500/30 gap-1"
                             >
@@ -623,315 +533,6 @@ export default function AuditPlatformPage() {
                     })}
                   </tbody>
                 </table>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ── TAB 2: AUDIT COPILOT (稽核副駕駛 - 4 模式與左對話右建議) ── */}
-        {activeTab === 'copilot' && (
-          <div className="space-y-4">
-            {/* 模式切換按鈕組 (討論 / 導引 / 建議 / 答案) */}
-            <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-slate-900 border border-slate-800">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-400 font-medium">{t('copilotModeLabel')}</span>
-                <div className="flex flex-wrap gap-1.5">
-                  <button
-                    onClick={() => setCopilotMode('discuss')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                      copilotMode === 'discuss'
-                        ? 'bg-indigo-600 text-white font-semibold'
-                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                    }`}
-                  >
-                    {t('modeDiscuss')}
-                  </button>
-
-                  <button
-                    onClick={() => setCopilotMode('guide')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                      copilotMode === 'guide'
-                        ? 'bg-indigo-600 text-white font-semibold'
-                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                    }`}
-                  >
-                    {t('modeGuide')}
-                  </button>
-
-                  <button
-                    onClick={() => setCopilotMode('suggest')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                      copilotMode === 'suggest'
-                        ? 'bg-indigo-600 text-white font-semibold'
-                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                    }`}
-                  >
-                    {t('modeSuggest')}
-                  </button>
-
-                  <button
-                    onClick={() => setCopilotMode('answer')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                      copilotMode === 'answer'
-                        ? 'bg-indigo-600 text-white font-semibold'
-                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                    }`}
-                  >
-                    {t('modeAnswer')}
-                  </button>
-                </div>
-              </div>
-
-              <div className="text-xs text-slate-400">
-                {t('currentModeFeature')}
-                <span className="text-indigo-300 font-medium ml-1">
-                  {copilotMode === 'discuss' && t('modeDiscussDesc')}
-                  {copilotMode === 'guide' && t('modeGuideDesc')}
-                  {copilotMode === 'suggest' && t('modeSuggestDesc')}
-                  {copilotMode === 'answer' && t('modeAnswerDesc')}
-                </span>
-              </div>
-            </div>
-
-            {/* 雙欄主架構：左側對話 (2/3) + 右側建議看板 (1/3) */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-              {/* 左側對話區 (2/3) */}
-              <div className="lg:col-span-2 bg-slate-900 rounded-xl border border-slate-800 flex flex-col h-[650px]">
-                <div className="px-5 py-3 border-b border-slate-800 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Bot className="w-4 h-4 text-indigo-400" />
-                    <span className="font-semibold text-sm text-white">{t('chatAreaTitle')}</span>
-                  </div>
-                  <span className="text-xs px-2 py-0.5 rounded bg-indigo-950/60 text-indigo-300 border border-indigo-500/30">
-                    Human-in-the-loop Active
-                  </span>
-                </div>
-
-                {/* 對話訊息捲動區 */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                  {chatMessages.map(msg => (
-                    <div
-                      key={msg.id}
-                      className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                    >
-                      {msg.role === 'assistant' && (
-                        <div className="w-8 h-8 rounded-lg bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center text-indigo-300 shrink-0">
-                          <Bot className="w-4 h-4" />
-                        </div>
-                      )}
-                      <div
-                        className={`max-w-[85%] rounded-xl p-4 text-sm leading-relaxed ${
-                          msg.role === 'user'
-                            ? 'bg-indigo-600 text-white'
-                            : 'bg-slate-800/80 text-slate-200 border border-slate-700/80'
-                        }`}
-                      >
-                        <div className="whitespace-pre-wrap">{msg.content}</div>
-                        <div className="mt-2 text-[11px] opacity-60 text-right flex items-center justify-end gap-2">
-                          <span>{msg.mode}</span>
-                          <span>•</span>
-                          <span>{msg.timestamp}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  {sendingMsg && (
-                    <div className="flex gap-3 justify-start">
-                      <div className="w-8 h-8 rounded-lg bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center text-indigo-300 shrink-0">
-                        <Bot className="w-4 h-4 animate-spin" />
-                      </div>
-                      <div className="bg-slate-800/80 p-3 rounded-xl text-xs text-slate-400 flex items-center gap-2">
-                        <span>{t('aiCalculating')}</span>
-                      </div>
-                    </div>
-                  )}
-                  <div ref={chatEndRef} />
-                </div>
-
-                {/* 快速提問標籤 */}
-                <div className="px-4 py-2 border-t border-slate-800/60 bg-slate-950/40 flex flex-wrap gap-2 text-xs">
-                  <span className="text-slate-500 self-center">{t('quickPromptsLabel')}</span>
-                  <button
-                    onClick={() => handleSendMessage(t('quickPrompt1Text'))}
-                    className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
-                  >
-                    {t('quickPrompt1')}
-                  </button>
-                  <button
-                    onClick={() => handleSendMessage(t('quickPrompt2Text'))}
-                    className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
-                  >
-                    {t('quickPrompt2')}
-                  </button>
-                  <button
-                    onClick={() => handleSendMessage(t('quickPrompt3Text'))}
-                    className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-indigo-500/30 transition-colors"
-                  >
-                    {t('quickPrompt3')}
-                  </button>
-                </div>
-
-                {/* 輸入框 */}
-                <div className="p-3 border-t border-slate-800 flex gap-2">
-                  <Input
-                    placeholder={t('chatInputPlaceholder')}
-                    value={inputMsg}
-                    onChange={e => setInputMsg(e.target.value)}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault()
-                        handleSendMessage()
-                      }
-                    }}
-                    className="bg-slate-950 border-slate-700 text-slate-200 placeholder:text-slate-500"
-                  />
-                  <Button
-                    onClick={() => handleSendMessage()}
-                    disabled={sendingMsg || !inputMsg.trim()}
-                    className="bg-indigo-600 hover:bg-indigo-500 text-white shrink-0 gap-1.5"
-                  >
-                    <Send className="w-4 h-4" />
-                    {t('send')}
-                  </Button>
-                </div>
-              </div>
-
-              {/* 右側結構化 AI 建議看板 (1/3) */}
-              <div className="bg-slate-900 rounded-xl border border-indigo-500/30 p-5 flex flex-col justify-between space-y-4">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-amber-400" />
-                      <h4 className="font-semibold text-white text-sm">{t('aiSuggestionBoardTitle')}</h4>
-                    </div>
-                    {currentSuggestion && (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-mono font-bold">
-                        {t('aiConfidence', { n: currentSuggestion.ai_confidence })}
-                      </span>
-                    )}
-                  </div>
-
-                  {currentSuggestion ? (
-                    <div className="space-y-4 text-xs">
-                      <div>
-                        <div className="text-slate-400 font-medium mb-1">{t('lockedIssueLabel')}</div>
-                        <div className="text-sm font-semibold text-white bg-slate-800/80 p-2.5 rounded-lg border border-slate-700">
-                          {currentSuggestion.issue_title}
-                        </div>
-                      </div>
-
-                      {/* 可能原因 */}
-                      <div className="space-y-2">
-                        <div className="text-slate-400 font-medium">{t('possibleCausesLabel')}</div>
-                        {currentSuggestion.possible_causes.map((c, idx) => (
-                          <div key={idx} className="p-2.5 rounded-lg bg-slate-950/60 border border-slate-800 space-y-1">
-                            <div className="flex items-center justify-between text-slate-200 font-medium">
-                              <span>{idx + 1}. {c.title}</span>
-                              <span className="text-indigo-400 font-mono font-semibold">{c.probability}%</span>
-                            </div>
-                            <p className="text-slate-400 leading-relaxed">{c.description}</p>
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* 依據資料源 */}
-                      <div className="space-y-1.5">
-                        <div className="text-slate-400 font-medium">{t('evidenceSourceLabel')}</div>
-                        <div className="grid grid-cols-2 gap-1.5">
-                          {currentSuggestion.evidence.map((ev, i) => (
-                            <div key={i} className="p-2 rounded bg-slate-800/50 border border-slate-700/50">
-                              <span className="font-semibold text-indigo-300 font-mono">[{ev.source}]</span>
-                              <p className="text-slate-300 mt-0.5 line-clamp-2">{ev.detail}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* 候選規則建議 */}
-                      {currentSuggestion.candidate_rule && (
-                        <div className="p-3 rounded-lg bg-indigo-950/40 border border-indigo-500/40 space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="font-semibold text-indigo-300">{t('candidateRuleLabel')}</span>
-                            <span className="font-mono text-emerald-400 font-bold">
-                              {currentSuggestion.candidate_rule.code}
-                            </span>
-                          </div>
-                          <div className="space-y-1 text-slate-300 font-mono">
-                            <div>{t('applicableLabel')}{currentSuggestion.candidate_rule.target_product}</div>
-                            <div>{t('conditionLabel')}{currentSuggestion.candidate_rule.condition}</div>
-                            <div>{t('adjustmentLabel')}{currentSuggestion.candidate_rule.adjustment_value}</div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="text-center py-12 text-slate-500">
-                      {t('noSuggestionYet')}
-                    </div>
-                  )}
-                </div>
-
-                {/* 動作按鈕：[採用建議] [繼續分析] [建立規則] [忽略] */}
-                {currentSuggestion && (
-                  <div className="pt-3 border-t border-slate-800 space-y-2">
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          if (currentSuggestion.candidate_rule) {
-                            handlePromoteRule(
-                              currentSuggestion.candidate_rule.code,
-                              'approved',
-                              t('adoptedNote')
-                            )
-                          }
-                        }}
-                        className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs gap-1"
-                      >
-                        <Check className="w-3.5 h-3.5" />
-                        {t('adoptSuggestion')}
-                      </Button>
-
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          if (currentSuggestion.candidate_rule) {
-                            handlePromoteRule(
-                              currentSuggestion.candidate_rule.code,
-                              'hard_rule',
-                              t('upgradeHardRuleNote')
-                            )
-                          }
-                        }}
-                        className="bg-indigo-950 hover:bg-indigo-900 text-indigo-300 border-indigo-500/40 text-xs gap-1"
-                      >
-                        <Flame className="w-3.5 h-3.5 text-rose-400" />
-                        {t('upgradeToHardRule')}
-                      </Button>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleSendMessage(t('continueAnalysisPrompt'))}
-                        className="bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700 text-xs"
-                      >
-                        {t('continueAnalysis')}
-                      </Button>
-
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setCurrentSuggestion(null)}
-                        className="text-slate-500 hover:text-slate-400 text-xs"
-                      >
-                        {t('dismiss')}
-                      </Button>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </div>
