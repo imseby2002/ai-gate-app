@@ -6191,6 +6191,7 @@
     "rawLossLabel": "Thiệt hại biểu kiến gốc",
     "adjustedLossLabel": "Thiệt hại sau hiệu chỉnh tổ hợp",
     "tabMaterial": "📊 Công cụ suy luận tiêu hao nguyên liệu",
+    "openAuditAi": "Thảo luận với AI kiểm toán",
     "tabCopilot": "🤖 Audit Copilot (Đồng phi công kiểm toán)",
     "fourModes": "4 Chế độ",
     "tabRules": "⚖️ Kho quy tắc phối hợp người-máy (Rule Engine)",

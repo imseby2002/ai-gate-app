@@ -3,13 +3,21 @@ import { getUnitContextAny } from '@/lib/auth/unit-access'
 import { INITIAL_AUDIT_RULES, INITIAL_RULE_VERSIONS } from '@/lib/audit/platform-core'
 import type { AuditRule, AuditRuleVersion } from '@/lib/types/audit-platform'
 
+
+async function denyIfNoAccess() {
+  const ctx = await getUnitContextAny(['audit', 'store', 'rd'])
+  if (ctx.ok) return { ctx, deny: null }
+  return { ctx, deny: NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status }) }
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
     const status = searchParams.get('status')
     const category = searchParams.get('category')
 
-    const ctx = await getUnitContextAny(['audit', 'store', 'rd']).catch(() => ({ ok: true, admin: null }))
+    const { ctx, deny } = await denyIfNoAccess()
+    if (deny) return deny
     const supabase = ctx.admin
 
     let rules: AuditRule[] = INITIAL_AUDIT_RULES
@@ -85,7 +93,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '請提供規則標題或欲升級之規則狀態' }, { status: 400 })
     }
 
-    const ctx = await getUnitContextAny(['audit', 'store', 'rd']).catch(() => ({ ok: true, admin: null }))
+    const { ctx, deny } = await denyIfNoAccess()
+    if (deny) return deny
     const supabase = ctx.admin
 
     const newCode = rule_code || `RULE-${String(Math.floor(10000 + Math.random() * 90000)).slice(1)}`

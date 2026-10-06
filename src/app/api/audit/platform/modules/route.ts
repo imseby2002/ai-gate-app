@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server'
+import { getUnitContextAny } from '@/lib/auth/unit-access'
 import { INITIAL_PLATFORM_OVERVIEW } from '@/lib/audit/platform-core'
 
 export async function GET() {
+  const ctx = await getUnitContextAny(['audit', 'store', 'rd'])
+  if (!ctx.ok) return NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status })
+
   return NextResponse.json({
     success: true,
     overview: INITIAL_PLATFORM_OVERVIEW,
