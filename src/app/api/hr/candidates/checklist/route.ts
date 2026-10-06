@@ -8,7 +8,19 @@ export async function GET(req: NextRequest) {
   if (!ctx.ok) return NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status })
   const { admin, ownerId } = ctx
 
-  const candidateId = new URL(req.url).searchParams.get('candidate_id')
+  const params = new URL(req.url).searchParams
+  let candidateId = params.get('candidate_id')
+  // 員工資料頁：以員工 id 找回其錄取前的應徵者紀錄
+  const employeeId = params.get('employee_id')
+  if (!candidateId && employeeId) {
+    const { data: cand } = await admin
+      .from('agent_hr_candidates')
+      .select('id')
+      .eq('hired_employee_id', employeeId).eq('user_id', ownerId)
+      .limit(1).maybeSingle()
+    if (!cand) return NextResponse.json({ candidate_id: null, documents: [], checklist: [] })
+    candidateId = cand.id as string
+  }
   if (!candidateId) return NextResponse.json({ error: 'candidate_id required' }, { status: 400 })
 
   const { data: docs } = await admin
@@ -27,7 +39,7 @@ export async function GET(req: NextRequest) {
     return { id: d.id, doc_type: d.doc_type, label: d.label, file_name: d.file_name, uploaded_at: d.uploaded_at, url: signed?.signedUrl ?? '' }
   }))
 
-  return NextResponse.json({ documents, checklist: checklist ?? [] })
+  return NextResponse.json({ candidate_id: candidateId, documents, checklist: checklist ?? [] })
 }
 
 // 人事勾選紙本繳交狀態。body: { candidate_id, doc_key, original_received?, copy_received?, note? }

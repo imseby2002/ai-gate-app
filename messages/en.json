@@ -6912,6 +6912,7 @@
     "subjectLabel": "Subject",
     "contentLabel": "Content",
     "send": "Send",
+    "empDocsNoApplication": "No linked application for this employee, so no uploaded documents.",
     "candidateDocsTitle": "{name}'s documents and submission",
     "allDocsSubmitted": "All paper documents submitted to the office (complete)",
     "uploadMeansScan": "Upload = scanned file",

@@ -6819,6 +6819,7 @@
     "subjectLabel": "Tiêu đề",
     "contentLabel": "Nội dung",
     "send": "Gửi",
+    "empDocsNoApplication": "Nhân viên này không có hồ sơ ứng tuyển liên kết, chưa có tài liệu tải lên.",
     "candidateDocsTitle": "Hồ sơ và nộp giấy tờ của {name}",
     "allDocsSubmitted": "Đã nộp đủ toàn bộ giấy tờ bản cứng cho văn phòng (hoàn tất)",
     "uploadMeansScan": "Tải lên = bản scan",
