@@ -114,7 +114,7 @@ function CashflowFormModal({
   initial: Partial<Cashflow>
   accounts: Account[]
   subjects: SubjectItem[]
-  onSave: (d: any) => void
+  onSave: (d: any, keepOpen?: boolean) => Promise<boolean>
   onCancel: () => void
   saving: boolean
 }) {
@@ -130,6 +130,8 @@ function CashflowFormModal({
   const [accountId, setAccountId] = useState(initial.account_id ?? accounts[0]?.id ?? '')
   const [toAccountId, setToAccountId] = useState(initial.to_account_id ?? accounts[1]?.id ?? '')
   const [err, setErr] = useState('')
+  const [addedCount, setAddedCount] = useState(0)
+  const isNew = !initial.id
 
   // 根據收支類別篩選可選科目
   const relevantSubjects = useMemo(() => {
@@ -144,7 +146,7 @@ function CashflowFormModal({
     if (found) setCategoryParent(found.parent_name)
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!amount || amount <= 0) {
       setErr('請輸入有效金額')
@@ -158,14 +160,27 @@ function CashflowFormModal({
       setErr('轉帳需指定不同的轉出與轉入帳戶')
       return
     }
-    onSave({
+    setErr('')
+    const ok = await onSave({
       type, category, category_parent: categoryParent,
       amount, date, description, notes,
       pay_coll_name: payCollName, invoice_no: invoiceNo,
       account_id: accountId || null,
       to_account_id: type === 'transfer' ? (toAccountId || null) : null,
       receipt_url: initial.receipt_url ?? ''
-    })
+    }, isNew)
+    // 新增模式：保留日期、類型、科目與帳戶，清空金額與內容，方便連續輸入
+    if (ok && isNew) {
+      setAmount(0)
+      setDescription('')
+      setNotes('')
+      setInvoiceNo('')
+      setPayCollName('')
+      setAddedCount(c => c + 1)
+      document.getElementById('cashflow-amount-input')?.focus()
+    } else if (!ok) {
+      setErr('儲存失敗，請重試')
+    }
   }
 
   return (
@@ -227,6 +242,8 @@ function CashflowFormModal({
             <div>
               <label className="block text-2xs font-medium text-muted-foreground mb-1">金額 (NT$) *</label>
               <Input
+                id="cashflow-amount-input"
+                autoFocus
                 type="number"
                 value={amount || ''}
                 onChange={e => setAmount(Number(e.target.value) || 0)}
@@ -338,12 +355,17 @@ function CashflowFormModal({
           </div>
 
           <div className="flex items-center justify-end gap-2 pt-2 border-t">
+            {isNew && addedCount > 0 && (
+              <span className="mr-auto text-emerald-600 font-medium flex items-center gap-1">
+                <Check className="h-3.5 w-3.5" />已新增 {addedCount} 筆
+              </span>
+            )}
             <Button type="button" variant="outline" size="sm" onClick={onCancel} className="h-8 text-xs">
-              取消
+              {isNew ? '關閉退出' : '取消'}
             </Button>
             <Button type="submit" size="sm" disabled={saving} className="h-8 text-xs gap-1">
               {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-              {saving ? '儲存中…' : '確認儲存'}
+              {saving ? '儲存中…' : isNew ? '新增加入' : '確認儲存'}
             </Button>
           </div>
         </form>
@@ -591,28 +613,31 @@ export default function FinancePage() {
   const totalErrors = allErrors.length
 
   // 儲存記錄
-  const handleSaveRecord = async (data: any) => {
+  // keepOpen：新增模式儲存後不關閉視窗，可連續新增
+  const handleSaveRecord = async (data: any, keepOpen?: boolean): Promise<boolean> => {
     setSavingRecord(true)
     try {
-      if (editingRecord) {
-        await fetch('/api/hr/cashflow', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: editingRecord.id, ...data })
-        })
-      } else {
-        await fetch('/api/hr/cashflow', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        })
+      const res = editingRecord
+        ? await fetch('/api/hr/cashflow', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: editingRecord.id, ...data })
+          })
+        : await fetch('/api/hr/cashflow', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          })
+      if (!res.ok) return false
+      if (!keepOpen) {
+        setShowFormModal(false)
+        setEditingRecord(null)
       }
-      setShowFormModal(false)
-      setEditingRecord(null)
       loadCashflow()
       loadAccounts()
+      return true
     } catch {
-      alert('儲存失敗')
+      return false
     } finally {
       setSavingRecord(false)
     }
