@@ -338,7 +338,7 @@ function AssignPanel({
 
   useEffect(() => {
     Promise.all([
-      fetch('/api/admin/users').then(r => r.ok ? r.json() : { users: [] }),
+      fetch('/api/admin/users?scope=company').then(r => r.ok ? r.json() : { users: [] }),
       fetch('/api/fin/stores').then(r => r.ok ? r.json() : { stores: [] }),
     ]).then(([userData, storeData]) => {
       setUsers((userData.users ?? []).map((u: UserRow) => ({ ...u, units: u.units ?? [] })))
