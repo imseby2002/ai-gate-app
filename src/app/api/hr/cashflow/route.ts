@@ -16,6 +16,7 @@ export async function GET(req: NextRequest) {
   const month = searchParams.get('month')
   const type = searchParams.get('type')
 
+  let rangeFrom: string | null = null
   let query = supabase
     .from('hr_cashflow')
     .select('*')
@@ -26,14 +27,60 @@ export async function GET(req: NextRequest) {
     const from = `${year}-${String(month).padStart(2, '0')}-01`
     const nextMonth = Number(month) === 12 ? `${Number(year) + 1}-01-01` : `${year}-${String(Number(month) + 1).padStart(2, '0')}-01`
     query = query.gte('date', from).lt('date', nextMonth)
+    rangeFrom = from
   } else if (year) {
     query = query.gte('date', `${year}-01-01`).lt('date', `${Number(year) + 1}-01-01`)
+    rangeFrom = `${year}-01-01`
   }
 
   const limit = searchParams.get('limit') ? Math.min(Number(searchParams.get('limit')) || 5000, 20000) : 5000
   const { data, error } = await query.order('date', { ascending: false }).order('created_at', { ascending: false }).limit(limit)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ cashflow: data })
+
+  // 每筆餘額用：各帳戶在查詢區間起日前的結餘，前端再依時間順序逐筆累加
+  let openingBalances: Record<string, number> | undefined
+  if (rangeFrom && !type) {
+    const r = await balancesBefore(supabase, user.id, rangeFrom)
+    if ('error' in r) return NextResponse.json({ error: r.error }, { status: 500 })
+    openingBalances = r.balances
+  }
+  return NextResponse.json({ cashflow: data, openingBalances })
+}
+
+// 區間起日前結餘 = 目前結餘（期初 + fn_hr_account_balances）− 起日（含）之後所有異動
+async function balancesBefore(
+  supabase: Awaited<ReturnType<typeof getAdminUser>>['supabase'],
+  ownerId: string,
+  from: string,
+): Promise<{ balances: Record<string, number> } | { error: string }> {
+  const [{ data: accounts, error: aErr }, { data: deltas, error: dErr }] = await Promise.all([
+    supabase.from('hr_accounts').select('id, opening_balance').eq('owner_id', ownerId),
+    supabase.rpc('fn_hr_account_balances', { p_owner_id: ownerId }),
+  ])
+  if (aErr || dErr) return { error: (aErr ?? dErr)!.message }
+
+  const bal: Record<string, number> = {}
+  for (const a of accounts ?? []) bal[a.id] = Number(a.opening_balance) || 0
+  for (const d of deltas ?? []) bal[d.account_id] = (bal[d.account_id] ?? 0) + (Number(d.delta) || 0)
+
+  const PAGE = 1000
+  for (let offset = 0; ; offset += PAGE) {
+    const { data: rows, error } = await supabase
+      .from('hr_cashflow')
+      .select('type, amount, account_id, to_account_id')
+      .eq('owner_id', ownerId)
+      .gte('date', from)
+      .order('id', { ascending: true })
+      .range(offset, offset + PAGE - 1)
+    if (error) return { error: error.message }
+    for (const r of rows ?? []) {
+      const amt = Number(r.amount) || 0
+      if (r.account_id) bal[r.account_id] = (bal[r.account_id] ?? 0) - (r.type === 'income' ? amt : -amt)
+      if (r.type === 'transfer' && r.to_account_id) bal[r.to_account_id] = (bal[r.to_account_id] ?? 0) - amt
+    }
+    if (!rows || rows.length < PAGE) break
+  }
+  return { balances: bal }
 }
 
 export async function POST(req: NextRequest) {

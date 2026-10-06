@@ -366,6 +366,7 @@ export default function FinancePage() {
   const [subjects, setSubjects] = useState<SubjectItem[]>([])
   const [selectedSubject, setSelectedSubject] = useState<SubjectFilter | null>(null)
   const [records, setRecords] = useState<Cashflow[]>([])
+  const [openingBalances, setOpeningBalances] = useState<Record<string, number>>({})
   const [accounts, setAccounts] = useState<Account[]>([])
   const [accountsLoaded, setAccountsLoaded] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -439,6 +440,7 @@ export default function FinancePage() {
       if (res.ok) {
         const d = await res.json()
         setRecords(d.cashflow ?? [])
+        setOpeningBalances(d.openingBalances ?? {})
       }
     } catch { /* ignore */ } finally {
       setLoading(false)
@@ -487,6 +489,30 @@ export default function FinancePage() {
 
     return map
   }, [accounts, records, subjects])
+
+  // 每筆交易後的帳戶餘額：區間起日前結餘依日期、建立時間逐筆累加
+  const runningBalances = useMemo(() => {
+    const bal: Record<string, number> = { ...openingBalances }
+    const out = new Map<string, { from?: number; to?: number }>()
+    const sorted = [...records].sort((a, b) =>
+      a.date !== b.date ? (a.date < b.date ? -1 : 1)
+        : a.created_at !== b.created_at ? (a.created_at < b.created_at ? -1 : 1)
+        : a.id < b.id ? -1 : 1)
+    for (const r of sorted) {
+      const amt = Number(r.amount) || 0
+      const entry: { from?: number; to?: number } = {}
+      if (r.account_id) {
+        bal[r.account_id] = (bal[r.account_id] ?? 0) + (r.type === 'income' ? amt : -amt)
+        entry.from = bal[r.account_id]
+      }
+      if (r.type === 'transfer' && r.to_account_id) {
+        bal[r.to_account_id] = (bal[r.to_account_id] ?? 0) + amt
+        entry.to = bal[r.to_account_id]
+      }
+      out.set(r.id, entry)
+    }
+    return out
+  }, [records, openingBalances])
 
   // 篩選後交易清單
   const filteredRecords = useMemo(() => {
@@ -887,6 +913,7 @@ export default function FinancePage() {
                       <th className="px-2 py-2 text-center whitespace-nowrap">狀態</th>
                       <th className="px-3 py-2 whitespace-nowrap">至項目</th>
                       <th className="px-3 py-2 text-right whitespace-nowrap">金額 (NT$)</th>
+                      <th className="px-3 py-2 text-right whitespace-nowrap">餘額</th>
                       <th className="px-3 py-2 whitespace-nowrap">摘要</th>
                       <th className="px-3 py-2 whitespace-nowrap">收付人</th>
                       <th className="px-3 py-2 whitespace-nowrap">備註 / 發票</th>
@@ -896,14 +923,14 @@ export default function FinancePage() {
                   <tbody className="divide-y divide-border/60 font-sans">
                     {loading ? (
                       <tr>
-                        <td colSpan={10} className="py-16 text-center text-muted-foreground">
+                        <td colSpan={11} className="py-16 text-center text-muted-foreground">
                           <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-primary" />
                           <span>正在讀取帳務記錄…</span>
                         </td>
                       </tr>
                     ) : filteredRecords.length === 0 ? (
                       <tr>
-                        <td colSpan={10} className="py-16 text-center text-muted-foreground">
+                        <td colSpan={11} className="py-16 text-center text-muted-foreground">
                           <Wallet className="h-8 w-8 mx-auto mb-2 opacity-30" />
                           <p className="font-medium text-sm">無符合條件的帳務分錄</p>
                           <p className="text-2xs text-muted-foreground mt-1">請切換年份月份、科目樹篩選或點擊「新增記錄」</p>
@@ -967,6 +994,16 @@ export default function FinancePage() {
                             {/* 金額 */}
                             <td className={`px-3 py-2 text-right font-mono tabular-nums text-sm ${amtColor}`}>
                               {fmt(r.amount)}
+                            </td>
+
+                            {/* 餘額：選取的帳戶為轉入方時顯示轉入帳戶餘額，否則顯示本筆帳戶餘額 */}
+                            <td className="px-3 py-2 text-right font-mono tabular-nums text-sm text-foreground/80 whitespace-nowrap">
+                              {(() => {
+                                const rb = runningBalances.get(r.id)
+                                const showTo = isTransfer && !!selectedSubject?.name && acctName(r.to_account_id) === selectedSubject.name
+                                const v = showTo ? rb?.to : rb?.from
+                                return v === undefined ? '—' : fmt(v)
+                              })()}
                             </td>
 
                             {/* 摘要 */}
