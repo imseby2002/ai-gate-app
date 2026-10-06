@@ -1371,6 +1371,7 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
   const [showImport, setShowImport] = useState(false)
   const [busy, setBusy] = useState(false)
   const [applyCode, setApplyCode] = useState('')
+  const [applySlug, setApplySlug] = useState<string | null>(null)
   const [docsFor, setDocsFor] = useState<Candidate | null>(null)
   const [docs, setDocs] = useState<CandDoc[]>([])
   const [checklist, setChecklist] = useState<CheckItem[]>([])
@@ -1411,7 +1412,7 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
   }
 
   useEffect(() => {
-    fetch('/api/hr/apply-config').then(r => r.ok ? r.json() : null).then(d => { if (d?.code) setApplyCode(d.code) })
+    fetch('/api/hr/apply-config').then(r => r.ok ? r.json() : null).then(d => { if (d?.code) setApplyCode(d.code); setApplySlug(d?.slug ?? null) })
   }, [])
 
   const unreadCount = notifs.filter(n => !n.is_read).length
@@ -1440,7 +1441,8 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
   }
 
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
-  const applyUrl = applyCode ? `${origin}/apply/${applyCode}` : ''
+  // 有公司子網域用好記的 <slug>.im-tourist.com/apply，否則沿用代碼連結
+  const applyUrl = applySlug ? `https://${applySlug}.im-tourist.com/apply` : applyCode ? `${origin}/apply/${applyCode}` : ''
   const copy = (text: string, msg: string) => { navigator.clipboard?.writeText(text); alert(msg) }
 
   const toggleLock = async (c: Candidate) => {

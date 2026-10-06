@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getUnitContext } from '@/lib/auth/unit-access'
 import { genCode } from '@/lib/hr/apply'
+import { companySlugForOwner } from '@/lib/company/fromHost'
 
 async function getAdminUser() {
   const ctx = await getUnitContext('hr')
@@ -22,5 +23,7 @@ export async function GET() {
       .upsert({ owner_id: user.id, apply_code: code, updated_at: new Date().toISOString() }, { onConflict: 'owner_id' })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   }
-  return NextResponse.json({ code })
+  // 有公司子網域時提供好記的連結 <slug>.im-tourist.com/apply
+  const slug = await companySlugForOwner(user.id)
+  return NextResponse.json({ code, slug })
 }
