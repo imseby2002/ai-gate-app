@@ -3,9 +3,17 @@ import { getUnitContextAny } from '@/lib/auth/unit-access'
 import { INITIAL_KNOWLEDGE_LOGS } from '@/lib/audit/platform-core'
 import type { AuditKnowledgeLog } from '@/lib/types/audit-platform'
 
+
+async function denyIfNoAccess() {
+  const ctx = await getUnitContextAny(['audit', 'store', 'rd'])
+  if (ctx.ok) return { ctx, deny: null }
+  return { ctx, deny: NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status }) }
+}
+
 export async function GET() {
   try {
-    const ctx = await getUnitContextAny(['audit', 'store', 'rd']).catch(() => ({ ok: true, admin: null }))
+    const { ctx, deny } = await denyIfNoAccess()
+    if (deny) return deny
     const supabase = ctx.admin
 
     let logs: AuditKnowledgeLog[] = INITIAL_KNOWLEDGE_LOGS
@@ -49,7 +57,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '問題主旨為必填' }, { status: 400 })
     }
 
-    const ctx = await getUnitContextAny(['audit', 'store', 'rd']).catch(() => ({ ok: true, admin: null }))
+    const { ctx, deny } = await denyIfNoAccess()
+    if (deny) return deny
     const supabase = ctx.admin
 
     const newLog: AuditKnowledgeLog = {

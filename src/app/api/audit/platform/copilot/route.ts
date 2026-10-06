@@ -3,11 +3,16 @@ import { generateText } from 'ai'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createOpenAI } from '@ai-sdk/openai'
+import { getUnitContextAny } from '@/lib/auth/unit-access'
 import type { CopilotMode, AuditSuggestionCard } from '@/lib/types/audit-platform'
 
 export const maxDuration = 60
 
 export async function POST(req: NextRequest) {
+  // 僅稽核／門市／研發單位可使用（避免未登入者消耗 AI 額度）
+  const ctx = await getUnitContextAny(['audit', 'store', 'rd'])
+  if (!ctx.ok) return NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status })
+
   try {
     const body = await req.json().catch(() => ({}))
     const {
