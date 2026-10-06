@@ -91,6 +91,11 @@ export default function CalendarPage() {
   // 房東手動關房（blocked_dates, reason=owner_block），key = `${property_id}|${date}`
   const [blocked, setBlocked] = useState<Set<string>>(new Set())
   const [togglingBlock, setTogglingBlock] = useState<string | null>(null)
+  // 協作成員為「檢視者」時不可新增訂單／關房，按鈕顯示灰色
+  const [canWrite, setCanWrite] = useState(true)
+  useEffect(() => {
+    fetch('/api/booking/active-bnb').then(r => r.json()).then(d => { if (d.canWrite === false) setCanWrite(false) }).catch(() => {})
+  }, [])
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -417,13 +422,15 @@ export default function CalendarPage() {
                     <td className="px-3 py-3 text-center text-gray-500 hidden sm:table-cell">{bksThis.length}</td>
                     <td className="px-3 py-3 text-center">
                       <div className="flex items-center justify-center gap-1.5">
-                        <button disabled={av === 0} onClick={() => openQuick(p, selected)}
+                        <button disabled={av === 0 || !canWrite} onClick={() => openQuick(p, selected)}
+                          title={!canWrite ? '檢視者無法修改' : undefined}
                           className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-500 text-white hover:bg-sky-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
                           {t('calendar.add')}
                         </button>
                         {(closed || bksThis.length < p.room_count) && (
-                          <button disabled={toggling} onClick={() => toggleClosed(p.id, selected)}
-                            className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-colors disabled:opacity-40
+                          <button disabled={toggling || !canWrite} onClick={() => toggleClosed(p.id, selected)}
+                            title={!canWrite ? '檢視者無法修改' : undefined}
+                            className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-colors disabled:opacity-40 disabled:cursor-not-allowed
                               ${closed ? 'border-emerald-300 text-emerald-600 hover:bg-emerald-50' : 'border-gray-300 text-gray-500 hover:bg-gray-100'}`}>
                             {closed ? t('calendar.openRoom') : t('calendar.closeRoom')}
                           </button>
