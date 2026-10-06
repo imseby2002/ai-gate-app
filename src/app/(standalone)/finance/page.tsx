@@ -8,7 +8,7 @@ import {
   ArrowDownCircle, ArrowLeftRight, Landmark, Banknote, PiggyBank,
   BarChart3, Upload, Store, FileText, Truck, FileSpreadsheet,
   Package, Search, AlertTriangle, Layers, Calendar, Filter,
-  Settings, ChevronRight, Sparkles, Database
+  Settings, ChevronRight, ChevronDown, Sparkles, Database
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -399,6 +399,7 @@ export default function FinancePage() {
   const [showZeroImport, setShowZeroImport] = useState(false)
   const [showMdbBatchModal, setShowMdbBatchModal] = useState(false)
   const [showExcelImport, setShowExcelImport] = useState(false)
+  const [showMoreMenu, setShowMoreMenu] = useState(false)
   const [showSubjectSettings, setShowSubjectSettings] = useState(false)
   const [showFormModal, setShowFormModal] = useState(false)
   const [editingRecord, setEditingRecord] = useState<Cashflow | null>(null)
@@ -756,7 +757,7 @@ export default function FinancePage() {
           {/* 右側：帳務小管家核心面板 - 獨立上下捲動 */}
           <div className="h-full min-h-0 min-w-0 flex flex-col space-y-2.5 overflow-hidden">
             {/* 上方子標籤（Zero.Net 子功能分頁） */}
-            <div className="flex items-center justify-between gap-2 flex-wrap border-b pb-2 shrink-0">
+            <div className="flex items-center gap-2 flex-wrap border-b pb-2 shrink-0">
               <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-lg text-xs overflow-x-auto">
                 <button
                   onClick={() => setSubTab('journal')}
@@ -800,61 +801,8 @@ export default function FinancePage() {
                 </button>
               </div>
 
-              {/* 頂部操作按鈕組 */}
-              <div className="flex items-center gap-2 flex-wrap">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 text-xs gap-1"
-                  onClick={() => setShowSubjectSettings(true)}
-                >
-                  <Settings className="h-3.5 w-3.5 text-muted-foreground" />
-                  項目設定
-                </Button>
-
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 text-xs gap-1"
-                  onClick={() => setShowZeroImport(true)}
-                >
-                  <Upload className="h-3.5 w-3.5 text-primary" />
-                  匯入記帳檔 (.mdb)
-                </Button>
-
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 text-xs gap-1 border-blue-200 text-blue-700 bg-blue-50/60 hover:bg-blue-100 dark:border-blue-900/40 dark:bg-blue-950/20 dark:text-blue-300 font-medium"
-                  onClick={() => setShowMdbBatchModal(true)}
-                  title="檢視 MDB 匯入歷史批次、撤回單次或清空 MDB 資料"
-                >
-                  <Database className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
-                  MDB 批次管理 / 撤回
-                </Button>
-
-                {totalErrors > 0 && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-7 text-xs gap-1 border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100"
-                    onClick={() => setShowErrorDrawer(true)}
-                  >
-                    <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
-                    匯入錯誤紀錄 ({totalErrors})
-                  </Button>
-                )}
-
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 text-xs gap-1"
-                  onClick={() => setShowExcelImport(true)}
-                >
-                  <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
-                  批次匯入
-                </Button>
-
+              {/* 新增記錄＋其他功能（下拉） */}
+              <div className="flex items-center gap-2">
                 <Button
                   size="sm"
                   className="h-7 text-xs gap-1 font-semibold"
@@ -863,6 +811,56 @@ export default function FinancePage() {
                   <Plus className="h-3.5 w-3.5" />
                   新增記錄
                 </Button>
+
+                <div className="relative">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className={`h-7 text-xs gap-1 ${totalErrors > 0 ? 'border-amber-300 text-amber-700' : ''}`}
+                    onClick={() => setShowMoreMenu(v => !v)}
+                  >
+                    {totalErrors > 0 && <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />}
+                    其他功能
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  </Button>
+                  {showMoreMenu && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setShowMoreMenu(false)} />
+                      <div className="absolute right-0 top-full mt-1 z-50 min-w-[200px] rounded-lg border bg-card shadow-lg p-1 text-xs">
+                        <button
+                          className="w-full flex items-center gap-2 px-2.5 py-2 rounded-md hover:bg-muted text-left"
+                          onClick={() => { setShowMoreMenu(false); setShowZeroImport(true) }}
+                        >
+                          <Upload className="h-3.5 w-3.5 text-primary" />
+                          匯入記帳檔 (.mdb)
+                        </button>
+                        <button
+                          className="w-full flex items-center gap-2 px-2.5 py-2 rounded-md hover:bg-muted text-left"
+                          onClick={() => { setShowMoreMenu(false); setShowMdbBatchModal(true) }}
+                        >
+                          <Database className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                          MDB 批次管理 / 撤回
+                        </button>
+                        <button
+                          className="w-full flex items-center gap-2 px-2.5 py-2 rounded-md hover:bg-muted text-left"
+                          onClick={() => { setShowMoreMenu(false); setShowExcelImport(true) }}
+                        >
+                          <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
+                          批次匯入
+                        </button>
+                        {totalErrors > 0 && (
+                          <button
+                            className="w-full flex items-center gap-2 px-2.5 py-2 rounded-md hover:bg-muted text-left text-amber-700"
+                            onClick={() => { setShowMoreMenu(false); setShowErrorDrawer(true) }}
+                          >
+                            <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+                            匯入錯誤紀錄 ({totalErrors})
+                          </button>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
 
