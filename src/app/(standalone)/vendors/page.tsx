@@ -38,6 +38,7 @@ interface Vendor {
   id: string; name: string; service: string; regions: string[]; fill_token: string; active: boolean
   tax_id: string; address: string; phone: string; contact: string; products: string
   pay_terms: string; billing_cycle: string; billing_day: number | null
+  link_slug: string | null; has_pin: boolean; new_pin?: string
 }
 interface Purchase { id: string; purchased_on: string; product: string; qty: number; amount: number; note: string }
 
@@ -48,6 +49,7 @@ export default function VendorsPage() {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
   const [vendors, setVendors] = useState<Vendor[]>([])
   const [regions, setRegions] = useState<string[]>([])
+  const [companySlug, setCompanySlug] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [sel, setSel] = useState<string | null>(null)
   const [q, setQ] = useState('')
@@ -57,7 +59,7 @@ export default function VendorsPage() {
 
   useEffect(() => {
     fetch('/api/fin/vendors').then(r => { if (r.status === 403) { setIsAdmin(false); return null } setIsAdmin(true); return r.json() })
-      .then(d => { if (d) { setVendors(d.vendors ?? []); setRegions(d.regions ?? []) } setLoading(false) })
+      .then(d => { if (d) { setVendors(d.vendors ?? []); setRegions(d.regions ?? []); setCompanySlug(d.company_slug ?? null) } setLoading(false) })
   }, [tick])
 
   if (isAdmin === false) return (
@@ -102,7 +104,7 @@ export default function VendorsPage() {
       )}
 
       {loading ? <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
-        : selected ? <VendorDetail vendor={selected} regions={regions} onBack={() => setSel(null)} onSaved={reload} />
+        : selected ? <VendorDetail vendor={selected} regions={regions} companySlug={companySlug} onBack={() => setSel(null)} onSaved={reload} />
         : (
           <div className="space-y-3">
             <PriceCompareBox />
@@ -220,7 +222,7 @@ function PriceCompareBox() {
   )
 }
 
-function VendorDetail({ vendor, regions, onBack, onSaved }: { vendor: Vendor; regions: string[]; onBack: () => void; onSaved: () => void }) {
+function VendorDetail({ vendor, regions, companySlug, onBack, onSaved }: { vendor: Vendor; regions: string[]; companySlug: string | null; onBack: () => void; onSaved: () => void }) {
   const t = useTranslations('Vendors')
   const [f, setF] = useState<Vendor>({ ...vendor })
   const [saving, setSaving] = useState(false)
@@ -230,14 +232,18 @@ function VendorDetail({ vendor, regions, onBack, onSaved }: { vendor: Vendor; re
   const save = async () => {
     setSaving(true); setMsg('')
     const res = await fetch('/api/fin/vendors', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(f) })
-    setSaving(false); setMsg(res.ok ? t('saved') : t('saveFailed')); if (res.ok) onSaved()
+    const d = await res.json().catch(() => ({}))
+    setSaving(false); setMsg(res.ok ? t('saved') : (d.error ?? t('saveFailed')))
+    if (res.ok) { if (f.new_pin) set({ has_pin: true, new_pin: '' }); onSaved() }
   }
   const remove = async () => {
     if (!confirm(t('confirmDeleteVendor', { name: f.name }))) return
     await fetch('/api/fin/vendors', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: f.id }) })
     onSaved(); onBack()
   }
-  const copyLink = () => { navigator.clipboard?.writeText(`${location.origin}/vendor/${f.fill_token}`); setMsg(t('linkCopied')) }
+  // 設好網址代號與密碼且公司有子網域時，提供好記的新網址；否則沿用舊的私密連結
+  const easyUrl = companySlug && vendor.link_slug && vendor.has_pin ? `https://${companySlug}.im-tourist.com/v/${vendor.link_slug}` : null
+  const copyLink = () => { navigator.clipboard?.writeText(easyUrl ?? `${location.origin}/vendor/${f.fill_token}`); setMsg(t('linkCopied')) }
   const toggleRegion = (r: string) => set({ regions: f.regions.includes(r) ? f.regions.filter(x => x !== r) : [...f.regions, r] })
 
   return (
@@ -288,6 +294,17 @@ function VendorDetail({ vendor, regions, onBack, onSaved }: { vendor: Vendor; re
             📌 {f.service === 'electric' ? t('utilityNoticeElectric') : t('utilityNoticeWater')}
           </div>
         )}
+        <div className="grid md:grid-cols-2 gap-2 pt-2 border-t">
+          <label className="space-y-1"><span className="text-xs text-gray-500">填表網址代號（小寫英文／數字，例如 ice-abc）</span>
+            <Input value={f.link_slug ?? ''} onChange={e => set({ link_slug: e.target.value.toLowerCase() })} className="h-9" placeholder="ice-abc" /></label>
+          <label className="space-y-1"><span className="text-xs text-gray-500">{f.has_pin ? '重設廠商密碼（已設定，留空不變）' : '設定廠商初始密碼（至少 6 碼）'}</span>
+            <Input type="text" value={f.new_pin ?? ''} onChange={e => set({ new_pin: e.target.value })} className="h-9" autoComplete="off" /></label>
+          <p className="md:col-span-2 text-xs text-muted-foreground">
+            {companySlug
+              ? `廠商網址：https://${companySlug}.im-tourist.com/v/${f.link_slug || '代號'}（儲存後把網址與密碼交給廠商，廠商登入後可自行改密碼）`
+              : '公司尚未設定專屬子網域，暫時只能使用舊的私密連結'}
+          </p>
+        </div>
         <div className="flex items-center gap-3 text-xs">
           <label className="flex items-center gap-1"><input type="checkbox" checked={f.active} onChange={e => set({ active: e.target.checked })} />{t('active')}</label>
           <button onClick={copyLink} className="flex items-center gap-1 text-primary ml-auto"><Link2 className="h-3.5 w-3.5" />{t('copyFillLink')}</button>

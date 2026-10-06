@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { notifyHR } from '@/lib/hr/notify'
+import { vendorPortalUrl, vendorTokenAllowed } from '@/lib/fin/vendor-portal'
 
 type Ctx = { params: Promise<{ token: string }> }
 type Admin = ReturnType<typeof createAdminClient>
 
 async function findVendor(admin: Admin, token: string) {
   const { data } = await admin.from('fin_vendors')
-    .select('id, owner_id, name, service, regions, active').eq('fill_token', token).single()
+    .select('id, owner_id, name, service, regions, active, link_slug, pin_hash').eq('fill_token', token).single()
   return data
 }
 
@@ -52,6 +53,9 @@ export async function GET(req: NextRequest, { params }: Ctx) {
   const admin = createAdminClient()
   const v = await findVendor(admin, token)
   if (!v || !v.active) return NextResponse.json({ error: '連結無效或已停用' }, { status: 404 })
+  const portalUrl = await vendorPortalUrl(v.owner_id, v.link_slug)
+  // 過渡期後舊連結需先以新網址密碼登入
+  if (!vendorTokenAllowed(req, v)) return NextResponse.json({ error: '此網址已停用，請改用新網址登入', portal_url: portalUrl }, { status: 410 })
   const sp = new URL(req.url).searchParams
   const year = parseInt(sp.get('year') ?? '') || new Date().getFullYear()
   const month = parseInt(sp.get('month') ?? '') || (new Date().getMonth() + 1)
@@ -93,6 +97,7 @@ export async function GET(req: NextRequest, { params }: Ctx) {
   }
 
   return NextResponse.json({
+    portal_url: portalUrl,
     vendor: { name: v.name, service: v.service, regions: v.regions },
     category: cat ? { code: cat.code, name: cat.name } : null,
     year,
@@ -109,6 +114,9 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   const admin = createAdminClient()
   const v = await findVendor(admin, token)
   if (!v || !v.active) return NextResponse.json({ error: '連結無效或已停用' }, { status: 404 })
+  const portalUrl = await vendorPortalUrl(v.owner_id, v.link_slug)
+  // 過渡期後舊連結需先以新網址密碼登入
+  if (!vendorTokenAllowed(req, v)) return NextResponse.json({ error: '此網址已停用，請改用新網址登入', portal_url: portalUrl }, { status: 410 })
   const b = await req.json().catch(() => ({}))
   const year = parseInt(b.year) || new Date().getFullYear()
   const month = parseInt(b.month) || (new Date().getMonth() + 1)

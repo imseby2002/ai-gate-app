@@ -5,10 +5,10 @@ import { companySlugForOwner } from '@/lib/company/fromHost'
 
 export const PORTAL_COOKIE = 'emp_portal'
 const SESSION_HOURS = 12
-const MAX_FAILS = 5
-const LOCK_MINUTES = 15
+export const MAX_FAILS = 5
+export const LOCK_MINUTES = 15
 
-/** 舊 /payslip/<token> 連結的停用日（員工專區上線日＋30 天） */
+/** 舊 /payslip/<token>、/vendor/<token> 連結的停用日（新連結上線日＋30 天） */
 export const LEGACY_PAYSLIP_CUTOFF = new Date('2026-11-06T00:00:00+07:00')
 
 function secret(): string {
@@ -17,21 +17,22 @@ function secret(): string {
   return s
 }
 
-export function signSession(employeeId: string): string {
-  const body = Buffer.from(JSON.stringify({ eid: employeeId, exp: Date.now() + SESSION_HOURS * 3600_000 })).toString('base64url')
+/** 簽章工作階段；kind 區分員工專區（emp）與廠商填表（vendor），兩者不可互用 */
+export function signSession(id: string, kind: 'emp' | 'vendor' = 'emp'): string {
+  const body = Buffer.from(JSON.stringify({ eid: id, kind, exp: Date.now() + SESSION_HOURS * 3600_000 })).toString('base64url')
   const sig = createHmac('sha256', secret()).update(body).digest('base64url')
   return `${body}.${sig}`
 }
 
-export function verifySession(token: string | undefined): string | null {
+export function verifySession(token: string | undefined, kind: 'emp' | 'vendor' = 'emp'): string | null {
   if (!token) return null
   const [body, sig] = token.split('.')
   if (!body || !sig) return null
   const expect = createHmac('sha256', secret()).update(body).digest('base64url')
   if (sig.length !== expect.length || !timingSafeEqual(Buffer.from(sig), Buffer.from(expect))) return null
   try {
-    const { eid, exp } = JSON.parse(Buffer.from(body, 'base64url').toString())
-    return typeof eid === 'string' && exp > Date.now() ? eid : null
+    const p = JSON.parse(Buffer.from(body, 'base64url').toString())
+    return typeof p.eid === 'string' && (p.kind ?? 'emp') === kind && p.exp > Date.now() ? p.eid : null
   } catch {
     return null
   }
@@ -42,7 +43,7 @@ export function hashPin(pin: string): string {
   return `${salt}:${scryptSync(pin, salt, 32).toString('hex')}`
 }
 
-function checkPin(pin: string, stored: string): boolean {
+export function checkPin(pin: string, stored: string): boolean {
   const [salt, hash] = stored.split(':')
   if (!salt || !hash) return false
   const got = scryptSync(pin, salt, 32)
