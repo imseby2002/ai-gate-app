@@ -6909,6 +6909,7 @@
     "subjectLabel": "主旨",
     "contentLabel": "內容",
     "send": "發送",
+    "empDocsNoApplication": "此員工沒有對應的應徵資料，無上傳文件。",
     "candidateDocsTitle": "{name} 的文件與繳交",
     "allDocsSubmitted": "紙本已全部繳交到辦公室（完成）",
     "uploadMeansScan": "上傳＝掃描檔",

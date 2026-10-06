@@ -550,6 +550,17 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
   const [showImport, setShowImport] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [exportingIns, setExportingIns] = useState(false)
+  // 員工上傳文件（沿用其錄取前的應徵者資料）
+  const [docsEmp, setDocsEmp] = useState<Employee | null>(null)
+  const [empDocs, setEmpDocs] = useState<{ loading: boolean; linked: boolean; docs: CandDoc[]; checklist: CheckItem[] }>({ loading: false, linked: false, docs: [], checklist: [] })
+  const DOC_CATALOG = getDocCatalog(t)
+
+  async function openEmpDocs(emp: Employee) {
+    setDocsEmp(emp); setEmpDocs({ loading: true, linked: false, docs: [], checklist: [] })
+    const res = await fetch(`/api/hr/candidates/checklist?employee_id=${emp.id}`)
+    const d = res.ok ? await res.json() : {}
+    setEmpDocs({ loading: false, linked: !!d.candidate_id, docs: d.documents ?? [], checklist: d.checklist ?? [] })
+  }
 
   async function exportInsurance() {
     setErr(''); setExportingIns(true)
@@ -670,6 +681,9 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
+                  <Button size="sm" variant="ghost" className="h-7 px-2 gap-1 text-xs text-gray-500" onClick={() => openEmpDocs(emp)}>
+                    <FileText className="h-3.5 w-3.5" />{t('documents')}
+                  </Button>
                   <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { setEditing(emp); setShowForm(false) }}>
                     <Pencil className="h-3.5 w-3.5" />
                   </Button>
@@ -700,6 +714,48 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
               )}
             </Card>
           ))}
+        </div>
+      )}
+
+      {docsEmp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setDocsEmp(null)}>
+          <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-5 space-y-3" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold">{t('candidateDocsTitle', { name: docsEmp.name })}</h3>
+              <button onClick={() => setDocsEmp(null)}><X className="h-5 w-5 text-gray-400" /></button>
+            </div>
+            {empDocs.loading ? (
+              <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-gray-400" /></div>
+            ) : !empDocs.linked ? (
+              <p className="text-sm text-gray-500 py-6 text-center">{t('empDocsNoApplication')}</p>
+            ) : (
+              <div className="space-y-2">
+                {DOC_CATALOG.map(spec => {
+                  const uploaded = empDocs.docs.filter(d => d.doc_type === spec.type)
+                  const chk = empDocs.checklist.find(x => x.doc_key === spec.type)
+                  return (
+                    <div key={spec.type} className="border rounded-lg px-3 py-2 text-sm space-y-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium">{spec.label}</span>
+                        {uploaded.length > 0
+                          ? <span className="text-[11px] text-emerald-600 whitespace-nowrap flex items-center gap-0.5"><Check className="h-3 w-3" />{t('uploadedCount', { n: uploaded.length })}</span>
+                          : <span className="text-[11px] text-gray-300 whitespace-nowrap">{t('notUploaded')}</span>}
+                      </div>
+                      {uploaded.map(d => (
+                        <a key={d.id} href={d.url} target="_blank" rel="noreferrer" className="block text-xs text-primary hover:underline truncate">📎 {d.file_name}</a>
+                      ))}
+                      {(chk?.original_received || chk?.copy_received) && (
+                        <div className="flex gap-3 text-[11px] text-gray-500">
+                          {chk.original_received && <span>✓ {t('originalSubmitted')}</span>}
+                          {chk.copy_received && <span>✓ {t('photocopySubmitted')}</span>}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
