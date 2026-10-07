@@ -4272,7 +4272,12 @@
     "videoStart": "Start video",
     "videoStop": "Stop video",
     "videoLoading": "Connecting…",
-    "videoFailed": "Couldn’t connect video. Please try again."
+    "videoFailed": "Couldn’t connect video. Please try again.",
+    "delete": "Delete meeting",
+    "removeFromList": "Remove from my list",
+    "confirmDelete": "Delete meeting “{title}”? The transcript will be deleted for all participants. This cannot be undone.",
+    "confirmRemove": "Remove meeting “{title}” from your list? Other participants are not affected.",
+    "deleteFailed": "Delete failed, please try again later."
   },
   "Work": {
     "title": "Work Items",

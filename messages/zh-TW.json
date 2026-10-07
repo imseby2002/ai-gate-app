@@ -4272,7 +4272,12 @@
     "videoStart": "開啟視訊",
     "videoStop": "關閉視訊",
     "videoLoading": "連線中…",
-    "videoFailed": "視訊連線失敗，請稍後再試。"
+    "videoFailed": "視訊連線失敗，請稍後再試。",
+    "delete": "刪除會議",
+    "removeFromList": "從我的紀錄移除",
+    "confirmDelete": "確定刪除會議「{title}」？逐字稿會一併刪除，所有參與者都看不到，無法復原。",
+    "confirmRemove": "將會議「{title}」從你的紀錄移除？其他人的紀錄不受影響。",
+    "deleteFailed": "刪除失敗，請稍後再試。"
   },
   "Work": {
     "title": "工作項目",
