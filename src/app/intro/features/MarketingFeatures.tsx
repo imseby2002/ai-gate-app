@@ -5,6 +5,7 @@ import {
 } from 'lucide-react'
 import { GRAD, DarkHeader, FinalCta, IntroFooter, GradText } from '../_ui'
 import { VisualStyleShowcase } from '../VisualStyleShowcase'
+import { introTr, trDeep } from '@/lib/i18n-data/server'
 
 export const marketingFeaturesMetadata: Metadata = {
   title: '功能詳解｜AI GATE 行銷中心',
@@ -21,7 +22,7 @@ type Feature = {
   plan?: string
 }
 
-const GROUPS: Array<{ id: string; n: string; title: string; sub: string; items: Feature[] }> = [
+const GROUPS__ZH: Array<{ id: string; n: string; title: string; sub: string; items: Feature[] }> = [
   {
     id: 'content', n: '01', title: '內容，AI 幫你做', sub: '從一張產品圖，到可以直接發佈的圖文與短影音。',
     items: [
@@ -125,20 +126,20 @@ const GROUPS: Array<{ id: string; n: string; title: string; sub: string; items: 
   },
 ]
 
-export function MarketingFeatures() {
+export async function MarketingFeatures() {
+  const tr = await introTr()
+  const GROUPS = trDeep(GROUPS__ZH, tr)
   return (
     <div className="min-h-screen bg-[#f5f3f8] text-[#17131f] scroll-smooth">
       <DarkHeader
-        eyebrow="功能詳解"
-        title={<>11 大功能，<GradText>一個目標</GradText>：讓你賣更多。</>}
-        sub="每個功能在做什麼、能幫你省下什麼、哪個方案開始可用，都在這裡。"
+        eyebrow={tr("功能詳解")}
+        title={<>{tr("11 大功能，")}<GradText>{tr("一個目標")}</GradText>{tr("：讓你賣更多。")}</>}
+        sub={tr("每個功能在做什麼、能幫你省下什麼、哪個方案開始可用，都在這裡。")}
       />
 
       <div className="sticky top-0 z-10 bg-[#f5f3f8]/90 backdrop-blur border-b border-[#e6e2ee]">
         <div className="max-w-5xl mx-auto px-6 py-3 flex gap-2 overflow-x-auto text-[14px] font-bold">
-          <a href="#templates" className="shrink-0 rounded-full border border-transparent px-3 py-1 text-white" style={{ background: GRAD }}>
-            ★ 視覺風格與廣告創作
-          </a>
+          <a href="#templates" className="shrink-0 rounded-full border border-transparent px-3 py-1 text-white" style={{ background: GRAD }}>{tr("★ 視覺風格與廣告創作")}</a>
           {GROUPS.map(g => (
             <a key={g.id} href={`#${g.id}`} className="shrink-0 rounded-full border border-[#e6e2ee] bg-white px-3 py-1 hover:border-[#6a4be0] hover:text-[#6a4be0]">
               {g.n} {g.title}
@@ -167,7 +168,7 @@ export function MarketingFeatures() {
                   {f.points.map(p => <span key={p} className="text-[12.5px] text-[#3f3a4d] bg-[#efecf5] rounded-md px-2 py-0.5">{p}</span>)}
                 </div>
                 {f.plan && (
-                  <div className="mt-auto pt-2 text-[13px] font-bold text-[#6a4be0]">可用方案：{f.plan}</div>
+                  <div className="mt-auto pt-2 text-[13px] font-bold text-[#6a4be0]">{tr("可用方案：")}{f.plan}</div>
                 )}
               </article>
             ))}
@@ -178,14 +179,14 @@ export function MarketingFeatures() {
       <section className="max-w-5xl mx-auto px-6 py-14">
         <Link href="/intro/pricing" className="group flex items-center justify-between gap-4 rounded-2xl border border-[#6a4be0] bg-white p-6 hover:shadow-[0_16px_40px_rgba(60,40,120,0.12)]">
           <div>
-            <div className="font-black text-[20px]">哪個方案適合我？</div>
-            <div className="text-[14px] text-[#3f3a4d]">免費／CORE／PRO／MAX，逐項功能比較。</div>
+            <div className="font-black text-[20px]">{tr("哪個方案適合我？")}</div>
+            <div className="text-[14px] text-[#3f3a4d]">{tr("免費／CORE／PRO／MAX，逐項功能比較。")}</div>
           </div>
           <ArrowRight className="h-5 w-5 text-[#6a4be0] group-hover:translate-x-1 transition-transform" />
         </Link>
       </section>
 
-      <FinalCta title={<>先免費跑一個行銷案，<br />看看 AI 能幫你做多少。</>} />
+      <FinalCta title={<>{tr("先免費跑一個行銷案，")}<br />{tr("看看 AI 能幫你做多少。")}</>} />
       <IntroFooter />
     </div>
   )

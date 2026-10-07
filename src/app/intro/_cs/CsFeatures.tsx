@@ -6,6 +6,7 @@ import {
   Gift, Star, BarChart3, FlaskConical, ArrowRight,
 } from 'lucide-react'
 import { CsDarkHeader, CsFinalCta, CsFooter, CS_GRAD } from './ui'
+import { introTr, trDeep } from '@/lib/i18n-data/server'
 
 export const csFeaturesMetadata: Metadata = {
   title: '完整功能｜IMT 智能客服',
@@ -14,7 +15,7 @@ export const csFeaturesMetadata: Metadata = {
 
 type Feature = { Icon: React.ComponentType<{ className?: string }>; title: string; desc: string; points?: string[]; plan?: string }
 
-const GROUPS: Array<{ id: string; n: string; title: string; sub: string; items: Feature[] }> = [
+const GROUPS__ZH: Array<{ id: string; n: string; title: string; sub: string; items: Feature[] }> = [
   {
     id: 'connect', n: '01', title: '接入：所有平台，一個後台', sub: '客人在哪裡傳訊息，AI 就在哪裡回。',
     items: [
@@ -81,13 +82,15 @@ const GROUPS: Array<{ id: string; n: string; title: string; sub: string; items: 
   },
 ]
 
-export function CsFeatures() {
+export async function CsFeatures() {
+  const tr = await introTr()
+  const GROUPS = trDeep(GROUPS__ZH, tr)
   return (
     <div className="min-h-screen bg-[#f3f6f8] text-[#0f1720]">
       <CsDarkHeader
-        eyebrow="完整功能"
-        title="從接訊息到轉真人，每一步都有 AI"
-        sub="下面列出 IMT 智能客服的所有功能；有標示方案的功能需對應方案才能使用，沒標示的所有方案都能用。"
+        eyebrow={tr("完整功能")}
+        title={tr("從接訊息到轉真人，每一步都有 AI")}
+        sub={tr("下面列出 IMT 智能客服的所有功能；有標示方案的功能需對應方案才能使用，沒標示的所有方案都能用。")}
       />
 
       <div className="sticky top-0 z-10 border-b border-[#dde5ea] bg-[#f3f6f8]/90 backdrop-blur">
@@ -97,7 +100,7 @@ export function CsFeatures() {
               {g.n} {g.title.split('：')[0]}
             </a>
           ))}
-          <Link href="/intro/pricing" className="shrink-0 rounded-full px-3 py-1 text-white" style={{ background: CS_GRAD }}>方案價格</Link>
+          <Link href="/intro/pricing" className="shrink-0 rounded-full px-3 py-1 text-white" style={{ background: CS_GRAD }}>{tr("方案價格")}</Link>
         </div>
       </div>
 
@@ -133,14 +136,14 @@ export function CsFeatures() {
       <section className="max-w-5xl mx-auto px-6 pb-14">
         <Link href="/intro/pricing" className="flex items-center justify-between gap-4 rounded-2xl p-6 text-white" style={{ background: CS_GRAD }}>
           <div>
-            <div className="font-black text-[20px]">每個方案有哪些功能？</div>
-            <div className="text-white/85 text-[14px]">FREE／CORE／PRO／MAX 逐項比較</div>
+            <div className="font-black text-[20px]">{tr("每個方案有哪些功能？")}</div>
+            <div className="text-white/85 text-[14px]">{tr("FREE／CORE／PRO／MAX 逐項比較")}</div>
           </div>
           <ArrowRight className="h-6 w-6 shrink-0" />
         </Link>
       </section>
 
-      <CsFinalCta title="先用免費方案接上 LINE 試試看" sub="不限訊息則數，隨時可升級。" />
+      <CsFinalCta title={tr("先用免費方案接上 LINE 試試看")} sub={tr("不限訊息則數，隨時可升級。")} />
       <CsFooter />
     </div>
   )
