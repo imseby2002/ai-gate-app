@@ -4179,7 +4179,12 @@
     "videoStart": "Bật video",
     "videoStop": "Tắt video",
     "videoLoading": "Đang kết nối…",
-    "videoFailed": "Không kết nối được video. Vui lòng thử lại."
+    "videoFailed": "Không kết nối được video. Vui lòng thử lại.",
+    "delete": "Xóa cuộc họp",
+    "removeFromList": "Xóa khỏi danh sách của tôi",
+    "confirmDelete": "Xóa cuộc họp “{title}”? Biên bản sẽ bị xóa với tất cả người tham gia và không thể khôi phục.",
+    "confirmRemove": "Xóa cuộc họp “{title}” khỏi danh sách của bạn? Người khác không bị ảnh hưởng.",
+    "deleteFailed": "Xóa thất bại, vui lòng thử lại sau."
   },
   "Work": {
     "title": "Hạng mục công việc",
