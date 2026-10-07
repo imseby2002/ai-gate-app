@@ -29,6 +29,8 @@ import {
   type VideoTemplate,
   type VideoCategory
 } from '@/lib/marketing/video-templates'
+import { useDataDict } from '@/lib/i18n-data/useDataDict'
+import { localizeVisual, localizeVideo } from '@/lib/i18n-data/localize-templates'
 
 const ASPECT_RATIOS: { value: '1:1' | '4:5' | '3:4' | '16:9' | '9:16'; label: string; desc: string }[] = [
   // desc 為 MktTemplates.ar.* 的 key
@@ -41,6 +43,9 @@ const ASPECT_RATIOS: { value: '1:1' | '4:5' | '3:4' | '16:9' | '9:16'; label: st
 
 export default function VisualTemplatesPage() {
   const t = useTranslations('MktTemplates')
+  const tr = useDataDict('templates')
+  const imgTemplates = useMemo(() => VISUAL_TEMPLATES.map(x => localizeVisual(x, tr)), [tr])
+  const videoTemplates = useMemo(() => VIDEO_TEMPLATES.map(x => localizeVideo(x, tr)), [tr])
   const locale = useLocale()
   const answerLang = locale === 'vi' ? 'tiếng Việt' : locale === 'en' ? 'English' : '繁體中文'
   // 主分頁切換：'image' (圖片風格模板) 或 'video' (影片廣告腳本)
@@ -49,7 +54,8 @@ export default function VisualTemplatesPage() {
   // ─── 圖片模式狀態 ───────────────────────────────────────────────
   const [selectedImgCat, setSelectedImgCat] = useState<ImageTemplateCategory>('all')
   const [imgSearchQuery, setImgSearchQuery] = useState('')
-  const [selectedImgTemplate, setSelectedImgTemplate] = useState<VisualTemplate>(VISUAL_TEMPLATES[0])
+  const [selectedImgTemplateRaw, setSelectedImgTemplate] = useState<VisualTemplate>(VISUAL_TEMPLATES[0])
+  const selectedImgTemplate = imgTemplates.find(x => x.id === selectedImgTemplateRaw.id) ?? selectedImgTemplateRaw
   const [imgAspectRatio, setImgAspectRatio] = useState<'1:1' | '4:5' | '3:4' | '16:9' | '9:16'>(VISUAL_TEMPLATES[0].defaultAspect)
 
   const [imgUserPrompt, setImgUserPrompt] = useState('')
@@ -70,12 +76,14 @@ export default function VisualTemplatesPage() {
     aspectRatio: string
   } | null>(null)
   const [showImgPublishModal, setShowImgPublishModal] = useState(false)
-  const [previewModalTpl, setPreviewModalTpl] = useState<VisualTemplate | null>(null)
+  const [previewModalTplRaw, setPreviewModalTpl] = useState<VisualTemplate | null>(null)
+  const previewModalTpl = previewModalTplRaw && (imgTemplates.find(x => x.id === previewModalTplRaw.id) ?? previewModalTplRaw)
 
   // ─── 影片模式狀態 ───────────────────────────────────────────────
   const [selectedVideoCat, setSelectedVideoCat] = useState<VideoCategory>('all')
   const [videoSearchQuery, setVideoSearchQuery] = useState('')
-  const [selectedVideoTemplate, setSelectedVideoTemplate] = useState<VideoTemplate>(VIDEO_TEMPLATES[0])
+  const [selectedVideoTemplateRaw, setSelectedVideoTemplate] = useState<VideoTemplate>(VIDEO_TEMPLATES[0])
+  const selectedVideoTemplate = videoTemplates.find(x => x.id === selectedVideoTemplateRaw.id) ?? selectedVideoTemplateRaw
   const [videoAspect, setVideoAspect] = useState<'9:16' | '16:9' | '1:1' | '4:5'>(VIDEO_TEMPLATES[0].defaultAspect)
   const [videoProductName, setVideoProductName] = useState('')
   const [videoKeyPoint, setVideoKeyPoint] = useState('')
@@ -94,7 +102,7 @@ export default function VisualTemplatesPage() {
 
   // ─── 圖片篩選 ───────────────────────────────────────────────────
   const filteredImgTemplates = useMemo(() => {
-    return VISUAL_TEMPLATES.filter(t => {
+    return imgTemplates.filter(t => {
       const matchCat = selectedImgCat === 'all' || t.category === selectedImgCat
       const q = imgSearchQuery.trim().toLowerCase()
       if (!q) return matchCat
@@ -107,11 +115,11 @@ export default function VisualTemplatesPage() {
 
       return matchCat && matchQuery
     })
-  }, [selectedImgCat, imgSearchQuery])
+  }, [imgTemplates, selectedImgCat, imgSearchQuery])
 
   // ─── 影片篩選 ───────────────────────────────────────────────────
   const filteredVideoTemplates = useMemo(() => {
-    return VIDEO_TEMPLATES.filter(t => {
+    return videoTemplates.filter(t => {
       const matchCat = selectedVideoCat === 'all' || t.category === selectedVideoCat
       const q = videoSearchQuery.trim().toLowerCase()
       if (!q) return matchCat
@@ -125,7 +133,7 @@ export default function VisualTemplatesPage() {
 
       return matchCat && matchQuery
     })
-  }, [selectedVideoCat, videoSearchQuery])
+  }, [videoTemplates, selectedVideoCat, videoSearchQuery])
 
   // 選擇圖片模板
   const handleSelectImgTemplate = (tpl: VisualTemplate) => {
@@ -621,7 +629,7 @@ ${selectedVideoTemplate.rawScript}
 
                             <div className="text-[11px] font-medium text-white/95 drop-shadow-sm flex items-center gap-1 truncate">
                               <Sparkles className="h-3 w-3 text-amber-300 shrink-0" />
-                              <span className="truncate">{tpl.feeling.split('・')[0]}</span>
+                              <span className="truncate">{tpl.feeling.split(/[・·]/)[0].trim()}</span>
                             </div>
                           </div>
                         </div>

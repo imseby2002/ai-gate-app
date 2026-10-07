@@ -4,10 +4,12 @@ import { useState } from 'react'
 import { BookOpen, ChevronDown, ExternalLink, AlertTriangle } from 'lucide-react'
 import type { PlatformGuide } from '@/lib/platform-guides'
 import { useTranslations } from 'next-intl'
+import { useDataDict } from '@/lib/i18n-data/useDataDict'
 
-// 平台卡片內的「詳細設定教學」折疊區：一步一步中文教學＋注意事項＋官方文件
+// 平台卡片內的「詳細設定教學」折疊區：一步一步教學＋注意事項＋官方文件（非中文介面以 guides 字典翻譯）
 export default function PlatformGuidePanel({ guide }: { guide?: PlatformGuide }) {
   const t = useTranslations('MktPlatforms.guide')
+  const tr = useDataDict('guides')
   const [open, setOpen] = useState(false)
   if (!guide) return null
   let n = 0
@@ -20,17 +22,17 @@ export default function PlatformGuidePanel({ guide }: { guide?: PlatformGuide })
       </button>
       {open && (
         <div className="px-3 pb-3 space-y-4 text-[13px] leading-relaxed">
-          <p className="text-muted-foreground">{guide.summary}</p>
+          <p className="text-muted-foreground">{tr(guide.summary)}</p>
           {guide.sections.map(sec => (
             <div key={sec.title}>
-              <p className="font-semibold mb-1.5">{sec.title}</p>
+              <p className="font-semibold mb-1.5">{tr(sec.title)}</p>
               <ol className="space-y-1.5">
                 {sec.steps.map(step => {
                   n += 1
                   return (
                     <li key={step} className="flex gap-2">
                       <span className="shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary text-[11px] font-semibold flex items-center justify-center mt-0.5">{n}</span>
-                      <span className="break-words min-w-0">{step}</span>
+                      <span className="break-words min-w-0">{tr(step)}</span>
                     </li>
                   )
                 })}
@@ -40,7 +42,7 @@ export default function PlatformGuidePanel({ guide }: { guide?: PlatformGuide })
           {guide.warnings && guide.warnings.length > 0 && (
             <div className="rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 px-3 py-2 space-y-1">
               {guide.warnings.map(w => (
-                <p key={w} className="flex gap-1.5"><AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />{w}</p>
+                <p key={w} className="flex gap-1.5"><AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />{tr(w)}</p>
               ))}
             </div>
           )}
@@ -49,7 +51,7 @@ export default function PlatformGuidePanel({ guide }: { guide?: PlatformGuide })
             {guide.links.map(l => (
               <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer"
                 className="inline-flex items-center gap-0.5 text-primary hover:underline">
-                {l.label} <ExternalLink className="h-3 w-3" />
+                {tr(l.label)} <ExternalLink className="h-3 w-3" />
               </a>
             ))}
           </div>
