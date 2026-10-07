@@ -73,6 +73,8 @@ export default function AuditPlatformPage() {
   const [ruleVersions, setRuleVersions] = useState<AuditRuleVersion[]>([])
   const [ruleStatusFilter, setRuleStatusFilter] = useState<string>('all')
   const [selectedRuleForHistory, setSelectedRuleForHistory] = useState<AuditRule | null>(null)
+  const [newRule, setNewRule] = useState({ title: '', target_product: '', condition_desc: '', numerical_delta: '', unit: 'ml', hypothesis_reason: '' })
+  const [savingRule, setSavingRule] = useState(false)
 
   // 稽核日誌與模組概況
   const [logs, setLogs] = useState<AuditKnowledgeLog[]>([])
@@ -180,9 +182,32 @@ export default function AuditPlatformPage() {
         alert(data.message)
         fetchRules()
         fetchCalculation()
+      } else {
+        alert(data.error || t('saveFailed'))
       }
     } catch (e) {
       console.error('Failed to promote rule:', e)
+    }
+  }
+
+  const handleCreateRule = async () => {
+    if (!newRule.title.trim() || savingRule) return
+    setSavingRule(true)
+    try {
+      const res = await fetch('/api/audit/platform/rules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...newRule, numerical_delta: Number(newRule.numerical_delta) || 0, store: targetStore }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (data.success) {
+        setNewRule({ title: '', target_product: '', condition_desc: '', numerical_delta: '', unit: 'ml', hypothesis_reason: '' })
+        fetchRules()
+      } else {
+        alert(data.error || t('saveFailed'))
+      }
+    } finally {
+      setSavingRule(false)
     }
   }
 
@@ -665,6 +690,32 @@ export default function AuditPlatformPage() {
                 {t('ruleCardHint')}
               </div>
             </div>
+
+            {/* 新增規則（從假說開始，逐級升級） */}
+            <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
+              <div className="text-sm font-semibold text-white">{t('newRuleTitle')}</div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <Input value={newRule.title} onChange={e => setNewRule(r => ({ ...r, title: e.target.value }))} placeholder={t('newRuleTitlePh')} className="bg-slate-950 border-slate-700 text-slate-100 md:col-span-3" />
+                <Input value={newRule.target_product} onChange={e => setNewRule(r => ({ ...r, target_product: e.target.value }))} placeholder={t('newRuleProductPh')} className="bg-slate-950 border-slate-700 text-slate-100" />
+                <Input value={newRule.condition_desc} onChange={e => setNewRule(r => ({ ...r, condition_desc: e.target.value }))} placeholder={t('newRuleConditionPh')} className="bg-slate-950 border-slate-700 text-slate-100" />
+                <div className="flex gap-2">
+                  <Input type="number" value={newRule.numerical_delta} onChange={e => setNewRule(r => ({ ...r, numerical_delta: e.target.value }))} placeholder={t('newRuleDeltaPh')} className="bg-slate-950 border-slate-700 text-slate-100" />
+                  <select value={newRule.unit} onChange={e => setNewRule(r => ({ ...r, unit: e.target.value }))} className="rounded-md bg-slate-950 border border-slate-700 text-slate-100 text-sm px-2">
+                    <option value="ml">ml</option><option value="g">g</option><option value="份">份</option>
+                  </select>
+                </div>
+                <Input value={newRule.hypothesis_reason} onChange={e => setNewRule(r => ({ ...r, hypothesis_reason: e.target.value }))} placeholder={t('newRuleReasonPh')} className="bg-slate-950 border-slate-700 text-slate-100 md:col-span-3" />
+              </div>
+              <div className="flex justify-end">
+                <Button size="sm" disabled={!newRule.title.trim() || savingRule} onClick={handleCreateRule} className="bg-indigo-600 hover:bg-indigo-500 text-white">
+                  {savingRule ? '…' : t('newRuleSubmit')}
+                </Button>
+              </div>
+            </div>
+
+            {rules.length === 0 && (
+              <div className="text-center text-sm text-slate-500 py-8">{t('noRulesYet')}</div>
+            )}
 
             {/* 規則卡片列表 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
