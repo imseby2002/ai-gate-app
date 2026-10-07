@@ -4143,6 +4143,62 @@
       "automation": "Quy trình Marketing",
       "linked": "Đang liên kết",
       "companySettings": "Cài đặt dữ liệu công ty"
+    },
+    "x": {
+      "free": "Miễn phí",
+      "mktMessage": "Tin nhắn marketing",
+      "we": "chúng tôi",
+      "smsEmpty": "Nội dung SMS không được để trống",
+      "needPhone": "Vui lòng cung cấp ít nhất một số điện thoại hợp lệ",
+      "smsTab": "Tin nhắn (SMS)",
+      "verifiedCallerId": "Hiển thị số thật (Verified Caller ID)",
+      "voiceRouting": "Hệ thống gọi thoại đa quốc gia thông minh",
+      "twNumber": "Số Đài Loan (09xx / +886)",
+      "via": "qua",
+      "twVoiceNote": "Hỗ trợ số gọi đã xác minh · không cần thuê số",
+      "vnNumber": "Số Việt Nam (+84)",
+      "vnVoiceNote": "Gọi nội địa Việt Nam · khoảng $0.8–$1.2/phút · tuyến trong nước",
+      "otherCountries": "Các quốc gia khác",
+      "intlVoiceNote": "CPaaS quốc tế hàng đầu · tỉ lệ kết nối cao",
+      "callerDisplay": "hiển thị trên máy người nhận",
+      "callerIdPh": "+886912345678 hoặc 84xxxxxxxxx",
+      "callerIdHelp": "Nhập số điện thoại thật đã xác minh miễn phí trên Twilio (Verified Caller ID); người nhận sẽ thấy số của bạn.",
+      "phonesPh": "+886912345678 (Đài Loan)\n+84901234567 (Việt Nam)\n+12025550123 (quốc tế)",
+      "totalNumbers": "Tổng: <b>{n}</b> số",
+      "tw": "Đài Loan: ",
+      "vn": "Việt Nam: ",
+      "intl": "Quốc tế: ",
+      "smsRouting": "Hệ thống SMS đa quốc gia thông minh",
+      "pointsLeft": "Còn {n} điểm",
+      "linked": "(đã liên kết tài khoản)",
+      "twSmsNote": "Tuyến nội địa trực tiếp · khoảng $0.72–$0.86/tin",
+      "vnSmsNote": "SMS thương hiệu/Zalo · khoảng $0.3–$0.8/tin",
+      "otherIntl": "Số quốc tế khác",
+      "twilioBird": "Twilio (dự phòng Bird)",
+      "intlSmsNote": "Gửi trực tiếp tới hơn 180 quốc gia",
+      "smsContent": "Nội dung SMS",
+      "useUnit4": "Dùng nội dung đơn vị 4",
+      "aiSms": "AI tạo SMS 70 ký tự",
+      "smsPh": "Nhập nội dung SMS… hỗ trợ biến '{name}' (tên khách hàng).\nVD: Chào '{name}', cảm ơn bạn đã ủng hộ! Ưu đãi riêng tuần này: https://example.com/promo Trả lời STOP để hủy",
+      "charCount": "Số ký tự: ",
+      "segments": "Ước tính: {n} tin / số",
+      "longSms": "Trên 70 ký tự sẽ tự động ghép thành SMS dài",
+      "smsLimit": "Giới hạn chuẩn: 70 ký tự/tin (Unicode)",
+      "recipients": "Danh sách số người nhận",
+      "usePhoneList": "Dùng danh sách gọi ({n})",
+      "smsPhonesPh": "Nhập số điện thoại, phân cách bằng xuống dòng, dấu phẩy hoặc chấm phẩy. VD:\n0912345678 (Đài Loan)\n+84912345678 (Việt Nam)\n+12025550123 (quốc tế)",
+      "sending": "Đang gửi {n} SMS…",
+      "startSend": "Gửi SMS tới {n} số",
+      "smsResult": "Kết quả gửi SMS",
+      "okOfTotal": "Thành công {ok} / {total} tin",
+      "delivered": "Đã gửi",
+      "lastSent": "Lần gửi gần nhất: ",
+      "keysNote": "Khóa của từng kênh (đặt trong .env.local hoặc biến môi trường máy chủ):",
+      "planNeed": "Đơn vị này cần gói {need}. Gói hiện tại: {cur}",
+      "viewPlans": "Xem gói & nâng cấp",
+      "corePlus": "CORE trở lên",
+      "proPlus": "PRO trở lên",
+      "openPipeline": "Mở quy trình marketing tự động hoàn toàn"
     }
   },
   "Meeting": {
@@ -8957,6 +9013,82 @@
       "social": "Tương tác MXH",
       "trust": "Uy tín & đánh giá",
       "business": "Thông báo kinh doanh"
+    }
+  },
+  "MktPlatforms": {
+    "ga4Hosts": " | phiên theo trang: {hosts}",
+    "p": {
+      "Facebook": {
+        "name": "Trang Facebook",
+        "note": "Dùng chung cho FB Reels. Tạo app trên Meta for Developers, xin quyền pages_manage_posts + pages_read_engagement + pages_show_list rồi tạo Token. Để AI Agent chạy quảng cáo Meta: dùng System User token có quyền ads_management và nhập ID tài khoản quảng cáo.",
+        "f_ad_account_id": "ID tài khoản quảng cáo (không bắt buộc, để Agent chạy quảng cáo)"
+      },
+      "Instagram": {
+        "note": "Dùng chung cho IG Reels. Cần tài khoản IG doanh nghiệp liên kết với Trang Facebook."
+      },
+      "Threads": {
+        "note": "Cần quyền truy cập Threads API."
+      },
+      "LinkedIn": {
+        "note": "Author URN: cá nhân là urn:li:person:xxxx, trang công ty là urn:li:organization:xxxx.",
+        "f_client_id": "Client ID (không bắt buộc, để tự làm mới token)",
+        "f_client_secret": "Client Secret (không bắt buộc, để tự làm mới token)",
+        "f_refresh_token": "Refresh Token (không bắt buộc, chỉ khi LinkedIn cấp)"
+      },
+      "Twitter_X": {
+        "note": "Lấy bốn giá trị này ở trang “Keys and Tokens” trong trang nhà phát triển."
+      },
+      "LINE_VOOM": {
+        "name": "Gửi hàng loạt LINE Official Account",
+        "note": "Dùng Channel Access Token của LINE Official Account để gửi tin cho tất cả bạn bè (tính vào hạn mức tin nhắn hàng tháng theo số bạn bè). Lưu riêng với thông tin LINE của kênh CSKH."
+      },
+      "Zalo": {
+        "name": "Zalo OA (đăng bài)",
+        "note": "Dùng để đăng bài; lưu riêng với thông tin Zalo của kênh CSKH.",
+        "f_app_id": "App ID (để tự làm mới token)",
+        "f_secret_key": "Secret Key (để tự làm mới token)",
+        "f_refresh_token": "Refresh Token (để tự làm mới token)"
+      },
+      "YouTube_Shorts": {
+        "note": "Refresh Token có được sau khi hoàn tất ủy quyền Google OAuth một lần (ví dụ qua OAuth Playground); không thể tạo bằng cách đăng nhập mật khẩu."
+      },
+      "TikTok": {
+        "note": "Cần Access Token có quyền Content Posting API.",
+        "f_client_key": "Client Key (để tự làm mới token)",
+        "f_client_secret": "Client Secret (để tự làm mới token)",
+        "f_refresh_token": "Refresh Token (để tự làm mới token)"
+      },
+      "GA4": {
+        "name": "Google Analytics 4 (lưu lượng website, chỉ đọc)",
+        "note": "Cho phép AI Agent đọc số phiên/người dùng của website. Các bước: ① bật “Google Analytics Data API” trong Google Cloud Console ② tạo tài khoản dịch vụ và tải khóa JSON ③ trong GA4 “Quản trị → Quản lý quyền truy cập tài sản”, thêm email tài khoản dịch vụ với vai trò “Người xem” ④ ID tài sản ở “Quản trị → Chi tiết tài sản”. Khi điền “Measurement ID”, website homestay và trang đăng ký thành viên trên nền tảng sẽ tự gắn mã theo dõi; với website bên ngoài, dán cùng Measurement ID và thêm cả hai tên miền trong “Định cấu hình miền” của luồng dữ liệu GA4 để theo dõi liên miền. Không tính vào số nền tảng của gói.",
+        "f_property_id": "ID tài sản GA4",
+        "f_measurement_id": "Measurement ID (tự gắn mã theo dõi cho website homestay trên nền tảng)",
+        "f_service_account_json": "Khóa JSON tài khoản dịch vụ (dán toàn bộ nội dung tệp)"
+      }
+    },
+    "adsOk": "{acc} | {name} | {cur} | trạng thái: {status} | 30 ngày qua: tiếp cận {reach}, hiển thị {imp}, chi tiêu {spend}",
+    "testFailed": "Kiểm tra thất bại",
+    "netErr": "Lỗi mạng",
+    "unknown": "(không rõ)",
+    "ga4Ok": "Tài sản {pid} | 7 ngày qua: phiên {s}, người dùng {u}, người dùng mới {nu}, lượt xem {pv}",
+    "saveFailed": "Lưu thất bại",
+    "saved": "Đã lưu {pid}",
+    "title": "Kết nối nền tảng đăng bài",
+    "needAdmin": "Kết nối nền tảng phải do <b>chủ sở hữu hoặc quản trị viên (IT)</b> thiết lập. Hãy nhờ chủ sở hữu cấp quyền quản trị.",
+    "connected": "Đã kết nối",
+    "notLinked": "Chưa liên kết",
+    "docs": "Tài liệu chính thức",
+    "maskedPh": "Đã đặt {masked} (để trống để giữ nguyên)",
+    "save": "Lưu",
+    "testGa4": "Kiểm tra kết nối GA4 (chỉ đọc)",
+    "testAds": "Kiểm tra kết nối Meta Ads (chỉ đọc, không tốn tiền)",
+    "guide": {
+      "title": "Hướng dẫn thiết lập từng bước",
+      "docs": "Tài liệu chính thức: "
+    },
+    "token": {
+      "refreshing": "Đang tự làm mới token | token hiện tại hết hạn: {at}",
+      "failed": "Lần tự làm mới gần nhất thất bại: {error} (hãy lấy và dán Refresh Token mới)"
     }
   }
 }

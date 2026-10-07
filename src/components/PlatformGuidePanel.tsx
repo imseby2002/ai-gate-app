@@ -3,9 +3,11 @@
 import { useState } from 'react'
 import { BookOpen, ChevronDown, ExternalLink, AlertTriangle } from 'lucide-react'
 import type { PlatformGuide } from '@/lib/platform-guides'
+import { useTranslations } from 'next-intl'
 
 // 平台卡片內的「詳細設定教學」折疊區：一步一步中文教學＋注意事項＋官方文件
 export default function PlatformGuidePanel({ guide }: { guide?: PlatformGuide }) {
+  const t = useTranslations('MktPlatforms.guide')
   const [open, setOpen] = useState(false)
   if (!guide) return null
   let n = 0
@@ -13,7 +15,7 @@ export default function PlatformGuidePanel({ guide }: { guide?: PlatformGuide })
     <div className="mb-3 rounded-xl border bg-muted/30">
       <button type="button" onClick={() => setOpen(v => !v)}
         className="w-full flex items-center justify-between gap-2 px-3 py-2.5 text-sm font-medium text-primary">
-        <span className="flex items-center gap-1.5"><BookOpen className="h-4 w-4" /> 詳細設定教學（一步一步）</span>
+        <span className="flex items-center gap-1.5"><BookOpen className="h-4 w-4" /> {t('title')}</span>
         <ChevronDown className={`h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
@@ -43,7 +45,7 @@ export default function PlatformGuidePanel({ guide }: { guide?: PlatformGuide })
             </div>
           )}
           <div className="flex flex-wrap gap-x-3 gap-y-1">
-            <span className="text-muted-foreground">官方文件：</span>
+            <span className="text-muted-foreground">{t('docs')}</span>
             {guide.links.map(l => (
               <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer"
                 className="inline-flex items-center gap-0.5 text-primary hover:underline">

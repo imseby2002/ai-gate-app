@@ -4236,6 +4236,62 @@
       "automation": "行銷流水線",
       "linked": "串接中",
       "companySettings": "公司資料設定"
+    },
+    "x": {
+      "free": "免費",
+      "mktMessage": "行銷訊息",
+      "we": "我們",
+      "smsEmpty": "簡訊內容不可為空",
+      "needPhone": "請提供至少一組有效電話號碼",
+      "smsTab": "簡訊 (SMS)",
+      "verifiedCallerId": "支援真實號碼外顯 (Verified Caller ID)",
+      "voiceRouting": "全球智慧多國語音外呼系統 (Smart Voice Routing)",
+      "twNumber": "台灣門號 (09xx / +886)",
+      "via": "走",
+      "twVoiceNote": "支援驗證主叫號碼 (Verified ID) · 免租號",
+      "vnNumber": "越南門號 (+84)",
+      "vnVoiceNote": "越南本地直撥 · 約 $0.8~$1.2/分 · 境內線路",
+      "otherCountries": "全球其他國家",
+      "intlVoiceNote": "國際頂級 CPaaS · 高接通率",
+      "callerDisplay": "受話端螢幕顯示",
+      "callerIdPh": "+886912345678 或 84xxxxxxxxx",
+      "callerIdHelp": "填寫於 Twilio 免費通過驗證的真實電話（Verified Caller ID），撥出時對方手機將直接顯示您本人電話。",
+      "phonesPh": "+886912345678 (台灣)\n+84901234567 (越南)\n+12025550123 (國際)",
+      "totalNumbers": "總計：<b>{n}</b> 門號",
+      "tw": "台灣：",
+      "vn": "越南：",
+      "intl": "國際：",
+      "smsRouting": "全球智慧多國分流簡訊系統 (Smart SMS Routing)",
+      "pointsLeft": "剩餘 {n} 點",
+      "linked": "(已綁定帳號)",
+      "twSmsNote": "本地直連通道 · 約 $0.72~$0.86/則",
+      "vnSmsNote": "品牌簡訊/Zalo · 約 $0.3~$0.8/則",
+      "otherIntl": "其他國際門號",
+      "twilioBird": "Twilio (備援 Bird)",
+      "intlSmsNote": "全球 180+ 國直達",
+      "smsContent": "簡訊推廣內容 (SMS Content)",
+      "useUnit4": "帶入單元4文案",
+      "aiSms": "AI 產生 70 字精準簡訊",
+      "smsPh": "請輸入簡訊內容... 支援變數 '{name}' (客戶名稱)。\n例：【喬民宿】親愛的'{name}'，感謝支持！本週專屬住宿優惠已發送，點擊查看詳情: https://example.com/promo 回覆 STOP 停閱",
+      "charCount": "當前字數：",
+      "segments": "預估則數：{n} 則 / 門號",
+      "longSms": "超過 70 字將自動以長簡訊拼接發送",
+      "smsLimit": "標準中文單則上限 70 字",
+      "recipients": "收件電話號碼清單",
+      "usePhoneList": "帶入語音名單 ({n} 支)",
+      "smsPhonesPh": "請輸入目標電話號碼，支援以換行、逗號或分號分隔。例如：\n0912345678 (台灣)\n+84912345678 (越南)\n+12025550123 (國際)",
+      "sending": "正在批次發送 {n} 則簡訊...",
+      "startSend": "開始批次發送簡訊 ({n} 支門號)",
+      "smsResult": "簡訊發送結果",
+      "okOfTotal": "成功 {ok} / 共 {total} 則",
+      "delivered": "已送達",
+      "lastSent": "上次發送時間：",
+      "keysNote": "各通道金鑰設定（於 .env.local 或伺服器環境變數）：",
+      "planNeed": "此單元需 {need} 方案，目前方案：{cur}",
+      "viewPlans": "查看方案並升級",
+      "corePlus": "CORE 以上",
+      "proPlus": "PRO 以上",
+      "openPipeline": "開啟行銷流水線全自動執行"
     }
   },
   "Meeting": {
@@ -9050,6 +9106,82 @@
       "social": "社群互動",
       "trust": "信任證言",
       "business": "商業公告"
+    }
+  },
+  "MktPlatforms": {
+    "ga4Hosts": "｜各網站 sessions：{hosts}",
+    "p": {
+      "Facebook": {
+        "name": "Facebook 粉絲頁",
+        "note": "同時套用於 FB Reels。到 Meta for Developers 建立 App，申請 pages_manage_posts + pages_read_engagement + pages_show_list 權限後產生 Token。要讓 AI Agent 投放 Meta 廣告：Token 使用具 ads_management 權限的 System User token，並填入廣告帳戶 ID。",
+        "f_ad_account_id": "廣告帳戶 ID（選填，Agent 投放廣告用）"
+      },
+      "Instagram": {
+        "note": "同時套用於 IG Reels。需要與粉專連結的 IG 商業帳號。"
+      },
+      "Threads": {
+        "note": "需要 Threads API 存取權限。"
+      },
+      "LinkedIn": {
+        "note": "Author URN：個人帳號為 urn:li:person:xxxx，公司頁為 urn:li:organization:xxxx。",
+        "f_client_id": "Client ID（選填，自動更新權杖用）",
+        "f_client_secret": "Client Secret（選填，自動更新權杖用）",
+        "f_refresh_token": "Refresh Token（選填，LinkedIn 有開放才有）"
+      },
+      "Twitter_X": {
+        "note": "開發者後台「Keys and Tokens」頁可取得以下四組值。"
+      },
+      "LINE_VOOM": {
+        "name": "LINE 官方帳號群發",
+        "note": "沿用 LINE 官方帳號的 Channel Access Token，群發訊息給所有好友（依好友數計入每月訊息則數）。與客服頻道綁定的 LINE 憑證分開儲存。"
+      },
+      "Zalo": {
+        "name": "Zalo OA（發文）",
+        "note": "發表文章用，與客服頻道綁定的 Zalo 憑證分開儲存。",
+        "f_app_id": "App ID（自動更新權杖用）",
+        "f_secret_key": "Secret Key（自動更新權杖用）",
+        "f_refresh_token": "Refresh Token（自動更新權杖用）"
+      },
+      "YouTube_Shorts": {
+        "note": "Refresh Token 需先完成一次 Google OAuth 授權流程取得（例如透過 OAuth Playground），無法直接用密碼登入產生。"
+      },
+      "TikTok": {
+        "note": "需要具備 Content Posting API 權限的 Access Token。",
+        "f_client_key": "Client Key（自動更新權杖用）",
+        "f_client_secret": "Client Secret（自動更新權杖用）",
+        "f_refresh_token": "Refresh Token（自動更新權杖用）"
+      },
+      "GA4": {
+        "name": "Google Analytics 4（官網流量，唯讀）",
+        "note": "讓 AI Agent 讀取官網 sessions／使用者數。步驟：① Google Cloud Console 啟用「Google Analytics Data API」② 建立服務帳戶並下載 JSON 金鑰 ③ GA4「管理 → 資源存取管理」把服務帳戶 email 加為「檢視者」④ 資源 ID 在「管理 → 資源詳細資料」。填了「評估 ID」，本平台的民宿官網與加入會員頁會自動裝上追蹤碼；自己的外部網站請貼同一個評估 ID，並在 GA4 資料串流「設定網域」加入兩個網域做跨網域追蹤。不佔方案平台數。",
+        "f_property_id": "GA4 資源 ID",
+        "f_measurement_id": "評估 ID（本平台民宿官網自動裝追蹤碼用）",
+        "f_service_account_json": "服務帳戶 JSON 金鑰（整份檔案內容貼上）"
+      }
+    },
+    "adsOk": "{acc}｜{name}｜{cur}｜狀態：{status}｜近 30 天觸及 {reach}、曝光 {imp}、花費 {spend}",
+    "testFailed": "測試失敗",
+    "netErr": "網路錯誤",
+    "unknown": "(未知)",
+    "ga4Ok": "資源 {pid}｜近 7 天 sessions {s}、使用者 {u}、新使用者 {nu}、瀏覽量 {pv}",
+    "saveFailed": "儲存失敗",
+    "saved": "{pid} 已儲存",
+    "title": "發文平台連結",
+    "needAdmin": "平台連結需由<b>負責人或管理員（IT）</b>設定。如需綁定請洽負責人開通管理員權限。",
+    "connected": "已連線",
+    "notLinked": "未綁定",
+    "docs": "官方文件",
+    "maskedPh": "已設定 {masked}（留空不變更）",
+    "save": "儲存",
+    "testGa4": "測試 GA4 連線（唯讀）",
+    "testAds": "測試 Meta 廣告連線（唯讀，不會花錢）",
+    "guide": {
+      "title": "詳細設定教學（一步一步）",
+      "docs": "官方文件："
+    },
+    "token": {
+      "refreshing": "權杖自動更新中｜目前權杖到期：{at}",
+      "failed": "上次自動更新失敗：{error}（請重新取得並貼上 Refresh Token）"
     }
   }
 }

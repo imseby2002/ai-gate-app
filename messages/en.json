@@ -4236,6 +4236,62 @@
       "automation": "Marketing Pipeline",
       "linked": "Linked",
       "companySettings": "Company Data Settings"
+    },
+    "x": {
+      "free": "Free",
+      "mktMessage": "Marketing message",
+      "we": "us",
+      "smsEmpty": "SMS content cannot be empty",
+      "needPhone": "Please provide at least one valid phone number",
+      "smsTab": "SMS",
+      "verifiedCallerId": "Shows your real number (Verified Caller ID)",
+      "voiceRouting": "Global smart voice routing",
+      "twNumber": "Taiwan numbers (09xx / +886)",
+      "via": "via",
+      "twVoiceNote": "Verified caller ID · no number rental",
+      "vnNumber": "Vietnam numbers (+84)",
+      "vnVoiceNote": "Local Vietnam calls · about $0.8–$1.2/min · domestic route",
+      "otherCountries": "Other countries",
+      "intlVoiceNote": "Top-tier international CPaaS · high connect rate",
+      "callerDisplay": "shown on the recipient’s screen",
+      "callerIdPh": "+886912345678 or 84xxxxxxxxx",
+      "callerIdHelp": "Enter a real phone number verified for free in Twilio (Verified Caller ID); recipients will see your own number.",
+      "phonesPh": "+886912345678 (Taiwan)\n+84901234567 (Vietnam)\n+12025550123 (international)",
+      "totalNumbers": "Total: <b>{n}</b> numbers",
+      "tw": "Taiwan: ",
+      "vn": "Vietnam: ",
+      "intl": "International: ",
+      "smsRouting": "Global smart SMS routing",
+      "pointsLeft": "{n} points left",
+      "linked": "(account linked)",
+      "twSmsNote": "Direct local route · about $0.72–$0.86/message",
+      "vnSmsNote": "Brandname SMS/Zalo · about $0.3–$0.8/message",
+      "otherIntl": "Other international numbers",
+      "twilioBird": "Twilio (Bird as backup)",
+      "intlSmsNote": "Direct to 180+ countries",
+      "smsContent": "SMS content",
+      "useUnit4": "Use Unit 4 copy",
+      "aiSms": "AI: write a 70-character SMS",
+      "smsPh": "Enter the SMS text… supports the variable '{name}' (customer name).\ne.g. Dear '{name}', thank you! This week's exclusive offer is ready: https://example.com/promo Reply STOP to opt out",
+      "charCount": "Characters: ",
+      "segments": "Estimated: {n} message(s) / number",
+      "longSms": "Over 70 characters will be sent as a concatenated long SMS",
+      "smsLimit": "Standard limit: 70 characters per message (Unicode)",
+      "recipients": "Recipient phone numbers",
+      "usePhoneList": "Use call list ({n})",
+      "smsPhonesPh": "Enter phone numbers separated by new lines, commas or semicolons, e.g.\n0912345678 (Taiwan)\n+84912345678 (Vietnam)\n+12025550123 (international)",
+      "sending": "Sending {n} SMS…",
+      "startSend": "Send SMS to {n} numbers",
+      "smsResult": "SMS results",
+      "okOfTotal": "{ok} of {total} sent",
+      "delivered": "Delivered",
+      "lastSent": "Last sent: ",
+      "keysNote": "Channel keys (set in .env.local or server environment variables):",
+      "planNeed": "This unit requires the {need} plan. Current plan: {cur}",
+      "viewPlans": "View plans & upgrade",
+      "corePlus": "CORE or above",
+      "proPlus": "PRO or above",
+      "openPipeline": "Open the fully automated marketing pipeline"
     }
   },
   "Meeting": {
@@ -9050,6 +9106,82 @@
       "social": "Social engagement",
       "trust": "Trust & reviews",
       "business": "Business notices"
+    }
+  },
+  "MktPlatforms": {
+    "ga4Hosts": " | sessions by site: {hosts}",
+    "p": {
+      "Facebook": {
+        "name": "Facebook Page",
+        "note": "Also used for FB Reels. Create an app on Meta for Developers, request pages_manage_posts + pages_read_engagement + pages_show_list, then generate a token. For the AI Agent to run Meta ads, use a System User token with ads_management and enter the ad account ID.",
+        "f_ad_account_id": "Ad account ID (optional, for Agent ads)"
+      },
+      "Instagram": {
+        "note": "Also used for IG Reels. Requires an IG business account linked to your Facebook Page."
+      },
+      "Threads": {
+        "note": "Requires Threads API access."
+      },
+      "LinkedIn": {
+        "note": "Author URN: urn:li:person:xxxx for a person, urn:li:organization:xxxx for a company page.",
+        "f_client_id": "Client ID (optional, for automatic token refresh)",
+        "f_client_secret": "Client Secret (optional, for automatic token refresh)",
+        "f_refresh_token": "Refresh Token (optional, only if LinkedIn grants it)"
+      },
+      "Twitter_X": {
+        "note": "Get these four values from the “Keys and Tokens” page in the developer portal."
+      },
+      "LINE_VOOM": {
+        "name": "LINE Official Account broadcast",
+        "note": "Uses the LINE Official Account Channel Access Token to broadcast to all friends (counts toward your monthly message quota by number of friends). Stored separately from the customer-service LINE credentials."
+      },
+      "Zalo": {
+        "name": "Zalo OA (posts)",
+        "note": "For publishing articles; stored separately from the customer-service Zalo credentials.",
+        "f_app_id": "App ID (for automatic token refresh)",
+        "f_secret_key": "Secret Key (for automatic token refresh)",
+        "f_refresh_token": "Refresh Token (for automatic token refresh)"
+      },
+      "YouTube_Shorts": {
+        "note": "The Refresh Token comes from completing a Google OAuth authorization once (e.g. via OAuth Playground); it cannot be generated by signing in with a password."
+      },
+      "TikTok": {
+        "note": "Requires an Access Token with Content Posting API permission.",
+        "f_client_key": "Client Key (for automatic token refresh)",
+        "f_client_secret": "Client Secret (for automatic token refresh)",
+        "f_refresh_token": "Refresh Token (for automatic token refresh)"
+      },
+      "GA4": {
+        "name": "Google Analytics 4 (website traffic, read-only)",
+        "note": "Lets the AI Agent read website sessions/users. Steps: ① enable the “Google Analytics Data API” in Google Cloud Console ② create a service account and download its JSON key ③ in GA4 “Admin → Property access management”, add the service account email as a “Viewer” ④ the property ID is under “Admin → Property details”. With a Measurement ID, this platform’s guesthouse site and member sign-up page get the tracking code automatically; for your own external site paste the same Measurement ID and add both domains under the GA4 data stream’s “Configure domains” for cross-domain tracking. Does not count toward your plan’s platform limit.",
+        "f_property_id": "GA4 property ID",
+        "f_measurement_id": "Measurement ID (auto-installs tracking on this platform’s guesthouse site)",
+        "f_service_account_json": "Service account JSON key (paste the whole file)"
+      }
+    },
+    "adsOk": "{acc} | {name} | {cur} | status: {status} | last 30 days: reach {reach}, impressions {imp}, spend {spend}",
+    "testFailed": "Test failed",
+    "netErr": "Network error",
+    "unknown": "(unknown)",
+    "ga4Ok": "Property {pid} | last 7 days: sessions {s}, users {u}, new users {nu}, page views {pv}",
+    "saveFailed": "Save failed",
+    "saved": "{pid} saved",
+    "title": "Publishing platform connections",
+    "needAdmin": "Platform connections must be set up by the <b>owner or an admin (IT)</b>. Ask the owner to grant you admin rights.",
+    "connected": "Connected",
+    "notLinked": "Not linked",
+    "docs": "Official docs",
+    "maskedPh": "Set: {masked} (leave blank to keep)",
+    "save": "Save",
+    "testGa4": "Test GA4 connection (read-only)",
+    "testAds": "Test Meta Ads connection (read-only, no spend)",
+    "guide": {
+      "title": "Step-by-step setup guide",
+      "docs": "Official docs: "
+    },
+    "token": {
+      "refreshing": "Token auto-refresh on | current token expires: {at}",
+      "failed": "Last auto-refresh failed: {error} (get and paste a new Refresh Token)"
     }
   }
 }
