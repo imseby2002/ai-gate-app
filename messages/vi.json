@@ -3977,6 +3977,13 @@
     }
   },
   "Meeting": {
+    "translateTo": "Dịch sang",
+    "noTranslation": "Không dịch",
+    "download": "Tải biên bản",
+    "downloading": "Đang chuẩn bị…",
+    "history": "Cuộc họp của tôi",
+    "historyEmpty": "Chưa có cuộc họp nào.",
+    "date": "Ngày",
     "title": "Biên bản họp",
     "subtitle": "Ghi chép và dịch trực tiếp cho cuộc họp trực tiếp hoặc trực tuyến",
     "myLang": "Tôi nói",
