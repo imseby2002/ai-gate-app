@@ -32,9 +32,9 @@ export default async function SettingsPage() {
         {/* Company & Team Membership Section */}
         <div>
           <div className="mb-6">
-            <h2 className="text-lg font-bold">公司與團隊成員</h2>
+            <h2 className="text-lg font-bold">{t('page.companyTitle')}</h2>
             <p className="text-muted-foreground text-sm mt-1">
-              管理所屬公司實體、成員名冊與協同邀請權限。
+              {t('page.companyDesc')}
             </p>
           </div>
           <CompanyMembershipSection />
@@ -47,9 +47,9 @@ export default async function SettingsPage() {
             <Building2 className="h-5 w-5 text-primary" />
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-bold">公司資料</h2>
+            <h2 className="text-lg font-bold">{t('page.dataTitle')}</h2>
             <p className="text-muted-foreground text-sm mt-0.5">
-              基本資料、品牌、產品、門市、素材全公司共用一份，行銷、客服、AI Agent 即時讀取。
+              {t('page.dataDesc')}
             </p>
           </div>
           <ArrowRight className="h-5 w-5 text-muted-foreground shrink-0" />

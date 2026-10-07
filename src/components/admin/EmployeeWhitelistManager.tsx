@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import {
   Plus, Trash2, Mail, Loader2, Building2, Edit3, Check, X, ShieldCheck
 } from 'lucide-react'
@@ -32,6 +33,7 @@ export function EmployeeWhitelistManager({
   onRefresh,
 }: Props) {
   const router = useRouter()
+  const t = useTranslations('Settings.whitelist')
   const isCompanyMode = mode === 'company' || !!currentCompany
 
   const [entries, setEntries] = useState<WhitelistEntry[]>(initialEntries ?? [])
@@ -119,13 +121,13 @@ export function EmployeeWhitelistManager({
       if (onRefresh) onRefresh()
     } else {
       const data = await res.json()
-      setError(data.error === 'Email already in whitelist' ? '此 Email 已在名單中' : data.error)
+      setError(data.error === 'Email already in whitelist' ? t('exists') : data.error)
     }
     setAdding(false)
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('確定要移除此員工 Email 白名單？')) return
+    if (!confirm(t('confirmRemove'))) return
     setDeletingId(id)
     await fetch(apiEndpoint, {
       method: 'DELETE',
@@ -161,7 +163,7 @@ export function EmployeeWhitelistManager({
         setEditingId(null)
       } else {
         const d = await res.json()
-        alert(d.error ?? '更新備註失敗')
+        alert(d.error ?? t('noteFailed'))
       }
     } catch (err: any) {
       alert(err.message)
@@ -189,7 +191,7 @@ export function EmployeeWhitelistManager({
         setEditingCompanyId(null)
       } else {
         const d = await res.json()
-        alert(d.error ?? '更新所屬公司失敗')
+        alert(d.error ?? t('companyFailed'))
       }
     } catch (err: any) {
       alert(err.message)
@@ -205,24 +207,24 @@ export function EmployeeWhitelistManager({
             {isCompanyMode ? (
               <>
                 <Building2 className="h-5 w-5 text-indigo-600" />
-                {currentCompany?.name ?? '本公司'}・員工 Email 白名單
+                {t('titleCompany', { name: currentCompany?.name ?? t('ourCompany') })}
               </>
             ) : (
               <>
                 <ShieldCheck className="h-5 w-5 text-primary" />
-                員工 Email 白名單
+                {t('title')}
               </>
             )}
           </h2>
           <p className="text-xs text-gray-500 mt-0.5">
             {isCompanyMode
-              ? `只有在名單中的 Email 註冊時才會自動納入「${currentCompany?.name ?? '本公司'}」為正式員工。`
-              : '只有在名單中的 Email 才能以「員工」身分註冊，未在名單中只能以外部用戶身分加入。'}
+              ? t('descCompany', { name: currentCompany?.name ?? t('ourCompany') })
+              : t('descAdmin')}
           </p>
         </div>
         {isCompanyMode && currentCompany && (
           <div className="text-xs px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-medium border border-indigo-200">
-            所屬公司：{currentCompany.name} (固定)
+            {t('fixedCompany', { name: currentCompany.name })}
           </div>
         )}
       </div>
@@ -231,7 +233,7 @@ export function EmployeeWhitelistManager({
       <form onSubmit={handleAdd} className="p-5 border-b bg-gray-50/70 dark:bg-muted/30 flex flex-wrap gap-3 items-end">
         {/* Email 輸入框 */}
         <div className="flex-1 min-w-48">
-          <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">員工 Email</label>
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">{t('email')}</label>
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
@@ -249,14 +251,14 @@ export function EmployeeWhitelistManager({
         {!isCompanyMode ? (
           <div className="flex-1 min-w-44">
             <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
-              所屬公司（總管理填選）
+              {t('companyAdmin')}
             </label>
             <select
               value={selectedCompanyId}
               onChange={e => setSelectedCompanyId(e.target.value)}
               className="w-full h-9 px-3 rounded-lg border bg-white dark:bg-background text-sm outline-none focus:ring-2 cursor-pointer"
             >
-              <option value="">全平台 / 未指定公司</option>
+              <option value="">{t('allPlatform')}</option>
               {companies.map(c => (
                 <option key={c.id} value={c.id}>
                   {c.name}
@@ -267,22 +269,22 @@ export function EmployeeWhitelistManager({
         ) : (
           <div className="flex-1 min-w-36">
             <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
-              所屬公司
+              {t('company')}
             </label>
             <div className="w-full h-9 px-3 rounded-lg border bg-gray-100 dark:bg-muted text-gray-500 flex items-center text-sm">
-              {currentCompany?.name ?? '本公司'}
+              {currentCompany?.name ?? t('ourCompany')}
             </div>
           </div>
         )}
 
         {/* 備註輸入框 */}
         <div className="flex-1 min-w-36">
-          <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">備註（選填）</label>
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">{t('noteOptional')}</label>
           <input
             type="text"
             value={note}
             onChange={e => setNote(e.target.value)}
-            placeholder="例如：業務部 - 張小明"
+            placeholder={t('notePh')}
             className="w-full h-9 px-3 rounded-lg border bg-white dark:bg-background text-sm outline-none focus:ring-2"
           />
         </div>
@@ -293,7 +295,7 @@ export function EmployeeWhitelistManager({
           className="h-9 px-4 rounded-lg text-sm font-medium text-white flex items-center gap-1.5 disabled:opacity-60 bg-blue-600 hover:bg-blue-700 transition-colors shadow-xs"
         >
           {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-          新增
+          {t('add')}
         </button>
         {error && <p className="w-full text-xs text-red-600">{error}</p>}
       </form>
@@ -303,11 +305,11 @@ export function EmployeeWhitelistManager({
         {loading ? (
           <div className="py-12 flex items-center justify-center text-gray-400 text-sm gap-2">
             <Loader2 className="h-4 w-4 animate-spin" />
-            載入中...
+            {t('loading')}
           </div>
         ) : entries.length === 0 ? (
           <div className="py-10 text-center text-sm text-gray-400">
-            尚無員工白名單，請新增允許的員工 Email
+            {t('empty')}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -316,13 +318,13 @@ export function EmployeeWhitelistManager({
                 <tr className="border-b bg-gray-50 dark:bg-muted/40">
                   <th className="text-left px-5 py-2.5 font-medium text-gray-500">Email</th>
                   {!isCompanyMode && (
-                    <th className="text-left px-5 py-2.5 font-medium text-gray-500">所屬公司</th>
+                    <th className="text-left px-5 py-2.5 font-medium text-gray-500">{t('company')}</th>
                   )}
                   <th className="text-left px-5 py-2.5 font-medium text-gray-500">
-                    備註 <span className="text-[11px] text-gray-400 font-normal">（可編輯）</span>
+                    {t('note')} <span className="text-[11px] text-gray-400 font-normal">{t('editable')}</span>
                   </th>
-                  <th className="text-left px-5 py-2.5 font-medium text-gray-500">新增時間</th>
-                  <th className="px-5 py-2.5 text-right font-medium text-gray-500">操作</th>
+                  <th className="text-left px-5 py-2.5 font-medium text-gray-500">{t('addedAt')}</th>
+                  <th className="px-5 py-2.5 text-right font-medium text-gray-500">{t('actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -349,7 +351,7 @@ export function EmployeeWhitelistManager({
                                 onBlur={() => setEditingCompanyId(null)}
                                 className="h-7 px-2 text-xs rounded border bg-white dark:bg-background outline-none focus:ring-1"
                               >
-                                <option value="">全域 / 未指定</option>
+                                <option value="">{t('global')}</option>
                                 {companies.map(c => (
                                   <option key={c.id} value={c.id}>{c.name}</option>
                                 ))}
@@ -360,14 +362,14 @@ export function EmployeeWhitelistManager({
                             <div
                               onClick={() => setEditingCompanyId(entry.id)}
                               className="group/comp flex items-center gap-1.5 cursor-pointer"
-                              title="點擊修改所屬公司"
+                              title={t('editCompany')}
                             >
                               {companyObj?.name ? (
                                 <span className="text-xs px-2 py-0.5 rounded-md font-medium bg-purple-50 text-purple-700 border border-purple-200">
                                   {companyObj.name}
                                 </span>
                               ) : (
-                                <span className="text-xs text-gray-400">全域 / 未指定</span>
+                                <span className="text-xs text-gray-400">{t('global')}</span>
                               )}
                               <Edit3 className="h-3 w-3 opacity-0 group-hover/comp:opacity-100 text-gray-400 transition-opacity shrink-0" />
                             </div>
@@ -388,7 +390,7 @@ export function EmployeeWhitelistManager({
                                 if (e.key === 'Escape') setEditingId(null)
                               }}
                               autoFocus
-                              placeholder="輸入備註..."
+                              placeholder={t('notePh2')}
                               className="h-7 px-2 text-xs rounded border bg-white dark:bg-background outline-none focus:ring-1 flex-1"
                             />
                             <button
@@ -396,7 +398,7 @@ export function EmployeeWhitelistManager({
                               onClick={() => handleSaveNote(entry.id)}
                               disabled={savingNote}
                               className="p-1 text-emerald-600 hover:text-emerald-700"
-                              title="儲存"
+                              title={t('save')}
                             >
                               {savingNote ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                             </button>
@@ -404,7 +406,7 @@ export function EmployeeWhitelistManager({
                               type="button"
                               onClick={() => setEditingId(null)}
                               className="p-1 text-gray-400 hover:text-gray-600"
-                              title="取消"
+                              title={t('cancel')}
                             >
                               <X className="h-3.5 w-3.5" />
                             </button>
@@ -413,7 +415,7 @@ export function EmployeeWhitelistManager({
                           <div
                             onClick={() => startEditNote(entry)}
                             className="group/note flex items-center gap-1.5 cursor-pointer max-w-xs text-gray-600 dark:text-gray-300 hover:text-blue-600 transition-colors"
-                            title="點擊修改備註"
+                            title={t('editNote')}
                           >
                             <span>{entry.note || '—'}</span>
                             <Edit3 className="h-3 w-3 opacity-0 group-hover/note:opacity-100 text-gray-400 transition-opacity shrink-0" />
@@ -422,7 +424,7 @@ export function EmployeeWhitelistManager({
                       </td>
 
                       <td className="px-5 py-3 text-gray-400 text-xs">
-                        {new Date(entry.added_at).toLocaleDateString('zh-TW')}
+                        {new Date(entry.added_at).toLocaleDateString()}
                       </td>
 
                       <td className="px-5 py-3 text-right">
@@ -430,7 +432,7 @@ export function EmployeeWhitelistManager({
                           onClick={() => handleDelete(entry.id)}
                           disabled={deletingId === entry.id}
                           className="text-red-500 hover:text-red-700 disabled:opacity-40 transition-colors p-1"
-                          title="移除"
+                          title={t('remove')}
                         >
                           {deletingId === entry.id ? (
                             <Loader2 className="h-4 w-4 animate-spin" />

@@ -65,18 +65,18 @@ export function SettingsForm({ profile, creditBalance, variant = 'full' }: Setti
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           chat_id: tgChatId.trim(),
-          text: '✅ IMT 行銷流水線 Telegram 設定成功！\n\n您將在此收到行銷流程的審核通知。',
+          text: t('tg.testText'),
           parse_mode: 'HTML',
         }),
       })
       const data = await res.json()
       if (data.ok) {
-        setTgTestResult({ ok: true, msg: '測試訊息發送成功！請確認 Telegram 是否收到。' })
+        setTgTestResult({ ok: true, msg: t('tg.testOk') })
       } else {
-        setTgTestResult({ ok: false, msg: data.description ?? '發送失敗，請確認 Bot Token 與 Chat ID 是否正確。' })
+        setTgTestResult({ ok: false, msg: data.description ?? t('tg.testFail') })
       }
     } catch {
-      setTgTestResult({ ok: false, msg: '網路錯誤，請稍後再試。' })
+      setTgTestResult({ ok: false, msg: t('tg.netErr') })
     } finally {
       setTestingTg(false)
     }
@@ -159,7 +159,7 @@ export function SettingsForm({ profile, creditBalance, variant = 'full' }: Setti
             </div>
           </div>
           <span className="inline-flex items-center gap-1 text-sm font-semibold text-primary">
-            前往儲值 <ArrowRight className="h-4 w-4" />
+            {t('tg.topUp')} <ArrowRight className="h-4 w-4" />
           </span>
         </div>
       </a>
@@ -170,7 +170,7 @@ export function SettingsForm({ profile, creditBalance, variant = 'full' }: Setti
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2">
             <MessageSquare className="h-5 w-5 text-blue-400" />
-            <h2 className="font-semibold">Telegram 整合</h2>
+            <h2 className="font-semibold">{t('tg.title')}</h2>
           </div>
           <a
             href="https://t.me/BotFather"
@@ -178,11 +178,11 @@ export function SettingsForm({ profile, creditBalance, variant = 'full' }: Setti
             rel="noopener noreferrer"
             className="flex items-center gap-1 text-xs text-blue-500 hover:underline"
           >
-            申請 Bot Token <ExternalLink className="h-3 w-3" />
+            {t('tg.getToken')} <ExternalLink className="h-3 w-3" />
           </a>
         </div>
         <p className="text-xs text-muted-foreground mb-5">
-          設定後，自動化行銷流程將透過您的 Telegram Bot 發送審核通知，並接收您的核准或修改回覆。
+          {t('tg.desc')}
         </p>
 
         <form onSubmit={handleSaveTelegram} className="space-y-4">
@@ -190,7 +190,7 @@ export function SettingsForm({ profile, creditBalance, variant = 'full' }: Setti
           <div>
             <label className="block text-sm font-medium mb-1.5">
               Bot Token
-              <span className="ml-2 text-xs font-normal text-gray-400">（從 @BotFather 取得）</span>
+              <span className="ml-2 text-xs font-normal text-gray-400">{t('tg.fromBotFather')}</span>
             </label>
             <div className="relative">
               <input
@@ -213,18 +213,18 @@ export function SettingsForm({ profile, creditBalance, variant = 'full' }: Setti
           {/* Chat ID */}
           <div>
             <label className="block text-sm font-medium mb-1.5">
-              Chat ID / 使用者名稱
-              <span className="ml-2 text-xs font-normal text-gray-400">（預設收通知的對象）</span>
+              {t('tg.chatId')}
+              <span className="ml-2 text-xs font-normal text-gray-400">{t('tg.chatIdHint')}</span>
             </label>
             <input
               type="text"
               value={tgChatId}
               onChange={e => setTgChatId(e.target.value)}
               className="w-full h-10 px-3 rounded-lg border text-sm outline-none focus:ring-2 bg-background"
-              placeholder="@username 或 -100xxxxxxxxxx（群組）"
+              placeholder={t('tg.chatIdPh')}
             />
             <p className="text-xs text-muted-foreground/70 mt-1.5">
-              個人 Chat ID 可傳訊給 <a href="https://t.me/userinfobot" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">@userinfobot</a> 查詢；群組請將 Bot 加入後取得群組 ID。
+              {t.rich('tg.chatIdHelp', { bot: chunks => <a href="https://t.me/userinfobot" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">{chunks}</a> })}
             </p>
           </div>
 
@@ -250,7 +250,7 @@ export function SettingsForm({ profile, creditBalance, variant = 'full' }: Setti
               style={{ background: 'var(--primary)' }}
             >
               {savingTg && <Loader2 className="h-4 w-4 animate-spin" />}
-              {savingTg ? '儲存中…' : '儲存設定'}
+              {savingTg ? t('tg.saving') : t('tg.save')}
             </button>
             <button
               type="button"
@@ -259,9 +259,9 @@ export function SettingsForm({ profile, creditBalance, variant = 'full' }: Setti
               className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border hover:bg-accent disabled:opacity-50 transition-colors"
             >
               {testingTg && <Loader2 className="h-4 w-4 animate-spin" />}
-              {testingTg ? '傳送中…' : '傳送測試訊息'}
+              {testingTg ? t('tg.sending') : t('tg.sendTest')}
             </button>
-            {savedTg && <span className="text-sm text-green-600">✓ 已儲存</span>}
+            {savedTg && <span className="text-sm text-green-600">✓ {t('tg.saved')}</span>}
           </div>
         </form>
       </div>
@@ -270,10 +270,10 @@ export function SettingsForm({ profile, creditBalance, variant = 'full' }: Setti
       <div className="bg-card rounded-2xl border p-6 shadow-sm">
         <div className="flex items-center gap-2 mb-2">
           <Share2 className="h-5 w-5 text-gray-400" />
-          <h2 className="font-semibold">社群平台連結</h2>
+          <h2 className="font-semibold">{t('tg.socialTitle')}</h2>
         </div>
         <p className="text-xs text-muted-foreground mb-5">
-          設定後，行銷流水線流程將自動上傳圖片與影片至對應平台。各平台 Token 請至官方開發者後台取得。
+          {t('tg.socialDesc')}
         </p>
         <SocialPlatformSettings />
       </div>
