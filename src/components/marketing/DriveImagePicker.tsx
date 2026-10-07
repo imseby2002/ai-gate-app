@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { FolderOpen, RefreshCw, Image, Link, ExternalLink } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
 interface DriveFolder { id: string; name: string }
 interface PickedImage {
@@ -26,8 +27,9 @@ export default function DriveImagePicker({
   onFolderChange,
   onImagePicked,
   pickedImage,
-  label = '參考圖片',
+  label,
 }: Props) {
+  const t = useTranslations('DrivePicker')
   const [connected, setConnected] = useState<boolean | null>(null)
   const [email, setEmail] = useState('')
   const [folders, setFolders] = useState<DriveFolder[]>([])
@@ -81,18 +83,18 @@ export default function DriveImagePicker({
     }
   }, [onImagePicked])
 
-  if (connected === null) return <div className="text-xs text-gray-400 animate-pulse">檢查 Google Drive 連接狀態…</div>
+  if (connected === null) return <div className="text-xs text-gray-400 animate-pulse">{t('checking')}</div>
 
   if (!connected) {
     return (
       <div className="flex items-center gap-2 p-3 rounded-lg border border-dashed border-gray-300 bg-gray-50">
         <Link className="w-4 h-4 text-gray-400 shrink-0" />
-        <span className="text-xs text-gray-500">尚未連接 Google Drive</span>
+        <span className="text-xs text-gray-500">{t('notConnected')}</span>
         <a
           href="/api/integrations/google-drive/auth"
           className="ml-auto text-xs font-medium text-blue-600 hover:underline flex items-center gap-1"
         >
-          前往設定連接 <ExternalLink className="w-3 h-3" />
+          {t('goConnect')} <ExternalLink className="w-3 h-3" />
         </a>
       </div>
     )
@@ -101,7 +103,7 @@ export default function DriveImagePicker({
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
-        <span className="text-xs font-medium text-gray-600">{label}</span>
+        <span className="text-xs font-medium text-gray-600">{label ?? t('refImage')}</span>
         <span className="text-xs text-green-600 bg-green-50 px-1.5 py-0.5 rounded">{email}</span>
       </div>
 
@@ -113,7 +115,7 @@ export default function DriveImagePicker({
           className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50"
         >
           <FolderOpen className="w-3.5 h-3.5" />
-          {folderId ? folderName ?? '已選資料夾' : '選擇資料夾'}
+          {folderId ? folderName ?? t('folderPicked') : t('pickFolder')}
         </button>
         {folderId && (
           <button
@@ -122,7 +124,7 @@ export default function DriveImagePicker({
             className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100 disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loadingImage ? 'animate-spin' : ''}`} />
-            {loadingImage ? '取圖中…' : '隨機取圖'}
+            {loadingImage ? t('fetching') : t('randomPick')}
           </button>
         )}
       </div>
@@ -159,7 +161,7 @@ export default function DriveImagePicker({
               disabled={loadingImage}
               className="text-xs text-white/80 hover:text-white flex items-center gap-1"
             >
-              <RefreshCw className="w-3 h-3" /> 換一張
+              <RefreshCw className="w-3 h-3" /> {t('another')}
             </button>
           </div>
         </div>

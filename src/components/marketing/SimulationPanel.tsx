@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import {
   Users, AlertTriangle, CheckCircle2, TrendingUp,
   ChevronDown, ChevronUp, Zap, RefreshCw, Loader2,
@@ -42,6 +43,7 @@ function scoreBar(s: number) {
 // ─── PersonaCard ──────────────────────────────────────────────────────────────
 
 function PersonaCard({ persona }: { persona: SimulationResult['personas'][0] }) {
+  const t = useTranslations('Simulation')
   const [open, setOpen] = useState(false)
   const b = BEHAVIOR_CFG[persona.socialBehavior]
   const BIcon = b?.icon ?? MessageSquare
@@ -64,7 +66,7 @@ function PersonaCard({ persona }: { persona: SimulationResult['personas'][0] }) 
             <div className={`text-xl font-bold ${scoreColor(persona.sentimentScore)}`}>
               {persona.sentimentScore > 0 ? '+' : ''}{persona.sentimentScore}
             </div>
-            <div className="text-[10px] text-gray-400">情感分</div>
+            <div className="text-[10px] text-gray-400">{t('sentiment')}</div>
           </div>
         </div>
 
@@ -79,8 +81,8 @@ function PersonaCard({ persona }: { persona: SimulationResult['personas'][0] }) 
 
         <div className="flex items-center gap-1.5">
           <BIcon className={`h-3 w-3 ${b?.color ?? 'text-gray-400'}`} />
-          <span className={`text-xs font-medium ${b?.color ?? 'text-gray-400'}`}>{b?.label ?? persona.socialBehavior}</span>
-          <span className="text-xs text-gray-300 ml-auto">影響力 {persona.influenceScore}</span>
+          <span className={`text-xs font-medium ${b?.color ?? 'text-gray-400'}`}>{b ? t(`behavior.${persona.socialBehavior}`) : persona.socialBehavior}</span>
+          <span className="text-xs text-gray-300 ml-auto">{t('influence', { n: persona.influenceScore })}</span>
         </div>
 
         <button
@@ -88,14 +90,14 @@ function PersonaCard({ persona }: { persona: SimulationResult['personas'][0] }) 
           className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 transition-colors"
         >
           {open ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-          {open ? '收起' : '展開詳情'}
+          {open ? t('collapse') : t('expand')}
         </button>
 
         {open && (
           <div className="space-y-2 pt-1 border-t">
             {persona.keyResonance.length > 0 && (
               <div>
-                <p className="text-xs font-medium text-green-600 mb-1">✓ 引起共鳴</p>
+                <p className="text-xs font-medium text-green-600 mb-1">✓ {t('resonates')}</p>
                 {persona.keyResonance.map((r, i) => (
                   <p key={i} className="text-xs text-gray-500 leading-relaxed">• {r}</p>
                 ))}
@@ -103,7 +105,7 @@ function PersonaCard({ persona }: { persona: SimulationResult['personas'][0] }) 
             )}
             {persona.keyObjections.length > 0 && (
               <div>
-                <p className="text-xs font-medium text-red-500 mb-1">✗ 主要疑慮</p>
+                <p className="text-xs font-medium text-red-500 mb-1">✗ {t('concerns')}</p>
                 {persona.keyObjections.map((o, i) => (
                   <p key={i} className="text-xs text-gray-500 leading-relaxed">• {o}</p>
                 ))}
@@ -125,6 +127,7 @@ interface SimulationPanelProps {
 }
 
 export function SimulationPanel({ result, onRerun, isRunning = false }: SimulationPanelProps) {
+  const t = useTranslations('Simulation')
   const [scenario, setScenario] = useState('')
   const [showPersonas, setShowPersonas] = useState(true)
 
@@ -136,10 +139,10 @@ export function SimulationPanel({ result, onRerun, isRunning = false }: Simulati
       {/* ── Metrics ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: '整體情感分',  value: `${result.overallSentiment > 0 ? '+' : ''}${result.overallSentiment}`, color: scoreColor(result.overallSentiment), bg: 'bg-gray-50' },
-          { label: '正向傳播',    value: `${result.predictedSpread.organic}%`,  color: 'text-green-600', bg: 'bg-green-50 border-green-100' },
-          { label: '負面口碑',    value: `${result.predictedSpread.negative}%`, color: 'text-red-500',   bg: 'bg-red-50 border-red-100'   },
-          { label: '無顯著影響',  value: `${result.predictedSpread.neutral}%`,  color: 'text-gray-400',  bg: 'bg-gray-50'                  },
+          { label: t('overall'),  value: `${result.overallSentiment > 0 ? '+' : ''}${result.overallSentiment}`, color: scoreColor(result.overallSentiment), bg: 'bg-gray-50' },
+          { label: t('positive'),    value: `${result.predictedSpread.organic}%`,  color: 'text-green-600', bg: 'bg-green-50 border-green-100' },
+          { label: t('negative'),    value: `${result.predictedSpread.negative}%`, color: 'text-red-500',   bg: 'bg-red-50 border-red-100'   },
+          { label: t('neutral'),  value: `${result.predictedSpread.neutral}%`,  color: 'text-gray-400',  bg: 'bg-gray-50'                  },
         ].map(m => (
           <div key={m.label} className={`p-3 rounded-xl border text-center ${m.bg}`}>
             <div className={`text-2xl font-bold ${m.color}`}>{m.value}</div>
@@ -158,7 +161,7 @@ export function SimulationPanel({ result, onRerun, isRunning = false }: Simulati
         <div>
           <div className="flex items-center gap-2 mb-3">
             <Users className="h-4 w-4 text-gray-600" />
-            <span className="text-sm font-semibold text-gray-700">消費者陣營</span>
+            <span className="text-sm font-semibold text-gray-700">{t('camps')}</span>
           </div>
           <div className="space-y-3">
             {result.coalitions.map((c, i) => (
@@ -167,7 +170,7 @@ export function SimulationPanel({ result, onRerun, isRunning = false }: Simulati
                   <div className="flex items-center gap-2">
                     <div className={`w-2.5 h-2.5 rounded-full ${c.isSupporter ? 'bg-green-500' : 'bg-red-400'}`} />
                     <span className="text-sm font-medium text-gray-700">{c.name}</span>
-                    <span className="text-xs text-gray-400">({c.memberIds.length} 族群)</span>
+                    <span className="text-xs text-gray-400">{t('segments', { n: c.memberIds.length })}</span>
                   </div>
                   <span className={`text-sm font-bold ${c.isSupporter ? 'text-green-600' : 'text-red-500'}`}>
                     {c.percentage}%
@@ -192,7 +195,7 @@ export function SimulationPanel({ result, onRerun, isRunning = false }: Simulati
           <div>
             <div className="flex items-center gap-2 mb-3">
               <AlertTriangle className="h-4 w-4 text-red-500" />
-              <span className="text-sm font-semibold text-gray-700">公關危機風險</span>
+              <span className="text-sm font-semibold text-gray-700">{t('crisis')}</span>
             </div>
             <div className="space-y-2">
               {result.crisisRisks.map((r, i) => {
@@ -201,7 +204,7 @@ export function SimulationPanel({ result, onRerun, isRunning = false }: Simulati
                   <div key={i} className={`p-3 rounded-xl border ${s.bg} ${s.border}`}>
                     <div className="flex items-center justify-between mb-1">
                       <span className={`text-sm font-medium ${s.text}`}>{r.topic}</span>
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${s.badge}`}>{s.label}風險</span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${s.badge}`}>{t(`risk.${r.severity}`)}</span>
                     </div>
                     <p className={`text-xs ${s.text} opacity-80 leading-relaxed`}>{r.description}</p>
                   </div>
@@ -215,7 +218,7 @@ export function SimulationPanel({ result, onRerun, isRunning = false }: Simulati
           <div>
             <div className="flex items-center gap-2 mb-3">
               <CheckCircle2 className="h-4 w-4 text-green-500" />
-              <span className="text-sm font-semibold text-gray-700">高共鳴訊息點</span>
+              <span className="text-sm font-semibold text-gray-700">{t('messages')}</span>
             </div>
             <div className="space-y-2">
               {result.resonancePoints.map((p, i) => (
@@ -225,7 +228,7 @@ export function SimulationPanel({ result, onRerun, isRunning = false }: Simulati
                     p.impact === 'medium' ? 'bg-green-100 text-green-700' :
                                             'bg-gray-100 text-gray-500'
                   }`}>
-                    {p.impact === 'high' ? '強' : p.impact === 'medium' ? '中' : '弱'}
+                    {p.impact === 'high' ? t('impact.high') : p.impact === 'medium' ? t('impact.medium') : t('impact.low')}
                   </span>
                   <p className="text-xs text-green-800 leading-relaxed">{p.message}</p>
                 </div>
@@ -242,7 +245,7 @@ export function SimulationPanel({ result, onRerun, isRunning = false }: Simulati
           className="flex items-center gap-2 w-full mb-3"
         >
           <Users className="h-4 w-4 text-gray-600" />
-          <span className="text-sm font-semibold text-gray-700">Persona 詳情（{result.personas.length}）</span>
+          <span className="text-sm font-semibold text-gray-700">{t('personas', { n: result.personas.length })}</span>
           {showPersonas
             ? <ChevronUp className="h-4 w-4 text-gray-400 ml-auto" />
             : <ChevronDown className="h-4 w-4 text-gray-400 ml-auto" />
@@ -259,7 +262,7 @@ export function SimulationPanel({ result, onRerun, isRunning = false }: Simulati
       <div className="p-4 rounded-xl border-2 border-amber-200 bg-amber-50">
         <div className="flex items-center gap-2 mb-2">
           <TrendingUp className="h-4 w-4 text-amber-600" />
-          <span className="text-sm font-semibold text-amber-800">AI 優化建議</span>
+          <span className="text-sm font-semibold text-amber-800">{t('aiTips')}</span>
         </div>
         <p className="text-sm text-gray-700 leading-relaxed">{result.recommendation}</p>
       </div>
@@ -268,15 +271,15 @@ export function SimulationPanel({ result, onRerun, isRunning = false }: Simulati
       <div className="p-4 rounded-xl bg-gray-50 border space-y-3">
         <div className="flex items-center gap-2">
           <Zap className="h-4 w-4 text-amber-500" />
-          <span className="text-sm font-semibold text-gray-700">情境注入（上帝視角）</span>
-          <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-200 text-gray-500">選填</span>
+          <span className="text-sm font-semibold text-gray-700">{t('scenario')}</span>
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-200 text-gray-500">{t('optional')}</span>
         </div>
-        <p className="text-xs text-gray-400">注入新假設，觀察消費者立場如何改變</p>
+        <p className="text-xs text-gray-400">{t('scenarioDesc')}</p>
         <textarea
           value={scenario}
           onChange={e => setScenario(e.target.value)}
           rows={2}
-          placeholder="例：「競爭對手突然降價 30%」、「產品爆出品質問題」、「獲得知名藝人代言」…"
+          placeholder={t('scenarioPh')}
           className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-amber-300 resize-none"
         />
         <button
@@ -285,8 +288,8 @@ export function SimulationPanel({ result, onRerun, isRunning = false }: Simulati
           className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-all bg-amber-500 hover:bg-amber-600"
         >
           {isRunning
-            ? <><Loader2 className="h-4 w-4 animate-spin" />重新模擬中…</>
-            : <><RefreshCw className="h-4 w-4" />重新模擬</>
+            ? <><Loader2 className="h-4 w-4 animate-spin" />{t('rerunning')}</>
+            : <><RefreshCw className="h-4 w-4" />{t('rerun')}</>
           }
         </button>
       </div>

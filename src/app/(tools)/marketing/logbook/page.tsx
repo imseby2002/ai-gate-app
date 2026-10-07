@@ -8,6 +8,7 @@ import {
   Palette, Bot, User, Filter, RefreshCw
 } from 'lucide-react'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 
 interface LogItem {
   id: string
@@ -60,6 +61,7 @@ const CATEGORY_CONFIG: Record<string, { label: string; color: string; icon: any 
 }
 
 export default function MarketingLogbookPage() {
+  const t = useTranslations('MktLogbook')
   const [days, setDays] = useState(30)
   const [data, setData] = useState<LogbookData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -113,7 +115,7 @@ export default function MarketingLogbookPage() {
         body: JSON.stringify({ action: 'generate_report', days })
       })
       const j = await r.json().catch(() => ({}))
-      setReport(j.report || j.error || '產生失敗')
+      setReport(j.report || j.error || t('genFailed'))
       load() // 重新整理日誌
     } finally {
       setGen(false)
@@ -142,7 +144,7 @@ export default function MarketingLogbookPage() {
         setShowNew(false)
         load()
       } else {
-        alert('新增失敗')
+        alert(t('addFailed'))
       }
     } finally {
       setCreating(false)
@@ -158,7 +160,7 @@ export default function MarketingLogbookPage() {
 
   // 刪除日誌
   async function handleDelete(id: string) {
-    if (!confirm('確定刪除此則日誌記錄？')) return
+    if (!confirm(t('confirmDelete'))) return
     await fetch('/api/marketing/logbook', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
@@ -195,7 +197,7 @@ export default function MarketingLogbookPage() {
   if (forbidden) {
     return (
       <div className="flex h-full items-center justify-center p-8 text-sm text-gray-500">
-        需具備行銷單位權限才能查閱行銷日誌
+        {t('noAccess')}
       </div>
     )
   }
@@ -210,13 +212,13 @@ export default function MarketingLogbookPage() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold text-gray-900 tracking-tight">行銷日誌</h1>
+              <h1 className="text-2xl font-bold text-gray-900 tracking-tight">{t('title')}</h1>
               <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-medium">
-                全體同仁與 AI 對談 ＆ 事件全紀錄
+                {t('subtitle')}
               </span>
             </div>
             <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
-              自動記錄員工與 AI 對話重點、行銷活動、社群排程、文案草稿及實體外送進度
+              {t('desc')}
             </p>
           </div>
         </div>
@@ -227,7 +229,7 @@ export default function MarketingLogbookPage() {
             onChange={e => setDays(Number(e.target.value))}
             className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-xs sm:text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
-            {DAYS.map(d => <option key={d} value={d}>近 {d} 天</option>)}
+            {DAYS.map(d => <option key={d} value={d}>{t('lastDays', { n: d })}</option>)}
           </select>
 
           <button
@@ -235,7 +237,7 @@ export default function MarketingLogbookPage() {
             className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 text-xs sm:text-sm font-medium hover:bg-indigo-100 transition-colors"
           >
             <Plus className="h-4 w-4" />
-            新增日誌
+            {t('add')}
           </button>
 
           <button
@@ -244,7 +246,7 @@ export default function MarketingLogbookPage() {
             className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg bg-indigo-600 text-white text-xs sm:text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors shadow-sm"
           >
             {gen ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-            AI 彙整報告
+            {t('aiReport')}
           </button>
         </div>
       </div>
@@ -255,14 +257,14 @@ export default function MarketingLogbookPage() {
           <div className="flex items-center justify-between">
             <h3 className="font-semibold text-sm text-indigo-950 flex items-center gap-2">
               <NotebookPen className="h-4 w-4 text-indigo-600" />
-              新增行銷工作日誌
+              {t('newTitle')}
             </h3>
             <button
               type="button"
               onClick={() => setShowNew(false)}
               className="text-gray-400 hover:text-gray-600 text-xs"
             >
-              取消
+              {t('cancel')}
             </button>
           </div>
 
@@ -270,7 +272,7 @@ export default function MarketingLogbookPage() {
             <div className="sm:col-span-3">
               <input
                 type="text"
-                placeholder="日誌主題 / 決策重點（例：2026 夏季冰品促銷策略確認）..."
+                placeholder={t('titlePh')}
                 value={newTitle}
                 onChange={e => setNewTitle(e.target.value)}
                 className="w-full h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -283,19 +285,19 @@ export default function MarketingLogbookPage() {
                 onChange={e => setNewCategory(e.target.value)}
                 className="w-full h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
-                <option value="manual">工作紀錄</option>
-                <option value="campaign">行銷活動</option>
-                <option value="calendar">社群排程</option>
-                <option value="content">文案草稿</option>
-                <option value="offline">實體宣傳</option>
-                <option value="delivery">外送平台</option>
-                <option value="brand">品牌守則</option>
+                <option value="manual">{t('cat.manual')}</option>
+                <option value="campaign">{t('cat.campaign')}</option>
+                <option value="calendar">{t('cat.calendar')}</option>
+                <option value="content">{t('cat.content')}</option>
+                <option value="offline">{t('cat.offline')}</option>
+                <option value="delivery">{t('cat.delivery')}</option>
+                <option value="brand">{t('brandRules')}</option>
               </select>
             </div>
           </div>
 
           <textarea
-            placeholder="請輸入詳細日誌內容、討論細節、下一步行動項目..."
+            placeholder={t('bodyPh')}
             rows={3}
             value={newSummary}
             onChange={e => setNewSummary(e.target.value)}
@@ -309,14 +311,14 @@ export default function MarketingLogbookPage() {
               onClick={() => setShowNew(false)}
               className="px-3 py-1.5 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-100"
             >
-              取消
+              {t('cancel')}
             </button>
             <button
               type="submit"
               disabled={creating || (!newTitle.trim() && !newSummary.trim())}
               className="px-4 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 disabled:opacity-50"
             >
-              {creating ? '儲存中...' : '確認儲存日誌'}
+              {creating ? t('saving') : t('save')}
             </button>
           </div>
         </form>
@@ -328,14 +330,14 @@ export default function MarketingLogbookPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-indigo-900 font-bold text-sm">
               <Sparkles className="h-4 w-4 text-indigo-600" />
-              AI 行銷總監：本期營運與協作日誌報告
+              {t('reportTitle')}
             </div>
             <button
               onClick={() => handleCopy('ai_report', report)}
               className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 bg-white px-2.5 py-1 rounded-md border border-indigo-100"
             >
               {copiedId === 'ai_report' ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
-              {copiedId === 'ai_report' ? '已複製報告' : '複製報告全文'}
+              {copiedId === 'ai_report' ? t('reportCopied') : t('copyReport')}
             </button>
           </div>
           <div className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed bg-white/80 p-4 rounded-xl border border-indigo-100/60 font-sans">
@@ -353,29 +355,29 @@ export default function MarketingLogbookPage() {
         <>
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             <div className="rounded-xl border border-gray-200/80 bg-white p-4 shadow-sm">
-              <div className="text-xs text-gray-500 font-medium">總日誌與事件</div>
+              <div className="text-xs text-gray-500 font-medium">{t('statTotal')}</div>
               <div className="mt-1 text-2xl font-bold text-gray-900">{data.total}</div>
             </div>
             <div className="rounded-xl border border-gray-200/80 bg-white p-4 shadow-sm">
               <div className="text-xs text-violet-600 font-medium flex items-center gap-1">
-                <Bot className="h-3.5 w-3.5" /> 員工 AI 對談
+                <Bot className="h-3.5 w-3.5" /> {t('statChats')}
               </div>
               <div className="mt-1 text-2xl font-bold text-violet-700">{data.chatCount}</div>
             </div>
             <div className="rounded-xl border border-gray-200/80 bg-white p-4 shadow-sm">
               <div className="text-xs text-blue-600 font-medium flex items-center gap-1">
-                <Megaphone className="h-3.5 w-3.5" /> 行銷產出事件
+                <Megaphone className="h-3.5 w-3.5" /> {t('statEvents')}
               </div>
               <div className="mt-1 text-2xl font-bold text-blue-700">{data.eventCount}</div>
             </div>
             <div className="rounded-xl border border-gray-200/80 bg-white p-4 shadow-sm">
               <div className="text-xs text-gray-500 font-medium flex items-center gap-1">
-                <User className="h-3.5 w-3.5" /> 參與同仁
+                <User className="h-3.5 w-3.5" /> {t('statPeople')}
               </div>
               <div className="mt-1 text-2xl font-bold text-gray-900">{data.byStaff.length}</div>
             </div>
             <div className="rounded-xl border border-gray-200/80 bg-white p-4 shadow-sm col-span-2 sm:col-span-1">
-              <div className="text-xs text-gray-500 font-medium">耗用點數</div>
+              <div className="text-xs text-gray-500 font-medium">{t('statCredits')}</div>
               <div className="mt-1 text-2xl font-bold text-indigo-600">{fmt(data.credits)}</div>
             </div>
           </div>
@@ -384,13 +386,13 @@ export default function MarketingLogbookPage() {
           {data.byStaff.length > 0 && (
             <div className="bg-white rounded-xl border border-gray-100 p-3.5 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-gray-500">同仁活躍度篩選</span>
+                <span className="text-xs font-semibold text-gray-500">{t('filterPeople')}</span>
                 {staffFilter && (
                   <button
                     onClick={() => setStaffFilter('')}
                     className="text-xs text-indigo-600 hover:underline"
                   >
-                    清除過濾（顯示全體）
+                    {t('clearFilter')}
                   </button>
                 )}
               </div>
@@ -427,7 +429,7 @@ export default function MarketingLogbookPage() {
                   activeTab === 'all' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
-                全部 ({data.items.length})
+                {t('tabAll', { n: data.items.length })}
               </button>
               <button
                 onClick={() => setActiveTab('chat')}
@@ -436,7 +438,7 @@ export default function MarketingLogbookPage() {
                 }`}
               >
                 <Bot className="h-3.5 w-3.5" />
-                AI 對談 ({data.chatCount})
+                {t('tabChats', { n: data.chatCount })}
               </button>
               <button
                 onClick={() => setActiveTab('events')}
@@ -445,7 +447,7 @@ export default function MarketingLogbookPage() {
                 }`}
               >
                 <Megaphone className="h-3.5 w-3.5" />
-                行銷事件 ({data.eventCount})
+                {t('tabEvents', { n: data.eventCount })}
               </button>
               <button
                 onClick={() => setActiveTab('manual')}
@@ -454,7 +456,7 @@ export default function MarketingLogbookPage() {
                 }`}
               >
                 <NotebookPen className="h-3.5 w-3.5" />
-                人工與總結 ({data.manualCount})
+                {t('tabManual', { n: data.manualCount })}
               </button>
             </div>
 
@@ -462,7 +464,7 @@ export default function MarketingLogbookPage() {
               <Search className="h-4 w-4 absolute left-3 top-2.5 text-gray-400" />
               <input
                 type="text"
-                placeholder="搜尋同仁姓名、標題或內容..."
+                placeholder={t('searchPh')}
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 className="w-full h-9 pl-9 pr-3 rounded-lg border border-gray-200 bg-white text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -474,7 +476,7 @@ export default function MarketingLogbookPage() {
           <div className="space-y-2.5">
             {filteredItems.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-gray-200 bg-white py-16 text-center text-sm text-gray-400">
-                近 {data.days} 天內無符合條件的行銷日誌紀錄
+                {t('empty', { n: data.days })}
               </div>
             ) : (
               filteredItems.map(item => {
@@ -497,7 +499,7 @@ export default function MarketingLogbookPage() {
                       <div className="flex items-center gap-2 flex-wrap min-w-0">
                         <span className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-md border ${conf.color}`}>
                           <Icon className="h-3 w-3" />
-                          {conf.label}
+                          {t(`cat.${CATEGORY_CONFIG[item.category] ? item.category : 'general'}`)}
                         </span>
 
                         <span className="font-semibold text-sm text-gray-900 truncate">
@@ -520,7 +522,7 @@ export default function MarketingLogbookPage() {
                         {isManual && (
                           <button
                             onClick={() => handleDelete(item.id)}
-                            title="刪除紀錄"
+                            title={t('delete')}
                             className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity p-0.5"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -537,14 +539,14 @@ export default function MarketingLogbookPage() {
                       <div className="flex items-center gap-3">
                         {item.credits !== undefined && item.credits > 0 && (
                           <span className="text-indigo-600 font-medium">
-                            耗用 {fmt(item.credits)} 點
+                            {t('credits', { n: fmt(item.credits) })}
                           </span>
                         )}
                         {item.details?.channel && (
-                          <span>通路：{String(item.details.channel).toUpperCase()}</span>
+                          <span>{t('channel')}{String(item.details.channel).toUpperCase()}</span>
                         )}
                         {item.details?.model && (
-                          <span>模型：{item.details.model}</span>
+                          <span>{t('model')}{item.details.model}</span>
                         )}
                       </div>
 
@@ -553,7 +555,7 @@ export default function MarketingLogbookPage() {
                         className="inline-flex items-center gap-1 text-gray-400 hover:text-gray-600"
                       >
                         {copiedId === item.id ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
-                        {copiedId === item.id ? '已複製' : '複製'}
+                        {copiedId === item.id ? t('copied') : t('copy')}
                       </button>
                     </div>
                   </div>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState, type ChangeEvent } from 'react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import {
   Download,
@@ -48,12 +49,13 @@ export function ExcelImportModal({
   description,
   columns,
   templateFilename,
-  sheetName = '資料清單',
+  sheetName,
   onClose,
   onSuccess,
   onSubmit,
   extraHelp,
 }: ExcelImportModalProps) {
+  const t = useTranslations('ExcelImport')
   const [file, setFile] = useState<File | null>(null)
   const [parsing, setParsing] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -65,7 +67,7 @@ export function ExcelImportModal({
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   const handleDownloadExcel = () => {
-    downloadExcelTemplate(templateFilename, sheetName, columns)
+    downloadExcelTemplate(templateFilename, sheetName ?? t('sheetDefault'), columns)
   }
 
   const handleDownloadCsv = () => {
@@ -92,7 +94,7 @@ export function ExcelImportModal({
         setActiveTab('preview')
       }
     } catch (err: unknown) {
-      setServerError(err instanceof Error ? err.message : '檔案解析失敗，請確認檔案格式是否正確')
+      setServerError(err instanceof Error ? err.message : t('parseFailed'))
       setParsedRows([])
       setValidationErrors([])
     } finally {
@@ -130,7 +132,7 @@ export function ExcelImportModal({
         }
       }
     } catch (err: unknown) {
-      setServerError(err instanceof Error ? err.message : '匯入提交時發生錯誤')
+      setServerError(err instanceof Error ? err.message : t('submitErr'))
     } finally {
       setSubmitting(false)
     }
@@ -161,7 +163,7 @@ export function ExcelImportModal({
             <div>
               <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">{title}</h2>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                {description || '支援 .xlsx, .xls 與 .csv 檔案，可自動批次建立或更新資料（Upsert）'}
+                {description || t('defaultDesc')}
               </p>
             </div>
           </div>
@@ -179,7 +181,7 @@ export function ExcelImportModal({
           <div className="rounded-xl border bg-slate-50/80 p-4 dark:bg-slate-900/40 dark:border-gray-800 space-y-2.5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-                1. 準備 Excel 試算表（或直接下載標準範本）
+                {t('step1')}
               </span>
               <div className="flex items-center gap-2">
                 <Button
@@ -189,7 +191,7 @@ export function ExcelImportModal({
                   onClick={handleDownloadExcel}
                 >
                   <Download className="h-3.5 w-3.5" />
-                  下載 Excel 範本 (.xlsx)
+                  {t('dlXlsx')}
                 </Button>
                 <Button
                   size="sm"
@@ -198,20 +200,20 @@ export function ExcelImportModal({
                   onClick={handleDownloadCsv}
                 >
                   <Download className="h-3.5 w-3.5" />
-                  .csv 範本
+                  {t('dlCsv')}
                 </Button>
               </div>
             </div>
 
             <ul className="list-disc pl-5 text-xs text-gray-600 dark:text-gray-400 space-y-1">
               <li>
-                <b>必填欄位：</b>
+                <b>{t('required')}</b>
                 {requiredCols.length > 0
-                  ? requiredCols.map(c => c.label).join('、')
-                  : '無特定必填（依各欄位自訂填寫）'}
+                  ? requiredCols.map(c => c.label).join(', ')
+                  : t('noRequired')}
               </li>
               <li>
-                <b>更新機制：</b>若資料已存在（以關鍵編號/名稱對應），系統將自動為您更新內容；若不存在則自動新增。
+                {t.rich('upsert', { b: c => <b>{c}</b> })}
               </li>
               {extraHelp?.map((help, idx) => (
                 <li key={idx}>{help}</li>
@@ -224,7 +226,7 @@ export function ExcelImportModal({
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-                  2. 上傳填好的 Excel / CSV 檔案
+                  {t('step2')}
                 </span>
                 {parsedRows.length > 0 && (
                   <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 p-0.5 rounded-lg text-xs">
@@ -234,7 +236,7 @@ export function ExcelImportModal({
                         activeTab === 'upload' ? 'bg-white shadow-xs text-primary dark:bg-gray-700' : 'text-gray-500'
                       }`}
                     >
-                      重新選擇
+                      {t('reselect')}
                     </button>
                     <button
                       onClick={() => setActiveTab('preview')}
@@ -242,7 +244,7 @@ export function ExcelImportModal({
                         activeTab === 'preview' ? 'bg-white shadow-xs text-primary dark:bg-gray-700' : 'text-gray-500'
                       }`}
                     >
-                      預覽資料 ({parsedRows.length} 筆)
+                      {t('previewN', { n: parsedRows.length })}
                     </button>
                   </div>
                 )}
@@ -270,14 +272,14 @@ export function ExcelImportModal({
                   {parsing ? (
                     <div className="flex flex-col items-center gap-2 py-4">
                       <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                      <span className="text-sm font-medium text-gray-600">正在解析試算表檔案…</span>
+                      <span className="text-sm font-medium text-gray-600">{t('parsing')}</span>
                     </div>
                   ) : file ? (
                     <div className="flex flex-col items-center gap-1.5">
                       <FileSpreadsheet className="h-9 w-9 text-emerald-600 dark:text-emerald-400" />
                       <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{file.name}</p>
                       <p className="text-xs text-gray-500">
-                        大小：{(file.size / 1024).toFixed(1)} KB・點此重新選擇或拖曳替換
+                        {t('fileSize', { kb: (file.size / 1024).toFixed(1) })}
                       </p>
                     </div>
                   ) : (
@@ -287,10 +289,10 @@ export function ExcelImportModal({
                       </div>
                       <div>
                         <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          點擊此處選擇檔案，或直接將檔案拖曳至此
+                          {t('pick')}
                         </p>
                         <p className="text-xs text-gray-400 mt-0.5">
-                          支援 Microsoft Excel (.xlsx, .xls) 及 CSV 格式
+                          {t('formats')}
                         </p>
                       </div>
                     </>
@@ -302,13 +304,13 @@ export function ExcelImportModal({
                   <div className="flex items-center justify-between text-xs text-gray-500">
                     <span className="flex items-center gap-1">
                       <Eye className="h-3.5 w-3.5 text-primary" />
-                      預覽前 {Math.min(parsedRows.length, 5)} 筆（共解析出 {parsedRows.length} 筆有效資料）
+                      {t('previewHead', { n: Math.min(parsedRows.length, 5), total: parsedRows.length })}
                     </span>
                     <button
                       onClick={() => fileInputRef.current?.click()}
                       className="text-xs text-primary hover:underline flex items-center gap-1"
                     >
-                      <RefreshCw className="h-3 w-3" /> 重新選檔
+                      <RefreshCw className="h-3 w-3" /> {t('reselectFile')}
                     </button>
                   </div>
 
@@ -344,7 +346,7 @@ export function ExcelImportModal({
                                 >
                                   {val !== undefined && val !== null && String(val) !== '' ? (
                                     typeof val === 'boolean' ? (
-                                      val ? '是' : '否'
+                                      val ? t('yes') : t('no')
                                     ) : (
                                       String(val)
                                     )
@@ -372,14 +374,14 @@ export function ExcelImportModal({
             <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3 text-xs space-y-1.5 dark:border-amber-900/50 dark:bg-amber-950/20">
               <div className="flex items-center gap-1.5 font-semibold text-amber-700 dark:text-amber-400">
                 <AlertTriangle className="h-4 w-4 shrink-0" />
-                <span>資料檢查提示（共 {validationErrors.length} 則）</span>
+                <span>{t('checks', { n: validationErrors.length })}</span>
               </div>
               <ul className="max-h-24 list-disc space-y-0.5 overflow-y-auto pl-5 text-gray-600 dark:text-gray-400">
                 {validationErrors.slice(0, 5).map((err, i) => (
                   <li key={i}>{err.message}</li>
                 ))}
                 {validationErrors.length > 5 && (
-                  <li className="text-gray-400">…以及其餘 {validationErrors.length - 5} 則提醒</li>
+                  <li className="text-gray-400">{t('moreChecks', { n: validationErrors.length - 5 })}</li>
                 )}
               </ul>
             </div>
@@ -390,7 +392,7 @@ export function ExcelImportModal({
             <div className="rounded-xl border border-red-200 bg-red-50/80 p-3.5 text-xs text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-400 flex items-start gap-2">
               <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
               <div>
-                <p className="font-semibold">匯入錯誤</p>
+                <p className="font-semibold">{t('importErr')}</p>
                 <p className="mt-0.5">{serverError}</p>
               </div>
             </div>
@@ -403,13 +405,13 @@ export function ExcelImportModal({
                 <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                 <div>
                   <p className="text-sm font-bold text-emerald-800 dark:text-emerald-300">
-                    批次匯入完成！
+                    {t('done')}
                   </p>
                   <p className="text-emerald-700 dark:text-emerald-400 mt-0.5">
-                    {result.inserted !== undefined && `新增 ${result.inserted} 筆`}
-                    {result.updated !== undefined && `、更新 ${result.updated} 筆`}
-                    {result.imported !== undefined && !result.inserted && !result.updated && `成功寫入 ${result.imported} 筆`}
-                    {result.skipped !== undefined && result.skipped > 0 && `、略過 ${result.skipped} 筆`}
+                    {result.inserted !== undefined && t('inserted', { n: result.inserted })}
+                    {result.updated !== undefined && t('updated', { n: result.updated })}
+                    {result.imported !== undefined && !result.inserted && !result.updated && t('importedN', { n: result.imported })}
+                    {result.skipped !== undefined && result.skipped > 0 && t('skipped', { n: result.skipped })}
                   </p>
                 </div>
               </div>
@@ -418,13 +420,13 @@ export function ExcelImportModal({
                 <div className="mt-2 rounded-lg border border-amber-200 bg-white p-3 dark:border-amber-900 dark:bg-gray-800 space-y-1">
                   <div className="flex items-center gap-1 font-semibold text-amber-700 dark:text-amber-400">
                     <AlertTriangle className="h-3.5 w-3.5" />
-                    <span>部分未匯入項目（{result.errors.length} 筆）：</span>
+                    <span>{t('notImported', { n: result.errors.length })}</span>
                   </div>
                   <ul className="max-h-32 list-disc space-y-0.5 overflow-y-auto pl-5 text-gray-600 dark:text-gray-400">
                     {result.errors.map((er, idx) => (
                       <li key={idx}>
-                        {er.line > 0 ? `第 ${er.line} 列：` : ''}
-                        {er.reason || er.message || '格式不符'}
+                        {er.line > 0 ? t('rowN', { n: er.line }) : ''}
+                        {er.reason || er.message || t('badFormat')}
                       </li>
                     ))}
                   </ul>
@@ -439,13 +441,13 @@ export function ExcelImportModal({
           <div>
             {parsedRows.length > 0 && !result && (
               <span className="text-xs text-gray-500">
-                已載入 <b>{parsedRows.length}</b> 筆資料準備匯入
+                {t.rich('ready', { n: parsedRows.length, b: c => <b>{c}</b> })}
               </span>
             )}
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={onClose} disabled={submitting}>
-              {result ? '關閉' : '取消'}
+              {result ? t('close') : t('cancel')}
             </Button>
             {!result ? (
               <Button
@@ -457,12 +459,12 @@ export function ExcelImportModal({
                 {submitting ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    寫入中…
+                    {t('writing')}
                   </>
                 ) : (
                   <>
                     <CheckCircle2 className="h-4 w-4" />
-                    確認匯入 / 更新 ({parsedRows.length})
+                    {t('confirm', { n: parsedRows.length })}
                   </>
                 )}
               </Button>
@@ -478,7 +480,7 @@ export function ExcelImportModal({
                   setActiveTab('upload')
                 }}
               >
-                繼續匯入其他檔案
+                {t('another')}
               </Button>
             )}
           </div>

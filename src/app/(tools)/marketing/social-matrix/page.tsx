@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import {
   Server, ShieldCheck, Activity, Plus, RefreshCw, Trash2, ExternalLink,
   Copy, Check, Sparkles, Send, Users, Layers, AlertCircle, Clock, Zap,
@@ -24,6 +25,7 @@ export default function SocialMatrixPage() {
 }
 
 function SocialMatrixContent() {
+  const t = useTranslations('SocialMatrix')
   const [activeTab, setActiveTab] = useState<'proxies' | 'accounts' | 'campaign'>('proxies')
   const [isLoading, setIsLoading] = useState(false)
   const [copiedId, setCopiedId] = useState<string | null>(null)
@@ -190,7 +192,7 @@ function SocialMatrixContent() {
     navigator.clipboard.writeText(text)
     setCopiedId(id)
     setTimeout(() => setCopiedId(null), 2500)
-    showToast('已成功複製到剪貼簿！', 'success')
+    showToast(t('copied'), 'success')
   }
 
   // 1. Proxy Actions
@@ -214,7 +216,7 @@ function SocialMatrixContent() {
         showToast(data.message, 'error')
       }
     } catch (err) {
-      showToast(`測速失敗: ${String(err)}`, 'error')
+      showToast(t('speedFail', { error: String(err) }), 'error')
     } finally {
       setTestingProxyId(null)
     }
@@ -234,7 +236,7 @@ function SocialMatrixContent() {
       })
       const data = await res.json()
       if (data.success) {
-        showToast('代理 IP 已成功加入代理池！', 'success')
+        showToast(t('proxyAdded'), 'success')
         setIsAddProxyOpen(false)
         if (data.proxy) {
           setProxies(prev => {
@@ -245,7 +247,7 @@ function SocialMatrixContent() {
         }
         fetchAllData()
       } else {
-        showToast(data.error || '新增失敗', 'error')
+        showToast(data.error || t('addFailed'), 'error')
       }
     } catch (err) {
       showToast(String(err), 'error')
@@ -253,7 +255,7 @@ function SocialMatrixContent() {
   }
 
   const handleDeleteProxy = async (id: string) => {
-    if (!confirm('確定要自代理池移除此代理 IP 嗎？')) return
+    if (!confirm(t('confirmRemoveProxy'))) return
     try {
       await fetch(`/api/marketing/social-matrix/proxies/${id}`, { method: 'DELETE' })
       setProxies(prev => {
@@ -261,9 +263,9 @@ function SocialMatrixContent() {
         saveProxiesLocally(next)
         return next
       })
-      showToast('已移除代理 IP', 'info')
+      showToast(t('proxyRemoved'), 'info')
     } catch (err) {
-      showToast(`刪除失敗: ${String(err)}`, 'error')
+      showToast(t('deleteFail', { error: String(err) }), 'error')
     }
   }
 
@@ -283,7 +285,7 @@ function SocialMatrixContent() {
       })
       const data = await res.json()
       if (data.success) {
-        showToast('代理資訊與名稱已成功更新！', 'success')
+        showToast(t('proxyUpdated'), 'success')
         setIsEditProxyOpen(false)
         setProxies(prev => {
           const next = prev.map(p => p.id === editingProxy.id ? { ...p, ...editingProxy } : p)
@@ -291,10 +293,10 @@ function SocialMatrixContent() {
           return next
         })
       } else {
-        showToast(data.error || '更新失敗', 'error')
+        showToast(data.error || t('updateFailed'), 'error')
       }
     } catch (err) {
-      showToast(`更新失敗: ${String(err)}`, 'error')
+      showToast(t('updateFail', { error: String(err) }), 'error')
     }
   }
 
@@ -306,7 +308,7 @@ function SocialMatrixContent() {
   const handleLeaseOfficial = async (offProxy: OfficialRentableProxy) => {
     if (!hasFreeQuota) {
       const credits = creditsFor(offProxy.monthly_price_twd)
-      if (!confirm(`附贈額度已用完，將扣 ${credits ?? '—'} 點租用此 IP 30 天，到期自動續扣（點數不足時到期釋放）。確定購買？`)) return
+      if (!confirm(t('confirmBuy', { credits: String(credits ?? '—') }))) return
     }
     setIsLeasingId(offProxy.id)
     try {
@@ -317,7 +319,7 @@ function SocialMatrixContent() {
       })
       const data = await res.json()
       if (data.success) {
-        showToast(data.message || '🎉 官方專屬原生 IP 租用成功！', 'success')
+        showToast(data.message || t('leaseOk'), 'success')
         if (data.proxy) {
           setProxies(prev => {
             const next = [data.proxy, ...prev]
@@ -328,17 +330,17 @@ function SocialMatrixContent() {
         await fetchAllData()
         setProxySubTab('my_proxies')
       } else {
-        showToast(data.error || '租用失敗', 'error')
+        showToast(data.error || t('leaseFailed'), 'error')
       }
     } catch (err) {
-      showToast(`租用失敗: ${String(err)}`, 'error')
+      showToast(t('leaseFail', { error: String(err) }), 'error')
     } finally {
       setIsLeasingId(null)
     }
   }
 
   const handleReleaseLease = async (leaseId: string) => {
-    if (!confirm('確定要解除此官方 IP 租用嗎？解除後該節點將自代理池移除，已綁定帳號需重新選擇代理。')) return
+    if (!confirm(t('confirmRelease'))) return
     setIsReleasingId(leaseId)
     try {
       const res = await fetch(`/api/marketing/social-matrix/official-proxies/lease/${leaseId}`, {
@@ -346,7 +348,7 @@ function SocialMatrixContent() {
       })
       const data = await res.json()
       if (data.success) {
-        showToast(data.message || '已成功解除租用', 'info')
+        showToast(data.message || t('released'), 'info')
         setProxies(prev => {
           const next = prev.filter(p => p.lease_id !== leaseId && p.id !== `leased-${leaseId}`)
           saveProxiesLocally(next)
@@ -354,10 +356,10 @@ function SocialMatrixContent() {
         })
         await fetchAllData()
       } else {
-        showToast(data.error || '退租失敗', 'error')
+        showToast(data.error || t('releaseFailed'), 'error')
       }
     } catch (err) {
-      showToast(`退租異常: ${String(err)}`, 'error')
+      showToast(t('releaseErr', { error: String(err) }), 'error')
     } finally {
       setIsReleasingId(null)
     }
@@ -373,14 +375,14 @@ function SocialMatrixContent() {
       })
       const data = await res.json()
       if (data.success) {
-        showToast('👑 官方供租用 IP 已成功上架！', 'success')
+        showToast(t('offListed'), 'success')
         setIsAddOfficialOpen(false)
         await fetchAllData()
       } else {
-        showToast(data.error || '上架失敗', 'error')
+        showToast(data.error || t('listFailed'), 'error')
       }
     } catch (err) {
-      showToast(`新增失敗: ${String(err)}`, 'error')
+      showToast(t('addFail', { error: String(err) }), 'error')
     }
   }
 
@@ -400,32 +402,32 @@ function SocialMatrixContent() {
       })
       const data = await res.json()
       if (data.success) {
-        showToast('官方 IP 庫存資訊與定價已成功更新！', 'success')
+        showToast(t('offUpdated'), 'success')
         setIsEditOfficialOpen(false)
         await fetchAllData()
       } else {
-        showToast(data.error || '更新失敗', 'error')
+        showToast(data.error || t('updateFailed'), 'error')
       }
     } catch (err) {
-      showToast(`更新失敗: ${String(err)}`, 'error')
+      showToast(t('updateFail', { error: String(err) }), 'error')
     }
   }
 
   const handleDeleteOfficialProxy = async (id: string) => {
-    if (!confirm('確定要自官方庫存中刪除/下架此供租用 IP 嗎？')) return
+    if (!confirm(t('confirmUnlist'))) return
     try {
       const res = await fetch(`/api/marketing/social-matrix/official-proxies/${id}`, {
         method: 'DELETE',
       })
       const data = await res.json()
       if (data.success) {
-        showToast('已自官方庫存下架該 IP', 'info')
+        showToast(t('unlisted'), 'info')
         await fetchAllData()
       } else {
-        showToast(data.error || '刪除失敗', 'error')
+        showToast(data.error || t('deleteFailed'), 'error')
       }
     } catch (err) {
-      showToast(`下架失敗: ${String(err)}`, 'error')
+      showToast(t('unlistFail', { error: String(err) }), 'error')
     }
   }
 
@@ -444,7 +446,7 @@ function SocialMatrixContent() {
       })
       const data = await res.json()
       if (data.success) {
-        showToast('新社群帳號已加入矩陣！', 'success')
+        showToast(t('accAdded'), 'success')
         setIsAddAccountOpen(false)
         setNewAccountForm({
           platform: 'facebook',
@@ -456,7 +458,7 @@ function SocialMatrixContent() {
         })
         fetchAllData()
       } else {
-        showToast(data.error || '新增失敗', 'error')
+        showToast(data.error || t('addFailed'), 'error')
       }
     } catch (err) {
       showToast(String(err), 'error')
@@ -464,11 +466,11 @@ function SocialMatrixContent() {
   }
 
   const handleDeleteAccount = async (id: string) => {
-    if (!confirm('確定要移除此帳號嗎？')) return
+    if (!confirm(t('confirmRemoveAcc'))) return
     try {
       await fetch(`/api/marketing/social-matrix/accounts/${id}`, { method: 'DELETE' })
       setAccounts(prev => prev.filter(a => a.id !== id))
-      showToast('已刪除社群帳號', 'info')
+      showToast(t('accRemoved'), 'info')
     } catch (err) {
       showToast(String(err), 'error')
     }
@@ -484,14 +486,14 @@ function SocialMatrixContent() {
       })
       const data = await res.json()
       if (data.success) {
-        showToast(`擬人化自動養號完成！已為 ${data.processed_count} 個帳號執行安全養成任務`, 'success')
+        showToast(t('warmupDone', { n: data.processed_count }), 'success')
         if (data.updated_accounts) setAccounts(data.updated_accounts)
         if (data.latest_logs) setLogs(data.latest_logs)
       } else {
-        showToast(data.error || '養號執行失敗', 'error')
+        showToast(data.error || t('warmupFailed'), 'error')
       }
     } catch (err) {
-      showToast(`養號異常: ${String(err)}`, 'error')
+      showToast(t('warmupErr', { error: String(err) }), 'error')
     } finally {
       setIsWarmingUp(false)
     }
@@ -521,12 +523,12 @@ function SocialMatrixContent() {
         if (data.copies?.length > 0) {
           setSelectedCopyId(data.copies[0].id)
         }
-        showToast(`AI 目標雷達已鎖定 ${data.target_groups?.length || 0} 個優質社群，並產出 ${data.copies?.length || 0} 組防封變異文案！`, 'success')
+        showToast(t('radarDone', { groups: data.target_groups?.length || 0, copies: data.copies?.length || 0 }), 'success')
       } else {
-        showToast(data.error || '生成失敗', 'error')
+        showToast(data.error || t('genFailed'), 'error')
       }
     } catch (err) {
-      showToast(`生成異常: ${String(err)}`, 'error')
+      showToast(t('genErr', { error: String(err) }), 'error')
     } finally {
       setIsGenerating(false)
     }
@@ -558,11 +560,11 @@ function SocialMatrixContent() {
       })
       const data = await res.json()
       if (data.success) {
-        showToast(`方案 A 啟動成功！已複製防重文案，並已開啟 ${group.name} 發文頁面`, 'success')
+        showToast(t('planAOk', { name: group.name }), 'success')
         fetchAllData()
       }
     } catch (err) {
-      showToast(`操作失敗: ${String(err)}`, 'error')
+      showToast(t('opFail', { error: String(err) }), 'error')
     } finally {
       setIsDispatching(false)
     }
@@ -572,13 +574,13 @@ function SocialMatrixContent() {
   const handleDispatchModeB = async () => {
     const selectedCopy = copies.find(c => c.id === selectedCopyId) || copies[0]
     if (!selectedCopy) {
-      showToast('請先由上方生成防封文案矩陣', 'error')
+      showToast(t('needCopies'), 'error')
       return
     }
 
     const matureCount = accounts.filter(a => a.status === 'mature' || a.warmup_day >= 12).length
     if (matureCount === 0) {
-      showToast('目前尚無已完成 14 天擬人化養成 (Day 12+) 的成熟矩陣號！請先養號以保帳號安全', 'error')
+      showToast(t('noMature'), 'error')
       return
     }
 
@@ -603,10 +605,10 @@ function SocialMatrixContent() {
         showToast(data.message, 'success')
         fetchAllData()
       } else {
-        showToast(data.error || '發布失敗', 'error')
+        showToast(data.error || t('publishFailed'), 'error')
       }
     } catch (err) {
-      showToast(`排程異常: ${String(err)}`, 'error')
+      showToast(t('scheduleErr', { error: String(err) }), 'error')
     } finally {
       setIsDispatching(false)
     }
@@ -643,35 +645,35 @@ function SocialMatrixContent() {
             <div>
               <div className="flex items-center gap-2 text-indigo-200 text-xs font-semibold uppercase tracking-wider mb-2">
                 <ShieldCheck className="h-4 w-4 text-emerald-300" />
-                <span>IMT 社群矩陣與自動養號行銷系統</span>
+                <span>{t('heroTag')}</span>
               </div>
               <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-                社群矩陣發文與擬人化養號中心
+                {t('heroTitle')}
               </h1>
               <p className="text-indigo-100 text-sm mt-1 max-w-2xl">
-                支援家用原生靜態住宅 IP、14 天擬人化漸進養號、方案 A（真人 Copilot）與方案 B（矩陣自動排程發布）、AI 社群雷達與防風控防重文案庫。
+                {t('heroDesc')}
               </p>
             </div>
 
             {/* Quick Live Stats Bar */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/15">
               <div className="px-3 py-1 text-center">
-                <span className="text-[11px] text-indigo-200 block">代理池在線</span>
+                <span className="text-[11px] text-indigo-200 block">{t('statOnline')}</span>
                 <span className="text-lg font-bold text-white flex items-center justify-center gap-1">
                   <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
                   {activeProxiesCount}
                 </span>
               </div>
               <div className="px-3 py-1 text-center border-l border-white/10">
-                <span className="text-[11px] text-indigo-200 block">成熟矩陣號</span>
+                <span className="text-[11px] text-indigo-200 block">{t('statMature')}</span>
                 <span className="text-lg font-bold text-emerald-300">{matureAccountsCount}</span>
               </div>
               <div className="px-3 py-1 text-center border-l border-white/10">
-                <span className="text-[11px] text-indigo-200 block">養號中 (Day 1-11)</span>
+                <span className="text-[11px] text-indigo-200 block">{t('statWarming')}</span>
                 <span className="text-lg font-bold text-amber-300">{warmingAccountsCount}</span>
               </div>
               <div className="px-3 py-1 text-center border-l border-white/10">
-                <span className="text-[11px] text-indigo-200 block">平均健康度</span>
+                <span className="text-[11px] text-indigo-200 block">{t('statHealth')}</span>
                 <span className="text-lg font-bold text-cyan-300">{avgHealthScore}%</span>
               </div>
             </div>
@@ -688,7 +690,7 @@ function SocialMatrixContent() {
               }`}
             >
               <Server className="h-4 w-4" />
-              <span>🌐 代理池管理 ({proxies.length})</span>
+              <span>🌐 {t('tabProxies')} ({proxies.length})</span>
             </button>
             <button
               onClick={() => setActiveTab('accounts')}
@@ -699,7 +701,7 @@ function SocialMatrixContent() {
               }`}
             >
               <Cpu className="h-4 w-4" />
-              <span>🤖 帳號矩陣與自動養號 ({accounts.length})</span>
+              <span>🤖 {t('tabAccounts')} ({accounts.length})</span>
             </button>
             <button
               onClick={() => setActiveTab('campaign')}
@@ -710,7 +712,7 @@ function SocialMatrixContent() {
               }`}
             >
               <Sparkles className="h-4 w-4 text-amber-300" />
-              <span>🚀 社群行銷發布 (方案 A + B)</span>
+              <span>🚀 {t('tabCampaign')}</span>
             </button>
           </div>
         </div>
@@ -734,7 +736,7 @@ function SocialMatrixContent() {
                   }`}
                 >
                   <Server className="h-3.5 w-3.5" />
-                  <span>我的自用代理池 ({proxies.length})</span>
+                  <span>{t('myProxies')} ({proxies.length})</span>
                 </button>
                 <button
                   onClick={() => setProxySubTab('official_market')}
@@ -745,8 +747,8 @@ function SocialMatrixContent() {
                   }`}
                 >
                   <Building2 className="h-3.5 w-3.5 text-amber-300" />
-                  <span>🏢 官方原生 IP 租賃市場 ({officialProxies.length})</span>
-                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-400 text-amber-950 font-bold">免自備</span>
+                  <span>🏢 {t('market')} ({officialProxies.length})</span>
+                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-400 text-amber-950 font-bold">{t('noOwn')}</span>
                 </button>
                 {isPlatformAdmin && (
                 <button
@@ -758,7 +760,7 @@ function SocialMatrixContent() {
                   }`}
                 >
                   <ShieldCheck className="h-3.5 w-3.5 text-amber-400" />
-                  <span>⚙️ 管理者專區：供租用 IP 庫存維護</span>
+                  <span>⚙️ {t('adminZone')}</span>
                 </button>
                 )}
               </div>
@@ -770,7 +772,7 @@ function SocialMatrixContent() {
                   className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-border rounded-lg bg-white dark:bg-card hover:bg-slate-50 transition-colors"
                 >
                   <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-                  <span>重新整理</span>
+                  <span>{t('refresh')}</span>
                 </button>
                 {proxySubTab === 'my_proxies' && (
                   <>
@@ -779,14 +781,14 @@ function SocialMatrixContent() {
                       className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-xs hover:from-amber-600 hover:to-orange-600 transition-all"
                     >
                       <Building2 className="h-3.5 w-3.5" />
-                      <span>🏢 租用官方原生 IP</span>
+                      <span>🏢 {t('rentOfficial')}</span>
                     </button>
                     <button
                       onClick={() => setIsAddProxyOpen(true)}
                       className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition-colors"
                     >
                       <Plus className="h-4 w-4" />
-                      <span>新增自備代理 IP</span>
+                      <span>{t('addOwnProxy')}</span>
                     </button>
                   </>
                 )}
@@ -796,7 +798,7 @@ function SocialMatrixContent() {
                     className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold rounded-lg bg-amber-600 hover:bg-amber-700 text-white shadow-sm transition-colors"
                   >
                     <Plus className="h-4 w-4" />
-                    <span>➕ 管理者新增供租用 IP</span>
+                    <span>➕ {t('adminAdd')}</span>
                   </button>
                 )}
               </div>
@@ -815,11 +817,11 @@ function SocialMatrixContent() {
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-sm text-white">想省去設定 Wi-Fi 路由器與電腦 Proxy 服務的繁複步驟？</span>
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-400 text-amber-950 font-extrabold uppercase">IMT 官方直供</span>
+                        <span className="font-bold text-sm text-white">{t('promoQ')}</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-400 text-amber-950 font-extrabold uppercase">{t('official')}</span>
                       </div>
                       <p className="text-xs text-indigo-100 mt-0.5 max-w-2xl">
-                        IMT 直供「台灣宜蘭聯禾原生住宅寬頻」與「中華電信 4G 行動基站代理」，純淨專屬獨立、絕非公共機房 IP，最抗演算法封號，點擊即可一鍵專屬租用！
+                        {t('promoDesc')}
                       </p>
                     </div>
                   </div>
@@ -828,7 +830,7 @@ function SocialMatrixContent() {
                     className="px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-bold text-xs shadow-sm transition-transform active:scale-95 shrink-0 flex items-center gap-1.5"
                   >
                     <Store className="h-4 w-4" />
-                    <span>瀏覽官方 IP 租賃市場</span>
+                    <span>{t('browseMarket')}</span>
                   </button>
                 </div>
 
@@ -837,24 +839,24 @@ function SocialMatrixContent() {
                   <summary className="font-bold text-xs text-blue-950 dark:text-blue-200 cursor-pointer flex items-center justify-between select-none">
                     <div className="flex items-center gap-2">
                       <Globe className="h-4 w-4 text-blue-600" />
-                      <span>自備 IP 教學：如何將自家中華電信 / 聯禾有線電視原生靜態 IP 串接至系統？</span>
+                      <span>{t('ownGuideTitle')}</span>
                     </div>
                     <span className="text-xs text-blue-600 group-open:rotate-180 transition-transform">▼</span>
                   </summary>
                   <div className="pt-3 space-y-2 text-xs text-blue-800 dark:text-blue-300 border-t border-blue-200/60 dark:border-indigo-900/60 mt-3">
-                    <p>若您已有自家家用寬頻（固定 IP），可依序設定後加入自備代理池：</p>
+                    <p>{t('ownGuideIntro')}</p>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
                       <div className="bg-white/80 dark:bg-card p-3 rounded-xl border border-blue-100 dark:border-border text-xs">
-                        <span className="font-bold text-blue-700 dark:text-blue-400 block mb-1">步驟 1：路由器轉發 Port</span>
-                        <span className="text-muted-foreground">進入 Wi-Fi 路由器後台，設定 Port Forwarding，將外網 Port (如 28899) 指向內網主機。</span>
+                        <span className="font-bold text-blue-700 dark:text-blue-400 block mb-1">{t('step1')}</span>
+                        <span className="text-muted-foreground">{t('step1d')}</span>
                       </div>
                       <div className="bg-white/80 dark:bg-card p-3 rounded-xl border border-blue-100 dark:border-border text-xs">
-                        <span className="font-bold text-blue-700 dark:text-blue-400 block mb-1">步驟 2：本機啟動 Proxy</span>
-                        <span className="text-muted-foreground">主機安裝 <code>gost -L=http://帳號:密碼@:28899</code>，提供本系統安全連線驗證。</span>
+                        <span className="font-bold text-blue-700 dark:text-blue-400 block mb-1">{t('step2')}</span>
+                        <span className="text-muted-foreground">{t.rich('step2d', { code: c => <code>{c}</code> })}</span>
                       </div>
                       <div className="bg-white/80 dark:bg-card p-3 rounded-xl border border-blue-100 dark:border-border text-xs">
-                        <span className="font-bold text-blue-700 dark:text-blue-400 block mb-1">步驟 3：填入後台並綁定</span>
-                        <span className="text-muted-foreground">點擊「新增自備代理 IP」，輸入靜態 IP 與 Port，測速通過後即可綁定主號。</span>
+                        <span className="font-bold text-blue-700 dark:text-blue-400 block mb-1">{t('step3')}</span>
+                        <span className="text-muted-foreground">{t('step3d')}</span>
                       </div>
                     </div>
                   </div>
@@ -885,7 +887,7 @@ function SocialMatrixContent() {
                               {!isOfficial && (
                                 <button
                                   onClick={() => handleOpenEditProxy(proxy)}
-                                  title="修改名稱與設定"
+                                  title={t('editNameSettings')}
                                   className="p-1 text-xs text-muted-foreground hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950 rounded transition-colors shrink-0"
                                 >
                                   <Pencil className="h-3 w-3" />
@@ -901,30 +903,30 @@ function SocialMatrixContent() {
                                 ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
                                 : 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300'
                             }`}>
-                              {isOfficial ? '🏢 官方專屬租用' : isHome ? '🏠 家用原生靜態' : isMobile ? '📱 4G行動基站' : '🏢 商業住宅代理'}
+                              {isOfficial ? t('kindOfficial') : isHome ? t('kindHome') : isMobile ? t('kindMobile') : t('kindBiz')}
                             </span>
                           </div>
 
                           <div className="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl text-xs font-mono text-muted-foreground mb-3 space-y-1">
                             <div className="flex justify-between">
-                              <span>位址與端口:</span>
+                              <span>{t('addrPort')}</span>
                               <span className="font-semibold text-foreground">{proxy.host}:{proxy.port}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span>通訊協議:</span>
+                              <span>{t('protocol')}</span>
                               <span className="uppercase font-semibold">{proxy.protocol}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span>所屬 ISP:</span>
-                              <span className="truncate max-w-[130px] font-medium text-foreground">{proxy.isp || '原生寬頻'}</span>
+                              <span>{t('isp')}</span>
+                              <span className="truncate max-w-[130px] font-medium text-foreground">{proxy.isp || t('nativeBb')}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span>地理位置:</span>
-                              <span>{proxy.country} - {proxy.city || '在地節點'}</span>
+                              <span>{t('location')}</span>
+                              <span>{proxy.country} - {proxy.city || t('localNode')}</span>
                             </div>
                             {isOfficial && proxy.expires_at && (
                               <div className="flex justify-between text-indigo-600 dark:text-indigo-400 pt-1 border-t border-slate-200 dark:border-slate-800">
-                                <span>租期有效至:</span>
+                                <span>{t('leaseUntil')}</span>
                                 <span>{new Date(proxy.expires_at).toLocaleDateString()}</span>
                               </div>
                             )}
@@ -940,10 +942,10 @@ function SocialMatrixContent() {
                         <div className="pt-2 border-t border-border flex items-center justify-between text-xs">
                           <div className="flex items-center gap-2">
                             <span className="text-[11px] font-medium text-muted-foreground">
-                              延遲: <span className={proxy.latency_ms < 50 ? 'text-emerald-600 font-bold' : 'text-amber-600 font-bold'}>{proxy.latency_ms}ms</span>
+                              {t('latency')} <span className={proxy.latency_ms < 50 ? 'text-emerald-600 font-bold' : 'text-amber-600 font-bold'}>{proxy.latency_ms}ms</span>
                             </span>
                             <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-muted-foreground">
-                              綁定 {proxy.assigned_count || 0} 帳號
+                              {t('boundN', { n: proxy.assigned_count || 0 })}
                             </span>
                           </div>
 
@@ -951,7 +953,7 @@ function SocialMatrixContent() {
                             {!isOfficial && (
                               <button
                                 onClick={() => handleOpenEditProxy(proxy)}
-                                title="編輯代理名稱與設定"
+                                title={t('editProxy')}
                                 className="p-1.5 text-xs text-muted-foreground hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950 rounded-md transition-colors"
                               >
                                 <Pencil className="h-3.5 w-3.5" />
@@ -960,7 +962,7 @@ function SocialMatrixContent() {
                             <button
                               onClick={() => handleTestProxy(proxy)}
                               disabled={isTesting}
-                              title="一鍵連線測速"
+                              title={t('speedTest')}
                               className="p-1.5 text-xs text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950 rounded-md transition-colors"
                             >
                               <Activity className={`h-3.5 w-3.5 ${isTesting ? 'animate-spin text-amber-500' : ''}`} />
@@ -969,15 +971,15 @@ function SocialMatrixContent() {
                               <button
                                 onClick={() => handleReleaseLease(proxy.lease_id || proxy.id)}
                                 disabled={isReleasingId === (proxy.lease_id || proxy.id)}
-                                title="退租 / 解除租用"
+                                title={t('releaseTitle')}
                                 className="px-2 py-1 text-[11px] font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950 rounded-md transition-colors border border-rose-200 dark:border-rose-900"
                               >
-                                {isReleasingId === (proxy.lease_id || proxy.id) ? '處理中...' : '退租'}
+                                {isReleasingId === (proxy.lease_id || proxy.id) ? t('processing') : t('release')}
                               </button>
                             ) : (
                               <button
                                 onClick={() => handleDeleteProxy(proxy.id)}
-                                title="刪除自備代理"
+                                title={t('deleteOwn')}
                                 className="p-1.5 text-xs text-muted-foreground hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950 rounded-md transition-colors"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
@@ -1001,8 +1003,8 @@ function SocialMatrixContent() {
                   <div className="flex items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 dark:border-emerald-800 px-4 py-3 text-sm">
                     <BadgeCheck className="h-4 w-4 text-emerald-600 shrink-0" />
                     <span className="font-semibold text-emerald-900 dark:text-emerald-200">
-                      方案附贈官方 IP：{leaseQuota.quota} 個（已使用 {Math.min(leaseQuota.used, leaseQuota.quota)} 個）
-                      {leaseQuota.used >= leaseQuota.quota && '；額外 IP 以點數購買，每 30 天扣點、到期自動續扣'}
+                      {t('quota', { quota: leaseQuota.quota, used: Math.min(leaseQuota.used, leaseQuota.quota) })}
+                      {leaseQuota.used >= leaseQuota.quota && t('quotaExtra')}
                     </span>
                   </div>
                 )}
@@ -1012,33 +1014,33 @@ function SocialMatrixContent() {
                     <div>
                       <div className="flex items-center gap-2 text-amber-300 text-xs font-bold uppercase tracking-wider mb-2">
                         <BadgeCheck className="h-4 w-4" />
-                        <span>IMT 官方直供・純天然原生乾淨 IP 庫存</span>
+                        <span>{t('mktTag')}</span>
                       </div>
                       <h2 className="text-xl md:text-2xl font-extrabold tracking-tight">
-                        社群抗風控專屬原生住宅與 4G 行動基地台 IP
+                        {t('mktTitle')}
                       </h2>
                       <p className="text-indigo-100 text-xs md:text-sm mt-1 max-w-2xl leading-relaxed">
-                        Facebook、Instagram、Threads、TikTok、Dcard 的演算法對公共機房 IP 風控極為嚴苛。
-                        IMT 官方直供 100% 乾淨原生家用寬頻與實體行動基站，一對一專屬獨享、免技術設定、一鍵即租即用！
+                        {t('mktDesc1')}
+                        {t('mktDesc2')}
                       </p>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 text-xs bg-white/10 backdrop-blur-md p-3.5 rounded-2xl border border-white/15 shrink-0">
                       <div className="flex items-center gap-2">
                         <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
-                        <span>100% 原生住宅寬頻</span>
+                        <span>{t('feat1')}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
-                        <span>1對1 專屬獨立獨享</span>
+                        <span>{t('feat2')}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
-                        <span>真 4G/5G 行動基站</span>
+                        <span>{t('feat3')}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
-                        <span>免 Termux/路由器設定</span>
+                        <span>{t('feat4')}</span>
                       </div>
                     </div>
                   </div>
@@ -1070,7 +1072,7 @@ function SocialMatrixContent() {
                                     ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
                                     : 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300'
                                 }`}>
-                                  {offProxy.proxy_type === 'home_static' ? '🏠 家用原生靜態寬頻' : offProxy.proxy_type === 'mobile_4g' ? '📱 4G/5G 移動基站' : '🏢 商業住宅代理'}
+                                  {offProxy.proxy_type === 'home_static' ? t('kindHomeBb') : offProxy.proxy_type === 'mobile_4g' ? t('kindMobile5g') : t('kindBiz')}
                                 </span>
                                 <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-muted-foreground uppercase font-mono">
                                   {offProxy.protocol}
@@ -1090,48 +1092,48 @@ function SocialMatrixContent() {
                                 : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
                             }`}>
                               <span className={`h-2 w-2 rounded-full ${isLeasedByMe ? 'bg-emerald-500' : isAvailable ? 'bg-indigo-500' : 'bg-slate-400'}`} />
-                              {isLeasedByMe ? '您已專屬租用' : isAvailable ? '可立即租用' : '已專屬租出'}
+                              {isLeasedByMe ? t('leasedByMe') : isAvailable ? t('available') : t('leasedOut')}
                             </span>
                           </div>
 
                           {/* Technical Highlights */}
                           <div className="grid grid-cols-2 gap-2 bg-slate-50 dark:bg-slate-900/60 p-3 rounded-xl text-xs font-mono">
                             <div>
-                              <span className="text-muted-foreground block text-[10px]">電信業者 (ISP)</span>
-                              <span className="font-bold text-foreground truncate block">{offProxy.isp || '台灣原生寬頻'}</span>
+                              <span className="text-muted-foreground block text-[10px]">{t('carrier')}</span>
+                              <span className="font-bold text-foreground truncate block">{offProxy.isp || t('twBb')}</span>
                             </div>
                             <div>
-                              <span className="text-muted-foreground block text-[10px]">伺服節點位置</span>
-                              <span className="font-bold text-foreground">{offProxy.country} - {offProxy.city || '台灣在地'}</span>
+                              <span className="text-muted-foreground block text-[10px]">{t('nodeLoc')}</span>
+                              <span className="font-bold text-foreground">{offProxy.country} - {offProxy.city || t('twLocal')}</span>
                             </div>
                             <div>
-                              <span className="text-muted-foreground block text-[10px]">延遲評級</span>
-                              <span className="font-bold text-emerald-600">{offProxy.latency_ms}ms (極速低延遲)</span>
+                              <span className="text-muted-foreground block text-[10px]">{t('latencyGrade')}</span>
+                              <span className="font-bold text-emerald-600">{offProxy.latency_ms}ms ({t('lowLatency')})</span>
                             </div>
                             <div>
-                              <span className="text-muted-foreground block text-[10px]">專屬獨享配額</span>
-                              <span className="font-bold text-foreground">1 客戶專屬 ({offProxy.current_tenants_count}/{offProxy.max_tenants})</span>
+                              <span className="text-muted-foreground block text-[10px]">{t('tenantQuota')}</span>
+                              <span className="font-bold text-foreground">{t('oneTenant', { cur: offProxy.current_tenants_count, max: offProxy.max_tenants })}</span>
                             </div>
                           </div>
 
                           {/* Description */}
                           <p className="text-xs text-muted-foreground leading-relaxed">
-                            💡 {offProxy.notes || 'IMT 原廠測試乾淨原生住宅 IP，具備極高演算法信任權重，主號養號防封首選。'}
+                            💡 {offProxy.notes || t('offNoteDefault')}
                           </p>
                         </div>
 
                         {/* Pricing & CTA */}
                         <div className="pt-4 mt-3 border-t border-border flex items-center justify-between gap-4">
                           <div>
-                            <span className="text-[10px] text-muted-foreground block">租賃方案 (30 天專屬獨享)</span>
+                            <span className="text-[10px] text-muted-foreground block">{t('leasePlan')}</span>
                             <div className="flex items-baseline gap-1">
                               <span className="text-xl font-extrabold text-indigo-600 dark:text-indigo-400">
                                 NT$ {offProxy.monthly_price_twd}
                               </span>
-                              <span className="text-xs text-muted-foreground">/ 月</span>
+                              <span className="text-xs text-muted-foreground">{t('perMonth')}</span>
                             </div>
                             {creditsFor(offProxy.monthly_price_twd) != null && (
-                              <span className="text-[11px] font-semibold text-muted-foreground">≈ {creditsFor(offProxy.monthly_price_twd)} 點 / 30 天</span>
+                              <span className="text-[11px] font-semibold text-muted-foreground">≈ {t('creditsPer30', { n: String(creditsFor(offProxy.monthly_price_twd) ?? '—') })}</span>
                             )}
                           </div>
 
@@ -1142,7 +1144,7 @@ function SocialMatrixContent() {
                                 className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 hover:bg-emerald-100 transition-colors"
                               >
                                 <CheckCheck className="h-4 w-4" />
-                                <span>已在代理池（查看）</span>
+                                <span>{t('inPool')}</span>
                               </button>
                             ) : isAvailable ? (
                               <button
@@ -1151,14 +1153,14 @@ function SocialMatrixContent() {
                                 className="flex items-center gap-1.5 px-5 py-2.5 text-xs font-bold rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-violet-700 hover:from-indigo-700 hover:to-violet-800 text-white shadow-md hover:shadow-indigo-500/25 active:scale-95 transition-all disabled:opacity-50"
                               >
                                 <Zap className={`h-4 w-4 text-amber-300 ${isLeasing ? 'animate-spin' : ''}`} />
-                                <span>{isLeasing ? '正在開通專屬 IP...' : hasFreeQuota ? '🎁 領取方案附贈 IP' : `⚡ 以 ${creditsFor(offProxy.monthly_price_twd) ?? '—'} 點租用`}</span>
+                                <span>{isLeasing ? t('activating') : hasFreeQuota ? t('claimFree') : t('rentWithCredits', { n: String(creditsFor(offProxy.monthly_price_twd) ?? '—') })}</span>
                               </button>
                             ) : (
                               <button
                                 disabled
                                 className="px-4 py-2 text-xs font-bold rounded-xl bg-slate-100 dark:bg-slate-800 text-muted-foreground cursor-not-allowed"
                               >
-                                🔒 專屬名額額滿
+                                {t('full')}
                               </button>
                             )}
                           </div>
@@ -1181,13 +1183,13 @@ function SocialMatrixContent() {
                     <div>
                       <div className="flex items-center gap-2 text-amber-400 text-xs font-bold uppercase tracking-wider mb-1">
                         <ShieldCheck className="h-4 w-4" />
-                        <span>👑 平台管理者專區（Admin Portal）</span>
+                        <span>{t('adminPortal')}</span>
                       </div>
                       <h3 className="text-lg font-bold">
-                        IMT 官方供租用 IP 資源庫維護
+                        {t('adminTitle')}
                       </h3>
                       <p className="text-xs text-slate-300 mt-1 max-w-2xl">
-                        管理者可在此錄入、定價並維護官方代理伺服器。在此上架的節點會立即顯示於「🏢 官方原生 IP 租賃市場」供平台所有客戶一鍵租用。
+                        {t('adminDesc')}
                       </p>
                     </div>
 
@@ -1196,7 +1198,7 @@ function SocialMatrixContent() {
                       className="flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-md transition-all active:scale-95 shrink-0"
                     >
                       <Plus className="h-4 w-4" />
-                      <span>➕ 管理者新增供租用 IP</span>
+                      <span>➕ {t('adminAdd')}</span>
                     </button>
                   </div>
                 </div>
@@ -1205,8 +1207,8 @@ function SocialMatrixContent() {
                 <div className="bg-white dark:bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
                   <div className="px-5 py-4 border-b border-border flex items-center justify-between">
                     <div>
-                      <h4 className="font-bold text-sm">官方可租用 IP 庫存清單</h4>
-                      <span className="text-xs text-muted-foreground">共 {officialProxies.length} 組官方管理節點</span>
+                      <h4 className="font-bold text-sm">{t('invList')}</h4>
+                      <span className="text-xs text-muted-foreground">{t('invCount', { n: officialProxies.length })}</span>
                     </div>
                   </div>
 
@@ -1214,14 +1216,14 @@ function SocialMatrixContent() {
                     <table className="w-full text-xs text-left">
                       <thead className="bg-slate-50 dark:bg-slate-900/60 text-muted-foreground border-b border-border font-bold">
                         <tr>
-                          <th className="px-4 py-3">節點名稱 / 類型</th>
-                          <th className="px-4 py-3">主機位址 (Host:Port)</th>
-                          <th className="px-4 py-3">協議 / 延遲</th>
-                          <th className="px-4 py-3">電信業者 (ISP) / 城市</th>
-                          <th className="px-4 py-3">月租費 (TWD)</th>
-                          <th className="px-4 py-3">租出配額</th>
-                          <th className="px-4 py-3">狀態</th>
-                          <th className="px-4 py-3 text-right">操作</th>
+                          <th className="px-4 py-3">{t('thName')}</th>
+                          <th className="px-4 py-3">{t('thHost')}</th>
+                          <th className="px-4 py-3">{t('thProto')}</th>
+                          <th className="px-4 py-3">{t('thIsp')}</th>
+                          <th className="px-4 py-3">{t('thPrice')}</th>
+                          <th className="px-4 py-3">{t('thQuota')}</th>
+                          <th className="px-4 py-3">{t('thStatus')}</th>
+                          <th className="px-4 py-3 text-right">{t('thActions')}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
@@ -1230,20 +1232,20 @@ function SocialMatrixContent() {
                             <td className="px-4 py-3">
                               <div className="font-bold text-foreground">{p.name}</div>
                               <span className="text-[10px] text-muted-foreground">
-                                {p.proxy_type === 'home_static' ? '🏠 家用原生' : p.proxy_type === 'mobile_4g' ? '📱 4G行動' : '🏢 商業住宅'}
+                                {p.proxy_type === 'home_static' ? t('kHome') : p.proxy_type === 'mobile_4g' ? t('kMobile') : t('kBiz')}
                               </span>
                             </td>
                             <td className="px-4 py-3 font-mono">
                               <span className="font-semibold text-foreground">{p.host}:{p.port}</span>
-                              {p.username && <span className="text-[10px] text-muted-foreground block">帳號: {p.username}</span>}
+                              {p.username && <span className="text-[10px] text-muted-foreground block">{t('userLabel', { name: p.username })}</span>}
                             </td>
                             <td className="px-4 py-3">
                               <span className="uppercase font-semibold block">{p.protocol}</span>
                               <span className="text-[10px] text-emerald-600 font-bold">{p.latency_ms}ms</span>
                             </td>
                             <td className="px-4 py-3">
-                              <span className="font-medium text-foreground block">{p.isp || '原生寬頻'}</span>
-                              <span className="text-[10px] text-muted-foreground">{p.country} - {p.city || '在地'}</span>
+                              <span className="font-medium text-foreground block">{p.isp || t('nativeBb')}</span>
+                              <span className="text-[10px] text-muted-foreground">{p.country} - {p.city || t('local')}</span>
                             </td>
                             <td className="px-4 py-3 font-bold text-indigo-600 dark:text-indigo-400">
                               NT$ {p.monthly_price_twd}
@@ -1261,21 +1263,21 @@ function SocialMatrixContent() {
                                   ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
                                   : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
                               }`}>
-                                {p.status === 'available' ? '開放租用' : p.status === 'rented_out' ? '已租出' : '維護中'}
+                                {p.status === 'available' ? t('stAvail') : p.status === 'rented_out' ? t('stRented') : t('stMaint')}
                               </span>
                             </td>
                             <td className="px-4 py-3 text-right">
                               <div className="flex items-center justify-end gap-1">
                                 <button
                                   onClick={() => handleOpenEditOfficial(p)}
-                                  title="編輯定價與資訊"
+                                  title={t('editPricing')}
                                   className="p-1.5 text-xs text-muted-foreground hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950 rounded-md transition-colors"
                                 >
                                   <Pencil className="h-3.5 w-3.5" />
                                 </button>
                                 <button
                                   onClick={() => handleDeleteOfficialProxy(p.id)}
-                                  title="下架刪除"
+                                  title={t('unlistDelete')}
                                   className="p-1.5 text-xs text-muted-foreground hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950 rounded-md transition-colors"
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />
@@ -1304,10 +1306,10 @@ function SocialMatrixContent() {
                 <div>
                   <h3 className="font-bold text-base flex items-center gap-2">
                     <TrendingUp className="h-5 w-5 text-indigo-600" />
-                    <span>AI 擬人化 14 天漸進式養號進程</span>
+                    <span>{t('warmTitle')}</span>
                   </h3>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    社群演算法會高度監控新帳號的前兩週行為。系統透過每日獨立住宅 IP + 模擬真人滾動瀏覽與社交互動，防封號率高達 99.4%。
+                    {t('warmDesc')}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1317,14 +1319,14 @@ function SocialMatrixContent() {
                     className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-sm transition-all active:scale-95 disabled:opacity-50"
                   >
                     <Play className={`h-3.5 w-3.5 ${isWarmingUp ? 'animate-spin' : ''}`} />
-                    <span>{isWarmingUp ? 'AI 養號任務執行中...' : '⚡ 一鍵執行全體今日擬人養號'}</span>
+                    <span>{isWarmingUp ? t('warming') : t('warmAll')}</span>
                   </button>
                   <button
                     onClick={() => setIsAddAccountOpen(true)}
                     className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition-colors"
                   >
                     <Plus className="h-4 w-4" />
-                    <span>新增矩陣帳號</span>
+                    <span>{t('addAcc')}</span>
                   </button>
                 </div>
               </div>
@@ -1333,38 +1335,38 @@ function SocialMatrixContent() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
                   <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    <span>階段一：靜默潛伏期</span>
+                    <span>{t('ph1')}</span>
                     <span className="text-[10px] px-1.5 py-0.2 bg-blue-100 text-blue-700 rounded">Day 1-3</span>
                   </div>
                   <p className="text-[11px] text-muted-foreground leading-relaxed">
-                    登入隨機瀏覽 15-30 分鐘，累積設備指紋，完全零發文零私訊，避開新號雷達。
+                    {t('ph1d')}
                   </p>
                 </div>
                 <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
                   <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    <span>階段二：輕度互動期</span>
+                    <span>{t('ph2')}</span>
                     <span className="text-[10px] px-1.5 py-0.2 bg-indigo-100 text-indigo-700 rounded">Day 4-7</span>
                   </div>
                   <p className="text-[11px] text-muted-foreground leading-relaxed">
-                    瀏覽同業話題，對 3~5 則貼文按讚、關注官方優質粉專、觀看影片，建立真人興趣特徵。
+                    {t('ph2d')}
                   </p>
                 </div>
                 <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
                   <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    <span>階段三：社交融入期</span>
+                    <span>{t('ph3')}</span>
                     <span className="text-[10px] px-1.5 py-0.2 bg-purple-100 text-purple-700 rounded">Day 8-11</span>
                   </div>
                   <p className="text-[11px] text-muted-foreground leading-relaxed">
-                    加入目標社群/板塊，AI 自動生成正向心得留言 1 則，自然融入討論，權重飆升。
+                    {t('ph3d')}
                   </p>
                 </div>
                 <div className="p-3 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50">
                   <div className="flex items-center justify-between text-xs font-bold text-emerald-800 dark:text-emerald-300 mb-1">
-                    <span>階段四：成熟發布期</span>
+                    <span>{t('ph4')}</span>
                     <span className="text-[10px] px-1.5 py-0.2 bg-emerald-100 text-emerald-800 rounded font-bold">Day 12-14+</span>
                   </div>
                   <p className="text-[11px] text-emerald-900/80 dark:text-emerald-300/80 leading-relaxed font-medium">
-                    健康度達 85% 以上，正式解鎖方案 A (Copilot) 與方案 B (自動發布) 矩陣行銷能力！
+                    {t('ph4d')}
                   </p>
                 </div>
               </div>
@@ -1372,7 +1374,7 @@ function SocialMatrixContent() {
 
             {/* Accounts Grid */}
             <div>
-              <h4 className="font-bold text-sm mb-3">矩陣帳號監控 ({accounts.length})</h4>
+              <h4 className="font-bold text-sm mb-3">{t('accMonitor')} ({accounts.length})</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {accounts.map(acc => {
                   const isMature = acc.status === 'mature' || acc.warmup_day >= 12
@@ -1397,14 +1399,14 @@ function SocialMatrixContent() {
                               ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
                               : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
                           }`}>
-                            {isMature ? '成熟可用' : `養號 Day ${acc.warmup_day}`}
+                            {isMature ? t('mature') : t('warmDay', { n: acc.warmup_day })}
                           </span>
                         </div>
 
                         {/* Health Bar */}
                         <div className="space-y-1 mb-3">
                           <div className="flex justify-between text-xs">
-                            <span className="text-muted-foreground">帳號健康度:</span>
+                            <span className="text-muted-foreground">{t('accHealth')}</span>
                             <span className="font-bold text-indigo-600">{acc.health_score}%</span>
                           </div>
                           <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
@@ -1426,15 +1428,15 @@ function SocialMatrixContent() {
                           <div className="flex justify-between items-center text-muted-foreground">
                             <span className="flex items-center gap-1">
                               <Lock className="h-3 w-3 text-indigo-500" />
-                              固定綁定代理:
+                              {t('boundProxy')}
                             </span>
                             <span className="font-mono text-foreground font-medium truncate max-w-[130px]">
-                              {acc.proxy?.name || '宜蘭聯禾原生 IP'}
+                              {acc.proxy?.name || t('defaultProxyName')}
                             </span>
                           </div>
                           <div className="flex justify-between items-center text-muted-foreground">
-                            <span>今日互動任務:</span>
-                            <span className="text-foreground">{acc.daily_actions_count || 1} / {acc.max_daily_actions || 5} 次</span>
+                            <span>{t('todayTasks')}</span>
+                            <span className="text-foreground">{t('times', { a: acc.daily_actions_count || 1, b: acc.max_daily_actions || 5 })}</span>
                           </div>
                         </div>
                       </div>
@@ -1446,7 +1448,7 @@ function SocialMatrixContent() {
                           className="flex items-center gap-1 px-2.5 py-1 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 font-medium transition-colors"
                         >
                           <Play className="h-3 w-3" />
-                          <span>執行今日養號</span>
+                          <span>{t('runToday')}</span>
                         </button>
                         <button
                           onClick={() => handleDeleteAccount(acc.id)}
@@ -1466,15 +1468,15 @@ function SocialMatrixContent() {
               <div className="flex items-center justify-between pb-2 mb-3 border-b border-slate-800">
                 <div className="flex items-center gap-2">
                   <Terminal className="h-4 w-4 text-emerald-400" />
-                  <span className="font-bold text-slate-100">擬人化養號與防封號行為即時日誌 (Live Warm-up Terminal)</span>
+                  <span className="font-bold text-slate-100">{t('liveLog')}</span>
                 </div>
-                <span className="text-[10px] text-slate-400">保留最新 {logs.length} 筆</span>
+                <span className="text-[10px] text-slate-400">{t('keepN', { n: logs.length })}</span>
               </div>
               <div className="space-y-2 max-h-56 overflow-y-auto pr-2">
                 {logs.map(log => (
                   <div key={log.id} className="flex items-start gap-2 leading-relaxed">
                     <span className="text-slate-500 shrink-0">[{new Date(log.created_at).toLocaleTimeString()}]</span>
-                    <span className="text-indigo-400 shrink-0 font-semibold">{log.account_name || '帳號'}:</span>
+                    <span className="text-indigo-400 shrink-0 font-semibold">{log.account_name || t('account')}:</span>
                     <span className="text-slate-300">{log.details}</span>
                   </div>
                 ))}
@@ -1491,10 +1493,10 @@ function SocialMatrixContent() {
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <Sparkles className="h-5 w-5 text-indigo-600" />
-                  <h3 className="font-bold text-base">廣告標的、產業動態輸入與設定</h3>
+                  <h3 className="font-bold text-base">{t('campTitle')}</h3>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">快速帶入範例：</span>
+                  <span className="text-xs text-muted-foreground">{t('quickSample')}</span>
                   <button
                     onClick={() => {
                       setIndustry('越南中越 (峴港/會安/巴拿山) 豪華包車與在地中文秘書服務')
@@ -1505,7 +1507,7 @@ function SocialMatrixContent() {
                     }}
                     className="text-xs px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
                   >
-                    🌴 越南峴港包車
+                    {t('sample1')}
                   </button>
                   <button
                     onClick={() => {
@@ -1517,59 +1519,59 @@ function SocialMatrixContent() {
                     }}
                     className="text-xs px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
                   >
-                    ♨️ 宜蘭溫泉包棟
+                    {t('sample2')}
                   </button>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                 <div>
-                  <label className="font-bold text-foreground block mb-1">推廣產業 / 廣告標的 *</label>
+                  <label className="font-bold text-foreground block mb-1">{t('fIndustry')}</label>
                   <input
                     type="text"
                     value={industry}
                     onChange={e => setIndustry(e.target.value)}
-                    placeholder="例：越南峴港包車旅遊、宜蘭包棟民宿、女性韓系服飾..."
+                    placeholder={t('fIndustryPh')}
                     className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-foreground block mb-1">推廣核心產品與獨家賣點 *</label>
+                  <label className="font-bold text-foreground block mb-1">{t('fProduct')}</label>
                   <input
                     type="text"
                     value={coreProduct}
                     onChange={e => setCoreProduct(e.target.value)}
-                    placeholder="例：全新7人座、雙語司機、無隱形消費..."
+                    placeholder={t('fProductPh')}
                     className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-foreground block mb-1">目標客群受眾特徵</label>
+                  <label className="font-bold text-foreground block mb-1">{t('fAudience')}</label>
                   <input
                     type="text"
                     value={targetAudience}
                     onChange={e => setTargetAudience(e.target.value)}
-                    placeholder="例：25-45歲家庭旅遊、自由行背包客、商務考察..."
+                    placeholder={t('fAudiencePh')}
                     className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-foreground block mb-1">促銷誘因 / 早鳥福利 (Hook)</label>
+                  <label className="font-bold text-foreground block mb-1">{t('fOffer')}</label>
                   <input
                     type="text"
                     value={offer}
                     onChange={e => setOffer(e.target.value)}
-                    placeholder="例：早鳥9折、贈送上網卡、免費行程諮詢..."
+                    placeholder={t('fOfferPh')}
                     className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="font-bold text-foreground block mb-1">行動呼籲 (CTA) / 導流連結 / LINE ID</label>
+                  <label className="font-bold text-foreground block mb-1">{t('fCta')}</label>
                   <input
                     type="text"
                     value={ctaLink}
                     onChange={e => setCtaLink(e.target.value)}
-                    placeholder="例：LINE 官方帳號 @danang_tour、電話或預約網址..."
+                    placeholder={t('fCtaPh')}
                     className="w-full px-3 py-2 rounded-lg border border-border bg-background focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                   />
                 </div>
@@ -1578,7 +1580,7 @@ function SocialMatrixContent() {
               {/* Target Platforms Multi-Select */}
               <div className="mt-4 pt-4 border-t border-border flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-muted-foreground">目標發行平台：</span>
+                  <span className="text-xs font-bold text-muted-foreground">{t('targetPlatforms')}</span>
                   {(['facebook', 'threads', 'dcard', 'instagram', 'tiktok', 'x'] as SocialPlatform[]).map(plat => {
                     const isSelected = selectedPlatforms.includes(plat)
                     return (
@@ -1608,7 +1610,7 @@ function SocialMatrixContent() {
                   className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 hover:opacity-95 text-white text-xs font-bold shadow-md transition-all active:scale-95 disabled:opacity-50"
                 >
                   <Sparkles className={`h-4 w-4 ${isGenerating ? 'animate-spin' : ''}`} />
-                  <span>{isGenerating ? 'AI 雷達探勘與防封文案生成中...' : '🎯 啟動 AI 目標社團雷達 & 生成防封文案庫'}</span>
+                  <span>{isGenerating ? t('generating') : t('startRadar')}</span>
                 </button>
               </div>
             </div>
@@ -1623,9 +1625,9 @@ function SocialMatrixContent() {
                     <div className="flex items-center justify-between mb-3 pb-2 border-b border-border">
                       <h4 className="font-bold text-sm flex items-center gap-2">
                         <Users className="h-4 w-4 text-indigo-600" />
-                        <span>AI 目標社團雷達 ({targetGroups.length})</span>
+                        <span>{t('radar')} ({targetGroups.length})</span>
                       </h4>
-                      <span className="text-[10px] text-muted-foreground">精準流量池探勘</span>
+                      <span className="text-[10px] text-muted-foreground">{t('radarSub')}</span>
                     </div>
 
                     <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
@@ -1648,12 +1650,12 @@ function SocialMatrixContent() {
                                   ? 'bg-amber-100 text-amber-700'
                                   : 'bg-emerald-100 text-emerald-700'
                               }`}>
-                                {group.strictness === 'high' ? '嚴格審查' : group.strictness === 'medium' ? '中度審查' : '公開寬鬆'}
+                                {group.strictness === 'high' ? t('strictHigh') : group.strictness === 'medium' ? t('strictMed') : t('strictLow')}
                               </span>
                             </div>
 
                             <p className="text-[11px] text-indigo-900 dark:text-indigo-300 bg-indigo-50/70 dark:bg-indigo-950/40 p-2 rounded-lg">
-                              💡 <strong>建議發布策略：</strong>{group.recommended_strategy}
+                              💡 <strong>{t('strategy')}</strong>{group.recommended_strategy}
                             </p>
 
                             <div className="flex items-center justify-between pt-1">
@@ -1663,7 +1665,7 @@ function SocialMatrixContent() {
                                 rel="noreferrer"
                                 className="text-[11px] text-muted-foreground hover:text-indigo-600 flex items-center gap-1"
                               >
-                                <span>前往社團預覽</span>
+                                <span>{t('previewGroup')}</span>
                                 <ArrowUpRight className="h-3 w-3" />
                               </a>
 
@@ -1674,7 +1676,7 @@ function SocialMatrixContent() {
                                 className="flex items-center gap-1 px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] shadow-sm transition-all"
                               >
                                 <Send className="h-3 w-3" />
-                                <span>方案 A：真人發布 ↗</span>
+                                <span>{t('planAPost')}</span>
                               </button>
                             </div>
                           </div>
@@ -1691,10 +1693,10 @@ function SocialMatrixContent() {
                       <div>
                         <h4 className="font-bold text-sm flex items-center gap-2">
                           <Layers className="h-4 w-4 text-indigo-600" />
-                          <span>防封防重文案矩陣庫 ({copies.length} 組變異版本)</span>
+                          <span>{t('copyLib', { n: copies.length })}</span>
                         </h4>
                         <p className="text-[11px] text-muted-foreground mt-0.5">
-                          每組採用不同受眾視角與非重複 Hash 指紋，杜絕平台文本比對風控。
+                          {t('copyLibDesc')}
                         </p>
                       </div>
 
@@ -1705,7 +1707,7 @@ function SocialMatrixContent() {
                         className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:opacity-90 text-white text-xs font-bold shadow-md transition-all active:scale-95 disabled:opacity-50"
                       >
                         <Zap className="h-3.5 w-3.5 text-amber-300" />
-                        <span>方案 B：矩陣自動排程發布</span>
+                        <span>{t('planB')}</span>
                       </button>
                     </div>
 
@@ -1743,14 +1745,14 @@ function SocialMatrixContent() {
                               </span>
                               <div className="flex items-center gap-2">
                                 <span className="text-[10px] text-muted-foreground font-mono bg-white dark:bg-slate-800 px-2 py-0.5 rounded border border-border">
-                                  防重 Hash: {activeCopy.anti_collision_hash}
+                                  {t('hash')} {activeCopy.anti_collision_hash}
                                 </span>
                                 <button
                                   onClick={() => handleCopy(`${activeCopy.title}\n\n${activeCopy.content}\n\n${activeCopy.hashtags.join(' ')}`, activeCopy.id)}
                                   className="flex items-center gap-1 text-xs px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-700 text-white font-medium shadow-sm transition-colors"
                                 >
                                   {copiedId === activeCopy.id ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                                  <span>{copiedId === activeCopy.id ? '已複製' : '一鍵複製全文'}</span>
+                                  <span>{copiedId === activeCopy.id ? t('copiedShort') : t('copyAll')}</span>
                                 </button>
                               </div>
                             </div>
@@ -1776,18 +1778,18 @@ function SocialMatrixContent() {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                             <div className="p-3 rounded-xl bg-blue-50/80 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50">
                               <span className="font-bold text-blue-900 dark:text-blue-300 block mb-1">
-                                🔹 方案 A：真人 Copilot 模式
+                                🔹 {t('planAMode')}
                               </span>
                               <p className="text-[11px] text-blue-800/80 dark:text-blue-300/80 leading-relaxed">
-                                由真人點擊左側社團清單的「方案 A：真人發布 ↗」，系統自動將防重文案帶入剪貼簿並開啟社團發文框，100% 零封號風險。
+                                {t('planAModeDesc')}
                               </p>
                             </div>
                             <div className="p-3 rounded-xl bg-purple-50/80 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900/50">
                               <span className="font-bold text-purple-900 dark:text-purple-300 block mb-1">
-                                🔹 方案 B：矩陣自動排程發布
+                                🔹 {t('planB')}
                               </span>
                               <p className="text-[11px] text-purple-800/80 dark:text-purple-300/80 leading-relaxed">
-                                專屬已成熟 (Day 12+) 矩陣號，點擊上方按鈕後，自動將變異文案分配至不同帳號與獨立代理 IP，分批間隔無人值守發布。
+                                {t('planBDesc')}
                               </p>
                             </div>
                           </div>
@@ -1812,7 +1814,7 @@ function SocialMatrixContent() {
             <div className="flex items-center justify-between pb-2 border-b border-border">
               <h3 className="font-bold text-base flex items-center gap-2">
                 <Server className="h-5 w-5 text-indigo-600" />
-                <span>新增代理 IP 節點</span>
+                <span>{t('addNode')}</span>
               </h3>
               <button onClick={() => setIsAddProxyOpen(false)} className="text-muted-foreground hover:text-foreground text-sm">
                 ✕
@@ -1827,7 +1829,7 @@ function SocialMatrixContent() {
                     checked={!newProxyForm.isBatch}
                     onChange={() => setNewProxyForm(p => ({ ...p, isBatch: false }))}
                   />
-                  <span>單一代理設定</span>
+                  <span>{t('single')}</span>
                 </label>
                 <label className="flex items-center gap-1.5 cursor-pointer">
                   <input
@@ -1835,13 +1837,13 @@ function SocialMatrixContent() {
                     checked={newProxyForm.isBatch}
                     onChange={() => setNewProxyForm(p => ({ ...p, isBatch: true }))}
                   />
-                  <span>多筆批次匯入 (ip:port:user:pass)</span>
+                  <span>{t('bulk')}</span>
                 </label>
               </div>
 
               {newProxyForm.isBatch ? (
                 <div>
-                  <label className="font-bold text-foreground block mb-1">貼上代理清單 (每行一筆)：</label>
+                  <label className="font-bold text-foreground block mb-1">{t('pasteList')}</label>
                   <textarea
                     rows={6}
                     value={newProxyForm.batchText}
@@ -1854,7 +1856,7 @@ function SocialMatrixContent() {
                 <>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="font-bold text-foreground block mb-1">節點名稱</label>
+                      <label className="font-bold text-foreground block mb-1">{t('nodeName')}</label>
                       <input
                         type="text"
                         value={newProxyForm.name}
@@ -1863,33 +1865,33 @@ function SocialMatrixContent() {
                       />
                     </div>
                     <div>
-                      <label className="font-bold text-foreground block mb-1">代理類型</label>
+                      <label className="font-bold text-foreground block mb-1">{t('proxyType')}</label>
                       <select
                         value={newProxyForm.proxy_type}
                         onChange={e => setNewProxyForm(p => ({ ...p, proxy_type: e.target.value as ProxyType }))}
                         className="w-full px-3 py-1.5 rounded-lg border border-border bg-background"
                       >
-                        <option value="home_static">🏠 家用原生靜態 (聯禾/中華)</option>
-                        <option value="residential">🏢 商業靜態住宅 (IPRoyal/Smartproxy)</option>
-                        <option value="mobile_4g">📱 4G/5G 移動基站代理</option>
+                        <option value="home_static">{t('optHome')}</option>
+                        <option value="residential">{t('optResi')}</option>
+                        <option value="mobile_4g">{t('optMobile')}</option>
                       </select>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-3 gap-3">
                     <div className="col-span-2">
-                      <label className="font-bold text-foreground block mb-1">IP 位址 / 主機 Host *</label>
+                      <label className="font-bold text-foreground block mb-1">{t('fHost')}</label>
                       <input
                         type="text"
                         value={newProxyForm.host}
                         onChange={e => setNewProxyForm(p => ({ ...p, host: e.target.value }))}
-                        placeholder="例：211.75.142.88"
+                        placeholder={t('hostPh')}
                         required
                         className="w-full px-3 py-1.5 rounded-lg border border-border font-mono bg-background"
                       />
                     </div>
                     <div>
-                      <label className="font-bold text-foreground block mb-1">端口 Port *</label>
+                      <label className="font-bold text-foreground block mb-1">{t('fPort')}</label>
                       <input
                         type="number"
                         value={newProxyForm.port}
@@ -1903,7 +1905,7 @@ function SocialMatrixContent() {
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="font-bold text-foreground block mb-1">帳號 (選填)</label>
+                      <label className="font-bold text-foreground block mb-1">{t('fUser')}</label>
                       <input
                         type="text"
                         value={newProxyForm.username}
@@ -1912,7 +1914,7 @@ function SocialMatrixContent() {
                       />
                     </div>
                     <div>
-                      <label className="font-bold text-foreground block mb-1">密碼 (選填)</label>
+                      <label className="font-bold text-foreground block mb-1">{t('fPass')}</label>
                       <input
                         type="password"
                         value={newProxyForm.password}
@@ -1924,7 +1926,7 @@ function SocialMatrixContent() {
 
                   <div className="grid grid-cols-3 gap-3">
                     <div>
-                      <label className="font-bold text-foreground block mb-1">國家代碼</label>
+                      <label className="font-bold text-foreground block mb-1">{t('fCountry')}</label>
                       <input
                         type="text"
                         value={newProxyForm.country}
@@ -1934,22 +1936,22 @@ function SocialMatrixContent() {
                       />
                     </div>
                     <div>
-                      <label className="font-bold text-foreground block mb-1">城市地區</label>
+                      <label className="font-bold text-foreground block mb-1">{t('fCity')}</label>
                       <input
                         type="text"
                         value={newProxyForm.city}
                         onChange={e => setNewProxyForm(p => ({ ...p, city: e.target.value }))}
-                        placeholder="宜蘭 / 台北 / 峴港"
+                        placeholder={t('cityPh')}
                         className="w-full px-3 py-1.5 rounded-lg border border-border bg-background"
                       />
                     </div>
                     <div>
-                      <label className="font-bold text-foreground block mb-1">電信業者 ISP</label>
+                      <label className="font-bold text-foreground block mb-1">{t('fIsp')}</label>
                       <input
                         type="text"
                         value={newProxyForm.isp}
                         onChange={e => setNewProxyForm(p => ({ ...p, isp: e.target.value }))}
-                        placeholder="聯禾有線電視"
+                        placeholder={t('ispPh')}
                         className="w-full px-3 py-1.5 rounded-lg border border-border bg-background"
                       />
                     </div>
@@ -1963,13 +1965,13 @@ function SocialMatrixContent() {
                   onClick={() => setIsAddProxyOpen(false)}
                   className="px-4 py-2 rounded-lg border border-border hover:bg-slate-100 text-xs"
                 >
-                  取消
+                  {t('cancel')}
                 </button>
                 <button
                   type="submit"
                   className="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm"
                 >
-                  確認新增
+                  {t('confirmAdd')}
                 </button>
               </div>
             </form>
@@ -1984,7 +1986,7 @@ function SocialMatrixContent() {
             <div className="flex items-center justify-between pb-2 border-b border-border">
               <h3 className="font-bold text-base flex items-center gap-2">
                 <Pencil className="h-5 w-5 text-indigo-600" />
-                <span>編輯代理節點資訊與名稱</span>
+                <span>{t('editNode')}</span>
               </h3>
               <button onClick={() => setIsEditProxyOpen(false)} className="text-muted-foreground hover:text-foreground text-sm">
                 ✕
@@ -1995,31 +1997,31 @@ function SocialMatrixContent() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="col-span-2">
                   <label className="font-bold text-foreground block mb-1">
-                    代理名稱 / 自訂標籤 * <span className="text-[10px] text-indigo-600 font-normal">（可自由更改，例如：我的 IPRoyal 代理、手機 4G 節點）</span>
+                    {t('fAlias')} <span className="text-[10px] text-indigo-600 font-normal">{t('fAliasHint')}</span>
                   </label>
                   <input
                     type="text"
                     required
                     value={editingProxy.name}
                     onChange={e => setEditingProxy({ ...editingProxy, name: e.target.value })}
-                    placeholder="例：我的 IPRoyal 住宅代理"
+                    placeholder={t('aliasPh')}
                     className="w-full px-3 py-2 rounded-lg border border-border bg-background font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-foreground block mb-1">代理類型</label>
+                  <label className="font-bold text-foreground block mb-1">{t('proxyType')}</label>
                   <select
                     value={editingProxy.proxy_type}
                     onChange={e => setEditingProxy({ ...editingProxy, proxy_type: e.target.value as ProxyType })}
                     className="w-full px-3 py-1.5 rounded-lg border border-border bg-background"
                   >
-                    <option value="home_static">🏠 家用原生靜態 (聯禾/中華)</option>
-                    <option value="residential">🏢 商業靜態住宅 (IPRoyal/Smartproxy)</option>
-                    <option value="mobile_4g">📱 4G/5G 移動基站代理</option>
+                    <option value="home_static">{t('optHome')}</option>
+                    <option value="residential">{t('optResi')}</option>
+                    <option value="mobile_4g">{t('optMobile')}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="font-bold text-foreground block mb-1">通訊協議</label>
+                  <label className="font-bold text-foreground block mb-1">{t('fProtocol')}</label>
                   <select
                     value={editingProxy.protocol}
                     onChange={e => setEditingProxy({ ...editingProxy, protocol: e.target.value as ProxyProtocol })}
@@ -2034,18 +2036,18 @@ function SocialMatrixContent() {
 
               <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-2">
-                  <label className="font-bold text-foreground block mb-1">IP 位址 / 主機 Host *</label>
+                  <label className="font-bold text-foreground block mb-1">{t('fHost')}</label>
                   <input
                     type="text"
                     required
                     value={editingProxy.host}
                     onChange={e => setEditingProxy({ ...editingProxy, host: e.target.value })}
-                    placeholder="211.75.142.88 或 geo.iproyal.com"
+                    placeholder={t('hostPh2')}
                     className="w-full px-3 py-1.5 rounded-lg border border-border font-mono bg-background"
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-foreground block mb-1">端口 Port *</label>
+                  <label className="font-bold text-foreground block mb-1">{t('fPort')}</label>
                   <input
                     type="number"
                     required
@@ -2059,7 +2061,7 @@ function SocialMatrixContent() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-foreground block mb-1">帳號 (選填)</label>
+                  <label className="font-bold text-foreground block mb-1">{t('fUser')}</label>
                   <input
                     type="text"
                     value={editingProxy.username || ''}
@@ -2068,7 +2070,7 @@ function SocialMatrixContent() {
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-foreground block mb-1">密碼 (選填)</label>
+                  <label className="font-bold text-foreground block mb-1">{t('fPass')}</label>
                   <input
                     type="password"
                     value={editingProxy.password || ''}
@@ -2080,7 +2082,7 @@ function SocialMatrixContent() {
 
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="font-bold text-foreground block mb-1">國家代碼</label>
+                  <label className="font-bold text-foreground block mb-1">{t('fCountry')}</label>
                   <input
                     type="text"
                     value={editingProxy.country || 'TW'}
@@ -2090,34 +2092,34 @@ function SocialMatrixContent() {
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-foreground block mb-1">城市地區</label>
+                  <label className="font-bold text-foreground block mb-1">{t('fCity')}</label>
                   <input
                     type="text"
                     value={editingProxy.city || ''}
                     onChange={e => setEditingProxy({ ...editingProxy, city: e.target.value })}
-                    placeholder="宜蘭 / 台北 / 峴港"
+                    placeholder={t('cityPh')}
                     className="w-full px-3 py-1.5 rounded-lg border border-border bg-background"
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-foreground block mb-1">電信業者 ISP</label>
+                  <label className="font-bold text-foreground block mb-1">{t('fIsp')}</label>
                   <input
                     type="text"
                     value={editingProxy.isp || ''}
                     onChange={e => setEditingProxy({ ...editingProxy, isp: e.target.value })}
-                    placeholder="聯禾有線電視 / 中華電信"
+                    placeholder={t('ispPh2')}
                     className="w-full px-3 py-1.5 rounded-lg border border-border bg-background"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="font-bold text-foreground block mb-1">備註說明 (選填)</label>
+                <label className="font-bold text-foreground block mb-1">{t('fNotes')}</label>
                 <input
                   type="text"
                   value={editingProxy.notes || ''}
                   onChange={e => setEditingProxy({ ...editingProxy, notes: e.target.value })}
-                  placeholder="例：專用於發布 FB 社團主號"
+                  placeholder={t('notesPh')}
                   className="w-full px-3 py-1.5 rounded-lg border border-border bg-background"
                 />
               </div>
@@ -2128,13 +2130,13 @@ function SocialMatrixContent() {
                   onClick={() => setIsEditProxyOpen(false)}
                   className="px-4 py-2 rounded-lg border border-border hover:bg-slate-100 text-xs"
                 >
-                  取消
+                  {t('cancel')}
                 </button>
                 <button
                   type="submit"
                   className="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm"
                 >
-                  儲存修改
+                  {t('saveChanges')}
                 </button>
               </div>
             </form>
@@ -2149,7 +2151,7 @@ function SocialMatrixContent() {
             <div className="flex items-center justify-between pb-2 border-b border-border">
               <h3 className="font-bold text-base flex items-center gap-2">
                 <Cpu className="h-5 w-5 text-indigo-600" />
-                <span>加入社群矩陣帳號</span>
+                <span>{t('addAccTitle')}</span>
               </h3>
               <button onClick={() => setIsAddAccountOpen(false)} className="text-muted-foreground hover:text-foreground text-sm">
                 ✕
@@ -2158,35 +2160,35 @@ function SocialMatrixContent() {
 
             <form onSubmit={handleAddAccount} className="space-y-3 text-xs">
               <div>
-                <label className="font-bold text-foreground block mb-1">目標社群平台 *</label>
+                <label className="font-bold text-foreground block mb-1">{t('fPlatform')}</label>
                 <select
                   value={newAccountForm.platform}
                   onChange={e => setNewAccountForm(p => ({ ...p, platform: e.target.value as SocialPlatform }))}
                   className="w-full px-3 py-2 rounded-lg border border-border bg-background"
                 >
-                  <option value="facebook">Facebook (社團/粉專/個人號)</option>
-                  <option value="threads">Threads (脆)</option>
+                  <option value="facebook">{t('optFb')}</option>
+                  <option value="threads">{t('optThreads')}</option>
                   <option value="instagram">Instagram</option>
-                  <option value="dcard">Dcard 看板</option>
-                  <option value="tiktok">TikTok 短影音</option>
+                  <option value="dcard">{t('optDcard')}</option>
+                  <option value="tiktok">{t('optTiktok')}</option>
                   <option value="x">X (Twitter)</option>
                 </select>
               </div>
 
               <div>
-                <label className="font-bold text-foreground block mb-1">帳號名稱 / 暱稱 *</label>
+                <label className="font-bold text-foreground block mb-1">{t('fAccName')}</label>
                 <input
                   type="text"
                   value={newAccountForm.account_name}
                   onChange={e => setNewAccountForm(p => ({ ...p, account_name: e.target.value }))}
-                  placeholder="例：峴港自由行達人-阿豪"
+                  placeholder={t('accNamePh')}
                   required
                   className="w-full px-3 py-2 rounded-lg border border-border bg-background"
                 />
               </div>
 
               <div>
-                <label className="font-bold text-foreground block mb-1">帳號 Handle (帳號代稱)</label>
+                <label className="font-bold text-foreground block mb-1">{t('fHandle')}</label>
                 <input
                   type="text"
                   value={newAccountForm.account_handle}
@@ -2197,16 +2199,16 @@ function SocialMatrixContent() {
               </div>
 
               <div>
-                <label className="font-bold text-foreground block mb-1">固定綁定代理 IP (防風控必選) *</label>
+                <label className="font-bold text-foreground block mb-1">{t('fBindProxy')}</label>
                 <select
                   value={newAccountForm.proxy_id}
                   onChange={e => setNewAccountForm(p => ({ ...p, proxy_id: e.target.value }))}
                   className="w-full px-3 py-2 rounded-lg border border-border bg-background font-mono"
                 >
-                  <option value="">選擇代理池節點...</option>
+                  <option value="">{t('pickNode')}</option>
                   {proxies.map(p => (
                     <option key={p.id} value={p.id}>
-                      {p.source === 'official_leased' ? '🏢 [官方租用] ' : '👤 [自備] '}
+                      {p.source === 'official_leased' ? t('srcOfficial') : t('srcOwn')}
                       {p.name} ({p.host}:{p.port})
                     </option>
                   ))}
@@ -2214,7 +2216,7 @@ function SocialMatrixContent() {
               </div>
 
               <div>
-                <label className="font-bold text-foreground block mb-1">目前養成天數 (1 - 14 天)</label>
+                <label className="font-bold text-foreground block mb-1">{t('fWarmDay')}</label>
                 <input
                   type="number"
                   min={1}
@@ -2224,7 +2226,7 @@ function SocialMatrixContent() {
                   className="w-full px-3 py-2 rounded-lg border border-border bg-background"
                 />
                 <span className="text-[10px] text-muted-foreground mt-0.5 block">
-                  新號建議從 Day 1 循序漸進；若為既有使用許久的舊帳號可直接設定 Day 14 成熟期。
+                  {t('warmDayHint')}
                 </span>
               </div>
 
@@ -2234,13 +2236,13 @@ function SocialMatrixContent() {
                   onClick={() => setIsAddAccountOpen(false)}
                   className="px-4 py-2 rounded-lg border border-border hover:bg-slate-100 text-xs"
                 >
-                  取消
+                  {t('cancel')}
                 </button>
                 <button
                   type="submit"
                   className="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm"
                 >
-                  加入矩陣
+                  {t('addToMatrix')}
                 </button>
               </div>
             </form>
@@ -2259,10 +2261,10 @@ function SocialMatrixContent() {
                 </div>
                 <div>
                   <h3 className="font-bold text-base text-foreground">
-                    管理者：新增官方供租用 IP 庫存
+                    {t('adminAddTitle')}
                   </h3>
                   <p className="text-[11px] text-muted-foreground">
-                    此處錄入的代理節點會直接上架至「官方原生 IP 租賃市場」，供客戶一鍵租用
+                    {t('adminAddDesc')}
                   </p>
                 </div>
               </div>
@@ -2277,33 +2279,33 @@ function SocialMatrixContent() {
             <form onSubmit={handleAddOfficialProxy} className="space-y-3 text-xs">
               <div>
                 <label className="font-bold text-foreground block mb-1">
-                  節點名稱 / 推薦標籤 *
+                  {t('fNodeLabel')}
                 </label>
                 <input
                   type="text"
                   required
                   value={newOfficialForm.name}
                   onChange={e => setNewOfficialForm(p => ({ ...p, name: e.target.value }))}
-                  placeholder="例：🇹🇼 台灣宜蘭聯禾原生住宅 IP #2 (A+ 級防封首選)"
+                  placeholder={t('nodeLabelPh')}
                   className="w-full px-3 py-2 rounded-lg border border-border bg-background font-medium"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-foreground block mb-1">代理類型 *</label>
+                  <label className="font-bold text-foreground block mb-1">{t('proxyTypeReq')}</label>
                   <select
                     value={newOfficialForm.proxy_type}
                     onChange={e => setNewOfficialForm(p => ({ ...p, proxy_type: e.target.value as ProxyType }))}
                     className="w-full px-3 py-1.5 rounded-lg border border-border bg-background"
                   >
-                    <option value="home_static">🏠 家用原生靜態 (聯禾/中華)</option>
-                    <option value="mobile_4g">📱 4G/5G 移動基站 (真 SIM 卡)</option>
-                    <option value="residential">🏢 商業靜態住宅 (大帶寬)</option>
+                    <option value="home_static">{t('optHome')}</option>
+                    <option value="mobile_4g">{t('optMobileSim')}</option>
+                    <option value="residential">{t('optResiBw')}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="font-bold text-foreground block mb-1">通訊協議 *</label>
+                  <label className="font-bold text-foreground block mb-1">{t('fProtocolReq')}</label>
                   <select
                     value={newOfficialForm.protocol}
                     onChange={e => setNewOfficialForm(p => ({ ...p, protocol: e.target.value as ProxyProtocol }))}
@@ -2318,7 +2320,7 @@ function SocialMatrixContent() {
 
               <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-2">
-                  <label className="font-bold text-foreground block mb-1">IP 位址 / 主機 Host *</label>
+                  <label className="font-bold text-foreground block mb-1">{t('fHost')}</label>
                   <input
                     type="text"
                     required
@@ -2329,7 +2331,7 @@ function SocialMatrixContent() {
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-foreground block mb-1">端口 Port *</label>
+                  <label className="font-bold text-foreground block mb-1">{t('fPort')}</label>
                   <input
                     type="number"
                     required
@@ -2343,7 +2345,7 @@ function SocialMatrixContent() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-foreground block mb-1">連線帳號 (選填)</label>
+                  <label className="font-bold text-foreground block mb-1">{t('fConnUser')}</label>
                   <input
                     type="text"
                     value={newOfficialForm.username}
@@ -2353,7 +2355,7 @@ function SocialMatrixContent() {
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-foreground block mb-1">連線密碼 (選填)</label>
+                  <label className="font-bold text-foreground block mb-1">{t('fConnPass')}</label>
                   <input
                     type="password"
                     value={newOfficialForm.password}
@@ -2366,27 +2368,27 @@ function SocialMatrixContent() {
 
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="font-bold text-foreground block mb-1">電信業者 ISP</label>
+                  <label className="font-bold text-foreground block mb-1">{t('fIsp')}</label>
                   <input
                     type="text"
                     value={newOfficialForm.isp}
                     onChange={e => setNewOfficialForm(p => ({ ...p, isp: e.target.value }))}
-                    placeholder="聯禾有線電視"
+                    placeholder={t('ispPh')}
                     className="w-full px-3 py-1.5 rounded-lg border border-border bg-background"
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-foreground block mb-1">國家 / 城市</label>
+                  <label className="font-bold text-foreground block mb-1">{t('fCountryCity')}</label>
                   <input
                     type="text"
                     value={newOfficialForm.city}
                     onChange={e => setNewOfficialForm(p => ({ ...p, city: e.target.value }))}
-                    placeholder="宜蘭 / 台北"
+                    placeholder={t('cityPh3')}
                     className="w-full px-3 py-1.5 rounded-lg border border-border bg-background"
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-foreground block mb-1">延遲毫秒 (ms)</label>
+                  <label className="font-bold text-foreground block mb-1">{t('fLatency')}</label>
                   <input
                     type="number"
                     value={newOfficialForm.latency_ms}
@@ -2400,7 +2402,7 @@ function SocialMatrixContent() {
               <div className="grid grid-cols-2 gap-3 bg-amber-50/60 dark:bg-amber-950/20 p-3 rounded-xl border border-amber-200 dark:border-amber-900/50">
                 <div>
                   <label className="font-bold text-amber-900 dark:text-amber-300 block mb-1">
-                    💰 客戶月租定價 (NTD) *
+                    💰 {t('fPrice')}
                   </label>
                   <div className="relative">
                     <span className="absolute left-3 top-2 text-muted-foreground font-bold">NT$</span>
@@ -2415,7 +2417,7 @@ function SocialMatrixContent() {
                 </div>
                 <div>
                   <label className="font-bold text-amber-900 dark:text-amber-300 block mb-1">
-                    🔒 最大可租用人數 (1=專屬獨享) *
+                    🔒 {t('fMaxTenants')}
                   </label>
                   <input
                     type="number"
@@ -2429,12 +2431,12 @@ function SocialMatrixContent() {
               </div>
 
               <div>
-                <label className="font-bold text-foreground block mb-1">節點亮點特色 / 備註說明</label>
+                <label className="font-bold text-foreground block mb-1">{t('fHighlights')}</label>
                 <input
                   type="text"
                   value={newOfficialForm.notes}
                   onChange={e => setNewOfficialForm(p => ({ ...p, notes: e.target.value }))}
-                  placeholder="例：純天然家用寬頻原生固定 IP，權重極高，最抗 Meta / Threads 風控"
+                  placeholder={t('highlightsPh')}
                   className="w-full px-3 py-1.5 rounded-lg border border-border bg-background"
                 />
               </div>
@@ -2445,13 +2447,13 @@ function SocialMatrixContent() {
                   onClick={() => setIsAddOfficialOpen(false)}
                   className="px-4 py-2 rounded-lg border border-border hover:bg-slate-100 text-xs"
                 >
-                  取消
+                  {t('cancel')}
                 </button>
                 <button
                   type="submit"
                   className="px-5 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-sm"
                 >
-                  確認上架供租用
+                  {t('confirmList')}
                 </button>
               </div>
             </form>
@@ -2466,7 +2468,7 @@ function SocialMatrixContent() {
             <div className="flex items-center justify-between pb-2 border-b border-border">
               <h3 className="font-bold text-base flex items-center gap-2">
                 <Pencil className="h-5 w-5 text-amber-600" />
-                <span>管理者：編輯官方 IP 庫存與定價</span>
+                <span>{t('adminEditTitle')}</span>
               </h3>
               <button
                 onClick={() => setIsEditOfficialOpen(false)}
@@ -2478,7 +2480,7 @@ function SocialMatrixContent() {
 
             <form onSubmit={handleUpdateOfficialProxy} className="space-y-3 text-xs">
               <div>
-                <label className="font-bold text-foreground block mb-1">節點名稱 *</label>
+                <label className="font-bold text-foreground block mb-1">{t('fNodeNameReq')}</label>
                 <input
                   type="text"
                   required
@@ -2490,7 +2492,7 @@ function SocialMatrixContent() {
 
               <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-2">
-                  <label className="font-bold text-foreground block mb-1">主機 Host *</label>
+                  <label className="font-bold text-foreground block mb-1">{t('fHostShort')}</label>
                   <input
                     type="text"
                     required
@@ -2500,7 +2502,7 @@ function SocialMatrixContent() {
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-foreground block mb-1">端口 Port *</label>
+                  <label className="font-bold text-foreground block mb-1">{t('fPort')}</label>
                   <input
                     type="number"
                     required
@@ -2513,7 +2515,7 @@ function SocialMatrixContent() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-foreground block mb-1">月租定價 (NTD) *</label>
+                  <label className="font-bold text-foreground block mb-1">{t('fMonthly')}</label>
                   <input
                     type="number"
                     required
@@ -2523,22 +2525,22 @@ function SocialMatrixContent() {
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-foreground block mb-1">租賃狀態 *</label>
+                  <label className="font-bold text-foreground block mb-1">{t('fLeaseStatus')}</label>
                   <select
                     value={editingOfficial.status}
                     onChange={e => setEditingOfficial({ ...editingOfficial, status: e.target.value as OfficialProxyStatus })}
                     className="w-full px-3 py-1.5 rounded-lg border border-border bg-background font-medium"
                   >
-                    <option value="available">🟢 開放租用 (Available)</option>
-                    <option value="rented_out">🔴 專屬租出中 (Rented Out)</option>
-                    <option value="maintenance">🟡 維護中 (Maintenance)</option>
+                    <option value="available">{t('optAvail')}</option>
+                    <option value="rented_out">{t('optRented')}</option>
+                    <option value="maintenance">{t('optMaint')}</option>
                   </select>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-foreground block mb-1">電信業者 ISP</label>
+                  <label className="font-bold text-foreground block mb-1">{t('fIsp')}</label>
                   <input
                     type="text"
                     value={editingOfficial.isp || ''}
@@ -2547,7 +2549,7 @@ function SocialMatrixContent() {
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-foreground block mb-1">城市地區</label>
+                  <label className="font-bold text-foreground block mb-1">{t('fCity')}</label>
                   <input
                     type="text"
                     value={editingOfficial.city || ''}
@@ -2558,7 +2560,7 @@ function SocialMatrixContent() {
               </div>
 
               <div>
-                <label className="font-bold text-foreground block mb-1">特色備註</label>
+                <label className="font-bold text-foreground block mb-1">{t('fFeatureNotes')}</label>
                 <input
                   type="text"
                   value={editingOfficial.notes || ''}
@@ -2573,13 +2575,13 @@ function SocialMatrixContent() {
                   onClick={() => setIsEditOfficialOpen(false)}
                   className="px-4 py-2 rounded-lg border border-border hover:bg-slate-100 text-xs"
                 >
-                  取消
+                  {t('cancel')}
                 </button>
                 <button
                   type="submit"
                   className="px-5 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-sm"
                 >
-                  儲存修改
+                  {t('saveChanges')}
                 </button>
               </div>
             </form>

@@ -5,6 +5,16 @@
 import { useState, useEffect, type ReactNode } from 'react'
 import Link from 'next/link'
 import { Lock, Loader2, Crown } from 'lucide-react'
+import { useTranslations } from 'next-intl'
+
+// 呼叫端傳入的中文功能名／方案名 → 翻譯 key
+const FEATURE_KEYS: Record<string, string> = {
+  'AI 視覺工坊': 'aiStudio',
+  'AI 產品行銷設計師': 'productDesigner',
+  '行銷流水線': 'pipeline',
+  '社群矩陣與自動養號': 'socialMatrix',
+}
+const PLAN_KEYS: Record<string, string> = { 'PRO 以上': 'proPlus', 'CORE 以上': 'corePlus' }
 
 export interface MarketingPlanInfo {
   plan: 'free' | 'pro' | 'team' | 'enterprise'
@@ -38,6 +48,9 @@ export function PlanGate({
   children: ReactNode
 }) {
   const info = useMarketingPlan()
+  const t = useTranslations('PlanGate')
+  const fk = FEATURE_KEYS[featureName]
+  const pk = PLAN_KEYS[requiredPlan]
 
   if (!info) {
     return (
@@ -56,9 +69,9 @@ export function PlanGate({
           <Lock className="h-5 w-5 text-muted-foreground" />
         </div>
         <div>
-          <h2 className="text-base font-bold mb-1">{featureName}</h2>
+          <h2 className="text-base font-bold mb-1">{fk ? t(`feature.${fk}`) : featureName}</h2>
           <p className="text-sm text-muted-foreground">
-            此功能需 {requiredPlan} 方案，目前方案：{info.plan === 'free' ? '免費' : info.plan.toUpperCase()}
+            {t('needPlan', { required: pk ? t(`plan.${pk}`) : requiredPlan, current: info.plan === 'free' ? t('free') : info.plan.toUpperCase() })}
           </p>
         </div>
         <Link
@@ -66,7 +79,7 @@ export function PlanGate({
           className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-lg text-sm font-semibold text-primary-foreground bg-primary"
         >
           <Crown className="h-4 w-4" />
-          查看方案並升級
+          {t('upgrade')}
         </Link>
       </div>
     </div>

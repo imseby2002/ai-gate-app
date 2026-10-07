@@ -529,8 +529,8 @@ function MarketingPipelineContent() {
             defaultText: smsText,
           }),
         })
-        if (res.ok) outputs.push(`SMS: 成功 ${data.success}/${data.total}`)
-        else outputs.push(`SMS失敗: ${data.error}`)
+        if (res.ok) outputs.push(t('x.smsOk', { success: data.success, total: data.total }))
+        else outputs.push(t('x.smsFail', { error: String(data.error) }))
       }
 
       if (outputs.length === 0) return { ok: false, output: t('out.noLeadsList') }
@@ -749,10 +749,10 @@ function MarketingPipelineContent() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 font-semibold text-gray-800 text-xs">
                     <span>{t('steps.2.name')}</span>
-                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-200 text-amber-800">必讀</span>
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-200 text-amber-800">{t('x.mustRead')}</span>
                   </div>
                   <div className="text-[10px] truncate text-gray-500">
-                    {hasComp ? `✓ 已載入 (${compData.companyName})` : t('steps.2.desc')}
+                    {hasComp ? `✓ ${t('x.loaded', { name: compData.companyName })}` : t('steps.2.desc')}
                   </div>
                 </div>
                 <a
@@ -761,7 +761,7 @@ function MarketingPipelineContent() {
                   rel="noreferrer"
                   className="text-[10px] text-blue-600 hover:underline shrink-0"
                 >
-                  {hasComp ? '查看' : '設定'}
+                  {hasComp ? t('x.view') : t('x.setup')}
                 </a>
               </div>
             </div>
