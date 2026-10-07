@@ -4070,6 +4070,13 @@
     }
   },
   "Meeting": {
+    "translateTo": "Translate to",
+    "noTranslation": "No translation",
+    "download": "Download record",
+    "downloading": "Preparing…",
+    "history": "My meetings",
+    "historyEmpty": "No meetings yet.",
+    "date": "Date",
     "title": "Meeting Notes",
     "subtitle": "Live transcription and translation for in-person or online meetings",
     "myLang": "I speak",

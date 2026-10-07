@@ -4070,6 +4070,13 @@
     }
   },
   "Meeting": {
+    "translateTo": "翻譯成",
+    "noTranslation": "不翻譯",
+    "download": "下載會議紀錄",
+    "downloading": "整理中…",
+    "history": "我的會議紀錄",
+    "historyEmpty": "尚無會議紀錄。",
+    "date": "日期",
     "title": "會議紀錄",
     "subtitle": "即時逐字紀錄與翻譯，實體／線上會議皆可",
     "myLang": "我說的語言",

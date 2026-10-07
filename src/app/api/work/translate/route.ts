@@ -10,6 +10,11 @@ const LANGS: Record<string, string> = {
   'zh-TW': '繁體中文 (Traditional Chinese)',
   en: 'English',
   vi: 'Tiếng Việt (Vietnamese)',
+  'zh-CN': '简体中文 (Simplified Chinese)',
+  ja: '日本語 (Japanese)',
+  ko: '한국어 (Korean)',
+  th: 'ไทย (Thai)',
+  id: 'Bahasa Indonesia (Indonesian)',
 }
 
 function hash(s: string) {
