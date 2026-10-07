@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
 import {
   Rocket, Crown, Sparkles, CheckCircle2, Clock, Calendar,
   BarChart3, Plus, Pencil, Trash2, X, Loader2, ArrowUpRight,
@@ -53,6 +54,7 @@ const LAUNCH_STATUS: Record<string, { label: string; variant: 'secondary' | 'def
 const fmt = (n: number) => Math.round(Number(n) || 0).toLocaleString('zh-TW')
 
 export function ProductLaunchesSection() {
+  const t = useTranslations('ProductLaunches')
   const [items, setItems] = useState<ProductLaunch[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<Partial<ProductLaunch> | null>(null)
@@ -82,7 +84,7 @@ export function ProductLaunchesSection() {
   async function handleSave() {
     if (!editing) return
     if (!String(editing.name ?? '').trim()) {
-      setErr('請填寫新品名稱')
+      setErr(t('needName'))
       return
     }
     setSaving(true)
@@ -96,13 +98,13 @@ export function ProductLaunchesSection() {
       })
       const j = await r.json()
       if (!r.ok) {
-        setErr(j.error || '儲存失敗')
+        setErr(j.error || t('saveFailed'))
         return
       }
       setEditing(null)
       load()
     } catch (e: any) {
-      setErr(e.message || '儲存失敗')
+      setErr(e.message || t('saveFailed'))
     } finally {
       setSaving(false)
     }
@@ -110,7 +112,7 @@ export function ProductLaunchesSection() {
 
   // 一鍵解鎖全面上市
   async function unlockPublicRelease(launch: ProductLaunch) {
-    if (!confirm(`確定將【${launch.name}】正式解鎖開放給所有大眾顧客？`)) return
+    if (!confirm(t('confirmUnlock', { name: launch.name }))) return
     try {
       const r = await fetch('/api/mkt/launches', {
         method: 'PATCH',
@@ -151,10 +153,10 @@ export function ProductLaunchesSection() {
         <div>
           <h2 className="text-base font-bold flex items-center gap-2">
             <Rocket className="h-4 w-4 text-primary" />
-            研發 $\leftrightarrow$ 行銷 新品上架流水線 (VIP 專享到全面上市)
+            {t('title')}
           </h2>
           <p className="text-xs text-muted-foreground mt-0.5">
-            研發完成配方後推送上架，行銷部可設定 VIP 搶先專屬試飲期限，期滿自動或一鍵開放全客購買
+            {t('subtitle')}
           </p>
         </div>
 
@@ -176,7 +178,7 @@ export function ProductLaunchesSection() {
           }}
         >
           <Plus className="h-3.5 w-3.5" />
-          排程新品上架
+          {t('schedule')}
         </Button>
       </div>
 
@@ -184,7 +186,7 @@ export function ProductLaunchesSection() {
         <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
       ) : items.length === 0 ? (
         <div className="text-center py-10 border rounded-xl bg-card/30 border-dashed text-xs text-muted-foreground">
-          目前無進行中之新品上架排程。研發人員於配方表提交新品後將自動出現在此處。
+          {t('empty')}
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
@@ -199,11 +201,11 @@ export function ProductLaunchesSection() {
                 <div>
                   <div className="flex items-center justify-between gap-1 flex-wrap">
                     <Badge variant={st.variant} className="text-[11px] font-bold">
-                      {st.label}
+                      {t(`status.${LAUNCH_STATUS[launch.status] ? launch.status : 'mkt_prep'}.label`)}
                     </Badge>
                     {launch.isVipExpired && (
                       <Badge variant="destructive" className="text-[10px] animate-pulse">
-                        ⚠️ VIP期限已到，可開放全客
+                        ⚠️ {t('vipExpired')}
                       </Badge>
                     )}
                   </div>
@@ -213,20 +215,20 @@ export function ProductLaunchesSection() {
                   {launch.recipe && (
                     <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                       <FlaskConical className="h-3 w-3 text-violet-500" />
-                      <span>配方連動成本：${fmt(launch.recipe.total_purchase)}</span>
+                      <span>{t('recipeCost')}${fmt(launch.recipe.total_purchase)}</span>
                     </div>
                   )}
 
                   <div className="p-2.5 rounded-lg bg-muted/40 text-xs space-y-1 mt-2.5">
                     <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">👑 VIP 搶先試飲期：</span>
+                      <span className="text-muted-foreground">👑 {t('vipWindow')}</span>
                       <strong className="text-foreground">
-                        {launch.vip_start_date ?? '即日起'} ~ {launch.vip_end_date ?? '未定'}
+                        {launch.vip_start_date ?? t('fromToday')} ~ {launch.vip_end_date ?? t('tbd')}
                       </strong>
                     </div>
                     {launch.public_release_date && (
                       <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">🚀 全面公開上市：</span>
+                        <span className="text-muted-foreground">🚀 {t('publicDate')}</span>
                         <span className="text-foreground">{launch.public_release_date}</span>
                       </div>
                     )}
@@ -243,7 +245,7 @@ export function ProductLaunchesSection() {
                         onClick={() => unlockPublicRelease(launch)}
                       >
                         <Unlock className="h-3 w-3" />
-                        解鎖全面上市
+                        {t('unlock')}
                       </Button>
                     )}
 
@@ -254,7 +256,7 @@ export function ProductLaunchesSection() {
                       onClick={() => openAnalytics(launch)}
                     >
                       <BarChart3 className="h-3 w-3" />
-                      成效比對
+                      {t('compare')}
                     </Button>
                   </div>
 
@@ -270,7 +272,7 @@ export function ProductLaunchesSection() {
                     </button>
                     <button
                       onClick={async () => {
-                        if (!confirm('確定移除此新品上架排程？')) return
+                        if (!confirm(t('confirmRemove'))) return
                         await fetch('/api/mkt/launches', {
                           method: 'DELETE',
                           headers: { 'Content-Type': 'application/json' },
@@ -298,7 +300,7 @@ export function ProductLaunchesSection() {
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b pb-3">
-              <h2 className="font-bold text-lg">{editing.id ? '設定新品上市排程' : '排程新品上架'}</h2>
+              <h2 className="font-bold text-lg">{editing.id ? t('editTitle') : t('schedule')}</h2>
               <button onClick={() => setEditing(null)} className="p-1.5 rounded-lg hover:bg-muted">
                 <X className="h-5 w-5" />
               </button>
@@ -306,7 +308,7 @@ export function ProductLaunchesSection() {
 
             <div className="space-y-3">
               <div>
-                <label className="text-xs font-semibold mb-1 block">新品名稱 *</label>
+                <label className="text-xs font-semibold mb-1 block">{t('name')} *</label>
                 <Input
                   value={editing.name ?? ''}
                   onChange={e => setEditing({ ...editing, name: e.target.value })}
@@ -315,21 +317,21 @@ export function ProductLaunchesSection() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold mb-1 block">當前上架階段</label>
+                <label className="text-xs font-semibold mb-1 block">{t('stage')}</label>
                 <select
                   value={editing.status ?? 'mkt_prep'}
                   onChange={e => setEditing({ ...editing, status: e.target.value as any })}
                   className="w-full h-9 rounded-lg border border-input bg-card px-3 text-xs font-medium"
                 >
                   {Object.entries(LAUNCH_STATUS).map(([k, v]) => (
-                    <option key={k} value={k}>{v.label} ({v.desc})</option>
+                    <option key={k} value={k}>{t(`status.${k}.label`)} ({t(`status.${k}.desc`)})</option>
                   ))}
                 </select>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-xs font-semibold mb-1 block">👑 VIP 專享起始日</label>
+                  <label className="text-xs font-semibold mb-1 block">👑 {t('vipStart')}</label>
                   <Input
                     type="date"
                     value={editing.vip_start_date ?? ''}
@@ -338,7 +340,7 @@ export function ProductLaunchesSection() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold mb-1 block">👑 VIP 專享截止日</label>
+                  <label className="text-xs font-semibold mb-1 block">👑 {t('vipEnd')}</label>
                   <Input
                     type="date"
                     value={editing.vip_end_date ?? ''}
@@ -349,7 +351,7 @@ export function ProductLaunchesSection() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold mb-1 block">🚀 全面公開上市日期</label>
+                <label className="text-xs font-semibold mb-1 block">🚀 {t('publicDateLabel')}</label>
                 <Input
                   type="date"
                   value={editing.public_release_date ?? ''}
@@ -359,11 +361,11 @@ export function ProductLaunchesSection() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold mb-1 block">專享期優惠方案說明</label>
+                <label className="text-xs font-semibold mb-1 block">{t('promo')}</label>
                 <Input
                   value={editing.vip_notes ?? ''}
                   onChange={e => setEditing({ ...editing, vip_notes: e.target.value })}
-                  placeholder="例：VIP 獨家搶先試飲，打卡贈送精美杯套"
+                  placeholder={t('promoPh')}
                   className="h-9"
                 />
               </div>
@@ -372,10 +374,10 @@ export function ProductLaunchesSection() {
             {err && <p className="text-xs text-destructive font-medium">{err}</p>}
 
             <div className="flex justify-end gap-2 pt-2 border-t">
-              <Button variant="outline" size="sm" onClick={() => setEditing(null)}>取消</Button>
+              <Button variant="outline" size="sm" onClick={() => setEditing(null)}>{t('cancel')}</Button>
               <Button size="sm" onClick={handleSave} disabled={saving} className="gap-1.5 font-bold">
                 {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                儲存排程
+                {t('save')}
               </Button>
             </div>
           </div>
@@ -393,10 +395,10 @@ export function ProductLaunchesSection() {
               <div>
                 <h2 className="font-bold text-lg flex items-center gap-2">
                   <BarChart3 className="h-5 w-5 text-primary" />
-                  新品銷售分析：VIP 專享期 vs 全面開放期
+                  {t('analyticsTitle')}
                 </h2>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  品項：【{analyticsModalTarget.name}】
+                  {t('item', { name: analyticsModalTarget.name })}
                 </p>
               </div>
               <button onClick={() => setAnalyticsModalTarget(null)} className="p-1.5 rounded-lg hover:bg-muted">
@@ -407,37 +409,37 @@ export function ProductLaunchesSection() {
             {analyticsLoading ? (
               <div className="py-20 flex justify-center"><Loader2 className="h-7 w-7 animate-spin text-primary" /></div>
             ) : !analyticsData ? (
-              <div className="py-12 text-center text-xs text-muted-foreground">暫無足夠之銷售數據</div>
+              <div className="py-12 text-center text-xs text-muted-foreground">{t('noData')}</div>
             ) : (
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   {/* VIP 專享期 */}
                   <div className="p-4 rounded-xl border bg-purple-50/40 dark:bg-purple-950/20 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-purple-600 dark:text-purple-400">👑 階段一：VIP 搶先期</span>
-                      <span className="text-[11px] text-muted-foreground">共 {analyticsData.vipPeriod.days} 天</span>
+                      <span className="text-xs font-bold text-purple-600 dark:text-purple-400">👑 {t('phase1')}</span>
+                      <span className="text-[11px] text-muted-foreground">{t('days', { n: analyticsData.vipPeriod.days })}</span>
                     </div>
                     <div className="text-2xl font-bold text-foreground">
-                      {analyticsData.vipPeriod.cups} <span className="text-xs font-normal">杯</span>
+                      {analyticsData.vipPeriod.cups} <span className="text-xs font-normal">{t('cups')}</span>
                     </div>
                     <div className="text-xs text-muted-foreground space-y-0.5">
-                      <div>總營收：${fmt(analyticsData.vipPeriod.revenue)}</div>
-                      <div>日均銷量：<strong className="text-foreground">{analyticsData.vipPeriod.dailyAvgCups} 杯/天</strong></div>
+                      <div>{t('revenue')}${fmt(analyticsData.vipPeriod.revenue)}</div>
+                      <div>{t('dailyAvg')}<strong className="text-foreground">{t('cupsPerDay', { n: analyticsData.vipPeriod.dailyAvgCups })}</strong></div>
                     </div>
                   </div>
 
                   {/* 全客全面上市 */}
                   <div className="p-4 rounded-xl border bg-emerald-50/40 dark:bg-emerald-950/20 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">🚀 階段二：全面上市</span>
-                      <span className="text-[11px] text-muted-foreground">共 {analyticsData.publicPeriod.days} 天</span>
+                      <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">🚀 {t('phase2')}</span>
+                      <span className="text-[11px] text-muted-foreground">{t('days', { n: analyticsData.publicPeriod.days })}</span>
                     </div>
                     <div className="text-2xl font-bold text-foreground">
-                      {analyticsData.publicPeriod.cups} <span className="text-xs font-normal">杯</span>
+                      {analyticsData.publicPeriod.cups} <span className="text-xs font-normal">{t('cups')}</span>
                     </div>
                     <div className="text-xs text-muted-foreground space-y-0.5">
-                      <div>總營收：${fmt(analyticsData.publicPeriod.revenue)}</div>
-                      <div>日均銷量：<strong className="text-foreground">{analyticsData.publicPeriod.dailyAvgCups} 杯/天</strong></div>
+                      <div>{t('revenue')}${fmt(analyticsData.publicPeriod.revenue)}</div>
+                      <div>{t('dailyAvg')}<strong className="text-foreground">{t('cupsPerDay', { n: analyticsData.publicPeriod.dailyAvgCups })}</strong></div>
                     </div>
                   </div>
                 </div>
@@ -445,7 +447,7 @@ export function ProductLaunchesSection() {
                 {/* 增長分析 */}
                 <div className="p-4 rounded-xl border bg-card space-y-2">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-muted-foreground">日均銷量乘數增幅：</span>
+                    <span className="font-bold text-muted-foreground">{t('lift')}</span>
                     <span className={`text-base font-bold ${
                       analyticsData.comparison.cupsLiftPct >= 0 ? 'text-emerald-600' : 'text-rose-600'
                     }`}>

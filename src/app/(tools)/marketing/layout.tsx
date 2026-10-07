@@ -103,7 +103,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
         {!collapse && <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">{t('center')}</span>}
         {/* 收合切換（桌面才顯示） */}
         <button type="button" onClick={toggleCollapsed}
-          title={collapse ? '展開選單' : '收合選單'}
+          title={collapse ? t('nav.expand') : t('nav.collapse')}
           className={`hidden sm:grid place-items-center h-7 w-7 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700 ${collapse ? '' : 'ml-auto'}`}>
           {collapse ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
         </button>
@@ -131,11 +131,11 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
 
       <div className="mt-auto pt-3 border-t border-gray-100 flex flex-col gap-1">
         {!collapse && sectionLabel(t('section.collab'))}
-        <Link href="/mkt" title={collapse ? 'ERP 行銷系統' : undefined}
+        <Link href="/mkt" title={collapse ? t('nav.erpMkt') : undefined}
           className={`flex items-center rounded-lg text-xs font-semibold text-pink-700 bg-pink-50 hover:bg-pink-100 transition-colors
             ${collapse ? 'justify-center py-2.5' : 'gap-2 px-3 py-2'}`}>
           <Megaphone className="h-3.5 w-3.5 shrink-0" />
-          {!collapse && <span>ERP 行銷系統 ↗</span>}
+          {!collapse && <span>{t('nav.erpMkt')} ↗</span>}
         </Link>
         <Link href="/office" title={collapse ? 'IMT ERP' : undefined}
           className={`flex items-center rounded-lg text-xs font-medium text-gray-500 hover:bg-gray-100 transition-colors
