@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useMemo, useRef } from 'react'
+import { useTranslations, useLocale } from 'next-intl'
 import Image from 'next/image'
 import Link from 'next/link'
 import {
@@ -30,14 +31,18 @@ import {
 } from '@/lib/marketing/video-templates'
 
 const ASPECT_RATIOS: { value: '1:1' | '4:5' | '3:4' | '16:9' | '9:16'; label: string; desc: string }[] = [
-  { value: '1:1',  label: '1:1 方形',     desc: 'IG 貼文 / 電商首圖' },
-  { value: '4:5',  label: '4:5 垂直貼文', desc: 'IG / FB 滿版最佳點擊' },
-  { value: '3:4',  label: '3:4 經典海報', desc: '活動宣傳 / 促銷海報' },
-  { value: '16:9', label: '16:9 寬螢幕',  desc: '首頁 Banner / 橫幅廣告' },
-  { value: '9:16', label: '9:16 全屏直式', desc: 'IG 限動 / Reels / TikTok' },
+  // desc 為 MktTemplates.ar.* 的 key
+  { value: '1:1',  label: '1:1',  desc: 'ar11' },
+  { value: '4:5',  label: '4:5',  desc: 'ar45' },
+  { value: '3:4',  label: '3:4',  desc: 'ar34' },
+  { value: '16:9', label: '16:9', desc: 'ar169' },
+  { value: '9:16', label: '9:16', desc: 'ar916' },
 ]
 
 export default function VisualTemplatesPage() {
+  const t = useTranslations('MktTemplates')
+  const locale = useLocale()
+  const answerLang = locale === 'vi' ? 'tiếng Việt' : locale === 'en' ? 'English' : '繁體中文'
   // 主分頁切換：'image' (圖片風格模板) 或 'video' (影片廣告腳本)
   const [mainTab, setMainTab] = useState<'image' | 'video'>('image')
 
@@ -146,7 +151,7 @@ export default function VisualTemplatesPage() {
     if (!files.length) return
 
     if (files.some(f => !f.type.startsWith('image/'))) {
-      alert('請上傳 JPG、PNG 或 WebP 圖片格式')
+      alert(t('badFormat'))
       return
     }
 
@@ -188,7 +193,7 @@ export default function VisualTemplatesPage() {
     e.target.value = ''
     if (!file) return
     if (!file.type.startsWith('image/')) {
-      alert('請上傳 JPG、PNG 或 WebP 圖片格式')
+      alert(t('badFormat'))
       return
     }
     const reader = new FileReader()
@@ -222,7 +227,7 @@ export default function VisualTemplatesPage() {
 
   // 複製圖片提示詞
   const handleCopyImgPrompt = () => {
-    const fullText = `【風格特徵 / 正向提示詞】：\n${previewSynthesizedImgPrompt}\n\n【排除特徵 / 負面提示詞】：\n${selectedImgTemplate.negativePrompt}\n\n【建議尺寸比例】：\n${imgAspectRatio}`
+    const fullText = `${t('fullPos')}\n${previewSynthesizedImgPrompt}\n\n${t('fullNeg')}\n${selectedImgTemplate.negativePrompt}\n\n${t('fullAspect')}\n${imgAspectRatio}`
     navigator.clipboard.writeText(fullText)
     setCopiedImgPrompt(true)
     setTimeout(() => setCopiedImgPrompt(false), 2000)
@@ -250,9 +255,9 @@ export default function VisualTemplatesPage() {
       const raw = await res.text()
       let data: any = {}
       try { data = JSON.parse(raw) } catch {
-        throw new Error(res.status === 413 ? '參考圖片太大，請換一張較小的圖片' : '生成失敗，請稍後再試')
+        throw new Error(res.status === 413 ? t('tooLarge') : t('genFailedRetry'))
       }
-      if (!res.ok) throw new Error(data.error || '生成失敗，請稍後再試')
+      if (!res.ok) throw new Error(data.error || t('genFailedRetry'))
 
       setGeneratedImgResult({
         url: data.url,
@@ -266,7 +271,7 @@ export default function VisualTemplatesPage() {
         el?.scrollIntoView({ behavior: 'smooth' })
       }, 100)
     } catch (err: any) {
-      setImgErrorMsg(err.message || '生成失敗')
+      setImgErrorMsg(err.message || t('genFailed'))
     } finally {
       setGeneratingImage(false)
     }
@@ -282,16 +287,16 @@ export default function VisualTemplatesPage() {
 
   // ─── 影片分鏡腳本合成 ───────────────────────────────────────────
   const synthesizedVideoScript = useMemo(() => {
-    const pName = videoProductName.trim() || '本商品'
-    const kPoint = videoKeyPoint.trim() ? `（重點：${videoKeyPoint.trim()}）` : ''
+    const pName = videoProductName.trim() || t('thisProduct')
+    const kPoint = videoKeyPoint.trim() ? t('keyPointParen', { k: videoKeyPoint.trim() }) : ''
 
     const lines = [
-      `【${selectedVideoTemplate.title} ${selectedVideoTemplate.command} 完整分鏡腳本】`,
-      `適用情境：${selectedVideoTemplate.applicability}`,
-      `推薦規格：比例 ${videoAspect}｜規格建議：${selectedVideoTemplate.params}`,
-      `推廣主題：${pName} ${kPoint}`,
+      t('scriptTitle', { title: selectedVideoTemplate.title, cmd: selectedVideoTemplate.command }),
+      `${t('applicability')}${selectedVideoTemplate.applicability}`,
+      t('specLine', { aspect: videoAspect, params: selectedVideoTemplate.params }),
+      `${t('topicLine')}${pName} ${kPoint}`,
       '',
-      '─── 分鏡時間軸規劃 ───',
+      t('timelineHead'),
     ]
 
     selectedVideoTemplate.scriptTimeline.forEach(item => {
@@ -334,8 +339,8 @@ export default function VisualTemplatesPage() {
       const prompt = `請為以下行銷影片腳本撰寫專業、具吸引力且自然流暢的口播台詞與分鏡字幕：
 模板：${selectedVideoTemplate.title} (${selectedVideoTemplate.command})
 適用情境：${selectedVideoTemplate.applicability}
-推廣商品/主題：${videoProductName || '精選商品'}
-核心特色/優惠：${videoKeyPoint || '極致品質、限時優惠'}
+推廣商品/主題：${videoProductName || t('featuredProduct')}
+核心特色/優惠：${videoKeyPoint || t('defaultKeyPoint')}
 分鏡時間軸結構：
 ${selectedVideoTemplate.rawScript}
 
@@ -343,7 +348,7 @@ ${selectedVideoTemplate.rawScript}
 1. 吸引人的開場口播（前3秒）
 2. 分鏡逐秒台詞與畫面拍攝指令
 3. 結尾行動呼籲（CTA）
-請用繁體中文回答，口吻具親和力與行銷轉換力。`
+請用${answerLang}回答，口吻具親和力與行銷轉換力。`
 
       const res = await fetch('/api/marketing/copy', {
         method: 'POST',
@@ -351,7 +356,7 @@ ${selectedVideoTemplate.rawScript}
         body: JSON.stringify({
           copyTypes: ['anchor_script'],
           userInstructions: prompt,
-          topic: `${selectedVideoTemplate.title} - ${videoProductName || '商品行銷影片'}`,
+          topic: `${selectedVideoTemplate.title} - ${videoProductName || t('productVideo')}`,
         }),
       })
 
@@ -361,13 +366,13 @@ ${selectedVideoTemplate.rawScript}
         if (text) {
           setExpandedAiScript(text)
         } else {
-          setExpandedAiScript(`【${selectedVideoTemplate.title} 口播講稿】\n\n「嗨大家！${videoProductName || '這款人氣好物'}今天正式亮相！${videoKeyPoint ? `不僅${videoKeyPoint}，` : ''}更為您帶來極致超值體驗！現在就留言或點擊主頁連結搶先下單，名額有限送完為止！」`)
+          setExpandedAiScript(t('fallbackScript', { title: selectedVideoTemplate.title, name: videoProductName || t('popularItem'), kp: videoKeyPoint ? t('fallbackKp', { k: videoKeyPoint }) : '' }))
         }
       } else {
-        setExpandedAiScript(`【${selectedVideoTemplate.title} 口播講稿】\n\n「嗨大家！${videoProductName || '這款人氣好物'}今天正式亮相！${videoKeyPoint ? `不僅${videoKeyPoint}，` : ''}更為您帶來極致超值體驗！現在就留言或點擊主頁連結搶先下單，名額有限送完為止！」`)
+        setExpandedAiScript(t('fallbackScript', { title: selectedVideoTemplate.title, name: videoProductName || t('popularItem'), kp: videoKeyPoint ? t('fallbackKp', { k: videoKeyPoint }) : '' }))
       }
     } catch {
-      setExpandedAiScript(`【${selectedVideoTemplate.title} 口播講稿】\n\n「嗨大家！${videoProductName || '這款人氣好物'}今天正式亮相！立即點擊了解更多！」`)
+      setExpandedAiScript(t('fallbackShort', { title: selectedVideoTemplate.title, name: videoProductName || t('popularItem') }))
     } finally {
       setExpandingAiScript(false)
     }
@@ -378,7 +383,7 @@ ${selectedVideoTemplate.rawScript}
     setGeneratingVideo(true)
     setVideoErrorMsg(null)
     setVideoResultUrl(null)
-    setVideoPollStatus('正在向 AI 影片引擎提交任務...')
+    setVideoPollStatus(t('pollSubmitting'))
     // 有參考圖走圖生影片
     const videoModel = videoRefImage ? 'kling-img2video' : 'kling-standard'
 
@@ -398,22 +403,22 @@ ${selectedVideoTemplate.rawScript}
       const data = await res.json()
       if (!res.ok) {
         if (res.status === 403) {
-          throw new Error(data.error || '目前方案未開放影片產出，請升級至 PRO 以上方案')
+          throw new Error(data.error || t('needPro'))
         }
-        throw new Error(data.error || '影片任務提交失敗')
+        throw new Error(data.error || t('submitFailed'))
       }
 
       const requestId = data.requestId
       if (!requestId) {
-        throw new Error('未取得影片任務 ID')
+        throw new Error(t('noTaskId'))
       }
 
-      setVideoPollStatus('任務已提交，AI 正在繪製各幀動態與光影渲染 (約 30~60 秒)...')
+      setVideoPollStatus(t('pollSubmitted'))
 
       // Polling
       for (let i = 0; i < 40; i++) {
         await new Promise(r => setTimeout(r, 4000))
-        setVideoPollStatus(`AI 影片渲染中 (進度 ${Math.min(15 + i * 2, 95)}%)...`)
+        setVideoPollStatus(t('pollProgress', { p: Math.min(15 + i * 2, 95) }))
 
         try {
           const pollRes = await fetch(`/api/marketing/generate-video?requestId=${requestId}&model=${videoModel}`)
@@ -427,7 +432,7 @@ ${selectedVideoTemplate.rawScript}
           }
 
           if (pollData.status === 'failed') {
-            throw new Error(pollData.error || '影片渲染失敗')
+            throw new Error(pollData.error || t('renderFailed'))
           }
         } catch (pollErr: any) {
           if (pollErr.message && !pollErr.message.includes('fetch')) {
@@ -436,9 +441,9 @@ ${selectedVideoTemplate.rawScript}
         }
       }
 
-      throw new Error('影片生成超時，請稍後至 AI 視覺工坊查看')
+      throw new Error(t('timeout'))
     } catch (err: any) {
-      setVideoErrorMsg(err.message || '生成失敗')
+      setVideoErrorMsg(err.message || t('genFailed'))
       setVideoPollStatus(null)
     } finally {
       setGeneratingVideo(false)
@@ -453,13 +458,13 @@ ${selectedVideoTemplate.rawScript}
           <div>
             <div className="flex items-center gap-2 text-amber-200 text-xs font-semibold uppercase tracking-wider mb-2">
               <Sparkles className="h-4 w-4" />
-              <span>行銷視覺風格與廣告創作中心</span>
+              <span>{t('hubTag')}</span>
             </div>
             <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-              視覺風格與廣告
+              {t('title')}
             </h1>
             <p className="text-amber-100/90 text-sm mt-1 max-w-2xl leading-relaxed">
-              免記指令！匯聚 85 種視覺風格呈現與 185 種行銷落地短影音分鏡模板。挑選氛圍感或腳本結構，AI 即刻打造吸睛商用圖文與短影音！
+              {t('subtitle')}
             </p>
           </div>
 
@@ -467,7 +472,7 @@ ${selectedVideoTemplate.rawScript}
             <Link href="/marketing/ai-studio">
               <Button variant="secondary" size="sm" className="gap-1.5 bg-white/20 hover:bg-white/30 text-white border-0 backdrop-blur-xs font-semibold">
                 <Sliders className="h-4 w-4" />
-                進入視覺工坊 (進階節點)
+                {t('openStudio')}
               </Button>
             </Link>
           </div>
@@ -486,9 +491,9 @@ ${selectedVideoTemplate.rawScript}
             }`}
           >
             <ImageIcon className="h-4 w-4" />
-            <span>圖片風格模板</span>
+            <span>{t('tabImage')}</span>
             <Badge variant="secondary" className={`text-xs px-2 py-0.5 ${mainTab === 'image' ? 'bg-white/20 text-white border-0' : ''}`}>
-              85 款風格
+              {t('count85')}
             </Badge>
           </button>
 
@@ -501,9 +506,9 @@ ${selectedVideoTemplate.rawScript}
             }`}
           >
             <Video className="h-4 w-4" />
-            <span>短影音與廣告腳本</span>
+            <span>{t('tabVideo')}</span>
             <Badge variant="secondary" className={`text-xs px-2 py-0.5 ${mainTab === 'video' ? 'bg-white/20 text-white border-0' : ''}`}>
-              185 款分鏡
+              {t('count185')}
             </Badge>
           </button>
         </div>
@@ -517,7 +522,7 @@ ${selectedVideoTemplate.rawScript}
                 <div className="relative flex-1 max-w-md">
                   <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="搜尋呈現感覺、關鍵字（如：黏土、黑五、免運、折扣、微縮、節慶...）"
+                    placeholder={t('searchImgPh')}
                     value={imgSearchQuery}
                     onChange={e => setImgSearchQuery(e.target.value)}
                     className="pl-9 h-10 rounded-xl bg-muted/40 border-muted"
@@ -533,7 +538,7 @@ ${selectedVideoTemplate.rawScript}
                 </div>
 
                 <div className="text-xs text-muted-foreground self-center">
-                  共顯示 <b className="text-foreground">{filteredImgTemplates.length}</b> 種視覺呈現風格
+                  {t.rich('imgCount', { n: filteredImgTemplates.length, b: c => <b className="text-foreground">{c}</b> })}
                 </div>
               </div>
 
@@ -549,7 +554,7 @@ ${selectedVideoTemplate.rawScript}
                         : 'bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground'
                     }`}
                   >
-                    <span>{cat.label}</span>
+                    <span>{t(`cat.${cat.key}`)}</span>
                   </button>
                 ))}
               </div>
@@ -608,7 +613,7 @@ ${selectedVideoTemplate.rawScript}
                                   setPreviewModalTpl(tpl)
                                 }}
                                 className="pointer-events-auto p-1.5 rounded-lg bg-black/60 hover:bg-black/90 text-white/90 hover:text-white backdrop-blur-xs transition-all shadow-xs"
-                                title="放大檢視示意圖與參數"
+                                title={t('zoomTitle')}
                               >
                                 <Eye className="h-3.5 w-3.5" />
                               </button>
@@ -633,14 +638,14 @@ ${selectedVideoTemplate.rawScript}
                           </div>
 
                           <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">
-                            適用：{tpl.applicability}
+                            {t('fitFor')}{tpl.applicability}
                           </p>
                         </div>
 
                         <div className="pt-2.5 mt-2.5 border-t flex items-center justify-between text-[11px] text-muted-foreground px-0.5">
-                          <span>預設比例 {tpl.defaultAspect}</span>
+                          <span>{t('defaultAspect', { a: tpl.defaultAspect })}</span>
                           <span className="text-amber-600 dark:text-amber-400 font-semibold group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5">
-                            選擇此風格 →
+                            {t('chooseStyle')}
                           </span>
                         </div>
                       </div>
@@ -655,14 +660,14 @@ ${selectedVideoTemplate.rawScript}
                   <div className="flex items-center justify-between border-b pb-3">
                     <div>
                       <h2 className="font-bold text-base text-foreground flex items-center gap-2">
-                        <span>風格生成設定</span>
+                        <span>{t('genSettings')}</span>
                       </h2>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        目前選用：<b className="text-foreground">{selectedImgTemplate.title}</b>
+                        {t('currentStyle')}<b className="text-foreground">{selectedImgTemplate.title}</b>
                       </p>
                     </div>
                     <Badge variant="secondary" className="text-xs bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-200">
-                      {selectedImgTemplate.badge || '視覺風格'}
+                      {selectedImgTemplate.badge || t('visualStyle')}
                     </Badge>
                   </div>
 
@@ -671,7 +676,7 @@ ${selectedVideoTemplate.rawScript}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5 text-xs font-bold text-foreground">
                         <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-                        <span>風格示範效果 (Sample Preview)</span>
+                        <span>{t('samplePreview')}</span>
                       </div>
                       <button
                         type="button"
@@ -679,7 +684,7 @@ ${selectedVideoTemplate.rawScript}
                         className="text-xs text-amber-600 hover:text-amber-700 dark:text-amber-400 font-semibold flex items-center gap-1 hover:underline cursor-pointer"
                       >
                         <Eye className="h-3.5 w-3.5" />
-                        放大細看
+                        {t('zoomIn')}
                       </button>
                     </div>
 
@@ -704,14 +709,14 @@ ${selectedVideoTemplate.rawScript}
                           🎨 {selectedImgTemplate.feeling}
                         </span>
                         <span className="px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-xs text-[10px] text-amber-300 shrink-0">
-                          點擊放大
+                          {t('clickZoom')}
                         </span>
                       </div>
                     </div>
 
                     <div className="p-2 rounded-lg bg-background/70 border text-[11px] text-muted-foreground space-y-1">
                       <div className="flex items-start justify-between gap-2">
-                        <span className="font-semibold text-foreground shrink-0">💡 建議參數：</span>
+                        <span className="font-semibold text-foreground shrink-0">💡 {t('suggestedParams')}</span>
                         <span className="text-amber-600 dark:text-amber-400 font-medium text-right">{selectedImgTemplate.paramAdvice}</span>
                       </div>
                     </div>
@@ -719,7 +724,7 @@ ${selectedVideoTemplate.rawScript}
 
                   {/* 尺寸比例選擇 */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-foreground">圖片尺寸比例</label>
+                    <label className="text-xs font-bold text-foreground">{t('imgAspect')}</label>
                     <div className="grid grid-cols-5 gap-1.5">
                       {ASPECT_RATIOS.map(ar => (
                         <button
@@ -733,7 +738,7 @@ ${selectedVideoTemplate.rawScript}
                           }`}
                         >
                           <div className="text-[11px]">{ar.value}</div>
-                          <div className="text-[9px] truncate opacity-70">{ar.desc.split(' ')[0]}</div>
+                          <div className="text-[9px] truncate opacity-70">{t(`ar.${ar.desc}`).split(' / ')[0]}</div>
                         </button>
                       ))}
                     </div>
@@ -741,9 +746,9 @@ ${selectedVideoTemplate.rawScript}
 
                   {/* 商品與賣點描述 */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-foreground">商品主題 / 促銷賣點說明</label>
+                    <label className="text-xs font-bold text-foreground">{t('imgTopic')}</label>
                     <Textarea
-                      placeholder="例如：手作抹茶千層蛋糕、極簡無線耳機、限量5折免運特惠..."
+                      placeholder={t('imgTopicPh')}
                       value={imgUserPrompt}
                       onChange={e => setImgUserPrompt(e.target.value)}
                       rows={3}
@@ -755,14 +760,14 @@ ${selectedVideoTemplate.rawScript}
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-foreground flex items-center justify-between">
                       <span>
-                        參考商品照片 (選填，支援圖生圖{(selectedImgTemplate.maxReferenceImages ?? 1) > 1 ? `，最多 ${selectedImgTemplate.maxReferenceImages} 張` : ''})
+                        {t('refPhotos')}{(selectedImgTemplate.maxReferenceImages ?? 1) > 1 ? t('refMax', { n: selectedImgTemplate.maxReferenceImages ?? 1 }) : ''}{t('refClose')}
                       </span>
                       {uploadedImages.length > 0 && (
                         <button
                           onClick={() => setUploadedImages([])}
                           className="text-[10px] text-destructive hover:underline"
                         >
-                          移除圖片
+                          {t('removeImage')}
                         </button>
                       )}
                     </label>
@@ -785,9 +790,9 @@ ${selectedVideoTemplate.rawScript}
                           ))}
                         </div>
                         <div className="text-xs flex-1 truncate">
-                          <p className="font-semibold text-foreground">已載入 {uploadedImages.length} 張參考照片</p>
+                          <p className="font-semibold text-foreground">{t('loadedN', { n: uploadedImages.length })}</p>
                           <p className="text-[10px] text-muted-foreground">
-                            {uploadedImages.length > 1 ? 'AI 只會使用這些照片中的商品組合畫面' : 'AI 將依此形狀與構圖融合風格'}
+                            {uploadedImages.length > 1 ? t('multiRefNote') : t('singleRefNote')}
                           </p>
                         </div>
                       </div>
@@ -799,7 +804,7 @@ ${selectedVideoTemplate.rawScript}
                       >
                         <Upload className="h-4 w-4 mx-auto text-muted-foreground mb-1" />
                         <p className="text-xs text-muted-foreground">
-                          {uploadedImages.length > 0 ? '繼續加入商品照片' : '點擊上傳商品照片 (JPG / PNG)'}
+                          {uploadedImages.length > 0 ? t('addMorePhotos') : t('uploadPhotos')}
                         </p>
                       </div>
                     )}
@@ -816,10 +821,10 @@ ${selectedVideoTemplate.rawScript}
                   {/* 提示詞預覽 */}
                   <div className="p-3 bg-muted/40 rounded-xl space-y-1.5 text-xs">
                     <div className="flex items-center justify-between text-muted-foreground font-medium">
-                      <span>AI Prompt 提示詞骨架</span>
+                      <span>{t('promptSkeleton')}</span>
                       <button onClick={handleCopyImgPrompt} className="hover:text-foreground flex items-center gap-1">
                         {copiedImgPrompt ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
-                        <span>{copiedImgPrompt ? '已複製' : '複製提示詞'}</span>
+                        <span>{copiedImgPrompt ? t('copied') : t('copyPrompt')}</span>
                       </button>
                     </div>
                     <p className="font-mono text-[11px] text-muted-foreground line-clamp-3 bg-card p-2 rounded border">
@@ -836,14 +841,14 @@ ${selectedVideoTemplate.rawScript}
 
                   {/* 生成引擎（實測切換） */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-foreground">生成引擎</label>
+                    <label className="text-xs font-bold text-foreground">{t('engine')}</label>
                     {uploadedImages.length ? (
-                      <p className="text-[11px] text-muted-foreground">有參考照片時固定使用 Nano Banana Pro（依原圖重新設計）</p>
+                      <p className="text-[11px] text-muted-foreground">{t('engineFixed')}</p>
                     ) : (
                       <div className="grid grid-cols-2 gap-1.5">
                         {([
-                          { id: 'flux', name: 'Nano Banana Pro', hint: '$0.20／張' },
-                          { id: 'ideogram', name: 'Ideogram v3', hint: '$0.18／張・實測' },
+                          { id: 'flux', name: 'Nano Banana Pro', hint: t('perImage', { p: '$0.20' }) },
+                          { id: 'ideogram', name: 'Ideogram v3', hint: t('perImageTested', { p: '$0.18' }) },
                         ] as const).map(e => (
                           <button
                             key={e.id}
@@ -868,12 +873,12 @@ ${selectedVideoTemplate.rawScript}
                     {generatingImage ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        <span>AI 正在渲染商業行銷圖 ({engineLabel})...</span>
+                        <span>{t('rendering', { e: engineLabel })}</span>
                       </>
                     ) : (
                       <>
                         <Sparkles className="h-4 w-4" />
-                        <span>立即產生商業行銷圖 ({engineLabel})</span>
+                        <span>{t('generateNow', { e: engineLabel })}</span>
                       </>
                     )}
                   </Button>
@@ -890,21 +895,21 @@ ${selectedVideoTemplate.rawScript}
                       ✓
                     </div>
                     <div>
-                      <h3 className="font-bold text-lg text-foreground">AI 行銷圖產出完成！</h3>
-                      <p className="text-xs text-muted-foreground">風格：{selectedImgTemplate.title}（{selectedImgTemplate.feeling}）</p>
+                      <h3 className="font-bold text-lg text-foreground">{t('imgDone')}</h3>
+                      <p className="text-xs text-muted-foreground">{t('styleLine', { title: selectedImgTemplate.title, feeling: selectedImgTemplate.feeling })}</p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2">
                     <Button variant="outline" size="sm" onClick={handleCopyImgLink} className="h-8 text-xs gap-1.5">
                       {copiedImgLink ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
-                      {copiedImgLink ? '已複製連結' : '複製圖片連結'}
+                      {copiedImgLink ? t('linkCopied') : t('copyImgLink')}
                     </Button>
 
                     <a href={generatedImgResult.url} download={`marketing-${selectedImgTemplate.id}-${Date.now()}.png`} target="_blank" rel="noreferrer">
                       <Button size="sm" className="h-8 text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">
                         <Download className="h-3.5 w-3.5" />
-                        下載高畫質大圖
+                        {t('downloadHd')}
                       </Button>
                     </a>
 
@@ -914,7 +919,7 @@ ${selectedVideoTemplate.rawScript}
                       className="h-8 text-xs gap-1.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold shadow-sm"
                     >
                       <Share2 className="h-3.5 w-3.5" />
-                      🚀 一鍵串接上傳至社群平台
+                      🚀 {t('publishSocial')}
                     </Button>
                   </div>
                 </div>
@@ -929,7 +934,7 @@ ${selectedVideoTemplate.rawScript}
                       <div className="p-3 bg-muted/40 rounded-xl space-y-1.5 text-xs">
                         <div className="font-bold text-foreground flex items-center gap-1.5">
                           <Sparkles className="h-3.5 w-3.5 text-primary" />
-                          所採用的完整提示詞骨架
+                          {t('fullSkeleton')}
                         </div>
                         <p className="font-mono text-[11px] text-muted-foreground leading-relaxed max-h-36 overflow-y-auto bg-card p-2 rounded border">
                           {generatedImgResult.positivePrompt}
@@ -940,14 +945,14 @@ ${selectedVideoTemplate.rawScript}
                         <div className="flex items-center justify-between">
                           <div className="font-bold text-xs flex items-center gap-1.5 text-blue-700 dark:text-blue-300">
                             <Share2 className="h-3.5 w-3.5" />
-                            社群發布中心一鍵串接
+                            {t('publishHub')}
                           </div>
                           <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-600 dark:text-blue-300 border-blue-300">
-                            直發多平台
+                            {t('multiPlatform')}
                           </Badge>
                         </div>
                         <p className="text-[11px] text-muted-foreground leading-relaxed">
-                          免手動下載轉存！立即將這張成果圖同步發布至 Facebook、Instagram、Threads、LINE 等社群平台。
+                          {t('publishDesc')}
                         </p>
                         <Button
                           size="sm"
@@ -955,7 +960,7 @@ ${selectedVideoTemplate.rawScript}
                           onClick={() => setShowImgPublishModal(true)}
                         >
                           <Share2 className="h-3.5 w-3.5" />
-                          開啟上傳中心並選擇發布平台
+                          {t('openPublish')}
                         </Button>
                       </div>
                     </div>
@@ -963,11 +968,11 @@ ${selectedVideoTemplate.rawScript}
                     <div className="space-y-2 pt-3 border-t">
                       <Button variant="outline" className="w-full text-xs font-semibold gap-1.5" onClick={handleGenerateImage} disabled={generatingImage}>
                         <RefreshCw className={`h-3.5 w-3.5 ${generatingImage ? 'animate-spin' : ''}`} />
-                        以相同參數重新生成一張 (產生變化)
+                        {t('regenerate')}
                       </Button>
                       <Link href="/marketing/ai-studio">
                         <Button variant="ghost" className="w-full text-xs text-primary gap-1">
-                          帶入視覺工坊進一步去背、局部修改或轉為短影音 →
+                          {t('toStudio')}
                         </Button>
                       </Link>
                     </div>
@@ -987,7 +992,7 @@ ${selectedVideoTemplate.rawScript}
                 <div className="relative flex-1 max-w-md">
                   <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="搜尋指令或主題（如：/hook3sec、痛點、360、開箱、ASMR、黑五、對比...）"
+                    placeholder={t('searchVideoPh')}
                     value={videoSearchQuery}
                     onChange={e => setVideoSearchQuery(e.target.value)}
                     className="pl-9 h-10 rounded-xl bg-muted/40 border-muted"
@@ -1003,7 +1008,7 @@ ${selectedVideoTemplate.rawScript}
                 </div>
 
                 <div className="text-xs text-muted-foreground self-center">
-                  共顯示 <b className="text-foreground">{filteredVideoTemplates.length}</b> 種行銷分鏡模板
+                  {t.rich('videoCount', { n: filteredVideoTemplates.length, b: c => <b className="text-foreground">{c}</b> })}
                 </div>
               </div>
 
@@ -1019,7 +1024,7 @@ ${selectedVideoTemplate.rawScript}
                         : 'bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground'
                     }`}
                   >
-                    <span>{cat.label}</span>
+                    <span>{t(`vcat.${cat.key}`)}</span>
                   </button>
                 ))}
               </div>
@@ -1062,14 +1067,14 @@ ${selectedVideoTemplate.rawScript}
                           </div>
 
                           <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">
-                            適用：{tpl.applicability}
+                            {t('fitFor')}{tpl.applicability}
                           </p>
                         </div>
 
                         <div className="pt-3 mt-3 border-t flex items-center justify-between text-[11px] text-muted-foreground">
-                          <span className="truncate max-w-[130px]">{tpl.scriptTimeline.length} 個分鏡鏡頭</span>
+                          <span className="truncate max-w-[130px]">{t('shots', { n: tpl.scriptTimeline.length })}</span>
                           <span className="text-blue-600 font-semibold group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5">
-                            套用腳本 →
+                            {t('useScript')}
                           </span>
                         </div>
                       </div>
@@ -1102,10 +1107,10 @@ ${selectedVideoTemplate.rawScript}
                     <div className="flex items-center justify-between text-xs font-bold text-foreground">
                       <span className="flex items-center gap-1.5">
                         <Clock className="h-3.5 w-3.5 text-blue-600" />
-                        官方分鏡腳本結構
+                        {t('officialStructure')}
                       </span>
                       <span className="text-[11px] text-muted-foreground font-normal">
-                        建議長度：約 {selectedVideoTemplate.recommendedSeconds} 秒
+                        {t('suggestedLength', { s: selectedVideoTemplate.recommendedSeconds })}
                       </span>
                     </div>
 
@@ -1123,16 +1128,16 @@ ${selectedVideoTemplate.rawScript}
                     </div>
 
                     <p className="text-[10px] text-muted-foreground leading-relaxed">
-                      💡 規格參數建議：{selectedVideoTemplate.params}
+                      💡 {t('specSuggest')}{selectedVideoTemplate.params}
                     </p>
                   </div>
 
                   {/* 自訂商品與賣點 */}
                   <div className="space-y-3 pt-2 border-t">
                     <div className="space-y-1">
-                      <label className="text-xs font-bold text-foreground">商品 / 主題名稱</label>
+                      <label className="text-xs font-bold text-foreground">{t('videoName')}</label>
                       <Input
-                        placeholder="例如：招牌黑糖厚奶、極簡降噪耳機、周年慶限定禮盒..."
+                        placeholder={t('videoNamePh')}
                         value={videoProductName}
                         onChange={e => setVideoProductName(e.target.value)}
                         className="h-8 text-xs rounded-lg"
@@ -1140,9 +1145,9 @@ ${selectedVideoTemplate.rawScript}
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-xs font-bold text-foreground">核心亮點 / 促銷說明 (選填)</label>
+                      <label className="text-xs font-bold text-foreground">{t('videoKey')}</label>
                       <Input
-                        placeholder="例如：3層濃郁口感、客人回購率90%、限時買一送一..."
+                        placeholder={t('videoKeyPh')}
                         value={videoKeyPoint}
                         onChange={e => setVideoKeyPoint(e.target.value)}
                         className="h-8 text-xs rounded-lg"
@@ -1152,14 +1157,14 @@ ${selectedVideoTemplate.rawScript}
                     {/* 參考圖片（圖生影片） */}
                     <div className="space-y-1">
                       <label className="text-xs font-bold text-foreground flex items-center justify-between">
-                        <span>參考照片 (選填，以此圖生成影片)</span>
+                        <span>{t('videoRef')}</span>
                         {videoRefImage && (
                           <button
                             type="button"
                             onClick={() => setVideoRefImage(null)}
                             className="text-[10px] text-destructive hover:underline"
                           >
-                            移除圖片
+                            {t('removeImage')}
                           </button>
                         )}
                       </label>
@@ -1167,8 +1172,8 @@ ${selectedVideoTemplate.rawScript}
                         <div className="rounded-lg border p-2 bg-muted/20 flex items-center gap-3">
                           <img src={videoRefImage} alt="Video reference" className="w-12 h-12 object-cover rounded-lg border" />
                           <div className="text-xs flex-1 truncate">
-                            <p className="font-semibold text-foreground">已載入參考照片</p>
-                            <p className="text-[10px] text-muted-foreground">影片將以此照片為畫面主體與第一幀</p>
+                            <p className="font-semibold text-foreground">{t('refLoaded')}</p>
+                            <p className="text-[10px] text-muted-foreground">{t('refFirstFrame')}</p>
                           </div>
                         </div>
                       ) : (
@@ -1177,7 +1182,7 @@ ${selectedVideoTemplate.rawScript}
                           className="border border-dashed border-border/80 rounded-lg p-2.5 text-center cursor-pointer hover:bg-muted/30 transition-colors"
                         >
                           <Upload className="h-4 w-4 mx-auto text-muted-foreground mb-1" />
-                          <p className="text-xs text-muted-foreground">點擊上傳商品／場景照片 (JPG / PNG)</p>
+                          <p className="text-xs text-muted-foreground">{t('uploadScene')}</p>
                         </div>
                       )}
                       <input ref={videoFileInputRef} type="file" accept="image/*" className="hidden" onChange={handleVideoFileChange} />
@@ -1185,7 +1190,7 @@ ${selectedVideoTemplate.rawScript}
 
                     {/* 影片比例 */}
                     <div className="space-y-1">
-                      <label className="text-xs font-bold text-foreground">影片長寬比例</label>
+                      <label className="text-xs font-bold text-foreground">{t('videoAspect')}</label>
                       <div className="grid grid-cols-4 gap-1.5">
                         {(['9:16', '16:9', '1:1', '4:5'] as const).map(ratio => (
                           <button
@@ -1215,7 +1220,7 @@ ${selectedVideoTemplate.rawScript}
                         className="text-xs h-7 gap-1 font-semibold"
                       >
                         {copiedVideoScript ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
-                        <span>{copiedVideoScript ? '已複製腳本' : '複製完整分鏡腳本'}</span>
+                        <span>{copiedVideoScript ? t('scriptCopied') : t('copyScript')}</span>
                       </Button>
 
                       <Button
@@ -1225,7 +1230,7 @@ ${selectedVideoTemplate.rawScript}
                         className="text-xs h-7 gap-1 font-semibold"
                       >
                         {copiedVideoPrompt ? <Check className="h-3 w-3 text-emerald-600" /> : <FileText className="h-3 w-3" />}
-                        <span>{copiedVideoPrompt ? '已複製Prompt' : '複製英文Prompt'}</span>
+                        <span>{copiedVideoPrompt ? t('promptCopied') : t('copyEnPrompt')}</span>
                       </Button>
                     </div>
 
@@ -1242,21 +1247,21 @@ ${selectedVideoTemplate.rawScript}
                       ) : (
                         <Sparkles className="h-3.5 w-3.5" />
                       )}
-                      <span>✨ AI 智慧擴寫完整逐字口播台詞與分鏡指示</span>
+                      <span>✨ {t('expandScript')}</span>
                     </Button>
 
                     {expandedAiScript && (
                       <div className="p-3 bg-muted/40 rounded-xl space-y-1 text-xs border animate-in fade-in-50">
                         <div className="font-bold text-foreground flex items-center justify-between">
-                          <span>AI 逐字口播講稿建議</span>
+                          <span>{t('voScript')}</span>
                           <button
                             onClick={() => {
                               navigator.clipboard.writeText(expandedAiScript)
-                              alert('已複製口播台詞')
+                              alert(t('voCopied'))
                             }}
                             className="text-[10px] text-primary hover:underline"
                           >
-                            複製講稿
+                            {t('copyVo')}
                           </button>
                         </div>
                         <p className="font-mono text-[11px] text-muted-foreground whitespace-pre-wrap max-h-40 overflow-y-auto leading-relaxed">
@@ -1287,12 +1292,12 @@ ${selectedVideoTemplate.rawScript}
                       <div className="flex items-center justify-between">
                         <span className="font-bold text-xs text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
                           <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                          AI 短影音生成完成！
+                          {t('videoDone')}
                         </span>
                         <a href={videoResultUrl} download={`video-${selectedVideoTemplate.id}.mp4`} target="_blank" rel="noreferrer">
                           <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 gap-1">
                             <Download className="h-3 w-3" />
-                            下載影片
+                            {t('downloadVideo')}
                           </Button>
                         </a>
                       </div>
@@ -1307,7 +1312,7 @@ ${selectedVideoTemplate.rawScript}
                         className="w-full h-8 text-xs font-bold gap-1.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-sm"
                       >
                         <Share2 className="h-3.5 w-3.5" />
-                        🚀 一鍵串接上傳至社群短影音 (Reels / Shorts / TikTok)
+                        🚀 {t('publishVideo')}
                       </Button>
                     </div>
                   )}
@@ -1321,12 +1326,12 @@ ${selectedVideoTemplate.rawScript}
                     {generatingVideo ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        <span>AI 影片引擎運算中...</span>
+                        <span>{t('videoBusy')}</span>
                       </>
                     ) : (
                       <>
                         <Film className="h-4 w-4" />
-                        <span>呼叫 AI 影片引擎生成 (Kling/Haiper)</span>
+                        <span>{t('videoGen')}</span>
                       </>
                     )}
                   </Button>
@@ -1339,7 +1344,7 @@ ${selectedVideoTemplate.rawScript}
                       className="w-full text-xs text-muted-foreground hover:text-foreground gap-1.5"
                     >
                       <Share2 className="h-3.5 w-3.5 text-blue-600" />
-                      已有影片檔案？直接開啟上傳中心同步發布 →
+                      {t('haveVideo')}
                     </Button>
                   </div>
                 </Card>
@@ -1363,7 +1368,7 @@ ${selectedVideoTemplate.rawScript}
             <div className="p-4 sm:px-6 flex items-center justify-between border-b bg-muted/30">
               <div className="flex items-center gap-2">
                 <Badge className="bg-amber-500 hover:bg-amber-600 text-white border-0 text-xs">
-                  {previewModalTpl.badge || '視覺風格示意'}
+                  {previewModalTpl.badge || t('styleSample')}
                 </Badge>
                 <h3 className="font-bold text-base sm:text-lg text-foreground">
                   {previewModalTpl.title}
@@ -1399,12 +1404,12 @@ ${selectedVideoTemplate.rawScript}
             <div className="p-5 sm:p-6 space-y-4 bg-card">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                 <div className="p-3 rounded-xl bg-muted/40 border space-y-1">
-                  <span className="font-bold text-foreground">✨ 風格氛圍感知</span>
+                  <span className="font-bold text-foreground">✨ {t('styleMood')}</span>
                   <p className="text-amber-600 dark:text-amber-400 font-medium">{previewModalTpl.feeling}</p>
-                  <p className="text-muted-foreground text-[11px] mt-1">適用：{previewModalTpl.applicability}</p>
+                  <p className="text-muted-foreground text-[11px] mt-1">{t('fitFor')}{previewModalTpl.applicability}</p>
                 </div>
                 <div className="p-3 rounded-xl bg-muted/40 border space-y-1">
-                  <span className="font-bold text-foreground">⚙️ 最佳生成建議</span>
+                  <span className="font-bold text-foreground">⚙️ {t('bestSettings')}</span>
                   <p className="text-foreground">{previewModalTpl.paramAdvice}</p>
                   <div className="flex flex-wrap gap-1 mt-1.5">
                     {previewModalTpl.tags.map(tag => (
@@ -1417,7 +1422,7 @@ ${selectedVideoTemplate.rawScript}
               </div>
 
               <div className="p-3 rounded-xl bg-muted/30 border font-mono text-[11px] text-muted-foreground break-all">
-                <div className="text-[10px] uppercase font-bold text-muted-foreground mb-1">提示詞骨架 (Positive Prompt)</div>
+                <div className="text-[10px] uppercase font-bold text-muted-foreground mb-1">{t('positivePrompt')}</div>
                 {previewModalTpl.positivePrompt}
               </div>
 
@@ -1427,7 +1432,7 @@ ${selectedVideoTemplate.rawScript}
                   variant="outline"
                   onClick={() => setPreviewModalTpl(null)}
                 >
-                  關閉
+                  {t('close')}
                 </Button>
                 <Button
                   className="bg-amber-600 hover:bg-amber-700 text-white font-bold"
@@ -1437,7 +1442,7 @@ ${selectedVideoTemplate.rawScript}
                   }}
                 >
                   <Sparkles className="h-4 w-4 mr-1.5" />
-                  套用此風格並設定生成
+                  {t('applyStyle')}
                 </Button>
               </div>
             </div>
@@ -1456,8 +1461,8 @@ ${selectedVideoTemplate.rawScript}
             title: `${selectedImgTemplate.title}（${selectedImgTemplate.feeling}）`,
             aspectRatio: generatedImgResult.aspectRatio,
           }}
-          initialCopy={`✨【${selectedImgTemplate.title}】新視覺公開！\n\n以「${selectedImgTemplate.feeling}」專屬風格打造，呈現極致質感與細節魅力 🔥${imgUserPrompt.trim() ? `\n\n重點特色：${imgUserPrompt.trim()}` : ''}\n\n立即了解更多或私訊我們！\n\n#品牌視覺 #新品上市 #行銷設計 #社群亮點 #質感生活`}
-          sourceName={`視覺風格與廣告 (${selectedImgTemplate.title})`}
+          initialCopy={t('imgCopy', { title: selectedImgTemplate.title, feeling: selectedImgTemplate.feeling, extra: imgUserPrompt.trim() ? t('imgCopyExtra', { k: imgUserPrompt.trim() }) : '' })}
+          sourceName={`${t('title')} (${selectedImgTemplate.title})`}
         />
       )}
 
@@ -1473,9 +1478,9 @@ ${selectedVideoTemplate.rawScript}
         }}
         initialCopy={
           expandedAiScript ||
-          `🔥【${selectedVideoTemplate.title}】短影音重磅登場！\n\n${videoProductName ? `產品：${videoProductName}\n` : ''}${videoKeyPoint ? `亮點：${videoKeyPoint}\n\n` : ''}以專業短影音分鏡打造高停留與高轉化視覺，立即觀看完整亮點！\n\n#短影音 #Reels #Shorts #TikTok #品牌行銷`
+          t('videoCopy', { title: selectedVideoTemplate.title, product: videoProductName ? t('videoCopyProduct', { p: videoProductName }) : '', key: videoKeyPoint ? t('videoCopyKey', { k: videoKeyPoint }) : '' })
         }
-        sourceName={`視覺風格與廣告 - 影片分鏡 (${selectedVideoTemplate.command})`}
+        sourceName={`${t('title')} - ${t('videoStoryboard')} (${selectedVideoTemplate.command})`}
       />
     </div>
   )
