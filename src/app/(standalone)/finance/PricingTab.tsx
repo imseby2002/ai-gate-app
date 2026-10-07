@@ -29,6 +29,7 @@ export interface MaterialPriceItem {
 const getCategories = (t: (key: string) => string) => [
   { id: 'all', label: t('catAll'), icon: Layers, color: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200' },
   { id: '原料', label: t('catRaw'), icon: Coffee, color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300' },
+  { id: '半成品', label: t('catSemi'), icon: Layers, color: 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300' },
   { id: '設備', label: t('catEquipment'), icon: Wrench, color: 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300' },
   { id: '耗材', label: t('catConsumable'), icon: ShoppingBag, color: 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300' },
   { id: '道具', label: t('catTool'), icon: Package, color: 'bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300' },
@@ -39,7 +40,7 @@ export default function PricingTab() {
   const locale = useLocale()
   const CATEGORIES = getCategories(t)
   const [items, setItems] = useState<MaterialPriceItem[]>([])
-  const [counts, setCounts] = useState({ all: 0, raw: 0, equipment: 0, consumable: 0, tool: 0 })
+  const [counts, setCounts] = useState({ all: 0, raw: 0, semi: 0, equipment: 0, consumable: 0, tool: 0 })
   const [loading, setLoading] = useState(true)
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [q, setQ] = useState('')
@@ -60,7 +61,7 @@ export default function PricingTab() {
       if (res.ok) {
         const d = await res.json()
         setItems(d.items ?? [])
-        setCounts(d.counts ?? { all: 0, raw: 0, equipment: 0, consumable: 0, tool: 0 })
+        setCounts(d.counts ?? { all: 0, raw: 0, semi: 0, equipment: 0, consumable: 0, tool: 0 })
       }
     } catch {
       setMsg({ text: t('loadPricingFailed'), type: 'error' })
@@ -293,6 +294,7 @@ export default function PricingTab() {
             const count =
               c.id === 'all' ? counts.all :
               c.id === '原料' ? counts.raw :
+              c.id === '半成品' ? counts.semi :
               c.id === '設備' ? counts.equipment :
               c.id === '耗材' ? counts.consumable :
               c.id === '道具' ? counts.tool : 0
@@ -411,6 +413,7 @@ export default function PricingTab() {
                     <td className="py-2 px-3">
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
                         it.category === '原料' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                        it.category === '半成品' ? 'bg-rose-50 text-rose-700 border-rose-200' :
                         it.category === '設備' ? 'bg-blue-50 text-blue-700 border-blue-200' :
                         it.category === '耗材' ? 'bg-amber-50 text-amber-700 border-amber-200' :
                         'bg-purple-50 text-purple-700 border-purple-200'
@@ -495,6 +498,7 @@ export default function PricingTab() {
                     className="w-full h-9 rounded-md border bg-background px-3 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
                   >
                     <option value="原料">{t('optRaw')}</option>
+                    <option value="半成品">{t('optSemi')}</option>
                     <option value="設備">{t('optEquipment')}</option>
                     <option value="耗材">{t('optConsumable')}</option>
                     <option value="道具">{t('optTool')}</option>

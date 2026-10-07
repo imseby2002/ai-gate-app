@@ -42,6 +42,8 @@ interface RecipeItem {
   material_code: string
   material_name: string
   qty_per_cup: number
+  qty_display?: number | null  // Excel 原始用量（g / ml / 個）
+  unit_display?: string | null
   unit?: string
   category?: string
   purchase_price?: number // 工廠進貨價
@@ -59,6 +61,11 @@ interface Recipe {
   name: string
   note: string
   created_at: string
+  kind?: RecipeKind | null           // drink | coffee | food | base
+  cup_size?: string | null
+  unit_label?: string | null
+  sell_ratio_export?: number | null  // Excel 成本比例（直營價）
+  excel_total_export?: number | null // Excel 試算成本（直營價）
   store_cost?: number     // 門市每杯總成本
   factory_cost?: number   // 工廠每杯總成本
   dealer_cost?: number    // 經銷每杯總成本
@@ -87,7 +94,9 @@ interface VarRow {
   money_loss: number
 }
 
-type RdTab = 'recipes' | 'prices' | 'mapping' | 'variance'
+type RdTab = 'recipes' | 'prices' | 'productPrices' | 'mapping' | 'variance'
+type RecipeKind = 'drink' | 'coffee' | 'food' | 'base'
+const RECIPE_PAGE = 60
 
 export default function RdPage() {
   const t = useTranslations('RdPage')
@@ -99,6 +108,8 @@ export default function RdPage() {
   const [prices, setPrices] = useState<MaterialPrice[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [kindFilter, setKindFilter] = useState<'all' | RecipeKind>('all')
+  const [visible, setVisible] = useState(RECIPE_PAGE)
   const [msg, setMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
   const [uploading, setUploading] = useState(false)
   const [expandedRecipes, setExpandedRecipes] = useState<Set<string>>(new Set())
@@ -145,7 +156,7 @@ export default function RdPage() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const p = new URLSearchParams(window.location.search).get('tab')
-      if (p === 'prices' || p === 'mapping' || p === 'variance' || p === 'recipes') {
+      if (p === 'prices' || p === 'productPrices' || p === 'mapping' || p === 'variance' || p === 'recipes') {
         setTab(p as RdTab)
       }
     }
@@ -287,6 +298,7 @@ export default function RdPage() {
 
   // 搜尋過濾
   const filteredRecipes = recipes.filter(r => {
+    if (kindFilter !== 'all' && (r.kind || 'drink') !== kindFilter) return false
     if (!search.trim()) return true
     const q = search.toLowerCase()
     return (
@@ -301,6 +313,7 @@ export default function RdPage() {
   const TABS: { id: RdTab; label: string; icon: ReactNode }[] = [
     { id: 'recipes', label: t('tabRecipes'), icon: <BookOpen className="h-4 w-4" /> },
     { id: 'prices', label: t('tabPrices'), icon: <DollarSign className="h-4 w-4" /> },
+    { id: 'productPrices', label: t('tabProductPrices'), icon: <TrendingUp className="h-4 w-4" /> },
     { id: 'mapping', label: t('tabMapping'), icon: <Link2 className="h-4 w-4" /> },
     { id: 'variance', label: t('tabVariance'), icon: <Scale className="h-4 w-4" /> },
   ]
@@ -500,7 +513,7 @@ export default function RdPage() {
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 value={search}
-                onChange={e => setSearch(e.target.value)}
+                onChange={e => { setSearch(e.target.value); setVisible(RECIPE_PAGE) }}
                 placeholder={t('searchPlaceholder')}
                 className="pl-9"
               />
@@ -510,6 +523,26 @@ export default function RdPage() {
                 {t('clear')}
               </Button>
             )}
+          </div>
+
+          {/* 配方類別篩選 */}
+          <div className="flex flex-wrap gap-2">
+            {(['all', 'drink', 'coffee', 'food', 'base'] as const).map(k => {
+              const count = k === 'all' ? recipes.length : recipes.filter(r => (r.kind || 'drink') === k).length
+              if (k !== 'all' && count === 0) return null
+              const label = { all: t('kindAll'), drink: t('kindDrink'), coffee: t('kindCoffee'), food: t('kindFood'), base: t('kindBase') }[k]
+              return (
+                <button
+                  key={k}
+                  onClick={() => { setKindFilter(k); setVisible(RECIPE_PAGE) }}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                    kindFilter === k ? 'bg-purple-600 text-white border-purple-600' : 'bg-background text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {label} <span className="opacity-70">({count})</span>
+                </button>
+              )
+            })}
           </div>
 
           {/* 配方列表 */}
@@ -543,7 +576,7 @@ export default function RdPage() {
             </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredRecipes.map(r => {
+              {filteredRecipes.slice(0, visible).map(r => {
                 const isExpanded = expandedRecipes.has(r.id)
                 const storeCost = r.store_cost ?? r.total_cost ?? 0
                 const factoryCost = r.factory_cost ?? 0
@@ -560,7 +593,17 @@ export default function RdPage() {
                           <div className="flex items-center gap-2">
                             <h3 className="font-bold text-lg text-foreground">{r.name}</h3>
                           </div>
+                          {(r.cup_size || r.unit_label) && (
+                            <span className="inline-block mt-1 px-2 py-0.5 rounded bg-muted text-[11px] text-muted-foreground">{r.cup_size || r.unit_label}</span>
+                          )}
                           {r.note && <p className="text-xs text-muted-foreground mt-0.5">{r.note}</p>}
+                          {(r.excel_total_export != null || r.sell_ratio_export != null) && (
+                            <p className="text-[11px] text-muted-foreground mt-0.5">
+                              {r.excel_total_export != null && <>{t('excelCost')}: {fmt(r.excel_total_export, locale)} ₫</>}
+                              {r.excel_total_export != null && r.sell_ratio_export != null && ' · '}
+                              {r.sell_ratio_export != null && <>{t('costRatio')}: {(r.sell_ratio_export * 100).toFixed(1)}%</>}
+                            </p>
+                          )}
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
                           <Button
@@ -665,7 +708,9 @@ export default function RdPage() {
                                       {it.material_name || it.material_code}
                                       {it.unit ? <span className="text-muted-foreground text-[10px] ml-1">({it.unit})</span> : ''}
                                     </td>
-                                    <td className="px-2 text-right tabular-nums">{fmt1(it.qty_per_cup, locale)}</td>
+                                    <td className="px-2 text-right tabular-nums">
+                                      {it.qty_display != null ? <>{fmt1(it.qty_display, locale)} <span className="text-muted-foreground text-[10px]">{it.unit_display}</span></> : fmt1(it.qty_per_cup, locale)}
+                                    </td>
                                     <td className="px-2 text-right tabular-nums font-semibold text-purple-700 dark:text-purple-300">
                                       {fmt(it.export_price || 0, locale)}
                                     </td>
@@ -689,7 +734,7 @@ export default function RdPage() {
                               >
                                 <span className="font-medium">{it.material_name || it.material_code}</span>
                                 <span className="text-purple-600 dark:text-purple-400 font-semibold">
-                                  ×{fmt1(it.qty_per_cup, locale)}
+                                  ×{it.qty_display != null ? `${fmt1(it.qty_display, locale)}${it.unit_display ?? ''}` : fmt1(it.qty_per_cup, locale)}
                                 </span>
                               </div>
                             ))}
@@ -704,6 +749,13 @@ export default function RdPage() {
                   </Card>
                 )
               })}
+              {filteredRecipes.length > visible && (
+                <div className="md:col-span-2 flex justify-center">
+                  <Button variant="outline" size="sm" onClick={() => setVisible(v => v + RECIPE_PAGE)}>
+                    {t('showMore', { n: Math.min(visible, filteredRecipes.length), total: filteredRecipes.length })}
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -713,6 +765,9 @@ export default function RdPage() {
       {tab === 'prices' && (
         <PricesSection prices={prices} />
       )}
+
+      {/* 產品售價與成本比例 TAB */}
+      {tab === 'productPrices' && <ProductPricesSection />}
 
       {/* POS 成品對照 TAB */}
       {tab === 'mapping' && <MappingSection />}
@@ -937,7 +992,7 @@ function PricesSection({
   const t = useTranslations('RdPage')
   const locale = useLocale()
   const [q, setQ] = useState('')
-  const [categoryFilter, setCategoryFilter] = useState<'all' | '原料' | '設備' | '道具' | '耗材'>('all')
+  const [categoryFilter, setCategoryFilter] = useState<'all' | '原料' | '半成品' | '設備' | '道具' | '耗材'>('all')
 
   const filtered = prices.filter(p => {
     const matchQ =
@@ -951,6 +1006,7 @@ function PricesSection({
   const CATEGORIES = [
     { id: 'all', label: t('catAllItems'), icon: Layers },
     { id: '原料', label: t('catMaterial'), icon: Coffee },
+    { id: '半成品', label: t('catSemi'), icon: FlaskConical },
     { id: '設備', label: t('catEquipment'), icon: Wrench },
     { id: '道具', label: t('catTool'), icon: Package },
     { id: '耗材', label: t('catConsumable'), icon: ShoppingBag },
@@ -1448,6 +1504,133 @@ function VarianceSection() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+    </Card>
+  )
+}
+
+// ── 子組件：產品售價與成本比例（Excel 匯入，唯讀） ──
+interface ProductPriceRow {
+  id: string
+  sheet: 'white_pearl' | 'combos'
+  sort: number
+  group_name: string
+  product_name: string
+  topping: string
+  topping_price: number | null
+  price_s: number | null
+  price_m: number | null
+  price_l: number | null
+  cost_ratio_s: number | null
+  cost_ratio_m: number | null
+  cost_ratio_l: number | null
+  cost_ratio2_s: number | null
+  cost_ratio2_m: number | null
+  cost_ratio2_l: number | null
+}
+
+function ProductPricesSection() {
+  const t = useTranslations('RdPage')
+  const locale = useLocale()
+  const [rows, setRows] = useState<ProductPriceRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [sheet, setSheet] = useState<'white_pearl' | 'combos'>('white_pearl')
+  const [group, setGroup] = useState('all')
+  const [q, setQ] = useState('')
+  const [visible, setVisible] = useState(100)
+
+  useEffect(() => {
+    fetch('/api/rd/product-prices')
+      .then(r => (r.ok ? r.json() : { rows: [] }))
+      .then(d => setRows(d.rows ?? []))
+      .catch(() => setRows([]))
+      .finally(() => setLoading(false))
+  }, [])
+
+  const sheetRows = rows.filter(r => r.sheet === sheet)
+  const groups = [...new Set(sheetRows.map(r => r.group_name).filter(Boolean))]
+  const filtered = sheetRows.filter(r =>
+    (group === 'all' || r.group_name === group) &&
+    (!q.trim() || r.product_name.toLowerCase().includes(q.toLowerCase()))
+  )
+  const pct = (v: number | null) => (v == null ? '—' : `${(v * 100).toFixed(1)}%`)
+  const money = (v: number | null) => (v == null ? '—' : fmt(v, locale))
+  const sizes = sheet === 'white_pearl' ? (['m', 'l'] as const) : (['s', 'm', 'l'] as const)
+
+  return (
+    <Card className="p-5 space-y-4">
+      <div className="border-b pb-3">
+        <h3 className="font-bold text-lg flex items-center gap-2">
+          <TrendingUp className="h-5 w-5 text-purple-600" />
+          {t('ppTitle')}
+        </h3>
+        <p className="text-xs text-muted-foreground">{t('ppDesc')}</p>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        {(['white_pearl', 'combos'] as const).map(s => (
+          <button
+            key={s}
+            onClick={() => { setSheet(s); setGroup('all'); setVisible(100) }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium border ${sheet === s ? 'bg-purple-600 text-white border-purple-600' : 'bg-background text-muted-foreground hover:text-foreground'}`}
+          >
+            {s === 'white_pearl' ? t('ppSheetWhitePearl') : t('ppSheetCombos')} ({rows.filter(r => r.sheet === s).length})
+          </button>
+        ))}
+        <select
+          value={group}
+          onChange={e => { setGroup(e.target.value); setVisible(100) }}
+          className="h-8 rounded-md border bg-background px-2 text-xs"
+        >
+          <option value="all">{t('kindAll')}</option>
+          {groups.map(g => <option key={g} value={g}>{g}</option>)}
+        </select>
+        <div className="relative flex-1 min-w-[180px]">
+          <Search className="absolute left-2.5 top-2 h-4 w-4 text-muted-foreground" />
+          <Input value={q} onChange={e => { setQ(e.target.value); setVisible(100) }} placeholder={t('searchPlaceholder')} className="pl-8 h-8 text-xs" />
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-purple-500" /></div>
+      ) : filtered.length === 0 ? (
+        <p className="text-sm text-muted-foreground text-center py-10">{t('ppEmpty')}</p>
+      ) : (
+        <div className="overflow-x-auto rounded-lg border text-xs">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b bg-muted/40 text-muted-foreground">
+                <th className="py-2 px-2 text-left">{t('ppGroup')}</th>
+                <th className="px-2 text-left">{t('ppProduct')}</th>
+                <th className="px-2 text-left">{t('ppTopping')}</th>
+                {sheet === 'white_pearl' && <th className="px-2 text-right">{t('ppToppingPrice')}</th>}
+                {sizes.map(z => <th key={`p${z}`} className="px-2 text-right">{t('ppPrice')} {z.toUpperCase()}</th>)}
+                {sizes.map(z => <th key={`r${z}`} className="px-2 text-right">{t('ppRatio')} {z.toUpperCase()}</th>)}
+                {sheet === 'combos' && sizes.map(z => <th key={`q${z}`} className="px-2 text-right">{t('ppRatio2')} {z.toUpperCase()}</th>)}
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {filtered.slice(0, visible).map(r => (
+                <tr key={r.id} className="hover:bg-muted/20">
+                  <td className="py-1.5 px-2 text-muted-foreground whitespace-nowrap">{r.group_name}</td>
+                  <td className="px-2 font-medium">{r.product_name}</td>
+                  <td className="px-2 text-muted-foreground">{r.topping}</td>
+                  {sheet === 'white_pearl' && <td className="px-2 text-right tabular-nums">{money(r.topping_price)}</td>}
+                  {sizes.map(z => <td key={`p${z}`} className="px-2 text-right tabular-nums">{money(r[`price_${z}`])}</td>)}
+                  {sizes.map(z => <td key={`r${z}`} className="px-2 text-right tabular-nums text-purple-700 dark:text-purple-300">{pct(r[`cost_ratio_${z}`])}</td>)}
+                  {sheet === 'combos' && sizes.map(z => <td key={`q${z}`} className="px-2 text-right tabular-nums text-muted-foreground">{pct(r[`cost_ratio2_${z}`])}</td>)}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {filtered.length > visible && (
+        <div className="flex justify-center">
+          <Button variant="outline" size="sm" onClick={() => setVisible(v => v + 100)}>
+            {t('showMore', { n: visible, total: filtered.length })}
+          </Button>
         </div>
       )}
     </Card>
