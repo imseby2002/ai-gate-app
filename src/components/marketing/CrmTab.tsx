@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
 import {
   Users, Crown, Search, Plus, Upload, Send, MessageSquare,
   Sparkles, CheckCircle2, X, Loader2, Phone, Mail, Tag,
@@ -99,6 +100,14 @@ const TIER_CONFIG: Record<string, { label: string; color: string; badge: 'defaul
 const fmt = (n: number) => Math.round(Number(n) || 0).toLocaleString('zh-TW')
 
 export function CrmTab() {
+  const t = useTranslations('Crm')
+  // 匯入欄位名稱／說明依介面語言顯示（aliases 保留多語別名供比對）
+  const importColumns: ImportColumn[] = CRM_IMPORT_COLUMNS.map(c => ({
+    ...c,
+    label: t(`col.${c.key}.label`),
+    ...(t.has(`col.${c.key}.desc`) ? { description: t(`col.${c.key}.desc`) } : {}),
+    ...(t.has(`col.${c.key}.ex`) ? { example: t(`col.${c.key}.ex`) } : {}),
+  }))
   const [items, setItems] = useState<Customer[]>([])
   const [summary, setSummary] = useState<any>({ total: 0, vipCount: 0, goldCount: 0, totalCustomerSpend: 0 })
   const [loading, setLoading] = useState(true)
@@ -147,7 +156,7 @@ export function CrmTab() {
   async function handleSave() {
     if (!editing) return
     if (!String(editing.phone ?? '').trim()) {
-      setErr('請填寫手機號碼')
+      setErr(t('needPhone'))
       return
     }
     setSaving(true)
@@ -161,20 +170,20 @@ export function CrmTab() {
       })
       const j = await r.json()
       if (!r.ok) {
-        setErr(j.error || '儲存失敗')
+        setErr(j.error || t('saveFailed'))
         return
       }
       setEditing(null)
       load()
     } catch (e: any) {
-      setErr(e.message || '儲存失敗')
+      setErr(e.message || t('saveFailed'))
     } finally {
       setSaving(false)
     }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('確定刪除此會員資料？')) return
+    if (!confirm(t('confirmDelete'))) return
     await fetch('/api/mkt/crm', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
@@ -193,7 +202,7 @@ export function CrmTab() {
       })
       const j = await res.json()
       if (!res.ok) {
-        return { ok: false, error: j.error || '匯入失敗' }
+        return { ok: false, error: j.error || t('importFailed') }
       }
       return {
         ok: true,
@@ -202,7 +211,7 @@ export function CrmTab() {
         imported: j.imported ?? j.count,
       }
     } catch (e: any) {
-      return { ok: false, error: e.message || '連線伺服器時發生錯誤' }
+      return { ok: false, error: e.message || t('serverErr') }
     }
   }
 
@@ -210,7 +219,7 @@ export function CrmTab() {
   async function handleBatchImport() {
     const lines = batchText.split('\n').map(l => l.trim()).filter(Boolean)
     if (lines.length === 0) {
-      alert('請輸入欲匯入之名單資料')
+      alert(t('needBatch'))
       return
     }
     setBatchImporting(true)
@@ -220,7 +229,7 @@ export function CrmTab() {
       return {
         phone: parts[0] || '',
         name: parts[1] || '',
-        tier: parts[2] === 'VIP' || parts[2] === 'vip' ? 'vip' : parts[2] === '黃金' ? 'gold' : 'general',
+        tier: parts[2] === 'VIP' || parts[2] === 'vip' ? 'vip' : (parts[2] === '黃金' || /gold|vàng/i.test(parts[2] ?? '')) ? 'gold' : 'general',
       }
     }).filter(x => x.phone)
 
@@ -232,15 +241,15 @@ export function CrmTab() {
       })
       const j = await r.json()
       if (j.ok) {
-        alert(`成功匯入 ${j.count} 筆會員資料！`)
+        alert(t('imported', { n: j.count }))
         setBatchModalOpen(false)
         setBatchText('')
         load()
       } else {
-        alert(j.error || '匯入失敗')
+        alert(j.error || t('importFailed'))
       }
     } catch (e: any) {
-      alert(e.message || '匯入失敗')
+      alert(e.message || t('importFailed'))
     } finally {
       setBatchImporting(false)
     }
@@ -249,7 +258,7 @@ export function CrmTab() {
   // 生成 VIP 推播文案
   async function generateVipPush() {
     if (!pushProductName.trim()) {
-      alert('請填寫欲推播之新品名稱')
+      alert(t('needProduct'))
       return
     }
     setPushGenerating(true)
@@ -267,10 +276,10 @@ export function CrmTab() {
       if (j.ok) {
         setPushTemplates(j)
       } else {
-        alert(j.error || '推播生成失敗')
+        alert(j.error || t('pushFailed'))
       }
     } catch (e: any) {
-      alert(e.message || '推播生成失敗')
+      alert(e.message || t('pushFailed'))
     } finally {
       setPushGenerating(false)
     }
@@ -287,29 +296,29 @@ export function CrmTab() {
       {/* 數據指標卡片 */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="p-4 rounded-xl border bg-card/60 backdrop-blur-sm shadow-sm">
-          <div className="text-xs text-muted-foreground font-medium">總會員人數</div>
+          <div className="text-xs text-muted-foreground font-medium">{t('totalMembers')}</div>
           <div className="text-2xl font-bold mt-1 text-foreground">{summary.total}</div>
         </div>
 
         <div className="p-4 rounded-xl border bg-card/60 backdrop-blur-sm shadow-sm">
           <div className="text-xs text-purple-600 dark:text-purple-400 font-medium flex items-center gap-1">
-            <Crown className="h-3.5 w-3.5" /> VIP 尊榮客群
+            <Crown className="h-3.5 w-3.5" /> {t('vipGroup')}
           </div>
           <div className="text-2xl font-bold mt-1 text-purple-600 dark:text-purple-400">
             {summary.vipCount}
           </div>
-          <div className="text-[10px] text-muted-foreground mt-0.5">享有新品優先嚐鮮權</div>
+          <div className="text-[10px] text-muted-foreground mt-0.5">{t('vipPerk')}</div>
         </div>
 
         <div className="p-4 rounded-xl border bg-card/60 backdrop-blur-sm shadow-sm">
-          <div className="text-xs text-amber-600 dark:text-amber-400 font-medium">黃金會員</div>
+          <div className="text-xs text-amber-600 dark:text-amber-400 font-medium">{t('gold')}</div>
           <div className="text-2xl font-bold mt-1 text-amber-600 dark:text-amber-400">
             {summary.goldCount}
           </div>
         </div>
 
         <div className="p-4 rounded-xl border bg-card/60 backdrop-blur-sm shadow-sm">
-          <div className="text-xs text-muted-foreground font-medium">會員累計貢獻額</div>
+          <div className="text-xs text-muted-foreground font-medium">{t('totalSpend')}</div>
           <div className="text-2xl font-bold mt-1 text-primary">
             ${fmt(summary.totalCustomerSpend)}
           </div>
@@ -323,18 +332,18 @@ export function CrmTab() {
             <Layers className="h-4 w-4" />
           </div>
           <div>
-            <span className="font-bold text-foreground">現有 CRM 串接模式：Excel / CSV 批次上傳（第一階段）</span>
+            <span className="font-bold text-foreground">{t('modeTitle')}</span>
             <p className="text-[11px] text-muted-foreground mt-0.5">
-              直接支援外部現役 CRM 匯出之試算表拖曳上傳與自動欄位對應；系統已預留第二階段排程自動同步與第三階段 API 直連機制。
+              {t('modeDesc')}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
           <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[10px]">
-            階段一：Excel批次啟用中
+            {t('phase1')}
           </Badge>
           <Badge variant="outline" className="text-muted-foreground text-[10px]">
-            階段二/三：自動同步規劃中
+            {t('phase23')}
           </Badge>
         </div>
       </div>
@@ -346,7 +355,7 @@ export function CrmTab() {
           <Input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="搜尋會員姓名、手機號碼..."
+            placeholder={t('searchPh')}
             className="pl-9 h-9 text-xs"
           />
         </div>
@@ -356,11 +365,11 @@ export function CrmTab() {
           onChange={e => setTierFilter(e.target.value)}
           className="h-9 rounded-lg border border-input bg-card px-3 text-xs font-medium"
         >
-          <option value="">全部會員等級</option>
-          <option value="vip">👑 尊榮 VIP / VVIP</option>
-          <option value="gold">黃金會員</option>
-          <option value="silver">白銀會員</option>
-          <option value="general">一般顧客</option>
+          <option value="">{t('allTiers')}</option>
+          <option value="vip">{t('vipFilter')}</option>
+          <option value="gold">{t('tier.gold')}</option>
+          <option value="silver">{t('tier.silver')}</option>
+          <option value="general">{t('tier.general')}</option>
         </select>
 
         <div className="flex items-center gap-2 ml-auto">
@@ -374,7 +383,7 @@ export function CrmTab() {
             }}
           >
             <Crown className="h-3.5 w-3.5 text-purple-500" />
-            VIP 新品推播
+            {t('vipPush')}
           </Button>
 
           <Button
@@ -384,7 +393,7 @@ export function CrmTab() {
             onClick={() => setExcelModalOpen(true)}
           >
             <FileSpreadsheet className="h-3.5 w-3.5" />
-            匯入 CRM Excel
+            {t('importExcel')}
           </Button>
 
           <Button
@@ -394,7 +403,7 @@ export function CrmTab() {
             onClick={() => setBatchModalOpen(true)}
           >
             <Upload className="h-3.5 w-3.5" />
-            純文字貼上
+            {t('pasteText')}
           </Button>
 
           <Button
@@ -413,7 +422,7 @@ export function CrmTab() {
             }}
           >
             <Plus className="h-3.5 w-3.5" />
-            新增會員
+            {t('addMember')}
           </Button>
         </div>
       </div>
@@ -424,8 +433,8 @@ export function CrmTab() {
       ) : items.length === 0 ? (
         <div className="text-center py-16 border rounded-2xl bg-card/40 border-dashed space-y-2">
           <Users className="h-10 w-10 mx-auto text-muted-foreground/40" />
-          <div className="font-medium text-muted-foreground">尚無符合條件之會員資料</div>
-          <p className="text-xs text-muted-foreground/70">您可點選上方「批次匯入」或「新增會員」建置客戶名冊。</p>
+          <div className="font-medium text-muted-foreground">{t('empty')}</div>
+          <p className="text-xs text-muted-foreground/70">{t('emptyHint')}</p>
         </div>
       ) : (
         <div className="rounded-xl border bg-card overflow-hidden shadow-sm">
@@ -433,13 +442,13 @@ export function CrmTab() {
             <table className="w-full text-xs">
               <thead className="bg-muted/40 text-muted-foreground border-b font-medium">
                 <tr>
-                  <th className="py-2.5 px-4 text-left">會員姓名 / 手機</th>
-                  <th className="py-2.5 px-3 text-left">等級</th>
-                  <th className="py-2.5 px-3 text-left">標籤特徵</th>
-                  <th className="py-2.5 px-3 text-right">累計消費</th>
-                  <th className="py-2.5 px-3 text-right">消費單數</th>
-                  <th className="py-2.5 px-3 text-left">最後到店</th>
-                  <th className="py-2.5 px-3 text-right">操作</th>
+                  <th className="py-2.5 px-4 text-left">{t('thName')}</th>
+                  <th className="py-2.5 px-3 text-left">{t('thTier')}</th>
+                  <th className="py-2.5 px-3 text-left">{t('thTags')}</th>
+                  <th className="py-2.5 px-3 text-right">{t('thSpend')}</th>
+                  <th className="py-2.5 px-3 text-right">{t('thOrders')}</th>
+                  <th className="py-2.5 px-3 text-left">{t('thLast')}</th>
+                  <th className="py-2.5 px-3 text-right">{t('thActions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -448,7 +457,7 @@ export function CrmTab() {
                   return (
                     <tr key={c.id} className="hover:bg-muted/20 transition-colors">
                       <td className="py-3 px-4">
-                        <div className="font-bold text-foreground">{c.name || '（未命名）'}</div>
+                        <div className="font-bold text-foreground">{c.name || t('unnamed')}</div>
                         <div className="font-mono text-muted-foreground text-[11px] flex items-center gap-1 mt-0.5">
                           <Phone className="h-3 w-3" />
                           {c.phone}
@@ -457,7 +466,7 @@ export function CrmTab() {
 
                       <td className="py-3 px-3">
                         <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${tConf.color}`}>
-                          {tConf.label}
+                          {t(`tier.${TIER_CONFIG[c.tier] ? c.tier : 'general'}`)}
                         </span>
                       </td>
 
@@ -480,11 +489,11 @@ export function CrmTab() {
                       </td>
 
                       <td className="py-3 px-3 text-right text-muted-foreground">
-                        {c.order_count} 次
+                        {t('times', { n: c.order_count })}
                       </td>
 
                       <td className="py-3 px-3 text-muted-foreground text-[11px]">
-                        {c.last_order_at ? c.last_order_at.split('T')[0] : '尚無紀錄'}
+                        {c.last_order_at ? c.last_order_at.split('T')[0] : t('noRecord')}
                       </td>
 
                       <td className="py-3 px-3 text-right">
@@ -523,7 +532,7 @@ export function CrmTab() {
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b pb-3">
-              <h2 className="font-bold text-lg">{editing.id ? '編輯會員資料' : '新增會員資料'}</h2>
+              <h2 className="font-bold text-lg">{editing.id ? t('editTitle') : t('newTitle')}</h2>
               <button onClick={() => setEditing(null)} className="p-1.5 rounded-lg hover:bg-muted">
                 <X className="h-5 w-5" />
               </button>
@@ -531,53 +540,53 @@ export function CrmTab() {
 
             <div className="space-y-3">
               <div>
-                <label className="text-xs font-semibold mb-1 block">手機號碼 *</label>
+                <label className="text-xs font-semibold mb-1 block">{t('phoneReq')}</label>
                 <Input
                   value={editing.phone ?? ''}
                   onChange={e => setEditing({ ...editing, phone: e.target.value })}
-                  placeholder="例：0912345678"
+                  placeholder={t('phonePh')}
                   className="h-9"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold mb-1 block">顧客姓名</label>
+                <label className="text-xs font-semibold mb-1 block">{t('col.name.label')}</label>
                 <Input
                   value={editing.name ?? ''}
                   onChange={e => setEditing({ ...editing, name: e.target.value })}
-                  placeholder="例：王小美"
+                  placeholder={t('namePh')}
                   className="h-9"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold mb-1 block">會員等級</label>
+                <label className="text-xs font-semibold mb-1 block">{t('col.tier.label')}</label>
                 <select
                   value={editing.tier ?? 'general'}
                   onChange={e => setEditing({ ...editing, tier: e.target.value as any })}
                   className="w-full h-9 rounded-lg border border-input bg-card px-3 text-xs font-medium"
                 >
                   {Object.entries(TIER_CONFIG).map(([k, v]) => (
-                    <option key={k} value={k}>{v.label}</option>
+                    <option key={k} value={k}>{t(`tier.${k}`)}</option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="text-xs font-semibold mb-1 block">特徵標籤（以逗號分隔）</label>
+                <label className="text-xs font-semibold mb-1 block">{t('tagsLabel')}</label>
                 <Input
                   value={Array.isArray(editing.tags) ? editing.tags.join(', ') : ''}
                   onChange={e => setEditing({
                     ...editing,
                     tags: e.target.value.split(/[,，]+/).map(s => s.trim()).filter(Boolean),
                   })}
-                  placeholder="例：新品控, 鮮奶茶愛好者, 常客"
+                  placeholder={t('tagsPh')}
                   className="h-9"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold mb-1 block">備註說明</label>
+                <label className="text-xs font-semibold mb-1 block">{t('notesLabel')}</label>
                 <textarea
                   rows={2}
                   value={editing.notes ?? ''}
@@ -590,10 +599,10 @@ export function CrmTab() {
             {err && <p className="text-xs text-destructive font-medium">{err}</p>}
 
             <div className="flex justify-end gap-2 pt-2 border-t">
-              <Button variant="outline" size="sm" onClick={() => setEditing(null)}>取消</Button>
+              <Button variant="outline" size="sm" onClick={() => setEditing(null)}>{t('cancel')}</Button>
               <Button size="sm" onClick={handleSave} disabled={saving} className="gap-1.5 font-bold">
                 {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                儲存會員
+                {t('saveMember')}
               </Button>
             </div>
           </div>
@@ -609,8 +618,8 @@ export function CrmTab() {
           >
             <div className="flex items-center justify-between border-b pb-3">
               <div>
-                <h2 className="font-bold text-lg">批次快速匯入名單</h2>
-                <p className="text-xs text-muted-foreground mt-0.5">每行一筆，支援格式：手機號碼 姓名 等級</p>
+                <h2 className="font-bold text-lg">{t('batchTitle')}</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">{t('batchHint')}</p>
               </div>
               <button onClick={() => setBatchModalOpen(false)} className="p-1.5 rounded-lg hover:bg-muted">
                 <X className="h-5 w-5" />
@@ -621,15 +630,15 @@ export function CrmTab() {
               rows={8}
               value={batchText}
               onChange={e => setBatchText(e.target.value)}
-              placeholder="0912345678, 陳大明, VIP&#10;0923456789, 林美麗, VIP&#10;0934567890, 張志豪, 黃金"
+              placeholder={t('batchPh')}
               className="w-full rounded-lg border border-input bg-card p-3 text-xs font-mono"
             />
 
             <div className="flex justify-end gap-2 pt-2 border-t">
-              <Button variant="outline" size="sm" onClick={() => setBatchModalOpen(false)}>取消</Button>
+              <Button variant="outline" size="sm" onClick={() => setBatchModalOpen(false)}>{t('cancel')}</Button>
               <Button size="sm" onClick={handleBatchImport} disabled={batchImporting} className="gap-1.5 font-bold">
                 {batchImporting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                開始批次匯入
+                {t('startBatch')}
               </Button>
             </div>
           </div>
@@ -649,8 +658,8 @@ export function CrmTab() {
                   <Crown className="h-4 w-4" />
                 </div>
                 <div>
-                  <h2 className="font-bold text-lg">VIP 專享搶先推播產生器</h2>
-                  <p className="text-xs text-muted-foreground">針對 VIP / VVIP 核心顧客，自動生成專屬優先品嚐邀請函與多通訊軟體文案</p>
+                  <h2 className="font-bold text-lg">{t('pushTitle')}</h2>
+                  <p className="text-xs text-muted-foreground">{t('pushDesc')}</p>
                 </div>
               </div>
               <button onClick={() => setVipPushModalOpen(false)} className="p-1.5 rounded-lg hover:bg-muted">
@@ -660,17 +669,17 @@ export function CrmTab() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="sm:col-span-2">
-                <label className="text-xs font-semibold mb-1 block">即將上市之新品名稱 *</label>
+                <label className="text-xs font-semibold mb-1 block">{t('productReq')}</label>
                 <Input
                   value={pushProductName}
                   onChange={e => setPushProductName(e.target.value)}
-                  placeholder="例：極品厚乳炭焙烏龍"
+                  placeholder={t('productPh')}
                   className="h-9"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold mb-1 block">VIP 獨享截止日</label>
+                <label className="text-xs font-semibold mb-1 block">{t('deadline')}</label>
                 <Input
                   type="date"
                   value={pushEndDate}
@@ -680,11 +689,11 @@ export function CrmTab() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold mb-1 block">額外專享備註</label>
+                <label className="text-xs font-semibold mb-1 block">{t('extraNote')}</label>
                 <Input
                   value={pushCustomNote}
                   onChange={e => setPushCustomNote(e.target.value)}
-                  placeholder="例：報手機贈手工餅乾一份"
+                  placeholder={t('extraPh')}
                   className="h-9"
                 />
               </div>
@@ -696,22 +705,22 @@ export function CrmTab() {
               className="w-full gap-2 font-bold bg-gradient-to-r from-purple-600 to-pink-600 text-white"
             >
               {pushGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              生成 VIP 專屬推播文案
+              {t('generate')}
             </Button>
 
             {pushTemplates && (
               <div className="space-y-4 pt-3 border-t animate-in fade-in-50">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-bold text-purple-600 dark:text-purple-400">
-                    👑 目標 VIP 受眾群：{pushTemplates.recipientCount} 位貴賓
+                    👑 {t('audience', { n: pushTemplates.recipientCount })}
                   </span>
-                  <Badge variant="outline">點選一鍵複製</Badge>
+                  <Badge variant="outline">{t('clickCopy')}</Badge>
                 </div>
 
                 {/* LINE 範本 */}
                 <div className="p-3.5 rounded-xl border bg-muted/20 space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">LINE 官方帳號推播範本</span>
+                    <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">{t('lineTpl')}</span>
                     <Button
                       size="sm"
                       variant="ghost"
@@ -719,7 +728,7 @@ export function CrmTab() {
                       onClick={() => copyText(pushTemplates.templates.line, 'line')}
                     >
                       {copiedType === 'line' ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
-                      {copiedType === 'line' ? '已複製' : '複製文案'}
+                      {copiedType === 'line' ? t('copied') : t('copy')}
                     </Button>
                   </div>
                   <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-sans bg-card p-3 rounded-lg border">
@@ -730,7 +739,7 @@ export function CrmTab() {
                 {/* 簡訊 SMS 範本 */}
                 <div className="p-3.5 rounded-xl border bg-muted/20 space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-blue-600 dark:text-blue-400">手機簡訊 (SMS) 精簡範本</span>
+                    <span className="text-xs font-bold text-blue-600 dark:text-blue-400">{t('smsTpl')}</span>
                     <Button
                       size="sm"
                       variant="ghost"
@@ -738,7 +747,7 @@ export function CrmTab() {
                       onClick={() => copyText(pushTemplates.templates.sms, 'sms')}
                     >
                       {copiedType === 'sms' ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
-                      {copiedType === 'sms' ? '已複製' : '複製文案'}
+                      {copiedType === 'sms' ? t('copied') : t('copy')}
                     </Button>
                   </div>
                   <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-sans bg-card p-3 rounded-lg border">
@@ -754,20 +763,20 @@ export function CrmTab() {
       {/* 彈窗 4：Excel / CSV 智慧匯入 Modal */}
       {excelModalOpen && (
         <ExcelImportModal
-          title="匯入 CRM 顧客與 VIP 名冊試算表"
-          description="支援 .xlsx, .xls 與 .csv 檔案。系統依據「手機號碼」自動比對並更新現有會員資料（Upsert），無須重複鍵入。"
-          columns={CRM_IMPORT_COLUMNS}
-          templateFilename="CRM_顧客名冊範本.xlsx"
-          sheetName="顧客會員名單"
+          title={t('importTitle')}
+          description={t('importDesc')}
+          columns={importColumns}
+          templateFilename={t('tplFile')}
+          sheetName={t('sheet')}
           onClose={() => setExcelModalOpen(false)}
           onSuccess={() => {
             load()
           }}
           onSubmit={handleCrmExcelSubmit}
           extraHelp={[
-            '若外部 CRM 匯出檔欄位名稱不同（如「Phone」、「客戶電話」、「SĐT」），系統具備多語系別名自動對應。',
-            '「會員等級」支援填寫 VIP、VVIP、黃金、白銀或一般，系統將自動歸類。',
-            '「顧客標籤」可以逗點分隔（如：新品愛好者, 常客, 奶茶控）。',
+            t('help1'),
+            t('help2'),
+            t('help3'),
           ]}
         />
       )}

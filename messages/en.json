@@ -9183,5 +9183,218 @@
       "refreshing": "Token auto-refresh on | current token expires: {at}",
       "failed": "Last auto-refresh failed: {error} (get and paste a new Refresh Token)"
     }
+  },
+  "SocialPublish": {
+    "imagePost": "Image post",
+    "failed": "Failed",
+    "p": {
+      "Facebook": {
+        "name": "Facebook Page",
+        "desc": "Post to your Facebook Page"
+      },
+      "Instagram": {
+        "name": "Instagram post",
+        "desc": "Post to your Instagram business account"
+      },
+      "Threads": {
+        "desc": "Post to Threads"
+      },
+      "FB_Reels": {
+        "name": "Facebook Reels",
+        "desc": "Post a vertical short video to Facebook"
+      },
+      "IG_Reels": {
+        "name": "Instagram Reels",
+        "desc": "Post a vertical short video to Instagram"
+      },
+      "YouTube_Shorts": {
+        "name": "YouTube Shorts",
+        "desc": "Post Shorts to your YouTube channel"
+      },
+      "TikTok": {
+        "name": "TikTok",
+        "desc": "Post a short video to your TikTok creator/brand account"
+      },
+      "LINE_VOOM": {
+        "name": "LINE Official Account broadcast",
+        "desc": "Broadcast to all friends via your LINE Official Account (counts toward monthly messages)"
+      },
+      "Twitter_X": {
+        "desc": "Post to your X account"
+      },
+      "LinkedIn": {
+        "desc": "Share to your profile or company page"
+      },
+      "Zalo": {
+        "desc": "Post an article to your Zalo Official Account"
+      }
+    },
+    "tags": {
+      "t0": "#NewArrival",
+      "t1": "#BrandEvent",
+      "t2": "#LimitedOffer",
+      "t3": "#AIVisual",
+      "t4": "#MustHave",
+      "t5": "#Lifestyle",
+      "t6": "#BestSeller"
+    },
+    "featured": "Featured visual",
+    "fallbackCopy": "✨ {title} is here!\n\nCrafted with stunning visual design for an unforgettable brand experience 🔥\n\nLearn more or message us to be the first to try it!\n\n#BrandVisual #NewArrival #MarketingIdeas #Design #AIVisual",
+    "fallbackShort": "✨ {title} is here!\n\nBeautiful design down to every detail. Follow us for the latest news!\n\n#BrandMarketing #Lifestyle #NewArrival",
+    "noMedia": "No media to publish",
+    "needPlatform": "Select at least one connected platform",
+    "needCopy": "Please enter the post text",
+    "uploadFailed": "Failed to upload the media, please retry",
+    "noPublicUrl": "Could not get a public link for the media",
+    "needPro": "Auto-publishing is not included in your plan. Please upgrade to PRO or above.",
+    "publishFailedRetry": "Publishing failed, please try again later",
+    "title": "One-click publishing hub",
+    "videoPost": "Short video",
+    "subtitle": "Publish your AI creations straight to Facebook, Instagram, Threads, TikTok, YouTube and more",
+    "credCenter": "Credentials",
+    "preview": "Media preview",
+    "source": "Source: {s}",
+    "status": "Connection status",
+    "linkedCount": "{n} / {total} linked",
+    "noCredsA": "No publishing credentials linked yet. Go to",
+    "noCredsLink": "Platform connections",
+    "noCredsB": "to set up a Page token or API key.",
+    "choose": "Choose platforms",
+    "selectAll": "Select all connected",
+    "clear": "Clear",
+    "refresh": "Refresh connection status",
+    "connected": "Connected",
+    "link": "Link ↗",
+    "copyLabel": "Post text / caption",
+    "aiPolish": "AI polish",
+    "copyPh": "Write the post, highlights, call to action and hashtags…",
+    "quickTags": "Quick tags: ",
+    "charCount": "{n} characters",
+    "limits": "Limits: Twitter 280 | Threads 500 | IG 2,200 characters",
+    "done": "Publishing finished",
+    "summary": "{n} platforms | succeeded: <g>{ok}</g> | failed: <r>{fail}</r>",
+    "ok": "Published",
+    "postId": "Post ID: {id}",
+    "selected": "<b>{n}</b> platforms selected",
+    "cancel": "Cancel",
+    "publishing": "Publishing…",
+    "publishNow": "Publish now",
+    "backEdit": "← Back to edit",
+    "manage": "Manage connections",
+    "close": "Done"
+  },
+  "Crm": {
+    "newTitle": "New member",
+    "copy": "Copy",
+    "tier": {
+      "general": "Regular",
+      "silver": "Silver",
+      "gold": "Gold",
+      "vip": "👑 VIP",
+      "vvip": "💎 VVIP"
+    },
+    "col": {
+      "phone": {
+        "label": "Phone",
+        "desc": "Member phone number (unique identifier)"
+      },
+      "name": {
+        "label": "Customer name",
+        "desc": "Name or nickname",
+        "ex": "Jane Doe"
+      },
+      "tier": {
+        "label": "Tier",
+        "desc": "general, silver, gold, vip, vvip"
+      },
+      "total_spend": {
+        "label": "Total spend"
+      },
+      "order_count": {
+        "label": "Order count"
+      },
+      "tags": {
+        "label": "Tags",
+        "desc": "Multiple tags, comma-separated",
+        "ex": "early adopter, milk tea lover"
+      },
+      "email": {
+        "label": "Email"
+      },
+      "notes": {
+        "label": "Notes & preferences",
+        "ex": "Less ice, less sugar; regular"
+      }
+    },
+    "needPhone": "Please enter a phone number",
+    "saveFailed": "Save failed",
+    "confirmDelete": "Delete this member?",
+    "importFailed": "Import failed",
+    "serverErr": "Error connecting to the server",
+    "needBatch": "Please enter the list to import",
+    "imported": "Imported {n} members!",
+    "needProduct": "Please enter the new product name",
+    "pushFailed": "Failed to generate the message",
+    "totalMembers": "Total members",
+    "vipGroup": "VIP customers",
+    "vipPerk": "Early access to new products",
+    "gold": "Gold members",
+    "totalSpend": "Total member spend",
+    "modeTitle": "Current CRM integration: Excel / CSV batch upload (phase 1)",
+    "modeDesc": "Drag in spreadsheets exported from your existing CRM with automatic column mapping. Scheduled sync (phase 2) and direct API integration (phase 3) are planned.",
+    "phase1": "Phase 1: Excel batch active",
+    "phase23": "Phase 2/3: auto sync planned",
+    "searchPh": "Search by name or phone…",
+    "allTiers": "All tiers",
+    "vipFilter": "👑 VIP / VVIP",
+    "vipPush": "VIP new-product push",
+    "importExcel": "Import CRM Excel",
+    "pasteText": "Paste text",
+    "addMember": "Add member",
+    "empty": "No matching members",
+    "emptyHint": "Use “Import” or “Add member” above to build your customer list.",
+    "thName": "Name / phone",
+    "thTier": "Tier",
+    "thTags": "Tags",
+    "thSpend": "Total spend",
+    "thOrders": "Orders",
+    "thLast": "Last visit",
+    "thActions": "Actions",
+    "unnamed": "(unnamed)",
+    "times": "{n}",
+    "noRecord": "No record",
+    "editTitle": "Edit member",
+    "phoneReq": "Phone *",
+    "phonePh": "e.g. 0912345678",
+    "namePh": "e.g. Jane Doe",
+    "tagsLabel": "Tags (comma-separated)",
+    "tagsPh": "e.g. early adopter, milk tea lover, regular",
+    "notesLabel": "Notes",
+    "cancel": "Cancel",
+    "saveMember": "Save member",
+    "batchTitle": "Quick batch import",
+    "batchHint": "One per line: phone, name, tier",
+    "batchPh": "0912345678, John Chen, VIP\n0923456789, Mary Lin, VIP\n0934567890, David Chang, Gold",
+    "startBatch": "Start import",
+    "pushTitle": "VIP early-access message generator",
+    "pushDesc": "Generates exclusive early-access invitations and messages for your VIP / VVIP customers",
+    "productReq": "Upcoming product name *",
+    "productPh": "e.g. Premium roasted oolong milk tea",
+    "deadline": "VIP exclusive until",
+    "extraNote": "Extra perk note",
+    "extraPh": "e.g. free handmade cookie when you show your phone number",
+    "generate": "Generate VIP messages",
+    "audience": "Target VIP audience: {n} guests",
+    "clickCopy": "Click to copy",
+    "lineTpl": "LINE Official Account message",
+    "copied": "Copied",
+    "smsTpl": "Short SMS message",
+    "importTitle": "Import CRM customer & VIP spreadsheet",
+    "importDesc": "Supports .xlsx, .xls and .csv. Members are matched by phone number and updated automatically (upsert).",
+    "tplFile": "CRM_customer_template.xlsx",
+    "sheet": "Customers",
+    "help1": "Different column names from your CRM export (e.g. “Phone”, “客戶電話”, “SĐT”) are mapped automatically.",
+    "help2": "“Tier” accepts VIP, VVIP, gold, silver or general and is categorized automatically.",
+    "help3": "“Tags” can be comma-separated (e.g. new-product fan, regular, milk tea lover)."
   }
 }

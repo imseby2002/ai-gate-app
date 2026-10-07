@@ -9090,5 +9090,218 @@
       "refreshing": "Đang tự làm mới token | token hiện tại hết hạn: {at}",
       "failed": "Lần tự làm mới gần nhất thất bại: {error} (hãy lấy và dán Refresh Token mới)"
     }
+  },
+  "SocialPublish": {
+    "imagePost": "Bài đăng hình ảnh",
+    "failed": "Thất bại",
+    "p": {
+      "Facebook": {
+        "name": "Trang Facebook",
+        "desc": "Đăng lên Trang Facebook"
+      },
+      "Instagram": {
+        "name": "Bài đăng Instagram",
+        "desc": "Đăng lên tài khoản Instagram doanh nghiệp"
+      },
+      "Threads": {
+        "desc": "Đăng lên Threads"
+      },
+      "FB_Reels": {
+        "name": "Facebook Reels",
+        "desc": "Đăng video ngắn dọc lên Facebook"
+      },
+      "IG_Reels": {
+        "name": "Instagram Reels",
+        "desc": "Đăng video ngắn dọc lên Instagram"
+      },
+      "YouTube_Shorts": {
+        "name": "YouTube Shorts",
+        "desc": "Đăng Shorts lên kênh YouTube"
+      },
+      "TikTok": {
+        "name": "TikTok",
+        "desc": "Đăng video ngắn lên tài khoản TikTok nhà sáng tạo/thương hiệu"
+      },
+      "LINE_VOOM": {
+        "name": "Gửi hàng loạt LINE OA",
+        "desc": "Gửi tới tất cả bạn bè qua LINE OA (tính vào hạn mức tin nhắn tháng)"
+      },
+      "Twitter_X": {
+        "desc": "Đăng lên tài khoản X"
+      },
+      "LinkedIn": {
+        "desc": "Chia sẻ lên trang cá nhân hoặc trang công ty"
+      },
+      "Zalo": {
+        "desc": "Đăng bài lên Zalo Official Account"
+      }
+    },
+    "tags": {
+      "t0": "#SanPhamMoi",
+      "t1": "#SuKienThuongHieu",
+      "t2": "#UuDaiCoHan",
+      "t3": "#AIVisual",
+      "t4": "#GoiY",
+      "t5": "#PhongCachSong",
+      "t6": "#BanChay"
+    },
+    "featured": "Hình ảnh nổi bật",
+    "fallbackCopy": "✨ {title} chính thức ra mắt!\n\nThiết kế hình ảnh đỉnh cao, mang đến trải nghiệm thương hiệu ấn tượng 🔥\n\nTìm hiểu thêm hoặc nhắn tin cho chúng tôi để trải nghiệm sớm nhất!\n\n#ThuongHieu #SanPhamMoi #YTuongMarketing #ThietKe #AIVisual",
+    "fallbackShort": "✨ {title} chính thức ra mắt!\n\nĐẹp đến từng chi tiết. Theo dõi chúng tôi để nhận tin mới nhất!\n\n#MarketingThuongHieu #PhongCachSong #SanPhamMoi",
+    "noMedia": "Không tìm thấy nội dung để đăng",
+    "needPlatform": "Hãy chọn ít nhất một nền tảng đã kết nối",
+    "needCopy": "Vui lòng nhập nội dung bài đăng",
+    "uploadFailed": "Tải tệp lên thất bại, vui lòng thử lại",
+    "noPublicUrl": "Không lấy được liên kết công khai của tệp",
+    "needPro": "Gói hiện tại chưa hỗ trợ tự động đăng, vui lòng nâng cấp lên PRO trở lên.",
+    "publishFailedRetry": "Đăng thất bại, vui lòng thử lại sau",
+    "title": "Trung tâm đăng bài một chạm",
+    "videoPost": "Video ngắn",
+    "subtitle": "Đăng ngay sản phẩm AI lên Facebook, Instagram, Threads, TikTok, YouTube và các nền tảng khác",
+    "credCenter": "Cài đặt thông tin xác thực",
+    "preview": "Xem trước nội dung",
+    "source": "Nguồn: {s}",
+    "status": "Tình trạng kết nối",
+    "linkedCount": "{n} / {total} đã liên kết",
+    "noCredsA": "Chưa liên kết thông tin đăng bài. Hãy vào",
+    "noCredsLink": "Kết nối nền tảng",
+    "noCredsB": "để thiết lập Token Trang hoặc khóa API.",
+    "choose": "Chọn nền tảng đăng",
+    "selectAll": "Chọn tất cả đã kết nối",
+    "clear": "Bỏ chọn",
+    "refresh": "Làm mới trạng thái kết nối",
+    "connected": "Đã kết nối",
+    "link": "Liên kết ↗",
+    "copyLabel": "Nội dung bài đăng / mô tả",
+    "aiPolish": "AI trau chuốt nội dung",
+    "copyPh": "Nhập nội dung bài đăng, điểm nổi bật, lời kêu gọi và hashtag…",
+    "quickTags": "Thẻ thường dùng: ",
+    "charCount": "{n} ký tự",
+    "limits": "Giới hạn: Twitter 280 | Threads 500 | IG 2.200 ký tự",
+    "done": "Đã đăng xong",
+    "summary": "{n} nền tảng | thành công: <g>{ok}</g> | thất bại: <r>{fail}</r>",
+    "ok": "Đã đăng",
+    "postId": "ID bài: {id}",
+    "selected": "Đã chọn <b>{n}</b> nền tảng",
+    "cancel": "Hủy",
+    "publishing": "Đang đăng…",
+    "publishNow": "Đăng ngay",
+    "backEdit": "← Quay lại chỉnh sửa",
+    "manage": "Quản lý kết nối",
+    "close": "Xong"
+  },
+  "Crm": {
+    "newTitle": "Thêm thành viên",
+    "copy": "Sao chép",
+    "tier": {
+      "general": "Khách thường",
+      "silver": "Bạc",
+      "gold": "Vàng",
+      "vip": "👑 VIP",
+      "vvip": "💎 VVIP"
+    },
+    "col": {
+      "phone": {
+        "label": "Số điện thoại",
+        "desc": "Số điện thoại thành viên (mã định danh)"
+      },
+      "name": {
+        "label": "Tên khách hàng",
+        "desc": "Tên hoặc biệt danh",
+        "ex": "Nguyễn Thị Lan"
+      },
+      "tier": {
+        "label": "Hạng thành viên",
+        "desc": "general (thường), silver (bạc), gold (vàng), vip, vvip"
+      },
+      "total_spend": {
+        "label": "Tổng chi tiêu"
+      },
+      "order_count": {
+        "label": "Số lần mua"
+      },
+      "tags": {
+        "label": "Nhãn khách hàng",
+        "desc": "Nhiều nhãn, phân cách bằng dấu phẩy",
+        "ex": "thích sản phẩm mới, mê trà sữa"
+      },
+      "email": {
+        "label": "Email"
+      },
+      "notes": {
+        "label": "Ghi chú sở thích",
+        "ex": "Ít đá, ít đường; khách quen"
+      }
+    },
+    "needPhone": "Vui lòng nhập số điện thoại",
+    "saveFailed": "Lưu thất bại",
+    "confirmDelete": "Xóa thành viên này?",
+    "importFailed": "Nhập thất bại",
+    "serverErr": "Lỗi kết nối máy chủ",
+    "needBatch": "Vui lòng nhập danh sách cần nhập",
+    "imported": "Đã nhập {n} thành viên!",
+    "needProduct": "Vui lòng nhập tên sản phẩm mới",
+    "pushFailed": "Tạo nội dung thất bại",
+    "totalMembers": "Tổng số thành viên",
+    "vipGroup": "Khách hàng VIP",
+    "vipPerk": "Được ưu tiên trải nghiệm sản phẩm mới",
+    "gold": "Thành viên Vàng",
+    "totalSpend": "Tổng chi tiêu của thành viên",
+    "modeTitle": "Chế độ kết nối CRM hiện tại: tải lên hàng loạt Excel / CSV (giai đoạn 1)",
+    "modeDesc": "Kéo thả bảng tính xuất từ CRM hiện có, tự động ghép cột. Đồng bộ theo lịch (giai đoạn 2) và kết nối API trực tiếp (giai đoạn 3) đang được lên kế hoạch.",
+    "phase1": "Giai đoạn 1: Excel hàng loạt đang hoạt động",
+    "phase23": "Giai đoạn 2/3: đồng bộ tự động đang lên kế hoạch",
+    "searchPh": "Tìm theo tên hoặc số điện thoại…",
+    "allTiers": "Tất cả hạng",
+    "vipFilter": "👑 VIP / VVIP",
+    "vipPush": "Gửi tin sản phẩm mới cho VIP",
+    "importExcel": "Nhập Excel CRM",
+    "pasteText": "Dán văn bản",
+    "addMember": "Thêm thành viên",
+    "empty": "Không có thành viên phù hợp",
+    "emptyHint": "Dùng “Nhập” hoặc “Thêm thành viên” ở trên để tạo danh sách khách hàng.",
+    "thName": "Tên / điện thoại",
+    "thTier": "Hạng",
+    "thTags": "Nhãn",
+    "thSpend": "Tổng chi tiêu",
+    "thOrders": "Số đơn",
+    "thLast": "Lần ghé gần nhất",
+    "thActions": "Thao tác",
+    "unnamed": "(chưa đặt tên)",
+    "times": "{n} lần",
+    "noRecord": "Chưa có",
+    "editTitle": "Sửa thành viên",
+    "phoneReq": "Số điện thoại *",
+    "phonePh": "VD: 0912345678",
+    "namePh": "VD: Nguyễn Thị Lan",
+    "tagsLabel": "Nhãn (phân cách bằng dấu phẩy)",
+    "tagsPh": "VD: thích sản phẩm mới, mê trà sữa, khách quen",
+    "notesLabel": "Ghi chú",
+    "cancel": "Hủy",
+    "saveMember": "Lưu thành viên",
+    "batchTitle": "Nhập nhanh hàng loạt",
+    "batchHint": "Mỗi dòng một người: số điện thoại, tên, hạng",
+    "batchPh": "0912345678, Trần Minh, VIP\n0923456789, Lê Lan, VIP\n0934567890, Phạm Hùng, Vàng",
+    "startBatch": "Bắt đầu nhập",
+    "pushTitle": "Tạo tin nhắn ưu tiên cho VIP",
+    "pushDesc": "Tự động tạo thư mời trải nghiệm sớm và nội dung tin nhắn cho khách VIP / VVIP",
+    "productReq": "Tên sản phẩm sắp ra mắt *",
+    "productPh": "VD: Trà ô long rang sữa đặc biệt",
+    "deadline": "Hạn ưu đãi VIP",
+    "extraNote": "Ghi chú ưu đãi thêm",
+    "extraPh": "VD: đọc số điện thoại tặng một bánh quy thủ công",
+    "generate": "Tạo tin nhắn VIP",
+    "audience": "Nhóm VIP mục tiêu: {n} khách",
+    "clickCopy": "Nhấn để sao chép",
+    "lineTpl": "Mẫu tin LINE OA",
+    "copied": "Đã sao chép",
+    "smsTpl": "Mẫu SMS ngắn",
+    "importTitle": "Nhập bảng tính khách hàng & VIP từ CRM",
+    "importDesc": "Hỗ trợ .xlsx, .xls và .csv. Hệ thống đối chiếu theo số điện thoại và tự cập nhật thành viên (upsert).",
+    "tplFile": "CRM_mau_khach_hang.xlsx",
+    "sheet": "Khách hàng",
+    "help1": "Tên cột khác nhau từ CRM (như “Phone”, “客戶電話”, “SĐT”) được tự động ghép.",
+    "help2": "“Hạng” nhận VIP, VVIP, vàng, bạc hoặc thường và được tự phân loại.",
+    "help3": "“Nhãn” có thể phân cách bằng dấu phẩy (VD: thích sản phẩm mới, khách quen, mê trà sữa)."
   }
 }
