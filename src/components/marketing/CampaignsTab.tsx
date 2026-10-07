@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
 import {
   MapPin, Globe, Sparkles, Plus, Pencil, Trash2, X, Loader2,
   TrendingUp, BarChart3, Calendar, DollarSign, Store, CheckCircle2,
@@ -121,6 +122,14 @@ const STATUS_CONFIG: Record<string, { label: string; variant: 'secondary' | 'def
 const fmt = (n: number) => Math.round(Number(n) || 0).toLocaleString('zh-TW')
 
 export function CampaignsTab() {
+  const t = useTranslations('Campaigns')
+  // 匯入欄位名稱／說明依介面語言顯示（aliases 保留多語別名供比對）
+  const importColumns: ImportColumn[] = IPOS_IMPORT_COLUMNS.map(c => ({
+    ...c,
+    label: t(`col.${c.key}.label`),
+    ...(t.has(`col.${c.key}.desc`) ? { description: t(`col.${c.key}.desc`) } : {}),
+    ...(t.has(`col.${c.key}.ex`) ? { example: t(`col.${c.key}.ex`) } : {}),
+  }))
   const [items, setItems] = useState<Campaign[]>([])
   const [loading, setLoading] = useState(true)
   const [channelFilter, setChannelFilter] = useState('')
@@ -192,7 +201,7 @@ export function CampaignsTab() {
       })
       const j = await res.json()
       if (!res.ok) {
-        return { ok: false, error: j.error || '匯入失敗' }
+        return { ok: false, error: j.error || t('importFailed') }
       }
       loadIposStats()
       return {
@@ -204,14 +213,14 @@ export function CampaignsTab() {
         errors: j.errors,
       }
     } catch (e: any) {
-      return { ok: false, error: e.message || '連線伺服器時發生錯誤' }
+      return { ok: false, error: e.message || t('serverErr') }
     }
   }
 
   async function handleSave() {
     if (!editing) return
     if (!String(editing.title ?? '').trim()) {
-      setErr('請填寫活動名稱')
+      setErr(t('needName'))
       return
     }
     setSaving(true)
@@ -225,20 +234,20 @@ export function CampaignsTab() {
       })
       const j = await r.json()
       if (!r.ok) {
-        setErr(j.error || '儲存失敗')
+        setErr(j.error || t('saveFailed'))
         return
       }
       setEditing(null)
       load()
     } catch (e: any) {
-      setErr(e.message || '儲存失敗')
+      setErr(e.message || t('saveFailed'))
     } finally {
       setSaving(false)
     }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('確定刪除此活動紀錄？')) return
+    if (!confirm(t('confirmDelete'))) return
     await fetch('/api/mkt/campaigns', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
@@ -250,7 +259,7 @@ export function CampaignsTab() {
   // 觸發 AI 企劃生成
   async function generateAiPlan() {
     if (!aiTopic.trim()) {
-      alert('請填寫活動主題或方向發想')
+      alert(t('needTopic'))
       return
     }
     setAiGenerating(true)
@@ -271,10 +280,10 @@ export function CampaignsTab() {
       if (j.ok) {
         setAiProposal(j.proposal)
       } else {
-        alert(j.error || 'AI 企劃生成失敗')
+        alert(j.error || t('aiFailed'))
       }
     } catch (e: any) {
-      alert(e.message || 'AI 企劃生成失敗')
+      alert(e.message || t('aiFailed'))
     } finally {
       setAiGenerating(false)
     }
@@ -311,10 +320,10 @@ export function CampaignsTab() {
         load()
       } else {
         const j = await r.json()
-        alert(j.error || '儲存失敗')
+        alert(j.error || t('saveFailed'))
       }
     } catch (e: any) {
-      alert(e.message || '儲存失敗')
+      alert(e.message || t('saveFailed'))
     } finally {
       setSaving(false)
     }
@@ -356,7 +365,7 @@ export function CampaignsTab() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="p-4 rounded-xl border bg-card/60 backdrop-blur-sm shadow-sm flex items-center justify-between">
           <div>
-            <div className="text-xs text-muted-foreground font-medium">進行中活動</div>
+            <div className="text-xs text-muted-foreground font-medium">{t('activeCount')}</div>
             <div className="text-2xl font-bold mt-1 text-primary">{activeCount}</div>
           </div>
           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
@@ -366,7 +375,7 @@ export function CampaignsTab() {
 
         <div className="p-4 rounded-xl border bg-card/60 backdrop-blur-sm shadow-sm flex items-center justify-between">
           <div>
-            <div className="text-xs text-muted-foreground font-medium">活動累計預算</div>
+            <div className="text-xs text-muted-foreground font-medium">{t('totalBudget')}</div>
             <div className="text-2xl font-bold mt-1">${fmt(totalBudget)}</div>
           </div>
           <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
@@ -376,7 +385,7 @@ export function CampaignsTab() {
 
         <div className="p-4 rounded-xl border bg-card/60 backdrop-blur-sm shadow-sm flex items-center justify-between">
           <div>
-            <div className="text-xs text-muted-foreground font-medium">總活動數量</div>
+            <div className="text-xs text-muted-foreground font-medium">{t('totalCount')}</div>
             <div className="text-2xl font-bold mt-1">{items.length}</div>
           </div>
           <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-600 dark:text-purple-400">
@@ -393,19 +402,19 @@ export function CampaignsTab() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-bold text-foreground">iPOS 營運業績數據庫</span>
+              <span className="font-bold text-foreground">{t('iposDb')}</span>
               {iposStats && iposStats.totalRecords > 0 ? (
                 <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[10px]">
-                  已匯入 {iposStats.totalRecords} 筆銷售數據 · 總營收 ${fmt(iposStats.totalRevenue)}
+                  {t('iposStats', { n: iposStats.totalRecords, rev: fmt(iposStats.totalRevenue) })}
                 </Badge>
               ) : (
-                <Badge variant="secondary" className="text-[10px]">尚未匯入 iPOS 資料</Badge>
+                <Badge variant="secondary" className="text-[10px]">{t('noIpos')}</Badge>
               )}
             </div>
             <p className="text-[11px] text-muted-foreground mt-0.5">
               {iposStats && iposStats.minDate && iposStats.maxDate
-                ? `資料涵蓋區間：${iposStats.minDate} ~ ${iposStats.maxDate}（涵蓋 ${iposStats.storeCount} 間門市）。活動成效分析自動自此庫精準比對前期與去年同期成長率。`
-                : '支援一鍵拖曳上傳 iPOS 門市日報表與商品銷售明細，自動串接成效比對（PoP、YoY、活動後長尾分析）。'}
+                ? t('iposRange', { from: iposStats.minDate, to: iposStats.maxDate, n: iposStats.storeCount })
+                : t('iposHint')}
             </p>
           </div>
         </div>
@@ -417,7 +426,7 @@ export function CampaignsTab() {
             onClick={() => setIposModalOpen(true)}
           >
             <FileSpreadsheet className="h-3.5 w-3.5" />
-            匯入 iPOS 業績報表
+            {t('importIpos')}
           </Button>
         </div>
       </div>
@@ -429,10 +438,10 @@ export function CampaignsTab() {
           onChange={e => setChannelFilter(e.target.value)}
           className="h-9 rounded-lg border border-input bg-card px-3 text-xs font-medium"
         >
-          <option value="">全部通路 (實體+線上+混合)</option>
-          <option value="offline">實體活動 (門市/快閃)</option>
-          <option value="online">線上促銷 (社群/外送)</option>
-          <option value="hybrid">虛實整合 (OMO)</option>
+          <option value="">{t('allChannels')}</option>
+          <option value="offline">{t('chOfflineLong')}</option>
+          <option value="online">{t('chOnlineLong')}</option>
+          <option value="hybrid">{t('chHybridLong')}</option>
         </select>
 
         <select
@@ -440,12 +449,12 @@ export function CampaignsTab() {
           onChange={e => setStatusFilter(e.target.value)}
           className="h-9 rounded-lg border border-input bg-card px-3 text-xs font-medium"
         >
-          <option value="">全部狀態</option>
-          <option value="active">進行中</option>
-          <option value="planned">已排程</option>
-          <option value="ended">已結案</option>
-          <option value="draft">草案</option>
-          <option value="cancelled">已取消</option>
+          <option value="">{t('allStatus')}</option>
+          <option value="active">{t('status.active')}</option>
+          <option value="planned">{t('status.planned')}</option>
+          <option value="ended">{t('status.ended')}</option>
+          <option value="draft">{t('status.draft')}</option>
+          <option value="cancelled">{t('status.cancelled')}</option>
         </select>
 
         <div className="ml-auto flex items-center gap-2">
@@ -460,7 +469,7 @@ export function CampaignsTab() {
             }}
           >
             <Sparkles className="h-4 w-4 text-purple-500" />
-            AI 企劃助理
+            {t('aiAssistant')}
           </Button>
 
           <Button
@@ -482,7 +491,7 @@ export function CampaignsTab() {
             }}
           >
             <Plus className="h-4 w-4" />
-            新增活動
+            {t('add')}
           </Button>
         </div>
       </div>
@@ -493,8 +502,8 @@ export function CampaignsTab() {
       ) : items.length === 0 ? (
         <div className="text-center py-20 border rounded-2xl bg-card/40 border-dashed space-y-2">
           <Sparkles className="h-10 w-10 mx-auto text-muted-foreground/40" />
-          <div className="font-medium text-muted-foreground">尚無行銷活動</div>
-          <p className="text-xs text-muted-foreground/70">點擊上方「AI 企劃助理」即可由 AI 為您量身打造高轉換活動方案。</p>
+          <div className="font-medium text-muted-foreground">{t('empty')}</div>
+          <p className="text-xs text-muted-foreground/70">{t('emptyHint')}</p>
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
@@ -517,16 +526,16 @@ export function CampaignsTab() {
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <Badge variant="outline" className={`gap-1 text-[11px] font-semibold border ${ch.color}`}>
                         <ChIcon className="h-3 w-3" />
-                        {ch.label}
+                        {t(`channel.${CHANNEL_LABELS[item.channel_type] ? item.channel_type : 'offline'}`)}
                       </Badge>
                       <Badge variant="secondary" className="text-[11px]">
-                        {CATEGORY_LABELS[item.category] || item.category}
+                        {CATEGORY_LABELS[item.category] ? t(`category.${item.category}`) : item.category}
                       </Badge>
                       <Badge variant={st.variant} className="text-[11px] font-semibold">
-                        {st.label}
+                        {t(`status.${STATUS_CONFIG[item.status] ? item.status : 'planned'}`)}
                         {item.status === 'active' && remDays !== null && (
                           <span className="ml-1 font-normal opacity-90">
-                            {remDays > 0 ? `(剩 ${remDays} 天)` : '(今日到期)'}
+                            {remDays > 0 ? t('daysLeft', { n: remDays }) : t('dueToday')}
                           </span>
                         )}
                       </Badge>
@@ -544,16 +553,16 @@ export function CampaignsTab() {
                     <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground pt-1 border-t">
                       <div className="flex items-center gap-1">
                         <Store className="h-3.5 w-3.5" />
-                        <span>{item.store ? `門市：${item.store}` : '全門市 / 全通路'}</span>
+                        <span>{item.store ? t('storeIs', { s: item.store }) : t('allStores')}</span>
                       </div>
                       <div className="flex items-center gap-1">
                         <DollarSign className="h-3.5 w-3.5" />
-                        <span>預算：${fmt(item.budget)}</span>
+                        <span>{t('budgetIs', { v: fmt(item.budget) })}</span>
                       </div>
                       <div className="col-span-2 flex items-center gap-1 text-[11px]">
                         <Calendar className="h-3.5 w-3.5" />
                         <span>
-                          {item.start_date ?? '即刻'} ~ {item.end_date ?? '未定'}
+                          {item.start_date ?? t('now')} ~ {item.end_date ?? t('tbd')}
                         </span>
                       </div>
                     </div>
@@ -574,7 +583,7 @@ export function CampaignsTab() {
                     onClick={() => openAnalytics(item)}
                   >
                     <BarChart3 className="h-3.5 w-3.5" />
-                    成效分析
+                    {t('analysis')}
                   </Button>
 
                   <div className="flex items-center gap-1">
@@ -614,8 +623,8 @@ export function CampaignsTab() {
                   <Sparkles className="h-4 w-4" />
                 </div>
                 <div>
-                  <h2 className="font-bold text-lg">AI 活動企劃助理</h2>
-                  <p className="text-xs text-muted-foreground">智能分析品牌調性，一鍵產出活動主題、優惠機制、門市話術與檢核表</p>
+                  <h2 className="font-bold text-lg">{t('aiTitle')}</h2>
+                  <p className="text-xs text-muted-foreground">{t('aiDesc')}</p>
                 </div>
               </div>
               <button onClick={() => setAiModalOpen(false)} className="p-1.5 rounded-lg hover:bg-muted">
@@ -625,69 +634,69 @@ export function CampaignsTab() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div className="sm:col-span-2">
-                <label className="text-xs font-semibold mb-1 block">活動主題 / 發想 *</label>
+                <label className="text-xs font-semibold mb-1 block">{t('topicReq')}</label>
                 <Input
                   value={aiTopic}
                   onChange={e => setAiTopic(e.target.value)}
-                  placeholder="例：秋季茶香節門市快閃試飲、雨天外送第二杯折20元..."
+                  placeholder={t('topicPh')}
                   className="h-10"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold mb-1 block">活動通路</label>
+                <label className="text-xs font-semibold mb-1 block">{t('channelLabel')}</label>
                 <select
                   value={aiChannel}
                   onChange={e => setAiChannel(e.target.value as any)}
                   className="w-full h-9 rounded-lg border border-input bg-card px-3 text-xs"
                 >
-                  <option value="offline">實體活動 (門市/快閃)</option>
-                  <option value="online">線上促銷 (社群/外送)</option>
-                  <option value="hybrid">虛實整合 (OMO 混合)</option>
+                  <option value="offline">{t('chOfflineLong')}</option>
+                  <option value="online">{t('chOnlineLong')}</option>
+                  <option value="hybrid">{t('chHybridLong')}</option>
                 </select>
               </div>
 
               <div>
-                <label className="text-xs font-semibold mb-1 block">活動類型</label>
+                <label className="text-xs font-semibold mb-1 block">{t('typeLabel')}</label>
                 <select
                   value={aiCategory}
                   onChange={e => setAiCategory(e.target.value)}
                   className="w-full h-9 rounded-lg border border-input bg-card px-3 text-xs"
                 >
                   {Object.entries(CATEGORY_LABELS).map(([k, v]) => (
-                    <option key={k} value={k}>{v}</option>
+                    <option key={k} value={k}>{t(`category.${k}`)}</option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="text-xs font-semibold mb-1 block">目標門市</label>
+                <label className="text-xs font-semibold mb-1 block">{t('targetStore')}</label>
                 <Input
                   value={aiStore}
                   onChange={e => setAiStore(e.target.value)}
-                  placeholder="空＝全門市"
+                  placeholder={t('allStoresPh')}
                   className="h-9"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold mb-1 block">規劃預算 ($)</label>
+                <label className="text-xs font-semibold mb-1 block">{t('budgetPlan')}</label>
                 <Input
                   type="number"
                   value={aiBudget}
                   onChange={e => setAiBudget(e.target.value)}
-                  placeholder="例：5000"
+                  placeholder={t('budgetPh')}
                   className="h-9"
                 />
               </div>
 
               <div className="sm:col-span-2">
-                <label className="text-xs font-semibold mb-1 block">補充要求 / 優惠期待（選填）</label>
+                <label className="text-xs font-semibold mb-1 block">{t('extraReq')}</label>
                 <textarea
                   rows={2}
                   value={aiBrief}
                   onChange={e => setAiBrief(e.target.value)}
-                  placeholder="例：希望能推動鮮奶茶與烘焙新品銷售，目標帶來年輕學生族群..."
+                  placeholder={t('extraPh')}
                   className="w-full rounded-lg border border-input bg-card p-2 text-xs"
                 />
               </div>
@@ -699,15 +708,15 @@ export function CampaignsTab() {
               className="w-full gap-2 font-bold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
             >
               {aiGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              {aiGenerating ? 'AI 總監正在為您全方位企劃中...' : '開始 AI 智能企劃'}
+              {aiGenerating ? t('aiWorking') : t('aiStart')}
             </Button>
 
             {/* AI 產出預覽 */}
             {aiProposal && (
               <div className="p-4 rounded-xl bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200/60 dark:border-purple-800/40 space-y-3.5 mt-4 animate-in fade-in-50">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-purple-600 dark:text-purple-400">✨ AI 企劃成果草案</span>
-                  <Badge variant="outline" className="text-[10px]">可立即採用</Badge>
+                  <span className="text-xs font-bold text-purple-600 dark:text-purple-400">✨ {t('aiDraft')}</span>
+                  <Badge variant="outline" className="text-[10px]">{t('readyToUse')}</Badge>
                 </div>
 
                 <div className="space-y-1">
@@ -717,22 +726,22 @@ export function CampaignsTab() {
 
                 <div className="space-y-2 text-xs">
                   <div>
-                    <span className="font-semibold text-foreground">💡 促銷機制：</span>
+                    <span className="font-semibold text-foreground">💡 {t('mechanic')}</span>
                     <span className="text-muted-foreground">{aiProposal.mechanics}</span>
                   </div>
                   <div>
-                    <span className="font-semibold text-foreground">🗣️ 門市話術：</span>
+                    <span className="font-semibold text-foreground">🗣️ {t('script')}</span>
                     <span className="text-muted-foreground">{aiProposal.staff_script}</span>
                   </div>
                   <div>
-                    <span className="font-semibold text-foreground">📱 社群文案：</span>
+                    <span className="font-semibold text-foreground">📱 {t('social')}</span>
                     <p className="mt-1 text-muted-foreground whitespace-pre-line bg-card/60 p-2.5 rounded-lg border">
                       {aiProposal.social_copy}
                     </p>
                   </div>
                   {Array.isArray(aiProposal.checklist) && (
                     <div>
-                      <span className="font-semibold text-foreground">📋 執行檢核清單：</span>
+                      <span className="font-semibold text-foreground">📋 {t('checklist')}</span>
                       <ul className="list-disc list-inside mt-1 space-y-0.5 text-muted-foreground">
                         {aiProposal.checklist.map((c: string, idx: number) => (
                           <li key={idx}>{c}</li>
@@ -742,16 +751,16 @@ export function CampaignsTab() {
                   )}
                   {aiProposal.kpi_target && (
                     <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-medium">
-                      🎯 效益目標：{aiProposal.kpi_target}
+                      🎯 {t('kpi')}{aiProposal.kpi_target}
                     </div>
                   )}
                 </div>
 
                 <div className="pt-2 flex justify-end gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setAiProposal(null)}>重新企劃</Button>
+                  <Button variant="outline" size="sm" onClick={() => setAiProposal(null)}>{t('replan')}</Button>
                   <Button size="sm" className="font-bold gap-1.5" onClick={applyAiProposal} disabled={saving}>
                     {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                    採用此企劃並儲存活動
+                    {t('adopt')}
                   </Button>
                 </div>
               </div>
@@ -768,7 +777,7 @@ export function CampaignsTab() {
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b pb-3">
-              <h2 className="font-bold text-lg">{editing.id ? '編輯行銷活動' : '新增行銷活動'}</h2>
+              <h2 className="font-bold text-lg">{editing.id ? t('editTitle') : t('newTitle')}</h2>
               <button onClick={() => setEditing(null)} className="p-1.5 rounded-lg hover:bg-muted">
                 <X className="h-5 w-5" />
               </button>
@@ -776,66 +785,66 @@ export function CampaignsTab() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-semibold mb-1 block">活動通路</label>
+                <label className="text-xs font-semibold mb-1 block">{t('channelLabel')}</label>
                 <select
                   value={editing.channel_type ?? 'offline'}
                   onChange={e => setEditing({ ...editing, channel_type: e.target.value as any })}
                   className="w-full h-9 rounded-lg border border-input bg-card px-3 text-xs"
                 >
-                  <option value="offline">實體活動</option>
-                  <option value="online">線上促銷</option>
-                  <option value="hybrid">虛實整合</option>
+                  <option value="offline">{t('channel.offline')}</option>
+                  <option value="online">{t('channel.online')}</option>
+                  <option value="hybrid">{t('channel.hybrid')}</option>
                 </select>
               </div>
 
               <div>
-                <label className="text-xs font-semibold mb-1 block">活動類型</label>
+                <label className="text-xs font-semibold mb-1 block">{t('typeLabel')}</label>
                 <select
                   value={editing.category ?? 'event'}
                   onChange={e => setEditing({ ...editing, category: e.target.value })}
                   className="w-full h-9 rounded-lg border border-input bg-card px-3 text-xs"
                 >
                   {Object.entries(CATEGORY_LABELS).map(([k, v]) => (
-                    <option key={k} value={k}>{v}</option>
+                    <option key={k} value={k}>{t(`category.${k}`)}</option>
                   ))}
                 </select>
               </div>
 
               <div className="col-span-2">
-                <label className="text-xs font-semibold mb-1 block">活動名稱 *</label>
+                <label className="text-xs font-semibold mb-1 block">{t('nameReq')}</label>
                 <Input
                   value={editing.title ?? ''}
                   onChange={e => setEditing({ ...editing, title: e.target.value })}
-                  placeholder="例：買一送一試飲快閃"
+                  placeholder={t('namePh')}
                   className="h-9"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold mb-1 block">執行狀態</label>
+                <label className="text-xs font-semibold mb-1 block">{t('statusLabel')}</label>
                 <select
                   value={editing.status ?? 'planned'}
                   onChange={e => setEditing({ ...editing, status: e.target.value as any })}
                   className="w-full h-9 rounded-lg border border-input bg-card px-3 text-xs"
                 >
                   {Object.entries(STATUS_CONFIG).map(([k, v]) => (
-                    <option key={k} value={k}>{v.label}</option>
+                    <option key={k} value={k}>{t(`status.${k}`)}</option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="text-xs font-semibold mb-1 block">所屬門市</label>
+                <label className="text-xs font-semibold mb-1 block">{t('storeLabel')}</label>
                 <Input
                   value={editing.store ?? ''}
                   onChange={e => setEditing({ ...editing, store: e.target.value })}
-                  placeholder="空＝全門市"
+                  placeholder={t('allStoresPh')}
                   className="h-9"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold mb-1 block">執行開始日</label>
+                <label className="text-xs font-semibold mb-1 block">{t('startDate')}</label>
                 <Input
                   type="date"
                   value={editing.start_date ?? ''}
@@ -845,7 +854,7 @@ export function CampaignsTab() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold mb-1 block">執行到期日</label>
+                <label className="text-xs font-semibold mb-1 block">{t('endDate')}</label>
                 <Input
                   type="date"
                   value={editing.end_date ?? ''}
@@ -855,7 +864,7 @@ export function CampaignsTab() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold mb-1 block">預算 ($)</label>
+                <label className="text-xs font-semibold mb-1 block">{t('budget')}</label>
                 <Input
                   type="number"
                   value={String(editing.budget ?? 0)}
@@ -865,7 +874,7 @@ export function CampaignsTab() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold mb-1 block">實際花費 ($)</label>
+                <label className="text-xs font-semibold mb-1 block">{t('spent')}</label>
                 <Input
                   type="number"
                   value={String(editing.actual_spend ?? editing.budget ?? 0)}
@@ -875,7 +884,7 @@ export function CampaignsTab() {
               </div>
 
               <div className="col-span-2">
-                <label className="text-xs font-semibold mb-1 block">主視覺 / 現場照片網址</label>
+                <label className="text-xs font-semibold mb-1 block">{t('imageUrl')}</label>
                 <Input
                   value={editing.photo_url ?? ''}
                   onChange={e => setEditing({ ...editing, photo_url: e.target.value })}
@@ -885,7 +894,7 @@ export function CampaignsTab() {
               </div>
 
               <div className="col-span-2">
-                <label className="text-xs font-semibold mb-1 block">活動備註與執行重點</label>
+                <label className="text-xs font-semibold mb-1 block">{t('notes')}</label>
                 <textarea
                   rows={2}
                   value={editing.note ?? ''}
@@ -898,10 +907,10 @@ export function CampaignsTab() {
             {err && <p className="text-xs text-destructive font-medium">{err}</p>}
 
             <div className="flex justify-end gap-2 pt-2 border-t">
-              <Button variant="outline" size="sm" onClick={() => setEditing(null)}>取消</Button>
+              <Button variant="outline" size="sm" onClick={() => setEditing(null)}>{t('cancel')}</Button>
               <Button size="sm" onClick={handleSave} disabled={saving} className="gap-1.5 font-bold">
                 {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                儲存活動
+                {t('save')}
               </Button>
             </div>
           </div>
@@ -918,13 +927,13 @@ export function CampaignsTab() {
             <div className="flex items-center justify-between border-b pb-3">
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className="font-bold text-lg">成效與業績比對分析報告</h2>
+                  <h2 className="font-bold text-lg">{t('reportTitle')}</h2>
                   <Badge variant="outline" className="text-xs font-semibold text-primary border-primary/30">
                     {analyticsTarget.title}
                   </Badge>
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  自動串接 POS 實時交易流水，精準對比活動期間、前期 (PoP)、去年同期 (YoY) 與活動後延續力
+                  {t('reportDesc')}
                 </p>
               </div>
               <button onClick={() => setAnalyticsTarget(null)} className="p-1.5 rounded-lg hover:bg-muted">
@@ -935,26 +944,26 @@ export function CampaignsTab() {
             {analyticsLoading ? (
               <div className="py-24 flex flex-col items-center justify-center gap-2">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <span className="text-xs text-muted-foreground">正在自 POS 巨量數據計算比對指標...</span>
+                <span className="text-xs text-muted-foreground">{t('computing')}</span>
               </div>
             ) : !analyticsData ? (
-              <div className="py-16 text-center text-muted-foreground text-sm">暫無足夠之訂單數據可供比對</div>
+              <div className="py-16 text-center text-muted-foreground text-sm">{t('noData')}</div>
             ) : (
               <div className="space-y-5">
                 {/* 核心增長摘要指標卡 */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div className="p-3.5 rounded-xl border bg-card/60">
-                    <div className="text-xs text-muted-foreground">活動期間總營收</div>
+                    <div className="text-xs text-muted-foreground">{t('periodRevenue')}</div>
                     <div className="text-xl font-bold mt-1 text-foreground">
                       ${fmt(analyticsData.currentPeriod.revenue)}
                     </div>
                     <div className="text-[11px] text-muted-foreground mt-0.5">
-                      {analyticsData.currentPeriod.orders} 筆訂單 · {analyticsData.currentPeriod.cups} 杯
+                      {t('ordersCups', { o: analyticsData.currentPeriod.orders, c: analyticsData.currentPeriod.cups })}
                     </div>
                   </div>
 
                   <div className="p-3.5 rounded-xl border bg-card/60">
-                    <div className="text-xs text-muted-foreground">前期成長 (PoP)</div>
+                    <div className="text-xs text-muted-foreground">{t('pop')}</div>
                     <div className={`text-xl font-bold mt-1 flex items-center gap-1 ${
                       analyticsData.growth.popRevenueGrowthPct >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600'
                     }`}>
@@ -962,12 +971,12 @@ export function CampaignsTab() {
                       {analyticsData.growth.popRevenueGrowthPct > 0 ? '+' : ''}{analyticsData.growth.popRevenueGrowthPct}%
                     </div>
                     <div className="text-[11px] text-muted-foreground mt-0.5">
-                      前期：${fmt(analyticsData.priorPeriod.revenue)}
+                      {t('priorIs', { v: fmt(analyticsData.priorPeriod.revenue) })}
                     </div>
                   </div>
 
                   <div className="p-3.5 rounded-xl border bg-card/60">
-                    <div className="text-xs text-muted-foreground">去年同期成長 (YoY)</div>
+                    <div className="text-xs text-muted-foreground">{t('yoy')}</div>
                     <div className={`text-xl font-bold mt-1 flex items-center gap-1 ${
                       analyticsData.growth.yoyRevenueGrowthPct >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600'
                     }`}>
@@ -975,17 +984,17 @@ export function CampaignsTab() {
                       {analyticsData.growth.yoyRevenueGrowthPct > 0 ? '+' : ''}{analyticsData.growth.yoyRevenueGrowthPct}%
                     </div>
                     <div className="text-[11px] text-muted-foreground mt-0.5">
-                      去年同期：${fmt(analyticsData.yoyPeriod.revenue)}
+                      {t('yoyIs', { v: fmt(analyticsData.yoyPeriod.revenue) })}
                     </div>
                   </div>
 
                   <div className="p-3.5 rounded-xl border bg-card/60">
-                    <div className="text-xs text-muted-foreground">投資回報率 (ROI)</div>
+                    <div className="text-xs text-muted-foreground">{t('roi')}</div>
                     <div className="text-xl font-bold mt-1 text-purple-600 dark:text-purple-400">
                       {analyticsData.roi.roiPct}%
                     </div>
                     <div className="text-[11px] text-muted-foreground mt-0.5">
-                      淨增毛利：${fmt(analyticsData.roi.estimatedGrossProfit)}
+                      {t('grossIs', { v: fmt(analyticsData.roi.estimatedGrossProfit) })}
                     </div>
                   </div>
                 </div>
@@ -993,43 +1002,43 @@ export function CampaignsTab() {
                 {/* 前期、當期與去年同期詳細對照表 */}
                 <div className="rounded-xl border overflow-hidden">
                   <div className="bg-muted/40 px-4 py-2.5 text-xs font-bold border-b">
-                    三大統計週期維度對比
+                    {t('periodsTitle')}
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs">
                       <thead className="bg-muted/20 text-muted-foreground border-b">
                         <tr>
-                          <th className="py-2 px-3 text-left">週期</th>
-                          <th className="py-2 px-3 text-left">時間區間</th>
-                          <th className="py-2 px-3 text-right">總營收</th>
-                          <th className="py-2 px-3 text-right">訂單數</th>
-                          <th className="py-2 px-3 text-right">總杯數</th>
-                          <th className="py-2 px-3 text-right">平均客單價 (AOV)</th>
+                          <th className="py-2 px-3 text-left">{t('thPeriod')}</th>
+                          <th className="py-2 px-3 text-left">{t('thRange')}</th>
+                          <th className="py-2 px-3 text-right">{t('thRevenue')}</th>
+                          <th className="py-2 px-3 text-right">{t('thOrders')}</th>
+                          <th className="py-2 px-3 text-right">{t('thCups')}</th>
+                          <th className="py-2 px-3 text-right">{t('thAov')}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y">
                         <tr className="bg-primary/5 font-semibold text-primary">
-                          <td className="py-2.5 px-3">活動期間</td>
+                          <td className="py-2.5 px-3">{t('rowCurrent')}</td>
                           <td className="py-2.5 px-3">{analyticsData.currentPeriod.from} ~ {analyticsData.currentPeriod.to}</td>
                           <td className="py-2.5 px-3 text-right">${fmt(analyticsData.currentPeriod.revenue)}</td>
-                          <td className="py-2.5 px-3 text-right">{analyticsData.currentPeriod.orders} 單</td>
-                          <td className="py-2.5 px-3 text-right">{analyticsData.currentPeriod.cups} 杯</td>
+                          <td className="py-2.5 px-3 text-right">{t('ordersN', { n: analyticsData.currentPeriod.orders })}</td>
+                          <td className="py-2.5 px-3 text-right">{t('cupsN', { n: analyticsData.currentPeriod.cups })}</td>
                           <td className="py-2.5 px-3 text-right">${analyticsData.currentPeriod.aov}</td>
                         </tr>
                         <tr>
-                          <td className="py-2.5 px-3 text-muted-foreground">前期 (同等長度)</td>
+                          <td className="py-2.5 px-3 text-muted-foreground">{t('rowPrior')}</td>
                           <td className="py-2.5 px-3 text-muted-foreground">{analyticsData.priorPeriod.from} ~ {analyticsData.priorPeriod.to}</td>
                           <td className="py-2.5 px-3 text-right">${fmt(analyticsData.priorPeriod.revenue)}</td>
-                          <td className="py-2.5 px-3 text-right">{analyticsData.priorPeriod.orders} 單</td>
-                          <td className="py-2.5 px-3 text-right">{analyticsData.priorPeriod.cups} 杯</td>
+                          <td className="py-2.5 px-3 text-right">{t('ordersN', { n: analyticsData.priorPeriod.orders })}</td>
+                          <td className="py-2.5 px-3 text-right">{t('cupsN', { n: analyticsData.priorPeriod.cups })}</td>
                           <td className="py-2.5 px-3 text-right">${analyticsData.priorPeriod.aov}</td>
                         </tr>
                         <tr>
-                          <td className="py-2.5 px-3 text-muted-foreground">去年同期 (YoY)</td>
+                          <td className="py-2.5 px-3 text-muted-foreground">{t('rowYoy')}</td>
                           <td className="py-2.5 px-3 text-muted-foreground">{analyticsData.yoyPeriod.from} ~ {analyticsData.yoyPeriod.to}</td>
                           <td className="py-2.5 px-3 text-right">${fmt(analyticsData.yoyPeriod.revenue)}</td>
-                          <td className="py-2.5 px-3 text-right">{analyticsData.yoyPeriod.orders} 單</td>
-                          <td className="py-2.5 px-3 text-right">{analyticsData.yoyPeriod.cups} 杯</td>
+                          <td className="py-2.5 px-3 text-right">{t('ordersN', { n: analyticsData.yoyPeriod.orders })}</td>
+                          <td className="py-2.5 px-3 text-right">{t('cupsN', { n: analyticsData.yoyPeriod.cups })}</td>
                           <td className="py-2.5 px-3 text-right">${analyticsData.yoyPeriod.aov}</td>
                         </tr>
                       </tbody>
@@ -1042,11 +1051,11 @@ export function CampaignsTab() {
                   <div className="p-4 rounded-xl border bg-gradient-to-br from-blue-50/50 to-indigo-50/50 dark:from-blue-950/20 dark:to-indigo-950/20 space-y-2">
                     <div className="flex items-center gap-2">
                       <Sparkles className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                      <h4 className="font-bold text-xs text-foreground">活動後延燒情況追蹤（結案後 {analyticsData.postAnalysis.days} 天）</h4>
+                      <h4 className="font-bold text-xs text-foreground">{t('postTitle', { n: analyticsData.postAnalysis.days })}</h4>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1 text-xs">
-                      <div>活動後日均營收：<strong className="text-foreground">${fmt(analyticsData.postAnalysis.dailyAvgRevenue)}</strong></div>
-                      <div>較活動前基準變化：<strong className={analyticsData.postAnalysis.sustained ? 'text-emerald-600' : 'text-rose-600'}>
+                      <div>{t('postDaily')}<strong className="text-foreground">${fmt(analyticsData.postAnalysis.dailyAvgRevenue)}</strong></div>
+                      <div>{t('postChange')}<strong className={analyticsData.postAnalysis.sustained ? 'text-emerald-600' : 'text-rose-600'}>
                         {analyticsData.postAnalysis.postVsPriorGrowth > 0 ? '+' : ''}{analyticsData.postAnalysis.postVsPriorGrowth}%
                       </strong></div>
                       <div className="sm:col-span-1 col-span-2 text-muted-foreground">
@@ -1057,19 +1066,19 @@ export function CampaignsTab() {
                 ) : (
                   <div className="p-3 rounded-lg border bg-muted/20 text-xs text-muted-foreground flex items-center gap-2">
                     <Clock className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    <span>活動尚未結案或進行中，結案後系統將自動開始追蹤後續 7~14 天長尾回購效益。</span>
+                    <span>{t('postPending')}</span>
                   </div>
                 )}
 
                 {/* 每日趨勢明細 */}
                 {Array.isArray(analyticsData.currentPeriod.daily) && analyticsData.currentPeriod.daily.length > 0 && (
                   <div className="space-y-2">
-                    <h4 className="text-xs font-bold text-muted-foreground">活動期間每日銷售曲線分佈</h4>
+                    <h4 className="text-xs font-bold text-muted-foreground">{t('dailyCurve')}</h4>
                     <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
                       {analyticsData.currentPeriod.daily.map((d: any) => (
                         <div key={d.date} className="flex items-center justify-between text-xs p-2 rounded-lg bg-card border">
                           <span className="font-mono text-muted-foreground">{d.date}</span>
-                          <span className="font-medium">{d.cups} 杯 ({d.orders} 單)</span>
+                          <span className="font-medium">{t('cupsOrders', { c: d.cups, o: d.orders })}</span>
                           <span className="font-bold text-foreground">${fmt(d.revenue)}</span>
                         </div>
                       ))}
@@ -1085,20 +1094,20 @@ export function CampaignsTab() {
       {/* 彈窗 4：iPOS 銷售報表試算表匯入 Modal */}
       {iposModalOpen && (
         <ExcelImportModal
-          title="匯入 iPOS 門市銷售與營收報表"
-          description="支援直接上傳 iPOS 匯出之門市日營收總表或商品銷售明細表（.xlsx / .xls / .csv）。系統自動將銷售數據納入活動成效、前期與去年同期成長率比對。"
-          columns={IPOS_IMPORT_COLUMNS}
-          templateFilename="iPOS_門市業績報表範本.xlsx"
-          sheetName="門市每日業績"
+          title={t('importTitle')}
+          description={t('importDesc')}
+          columns={importColumns}
+          templateFilename={t('tplFile')}
+          sheetName={t('sheet')}
           onClose={() => setIposModalOpen(false)}
           onSuccess={() => {
             loadIposStats()
           }}
           onSubmit={handleIposExcelSubmit}
           extraHelp={[
-            '支援多語系 iPOS 欄位標題：包含中文、英文（Revenue, Orders, Cups）與越南文（Doanh thu, Số đơn, Số ly）自動識別。',
-            '系統支援門市整體日報表（可不填品名），也支援個別品項銷售清單（填寫品名即可精準比對該新品/促銷商品拉動力）。',
-            '重複匯入相同門市與日期的紀錄將自動更新（Upsert），不會產生重複累計。',
+            t('help1'),
+            t('help2'),
+            t('help3'),
           ]}
         />
       )}
