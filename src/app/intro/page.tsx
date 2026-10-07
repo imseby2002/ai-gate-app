@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { introTr, trDeep } from '@/lib/i18n-data/server'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { SUBDOMAIN_SYSTEM } from '@/lib/systems'
@@ -24,7 +25,7 @@ async function resolveIntro() {
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-  return (await resolveIntro())?.metadata ?? {}
+  return trDeep((await resolveIntro())?.metadata ?? {}, await introTr())
 }
 
 export default async function IntroPage() {

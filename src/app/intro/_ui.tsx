@@ -1,5 +1,8 @@
 import Link from 'next/link'
 import { Zap, ArrowRight } from 'lucide-react'
+import { getLocale } from 'next-intl/server'
+import { introTr } from '@/lib/i18n-data/server'
+import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
 
 export const GRAD = 'linear-gradient(100deg,#7b5cf0,#a34be0 42%,#e0479b)'
 export const BALANCE = { textWrap: 'balance' } as React.CSSProperties
@@ -8,27 +11,30 @@ export function GradText({ children }: { children: React.ReactNode }) {
   return <span style={{ background: GRAD, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>{children}</span>
 }
 
-export function IntroNav() {
+export async function IntroNav() {
+  const tr = await introTr()
   return (
     <nav className="flex items-center gap-3 pt-6 pb-10 flex-wrap">
       <Link href="/intro" className="flex items-center gap-3">
         <span className="grid place-items-center w-8 h-8 rounded-lg text-white font-black shrink-0" style={{ background: GRAD }}>⚡</span>
-        <b className="font-black tracking-wide">AI GATE 行銷中心</b>
+        <b className="font-black tracking-wide">{tr("AI GATE 行銷中心")}</b>
       </Link>
       <div className="ml-auto flex items-center gap-4 text-[14px] text-[#ddd5ee]">
-        <Link href="/intro/features" className="hover:text-white">功能詳解</Link>
-        <Link href="/intro/pricing" className="hover:text-white">方案比較</Link>
-        <Link href="/login" className="hover:text-white">登入</Link>
+        <Link href="/intro/features" className="hover:text-white">{tr("功能詳解")}</Link>
+        <Link href="/intro/pricing" className="hover:text-white">{tr("方案比較")}</Link>
+        <Link href="/login" className="hover:text-white">{tr("登入")}</Link>
+        <span className="text-white [&_.bg-popover]:text-foreground"><LanguageSwitcher currentLocale={await getLocale()} /></span>
       </div>
     </nav>
   )
 }
 
-export function PrimaryCta({ children = '免費開始' }: { children?: React.ReactNode }) {
+export async function PrimaryCta({ children }: { children?: React.ReactNode }) {
+  const tr = await introTr()
   return (
     <Link href="/register" className="inline-flex items-center gap-2 font-bold text-[15px] px-6 py-3 rounded-xl text-white transition-transform hover:-translate-y-0.5"
       style={{ background: GRAD, boxShadow: '0 10px 26px rgba(123,92,240,.4)' }}>
-      {children} <ArrowRight className="h-4 w-4" />
+      {children ?? tr('免費開始')} <ArrowRight className="h-4 w-4" />
     </Link>
   )
 }
@@ -58,7 +64,8 @@ export function DarkHeader({ eyebrow, title, sub }: { eyebrow: string; title: Re
   )
 }
 
-export function FinalCta({ title }: { title: React.ReactNode }) {
+export async function FinalCta({ title }: { title: React.ReactNode }) {
+  const tr = await introTr()
   return (
     <section className="relative overflow-hidden bg-[#161020] text-[#f4f0fb]">
       <div className="pointer-events-none absolute -top-1/3 inset-x-0 h-[70%]"
@@ -67,20 +74,21 @@ export function FinalCta({ title }: { title: React.ReactNode }) {
         <h2 className="mb-6 text-[clamp(26px,5vw,42px)] font-black tracking-tight" style={BALANCE}>{title}</h2>
         <div className="flex flex-wrap gap-3 justify-center">
           <PrimaryCta />
-          <GhostCta href="/login">我已有帳號</GhostCta>
+          <GhostCta href="/login">{tr("我已有帳號")}</GhostCta>
         </div>
       </div>
     </section>
   )
 }
 
-export function IntroFooter() {
+export async function IntroFooter() {
+  const tr = await introTr()
   return (
     <footer className="text-center text-[#6b6480] text-[13px] py-7 flex items-center justify-center gap-3 flex-wrap">
-      <span className="flex items-center gap-2"><Zap className="h-3.5 w-3.5" /> AI GATE 行銷中心 · IMT</span>
-      <Link href="/intro/features" className="hover:text-[#3f3a4d]">功能詳解</Link>
-      <Link href="/intro/pricing" className="hover:text-[#3f3a4d]">方案比較</Link>
-      <Link href="/privacy" className="hover:text-[#3f3a4d]">隱私權政策</Link>
+      <span className="flex items-center gap-2"><Zap className="h-3.5 w-3.5" />{" "}{tr("AI GATE 行銷中心 · IMT")}</span>
+      <Link href="/intro/features" className="hover:text-[#3f3a4d]">{tr("功能詳解")}</Link>
+      <Link href="/intro/pricing" className="hover:text-[#3f3a4d]">{tr("方案比較")}</Link>
+      <Link href="/privacy" className="hover:text-[#3f3a4d]">{tr("隱私權政策")}</Link>
     </footer>
   )
 }
