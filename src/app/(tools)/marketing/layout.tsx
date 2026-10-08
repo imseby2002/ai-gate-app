@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { Megaphone, Palette, LayoutDashboard, Phone, Menu, Search, Wand2, Crown, Brain, NotebookPen, CalendarCheck, Fingerprint, GitBranch, Share2, Sparkles, Building2, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { Megaphone, Palette, LayoutDashboard, Phone, Menu, Search, Wand2, Crown, Brain, NotebookPen, CalendarCheck, Fingerprint, GitBranch, Share2, Sparkles, Building2, PanelLeftClose, PanelLeftOpen, FileText, Download } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 interface NavItem {
@@ -127,6 +127,21 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
       <div className="mt-3 pt-3 border-t border-gray-100 flex flex-col gap-0.5">
         {!collapse && sectionLabel(t('section.settings'), 'mb-1')}
         {SETTINGS.map(item => renderItem(item, false, collapse))}
+        {/* 使用說明書（PDF，登入後可看／下載） */}
+        <div className={`flex items-center ${collapse ? 'flex-col gap-0.5' : 'gap-1'}`}>
+          <a href="/api/docs/marketing-manual" target="_blank" rel="noreferrer" title={collapse ? t('nav.manual') : undefined}
+            className={`flex flex-1 items-center rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors
+              ${collapse ? 'justify-center py-2.5 w-full' : 'gap-2.5 px-3 py-2'}`}>
+            <FileText className="h-4 w-4 shrink-0" />
+            {!collapse && t('nav.manual')}
+          </a>
+          {!collapse && (
+            <a href="/api/docs/marketing-manual?download=1" title={t('nav.manualDownload')}
+              className="grid place-items-center h-8 w-8 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700">
+              <Download className="h-4 w-4" />
+            </a>
+          )}
+        </div>
       </div>
 
       <div className="mt-auto pt-3 border-t border-gray-100 flex flex-col gap-1">

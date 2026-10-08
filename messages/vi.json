@@ -1704,7 +1704,9 @@
       "collapse": "Thu gọn menu",
       "expand": "Mở rộng menu",
       "erpMkt": "ERP Marketing",
-      "campaigns": "Chiến dịch"
+      "campaigns": "Chiến dịch",
+      "manual": "Hướng dẫn sử dụng",
+      "manualDownload": "Tải hướng dẫn sử dụng (PDF)"
     },
     "section": {
       "create": "Sáng tạo",
@@ -6917,7 +6919,9 @@
     "tabCompany": "Hồ sơ công ty",
     "tabCampaigns": "Trung tâm chiến dịch (AI / hiệu quả)",
     "tabCrm": "CRM hội viên & VIP",
-    "templatesLink": "Phong cách hình ảnh & quảng cáo"
+    "templatesLink": "Phong cách hình ảnh & quảng cáo",
+    "manual": "Hướng dẫn sử dụng",
+    "manualDownload": "Tải hướng dẫn sử dụng (PDF)"
   },
   "HrPage": {
     "staffFulltime": "Chính thức",
