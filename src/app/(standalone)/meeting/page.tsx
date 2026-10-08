@@ -22,6 +22,7 @@ interface Meeting {
   host_id: string
   source_lang: string
   department?: string
+  departments?: string[]
   meeting_mode?: 'online' | 'in_person'
   stores?: string[]
   context_keywords?: string
@@ -139,11 +140,19 @@ export default function MeetingPage() {
   const [fixedSentences, setFixedSentences] = useState<Record<string, string>>({})
 
   const [newTitle, setNewTitle] = useState('')
-  const [selectedDept, setSelectedDept] = useState('store')
+  const [selectedDepts, setSelectedDepts] = useState<string[]>(['store'])
   const [selectedMode, setSelectedMode] = useState<'online' | 'in_person'>('in_person')
   const [selectedStores, setSelectedStores] = useState<string[]>([])
   const [contextKeywords, setContextKeywords] = useState('')
   const [joinCode, setJoinCode] = useState('')
+
+  const toggleDept = (key: string) => {
+    setSelectedDepts(prev =>
+      prev.includes(key)
+        ? (prev.length > 1 ? prev.filter(k => k !== key) : prev)
+        : [...prev, key]
+    )
+  }
   const [myLang, setMyLang] = useState<string>(TRANSLATABLE.has(locale) ? locale : 'zh-TW')
   const [err, setErr] = useState('')
   const [copied, setCopied] = useState(false)
@@ -201,7 +210,7 @@ export default function MeetingPage() {
           if (Array.isArray(data.stores)) setStoreList(data.stores)
           if (data.voiceProfile) setVoiceProfile(data.voiceProfile)
           if (data.fixedSentences) setFixedSentences(data.fixedSentences)
-          if (data.user?.department) setSelectedDept(data.user.department)
+          if (data.user?.department) setSelectedDepts([data.user.department])
         }
       } catch (e) {
         console.warn('[Meeting] Failed to load meta:', e)
@@ -300,10 +309,16 @@ export default function MeetingPage() {
     if (!need.length) return
     let alive = true
 
+    const meetingDeptLabels = (
+      meeting.departments?.length
+        ? meeting.departments
+        : (meeting.department ? meeting.department.split(',') : [])
+    ).map(k => departments.find(d => d.key === k)?.label || k).join('、')
+
     // 滑動視窗上下文資料
     const context = {
       title: meeting.title,
-      department: meeting.department,
+      department: meetingDeptLabels || meeting.department,
       stores: meeting.stores,
       keywords: meeting.context_keywords,
       participants,
@@ -327,7 +342,7 @@ export default function MeetingPage() {
       })
       .catch(() => {})
     return () => { alive = false }
-  }, [lines, locale, meeting, participants])
+  }, [lines, locale, meeting, participants, departments])
 
   function translatedOf(l: Line): string | null {
     if (l.source_lang === locale || !TRANSLATABLE.has(locale)) return null
@@ -345,30 +360,33 @@ export default function MeetingPage() {
   // ── 建立會議 ──
   async function createMeeting() {
     setErr('')
-    const deptObj = departments.find(d => d.key === selectedDept)
+    const selectedDeptObjs = departments.filter(d => selectedDepts.includes(d.key))
+    const deptLabels = selectedDeptObjs.map(d => d.label).join('、')
     const storeNames = selectedStores
       .map(c => storeList.find(s => s.code === c)?.name || c)
       .join(', ')
 
-    // 彙整關鍵字：手動輸入 + 門市名稱
+    // 彙整關鍵字：手動輸入 + 門市名稱 + 跨部門名稱
     const combinedKeywords = [
+      deptLabels ? `跨部門領域: ${deptLabels}` : '',
       storeNames,
       contextKeywords.trim(),
     ].filter(Boolean).join(', ')
 
-    const autoTitle = newTitle.trim() || `${deptObj?.label || '營運'}會議${storeNames ? ` (${storeNames})` : ''}`
+    const autoTitle = newTitle.trim() || `${deptLabels || '跨部門'}會議${storeNames ? ` (${storeNames})` : ''}`
 
     const { data, error } = await supabase
       .from('meetings')
       .insert({
         title: autoTitle,
         source_lang: myLang,
-        department: selectedDept,
+        department: selectedDepts.join(','),
+        departments: selectedDepts,
         meeting_mode: selectedMode,
         stores: selectedStores,
         context_keywords: combinedKeywords,
       })
-      .select('id, title, room_code, host_id, source_lang, department, meeting_mode, stores, context_keywords')
+      .select('id, title, room_code, host_id, source_lang, department, departments, meeting_mode, stores, context_keywords')
       .single()
 
     if (error || !data) {
@@ -396,6 +414,7 @@ export default function MeetingPage() {
           host_id: string
           source_lang: string
           department?: string
+          departments?: string[]
           meeting_mode?: 'online' | 'in_person'
           stores?: string[]
           context_keywords?: string
@@ -409,6 +428,7 @@ export default function MeetingPage() {
       host_id: row.host_id,
       source_lang: row.source_lang,
       department: row.department,
+      departments: row.departments,
       meeting_mode: row.meeting_mode,
       stores: row.stores,
       context_keywords: row.context_keywords,
@@ -887,23 +907,42 @@ export default function MeetingPage() {
               />
             </div>
 
-            {/* 主責部門選單 */}
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {departments.map(d => (
-                <button
-                  key={d.key}
-                  type="button"
-                  onClick={() => setSelectedDept(d.key)}
-                  className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-xs transition-all ${
-                    selectedDept === d.key
-                      ? 'border-primary bg-primary/10 font-semibold text-primary'
-                      : 'border-border bg-background hover:bg-muted/50 text-muted-foreground'
-                  }`}
-                >
-                  <span className="text-sm">{d.icon}</span>
-                  <span className="truncate">{d.label}</span>
-                </button>
-              ))}
+            {/* 主責與跨部門選單（支援多選） */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                  <Building2 className="h-3.5 w-3.5" />
+                  {t('deptLabel')}
+                  <span className="text-[11px] text-muted-foreground/80">（可複選跨部門）</span>
+                </label>
+                {selectedDepts.length > 1 && (
+                  <span className="text-[11px] font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 px-2 py-0.5 rounded-full border border-blue-200 dark:border-blue-900/40 flex items-center gap-1">
+                    <Users className="h-3 w-3" />
+                    跨部門會議 ({selectedDepts.length})
+                  </span>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {departments.map(d => {
+                  const active = selectedDepts.includes(d.key)
+                  return (
+                    <button
+                      key={d.key}
+                      type="button"
+                      onClick={() => toggleDept(d.key)}
+                      className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-xs transition-all ${
+                        active
+                          ? 'border-primary bg-primary/10 font-semibold text-primary ring-1 ring-primary'
+                          : 'border-border bg-background hover:bg-muted/50 text-muted-foreground'
+                      }`}
+                    >
+                      <span className="text-sm">{d.icon}</span>
+                      <span className="truncate flex-1">{d.label}</span>
+                      {active && <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0" />}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
 
             {/* 關聯門市選取 */}
@@ -1049,7 +1088,10 @@ export default function MeetingPage() {
 
   // ── 會議進行中畫面 ──
   const isHost = me?.id === meeting.host_id
-  const deptObj = departments.find(d => d.key === meeting.department)
+  const meetingDeptKeys = meeting.departments?.length
+    ? meeting.departments
+    : (meeting.department ? meeting.department.split(',') : [])
+  const matchedDepts = departments.filter(d => meetingDeptKeys.includes(d.key))
 
   return (
     <div className="mx-auto flex h-full max-w-2xl flex-col gap-3 p-6">
@@ -1068,13 +1110,13 @@ export default function MeetingPage() {
               {meeting.meeting_mode === 'in_person' ? t('modeInPerson') : t('modeOnline')}
             </span>
 
-            {/* 部門徽章 */}
-            {deptObj && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] bg-muted border text-muted-foreground">
-                <span>{deptObj.icon}</span>
-                <span>{deptObj.label}</span>
+            {/* 部門徽章（支援跨部門多個徽章） */}
+            {matchedDepts.map(d => (
+              <span key={d.key} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] bg-muted border text-muted-foreground font-medium">
+                <span>{d.icon}</span>
+                <span>{d.label}</span>
               </span>
-            )}
+            ))}
           </div>
 
           <div className="flex items-center gap-3 text-xs text-muted-foreground">

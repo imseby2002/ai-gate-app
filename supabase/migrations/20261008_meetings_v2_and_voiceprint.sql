@@ -6,6 +6,7 @@
 
 alter table public.meetings
   add column if not exists department text not null default '',
+  add column if not exists departments text[] not null default '{}',
   add column if not exists meeting_mode text not null default 'online', -- 'online' | 'in_person'
   add column if not exists stores text[] not null default '{}',
   add column if not exists context_keywords text not null default '';
@@ -42,6 +43,7 @@ returns table (
   host_id uuid,
   source_lang text,
   department text,
+  departments text[],
   meeting_mode text,
   stores text[],
   context_keywords text
@@ -68,7 +70,7 @@ begin
   on conflict (meeting_id, user_id) do nothing;
 
   return query
-    select m.id, m.title, m.host_id, m.source_lang, m.department, m.meeting_mode, m.stores, m.context_keywords
+    select m.id, m.title, m.host_id, m.source_lang, m.department, m.departments, m.meeting_mode, m.stores, m.context_keywords
     from public.meetings m
     where m.id = v_id;
 end;
