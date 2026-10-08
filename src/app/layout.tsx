@@ -4,6 +4,7 @@ import { IntlProvider } from '@/components/layout/IntlProvider'
 import { ScopeManager } from '@/components/layout/ScopeManager'
 import { ServiceWorkerRegister } from '@/components/layout/ServiceWorkerRegister'
 import { GlobalFeedbackWidget } from '@/components/layout/GlobalFeedbackWidget'
+import { ApiErrorTranslator } from '@/components/layout/ApiErrorTranslator'
 import "./globals.css";
 
 export const dynamic = 'force-dynamic'
@@ -57,6 +58,7 @@ export default async function RootLayout({
           <ServiceWorkerRegister />
           {children}
           <GlobalFeedbackWidget />
+          <ApiErrorTranslator />
         </IntlProvider>
       </body>
     </html>
