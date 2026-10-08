@@ -430,7 +430,12 @@
    "預算需為 0 以上的數字": "Budget must be a number ≥ 0",
    "點數不足": "Not enough credits",
    "點數不足，本次結果未扣款": "Not enough credits — you weren't charged for this result",
-   "點數餘額不足": "Insufficient credit balance"
+   "點數餘額不足": "Insufficient credit balance",
+   "找不到聯絡人": "Contact not found",
+   "缺少 id": "Missing id",
+   "AI 服務暫時無法使用，請稍後再試": "AI service is temporarily unavailable, please try again later",
+   "找不到候選點": "Site not found",
+   "請先填寫地址或區域": "Please fill in an address or area first"
   },
   "vi": {
    "AI 回傳格式錯誤": "AI trả về sai định dạng",
@@ -874,7 +879,12 @@
    "File too large (max 50MB)": "Tệp quá lớn (tối đa 50MB)",
    "Unsupported file type": "Loại tệp không được hỗ trợ",
    "No file provided": "Chưa cung cấp tệp",
-   "Expired": "Đã hết hạn"
+   "Expired": "Đã hết hạn",
+   "找不到聯絡人": "Không tìm thấy liên hệ",
+   "缺少 id": "Thiếu id",
+   "AI 服務暫時無法使用，請稍後再試": "Dịch vụ AI tạm thời không khả dụng, vui lòng thử lại sau",
+   "找不到候選點": "Không tìm thấy mặt bằng",
+   "請先填寫地址或區域": "Vui lòng điền địa chỉ hoặc khu vực trước"
   },
   "zh-TW": {
    "Unauthorized": "未登入或登入已過期",
@@ -1181,6 +1191,11 @@
    "re": "^養號執行失敗:\\ (.+)$",
    "en": "Account warm-up failed: {1}",
    "vi": "Chạy nuôi tài khoản thất bại: {1}"
+  },
+  {
+   "re": "^缺少必填欄位：(.+)$",
+   "en": "Missing required field: {1}",
+   "vi": "Thiếu trường bắt buộc: {1}"
   }
  ]
 }
