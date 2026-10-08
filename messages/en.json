@@ -10338,7 +10338,21 @@
     "optAvail": "🟢 Available",
     "optRented": "🔴 Rented out",
     "optMaint": "🟡 Maintenance",
-    "fFeatureNotes": "Notes"
+    "fFeatureNotes": "Notes",
+    "s1": {
+      "industry": "Central Vietnam (Da Nang / Hoi An / Ba Na Hills) luxury private car hire with local Chinese-speaking assistants",
+      "product": "Brand-new 7–16 seat vans, bilingual drivers, fast-track airport transfers, custom itineraries with full insurance",
+      "audience": "Taiwanese family trips, independent backpackers, company outings and business delegations",
+      "offer": "Book 14 days ahead for 10% early-bird off, plus unlimited 5G SIMs for the group and a seafood restaurant discount",
+      "cta": "LINE official: @danang_tour or book on our website"
+    },
+    "s2": {
+      "industry": "Family-friendly whole-house hot spring homestay in Jiaoxi, Yilan",
+      "product": "Detached house with Japanese garden, private hot & cold springs, mahjong table, kids' ball pit, BBQ courtyard",
+      "audience": "Multi-generation families, friends booking the whole house, weekend getaways",
+      "offer": "Weekday stays include a fresh organic breakfast basket and a local hot-spring gift box",
+      "cta": "Ask us on LINE: @yilan_hotspring"
+    }
   },
   "MktCampaignsPage": {
     "title": "Campaign Center",

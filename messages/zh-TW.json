@@ -10338,7 +10338,21 @@
     "optAvail": "🟢 開放租用 (Available)",
     "optRented": "🔴 專屬租出中 (Rented Out)",
     "optMaint": "🟡 維護中 (Maintenance)",
-    "fFeatureNotes": "特色備註"
+    "fFeatureNotes": "特色備註",
+    "s1": {
+      "industry": "越南中越 (峴港/會安/巴拿山) 豪華包車與在地中文秘書服務",
+      "product": "全新7-16人座商務車、雙語中文司機、機場快速通關接送、行程客製保險全包",
+      "audience": "台灣家庭出遊、自由行背包客、公司員旅與商務考察團",
+      "offer": "出發前14天預訂享早鳥 9 折，加贈全團越南 5G 吃到飽上網卡與私房海鮮餐廳折扣",
+      "cta": "LINE 官方客服：@danang_tour 或 官網即時預約"
+    },
+    "s2": {
+      "industry": "宜蘭礁溪溫泉包棟親子特色民宿",
+      "product": "獨棟日式庭院、私人冷熱雙泉、電動麻將桌、兒童球池、烤肉庭院",
+      "audience": "三代同堂家庭、好友聚會包棟、週末度假客",
+      "offer": "平日預訂贈送現採無毒蔬果早餐籃與礁溪在地溫泉伴手禮盒",
+      "cta": "官方 LINE 諮詢：@yilan_hotspring"
+    }
   },
   "MktCampaignsPage": {
     "title": "活動企劃中心",

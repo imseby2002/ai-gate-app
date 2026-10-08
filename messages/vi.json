@@ -10245,7 +10245,21 @@
     "optAvail": "🟢 Đang cho thuê",
     "optRented": "🔴 Đã cho thuê",
     "optMaint": "🟡 Đang bảo trì",
-    "fFeatureNotes": "Ghi chú đặc điểm"
+    "fFeatureNotes": "Ghi chú đặc điểm",
+    "s1": {
+      "industry": "Thuê xe riêng cao cấp miền Trung Việt Nam (Đà Nẵng / Hội An / Bà Nà) kèm trợ lý nói tiếng Trung",
+      "product": "Xe 7–16 chỗ đời mới, tài xế song ngữ, đón tiễn sân bay ưu tiên, lịch trình tùy chỉnh kèm bảo hiểm trọn gói",
+      "audience": "Gia đình Đài Loan đi du lịch, khách tự túc, du lịch công ty và đoàn khảo sát doanh nghiệp",
+      "offer": "Đặt trước 14 ngày giảm 10%, tặng SIM 5G không giới hạn cho cả đoàn và ưu đãi nhà hàng hải sản",
+      "cta": "LINE chính thức: @danang_tour hoặc đặt ngay trên website"
+    },
+    "s2": {
+      "industry": "Homestay suối nước nóng thuê nguyên căn cho gia đình tại Jiaoxi, Yilan",
+      "product": "Nhà riêng sân vườn kiểu Nhật, hồ nóng lạnh riêng, bàn mạt chược tự động, hồ bóng trẻ em, sân nướng BBQ",
+      "audience": "Gia đình ba thế hệ, nhóm bạn thuê nguyên căn, khách nghỉ cuối tuần",
+      "offer": "Đặt ngày thường tặng giỏ bữa sáng rau củ hữu cơ và hộp quà suối nước nóng địa phương",
+      "cta": "Tư vấn qua LINE: @yilan_hotspring"
+    }
   },
   "MktCampaignsPage": {
     "title": "Trung tâm chiến dịch",
