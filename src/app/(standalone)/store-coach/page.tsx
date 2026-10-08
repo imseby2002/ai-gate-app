@@ -60,11 +60,11 @@ export default function StoreCoachPage() {
   const [copiedKey, setCopiedKey] = useState<string | null>(null)
 
   // 10-Layer Diagnosis State
-  const [problemTitle, setProblemTitle] = useState('多位顧客反映翡翠檸檬綠太甜、喉嚨有黏膩感')
-  const [problemDesc, setProblemDesc] = useState('下午 15:30-17:00 兩組外帶客人反應微糖還是太甜，調茶出單速度有些許延遲。')
-  const [selectedProduct, setSelectedProduct] = useState('翡翠檸檬綠')
+  const [problemTitle, setProblemTitle] = useState(t('sample.sweetTitle'))
+  const [problemDesc, setProblemDesc] = useState(t('sample.sweetDesc'))
+  const [selectedProduct, setSelectedProduct] = useState(t('sample.sweetProduct'))
   const [selectedCategory, setSelectedCategory] = useState('quality')
-  const [selectedStore, setSelectedStore] = useState('TNN-01 (台南旗艦店)')
+  const [selectedStore, setSelectedStore] = useState(t('sample.storeTnn'))
   const [diagnosing, setDiagnosing] = useState(false)
   const [diagnosisResult, setDiagnosisResult] = useState<DiagnosisOutput | null>(null)
   const [expandedLayer, setExpandedLayer] = useState<number | string | null>(1)
@@ -629,9 +629,9 @@ export default function StoreCoachPage() {
                   <button
                     type="button"
                     onClick={() => {
-                      setProblemTitle('多位顧客反映翡翠檸檬綠太甜、喉嚨有黏膩感')
-                      setProblemDesc('下午 15:30-17:00 兩組外帶客人反應微糖還是太甜，調茶出單速度有些許延遲。')
-                      setSelectedProduct('翡翠檸檬綠')
+                      setProblemTitle(t('sample.sweetTitle'))
+                      setProblemDesc(t('sample.sweetDesc'))
+                      setSelectedProduct(t('sample.sweetProduct'))
                       setSelectedCategory('quality')
                     }}
                     className="text-xs px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 border border-emerald-200 cursor-pointer"
@@ -641,9 +641,9 @@ export default function StoreCoachPage() {
                   <button
                     type="button"
                     onClick={() => {
-                      setProblemTitle('下午茶外送尖峰時段，出單到封口出現瓶頸積單 15 杯')
-                      setProblemDesc('調茶師頻繁在茶桶與封口機之間來回走動，取冰槽動線被點餐人員擋住，導致顧客催單。')
-                      setSelectedProduct('全部熱門飲品')
+                      setProblemTitle(t('sample.bottleTitle'))
+                      setProblemDesc(t('sample.bottleDesc'))
+                      setSelectedProduct(t('sample.bottleProduct'))
                       setSelectedCategory('efficiency')
                     }}
                     className="text-xs px-2 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 hover:bg-amber-100 border border-amber-200 cursor-pointer"
@@ -653,9 +653,9 @@ export default function StoreCoachPage() {
                   <button
                     type="button"
                     onClick={() => {
-                      setProblemTitle('新進工讀夥伴在點餐時面部緊繃無笑容，遭熟客投訴態度冷淡')
-                      setProblemDesc('晚班新夥伴剛來兩週，記不熟收銀 POS 促銷活動鍵，遇到客人催促時低頭慌張，未說進店問候語。')
-                      setSelectedProduct('服務接觸')
+                      setProblemTitle(t('sample.coldTitle'))
+                      setProblemDesc(t('sample.coldDesc'))
+                      setSelectedProduct(t('sample.coldProduct'))
                       setSelectedCategory('service')
                     }}
                     className="text-xs px-2 py-1 rounded-lg bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 hover:bg-purple-100 border border-purple-200 cursor-pointer"
@@ -675,10 +675,10 @@ export default function StoreCoachPage() {
                     onChange={e => setSelectedStore(e.target.value)}
                     className="w-full text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-200"
                   >
-                    <option>TNN-01 (台南旗艦店)</option>
-                    <option>TPE-02 (台北信義門市)</option>
-                    <option>KHH-03 (高雄巨蛋門市)</option>
-                    <option>SGN-01 (胡志明第一郡示範店)</option>
+                    <option>{t('sample.storeTnn')}</option>
+                    <option>{t('sample.storeTpe')}</option>
+                    <option>{t('sample.storeKhh')}</option>
+                    <option>{t('sample.storeSgn')}</option>
                   </select>
                 </div>
 
@@ -1835,21 +1835,21 @@ export default function StoreCoachPage() {
                   <span>{t('commonRegQueriesLabel')}</span>
                   <button
                     type="button"
-                    onClick={() => setRegQuery('收銀員私自收取現金未打 POS 單，公司處分規定是什麼？')}
+                    onClick={() => setRegQuery(t('sample.regCash'))}
                     className="px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 text-slate-200 cursor-pointer"
                   >
                     {t('sampleQueryCashHandling')}
                   </button>
                   <button
                     type="button"
-                    onClick={() => setRegQuery('原料賞味期過了或是標籤塗改，依照公司紅線如何懲處？')}
+                    onClick={() => setRegQuery(t('sample.regExpired'))}
                     className="px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 text-slate-200 cursor-pointer"
                   >
                     {t('sampleQueryExpiredMaterial')}
                   </button>
                   <button
                     type="button"
-                    onClick={() => setRegQuery('員工把公司配方表拍照傳到社群網路，公司法律責任為何？')}
+                    onClick={() => setRegQuery(t('sample.regRecipe'))}
                     className="px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 text-slate-200 cursor-pointer"
                   >
                     {t('sampleQueryRecipeLeak')}
@@ -1959,11 +1959,11 @@ export default function StoreCoachPage() {
                   <button
                     type="button"
                     onClick={() => {
-                      setLearnTitle('【總部SOP】打烊保溫茶桶深度除垢與密封環消毒指引')
+                      setLearnTitle(t('sample.t1Title'))
                       setLearnType('sop_manual')
                       setLearnDimension('hygiene')
                       setLearnUrl('https://internal.feelingtea.com/sop/tea-urn-sanitation')
-                      setLearnContent(`保溫茶桶出水龍頭在長期使用後，喉管內部容易附著單寧酸茶垢與微細水垢，若未每日拆卸浸泡，會導致出茶帶有陳年茶酸味。\n標準打烊流程：\n1. 每日打烊前以 70°C 溫水沖泡食用級檸檬酸粉 (比例 1:50)，注入茶桶浸泡 20 分鐘。\n2. 拆卸出水龍頭矽膠密封環，置於 75% 食品級酒精浸泡碗中，嚴禁使用粗糙菜瓜布刷洗以防刮傷漏水。\n3. 隔日開早以 85°C 煮沸純水徹底循環沖洗兩次後，方可注入新鮮基底茶。`)
+                      setLearnContent(t('sample.c1'))
                     }}
                     className="text-xs px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-emerald-50 hover:text-emerald-700 border border-slate-300 dark:border-slate-600 transition-colors cursor-pointer"
                   >
@@ -1973,11 +1973,11 @@ export default function StoreCoachPage() {
                   <button
                     type="button"
                     onClick={() => {
-                      setLearnTitle('【督導現場實證】尖峰外送雙軌叫號防催單與防漏做策略')
+                      setLearnTitle(t('sample.t2Title'))
                       setLearnType('audit_report')
                       setLearnDimension('workflow')
                       setLearnUrl('https://internal.feelingtea.com/audit/rush-delivery-queue')
-                      setLearnContent(`台南旗艦店在外送平台促銷期間，外送員常聚集於取餐台前催單，造成現場散客感受壓迫，且調茶師常因外送多杯重疊而跳單漏料。\n改善對策實證：\n1. 設立獨立「外送待取區」於取餐櫃檯右側 1.5 公尺處，劃定藍色等待標線，與現場散客取餐動線物理隔離。\n2. 實施「雙標籤貼單制」：一張貼杯身、一張貼外帶袋口，調茶師做完由機動手核對雙標籤無誤後裝袋打結，杜絕漏放吸管與誤拿。\n3. 平台接單設定前置製作緩衝時間由 8 分鐘彈性調整為 12 分鐘。`)
+                      setLearnContent(t('sample.c2'))
                     }}
                     className="text-xs px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-amber-50 hover:text-amber-700 border border-slate-300 dark:border-slate-600 transition-colors cursor-pointer"
                   >
@@ -1987,11 +1987,11 @@ export default function StoreCoachPage() {
                   <button
                     type="button"
                     onClick={() => {
-                      setLearnTitle('【客訴應對案例】冰塊融化導致飲品口感變淡的換新與試飲挽回法')
+                      setLearnTitle(t('sample.t3Title'))
                       setLearnType('complaint_case')
                       setLearnDimension('coaching')
                       setLearnUrl('')
-                      setLearnContent(`顧客外帶一杯微冰四季春，在店內座位區待了 30 分鐘後向櫃台抱怨「茶喝起來很淡，像白開水一樣」。\n現場店長標準處置流程：\n1. 第一時間微笑接過飲料，同理顧客感受：「不好意思，四季春放久冰塊融化確實會把茶香沖淡！」\n2. 絕不爭辯「那是因為您放太久」，立即啟動 30 秒重調政策：「我立刻幫您用剛煮好的現泡茶湯，重做一杯微冰黃金比例！」\n3. 遞送新茶時雙手奉上，並贈送一張新品試飲卡：「這是我們今日現煮的高山四季春，趁冰度剛好時品嚐香氣最鮮美！」`)
+                      setLearnContent(t('sample.c3'))
                     }}
                     className="text-xs px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-blue-50 hover:text-blue-700 border border-slate-300 dark:border-slate-600 transition-colors cursor-pointer"
                   >
@@ -2001,11 +2001,11 @@ export default function StoreCoachPage() {
                   <button
                     type="button"
                     onClick={() => {
-                      setLearnTitle('【設備校準查核】蒸汽奶棒噴嘴與紅外線溫度槍每週校正指南')
+                      setLearnTitle(t('sample.t4Title'))
                       setLearnType('supervisor_guide')
                       setLearnDimension('workstation')
                       setLearnUrl('')
-                      setLearnContent(`熱飲奶泡綿密度與熱飲溫度是否精準 (標準 65°C)，直接影響鮮奶甜感與香氣。\n每週校準標準：\n1. 蒸奶棒使用專用通針清理四個氣孔，以牛奶除垢液浸泡 15 分鐘後排空蒸氣 3 次。\n2. 紅外線溫度槍與水銀標準溫度計同步測量 65°C 熱水，誤差超過 ±1.5°C 需更換電池或校正發射率。\n3. 測試打發 200ml 全脂鮮奶，細緻微氣泡綿密層厚度需達 1.5cm。`)
+                      setLearnContent(t('sample.c4'))
                     }}
                     className="text-xs px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-purple-50 hover:text-purple-700 border border-slate-300 dark:border-slate-600 transition-colors cursor-pointer"
                   >
@@ -2245,21 +2245,21 @@ export default function StoreCoachPage() {
                 <span className="text-[11px] text-emerald-300 font-semibold">{t('recommendedQueriesLabel')}</span>
                 <button
                   type="button"
-                  onClick={() => setCoachQuery('打烊保溫茶桶如何深度除垢？矽膠密封環可以用菜瓜布刷嗎？')}
+                  onClick={() => setCoachQuery(t('sample.coachUrn'))}
                   className="text-[11px] px-2 py-0.5 rounded-md bg-white/10 hover:bg-white/20 text-slate-200 border border-white/15 cursor-pointer"
                 >
                   {t('sampleCoachQueryTeaUrn')}
                 </button>
                 <button
                   type="button"
-                  onClick={() => setCoachQuery('尖峰時段外送員一直在吧檯前催單，我們該如何劃分動線和貼單防漏？')}
+                  onClick={() => setCoachQuery(t('sample.coachDelivery'))}
                   className="text-[11px] px-2 py-0.5 rounded-md bg-white/10 hover:bg-white/20 text-slate-200 border border-white/15 cursor-pointer"
                 >
                   {t('sampleCoachQueryDelivery')}
                 </button>
                 <button
                   type="button"
-                  onClick={() => setCoachQuery('客人說冰塊融化茶變淡了，店長要怎麼教新夥伴親切應對並重做？')}
+                  onClick={() => setCoachQuery(t('sample.coachDiluted'))}
                   className="text-[11px] px-2 py-0.5 rounded-md bg-white/10 hover:bg-white/20 text-slate-200 border border-white/15 cursor-pointer"
                 >
                   {t('sampleCoachQueryDilutedTea')}
