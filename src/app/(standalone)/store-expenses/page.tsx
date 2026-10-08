@@ -158,6 +158,7 @@ function VendorsTab() {
           title="批次匯入廠商資料"
           description="支援 .xlsx, .xls 與 .csv 檔案。若統編或廠商名稱相符將自動更新。"
           columns={VENDOR_IMPORT_COLUMNS}
+          columnsNs="StoreExpensesImport.vendor"
           templateFilename="廠商資料範本"
           sheetName="廠商名冊"
           onClose={() => setShowImport(false)}
@@ -577,6 +578,7 @@ function StoresTab() {
           title="批次匯入門市 / 區域"
           description="支援 .xlsx, .xls 與 .csv 檔案。若門市代碼相符將自動更新。"
           columns={STORE_IMPORT_COLUMNS}
+          columnsNs="StoreExpensesImport.store"
           templateFilename="門市資料範本"
           sheetName="門市清單"
           onClose={() => setShowImport(false)}
@@ -671,6 +673,7 @@ function CategoriesTab() {
           title="批次匯入費用科目"
           description="支援 .xlsx, .xls 與 .csv 檔案。若科目代碼相符將自動更新。"
           columns={CATEGORY_IMPORT_COLUMNS}
+          columnsNs="StoreExpensesImport.category"
           templateFilename="費用科目範本"
           sheetName="科目清單"
           onClose={() => setShowImport(false)}

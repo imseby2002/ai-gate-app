@@ -83,6 +83,7 @@ export default function UnitsPage() {
           title="批次匯入 / 更新單位資料"
           description="支援 .xlsx, .xls 與 .csv 檔案。若單位編號相符將自動更新，否則新增。"
           columns={UNIT_IMPORT_COLUMNS}
+          columnsNs="UnitsImport"
           templateFilename="單位資料範本"
           sheetName="單位清單"
           onClose={() => setShowImport(false)}

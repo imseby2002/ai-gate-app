@@ -10898,5 +10898,643 @@
     "colOut": "Chi",
     "colNote": "Diễn giải / ghi chú",
     "eFooter": "Tổng {n} mục (lỗi: {e}, cảnh báo: {w})"
+  },
+  "HrImport": {
+    "employee": {
+      "name": {
+        "label": "Họ tên",
+        "example": "Nguyễn Văn Minh"
+      },
+      "phone": {
+        "label": "Điện thoại"
+      },
+      "department": {
+        "label": "Phòng ban"
+      },
+      "position": {
+        "label": "Chức danh",
+        "example": "Nhân viên cửa hàng"
+      },
+      "staff_category": {
+        "label": "Toàn thời gian / bán thời gian"
+      },
+      "employment_type": {
+        "label": "Loại hợp đồng"
+      },
+      "hire_date": {
+        "label": "Ngày vào làm"
+      },
+      "base_salary": {
+        "label": "Lương cơ bản"
+      },
+      "hourly_rate": {
+        "label": "Lương theo giờ"
+      },
+      "store": {
+        "label": "Cửa hàng"
+      },
+      "attendance_no": {
+        "label": "Mã chấm công"
+      },
+      "bank_account": {
+        "label": "Số tài khoản"
+      },
+      "bank_name": {
+        "label": "Ngân hàng nhận"
+      },
+      "id_number": {
+        "label": "Số CCCD"
+      },
+      "status": {
+        "label": "Trạng thái"
+      },
+      "notes": {
+        "label": "Ghi chú"
+      },
+      "_meta": {
+        "title": "Nhập / cập nhật nhân viên hàng loạt",
+        "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Nếu họ tên và số CCCD đã tồn tại sẽ tự cập nhật, ngược lại sẽ thêm mới.",
+        "template": "Mau nhan vien",
+        "sheet": "Nhan vien"
+      }
+    },
+    "payroll": {
+      "name": {
+        "label": "Tên nhân viên",
+        "example": "Nguyễn Văn Minh"
+      },
+      "year": {
+        "label": "Năm"
+      },
+      "month": {
+        "label": "Tháng"
+      },
+      "base_salary": {
+        "label": "Lương cơ bản"
+      },
+      "allowances": {
+        "label": "Phụ cấp"
+      },
+      "deductions": {
+        "label": "Khấu trừ"
+      },
+      "bonus": {
+        "label": "Thưởng"
+      },
+      "notes": {
+        "label": "Ghi chú"
+      },
+      "_meta": {
+        "title": "Nhập / cập nhật bảng lương tháng",
+        "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Lương tháng đã có của nhân viên sẽ được ghi đè; nhân viên chưa có sẽ được tự tạo.",
+        "template": "Mau bang luong",
+        "sheet": "Bang luong"
+      }
+    },
+    "candidate": {
+      "name": {
+        "label": "Họ tên",
+        "example": "Lê Văn Đồng"
+      },
+      "phone": {
+        "label": "Điện thoại"
+      },
+      "position": {
+        "label": "Vị trí ứng tuyển",
+        "example": "Pha chế"
+      },
+      "store": {
+        "label": "Cửa hàng ứng tuyển"
+      },
+      "staff_category": {
+        "label": "Toàn thời gian / bán thời gian"
+      },
+      "stage": {
+        "label": "Giai đoạn tuyển dụng"
+      },
+      "birthday": {
+        "label": "Ngày sinh"
+      },
+      "id_number": {
+        "label": "Số CCCD"
+      },
+      "_meta": {
+        "title": "Nhập / cập nhật ứng viên hàng loạt",
+        "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Nếu trùng điện thoại, email hoặc số CCCD sẽ tự cập nhật, ngược lại thêm mới.",
+        "template": "Mau ung vien",
+        "sheet": "Ung vien"
+      }
+    },
+    "evaluation": {
+      "name": {
+        "label": "Tên nhân viên",
+        "example": "Nguyễn Văn Minh"
+      },
+      "attendance_no": {
+        "label": "Mã chấm công"
+      },
+      "year": {
+        "label": "Năm"
+      },
+      "month": {
+        "label": "Tháng"
+      },
+      "bonus": {
+        "label": "Thưởng"
+      },
+      "reward": {
+        "label": "Tiền thưởng"
+      },
+      "penalty": {
+        "label": "Tiền phạt"
+      },
+      "score": {
+        "label": "Điểm"
+      },
+      "notes": {
+        "label": "Nhận xét",
+        "example": "Chuyên cần tốt, làm việc xuất sắc"
+      },
+      "_meta": {
+        "title": "Nhập / cập nhật đánh giá, khen thưởng & kỷ luật",
+        "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Vui lòng điền tên nhân viên hoặc mã chấm công.",
+        "template": "Mau danh gia",
+        "sheet": "Danh gia"
+      }
+    },
+    "insurance": {
+      "name": {
+        "label": "Tên nhân viên",
+        "example": "Nguyễn Văn Minh"
+      },
+      "id_number": {
+        "label": "Số CCCD"
+      },
+      "attendance_no": {
+        "label": "Mã chấm công"
+      },
+      "insurance_required": {
+        "label": "Cần đóng bảo hiểm?"
+      },
+      "insurance_status": {
+        "label": "Tình trạng bảo hiểm"
+      },
+      "insurance_number": {
+        "label": "Số sổ bảo hiểm"
+      },
+      "insurance_salary": {
+        "label": "Lương đóng bảo hiểm"
+      },
+      "_meta": {
+        "title": "Nhập / cập nhật bảo hiểm hàng loạt",
+        "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Đối chiếu theo tên, số CCCD hoặc mã chấm công để cập nhật tình trạng, số sổ và mức lương đóng bảo hiểm.",
+        "template": "Mau bao hiem",
+        "sheet": "Bao hiem"
+      }
+    },
+    "leave": {
+      "name": {
+        "label": "Tên nhân viên",
+        "example": "Nguyễn Văn Minh"
+      },
+      "attendance_no": {
+        "label": "Mã chấm công"
+      },
+      "leave_type": {
+        "label": "Loại nghỉ phép"
+      },
+      "start_date": {
+        "label": "Ngày bắt đầu"
+      },
+      "end_date": {
+        "label": "Ngày kết thúc"
+      },
+      "days": {
+        "label": "Số ngày"
+      },
+      "reason": {
+        "label": "Lý do",
+        "example": "Việc gia đình"
+      },
+      "status": {
+        "label": "Trạng thái duyệt"
+      },
+      "notes": {
+        "label": "Ghi chú"
+      },
+      "_meta": {
+        "title": "Nhập ngày nghỉ phép hàng loạt",
+        "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Vui lòng điền tên nhân viên hoặc mã chấm công.",
+        "template": "Mau nghi phep",
+        "sheet": "Nghi phep"
+      }
+    }
+  },
+  "UnitsImport": {
+    "code": {
+      "label": "Mã đơn vị"
+    },
+    "name": {
+      "label": "Tên đơn vị"
+    },
+    "unit_type": {
+      "label": "Loại"
+    },
+    "short_name": {
+      "label": "Tên viết tắt"
+    },
+    "region": {
+      "label": "Khu vực",
+      "example": "Hồ Chí Minh"
+    },
+    "base_hourly_rate": {
+      "label": "Lương giờ cơ bản"
+    },
+    "electricity_no": {
+      "label": "Mã số điện"
+    },
+    "water_no": {
+      "label": "Mã số nước"
+    },
+    "address": {
+      "label": "Địa chỉ",
+      "example": "Quận 1, TP. Hồ Chí Minh..."
+    },
+    "active": {
+      "label": "Đang hoạt động"
+    },
+    "_meta": {
+      "title": "Nhập / cập nhật đơn vị hàng loạt",
+      "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Nếu trùng mã đơn vị sẽ tự cập nhật, ngược lại thêm mới.",
+      "template": "Mau don vi",
+      "sheet": "Don vi"
+    }
+  },
+  "AffairsImport": {
+    "title": {
+      "label": "Tiêu đề tài liệu",
+      "example": "Hợp đồng thuê mặt bằng cửa hàng Zhongxiao"
+    },
+    "doc_type": {
+      "label": "Loại tài liệu"
+    },
+    "store_code": {
+      "label": "Mã cửa hàng"
+    },
+    "counterparty": {
+      "label": "Bên ký / bên cho thuê",
+      "example": "Chủ nhà Vương Đại Minh"
+    },
+    "effective_date": {
+      "label": "Ngày hiệu lực"
+    },
+    "expiry_date": {
+      "label": "Ngày hết hạn"
+    },
+    "deposit": {
+      "label": "Tiền cọc"
+    },
+    "monthly_rent": {
+      "label": "Tiền thuê / phí hàng tháng"
+    },
+    "payment_day": {
+      "label": "Ngày thanh toán hàng tháng"
+    },
+    "notes": {
+      "label": "Ghi chú",
+      "example": "Cọc 2 tháng, điện nước tự trả"
+    },
+    "_meta": {
+      "title": "Nhập giấy phép & hợp đồng thuê hàng loạt",
+      "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Nếu trùng tiêu đề tài liệu sẽ tự cập nhật.",
+      "template": "Mau giay phep va hop dong thue",
+      "sheet": "Tai lieu"
+    }
+  },
+  "RdLogsImport": {
+    "title": {
+      "label": "Tiêu đề nhật ký",
+      "example": "Ghi chép thử hương vị công thức"
+    },
+    "summary": {
+      "label": "Nội dung nhật ký",
+      "example": "Giảm độ ngọt 5%, hương trà rõ hơn..."
+    },
+    "date": {
+      "label": "Ngày"
+    },
+    "_meta": {
+      "title": "Nhập nhật ký R&D hàng loạt",
+      "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Cần có tiêu đề và nội dung nhật ký.",
+      "template": "Mau nhat ky RD",
+      "sheet": "Nhat ky RD"
+    }
+  },
+  "StoreExpensesImport": {
+    "store": {
+      "code": {
+        "label": "Mã cửa hàng"
+      },
+      "name": {
+        "label": "Tên cửa hàng"
+      },
+      "region": {
+        "label": "Khu vực",
+        "example": "Hồ Chí Minh"
+      },
+      "active": {
+        "label": "Đang hoạt động"
+      },
+      "_meta": {
+        "title": "Nhập cửa hàng / khu vực hàng loạt",
+        "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Nếu trùng mã cửa hàng sẽ tự cập nhật.",
+        "template": "Mau cua hang",
+        "sheet": "Cua hang"
+      }
+    },
+    "category": {
+      "code": {
+        "label": "Mã khoản mục"
+      },
+      "name": {
+        "label": "Tên khoản mục",
+        "example": "Tiền nước"
+      },
+      "entry_method": {
+        "label": "Cách nhập"
+      },
+      "vendor_service": {
+        "label": "Loại nhà cung cấp"
+      },
+      "sort": {
+        "label": "Thứ tự"
+      },
+      "_meta": {
+        "title": "Nhập khoản mục chi phí hàng loạt",
+        "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Nếu trùng mã khoản mục sẽ tự cập nhật.",
+        "template": "Mau khoan muc chi phi",
+        "sheet": "Khoan muc"
+      }
+    },
+    "vendor": {
+      "name": {
+        "label": "Tên nhà cung cấp",
+        "example": "Công ty gas"
+      },
+      "service": {
+        "label": "Dịch vụ"
+      },
+      "regions": {
+        "label": "Khu vực phục vụ"
+      },
+      "active": {
+        "label": "Đang hoạt động"
+      },
+      "_meta": {
+        "title": "Nhập nhà cung cấp hàng loạt",
+        "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Nếu trùng mã số thuế hoặc tên nhà cung cấp sẽ tự cập nhật.",
+        "template": "Mau nha cung cap",
+        "sheet": "Nha cung cap"
+      }
+    }
+  },
+  "VendorsImport": {
+    "vendor": {
+      "name": {
+        "label": "Tên nhà cung cấp",
+        "example": "Nhà cung cấp trà Đài Loan"
+      },
+      "tax_id": {
+        "label": "Mã số thuế"
+      },
+      "service": {
+        "label": "Loại"
+      },
+      "contact": {
+        "label": "Người liên hệ",
+        "example": "Anh Trần"
+      },
+      "phone": {
+        "label": "Điện thoại"
+      },
+      "address": {
+        "label": "Địa chỉ",
+        "example": "Quận Đại An, Đài Bắc..."
+      },
+      "products": {
+        "label": "Sản phẩm cung cấp",
+        "example": "Lá trà, nguyên liệu"
+      },
+      "pay_terms": {
+        "label": "Hình thức thanh toán"
+      },
+      "billing_cycle": {
+        "label": "Chu kỳ thanh toán"
+      },
+      "billing_day": {
+        "label": "Ngày chốt sổ"
+      },
+      "active": {
+        "label": "Đang hoạt động"
+      },
+      "_meta": {
+        "title": "Nhập / cập nhật nhà cung cấp hàng loạt",
+        "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Nếu trùng mã số thuế hoặc tên sẽ tự cập nhật, ngược lại thêm mới.",
+        "template": "Mau nha cung cap",
+        "sheet": "Nha cung cap"
+      }
+    },
+    "purchase": {
+      "purchased_on": {
+        "label": "Ngày mua"
+      },
+      "product": {
+        "label": "Mặt hàng mua",
+        "example": "Hồng trà Ceylon cao cấp"
+      },
+      "qty": {
+        "label": "Số lượng"
+      },
+      "amount": {
+        "label": "Số tiền"
+      },
+      "note": {
+        "label": "Ghi chú",
+        "example": "Lô nhập đầu tiên"
+      },
+      "_meta": {
+        "title": "Nhập lịch sử mua hàng hàng loạt",
+        "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Vui lòng điền ngày mua, mặt hàng và số tiền.",
+        "template": "Mau mua hang",
+        "sheet": "Mua hang"
+      }
+    }
+  },
+  "PersonnelImport": {
+    "name": {
+      "label": "Họ tên",
+      "example": "Nguyễn Thị Phương"
+    },
+    "gender": {
+      "label": "Giới tính"
+    },
+    "native_place": {
+      "label": "Quê quán",
+      "example": "TP. Hồ Chí Minh"
+    },
+    "birthday": {
+      "label": "Ngày sinh"
+    },
+    "id_number": {
+      "label": "Số CCCD"
+    },
+    "education": {
+      "label": "Trình độ học vấn"
+    },
+    "phone": {
+      "label": "Điện thoại"
+    },
+    "email": {
+      "label": "Email cá nhân"
+    },
+    "company_email": {
+      "label": "Email công ty"
+    },
+    "position": {
+      "label": "Chức vụ",
+      "example": "Cửa hàng trưởng"
+    },
+    "store": {
+      "label": "Cửa hàng"
+    },
+    "staff_category": {
+      "label": "Toàn thời gian / bán thời gian"
+    },
+    "payroll_no": {
+      "label": "Mã lương"
+    },
+    "address": {
+      "label": "Địa chỉ",
+      "example": "Quận 1, TP. Hồ Chí Minh"
+    },
+    "_meta": {
+      "title": "Nhập / cập nhật nhân sự hàng loạt",
+      "description": "Hỗ trợ Excel (.xlsx) và CSV. Nếu trùng số CCCD, email hoặc họ tên + điện thoại sẽ tự cập nhật, ngược lại thêm mới.",
+      "template": "Mau nhan su",
+      "sheet": "Nhan su"
+    }
+  },
+  "ShiftImport": {
+    "employee_name": {
+      "label": "Tên nhân viên",
+      "example": "Nguyễn Văn Minh"
+    },
+    "work_date": {
+      "label": "Ngày làm việc"
+    },
+    "slot_code": {
+      "label": "Ca làm"
+    },
+    "_meta": {
+      "title": "Nhập lịch ca hàng loạt",
+      "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Vui lòng điền tên nhân viên, ngày làm (YYYY-MM-DD) và ca (早 / 午 / 晚 = sáng / trưa / tối).",
+      "template": "Mau xep ca",
+      "sheet": "Lich ca"
+    }
+  },
+  "HrUnion": {
+    "subtitle": "Quản lý đoàn viên, phúc lợi thăm hỏi, thỏa ước tập thể và báo cáo tài chính theo quy định của Tổng Liên đoàn Lao động Việt Nam",
+    "noDocs": "Chưa lưu thỏa ước hay biên bản đối thoại nào. Hỗ trợ tải lên PDF có đóng dấu để lưu trữ lâu dài.",
+    "noBenefits": "Chưa có đề nghị nào. Hỗ trợ đề nghị và duyệt trực tuyến cho sinh nhật, kết hôn, sinh con, nằm viện, trợ cấp khó khăn.",
+    "totalIncome": "Tổng thu (đoàn phí 1% & kinh phí 2%)",
+    "exportReport": "Xuất báo cáo tài chính công đoàn (Mẫu B14-CĐ & B15-CĐ)",
+    "tabDocs": "TƯLĐTT & đối thoại",
+    "docsTitle": "Thỏa ước lao động tập thể (TƯLĐTT) và biên bản đối thoại định kỳ hàng quý",
+    "totalExpense": "Tổng chi (thăm hỏi, phong trào)",
+    "requestTitle": "Đề nghị chế độ & thăm hỏi",
+    "tabFinances": "Tài chính công đoàn",
+    "noMembers": "Chưa có đoàn viên. Bấm \"Thêm đoàn viên\" ở góc trên bên phải để ghi nhận.",
+    "docTitlePh": "VD: Thỏa ước lao động tập thể 2026-2028 (đã đóng dấu)",
+    "entryTitle": "Ghi sổ thu - chi công đoàn",
+    "code2": "Kinh phí công đoàn 2%",
+    "tabBenefits": "Chế độ & thăm hỏi",
+    "noEntries": "Chưa có thu chi. Bấm \"Ghi sổ\" ở góc trên bên phải để thêm khoản thu hoặc chi.",
+    "code3": "Thăm hỏi, trợ cấp",
+    "cardNumber": "Số thẻ đoàn viên",
+    "balance": "Kết dư tài chính",
+    "title": "Công đoàn cơ sở",
+    "uploadDocTitle": "Tải lên thỏa ước tập thể / biên bản",
+    "receiptNo": "Số chứng từ",
+    "addMemberTitle": "Thêm đoàn viên công đoàn",
+    "code1": "Đoàn phí 1%",
+    "tabMembers": "Đoàn viên",
+    "bhxhNumber": "Mã số BHXH",
+    "code4": "Phong trào",
+    "statusApproved": "Đã duyệt",
+    "statusPending": "Chờ duyệt",
+    "active": "Đoàn viên",
+    "statusPaid": "✓ Đã chi",
+    "reasonPh": "VD: giấy ra viện lưu hồ sơ, quà cưới",
+    "code5": "Quản lý",
+    "amountVndReq": "Số tiền (VND) *",
+    "benefitsTitle": "Chi trả chế độ & duyệt thăm hỏi",
+    "idNumber": "Số CCCD",
+    "summaryPh": "VD: Trích đoàn phí tháng 7",
+    "reasonVoucher": "Lý do / số chứng từ",
+    "choosePdf": "Chọn tệp PDF scan",
+    "amountReq": "Số tiền (VND) *",
+    "bhxh": "Mã số BHXH:",
+    "uploadDoc": "Tải lên thỏa ước / biên bản",
+    "addEntry": "Ghi sổ (thu / chi)",
+    "storeDept": "Cửa hàng / phòng ban",
+    "requestBenefit": "Đề nghị trợ cấp / thăm hỏi",
+    "income": "Thu",
+    "expense": "Chi",
+    "ledger": "Sổ thu chi chi tiết",
+    "pleaseChoose": "— Vui lòng chọn —",
+    "addMember": "Thêm đoàn viên",
+    "employeeNameReq": "Tên nhân viên *",
+    "chooseMemberReq": "Chọn đoàn viên *",
+    "benefitTypeReq": "Loại chế độ *",
+    "docCategoryReq": "Phân loại tài liệu *",
+    "docTitleReq": "Tiêu đề tài liệu *",
+    "confirmUpload": "Xác nhận tải lên",
+    "joinDate": "Ngày vào công đoàn:",
+    "requestDate": "Ngày đề nghị:",
+    "effective": "Ngày hiệu lực:",
+    "expiry": "Ngày hết hạn:",
+    "saveFailed": "Lưu thất bại",
+    "confirmSave": "Xác nhận lưu",
+    "requestFailed": "Gửi đề nghị thất bại",
+    "submitRequest": "Gửi đề nghị",
+    "uploadFailed": "Tải lên thất bại",
+    "entryFailed": "Ghi sổ thất bại",
+    "typeReq": "Loại *",
+    "itemCode": "Mã khoản mục",
+    "summary": "Diễn giải",
+    "confirmEntry": "Xác nhận ghi sổ",
+    "cardNo": "Số thẻ:",
+    "note": "Ghi chú:",
+    "remark": "Ghi chú:",
+    "voucher": "Chứng từ:",
+    "hq": "Trụ sở chính",
+    "member": "Đoàn viên",
+    "cancel": "Hủy",
+    "other": "Khác",
+    "memberCount": "Tổng {n} đoàn viên",
+    "benefit": {
+      "birthday": "Quà sinh nhật",
+      "marriage": "Mừng kết hôn",
+      "maternity": "Trợ cấp sinh con",
+      "hospital": "Thăm hỏi nằm viện",
+      "relief": "Trợ cấp khó khăn",
+      "other": "Phúc lợi khác"
+    },
+    "docCat": {
+      "tuldtt": "Thỏa ước lao động tập thể (TƯLĐTT)",
+      "noiquy": "Nội quy lao động",
+      "doitheo": "Biên bản đối thoại",
+      "committee": "Đại hội / Quyết định"
+    }
   }
 }

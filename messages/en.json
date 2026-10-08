@@ -10991,5 +10991,643 @@
     "colOut": "Out",
     "colNote": "Note",
     "eFooter": "{n} items (errors: {e}, warnings: {w})"
+  },
+  "HrImport": {
+    "employee": {
+      "name": {
+        "label": "Name",
+        "example": "John Wang"
+      },
+      "phone": {
+        "label": "Phone"
+      },
+      "department": {
+        "label": "Department"
+      },
+      "position": {
+        "label": "Job title",
+        "example": "Store staff"
+      },
+      "staff_category": {
+        "label": "Full/part-time"
+      },
+      "employment_type": {
+        "label": "Employment type"
+      },
+      "hire_date": {
+        "label": "Start date"
+      },
+      "base_salary": {
+        "label": "Base salary"
+      },
+      "hourly_rate": {
+        "label": "Hourly rate"
+      },
+      "store": {
+        "label": "Store"
+      },
+      "attendance_no": {
+        "label": "Attendance ID"
+      },
+      "bank_account": {
+        "label": "Bank account"
+      },
+      "bank_name": {
+        "label": "Bank"
+      },
+      "id_number": {
+        "label": "ID number"
+      },
+      "status": {
+        "label": "Status"
+      },
+      "notes": {
+        "label": "Notes"
+      },
+      "_meta": {
+        "title": "Batch import / update employees",
+        "description": "Supports .xlsx, .xls and .csv files. Existing employees (same name and ID number) are updated; others are added.",
+        "template": "Employee template",
+        "sheet": "Employees"
+      }
+    },
+    "payroll": {
+      "name": {
+        "label": "Employee name",
+        "example": "John Wang"
+      },
+      "year": {
+        "label": "Year"
+      },
+      "month": {
+        "label": "Month"
+      },
+      "base_salary": {
+        "label": "Base salary"
+      },
+      "allowances": {
+        "label": "Allowances"
+      },
+      "deductions": {
+        "label": "Deductions"
+      },
+      "bonus": {
+        "label": "Bonus"
+      },
+      "notes": {
+        "label": "Notes"
+      },
+      "_meta": {
+        "title": "Batch import / update monthly payroll",
+        "description": "Supports .xlsx, .xls and .csv files. An employee's existing payroll for that month is overwritten; missing employees are created automatically.",
+        "template": "Payroll template",
+        "sheet": "Payroll"
+      }
+    },
+    "candidate": {
+      "name": {
+        "label": "Name",
+        "example": "David Lee"
+      },
+      "phone": {
+        "label": "Phone"
+      },
+      "position": {
+        "label": "Position applied",
+        "example": "Drink maker"
+      },
+      "store": {
+        "label": "Store applied"
+      },
+      "staff_category": {
+        "label": "Full/part-time"
+      },
+      "stage": {
+        "label": "Stage"
+      },
+      "birthday": {
+        "label": "Birthday"
+      },
+      "id_number": {
+        "label": "ID number"
+      },
+      "_meta": {
+        "title": "Batch import / update candidates",
+        "description": "Supports .xlsx, .xls and .csv files. Matching phone, email or ID number updates the candidate; otherwise a new one is added.",
+        "template": "Candidate template",
+        "sheet": "Candidates"
+      }
+    },
+    "evaluation": {
+      "name": {
+        "label": "Employee name",
+        "example": "John Wang"
+      },
+      "attendance_no": {
+        "label": "Attendance ID"
+      },
+      "year": {
+        "label": "Year"
+      },
+      "month": {
+        "label": "Month"
+      },
+      "bonus": {
+        "label": "Bonus"
+      },
+      "reward": {
+        "label": "Reward amount"
+      },
+      "penalty": {
+        "label": "Penalty deduction"
+      },
+      "score": {
+        "label": "Score"
+      },
+      "notes": {
+        "label": "Comments",
+        "example": "Good attendance, excellent performance"
+      },
+      "_meta": {
+        "title": "Batch import / update reviews, rewards & penalties",
+        "description": "Supports .xlsx, .xls and .csv files. Fill in the employee name or attendance ID.",
+        "template": "Review template",
+        "sheet": "Reviews"
+      }
+    },
+    "insurance": {
+      "name": {
+        "label": "Employee name",
+        "example": "John Wang"
+      },
+      "id_number": {
+        "label": "ID number"
+      },
+      "attendance_no": {
+        "label": "Attendance ID"
+      },
+      "insurance_required": {
+        "label": "Insurance required?"
+      },
+      "insurance_status": {
+        "label": "Insurance status"
+      },
+      "insurance_number": {
+        "label": "Insurance no."
+      },
+      "insurance_salary": {
+        "label": "Insured salary"
+      },
+      "_meta": {
+        "title": "Batch import / update insurance",
+        "description": "Supports .xlsx, .xls and .csv files. Matches by employee name, ID number or attendance ID to update insurance status, number and insured salary.",
+        "template": "Insurance template",
+        "sheet": "Insurance"
+      }
+    },
+    "leave": {
+      "name": {
+        "label": "Employee name",
+        "example": "John Wang"
+      },
+      "attendance_no": {
+        "label": "Attendance ID"
+      },
+      "leave_type": {
+        "label": "Leave type"
+      },
+      "start_date": {
+        "label": "Start date"
+      },
+      "end_date": {
+        "label": "End date"
+      },
+      "days": {
+        "label": "Days"
+      },
+      "reason": {
+        "label": "Reason",
+        "example": "Family matters"
+      },
+      "status": {
+        "label": "Approval status"
+      },
+      "notes": {
+        "label": "Notes"
+      },
+      "_meta": {
+        "title": "Batch import leave records",
+        "description": "Supports .xlsx, .xls and .csv files. Fill in the employee name or attendance ID.",
+        "template": "Leave template",
+        "sheet": "Leave"
+      }
+    }
+  },
+  "UnitsImport": {
+    "code": {
+      "label": "Unit code"
+    },
+    "name": {
+      "label": "Unit name"
+    },
+    "unit_type": {
+      "label": "Type"
+    },
+    "short_name": {
+      "label": "Short name"
+    },
+    "region": {
+      "label": "Region",
+      "example": "Ho Chi Minh City"
+    },
+    "base_hourly_rate": {
+      "label": "Base hourly rate"
+    },
+    "electricity_no": {
+      "label": "Electricity meter no."
+    },
+    "water_no": {
+      "label": "Water meter no."
+    },
+    "address": {
+      "label": "Address",
+      "example": "District 1, Ho Chi Minh City..."
+    },
+    "active": {
+      "label": "Active"
+    },
+    "_meta": {
+      "title": "Batch import / update units",
+      "description": "Supports .xlsx, .xls and .csv files. Units with a matching code are updated; others are added.",
+      "template": "Units template",
+      "sheet": "Units"
+    }
+  },
+  "AffairsImport": {
+    "title": {
+      "label": "Document title",
+      "example": "Store lease agreement — Zhongxiao branch"
+    },
+    "doc_type": {
+      "label": "Document type"
+    },
+    "store_code": {
+      "label": "Store code"
+    },
+    "counterparty": {
+      "label": "Counterparty / landlord",
+      "example": "Landlord David Wang"
+    },
+    "effective_date": {
+      "label": "Effective from"
+    },
+    "expiry_date": {
+      "label": "Expiry date"
+    },
+    "deposit": {
+      "label": "Deposit"
+    },
+    "monthly_rent": {
+      "label": "Monthly rent / fee"
+    },
+    "payment_day": {
+      "label": "Monthly payment day"
+    },
+    "notes": {
+      "label": "Notes",
+      "example": "Two months deposit; tenant pays utilities"
+    },
+    "_meta": {
+      "title": "Batch import licenses & leases",
+      "description": "Supports .xlsx, .xls and .csv files. Documents with a matching title are updated.",
+      "template": "Licenses and leases template",
+      "sheet": "Documents"
+    }
+  },
+  "RdLogsImport": {
+    "title": {
+      "label": "Log title",
+      "example": "Recipe flavor test notes"
+    },
+    "summary": {
+      "label": "Log content",
+      "example": "Sweetness down 5%, tea aroma clearly stronger..."
+    },
+    "date": {
+      "label": "Date"
+    },
+    "_meta": {
+      "title": "Batch import R&D logs",
+      "description": "Supports .xlsx, .xls and .csv files. Include a log title and content.",
+      "template": "R&D log template",
+      "sheet": "R&D logs"
+    }
+  },
+  "StoreExpensesImport": {
+    "store": {
+      "code": {
+        "label": "Store code"
+      },
+      "name": {
+        "label": "Store name"
+      },
+      "region": {
+        "label": "Region",
+        "example": "Ho Chi Minh City"
+      },
+      "active": {
+        "label": "Active"
+      },
+      "_meta": {
+        "title": "Batch import stores / regions",
+        "description": "Supports .xlsx, .xls and .csv files. Stores with a matching code are updated.",
+        "template": "Store template",
+        "sheet": "Stores"
+      }
+    },
+    "category": {
+      "code": {
+        "label": "Account code"
+      },
+      "name": {
+        "label": "Account name",
+        "example": "Water bill"
+      },
+      "entry_method": {
+        "label": "Entry method"
+      },
+      "vendor_service": {
+        "label": "Vendor type"
+      },
+      "sort": {
+        "label": "Order"
+      },
+      "_meta": {
+        "title": "Batch import expense accounts",
+        "description": "Supports .xlsx, .xls and .csv files. Accounts with a matching code are updated.",
+        "template": "Expense account template",
+        "sheet": "Accounts"
+      }
+    },
+    "vendor": {
+      "name": {
+        "label": "Vendor name",
+        "example": "Taiwan Gas"
+      },
+      "service": {
+        "label": "Service"
+      },
+      "regions": {
+        "label": "Regions covered"
+      },
+      "active": {
+        "label": "Active"
+      },
+      "_meta": {
+        "title": "Batch import vendors",
+        "description": "Supports .xlsx, .xls and .csv files. Vendors with a matching tax ID or name are updated.",
+        "template": "Vendor template",
+        "sheet": "Vendors"
+      }
+    }
+  },
+  "VendorsImport": {
+    "vendor": {
+      "name": {
+        "label": "Vendor name",
+        "example": "Taiwan Tea Supplier"
+      },
+      "tax_id": {
+        "label": "Tax ID"
+      },
+      "service": {
+        "label": "Category"
+      },
+      "contact": {
+        "label": "Contact",
+        "example": "Mr. Chen"
+      },
+      "phone": {
+        "label": "Phone"
+      },
+      "address": {
+        "label": "Address",
+        "example": "Da'an District, Taipei..."
+      },
+      "products": {
+        "label": "Products",
+        "example": "Tea leaves, raw materials"
+      },
+      "pay_terms": {
+        "label": "Payment terms"
+      },
+      "billing_cycle": {
+        "label": "Billing cycle"
+      },
+      "billing_day": {
+        "label": "Billing day"
+      },
+      "active": {
+        "label": "Active"
+      },
+      "_meta": {
+        "title": "Batch import / update vendors",
+        "description": "Supports .xlsx, .xls and .csv files. Vendors with a matching tax ID or name are updated; others are added.",
+        "template": "Vendor template",
+        "sheet": "Vendors"
+      }
+    },
+    "purchase": {
+      "purchased_on": {
+        "label": "Purchase date"
+      },
+      "product": {
+        "label": "Item",
+        "example": "Premium Ceylon black tea"
+      },
+      "qty": {
+        "label": "Qty"
+      },
+      "amount": {
+        "label": "Amount"
+      },
+      "note": {
+        "label": "Notes",
+        "example": "First delivery"
+      },
+      "_meta": {
+        "title": "Batch import purchases",
+        "description": "Supports .xlsx, .xls and .csv files. Fill in purchase date, item and amount.",
+        "template": "Purchase template",
+        "sheet": "Purchases"
+      }
+    }
+  },
+  "PersonnelImport": {
+    "name": {
+      "label": "Name",
+      "example": "Nguyen Thi Phuong"
+    },
+    "gender": {
+      "label": "Gender"
+    },
+    "native_place": {
+      "label": "Hometown",
+      "example": "Ho Chi Minh City"
+    },
+    "birthday": {
+      "label": "Birthday"
+    },
+    "id_number": {
+      "label": "ID number"
+    },
+    "education": {
+      "label": "Education"
+    },
+    "phone": {
+      "label": "Phone"
+    },
+    "email": {
+      "label": "Personal email"
+    },
+    "company_email": {
+      "label": "Company email"
+    },
+    "position": {
+      "label": "Position",
+      "example": "Store manager"
+    },
+    "store": {
+      "label": "Store"
+    },
+    "staff_category": {
+      "label": "Full/part-time"
+    },
+    "payroll_no": {
+      "label": "Payroll no."
+    },
+    "address": {
+      "label": "Address",
+      "example": "District 1, Ho Chi Minh City"
+    },
+    "_meta": {
+      "title": "Batch import / update personnel",
+      "description": "Supports Excel (.xlsx) and CSV files. Matching ID number, email or name + phone updates the record; otherwise a new one is added.",
+      "template": "Personnel template",
+      "sheet": "Personnel"
+    }
+  },
+  "ShiftImport": {
+    "employee_name": {
+      "label": "Employee name",
+      "example": "John Wang"
+    },
+    "work_date": {
+      "label": "Work date"
+    },
+    "slot_code": {
+      "label": "Shift"
+    },
+    "_meta": {
+      "title": "Batch import shift schedule",
+      "description": "Supports .xlsx, .xls and .csv files. Fill in employee name, work date (YYYY-MM-DD) and shift (早 / 午 / 晚 = morning / noon / evening).",
+      "template": "Shift template",
+      "sheet": "Shifts"
+    }
+  },
+  "HrUnion": {
+    "subtitle": "Member management, welfare, collective agreements and financial reports compliant with the Vietnam General Confederation of Labour (Tổng Liên đoàn Lao động)",
+    "noDocs": "No agreements or dialogue minutes filed yet. Upload officially stamped PDFs for permanent archiving.",
+    "noBenefits": "No benefit requests yet. Birthday, marriage, maternity, hospital and hardship requests can be submitted and approved online.",
+    "totalIncome": "Total income (1% dues & 2% funding)",
+    "exportReport": "Export union financial report (Mẫu B14-CĐ & B15-CĐ)",
+    "tabDocs": "Collective agreements & dialogue",
+    "docsTitle": "Collective labour agreement (TƯLĐTT) and quarterly statutory dialogue minutes",
+    "totalExpense": "Total expenses (welfare, activities)",
+    "requestTitle": "Request union benefit",
+    "tabFinances": "Union finances",
+    "noMembers": "No union members yet. Click \"Add member\" at the top right to record a membership.",
+    "docTitlePh": "e.g. Collective labour agreement 2026-2028 (stamped)",
+    "entryTitle": "Union finance entry",
+    "code2": "2% company union funding",
+    "tabBenefits": "Benefits & welfare",
+    "noEntries": "No union transactions yet. Click \"Add entry\" at the top right to record income or welfare spending.",
+    "code3": "Welfare & hardship aid",
+    "cardNumber": "Union card no.",
+    "balance": "Union balance",
+    "title": "Trade Union (Công đoàn cơ sở)",
+    "uploadDocTitle": "Upload collective agreement / minutes",
+    "receiptNo": "Receipt / voucher no.",
+    "addMemberTitle": "Add union member",
+    "code1": "1% member dues",
+    "tabMembers": "Members",
+    "bhxhNumber": "Social insurance no. (BHXH)",
+    "code4": "Activities",
+    "statusApproved": "Approved",
+    "statusPending": "Pending",
+    "active": "Active member",
+    "statusPaid": "✓ Paid",
+    "reasonPh": "e.g. discharge certificate on file, wedding gift",
+    "code5": "Administration",
+    "amountVndReq": "Amount (VND) *",
+    "benefitsTitle": "Statutory benefits & welfare approvals",
+    "idNumber": "ID number (CCCD)",
+    "summaryPh": "e.g. July union dues allocation",
+    "reasonVoucher": "Reason / voucher no.",
+    "choosePdf": "Choose scanned PDF",
+    "amountReq": "Amount (VND) *",
+    "bhxh": "Social insurance (BHXH):",
+    "uploadDoc": "Upload agreement / minutes",
+    "addEntry": "Add entry (income / expense)",
+    "storeDept": "Store / department",
+    "requestBenefit": "Request benefit",
+    "income": "Income",
+    "expense": "Expense",
+    "ledger": "Transactions",
+    "pleaseChoose": "— Select —",
+    "addMember": "Add member",
+    "employeeNameReq": "Employee name *",
+    "chooseMemberReq": "Member *",
+    "benefitTypeReq": "Benefit type *",
+    "docCategoryReq": "Category *",
+    "docTitleReq": "Title *",
+    "confirmUpload": "Upload & file",
+    "joinDate": "Joined:",
+    "requestDate": "Requested:",
+    "effective": "Effective:",
+    "expiry": "Expires:",
+    "saveFailed": "Save failed",
+    "confirmSave": "Save",
+    "requestFailed": "Request failed",
+    "submitRequest": "Submit",
+    "uploadFailed": "Upload failed",
+    "entryFailed": "Failed to save entry",
+    "typeReq": "Type *",
+    "itemCode": "Item code",
+    "summary": "Summary",
+    "confirmEntry": "Save entry",
+    "cardNo": "Card no.:",
+    "note": "Note:",
+    "remark": "Notes:",
+    "voucher": "Voucher:",
+    "hq": "HQ",
+    "member": "Member",
+    "cancel": "Cancel",
+    "other": "Other",
+    "memberCount": "{n} union members",
+    "benefit": {
+      "birthday": "Birthday gift",
+      "marriage": "Wedding gift",
+      "maternity": "Maternity allowance",
+      "hospital": "Hospitalisation visit",
+      "relief": "Hardship relief",
+      "other": "Other benefit"
+    },
+    "docCat": {
+      "tuldtt": "Collective labour agreement (TƯLĐTT)",
+      "noiquy": "Internal work rules",
+      "doitheo": "Statutory dialogue minutes",
+      "committee": "Committee meetings & election decisions"
+    }
   }
 }

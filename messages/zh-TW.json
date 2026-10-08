@@ -10991,5 +10991,643 @@
     "colOut": "支出",
     "colNote": "摘要備註",
     "eFooter": "共 {n} 筆項目（錯誤: {e}，警告: {w}）"
+  },
+  "HrImport": {
+    "employee": {
+      "name": {
+        "label": "姓名",
+        "example": "王小明"
+      },
+      "phone": {
+        "label": "電話"
+      },
+      "department": {
+        "label": "部門"
+      },
+      "position": {
+        "label": "職稱",
+        "example": "店員"
+      },
+      "staff_category": {
+        "label": "正兼職"
+      },
+      "employment_type": {
+        "label": "聘用類型"
+      },
+      "hire_date": {
+        "label": "到職日"
+      },
+      "base_salary": {
+        "label": "底薪"
+      },
+      "hourly_rate": {
+        "label": "時薪"
+      },
+      "store": {
+        "label": "門市"
+      },
+      "attendance_no": {
+        "label": "考勤工號"
+      },
+      "bank_account": {
+        "label": "銀行帳號"
+      },
+      "bank_name": {
+        "label": "收款銀行"
+      },
+      "id_number": {
+        "label": "身分證字號"
+      },
+      "status": {
+        "label": "狀態"
+      },
+      "notes": {
+        "label": "備註"
+      },
+      "_meta": {
+        "title": "批次匯入 / 更新員工資料",
+        "description": "支援 .xlsx, .xls 與 .csv 檔案。若姓名與身分證號已存在將自動更新，否則新增。",
+        "template": "員工名單範本",
+        "sheet": "員工資料"
+      }
+    },
+    "payroll": {
+      "name": {
+        "label": "員工姓名",
+        "example": "王小明"
+      },
+      "year": {
+        "label": "年"
+      },
+      "month": {
+        "label": "月"
+      },
+      "base_salary": {
+        "label": "底薪"
+      },
+      "allowances": {
+        "label": "加給"
+      },
+      "deductions": {
+        "label": "扣除"
+      },
+      "bonus": {
+        "label": "獎金"
+      },
+      "notes": {
+        "label": "備註"
+      },
+      "_meta": {
+        "title": "批次匯入 / 更新月度薪資",
+        "description": "支援 .xlsx, .xls 與 .csv 檔案。若名單中已有該員工當月薪資將自動覆蓋更新，未建立之員工將自動建立。",
+        "template": "薪資資料範本",
+        "sheet": "月薪資表"
+      }
+    },
+    "candidate": {
+      "name": {
+        "label": "姓名",
+        "example": "李大同"
+      },
+      "phone": {
+        "label": "電話"
+      },
+      "position": {
+        "label": "應徵職務",
+        "example": "調飲師"
+      },
+      "store": {
+        "label": "應徵門市"
+      },
+      "staff_category": {
+        "label": "正兼職"
+      },
+      "stage": {
+        "label": "應徵階段"
+      },
+      "birthday": {
+        "label": "生日"
+      },
+      "id_number": {
+        "label": "身分證號"
+      },
+      "_meta": {
+        "title": "批次匯入 / 更新應徵者名單",
+        "description": "支援 .xlsx, .xls 與 .csv 檔案。若電話、Email 或身分證號相符將自動更新，否則新增。",
+        "template": "應徵者名單範本",
+        "sheet": "應徵者清單"
+      }
+    },
+    "evaluation": {
+      "name": {
+        "label": "員工姓名",
+        "example": "王小明"
+      },
+      "attendance_no": {
+        "label": "考勤工號"
+      },
+      "year": {
+        "label": "年"
+      },
+      "month": {
+        "label": "月"
+      },
+      "bonus": {
+        "label": "獎金"
+      },
+      "reward": {
+        "label": "獎勵金額"
+      },
+      "penalty": {
+        "label": "懲罰扣款"
+      },
+      "score": {
+        "label": "評分"
+      },
+      "notes": {
+        "label": "評語備註",
+        "example": "出勤良好表現優異"
+      },
+      "_meta": {
+        "title": "批次匯入 / 更新考核獎懲資料",
+        "description": "支援 .xlsx, .xls 與 .csv 檔案。請填寫員工姓名或考勤工號。",
+        "template": "員工考核獎懲範本",
+        "sheet": "考核獎懲"
+      }
+    },
+    "insurance": {
+      "name": {
+        "label": "員工姓名",
+        "example": "王小明"
+      },
+      "id_number": {
+        "label": "身分證號"
+      },
+      "attendance_no": {
+        "label": "考勤工號"
+      },
+      "insurance_required": {
+        "label": "是否需投保"
+      },
+      "insurance_status": {
+        "label": "投保狀態"
+      },
+      "insurance_number": {
+        "label": "保險證號"
+      },
+      "insurance_salary": {
+        "label": "投保薪資"
+      },
+      "_meta": {
+        "title": "批次匯入 / 更新勞健保資料",
+        "description": "支援 .xlsx, .xls 與 .csv 檔案。可比對員工姓名、身分證號或考勤工號更新投保狀態、證號與投保薪資。",
+        "template": "員工投保資料範本",
+        "sheet": "投保名單"
+      }
+    },
+    "leave": {
+      "name": {
+        "label": "員工姓名",
+        "example": "王小明"
+      },
+      "attendance_no": {
+        "label": "考勤工號"
+      },
+      "leave_type": {
+        "label": "假別"
+      },
+      "start_date": {
+        "label": "開始日期"
+      },
+      "end_date": {
+        "label": "結束日期"
+      },
+      "days": {
+        "label": "天數"
+      },
+      "reason": {
+        "label": "事由",
+        "example": "家庭事宜"
+      },
+      "status": {
+        "label": "審核狀態"
+      },
+      "notes": {
+        "label": "備註"
+      },
+      "_meta": {
+        "title": "批次匯入請假紀錄",
+        "description": "支援 .xlsx, .xls 與 .csv 檔案。請填寫員工姓名或考勤工號。",
+        "template": "請假紀錄範本",
+        "sheet": "請假清單"
+      }
+    }
+  },
+  "UnitsImport": {
+    "code": {
+      "label": "單位編號"
+    },
+    "name": {
+      "label": "單位名稱"
+    },
+    "unit_type": {
+      "label": "類型"
+    },
+    "short_name": {
+      "label": "簡稱"
+    },
+    "region": {
+      "label": "區域",
+      "example": "胡志明"
+    },
+    "base_hourly_rate": {
+      "label": "基本時薪"
+    },
+    "electricity_no": {
+      "label": "電號"
+    },
+    "water_no": {
+      "label": "水號"
+    },
+    "address": {
+      "label": "地址",
+      "example": "胡志明市第一郡..."
+    },
+    "active": {
+      "label": "啟用狀態"
+    },
+    "_meta": {
+      "title": "批次匯入 / 更新單位資料",
+      "description": "支援 .xlsx, .xls 與 .csv 檔案。若單位編號相符將自動更新，否則新增。",
+      "template": "單位資料範本",
+      "sheet": "單位清單"
+    }
+  },
+  "AffairsImport": {
+    "title": {
+      "label": "文件標題",
+      "example": "台北忠孝門市房屋租賃契約書"
+    },
+    "doc_type": {
+      "label": "文件類別"
+    },
+    "store_code": {
+      "label": "門市代碼"
+    },
+    "counterparty": {
+      "label": "簽約對象/出租人",
+      "example": "房東 王大明"
+    },
+    "effective_date": {
+      "label": "生效起日"
+    },
+    "expiry_date": {
+      "label": "到期日"
+    },
+    "deposit": {
+      "label": "押金"
+    },
+    "monthly_rent": {
+      "label": "月租金/費用"
+    },
+    "payment_day": {
+      "label": "每月繳款日"
+    },
+    "notes": {
+      "label": "備註",
+      "example": "押金兩個月，水電自付"
+    },
+    "_meta": {
+      "title": "批次匯入外務證照與租約",
+      "description": "支援 .xlsx, .xls 與 .csv 檔案。若文件標題相符將自動更新。",
+      "template": "外務證照與門市租約範本",
+      "sheet": "合約證照清單"
+    }
+  },
+  "RdLogsImport": {
+    "title": {
+      "label": "日誌標題",
+      "example": "配方風味測試紀錄"
+    },
+    "summary": {
+      "label": "日誌內容",
+      "example": "甜度降5%，茶香明顯提升..."
+    },
+    "date": {
+      "label": "日期"
+    },
+    "_meta": {
+      "title": "批次匯入研發日誌",
+      "description": "支援 .xlsx, .xls 與 .csv 檔案。請包含日誌標題與內容。",
+      "template": "研發日誌範本",
+      "sheet": "研發日誌"
+    }
+  },
+  "StoreExpensesImport": {
+    "store": {
+      "code": {
+        "label": "門市編碼"
+      },
+      "name": {
+        "label": "門市名稱"
+      },
+      "region": {
+        "label": "區域",
+        "example": "胡志明"
+      },
+      "active": {
+        "label": "啟用狀態"
+      },
+      "_meta": {
+        "title": "批次匯入門市 / 區域",
+        "description": "支援 .xlsx, .xls 與 .csv 檔案。若門市代碼相符將自動更新。",
+        "template": "門市資料範本",
+        "sheet": "門市清單"
+      }
+    },
+    "category": {
+      "code": {
+        "label": "科目編碼"
+      },
+      "name": {
+        "label": "科目名稱",
+        "example": "水費"
+      },
+      "entry_method": {
+        "label": "填寫方式"
+      },
+      "vendor_service": {
+        "label": "廠商別"
+      },
+      "sort": {
+        "label": "排序"
+      },
+      "_meta": {
+        "title": "批次匯入費用科目",
+        "description": "支援 .xlsx, .xls 與 .csv 檔案。若科目代碼相符將自動更新。",
+        "template": "費用科目範本",
+        "sheet": "科目清單"
+      }
+    },
+    "vendor": {
+      "name": {
+        "label": "廠商名稱",
+        "example": "台灣瓦斯"
+      },
+      "service": {
+        "label": "服務別"
+      },
+      "regions": {
+        "label": "涵蓋區域"
+      },
+      "active": {
+        "label": "啟用狀態"
+      },
+      "_meta": {
+        "title": "批次匯入廠商資料",
+        "description": "支援 .xlsx, .xls 與 .csv 檔案。若統編或廠商名稱相符將自動更新。",
+        "template": "廠商資料範本",
+        "sheet": "廠商名冊"
+      }
+    }
+  },
+  "VendorsImport": {
+    "vendor": {
+      "name": {
+        "label": "廠商名稱",
+        "example": "台灣茶葉供應商"
+      },
+      "tax_id": {
+        "label": "統一編號"
+      },
+      "service": {
+        "label": "類別"
+      },
+      "contact": {
+        "label": "聯絡人",
+        "example": "陳先生"
+      },
+      "phone": {
+        "label": "電話"
+      },
+      "address": {
+        "label": "地址",
+        "example": "台北市大安區..."
+      },
+      "products": {
+        "label": "提供產品",
+        "example": "茶葉、原物料"
+      },
+      "pay_terms": {
+        "label": "付款方式"
+      },
+      "billing_cycle": {
+        "label": "結帳週期"
+      },
+      "billing_day": {
+        "label": "結帳日"
+      },
+      "active": {
+        "label": "啟用狀態"
+      },
+      "_meta": {
+        "title": "批次匯入 / 更新廠商資料",
+        "description": "支援 .xlsx, .xls 與 .csv 檔案。若統編或廠商名稱相符將自動更新，否則新增。",
+        "template": "廠商資料範本",
+        "sheet": "廠商名冊"
+      }
+    },
+    "purchase": {
+      "purchased_on": {
+        "label": "採購日期"
+      },
+      "product": {
+        "label": "採購品項",
+        "example": "高級錫蘭紅茶"
+      },
+      "qty": {
+        "label": "數量"
+      },
+      "amount": {
+        "label": "金額"
+      },
+      "note": {
+        "label": "備註",
+        "example": "第一批進貨"
+      },
+      "_meta": {
+        "title": "批次匯入採購紀錄",
+        "description": "支援 .xlsx, .xls 與 .csv 檔案。請填寫採購日期、採購品項與金額。",
+        "template": "採購紀錄範本",
+        "sheet": "採購清單"
+      }
+    }
+  },
+  "PersonnelImport": {
+    "name": {
+      "label": "姓名",
+      "example": "阮小芳"
+    },
+    "gender": {
+      "label": "性別"
+    },
+    "native_place": {
+      "label": "籍貫",
+      "example": "胡志明市"
+    },
+    "birthday": {
+      "label": "生日"
+    },
+    "id_number": {
+      "label": "身分證號"
+    },
+    "education": {
+      "label": "學歷"
+    },
+    "phone": {
+      "label": "電話"
+    },
+    "email": {
+      "label": "個人Email"
+    },
+    "company_email": {
+      "label": "公司Email"
+    },
+    "position": {
+      "label": "職務",
+      "example": "店長"
+    },
+    "store": {
+      "label": "門市"
+    },
+    "staff_category": {
+      "label": "正兼職"
+    },
+    "payroll_no": {
+      "label": "薪資編號"
+    },
+    "address": {
+      "label": "地址",
+      "example": "胡志明市第一郡"
+    },
+    "_meta": {
+      "title": "批次匯入 / 更新人員資料",
+      "description": "支援 Excel (.xlsx) 與 CSV 檔。若身分證號、Email 或姓名電話相符將自動更新，否則新增。",
+      "template": "人員資料範本",
+      "sheet": "人員名冊"
+    }
+  },
+  "ShiftImport": {
+    "employee_name": {
+      "label": "員工姓名",
+      "example": "王小明"
+    },
+    "work_date": {
+      "label": "工作日期"
+    },
+    "slot_code": {
+      "label": "時段"
+    },
+    "_meta": {
+      "title": "批次匯入排班表",
+      "description": "支援 .xlsx, .xls 與 .csv 檔案。請填寫員工姓名、工作日期（YYYY-MM-DD）與時段（如：早、午、晚）。",
+      "template": "門市排班範本",
+      "sheet": "排班表"
+    }
+  },
+  "HrUnion": {
+    "subtitle": "符合越南總工會 (Tổng Liên đoàn Lao động) 規範之會員管理、福利慰問、集體協議與財務報表",
+    "noDocs": "目前尚未歸檔集體協議與勞資對話文件。支援上傳經官方核准戳印之 PDF 永久存檔。",
+    "noBenefits": "目前尚無慰問金申請記錄。支援生日、結婚、生育、住院、急難救助線上申請與簽核。",
+    "totalIncome": "總收入 (Thu đoàn phí 1% & kinh phí 2%)",
+    "exportReport": "匯出總工會財務報表 (Mẫu B14-CĐ & B15-CĐ)",
+    "tabDocs": "集體協議與勞資對話 (TƯLĐTT & Đối thoại)",
+    "docsTitle": "集體勞動協議書 (TƯLĐTT) 及每季法定勞資對話會議紀錄",
+    "totalExpense": "總支出 (Chi thăm hỏi, phong trào)",
+    "requestTitle": "申請工會福利／慰問金 (Chế độ & Thăm hỏi)",
+    "tabFinances": "工會財務收支 (Tài chính Công đoàn)",
+    "noMembers": "尚無工會會員資料。點擊右上「新增工會會員」記錄加入申請。",
+    "docTitlePh": "如：集體勞動協議書 2026-2028 (已蓋聯團戳印)",
+    "entryTitle": "工會財務記帳 (Thu - Chi tài chính)",
+    "code2": "2% 企業經費 (Kinh phí công đoàn)",
+    "tabBenefits": "福利與慰問申請 (Chế độ & Thăm hỏi)",
+    "noEntries": "尚無工會收支流水。點擊右上「記帳」新增收入或慰問支出。",
+    "code3": "慰問與急難補助 (Thăm hỏi trợ cấp)",
+    "cardNumber": "工會會員卡號 (Số thẻ đoàn viên)",
+    "balance": "工會結餘 (Kết dư tài chính)",
+    "title": "工會系統 (Công đoàn cơ sở)",
+    "uploadDocTitle": "上傳集體協議與會議紀錄 (TƯLĐTT)",
+    "receiptNo": "收據 / 憑證號 (Chứng từ)",
+    "addMemberTitle": "新增工會會員 (Đoàn viên)",
+    "code1": "1% 會員會費 (Đoàn phí)",
+    "tabMembers": "會員檔案庫 (Đoàn viên)",
+    "bhxhNumber": "社保號碼 (Mã số BHXH)",
+    "code4": "活動推廣 (Phong trào)",
+    "statusApproved": "已核准待發 (Đã duyệt)",
+    "statusPending": "待審核 (Chờ duyệt)",
+    "active": "在會 (Đoàn viên)",
+    "statusPaid": "✓ 已撥款 (Đã chi)",
+    "reasonPh": "如：出院證明書備查、結婚賀禮",
+    "code5": "行政管理 (Quản lý)",
+    "amountVndReq": "慰問金額 (VND) *",
+    "benefitsTitle": "法定福利發放與慰問簽核",
+    "idNumber": "身分證號 (CCCD)",
+    "summaryPh": "如：提撥7月份工會會費",
+    "reasonVoucher": "事由說明 / 憑證號",
+    "choosePdf": "選擇 PDF 掃描檔",
+    "amountReq": "金額 (VND) *",
+    "bhxh": "社保號 BHXH:",
+    "uploadDoc": "上傳協議／會議紀錄",
+    "addEntry": "記帳（收入／支出）",
+    "storeDept": "任職門市 / 部門",
+    "requestBenefit": "申請福利／慰問金",
+    "income": "收入 (Thu)",
+    "expense": "支出 (Chi)",
+    "ledger": "財務流水帳明細",
+    "pleaseChoose": "— 請選擇 —",
+    "addMember": "新增工會會員",
+    "employeeNameReq": "員工姓名 *",
+    "chooseMemberReq": "選擇會員 *",
+    "benefitTypeReq": "福利種類 *",
+    "docCategoryReq": "文件分類 *",
+    "docTitleReq": "文件標題 *",
+    "confirmUpload": "確認上傳歸檔",
+    "joinDate": "入會日期:",
+    "requestDate": "申請日:",
+    "effective": "生效日:",
+    "expiry": "到期日:",
+    "saveFailed": "儲存失敗",
+    "confirmSave": "確認儲存",
+    "requestFailed": "申請失敗",
+    "submitRequest": "送出申請",
+    "uploadFailed": "上傳失敗",
+    "entryFailed": "記帳失敗",
+    "typeReq": "類型 *",
+    "itemCode": "項目代碼",
+    "summary": "說明摘要",
+    "confirmEntry": "確認記帳",
+    "cardNo": "卡號:",
+    "note": "說明:",
+    "remark": "備註:",
+    "voucher": "憑證:",
+    "hq": "總部",
+    "member": "會員",
+    "cancel": "取消",
+    "other": "其他",
+    "memberCount": "共 {n} 名工會會員",
+    "benefit": {
+      "birthday": "生日禮金 (Sinh nhật)",
+      "marriage": "結婚禮金 (Kết hôn)",
+      "maternity": "生育津貼 (Sinh con)",
+      "hospital": "住院慰問 (Nằm viện)",
+      "relief": "急難救助 (Trợ cấp khó khăn)",
+      "other": "其他福利 (Khác)"
+    },
+    "docCat": {
+      "tuldtt": "集體勞動協議書 (TƯLĐTT)",
+      "noiquy": "內部工作規章 (Nội quy lao động)",
+      "doitheo": "法定勞資對話紀錄 (Biên bản đối thoại)",
+      "committee": "執委會會議與選舉批文 (Đại hội / Quyết định)"
+    }
   }
 }

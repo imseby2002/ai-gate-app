@@ -219,6 +219,7 @@ function PeriodDetail({ periodId, onChanged, onDeleted }: { periodId: string; on
           title="批次匯入排班表"
           description="支援 .xlsx, .xls 與 .csv 檔案。請填寫員工姓名、工作日期（YYYY-MM-DD）與時段（如：早、午、晚）。"
           columns={SHIFT_IMPORT_COLUMNS}
+          columnsNs="ShiftImport"
           templateFilename="門市排班範本"
           sheetName="排班表"
           onClose={() => setShowImport(false)}

@@ -88,6 +88,7 @@ export default function VendorsPage() {
           title="批次匯入 / 更新廠商資料"
           description="支援 .xlsx, .xls 與 .csv 檔案。若統編或廠商名稱相符將自動更新，否則新增。"
           columns={VENDOR_IMPORT_COLUMNS}
+          columnsNs="VendorsImport.vendor"
           templateFilename="廠商資料範本"
           sheetName="廠商名冊"
           onClose={() => setShowImport(false)}
@@ -356,6 +357,7 @@ function PurchaseSection({ vendorId }: { vendorId: string }) {
           title="批次匯入採購紀錄"
           description="支援 .xlsx, .xls 與 .csv 檔案。請填寫採購日期、採購品項與金額。"
           columns={PURCHASE_IMPORT_COLUMNS}
+          columnsNs="VendorsImport.purchase"
           templateFilename="採購紀錄範本"
           sheetName="採購清單"
           onClose={() => setShowImport(false)}

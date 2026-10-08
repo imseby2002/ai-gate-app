@@ -136,6 +136,7 @@ function PeopleList({ onOpen }: { onOpen: (id: string) => void }) {
           title="批次匯入 / 更新人員資料"
           description="支援 Excel (.xlsx) 與 CSV 檔。若身分證號、Email 或姓名電話相符將自動更新，否則新增。"
           columns={PERSONNEL_IMPORT_COLUMNS}
+          columnsNs="PersonnelImport"
           templateFilename="人員資料範本"
           sheetName="人員名冊"
           onClose={() => setShowImport(false)}
