@@ -41,13 +41,6 @@ interface StoreOption {
   short_name: string
 }
 
-interface VoiceProfile {
-  status: string
-  language: string
-  audio_url: string
-  updated_at?: string
-}
-
 interface Line {
   id: string
   speaker_id: string
@@ -57,13 +50,22 @@ interface Line {
   created_at: string
 }
 
-// 可辨識／翻譯的語言（對應 /api/work/translate 支援的目標語言）
-const LANGS: { code: string; label: string; sr: string }[] = [
-  { code: 'zh-TW', label: '中文', sr: 'zh-TW' },
-  { code: 'en', label: 'English', sr: 'en-US' },
+// 支援的語音輸入語言（包括 Azure 自動偵測）
+const INPUT_LANGS: { code: string; label: string; sr: string }[] = [
+  { code: 'auto', label: '自動偵測 (中/越/英)', sr: 'zh-TW' },
+  { code: 'zh-TW', label: '繁體中文', sr: 'zh-TW' },
   { code: 'vi', label: 'Tiếng Việt', sr: 'vi-VN' },
+  { code: 'en', label: 'English', sr: 'en-US' },
 ]
-const TRANSLATABLE = new Set(LANGS.map(l => l.code))
+
+// 支援的翻譯目標語言
+const TARGET_LANGS: { code: string; label: string }[] = [
+  { code: 'zh-TW', label: '繁體中文' },
+  { code: 'vi', label: 'Tiếng Việt' },
+  { code: 'en', label: 'English' },
+]
+
+const TRANSLATABLE = new Set(['zh-TW', 'vi', 'en'])
 
 // ── Web Speech API（瀏覽器內建，無需套件）最小型別 ────────────────
 interface SRAlternative { transcript: string }
@@ -136,9 +138,6 @@ export default function MeetingPage() {
 
   const [departments, setDepartments] = useState<DeptOption[]>([])
   const [storeList, setStoreList] = useState<StoreOption[]>([])
-  const [voiceProfile, setVoiceProfile] = useState<VoiceProfile | null>(null)
-  const [fixedSentences, setFixedSentences] = useState<Record<string, string>>({})
-
   const [newTitle, setNewTitle] = useState('')
   const [selectedDepts, setSelectedDepts] = useState<string[]>(['store'])
   const [selectedMode, setSelectedMode] = useState<'online' | 'in_person'>('in_person')
@@ -153,22 +152,17 @@ export default function MeetingPage() {
         : [...prev, key]
     )
   }
-  const [myLang, setMyLang] = useState<string>(TRANSLATABLE.has(locale) ? locale : 'zh-TW')
+
+  // 辨識輸入語言（預設 auto，支援中/越/英自動偵測）與翻譯目標語言（可自由切換）
+  const [inputLang, setInputLang] = useState<string>('auto')
+  const [targetLang, setTargetLang] = useState<string>(
+    TRANSLATABLE.has(locale) ? locale : 'zh-TW'
+  )
   const [err, setErr] = useState('')
   const [copied, setCopied] = useState(false)
 
   // ── 檢視模式：bilingual (雙語) / translation_only (只看翻譯) / original_only (只看原文) ──
   const [viewMode, setViewMode] = useState<'bilingual' | 'translation_only' | 'original_only'>('bilingual')
-
-  // ── 聲紋語音包錄音 Modal 狀態 ──
-  const [showVoiceModal, setShowVoiceModal] = useState(false)
-  const [voiceLang, setVoiceLang] = useState<'zh-TW' | 'vi'>(locale === 'vi' ? 'vi' : 'zh-TW')
-  const [isRecordingVoice, setIsRecordingVoice] = useState(false)
-  const [voiceAudioUrl, setVoiceAudioUrl] = useState<string | null>(null)
-  const [voiceSaving, setVoiceSaving] = useState(false)
-  const [voiceSuccess, setVoiceSuccess] = useState(false)
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-  const audioChunksRef = useRef<Blob[]>([])
 
   const [recording, setRecording] = useState(false)
   const [speechEngine, setSpeechEngine] = useState<'azure' | 'web_speech' | null>(null)
@@ -208,8 +202,6 @@ export default function MeetingPage() {
           if (!alive) return
           if (Array.isArray(data.departments)) setDepartments(data.departments)
           if (Array.isArray(data.stores)) setStoreList(data.stores)
-          if (data.voiceProfile) setVoiceProfile(data.voiceProfile)
-          if (data.fixedSentences) setFixedSentences(data.fixedSentences)
           if (data.user?.department) setSelectedDepts([data.user.department])
         }
       } catch (e) {
@@ -299,13 +291,13 @@ export default function MeetingPage() {
   // ── 自動捲到底 ──
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [lines.length])
 
-  // ── 上下文滑動視窗意譯：把非本語言的逐字翻譯成介面語言 ──
+  // ── 上下文滑動視窗意譯：把非目標語言的發言翻譯成所選 targetLang ──
   const [, forceTick] = useState(0)
   useEffect(() => {
-    if (!TRANSLATABLE.has(locale) || !meeting) return
+    if (!TRANSLATABLE.has(targetLang) || !meeting) return
     const need = Array.from(
-      new Set(lines.filter(l => l.source_lang !== locale).map(l => l.content.trim()).filter(Boolean)),
-    ).filter(txt => !transCache.has(tkey(locale, txt)))
+      new Set(lines.filter(l => l.source_lang !== targetLang).map(l => l.content.trim()).filter(Boolean)),
+    ).filter(txt => !transCache.has(tkey(targetLang, txt)))
     if (!need.length) return
     let alive = true
 
@@ -325,28 +317,28 @@ export default function MeetingPage() {
       history: lines.slice(-5).map(l => ({
         speaker: l.speaker_name,
         text: l.content,
-        translated: transCache.get(tkey(locale, l.content.trim())),
+        translated: transCache.get(tkey(targetLang, l.content.trim())),
       })),
     }
 
     fetch('/api/meeting/translate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ texts: need, target: locale, context }),
+      body: JSON.stringify({ texts: need, target: targetLang, context }),
     })
       .then(r => r.json())
       .then(d => {
         if (!alive || !Array.isArray(d.translations)) return
-        need.forEach((txt, i) => transCache.set(tkey(locale, txt), d.translations[i] ?? txt))
+        need.forEach((txt, i) => transCache.set(tkey(targetLang, txt), d.translations[i] ?? txt))
         forceTick(x => x + 1)
       })
       .catch(() => {})
     return () => { alive = false }
-  }, [lines, locale, meeting, participants, departments])
+  }, [lines, targetLang, meeting, participants, departments])
 
   function translatedOf(l: Line): string | null {
-    if (l.source_lang === locale || !TRANSLATABLE.has(locale)) return null
-    const tr = transCache.get(tkey(locale, l.content.trim()))
+    if (l.source_lang === targetLang || !TRANSLATABLE.has(targetLang)) return null
+    const tr = transCache.get(tkey(targetLang, l.content.trim()))
     return tr && tr !== l.content.trim() ? tr : null
   }
 
@@ -379,7 +371,7 @@ export default function MeetingPage() {
       .from('meetings')
       .insert({
         title: autoTitle,
-        source_lang: myLang,
+        source_lang: inputLang === 'auto' ? 'zh-TW' : inputLang,
         department: selectedDepts.join(','),
         departments: selectedDepts,
         meeting_mode: selectedMode,
@@ -437,84 +429,13 @@ export default function MeetingPage() {
     loadMeetingData(m)
   }
 
-  // ── 聲紋語音包錄製流程 ──
-  const startVoiceRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      audioChunksRef.current = []
-      const mr = new MediaRecorder(stream)
-      mr.ondataavailable = e => {
-        if (e.data.size > 0) audioChunksRef.current.push(e.data)
-      }
-      mr.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
-        const url = URL.createObjectURL(audioBlob)
-        setVoiceAudioUrl(url)
-        stream.getTracks().forEach(t => t.stop())
-      }
-      mediaRecorderRef.current = mr
-      mr.start()
-      setIsRecordingVoice(true)
-    } catch {
-      alert(t('micDenied'))
-    }
-  }
-
-  const stopVoiceRecording = () => {
-    if (mediaRecorderRef.current && isRecordingVoice) {
-      mediaRecorderRef.current.stop()
-      setIsRecordingVoice(false)
-    }
-  }
-
-  const saveVoiceProfile = async () => {
-    if (!audioChunksRef.current.length) return
-    setVoiceSaving(true)
-    try {
-      const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
-      const reader = new FileReader()
-      reader.readAsDataURL(audioBlob)
-      reader.onloadend = async () => {
-        const base64data = reader.result as string
-        const fixedText = fixedSentences[voiceLang] || ''
-
-        const res = await fetch('/api/meeting/voice-profile', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            language: voiceLang === 'vi' ? 'vi-VN' : 'zh-TW',
-            fixed_text: fixedText,
-            audio_url: base64data.slice(0, 100) + '...',
-          }),
-        })
-
-        if (res.ok) {
-          const d = await res.json()
-          setVoiceProfile(d.voiceProfile)
-          setVoiceSuccess(true)
-          setTimeout(() => {
-            setShowVoiceModal(false)
-            setVoiceSuccess(false)
-            setVoiceAudioUrl(null)
-          }, 1500)
-        } else {
-          alert('上傳失敗，請稍後再試')
-        }
-        setVoiceSaving(false)
-      }
-    } catch {
-      alert('上傳失敗')
-      setVoiceSaving(false)
-    }
-  }
-
   // ── 麥克風辨識寫入資料庫 ──
   const addLine = useCallback(async (text: string, speakerName?: string, lang?: string) => {
     const clean = text.trim()
     if (!clean || !meeting) return
 
     const finalSpeaker = speakerName || me?.name || ''
-    const finalLang = lang || myLang
+    const finalLang = lang || (inputLang === 'auto' ? 'zh-TW' : inputLang)
 
     try {
       let { data, error } = await supabase
@@ -579,7 +500,7 @@ export default function MeetingPage() {
 
     try {
       const rec = new Ctor()
-      rec.lang = LANGS.find(l => l.code === myLang)?.sr ?? 'zh-TW'
+      rec.lang = INPUT_LANGS.find(l => l.code === inputLang)?.sr ?? 'zh-TW'
       rec.continuous = true
       rec.interimResults = true
 
@@ -630,7 +551,7 @@ export default function MeetingPage() {
         }, 1000)
       }
     }
-  }, [cleanupRec, myLang, addLine])
+  }, [cleanupRec, inputLang, addLine])
 
   const startRec = useCallback(async () => {
     setMicDenied(false)
@@ -669,7 +590,7 @@ export default function MeetingPage() {
           token: tokenData.token,
           region: tokenData.region,
           mode: meeting?.meeting_mode || 'online',
-          defaultLang: myLang,
+          defaultLang: inputLang === 'auto' ? 'zh-TW' : inputLang,
           onRecognized: (text, speakerLabel, detectedLang) => {
             lastActiveRef.current = Date.now()
             void addLine(text, speakerLabel, detectedLang)
@@ -695,7 +616,7 @@ export default function MeetingPage() {
     // 若未配置 Azure 或建立失敗，降級為瀏覽器 Web Speech API
     setSpeechEngine('web_speech')
     startRecognizerInstance()
-  }, [meeting, myLang, addLine, startRecognizerInstance])
+  }, [meeting, inputLang, addLine, startRecognizerInstance])
 
   const stopRec = useCallback(() => {
     recordingRef.current = false
@@ -831,28 +752,6 @@ export default function MeetingPage() {
               <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
             </div>
           </div>
-
-          {/* 員工聲紋狀態指示卡 */}
-          <button
-            onClick={() => setShowVoiceModal(true)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border transition-colors ${
-              voiceProfile?.status === 'enrolled'
-                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400'
-                : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-400'
-            }`}
-          >
-            {voiceProfile?.status === 'enrolled' ? (
-              <>
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                <span>{t('voiceProfileEnrolled')}</span>
-              </>
-            ) : (
-              <>
-                <AlertCircle className="h-3.5 w-3.5 text-amber-600 animate-pulse" />
-                <span>{t('voiceProfilePending')}</span>
-              </>
-            )}
-          </button>
         </div>
 
         {!srSupported && (
@@ -861,7 +760,25 @@ export default function MeetingPage() {
           </p>
         )}
 
-        <LangPicker value={myLang} onChange={setMyLang} label={t('myLang')} />
+        {/* 語言偏好設定（語音輸入辨識語言 與 翻譯目標語言） */}
+        <div className="flex items-center gap-3 flex-wrap p-3 rounded-lg border bg-muted/20">
+          <LangPicker
+            value={inputLang}
+            onChange={setInputLang}
+            label={t('inputLangLabel')}
+            options={INPUT_LANGS}
+            compact
+          />
+          <span className="text-muted-foreground/40 text-xs">|</span>
+          <LangPicker
+            value={targetLang}
+            onChange={setTargetLang}
+            label={t('targetLangLabel')}
+            options={TARGET_LANGS}
+            compact
+            icon={<Languages className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />}
+          />
+        </div>
 
         {/* 建立會議表單 */}
         <Card className="space-y-4 p-5">
@@ -1006,82 +923,6 @@ export default function MeetingPage() {
         </Card>
 
         {err && <p className="text-sm text-red-500">{err}</p>}
-
-        {/* 員工聲紋語音包錄製 Modal */}
-        {showVoiceModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <Card className="max-w-md w-full p-5 space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                  <h3 className="font-bold text-base">{t('voiceEnrollTitle')}</h3>
-                </div>
-                <button onClick={() => setShowVoiceModal(false)} className="text-muted-foreground hover:text-foreground text-sm">✕</button>
-              </div>
-
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                {t('voiceEnrollDesc')}
-              </p>
-
-              {/* 語言選擇 */}
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant={voiceLang === 'zh-TW' ? 'default' : 'outline'}
-                  onClick={() => setVoiceLang('zh-TW')}
-                  className="flex-1 text-xs"
-                >
-                  中文語句
-                </Button>
-                <Button
-                  size="sm"
-                  variant={voiceLang === 'vi' ? 'default' : 'outline'}
-                  onClick={() => setVoiceLang('vi')}
-                  className="flex-1 text-xs"
-                >
-                  Tiếng Việt
-                </Button>
-              </div>
-
-              {/* 固定朗讀語句 */}
-              <div className="rounded-lg border bg-muted/40 p-3 text-sm font-medium leading-relaxed select-none">
-                {voiceLang === 'zh-TW'
-                  ? (fixedSentences['zh-TW'] || '我是台灣極渴與 FEELING TEA 的夥伴，今天在門市與辦公室參與營運盤點與各部門會議，確認設備與物料品質。')
-                  : (fixedSentences['vi'] || 'Tôi là nhân viên của FEELING TEA, hôm nay tham gia cuộc họp vận hành và kiểm kê cửa hàng, xác nhận chất lượng thiết bị và nguyên vật liệu.')}
-              </div>
-
-              {/* 錄音操作 */}
-              <div className="flex flex-col items-center gap-3 py-2">
-                {isRecordingVoice ? (
-                  <Button variant="destructive" onClick={stopVoiceRecording} className="gap-2">
-                    <span className="h-2 w-2 animate-pulse rounded-full bg-white" />
-                    {t('voiceStopRec')}
-                  </Button>
-                ) : (
-                  <Button onClick={startVoiceRecording} className="gap-2">
-                    <Mic className="h-4 w-4" />
-                    {voiceAudioUrl ? '重新錄製' : t('voiceStartRec')}
-                  </Button>
-                )}
-
-                {voiceAudioUrl && (
-                  <audio src={voiceAudioUrl} controls className="w-full h-9 mt-1" />
-                )}
-              </div>
-
-              {voiceSuccess ? (
-                <p className="text-center text-sm font-semibold text-emerald-600">{t('voiceUploadSuccess')}</p>
-              ) : (
-                <div className="flex justify-end gap-2 pt-2">
-                  <Button variant="outline" onClick={() => setShowVoiceModal(false)} size="sm">取消</Button>
-                  <Button onClick={saveVoiceProfile} disabled={!voiceAudioUrl || voiceSaving} size="sm">
-                    {voiceSaving ? t('voiceUploading') : t('voiceUpload')}
-                  </Button>
-                </div>
-              )}
-            </Card>
-          </div>
-        )}
       </div>
     )
   }
@@ -1149,23 +990,39 @@ export default function MeetingPage() {
         </div>
       )}
 
-      {/* 控制列：語言選擇、麥克風、視訊、三段式檢視切換 */}
+      {/* 控制列：麥克風、輸入辨識語言、翻譯目標語言、視訊、三段式檢視切換 */}
       <div className="flex items-center gap-2 border-y py-2 flex-wrap">
-        <LangPicker value={myLang} onChange={setMyLang} label={t('myLang')} disabled={recording} compact />
-
         {srSupported ? (
           recording ? (
-            <Button size="sm" variant="destructive" onClick={stopRec} className="gap-1.5">
+            <Button size="sm" variant="destructive" onClick={stopRec} className="gap-1.5 shrink-0">
               <MicOff className="h-4 w-4" />{t('stop')}
             </Button>
           ) : (
-            <Button size="sm" onClick={startRec} className="gap-1.5">
+            <Button size="sm" onClick={startRec} className="gap-1.5 shrink-0">
               <Mic className="h-4 w-4" />{t('start')}
             </Button>
           )
         ) : (
           <span className="text-xs text-muted-foreground">{t('unsupported')}</span>
         )}
+
+        <LangPicker
+          value={inputLang}
+          onChange={setInputLang}
+          label={t('inputLangLabel')}
+          options={INPUT_LANGS}
+          disabled={recording}
+          compact
+        />
+
+        <LangPicker
+          value={targetLang}
+          onChange={setTargetLang}
+          label={t('targetLangLabel')}
+          options={TARGET_LANGS}
+          compact
+          icon={<Languages className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />}
+        />
 
         {recording && (
           <span className="flex items-center gap-1.5 text-xs text-red-500">
@@ -1306,24 +1163,27 @@ export default function MeetingPage() {
 
 // ── 語言選擇器 ────────────────────────────────────────────────────
 function LangPicker({
-  value, onChange, label, disabled, compact,
+  value, onChange, label, disabled, compact, options = TARGET_LANGS, icon,
 }: {
   value: string
   onChange: (v: string) => void
   label: string
   disabled?: boolean
   compact?: boolean
+  options?: { code: string; label: string }[]
+  icon?: React.ReactNode
 }) {
   return (
-    <label className={`flex items-center gap-2 ${compact ? 'text-xs' : 'text-sm'}`}>
-      <span className="text-muted-foreground">{label}</span>
+    <label className={`flex items-center gap-1.5 ${compact ? 'text-xs' : 'text-sm'}`}>
+      {icon}
+      <span className="text-muted-foreground whitespace-nowrap">{label}</span>
       <select
         value={value}
         onChange={e => onChange(e.target.value)}
         disabled={disabled}
-        className="rounded-md border bg-background px-2 py-1 text-sm disabled:opacity-50"
+        className="rounded-md border bg-background px-2 py-1 text-xs font-medium text-foreground disabled:opacity-50"
       >
-        {LANGS.map(l => <option key={l.code} value={l.code}>{l.label}</option>)}
+        {options.map(l => <option key={l.code} value={l.code}>{l.label}</option>)}
       </select>
     </label>
   )

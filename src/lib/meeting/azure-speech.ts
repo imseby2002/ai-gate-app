@@ -45,6 +45,7 @@ export async function startAzureRecognition(options: {
   const audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput()
 
   function resolveLanguage(result: SpeechSDKType.SpeechRecognitionResult, fallback: string): string {
+    const defaultFallback = fallback === 'auto' ? 'zh-TW' : fallback
     try {
       const autoRes = SpeechSDK.AutoDetectSourceLanguageResult.fromResult(result)
       if (autoRes?.language) {
@@ -53,7 +54,7 @@ export async function startAzureRecognition(options: {
         if (autoRes.language.toLowerCase().startsWith('en')) return 'en'
       }
     } catch {}
-    return fallback
+    return defaultFallback
   }
 
   // 實體會議：啟用多人語音分離 (ConversationTranscriber Diarization)

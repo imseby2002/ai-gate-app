@@ -4279,6 +4279,8 @@
     "storesLabel": "Chi nhánh / Cửa hàng liên quan",
     "keywordsLabel": "Từ khóa nền tảng / Thuật ngữ chuyên môn",
     "keywordsPh": "Ví dụ: Royal, Hồ Tùng Mậu, Tủ đông, Bán thành phẩm",
+    "inputLangLabel": "Nhận diện",
+    "targetLangLabel": "Dịch sang",
     "viewBilingual": "Song ngữ",
     "viewTranslationOnly": "Chỉ xem bản dịch",
     "viewOriginalOnly": "Chỉ xem bản gốc",

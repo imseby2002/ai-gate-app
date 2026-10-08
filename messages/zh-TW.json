@@ -4372,6 +4372,8 @@
     "storesLabel": "關聯門市 / 據點",
     "keywordsLabel": "背景關鍵字 / 專有名詞",
     "keywordsPh": "例：Royal, Hồ Tùng Mậu, 冷凍櫃, 半成品",
+    "inputLangLabel": "辨識語言",
+    "targetLangLabel": "翻譯為",
     "viewBilingual": "雙語對照",
     "viewTranslationOnly": "只看翻譯",
     "viewOriginalOnly": "只看原文",

@@ -4372,6 +4372,8 @@
     "storesLabel": "Stores / Branches",
     "keywordsLabel": "Terminology & Keywords",
     "keywordsPh": "e.g. Royal, Hồ Tùng Mậu, Freezer, Semi-finished",
+    "inputLangLabel": "Recognize",
+    "targetLangLabel": "Translate to",
     "viewBilingual": "Bilingual",
     "viewTranslationOnly": "Translation Only",
     "viewOriginalOnly": "Original Only",
