@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import {
   BookOpen, Search, Plus, Filter, FileText, Cpu, CheckCircle2,
   AlertTriangle, Wrench, Sparkles, Loader2, ArrowRight, ShieldCheck,
@@ -20,6 +21,7 @@ import type {
 import { INITIAL_KNOWLEDGE_CHUNKS, INITIAL_REPAIR_CASES } from '@/lib/repair-ai/knowledge-base'
 
 export default function RepairKnowledgeTab() {
+  const t = useTranslations('RepairKnowledge')
   const [chunks, setChunks] = useState<RepairKnowledgeChunk[]>(INITIAL_KNOWLEDGE_CHUNKS)
   const [cases, setCases] = useState<RepairCaseFeedback[]>(INITIAL_REPAIR_CASES)
   const [loading, setLoading] = useState(false)
@@ -88,7 +90,7 @@ export default function RepairKnowledgeTab() {
   // 執行冷啟動推導
   const handleRunColdStart = async () => {
     if (!csBrand.trim() || !csModel.trim()) {
-      alert('請輸入設備品牌與型號')
+      alert(t('errBrandModel'))
       return
     }
     setCsLoading(true)
@@ -117,10 +119,10 @@ export default function RepairKnowledgeTab() {
         }
         setChunks(prev => [generatedChunk, ...prev])
       } else {
-        alert(data.error || '推導失敗')
+        alert(data.error || t('errDerive'))
       }
     } catch (e) {
-      alert('連線失敗')
+      alert(t('errNetwork'))
     } finally {
       setCsLoading(false)
     }
@@ -129,7 +131,7 @@ export default function RepairKnowledgeTab() {
   // 儲存新增切片
   const handleSaveChunk = async () => {
     if (!newChunk.title.trim() || !newChunk.content.trim()) {
-      alert('標題與內容為必填')
+      alert(t('errTitleContent'))
       return
     }
     setSavingChunk(true)
@@ -157,10 +159,10 @@ export default function RepairKnowledgeTab() {
           tags: '',
         })
       } else {
-        alert(data.error || '儲存失敗')
+        alert(data.error || t('errSave'))
       }
     } catch (e) {
-      alert('連線異常')
+      alert(t('errConnection'))
     } finally {
       setSavingChunk(false)
     }
@@ -169,7 +171,7 @@ export default function RepairKnowledgeTab() {
   // 儲存技師案例回饋
   const handleSaveFeedback = async () => {
     if (!newFeedback.actual_root_cause.trim() || !newFeedback.parts_replaced.trim()) {
-      alert('故障真實原因與更換零件為必填')
+      alert(t('errCauseParts'))
       return
     }
     setSavingFeedback(true)
@@ -197,10 +199,10 @@ export default function RepairKnowledgeTab() {
           verified_by: '機電工務組',
         })
       } else {
-        alert(data.error || '儲存失敗')
+        alert(data.error || t('errSave'))
       }
     } catch (e) {
-      alert('連線異常')
+      alert(t('errConnection'))
     } finally {
       setSavingFeedback(false)
     }
@@ -215,19 +217,19 @@ export default function RepairKnowledgeTab() {
         c.title.toLowerCase().includes(q) ||
         c.equipment_model.toLowerCase().includes(q) ||
         c.content.toLowerCase().includes(q) ||
-        c.tags.some(t => t.toLowerCase().includes(q))
+        c.tags.some(tag => tag.toLowerCase().includes(q))
       )
     }
     return true
   })
 
   const TYPE_LABELS: Record<KnowledgeChunkType, string> = {
-    error_code: '故障代碼表',
-    circuit_diagram: '電路接線圖',
-    troubleshooting_tree: '故障排查樹',
-    maintenance_sop: '保養清潔 SOP',
-    exploded_view: '零件爆炸圖',
-    real_case: '技師實戰回饋',
+    error_code: t('type.error_code'),
+    circuit_diagram: t('type.circuit_diagram'),
+    troubleshooting_tree: t('type.troubleshooting_tree'),
+    maintenance_sop: t('type.maintenance_sop'),
+    exploded_view: t('type.exploded_view'),
+    real_case: t('type.real_case'),
   }
 
   return (
@@ -237,10 +239,10 @@ export default function RepairKnowledgeTab() {
         <div>
           <h2 className="text-base font-bold flex items-center gap-2">
             <BookOpen className="h-5 w-5 text-primary" />
-            設備手冊與 RAG 知識庫
+            {t('title')}
           </h2>
           <p className="text-xs text-muted-foreground mt-0.5">
-            原廠說明書、線路圖、代碼表結構化切片・冷啟動狀態機自動推導・技師修復閉環學習
+            {t('subtitle')}
           </p>
         </div>
 
@@ -252,7 +254,7 @@ export default function RepairKnowledgeTab() {
             className="text-xs gap-1.5 border-primary/40 text-primary hover:bg-primary/10"
           >
             <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-            冷啟動狀態機推導
+            {t('coldStartBtn')}
           </Button>
 
           <Button
@@ -262,7 +264,7 @@ export default function RepairKnowledgeTab() {
             className="text-xs gap-1.5 border-indigo-500/40 text-indigo-600 hover:bg-indigo-500/10"
           >
             <Zap className="h-3.5 w-3.5 text-indigo-600" />
-            登記技師完修案例
+            {t('logCaseBtn')}
           </Button>
 
           <Button
@@ -271,7 +273,7 @@ export default function RepairKnowledgeTab() {
             className="text-xs gap-1.5 bg-primary text-primary-foreground font-semibold"
           >
             <Plus className="h-3.5 w-3.5" />
-            上傳/新增手冊切片
+            {t('addChunkBtn')}
           </Button>
         </div>
       </div>
@@ -281,7 +283,7 @@ export default function RepairKnowledgeTab() {
         <div className="relative w-full sm:w-80">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="搜尋機型、故障碼 (E01)、零件料號..."
+            placeholder={t('searchPh')}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             className="pl-9 text-xs h-9"
@@ -294,10 +296,10 @@ export default function RepairKnowledgeTab() {
             onChange={e => setSelectedCategory(e.target.value)}
             className="h-8 text-xs rounded-md border bg-background px-2"
           >
-            <option value="all">所有類別 (吧檯/工廠/IT)</option>
-            <option value="bar">🧋 門市吧檯設備</option>
-            <option value="it_pos">💻 POS 與資訊軟硬體</option>
-            <option value="factory">🏭 中央工廠設備</option>
+            <option value="all">{t('allCategories')}</option>
+            <option value="bar">{t('catBar')}</option>
+            <option value="it_pos">{t('catPos')}</option>
+            <option value="factory">{t('catFactory')}</option>
           </select>
 
           <select
@@ -305,12 +307,12 @@ export default function RepairKnowledgeTab() {
             onChange={e => setSelectedType(e.target.value)}
             className="h-8 text-xs rounded-md border bg-background px-2"
           >
-            <option value="all">所有資料類型</option>
-            <option value="error_code">故障代碼表 (Error Code)</option>
-            <option value="circuit_diagram">電路接線圖 (Circuit)</option>
-            <option value="maintenance_sop">清潔保養 SOP</option>
-            <option value="troubleshooting_tree">故障排查樹</option>
-            <option value="real_case">技師實戰回饋案例</option>
+            <option value="all">{t('allTypes')}</option>
+            <option value="error_code">{t('typeErrorCode')}</option>
+            <option value="circuit_diagram">{t('typeCircuit')}</option>
+            <option value="maintenance_sop">{t('typeSop')}</option>
+            <option value="troubleshooting_tree">{t('type.troubleshooting_tree')}</option>
+            <option value="real_case">{t('typeCases')}</option>
           </select>
         </div>
       </div>
@@ -322,7 +324,7 @@ export default function RepairKnowledgeTab() {
         </div>
       ) : filteredChunks.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground text-xs bg-muted/20 rounded-2xl border border-dashed">
-          查無符合條件之知識切片
+          {t('noChunks')}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -352,11 +354,11 @@ export default function RepairKnowledgeTab() {
                     </Badge>
                     {chunk.safe_for_store ? (
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium">
-                        門市可用
+                        {t('storeSafe')}
                       </span>
                     ) : (
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-medium">
-                        技師專屬
+                        {t('techOnly')}
                       </span>
                     )}
                   </div>
@@ -370,11 +372,11 @@ export default function RepairKnowledgeTab() {
               </div>
 
               <div className="pt-2 border-t border-border/40 flex items-center justify-between text-[11px] text-muted-foreground">
-                <span className="truncate max-w-[180px]">來源：{chunk.source_file || '官方技術規範'}</span>
+                <span className="truncate max-w-[180px]">{t('source')}{chunk.source_file || t('officialSpec')}</span>
                 <div className="flex items-center gap-1">
-                  {chunk.tags.slice(0, 3).map((t, idx) => (
+                  {chunk.tags.slice(0, 3).map((tag, idx) => (
                     <span key={idx} className="px-1.5 py-0.2 rounded bg-muted text-[10px]">
-                      #{t}
+                      #{tag}
                     </span>
                   ))}
                 </div>
@@ -389,10 +391,10 @@ export default function RepairKnowledgeTab() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Zap className="h-4 w-4 text-indigo-600" />
-            <h3 className="text-sm font-bold">技師實戰修復經驗閉環庫 (Case-Based Learning)</h3>
+            <h3 className="text-sm font-bold">{t('casesTitle')}</h3>
           </div>
           <span className="text-xs text-muted-foreground">
-            經由實際到府維修回填，持續反哺 AI 判斷精確度
+            {t('casesSubtitle')}
           </span>
         </div>
 
@@ -407,17 +409,17 @@ export default function RepairKnowledgeTab() {
                 <span className="text-[11px] text-muted-foreground">{cs.verified_by}</span>
               </div>
               <p className="text-muted-foreground">
-                <strong>回報異常：</strong> {cs.symptom}
+                <strong>{t('reported')}</strong> {cs.symptom}
               </p>
               <p className="text-emerald-700 dark:text-emerald-300">
-                <strong>真實成因：</strong> {cs.actual_root_cause}
+                <strong>{t('rootCause')}</strong> {cs.actual_root_cause}
               </p>
               <p className="text-foreground font-medium">
-                <strong>更換零件：</strong> {cs.parts_replaced}
+                <strong>{t('partsReplaced')}</strong> {cs.parts_replaced}
               </p>
               {cs.measured_resistance_or_voltage && (
                 <div className="text-[11px] bg-background/80 p-1.5 rounded font-mono text-muted-foreground">
-                  ⚡ 量測紀錄：{cs.measured_resistance_or_voltage}
+                  {t('measurements')}{cs.measured_resistance_or_voltage}
                 </div>
               )}
             </div>
@@ -432,7 +434,7 @@ export default function RepairKnowledgeTab() {
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-amber-500" />
-                設備冷啟動狀態機推導引擎
+                {t('csTitle')}
               </h3>
               <button
                 onClick={() => {
@@ -446,27 +448,27 @@ export default function RepairKnowledgeTab() {
             </div>
 
             <p className="text-xs text-muted-foreground">
-              當引進全新品牌型號且尚未建立 PDF 手冊時，輸入品牌與型號，AI 將依據水吧機電公理推導標準狀態機、極限開關與 10 大常見故障樹。
+              {t('csDesc')}
             </p>
 
             <div className="space-y-3 text-xs">
               <div>
-                <label className="font-bold">設備類別</label>
+                <label className="font-bold">{t('equipmentCategory')}</label>
                 <select
                   value={csCategory}
                   onChange={e => setCsCategory(e.target.value as EquipmentCategory)}
                   className="w-full mt-1 h-8 rounded-md border bg-background px-2"
                 >
-                  <option value="bar">🧋 門市吧檯設備 (封口機/果糖機/萃茶機/製冰機)</option>
-                  <option value="it_pos">💻 POS 與資訊軟硬體 (觸控機/出單機/標籤機/交換機)</option>
-                  <option value="factory">🏭 中央工廠設備 (炒糖機/煮茶鍋/循環泵)</option>
+                  <option value="bar">{t('catBarLong')}</option>
+                  <option value="it_pos">{t('catPosLong')}</option>
+                  <option value="factory">{t('catFactoryLong')}</option>
                 </select>
               </div>
 
               <div>
-                <label className="font-bold">品牌廠商</label>
+                <label className="font-bold">{t('brand')}</label>
                 <Input
-                  placeholder="如：益芳、宏茂、Hoshizaki、Epson、台達"
+                  placeholder={t('brandPh')}
                   value={csBrand}
                   onChange={e => setCsBrand(e.target.value)}
                   className="mt-1 text-xs h-8"
@@ -474,9 +476,9 @@ export default function RepairKnowledgeTab() {
               </div>
 
               <div>
-                <label className="font-bold">設備型號</label>
+                <label className="font-bold">{t('model')}</label>
                 <Input
-                  placeholder="如：ET-99S、FT-16、TM-T82、KM-150A"
+                  placeholder={t('modelPh')}
                   value={csModel}
                   onChange={e => setCsModel(e.target.value)}
                   className="mt-1 text-xs h-8"
@@ -490,7 +492,7 @@ export default function RepairKnowledgeTab() {
                 className="w-full gap-2 text-xs font-bold"
               >
                 {csLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-                自動推導機電狀態機與故障樹
+                {t('runDerive')}
               </Button>
             </div>
 
@@ -498,14 +500,14 @@ export default function RepairKnowledgeTab() {
               <div className="p-3.5 bg-muted/40 rounded-xl border space-y-2.5 text-xs">
                 <div className="font-bold text-foreground flex items-center justify-between">
                   <span>
-                    ✓ 已成功推導：{csResult.brand} {csResult.model_name}
+                    ✓ {t('derivedOk', { name: `${csResult.brand} ${csResult.model_name}` })}
                   </span>
                   <Badge variant="outline" className="text-[10px]">
-                    已收錄至知識庫
+                    {t('savedToKb')}
                   </Badge>
                 </div>
                 <div>
-                  <strong>推導機電狀態機：</strong>
+                  <strong>{t('derivedStates')}</strong>
                   <ol className="list-decimal list-inside text-muted-foreground space-y-0.5 mt-1">
                     {csResult.state_machine_steps?.map((step, idx) => (
                       <li key={idx}>{step}</li>
@@ -513,7 +515,7 @@ export default function RepairKnowledgeTab() {
                   </ol>
                 </div>
                 <div>
-                  <strong>推導標準備品料號：</strong>
+                  <strong>{t('derivedParts')}</strong>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {csResult.standard_parts?.map((p, idx) => (
                       <span
@@ -538,7 +540,7 @@ export default function RepairKnowledgeTab() {
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold flex items-center gap-2">
                 <Plus className="h-4 w-4 text-primary" />
-                新增/收錄設備手冊知識切片
+                {t('addChunkTitle')}
               </h3>
               <button
                 onClick={() => setShowAddChunk(false)}
@@ -551,16 +553,16 @@ export default function RepairKnowledgeTab() {
             <div className="space-y-3 text-xs">
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="font-bold">目標設備機型</label>
+                  <label className="font-bold">{t('targetModel')}</label>
                   <Input
-                    placeholder="如：益芳-ET-99S"
+                    placeholder={t('targetModelPh')}
                     value={newChunk.equipment_model}
                     onChange={e => setNewChunk({ ...newChunk, equipment_model: e.target.value })}
                     className="mt-1 text-xs h-8"
                   />
                 </div>
                 <div>
-                  <label className="font-bold">切片類型</label>
+                  <label className="font-bold">{t('chunkType')}</label>
                   <select
                     value={newChunk.chunk_type}
                     onChange={e =>
@@ -568,18 +570,18 @@ export default function RepairKnowledgeTab() {
                     }
                     className="w-full mt-1 h-8 rounded-md border bg-background px-2"
                   >
-                    <option value="error_code">故障代碼表 (Error Code)</option>
-                    <option value="circuit_diagram">電路接線圖 (Circuit)</option>
-                    <option value="maintenance_sop">保養清潔 SOP</option>
-                    <option value="troubleshooting_tree">故障排查樹</option>
+                    <option value="error_code">{t('typeErrorCode')}</option>
+                    <option value="circuit_diagram">{t('typeCircuit')}</option>
+                    <option value="maintenance_sop">{t('type.maintenance_sop')}</option>
+                    <option value="troubleshooting_tree">{t('type.troubleshooting_tree')}</option>
                   </select>
                 </div>
               </div>
 
               <div>
-                <label className="font-bold">切片標題</label>
+                <label className="font-bold">{t('chunkTitle')}</label>
                 <Input
-                  placeholder="如：益芳封口機切刀磨損判斷與更換工序"
+                  placeholder={t('chunkTitlePh')}
                   value={newChunk.title}
                   onChange={e => setNewChunk({ ...newChunk, title: e.target.value })}
                   className="mt-1 text-xs h-8"
@@ -587,10 +589,10 @@ export default function RepairKnowledgeTab() {
               </div>
 
               <div>
-                <label className="font-bold">切片正文內容 (支援 SOP、電阻值、步驟)</label>
+                <label className="font-bold">{t('chunkContent')}</label>
                 <textarea
                   rows={6}
-                  placeholder="請詳述排查步驟、正常標準值與異常處置方式..."
+                  placeholder={t('chunkContentPh')}
                   value={newChunk.content}
                   onChange={e => setNewChunk({ ...newChunk, content: e.target.value })}
                   className="w-full mt-1 p-2 rounded-md border bg-background text-xs font-mono"
@@ -605,7 +607,7 @@ export default function RepairKnowledgeTab() {
                     onChange={e => setNewChunk({ ...newChunk, safe_for_store: e.target.checked })}
                     className="rounded"
                   />
-                  <span>門市人員可執行 (免拆機安全)</span>
+                  <span>{t('storeSafeLong')}</span>
                 </label>
                 <label className="flex items-center gap-1.5 cursor-pointer">
                   <input
@@ -614,14 +616,14 @@ export default function RepairKnowledgeTab() {
                     onChange={e => setNewChunk({ ...newChunk, tech_only: e.target.checked })}
                     className="rounded"
                   />
-                  <span>技師專用 (需拆機量測)</span>
+                  <span>{t('techOnlyLong')}</span>
                 </label>
               </div>
 
               <div>
-                <label className="font-bold">標籤 (逗號分隔)</label>
+                <label className="font-bold">{t('tags')}</label>
                 <Input
-                  placeholder="如：切刀, 耗損, 刀片更換"
+                  placeholder={t('tagsPh')}
                   value={newChunk.tags}
                   onChange={e => setNewChunk({ ...newChunk, tags: e.target.value })}
                   className="mt-1 text-xs h-8"
@@ -635,7 +637,7 @@ export default function RepairKnowledgeTab() {
                   onClick={() => setShowAddChunk(false)}
                   className="text-xs"
                 >
-                  取消
+                  {t('cancel')}
                 </Button>
                 <Button
                   size="sm"
@@ -644,7 +646,7 @@ export default function RepairKnowledgeTab() {
                   className="text-xs font-bold"
                 >
                   {savingChunk && <Loader2 className="h-3 w-3 animate-spin mr-1" />}
-                  儲存切片
+                  {t('saveChunk')}
                 </Button>
               </div>
             </div>
@@ -659,7 +661,7 @@ export default function RepairKnowledgeTab() {
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold flex items-center gap-2">
                 <Zap className="h-4 w-4 text-indigo-600" />
-                登記技師完修實戰經驗 (閉環反哺)
+                {t('caseTitle')}
               </h3>
               <button
                 onClick={() => setShowFeedbackModal(false)}
@@ -670,14 +672,13 @@ export default function RepairKnowledgeTab() {
             </div>
 
             <p className="text-xs text-muted-foreground">
-              將到府修復的真實故障原因與實測數值寫入系統，AI
-              將自動學習並在下一次類似故障中優先推薦該處置方案。
+              {t('caseDesc')}
             </p>
 
             <div className="space-y-3 text-xs">
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="font-bold">設備機型</label>
+                  <label className="font-bold">{t('equipmentModel')}</label>
                   <Input
                     value={newFeedback.equipment_model}
                     onChange={e =>
@@ -687,9 +688,9 @@ export default function RepairKnowledgeTab() {
                   />
                 </div>
                 <div>
-                  <label className="font-bold">工單編號 (可選)</label>
+                  <label className="font-bold">{t('orderNo')}</label>
                   <Input
-                    placeholder="如 RO-202609-008"
+                    placeholder={t('orderNoPh')}
                     value={newFeedback.order_id}
                     onChange={e => setNewFeedback({ ...newFeedback, order_id: e.target.value })}
                     className="mt-1 text-xs h-8"
@@ -698,9 +699,9 @@ export default function RepairKnowledgeTab() {
               </div>
 
               <div>
-                <label className="font-bold">現場回報現象</label>
+                <label className="font-bold">{t('symptom')}</label>
                 <Input
-                  placeholder="如：E01 溫度不上升、膠膜捲不動"
+                  placeholder={t('symptomPh')}
                   value={newFeedback.symptom}
                   onChange={e => setNewFeedback({ ...newFeedback, symptom: e.target.value })}
                   className="mt-1 text-xs h-8"
@@ -708,10 +709,10 @@ export default function RepairKnowledgeTab() {
               </div>
 
               <div>
-                <label className="font-bold">拆機排查之真實根因 (Root Cause) *</label>
+                <label className="font-bold">{t('rootCauseReq')}</label>
                 <textarea
                   rows={2}
-                  placeholder="如：主板固態繼電器 (SSR) 輸出端擊穿斷路，無法供電給加熱棒"
+                  placeholder={t('rootCausePh')}
                   value={newFeedback.actual_root_cause}
                   onChange={e =>
                     setNewFeedback({ ...newFeedback, actual_root_cause: e.target.value })
@@ -721,9 +722,9 @@ export default function RepairKnowledgeTab() {
               </div>
 
               <div>
-                <label className="font-bold">實際更換料件與料號 *</label>
+                <label className="font-bold">{t('partsReq')}</label>
                 <Input
-                  placeholder="如：更換 25A 固態繼電器 (SSR-25DA)"
+                  placeholder={t('partsPh')}
                   value={newFeedback.parts_replaced}
                   onChange={e =>
                     setNewFeedback({ ...newFeedback, parts_replaced: e.target.value })
@@ -733,9 +734,9 @@ export default function RepairKnowledgeTab() {
               </div>
 
               <div>
-                <label className="font-bold">實測電阻值或電壓紀錄</label>
+                <label className="font-bold">{t('measured')}</label>
                 <Input
-                  placeholder="如：加熱棒量得 530Ω 正常，SSR 輸入端 12V 正常但無輸出"
+                  placeholder={t('measuredPh')}
                   value={newFeedback.measured_resistance_or_voltage}
                   onChange={e =>
                     setNewFeedback({
@@ -748,9 +749,9 @@ export default function RepairKnowledgeTab() {
               </div>
 
               <div>
-                <label className="font-bold">技師心得與預防建議</label>
+                <label className="font-bold">{t('techNote')}</label>
                 <Input
-                  placeholder="如：建議門市避免於潮濕處放置，每半年緊固端子螺絲"
+                  placeholder={t('techNotePh')}
                   value={newFeedback.technician_note}
                   onChange={e =>
                     setNewFeedback({ ...newFeedback, technician_note: e.target.value })
@@ -766,7 +767,7 @@ export default function RepairKnowledgeTab() {
                   onClick={() => setShowFeedbackModal(false)}
                   className="text-xs"
                 >
-                  取消
+                  {t('cancel')}
                 </Button>
                 <Button
                   size="sm"
@@ -775,7 +776,7 @@ export default function RepairKnowledgeTab() {
                   className="text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white"
                 >
                   {savingFeedback && <Loader2 className="h-3 w-3 animate-spin mr-1" />}
-                  歸檔學習庫
+                  {t('fileCase')}
                 </Button>
               </div>
             </div>

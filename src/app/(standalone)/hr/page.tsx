@@ -628,6 +628,7 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
           title="批次匯入 / 更新員工資料"
           description="支援 .xlsx, .xls 與 .csv 檔案。若姓名與身分證號已存在將自動更新，否則新增。"
           columns={EMPLOYEE_IMPORT_COLUMNS}
+          columnsNs="HrImport.employee"
           templateFilename="員工名單範本"
           sheetName="員工資料"
           onClose={() => setShowImport(false)}
@@ -912,6 +913,7 @@ function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: 
           title="批次匯入 / 更新月度薪資"
           description="支援 .xlsx, .xls 與 .csv 檔案。若名單中已有該員工當月薪資將自動覆蓋更新，未建立之員工將自動建立。"
           columns={PAYROLL_IMPORT_COLUMNS}
+          columnsNs="HrImport.payroll"
           templateFilename="薪資資料範本"
           sheetName="月薪資表"
           onClose={() => setShowImport(false)}
@@ -1125,6 +1127,7 @@ function LeaveTab({ employees, loading: empLoading }: { employees: Employee[]; l
           title="批次匯入請假紀錄"
           description="支援 .xlsx, .xls 與 .csv 檔案。請填寫員工姓名或考勤工號。"
           columns={LEAVE_IMPORT_COLUMNS}
+          columnsNs="HrImport.leave"
           templateFilename="請假紀錄範本"
           sheetName="請假清單"
           onClose={() => setShowImport(false)}
@@ -1616,6 +1619,7 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
           title="批次匯入 / 更新應徵者名單"
           description="支援 .xlsx, .xls 與 .csv 檔案。若電話、Email 或身分證號相符將自動更新，否則新增。"
           columns={CANDIDATE_IMPORT_COLUMNS}
+          columnsNs="HrImport.candidate"
           templateFilename="應徵者名單範本"
           sheetName="應徵者清單"
           onClose={() => setShowImport(false)}
@@ -1994,6 +1998,7 @@ function EvaluationTab({ employees, loading }: { employees: Employee[]; loading:
           title="批次匯入 / 更新考核獎懲資料"
           description="支援 .xlsx, .xls 與 .csv 檔案。請填寫員工姓名或考勤工號。"
           columns={EVALUATION_IMPORT_COLUMNS}
+          columnsNs="HrImport.evaluation"
           templateFilename="員工考核獎懲範本"
           sheetName="考核獎懲"
           onClose={() => setShowImport(false)}
@@ -2222,6 +2227,7 @@ function InsuranceTab({ onRefresh }: { onRefresh: () => void }) {
           title="批次匯入 / 更新勞健保資料"
           description="支援 .xlsx, .xls 與 .csv 檔案。可比對員工姓名、身分證號或考勤工號更新投保狀態、證號與投保薪資。"
           columns={INSURANCE_IMPORT_COLUMNS}
+          columnsNs="HrImport.insurance"
           templateFilename="員工投保資料範本"
           sheetName="投保名單"
           onClose={() => setShowImport(false)}

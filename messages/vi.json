@@ -4368,7 +4368,13 @@
     "save": "Lưu",
     "cancel": "Hủy",
     "ownerOnlyDone": "Chỉ chủ sở hữu mới đánh dấu hoàn thành",
-    "deadlineFieldLabel": "Hạn chót"
+    "deadlineFieldLabel": "Hạn chót",
+    "importBtn": "Nhập hàng loạt (Excel/CSV)",
+    "importTitle": "Nhập công việc hàng loạt",
+    "importDesc": "Hỗ trợ tệp .xlsx, .xls và .csv. Vui lòng điền tiêu đề công việc, ghi chú trạng thái, hạn chót…",
+    "importTemplate": "Mau danh sach cong viec",
+    "importSheet": "Cong viec",
+    "expand": "Mở rộng"
   },
   "Pos": {
     "title": "Gọi món",
@@ -5138,7 +5144,13 @@
     "qty": "Số lượng",
     "amount": "Số tiền",
     "noPurchaseRecords": "Chưa có lịch sử mua hàng",
-    "date": "Ngày"
+    "date": "Ngày",
+    "linkSlugLabel": "Mã đường dẫn biểu mẫu (chữ thường / số, VD: ice-abc)",
+    "pinReset": "Đặt lại mật khẩu nhà cung cấp (đã có, để trống nếu giữ nguyên)",
+    "pinSet": "Đặt mật khẩu ban đầu cho nhà cung cấp (ít nhất 6 ký tự)",
+    "vendorUrl": "Đường dẫn nhà cung cấp: {url} (sau khi lưu, gửi đường dẫn và mật khẩu cho nhà cung cấp; họ có thể tự đổi mật khẩu sau khi đăng nhập)",
+    "slugPlaceholder": "mã",
+    "noSubdomain": "Công ty chưa thiết lập tên miền con riêng, tạm thời chỉ dùng được liên kết riêng cũ"
   },
   "AgentPage": {
     "statusQueued": "Đang chờ",
@@ -6486,7 +6498,12 @@
     "moneyLossValue": "{n} VND",
     "notifiedHr": "Đã thông báo nhân sự ({n} mục vượt ngưỡng)",
     "noOverItems": "Hiện không có mục nào vượt ngưỡng",
-    "notifyFailed": "Thông báo thất bại"
+    "notifyFailed": "Thông báo thất bại",
+    "pushConfirm": "Gửi công thức R&D \"{name}\" sang phòng marketing để chuẩn bị ra mắt sản phẩm mới?",
+    "pushDone": "✅ Đã gửi \"{name}\" sang phòng marketing!\nNhân viên marketing có thể tiếp tục tại \"Hệ thống marketing → Tư liệu sản phẩm → Quy trình ra mắt sản phẩm mới\" để chuẩn bị giai đoạn ưu tiên VIP và lịch ra mắt.",
+    "pushFailed": "Gửi thất bại",
+    "pushTitle": "Gửi sang phòng marketing để ra mắt sản phẩm mới",
+    "pushBtn": "Gửi ra mắt"
   },
   "AuditPlatform": {
     "knowledgeCoreStatus": "COMPANY KNOWLEDGE CORE — lớp kiến thức chung của doanh nghiệp đang liên kết",
@@ -6896,7 +6913,11 @@
     "unscheduled": "Chưa lên lịch",
     "editContentTitle": "Sửa nội dung",
     "addContentTitle": "Thêm nội dung",
-    "scheduledDateLabel": "Ngày lên lịch"
+    "scheduledDateLabel": "Ngày lên lịch",
+    "tabCompany": "Hồ sơ công ty",
+    "tabCampaigns": "Trung tâm chiến dịch (AI / hiệu quả)",
+    "tabCrm": "CRM hội viên & VIP",
+    "templatesLink": "Phong cách hình ảnh & quảng cáo"
   },
   "HrPage": {
     "staffFulltime": "Chính thức",
@@ -7520,7 +7541,110 @@
     "viNameLabel": "Tên tiếng Việt",
     "yearSuffix": "Năm {y}",
     "zhNameLabel": "Tên tiếng Trung *",
-    "zhNamePlaceholder": "VD: Tiền điện"
+    "zhNamePlaceholder": "VD: Tiền điện",
+    "cf": {
+      "errTransfer": "Chuyển khoản cần chọn tài khoản chuyển và nhận khác nhau",
+      "payee": "Người thu chi / nhà cung cấp / khách hàng",
+      "fromAccountReq": "Tài khoản chuyển (từ mục) *",
+      "toAccountReq": "Tài khoản nhận (đến mục) *",
+      "invoicePh": "VD: AB12345678",
+      "summaryPh": "VD: mua lá trà, doanh thu cửa hàng",
+      "amountReq": "Số tiền *",
+      "receiveAccount": "Tài khoản nhận tiền (đến mục)",
+      "payAccount": "Tài khoản chi tiền (từ mục)",
+      "incomeSubject": "Khoản mục thu (từ mục)",
+      "expenseSubject": "Khoản mục chi (đến mục)",
+      "chooseSubject": "-- Chọn khoản mục --",
+      "payeePh": "VD: Hà, tên nhà cung cấp",
+      "errSave": "Lưu thất bại, vui lòng thử lại",
+      "errAmount": "Vui lòng nhập số tiền hợp lệ",
+      "errDate": "Vui lòng chọn ngày ghi sổ",
+      "editTitle": "Sửa bút toán",
+      "newTitle": "Thêm bút toán",
+      "typeIncome": "Thu (+)",
+      "typeExpense": "Chi (-)",
+      "typeTransfer": "Chuyển khoản (⇄)",
+      "dateReq": "Ngày ghi sổ *",
+      "notesPh": "Thông tin bổ sung khác",
+      "txType": "Loại giao dịch",
+      "summary": "Diễn giải",
+      "invoice": "Số hóa đơn",
+      "notes": "Ghi chú chi tiết",
+      "closeExit": "Đóng",
+      "saving": "Đang lưu…",
+      "addEntry": "Thêm",
+      "confirmSave": "Xác nhận lưu",
+      "cancel": "Hủy",
+      "importDesc": "Hỗ trợ tệp .xlsx, .xls và .csv. Cần có ngày, loại (thu/chi), số tiền…",
+      "emptyHint": "Hãy đổi năm/tháng, lọc theo cây khoản mục hoặc bấm \"Thêm bút toán\"",
+      "noAccess": "Chỉ bộ phận thủ quỹ / hành chính mới dùng được chức năng thủ quỹ",
+      "mdbBatches": "Quản lý / hoàn tác lô MDB",
+      "noAccessHint": "Vui lòng đăng nhập bằng tài khoản quản trị rồi thử lại",
+      "title": "IMT ERP Thủ quỹ",
+      "importMdb": "Nhập tệp sổ sách (.mdb)",
+      "searchPh": "Nhập từ khóa tìm kiếm...",
+      "clearFilter": "Xóa bộ lọc (hiển thị tất cả)",
+      "empty": "Không có bút toán phù hợp",
+      "confirmDelete": "Xóa bút toán này?",
+      "loading": "Đang tải bút toán…",
+      "colAmount": "Số tiền",
+      "importTitle": "Nhập sổ quỹ hàng loạt",
+      "filteringBy": "Đang lọc theo khoản mục:",
+      "colDate": "Ngày / thứ",
+      "colNotes": "Ghi chú / hóa đơn",
+      "tabPnl": "Báo cáo doanh thu & lãi lỗ",
+      "importTemplate": "Mau so quy",
+      "searchLabel": "Tìm kiếm:",
+      "cashBank": "Tiền mặt / ngân hàng",
+      "ledgerName": "Sổ:",
+      "todayDate": "Hôm nay:",
+      "shown": "Hiển thị:",
+      "monthIncome": "Thu tháng này:",
+      "monthExpense": "Chi tháng này:",
+      "monthNet": "Chênh lệch thu chi:",
+      "todayIncome": "Thu hôm nay:",
+      "todayExpense": "Chi hôm nay:",
+      "tabCashflow": "Sổ quỹ",
+      "tabPricing": "Định giá vật tư",
+      "tabStoreExpenses": "Chi phí cửa hàng",
+      "tabVendors": "Nhà cung cấp",
+      "subJournal": "Sổ ghi chép",
+      "subToday": "Thu chi hôm nay",
+      "subMonth": "Thu chi tháng này",
+      "subRegular": "Tiền gửi có kỳ hạn",
+      "subProject": "Ghi chép dự án",
+      "addRecord": "Thêm bút toán",
+      "more": "Chức năng khác",
+      "batchImport": "Nhập hàng loạt",
+      "toAccount": "Tài khoản nhận",
+      "depositAccount": "Tài khoản gửi vào",
+      "editRecord": "Sửa bút toán",
+      "deleteRecord": "Xóa bút toán",
+      "importSheet": "But toan",
+      "colFrom": "Từ mục",
+      "colTo": "Đến mục",
+      "colPayee": "Người thu chi",
+      "colStatus": "Loại",
+      "colBalance": "Số dư",
+      "colSummary": "Diễn giải",
+      "colActions": "Thao tác",
+      "income": "Thu",
+      "expense": "Chi",
+      "transfer": "Chuyển khoản",
+      "badgeIn": "Thu",
+      "badgeOut": "Chi",
+      "badgeTransfer": "CK",
+      "addedCount": "Đã thêm {n} bút toán",
+      "importErrors": "Lỗi nhập dữ liệu ({n})",
+      "rowsUnit": "dòng",
+      "searchMode": {
+        "all": "Tìm tất cả",
+        "desc": "Diễn giải",
+        "category": "Khoản mục",
+        "payee": "Người thu chi",
+        "notes": "Ghi chú / hóa đơn"
+      }
+    }
   },
   "StoreCoachPage": {
     "fillRegTitleAndClause": "Vui lòng điền tiêu đề quy định và nội dung điều khoản cụ thể",
@@ -10143,10 +10267,1708 @@
     "optAvail": "🟢 Đang cho thuê",
     "optRented": "🔴 Đã cho thuê",
     "optMaint": "🟡 Đang bảo trì",
-    "fFeatureNotes": "Ghi chú đặc điểm"
+    "fFeatureNotes": "Ghi chú đặc điểm",
+    "s1": {
+      "industry": "Thuê xe riêng cao cấp miền Trung Việt Nam (Đà Nẵng / Hội An / Bà Nà) kèm trợ lý nói tiếng Trung",
+      "product": "Xe 7–16 chỗ đời mới, tài xế song ngữ, đón tiễn sân bay ưu tiên, lịch trình tùy chỉnh kèm bảo hiểm trọn gói",
+      "audience": "Gia đình Đài Loan đi du lịch, khách tự túc, du lịch công ty và đoàn khảo sát doanh nghiệp",
+      "offer": "Đặt trước 14 ngày giảm 10%, tặng SIM 5G không giới hạn cho cả đoàn và ưu đãi nhà hàng hải sản",
+      "cta": "LINE chính thức: @danang_tour hoặc đặt ngay trên website"
+    },
+    "s2": {
+      "industry": "Homestay suối nước nóng thuê nguyên căn cho gia đình tại Jiaoxi, Yilan",
+      "product": "Nhà riêng sân vườn kiểu Nhật, hồ nóng lạnh riêng, bàn mạt chược tự động, hồ bóng trẻ em, sân nướng BBQ",
+      "audience": "Gia đình ba thế hệ, nhóm bạn thuê nguyên căn, khách nghỉ cuối tuần",
+      "offer": "Đặt ngày thường tặng giỏ bữa sáng rau củ hữu cơ và hộp quà suối nước nóng địa phương",
+      "cta": "Tư vấn qua LINE: @yilan_hotspring"
+    }
   },
   "MktCampaignsPage": {
     "title": "Trung tâm chiến dịch",
     "subtitle": "Lập kế hoạch, tạo và theo dõi chiến dịch trực tiếp, trực tuyến và kết hợp tại một nơi"
+  },
+  "Feedback": {
+    "title": "Góp ý",
+    "thanks": "Đã gửi, cảm ơn bạn đã góp ý!",
+    "type": {
+      "bug": "🐛 Báo lỗi",
+      "ai_error": "🤖 AI trả lời sai",
+      "feature": "✨ Đề xuất tính năng",
+      "text_change": "🎨 Chỉnh giao diện / văn bản"
+    },
+    "titlePh": "Tiêu đề (mô tả ngắn)",
+    "descPh": "Mô tả chi tiết điều đã xảy ra và kết quả mong muốn",
+    "submit": "Gửi"
+  },
+  "Skills": {
+    "viral-video-copywriting": {
+      "label": "Kịch bản video ngắn viral",
+      "description": "Tạo câu mở đầu, kịch bản phân cảnh và lời thoại cho video ngắn (Reels / Douyin / Shorts).",
+      "fields": {
+        "topic": {
+          "label": "Chủ đề video",
+          "placeholder": "VD: 3 mẹo sắp xếp bếp nhỏ nhanh gọn"
+        },
+        "product": {
+          "label": "Sản phẩm / dịch vụ lồng ghép"
+        },
+        "duration": {
+          "label": "Thời lượng video (giây)"
+        },
+        "style": {
+          "label": "Phong cách",
+          "options": {
+            "energetic": "Nhịp nhanh, sôi động",
+            "storytelling": "Kể chuyện",
+            "educational": "Kiến thức hữu ích"
+          }
+        }
+      }
+    },
+    "ecommerce-copywriter": {
+      "label": "Mô tả sản phẩm thương mại điện tử",
+      "description": "Tạo mô tả sản phẩm sẵn sàng đăng bán từ thông tin sản phẩm (điểm nổi bật, thông số, tình huống sử dụng).",
+      "fields": {
+        "productName": {
+          "label": "Tên sản phẩm",
+          "placeholder": "VD: Bình giữ nhiệt inox 500ml"
+        },
+        "features": {
+          "label": "Điểm nổi bật / thông số",
+          "placeholder": "Chất liệu, dung tích, thời gian giữ nhiệt, tình huống sử dụng…"
+        },
+        "audience": {
+          "label": "Khách hàng mục tiêu",
+          "placeholder": "VD: dân văn phòng, người tập gym"
+        },
+        "tone": {
+          "label": "Giọng văn",
+          "options": {
+            "professional": "Chuyên nghiệp, đáng tin",
+            "warm": "Thân thiện, ấm áp",
+            "playful": "Vui nhộn, sinh động"
+          }
+        }
+      }
+    },
+    "product-marketing-copywriter": {
+      "label": "Nội dung quảng bá",
+      "description": "Tạo nhiều phiên bản nội dung và tiêu đề quảng cáo cho chiến dịch quảng cáo / khuyến mãi.",
+      "fields": {
+        "product": {
+          "label": "Sản phẩm / dịch vụ"
+        },
+        "campaign": {
+          "label": "Chiến dịch / chủ đề",
+          "placeholder": "VD: Ngày của Mẹ giảm 20% có thời hạn"
+        },
+        "platform": {
+          "label": "Nền tảng quảng cáo",
+          "options": {
+            "google": "Quảng cáo tìm kiếm Google"
+          }
+        },
+        "usp": {
+          "label": "Lợi thế cốt lõi",
+          "placeholder": "Khác biệt so với đối thủ, ưu đãi có thời hạn…"
+        }
+      }
+    },
+    "article-illustrator": {
+      "label": "Tự động minh họa bài viết",
+      "description": "Phân tích bài viết, tạo prompt hình minh họa cho từng đoạn và sinh ảnh.",
+      "fields": {
+        "article": {
+          "label": "Nội dung bài viết",
+          "placeholder": "Dán toàn bộ bài viết…"
+        },
+        "numImages": {
+          "label": "Số lượng ảnh"
+        },
+        "aspectRatio": {
+          "label": "Tỷ lệ ảnh",
+          "options": {
+            "16:9": "16:9 ngang",
+            "1:1": "1:1 vuông",
+            "9:16": "9:16 dọc"
+          }
+        }
+      }
+    },
+    "market-research-reports": {
+      "label": "Báo cáo nghiên cứu thị trường",
+      "description": "Tạo báo cáo phân tích thị trường / đối thủ có cấu trúc.",
+      "fields": {
+        "topic": {
+          "label": "Chủ đề nghiên cứu / ngành",
+          "placeholder": "VD: Thị trường dụng cụ cà phê pha tay tại Đài Loan"
+        },
+        "competitors": {
+          "label": "Đối thủ chính",
+          "placeholder": "Các thương hiệu cạnh tranh đã biết (không bắt buộc)"
+        },
+        "focus": {
+          "label": "Trọng tâm phân tích",
+          "options": {
+            "overview": "Tổng quan thị trường",
+            "competitor": "Phân tích đối thủ",
+            "entry": "Chiến lược thâm nhập"
+          }
+        }
+      }
+    },
+    "product-video-creator": {
+      "label": "Lên kế hoạch video sản phẩm",
+      "description": "Tạo phân cảnh video sản phẩm, prompt tạo video, kịch bản lồng tiếng và 1 ảnh tham chiếu key visual.",
+      "fields": {
+        "product": {
+          "label": "Tên sản phẩm"
+        },
+        "features": {
+          "label": "Điểm nổi bật / thông số"
+        },
+        "duration": {
+          "label": "Thời lượng video (giây)"
+        },
+        "aspectRatio": {
+          "label": "Tỷ lệ khung hình",
+          "options": {
+            "9:16": "9:16 dọc (video ngắn)",
+            "16:9": "16:9 ngang",
+            "1:1": "1:1 vuông"
+          }
+        }
+      }
+    },
+    "ecommerce-video-marketing": {
+      "label": "Kịch bản video ngắn bán hàng",
+      "description": "Kịch bản video ngắn bán hàng: lời thoại, nhịp độ, CTA và gợi ý nền tảng đăng.",
+      "fields": {
+        "product": {
+          "label": "Sản phẩm / dịch vụ"
+        },
+        "sellingPoints": {
+          "label": "Điểm bán hàng chính / ưu đãi"
+        },
+        "platform": {
+          "label": "Nền tảng đăng",
+          "options": {
+            "tiktok": "Douyin / TikTok",
+            "shopee": "Shopee Live / video"
+          }
+        }
+      }
+    },
+    "tts-voice-synthesis": {
+      "label": "Lồng tiếng AI",
+      "description": "Chuyển văn bản thành giọng đọc và trả về file âm thanh có thể tải xuống.",
+      "fields": {
+        "text": {
+          "label": "Văn bản lồng tiếng",
+          "placeholder": "Dán văn bản cần lồng tiếng…"
+        },
+        "voice": {
+          "label": "Giọng đọc",
+          "options": {
+            "default": "Mặc định",
+            "female": "Giọng nữ",
+            "male": "Giọng nam"
+          }
+        }
+      }
+    },
+    "ppt-generator": {
+      "label": "Tạo bài thuyết trình (PPTX)",
+      "description": "Tự lên bố cục slide theo chủ đề và xuất file .pptx có thể tải xuống.",
+      "fields": {
+        "topic": {
+          "label": "Chủ đề thuyết trình",
+          "placeholder": "VD: Chiến lược marketing thương hiệu 2026"
+        },
+        "context": {
+          "label": "Nội dung chính / tư liệu bổ sung",
+          "placeholder": "Các ý chính, số liệu, chương mục cần có…"
+        },
+        "numSlides": {
+          "label": "Số slide"
+        },
+        "audience": {
+          "label": "Đối tượng",
+          "placeholder": "VD: quản lý, khách hàng, nhà đầu tư"
+        }
+      }
+    },
+    "social-account-coach": {
+      "label": "Huấn luyện vận hành tài khoản MXH",
+      "description": "Phân tích định vị và khán giả của tài khoản, đưa ra hướng nội dung, chẩn đoán tăng trưởng và việc cần làm.",
+      "fields": {
+        "platform": {
+          "label": "Nền tảng",
+          "options": {
+            "xiaohongshu": "Xiaohongshu"
+          }
+        },
+        "niche": {
+          "label": "Định vị / chủ đề tài khoản",
+          "placeholder": "VD: mẹo sắp xếp nhà cửa, tài chính cá nhân"
+        },
+        "recent": {
+          "label": "Nội dung hoặc số liệu gần đây (không bắt buộc)",
+          "placeholder": "Dán vài bài đăng gần đây, số người theo dõi, tỷ lệ tương tác… để phân tích chính xác hơn"
+        },
+        "goal": {
+          "label": "Mục tiêu hiện tại",
+          "options": {
+            "growth": "Tăng follower / tiếp cận",
+            "engagement": "Tương tác / bình luận",
+            "conversion": "Chuyển đổi / kiếm tiền"
+          }
+        }
+      }
+    },
+    "viral-content-planner": {
+      "label": "Lên kế hoạch nội dung viral",
+      "description": "Lên ý tưởng chủ đề dễ lan truyền theo tư duy growth hacking: câu mở đầu, cấu trúc giữ chân và động lực chia sẻ.",
+      "fields": {
+        "topic": {
+          "label": "Lĩnh vực / chủ đề nội dung",
+          "placeholder": "VD: review món ăn bình dân, phát triển sự nghiệp"
+        },
+        "format": {
+          "label": "Định dạng nội dung",
+          "options": {
+            "short_video": "Video ngắn",
+            "long_video": "Video dài",
+            "thread": "Bài ảnh / chuỗi bài"
+          }
+        },
+        "audience": {
+          "label": "Khán giả mục tiêu",
+          "placeholder": "VD: dân văn phòng 25-35 tuổi"
+        },
+        "goal": {
+          "label": "Mục tiêu lan truyền",
+          "placeholder": "VD: tăng follower, nhận diện thương hiệu, kéo traffic"
+        }
+      }
+    },
+    "kol-persona-writer": {
+      "label": "Nội dung theo persona",
+      "description": "Viết bài đăng mạng xã hội nhất quán với giọng văn mẫu và persona của bạn.",
+      "fields": {
+        "persona": {
+          "label": "Persona / giọng văn",
+          "placeholder": "VD: blogger tài chính lý trí, ấm áp, nói chuyện như bạn bè, không lên lớp; hoặc dán vài bài cũ làm mẫu phong cách"
+        },
+        "topic": {
+          "label": "Bài này viết về gì",
+          "placeholder": "VD: chia sẻ app ghi chép chi tiêu, quảng bá khóa học mới"
+        },
+        "platform": {
+          "label": "Nền tảng",
+          "options": {
+            "xiaohongshu": "Xiaohongshu"
+          }
+        }
+      }
+    },
+    "live-stream-copywriter": {
+      "label": "Nội dung livestream",
+      "description": "Tạo thông báo lên sóng, lời thoại livestream và kịch bản tương tác với fan, có tính giải trí và bán hàng.",
+      "fields": {
+        "persona": {
+          "label": "Người dẫn / biệt danh & phong cách",
+          "placeholder": "VD: biệt danh Phàm, hoạt bát, lầy lội, hay làm nũng với fan"
+        },
+        "occasion": {
+          "label": "Mục đích",
+          "options": {
+            "preview": "Thông báo lên sóng",
+            "voiceover": "Lời thoại video ngắn",
+            "interaction": "Tương tác livestream / trả lời bình luận",
+            "post": "Bài đăng trạng thái"
+          }
+        },
+        "points": {
+          "label": "Nội dung chính lần này",
+          "placeholder": "VD: 8 giờ tối nay lên sóng chơi game mới, bốc thăm quà, cảm ơn fan ủng hộ"
+        }
+      }
+    }
+  },
+  "SkillRunner": {
+    "loadFailed": "Không tải được danh sách chuyên gia",
+    "trainNeedPro": "Huấn luyện chuyên gia cần gói PRO trở lên",
+    "addFailed": "Thêm thất bại",
+    "networkError": "Lỗi kết nối",
+    "uploadFailed": "Tải tệp lên thất bại",
+    "noText": "Không trích xuất được văn bản từ tệp này (chỉ hỗ trợ docx / xlsx / csv / txt / pdf)",
+    "fileFailed": "Xử lý tệp thất bại",
+    "fillRequired": "Vui lòng điền: {field}",
+    "insufficient": "Không đủ điểm, lần này cần khoảng {n} điểm",
+    "runFailed": "Chạy thất bại",
+    "balance": "Số dư {n} điểm",
+    "category": {
+      "copywriting": "Nội dung",
+      "video": "Video ngắn",
+      "illustration": "Hình minh họa",
+      "research": "Nghiên cứu",
+      "audio": "Âm thanh",
+      "presentation": "Thuyết trình",
+      "social": "Mạng xã hội"
+    },
+    "fromCredits": "Từ {n} điểm",
+    "ownKnowledge": "Kho kiến thức riêng",
+    "loading": "Đang tải…",
+    "back": "Quay lại",
+    "generating": "Đang tạo…",
+    "run": "Chạy",
+    "result": "Kết quả",
+    "charged": "Đã trừ {n} điểm",
+    "copied": "Đã sao chép",
+    "copy": "Sao chép",
+    "trainTitle": "Huấn luyện chuyên gia này",
+    "trainHint": "Thêm liên kết / văn bản / tệp, tự động tham chiếu khi chạy",
+    "trainLocked": "Huấn luyện kho kiến thức riêng là tính năng của gói PRO trở lên. Nâng cấp để chuyên gia học từ các ví dụ viral, phong cách và tài liệu bạn tải lên.",
+    "srcType": {
+      "url": "Liên kết",
+      "file": "Tệp",
+      "text": "Văn bản"
+    },
+    "chars": "{n} ký tự",
+    "tab": {
+      "url": "Đường dẫn URL",
+      "text": "Dán văn bản",
+      "file": "Tải tệp lên"
+    },
+    "urlPh": "https://… (bài viết / bài đăng / trang web)",
+    "namePh": "Tên của kiến thức này (không bắt buộc)",
+    "textPh": "Dán ví dụ viral, phương pháp, mẫu phong cách…",
+    "adding": "Đang thêm…",
+    "addKnowledge": "Thêm kiến thức",
+    "processing": "Đang xử lý…",
+    "chooseFile": "Chọn tệp",
+    "fileHint": "Hỗ trợ docx / xlsx / csv / txt / pdf, tự động trích xuất văn bản"
+  },
+  "CompanyProfile": {
+    "noPermission": "Cần quyền quản trị công ty hoặc quyền marketing để chỉnh sửa hồ sơ công ty",
+    "tab": {
+      "basic": "Thông tin cơ bản",
+      "brand": "Thương hiệu",
+      "products": "Sản phẩm",
+      "stores": "Cửa hàng",
+      "files": "Tư liệu"
+    },
+    "legalName": "Tên pháp lý của công ty",
+    "legalNameHint": "Tên đăng ký; tên thương hiệu nhập ở tab \"Thương hiệu\"",
+    "legalNamePh": "VD: Công ty TNHH XX",
+    "pleaseSelect": "Vui lòng chọn",
+    "industry": {
+      "label": "Ngành nghề",
+      "tech": "Công nghệ / phần mềm",
+      "manufacturing": "Sản xuất",
+      "retail": "Bán lẻ / thương mại điện tử",
+      "finance": "Dịch vụ tài chính",
+      "health": "Y tế / sức khỏe",
+      "food": "F&B / tiêu dùng",
+      "education": "Giáo dục / đào tạo",
+      "realEstate": "Bất động sản",
+      "logistics": "Logistics / vận tải",
+      "advertising": "Quảng cáo / marketing",
+      "hospitality": "Khách sạn / homestay",
+      "other": "Khác"
+    },
+    "employees": {
+      "label": "Số nhân viên",
+      "e1": "1-10 người",
+      "e2": "11-50 người",
+      "e3": "51-200 người",
+      "e4": "201-500 người",
+      "e5": "501-1000 người",
+      "e6": "Trên 1000 người"
+    },
+    "capital": "Vốn điều lệ",
+    "capitalPh": "VD: 10 tỷ VND",
+    "founded": "Năm thành lập",
+    "foundedPh": "VD: 2010",
+    "address": "Địa chỉ công ty",
+    "addressPh": "Tỉnh/TP + quận/huyện + đường",
+    "basicHint": "Website, khách hàng mục tiêu, điểm bán hàng, câu chuyện thương hiệu… nhập ở tab \"Thương hiệu\"; sản phẩm và cửa hàng nhập ở tab riêng.",
+    "saveBasic": "Lưu thông tin cơ bản",
+    "saved": "Đã lưu",
+    "saveFailed": "Lưu thất bại",
+    "fileCat": {
+      "logo": "Logo / biểu tượng thương hiệu",
+      "image": "Ảnh sản phẩm / bối cảnh",
+      "document": "Giới thiệu công ty / catalogue",
+      "faq": "FAQ / dữ liệu hỏi đáp"
+    },
+    "extracted": "Đã trích xuất",
+    "uploadFile": "Tải tệp lên",
+    "filesHint": "Excel / Word / PDF sẽ được tự động trích xuất văn bản để AI dùng cho marketing và trả lời khách hàng. Tải lên hoặc xóa sẽ tự động lưu.",
+    "tone": {
+      "formal": "Chuyên nghiệp / trang trọng",
+      "young": "Sôi nổi / trẻ trung",
+      "warm": "Ấm áp / thân thiện",
+      "innovative": "Sáng tạo / tiên phong",
+      "luxury": "Sang trọng / cao cấp",
+      "friendly": "Gần gũi / bình dân"
+    },
+    "storeFeature": {
+      "wifi": "WiFi miễn phí",
+      "outlets": "Ổ cắm sạc",
+      "privateRoom": "Phòng riêng",
+      "photoWall": "Góc chụp ảnh check-in",
+      "petFriendly": "Thân thiện thú cưng",
+      "nearMrt": "Gần ga tàu điện",
+      "outdoor": "Chỗ ngồi ngoài trời",
+      "accessible": "Lối đi cho người khuyết tật"
+    },
+    "productTag": {
+      "new": "Sản phẩm mới",
+      "bestseller": "Bán chạy",
+      "signature": "Món đặc trưng",
+      "seasonal": "Giới hạn theo mùa",
+      "photogenic": "Đẹp để check-in",
+      "light": "Ít calo",
+      "chefPick": "Đầu bếp đề xuất"
+    },
+    "defaultCategory": "Đồ uống"
+  },
+  "WorkImport": {
+    "title": {
+      "label": "Tiêu đề công việc",
+      "example": "Hoàn thành thử nghiệm thực đơn quý 3"
+    },
+    "status": {
+      "label": "Ghi chú trạng thái",
+      "example": "Đang thực hiện"
+    },
+    "done": {
+      "label": "Đã hoàn thành?",
+      "example": "Không"
+    },
+    "deadline": {
+      "label": "Hạn chót"
+    }
+  },
+  "FinancePageImport": {
+    "date": {
+      "label": "Ngày"
+    },
+    "type": {
+      "label": "Loại",
+      "example": "chi"
+    },
+    "category": {
+      "label": "Phân loại",
+      "example": "Chi phí mua hàng"
+    },
+    "amount": {
+      "label": "Số tiền"
+    },
+    "description": {
+      "label": "Diễn giải",
+      "example": "Mua vật tư văn phòng"
+    },
+    "account_name": {
+      "label": "Tên tài khoản",
+      "example": "Quỹ tiền mặt"
+    },
+    "pay_coll_name": {
+      "label": "Người thu chi",
+      "example": "Nguyễn Văn A"
+    }
+  },
+  "FinanceSubjects": {
+    "hint": "Bấm vào khoản mục để lọc nhanh bút toán bên phải",
+    "allSubjects": "📁 Tất cả khoản mục",
+    "prevMonth": "‹ Tháng trước",
+    "nextMonth": "Tháng sau ›",
+    "jumpThisMonth": "Đến tháng này",
+    "thisMonth": "Tháng này",
+    "settings": "Cài đặt khoản mục",
+    "selected": "Đang chọn",
+    "cls": {
+      "asset": "Tài sản",
+      "liability": "Nợ phải trả",
+      "income": "Thu nhập",
+      "expense": "Chi phí"
+    },
+    "other": "Khác",
+    "year": "Năm",
+    "mgmtDesc": "Quản lý nhóm (thư mục), tên chi tiết, số dư đầu kỳ và tính chất thường xuyên của các khoản mục theo từng loại.",
+    "subjectNamePh": "VD: Két sắt, Bột kem, DT VNPAY",
+    "parentPh": "VD: Tiền mặt, Nguyên liệu đồ uống, Thu nhập khác",
+    "mgmtTitle": "Cài đặt khoản mục (dữ liệu gốc)",
+    "parentName": "Tên nhóm (thư mục / cấp cha)",
+    "openingBalance": "Số dư đầu kỳ",
+    "subjectNameReq": "Tên khoản mục chi tiết *",
+    "errName": "Vui lòng nhập tên khoản mục",
+    "noMatch": "Không tìm thấy khoản mục phù hợp",
+    "saveFailed": "Lưu thất bại",
+    "deleteFailed": "Xóa thất bại",
+    "addSubject": "Thêm khoản mục",
+    "styleLabel": "Tính chất",
+    "saveChanges": "Lưu thay đổi",
+    "create": "Tạo mới",
+    "cancel": "Hủy",
+    "edit": "Sửa",
+    "delete": "Xóa",
+    "close": "Đóng",
+    "monthN": "Tháng {n}",
+    "searchPh": "Tìm nhóm hoặc tên khoản mục {cls}...",
+    "editSubject": "Sửa khoản mục: {name}",
+    "newSubjectOf": "Thêm khoản mục {cls}",
+    "confirmDelete": "Xóa khoản mục \"{name}\"? Nếu khoản mục có giao dịch liên quan, số liệu thống kê có thể bị ảnh hưởng.",
+    "styleRegular": "Thường xuyên",
+    "styleIrregular": "Không thường xuyên",
+    "openingBalanceLabel": "Số dư đầu kỳ:",
+    "sortLabel": "Thứ tự:",
+    "total": "Tổng {n} khoản mục"
+  },
+  "FinanceMdb": {
+    "reLogin": "Vui lòng đăng nhập lại",
+    "uploadFailed": "Tải lên thất bại: {msg}",
+    "parseFailed": "Phân tích thất bại",
+    "importFailed": "Nhập thất bại",
+    "zTitle": "Nhập sổ quỹ & khoản mục (.mdb)",
+    "zDesc": "Tải lên cơ sở dữ liệu sổ sách, hệ thống sẽ tự tạo cây khoản mục và nhập giao dịch (loại bỏ trùng lặp).",
+    "parsing": "Đang phân tích cơ sở dữ liệu…",
+    "chooseMdb": "Bấm để chọn tệp .mdb",
+    "supportsMdb": "Hỗ trợ cơ sở dữ liệu sổ sách MymoneyData.mdb",
+    "bookName": "Sổ: ",
+    "dateRange": "Khoảng thời gian: ",
+    "importableRows": "Bút toán có thể nhập",
+    "rowsN": "{n} bút toán",
+    "autoSubjects": "Khoản mục tự tạo",
+    "itemsN": "{n} mục",
+    "totalIncome": "Tổng thu",
+    "totalExpense": "Tổng chi",
+    "writeMode": "Chế độ ghi (chống nhầm & ghi đè)",
+    "modeAppend": "Bổ sung phần mới (khuyến nghị)",
+    "modeAppendDesc": "Tự loại trùng theo số chứng từ: bỏ qua giao dịch đã có, chỉ thêm chứng từ mới.",
+    "modeClean": "Xóa và nhập lại (ghi đè sạch)",
+    "modeCleanDesc": "Xóa dữ liệu MDB cũ rồi ghi lại toàn bộ, tránh sót chứng từ đã xóa. Bút toán nhập tay hoàn toàn không bị ảnh hưởng.",
+    "alignTree": "Tự tạo và đồng bộ cây khoản mục ({n} khoản mục)",
+    "alignTreeDesc": "Dựa trên <code>ITEM_DATA</code> trong MDB, hệ thống tự tạo cây khoản mục tài sản, nợ, thu, chi cùng số dư đầu kỳ và đồng bộ mọi tài khoản thu chi.",
+    "detected": "Phát hiện {e} lỗi định dạng, {w} dòng nghi sai năm",
+    "viewErrors": "Xem chi tiết lỗi",
+    "viewErrorsHint": "Bấm \"Xem chi tiết lỗi\" để biết cụ thể số chứng từ, ngày, mục và nguyên nhân lỗi, giúp bạn đối chiếu và sửa.",
+    "allOk": "Tất cả bút toán đều đúng định dạng, không có bất thường.",
+    "rechoose": "Chọn lại",
+    "writing": "Đang ghi vào cơ sở dữ liệu…",
+    "confirmClean": "Xác nhận xóa dữ liệu cũ và nhập lại",
+    "confirmAppend": "Xác nhận nhập và tạo khoản mục",
+    "done": "Nhập hoàn tất!",
+    "importedN": "Đã nhập thành công <b>{n}</b> giao dịch",
+    "clearedN": " (đã xóa {n} dòng MDB cũ để nhập lại sạch)",
+    "skippedN": ", bỏ qua {n}",
+    "createdSummary": "; đã tạo/cập nhật <b>{s}</b> khoản mục và tạo mới <b>{a}</b> tài khoản tiền.",
+    "issuesN": "Lần nhập này có {n} lỗi hoặc cảnh báo",
+    "viewErrorsN": "Xem lỗi ({n})",
+    "finish": "Hoàn tất và vào hệ thống thủ quỹ",
+    "loadLogsFailed": "Không tải được lịch sử nhập",
+    "networkError": "Lỗi kết nối",
+    "revertFailed": "Hoàn tác thất bại",
+    "revertedN": "Đã hoàn tác lô này (xóa {n} chứng từ)",
+    "typeDelete": "Vui lòng nhập DELETE để xác nhận xóa",
+    "clearFailed": "Xóa thất bại",
+    "clearedAllN": "Đã xóa toàn bộ dữ liệu MDB ({n} chứng từ)",
+    "bTitle": "Lịch sử nhập MDB & hoàn tác theo lô",
+    "bDesc": "Nếu dữ liệu nhập sai hoặc muốn nhập lại, có thể hoàn tác cả lô chỉ với một lần bấm (bút toán nhập tay được giữ nguyên 100%).",
+    "bookCode": "Mã sổ: <b>{book}</b> ({n} lần nhập)",
+    "clearAllBtn": "Xóa toàn bộ bút toán nhập từ MDB",
+    "loadingLogs": "Đang tải các lô nhập…",
+    "noLogs": "Chưa có lịch sử nhập MDB",
+    "noLogsHint": "Dùng \"Nhập tệp sổ sách (.mdb)\" ở trang Thủ quỹ để nhập cơ sở dữ liệu sổ sách.",
+    "statusReverted": "Đã hoàn tác",
+    "statusActive": "Đang hiệu lực",
+    "revertBtn": "Hoàn tác lô này",
+    "importedRows": "Số dòng nhập: ",
+    "builtSubjects": "Khoản mục đã tạo: ",
+    "notRecorded": "Chưa ghi nhận",
+    "revertedAt": "Lô này đã được hoàn tác lúc {at}, toàn bộ bút toán đã bị xóa.",
+    "closeWindow": "Đóng",
+    "revertConfirmTitle": "Xác nhận hoàn tác lô MDB này?",
+    "revertConfirmBody": "Bạn sắp hoàn tác <b>{file}</b> đã nhập lúc <b>{at}</b>.",
+    "revertWillDelete": "Sẽ xóa hoàn toàn <b>{n}</b> chứng từ của lô này.",
+    "manualKept": "Mọi bút toán thủ quỹ bạn nhập tay <b>được giữ nguyên, không bị ảnh hưởng</b>.",
+    "confirmRevert": "Xác nhận hoàn tác",
+    "cancel": "Hủy",
+    "clearAllTitle": "Cảnh báo: xóa toàn bộ giao dịch nhập từ MDB",
+    "clearAllBody": "Thao tác này sẽ xóa khỏi sổ quỹ <b>mọi giao dịch nhập từ MDB</b> (tất cả các lô).",
+    "irreversible": "Không thể hoàn tác, hãy chắc chắn bạn muốn làm sạch toàn bộ sổ.",
+    "manualAndTreeKept": "Bút toán nhập tay và cây khoản mục hiện có vẫn được giữ.",
+    "typeDeleteHint": "Để tránh bấm nhầm, hãy nhập <b>DELETE</b> bên dưới để xác nhận:",
+    "typeDeletePh": "Nhập DELETE",
+    "confirmClearAll": "Xác nhận xóa toàn bộ chứng từ MDB",
+    "rpTitle": "=== Báo cáo chẩn đoán lỗi nhập MDB ===",
+    "rpBook": "Sổ: {book} | Tệp: {file}",
+    "rpCounts": "Tổng lỗi: {e} | Tổng cảnh báo: {w}",
+    "rpGenerated": "Thời gian tạo: {at}",
+    "rpItem": "[#{i}] Số chứng từ MAKE_NO: {no} | Ngày: {date} | Loại: {sev} ({type})",
+    "sevError": "Lỗi",
+    "sevWarning": "Cảnh báo",
+    "rpProblem": "Vấn đề:",
+    "rpDesc": "Mô tả:",
+    "rpFix": "Đề xuất sửa:",
+    "rpRaw": "Bút toán gốc:",
+    "rpRow": "Loại:{cls} | Mục:{item} | Thu:{inn} | Chi:{out} | Diễn giải:{note}",
+    "eTitle": "Chi tiết lỗi và bất thường khi nhập MDB",
+    "eBook": "Sổ: {book}",
+    "eDesc": "Liệt kê số chứng từ, mục liên quan và nguyên nhân của từng bút toán bất thường để bạn đối chiếu và sửa.",
+    "fAll": "Tất cả ({n})",
+    "fError": "Lỗi ({n})",
+    "fWarning": "Cảnh báo / nghi sai chính tả ({n})",
+    "reportCopied": "Đã sao chép báo cáo",
+    "copyReport": "Sao chép báo cáo chẩn đoán",
+    "eSearchPh": "Tìm số chứng từ (MAKE_NO), ngày, tên mục, ghi chú...",
+    "eNone": "Không có lỗi phù hợp",
+    "eNoneHint": "Mọi bút toán trong tệp này đều nhập bình thường",
+    "voucherNo": "Chứng từ #{no}",
+    "dateN": "Ngày: {date}",
+    "skipped": "Bỏ qua, không nhập",
+    "importedCheck": "Đã nhập (nên kiểm tra)",
+    "collapseRaw": "Thu gọn bút toán gốc",
+    "viewRaw": "Xem bút toán gốc",
+    "suggestion": "Đề xuất xử lý:",
+    "rawInfo": "Bút toán gốc theo cặp trong MDB ({n} dòng):",
+    "colClass": "Loại",
+    "colItem": "Tên mục",
+    "colIn": "Thu",
+    "colOut": "Chi",
+    "colNote": "Diễn giải / ghi chú",
+    "eFooter": "Tổng {n} mục (lỗi: {e}, cảnh báo: {w})"
+  },
+  "HrImport": {
+    "employee": {
+      "name": {
+        "label": "Họ tên",
+        "example": "Nguyễn Văn Minh"
+      },
+      "phone": {
+        "label": "Điện thoại"
+      },
+      "department": {
+        "label": "Phòng ban"
+      },
+      "position": {
+        "label": "Chức danh",
+        "example": "Nhân viên cửa hàng"
+      },
+      "staff_category": {
+        "label": "Toàn thời gian / bán thời gian"
+      },
+      "employment_type": {
+        "label": "Loại hợp đồng"
+      },
+      "hire_date": {
+        "label": "Ngày vào làm"
+      },
+      "base_salary": {
+        "label": "Lương cơ bản"
+      },
+      "hourly_rate": {
+        "label": "Lương theo giờ"
+      },
+      "store": {
+        "label": "Cửa hàng"
+      },
+      "attendance_no": {
+        "label": "Mã chấm công"
+      },
+      "bank_account": {
+        "label": "Số tài khoản"
+      },
+      "bank_name": {
+        "label": "Ngân hàng nhận"
+      },
+      "id_number": {
+        "label": "Số CCCD"
+      },
+      "status": {
+        "label": "Trạng thái"
+      },
+      "notes": {
+        "label": "Ghi chú"
+      },
+      "_meta": {
+        "title": "Nhập / cập nhật nhân viên hàng loạt",
+        "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Nếu họ tên và số CCCD đã tồn tại sẽ tự cập nhật, ngược lại sẽ thêm mới.",
+        "template": "Mau nhan vien",
+        "sheet": "Nhan vien"
+      }
+    },
+    "payroll": {
+      "name": {
+        "label": "Tên nhân viên",
+        "example": "Nguyễn Văn Minh"
+      },
+      "year": {
+        "label": "Năm"
+      },
+      "month": {
+        "label": "Tháng"
+      },
+      "base_salary": {
+        "label": "Lương cơ bản"
+      },
+      "allowances": {
+        "label": "Phụ cấp"
+      },
+      "deductions": {
+        "label": "Khấu trừ"
+      },
+      "bonus": {
+        "label": "Thưởng"
+      },
+      "notes": {
+        "label": "Ghi chú"
+      },
+      "_meta": {
+        "title": "Nhập / cập nhật bảng lương tháng",
+        "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Lương tháng đã có của nhân viên sẽ được ghi đè; nhân viên chưa có sẽ được tự tạo.",
+        "template": "Mau bang luong",
+        "sheet": "Bang luong"
+      }
+    },
+    "candidate": {
+      "name": {
+        "label": "Họ tên",
+        "example": "Lê Văn Đồng"
+      },
+      "phone": {
+        "label": "Điện thoại"
+      },
+      "position": {
+        "label": "Vị trí ứng tuyển",
+        "example": "Pha chế"
+      },
+      "store": {
+        "label": "Cửa hàng ứng tuyển"
+      },
+      "staff_category": {
+        "label": "Toàn thời gian / bán thời gian"
+      },
+      "stage": {
+        "label": "Giai đoạn tuyển dụng"
+      },
+      "birthday": {
+        "label": "Ngày sinh"
+      },
+      "id_number": {
+        "label": "Số CCCD"
+      },
+      "_meta": {
+        "title": "Nhập / cập nhật ứng viên hàng loạt",
+        "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Nếu trùng điện thoại, email hoặc số CCCD sẽ tự cập nhật, ngược lại thêm mới.",
+        "template": "Mau ung vien",
+        "sheet": "Ung vien"
+      }
+    },
+    "evaluation": {
+      "name": {
+        "label": "Tên nhân viên",
+        "example": "Nguyễn Văn Minh"
+      },
+      "attendance_no": {
+        "label": "Mã chấm công"
+      },
+      "year": {
+        "label": "Năm"
+      },
+      "month": {
+        "label": "Tháng"
+      },
+      "bonus": {
+        "label": "Thưởng"
+      },
+      "reward": {
+        "label": "Tiền thưởng"
+      },
+      "penalty": {
+        "label": "Tiền phạt"
+      },
+      "score": {
+        "label": "Điểm"
+      },
+      "notes": {
+        "label": "Nhận xét",
+        "example": "Chuyên cần tốt, làm việc xuất sắc"
+      },
+      "_meta": {
+        "title": "Nhập / cập nhật đánh giá, khen thưởng & kỷ luật",
+        "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Vui lòng điền tên nhân viên hoặc mã chấm công.",
+        "template": "Mau danh gia",
+        "sheet": "Danh gia"
+      }
+    },
+    "insurance": {
+      "name": {
+        "label": "Tên nhân viên",
+        "example": "Nguyễn Văn Minh"
+      },
+      "id_number": {
+        "label": "Số CCCD"
+      },
+      "attendance_no": {
+        "label": "Mã chấm công"
+      },
+      "insurance_required": {
+        "label": "Cần đóng bảo hiểm?"
+      },
+      "insurance_status": {
+        "label": "Tình trạng bảo hiểm"
+      },
+      "insurance_number": {
+        "label": "Số sổ bảo hiểm"
+      },
+      "insurance_salary": {
+        "label": "Lương đóng bảo hiểm"
+      },
+      "_meta": {
+        "title": "Nhập / cập nhật bảo hiểm hàng loạt",
+        "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Đối chiếu theo tên, số CCCD hoặc mã chấm công để cập nhật tình trạng, số sổ và mức lương đóng bảo hiểm.",
+        "template": "Mau bao hiem",
+        "sheet": "Bao hiem"
+      }
+    },
+    "leave": {
+      "name": {
+        "label": "Tên nhân viên",
+        "example": "Nguyễn Văn Minh"
+      },
+      "attendance_no": {
+        "label": "Mã chấm công"
+      },
+      "leave_type": {
+        "label": "Loại nghỉ phép"
+      },
+      "start_date": {
+        "label": "Ngày bắt đầu"
+      },
+      "end_date": {
+        "label": "Ngày kết thúc"
+      },
+      "days": {
+        "label": "Số ngày"
+      },
+      "reason": {
+        "label": "Lý do",
+        "example": "Việc gia đình"
+      },
+      "status": {
+        "label": "Trạng thái duyệt"
+      },
+      "notes": {
+        "label": "Ghi chú"
+      },
+      "_meta": {
+        "title": "Nhập ngày nghỉ phép hàng loạt",
+        "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Vui lòng điền tên nhân viên hoặc mã chấm công.",
+        "template": "Mau nghi phep",
+        "sheet": "Nghi phep"
+      }
+    }
+  },
+  "UnitsImport": {
+    "code": {
+      "label": "Mã đơn vị"
+    },
+    "name": {
+      "label": "Tên đơn vị"
+    },
+    "unit_type": {
+      "label": "Loại"
+    },
+    "short_name": {
+      "label": "Tên viết tắt"
+    },
+    "region": {
+      "label": "Khu vực",
+      "example": "Hồ Chí Minh"
+    },
+    "base_hourly_rate": {
+      "label": "Lương giờ cơ bản"
+    },
+    "electricity_no": {
+      "label": "Mã số điện"
+    },
+    "water_no": {
+      "label": "Mã số nước"
+    },
+    "address": {
+      "label": "Địa chỉ",
+      "example": "Quận 1, TP. Hồ Chí Minh..."
+    },
+    "active": {
+      "label": "Đang hoạt động"
+    },
+    "_meta": {
+      "title": "Nhập / cập nhật đơn vị hàng loạt",
+      "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Nếu trùng mã đơn vị sẽ tự cập nhật, ngược lại thêm mới.",
+      "template": "Mau don vi",
+      "sheet": "Don vi"
+    }
+  },
+  "AffairsImport": {
+    "title": {
+      "label": "Tiêu đề tài liệu",
+      "example": "Hợp đồng thuê mặt bằng cửa hàng Zhongxiao"
+    },
+    "doc_type": {
+      "label": "Loại tài liệu"
+    },
+    "store_code": {
+      "label": "Mã cửa hàng"
+    },
+    "counterparty": {
+      "label": "Bên ký / bên cho thuê",
+      "example": "Chủ nhà Vương Đại Minh"
+    },
+    "effective_date": {
+      "label": "Ngày hiệu lực"
+    },
+    "expiry_date": {
+      "label": "Ngày hết hạn"
+    },
+    "deposit": {
+      "label": "Tiền cọc"
+    },
+    "monthly_rent": {
+      "label": "Tiền thuê / phí hàng tháng"
+    },
+    "payment_day": {
+      "label": "Ngày thanh toán hàng tháng"
+    },
+    "notes": {
+      "label": "Ghi chú",
+      "example": "Cọc 2 tháng, điện nước tự trả"
+    },
+    "_meta": {
+      "title": "Nhập giấy phép & hợp đồng thuê hàng loạt",
+      "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Nếu trùng tiêu đề tài liệu sẽ tự cập nhật.",
+      "template": "Mau giay phep va hop dong thue",
+      "sheet": "Tai lieu"
+    }
+  },
+  "RdLogsImport": {
+    "title": {
+      "label": "Tiêu đề nhật ký",
+      "example": "Ghi chép thử hương vị công thức"
+    },
+    "summary": {
+      "label": "Nội dung nhật ký",
+      "example": "Giảm độ ngọt 5%, hương trà rõ hơn..."
+    },
+    "date": {
+      "label": "Ngày"
+    },
+    "_meta": {
+      "title": "Nhập nhật ký R&D hàng loạt",
+      "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Cần có tiêu đề và nội dung nhật ký.",
+      "template": "Mau nhat ky RD",
+      "sheet": "Nhat ky RD"
+    }
+  },
+  "StoreExpensesImport": {
+    "store": {
+      "code": {
+        "label": "Mã cửa hàng"
+      },
+      "name": {
+        "label": "Tên cửa hàng"
+      },
+      "region": {
+        "label": "Khu vực",
+        "example": "Hồ Chí Minh"
+      },
+      "active": {
+        "label": "Đang hoạt động"
+      },
+      "_meta": {
+        "title": "Nhập cửa hàng / khu vực hàng loạt",
+        "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Nếu trùng mã cửa hàng sẽ tự cập nhật.",
+        "template": "Mau cua hang",
+        "sheet": "Cua hang"
+      }
+    },
+    "category": {
+      "code": {
+        "label": "Mã khoản mục"
+      },
+      "name": {
+        "label": "Tên khoản mục",
+        "example": "Tiền nước"
+      },
+      "entry_method": {
+        "label": "Cách nhập"
+      },
+      "vendor_service": {
+        "label": "Loại nhà cung cấp"
+      },
+      "sort": {
+        "label": "Thứ tự"
+      },
+      "_meta": {
+        "title": "Nhập khoản mục chi phí hàng loạt",
+        "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Nếu trùng mã khoản mục sẽ tự cập nhật.",
+        "template": "Mau khoan muc chi phi",
+        "sheet": "Khoan muc"
+      }
+    },
+    "vendor": {
+      "name": {
+        "label": "Tên nhà cung cấp",
+        "example": "Công ty gas"
+      },
+      "service": {
+        "label": "Dịch vụ"
+      },
+      "regions": {
+        "label": "Khu vực phục vụ"
+      },
+      "active": {
+        "label": "Đang hoạt động"
+      },
+      "_meta": {
+        "title": "Nhập nhà cung cấp hàng loạt",
+        "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Nếu trùng mã số thuế hoặc tên nhà cung cấp sẽ tự cập nhật.",
+        "template": "Mau nha cung cap",
+        "sheet": "Nha cung cap"
+      }
+    }
+  },
+  "VendorsImport": {
+    "vendor": {
+      "name": {
+        "label": "Tên nhà cung cấp",
+        "example": "Nhà cung cấp trà Đài Loan"
+      },
+      "tax_id": {
+        "label": "Mã số thuế"
+      },
+      "service": {
+        "label": "Loại"
+      },
+      "contact": {
+        "label": "Người liên hệ",
+        "example": "Anh Trần"
+      },
+      "phone": {
+        "label": "Điện thoại"
+      },
+      "address": {
+        "label": "Địa chỉ",
+        "example": "Quận Đại An, Đài Bắc..."
+      },
+      "products": {
+        "label": "Sản phẩm cung cấp",
+        "example": "Lá trà, nguyên liệu"
+      },
+      "pay_terms": {
+        "label": "Hình thức thanh toán"
+      },
+      "billing_cycle": {
+        "label": "Chu kỳ thanh toán"
+      },
+      "billing_day": {
+        "label": "Ngày chốt sổ"
+      },
+      "active": {
+        "label": "Đang hoạt động"
+      },
+      "_meta": {
+        "title": "Nhập / cập nhật nhà cung cấp hàng loạt",
+        "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Nếu trùng mã số thuế hoặc tên sẽ tự cập nhật, ngược lại thêm mới.",
+        "template": "Mau nha cung cap",
+        "sheet": "Nha cung cap"
+      }
+    },
+    "purchase": {
+      "purchased_on": {
+        "label": "Ngày mua"
+      },
+      "product": {
+        "label": "Mặt hàng mua",
+        "example": "Hồng trà Ceylon cao cấp"
+      },
+      "qty": {
+        "label": "Số lượng"
+      },
+      "amount": {
+        "label": "Số tiền"
+      },
+      "note": {
+        "label": "Ghi chú",
+        "example": "Lô nhập đầu tiên"
+      },
+      "_meta": {
+        "title": "Nhập lịch sử mua hàng hàng loạt",
+        "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Vui lòng điền ngày mua, mặt hàng và số tiền.",
+        "template": "Mau mua hang",
+        "sheet": "Mua hang"
+      }
+    }
+  },
+  "PersonnelImport": {
+    "name": {
+      "label": "Họ tên",
+      "example": "Nguyễn Thị Phương"
+    },
+    "gender": {
+      "label": "Giới tính"
+    },
+    "native_place": {
+      "label": "Quê quán",
+      "example": "TP. Hồ Chí Minh"
+    },
+    "birthday": {
+      "label": "Ngày sinh"
+    },
+    "id_number": {
+      "label": "Số CCCD"
+    },
+    "education": {
+      "label": "Trình độ học vấn"
+    },
+    "phone": {
+      "label": "Điện thoại"
+    },
+    "email": {
+      "label": "Email cá nhân"
+    },
+    "company_email": {
+      "label": "Email công ty"
+    },
+    "position": {
+      "label": "Chức vụ",
+      "example": "Cửa hàng trưởng"
+    },
+    "store": {
+      "label": "Cửa hàng"
+    },
+    "staff_category": {
+      "label": "Toàn thời gian / bán thời gian"
+    },
+    "payroll_no": {
+      "label": "Mã lương"
+    },
+    "address": {
+      "label": "Địa chỉ",
+      "example": "Quận 1, TP. Hồ Chí Minh"
+    },
+    "_meta": {
+      "title": "Nhập / cập nhật nhân sự hàng loạt",
+      "description": "Hỗ trợ Excel (.xlsx) và CSV. Nếu trùng số CCCD, email hoặc họ tên + điện thoại sẽ tự cập nhật, ngược lại thêm mới.",
+      "template": "Mau nhan su",
+      "sheet": "Nhan su"
+    }
+  },
+  "ShiftImport": {
+    "employee_name": {
+      "label": "Tên nhân viên",
+      "example": "Nguyễn Văn Minh"
+    },
+    "work_date": {
+      "label": "Ngày làm việc"
+    },
+    "slot_code": {
+      "label": "Ca làm"
+    },
+    "_meta": {
+      "title": "Nhập lịch ca hàng loạt",
+      "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Vui lòng điền tên nhân viên, ngày làm (YYYY-MM-DD) và ca (早 / 午 / 晚 = sáng / trưa / tối).",
+      "template": "Mau xep ca",
+      "sheet": "Lich ca"
+    }
+  },
+  "HrUnion": {
+    "subtitle": "Quản lý đoàn viên, phúc lợi thăm hỏi, thỏa ước tập thể và báo cáo tài chính theo quy định của Tổng Liên đoàn Lao động Việt Nam",
+    "noDocs": "Chưa lưu thỏa ước hay biên bản đối thoại nào. Hỗ trợ tải lên PDF có đóng dấu để lưu trữ lâu dài.",
+    "noBenefits": "Chưa có đề nghị nào. Hỗ trợ đề nghị và duyệt trực tuyến cho sinh nhật, kết hôn, sinh con, nằm viện, trợ cấp khó khăn.",
+    "totalIncome": "Tổng thu (đoàn phí 1% & kinh phí 2%)",
+    "exportReport": "Xuất báo cáo tài chính công đoàn (Mẫu B14-CĐ & B15-CĐ)",
+    "tabDocs": "TƯLĐTT & đối thoại",
+    "docsTitle": "Thỏa ước lao động tập thể (TƯLĐTT) và biên bản đối thoại định kỳ hàng quý",
+    "totalExpense": "Tổng chi (thăm hỏi, phong trào)",
+    "requestTitle": "Đề nghị chế độ & thăm hỏi",
+    "tabFinances": "Tài chính công đoàn",
+    "noMembers": "Chưa có đoàn viên. Bấm \"Thêm đoàn viên\" ở góc trên bên phải để ghi nhận.",
+    "docTitlePh": "VD: Thỏa ước lao động tập thể 2026-2028 (đã đóng dấu)",
+    "entryTitle": "Ghi sổ thu - chi công đoàn",
+    "code2": "Kinh phí công đoàn 2%",
+    "tabBenefits": "Chế độ & thăm hỏi",
+    "noEntries": "Chưa có thu chi. Bấm \"Ghi sổ\" ở góc trên bên phải để thêm khoản thu hoặc chi.",
+    "code3": "Thăm hỏi, trợ cấp",
+    "cardNumber": "Số thẻ đoàn viên",
+    "balance": "Kết dư tài chính",
+    "title": "Công đoàn cơ sở",
+    "uploadDocTitle": "Tải lên thỏa ước tập thể / biên bản",
+    "receiptNo": "Số chứng từ",
+    "addMemberTitle": "Thêm đoàn viên công đoàn",
+    "code1": "Đoàn phí 1%",
+    "tabMembers": "Đoàn viên",
+    "bhxhNumber": "Mã số BHXH",
+    "code4": "Phong trào",
+    "statusApproved": "Đã duyệt",
+    "statusPending": "Chờ duyệt",
+    "active": "Đoàn viên",
+    "statusPaid": "✓ Đã chi",
+    "reasonPh": "VD: giấy ra viện lưu hồ sơ, quà cưới",
+    "code5": "Quản lý",
+    "amountVndReq": "Số tiền (VND) *",
+    "benefitsTitle": "Chi trả chế độ & duyệt thăm hỏi",
+    "idNumber": "Số CCCD",
+    "summaryPh": "VD: Trích đoàn phí tháng 7",
+    "reasonVoucher": "Lý do / số chứng từ",
+    "choosePdf": "Chọn tệp PDF scan",
+    "amountReq": "Số tiền (VND) *",
+    "bhxh": "Mã số BHXH:",
+    "uploadDoc": "Tải lên thỏa ước / biên bản",
+    "addEntry": "Ghi sổ (thu / chi)",
+    "storeDept": "Cửa hàng / phòng ban",
+    "requestBenefit": "Đề nghị trợ cấp / thăm hỏi",
+    "income": "Thu",
+    "expense": "Chi",
+    "ledger": "Sổ thu chi chi tiết",
+    "pleaseChoose": "— Vui lòng chọn —",
+    "addMember": "Thêm đoàn viên",
+    "employeeNameReq": "Tên nhân viên *",
+    "chooseMemberReq": "Chọn đoàn viên *",
+    "benefitTypeReq": "Loại chế độ *",
+    "docCategoryReq": "Phân loại tài liệu *",
+    "docTitleReq": "Tiêu đề tài liệu *",
+    "confirmUpload": "Xác nhận tải lên",
+    "joinDate": "Ngày vào công đoàn:",
+    "requestDate": "Ngày đề nghị:",
+    "effective": "Ngày hiệu lực:",
+    "expiry": "Ngày hết hạn:",
+    "saveFailed": "Lưu thất bại",
+    "confirmSave": "Xác nhận lưu",
+    "requestFailed": "Gửi đề nghị thất bại",
+    "submitRequest": "Gửi đề nghị",
+    "uploadFailed": "Tải lên thất bại",
+    "entryFailed": "Ghi sổ thất bại",
+    "typeReq": "Loại *",
+    "itemCode": "Mã khoản mục",
+    "summary": "Diễn giải",
+    "confirmEntry": "Xác nhận ghi sổ",
+    "cardNo": "Số thẻ:",
+    "note": "Ghi chú:",
+    "remark": "Ghi chú:",
+    "voucher": "Chứng từ:",
+    "hq": "Trụ sở chính",
+    "member": "Đoàn viên",
+    "cancel": "Hủy",
+    "other": "Khác",
+    "memberCount": "Tổng {n} đoàn viên",
+    "benefit": {
+      "birthday": "Quà sinh nhật",
+      "marriage": "Mừng kết hôn",
+      "maternity": "Trợ cấp sinh con",
+      "hospital": "Thăm hỏi nằm viện",
+      "relief": "Trợ cấp khó khăn",
+      "other": "Phúc lợi khác"
+    },
+    "docCat": {
+      "tuldtt": "Thỏa ước lao động tập thể (TƯLĐTT)",
+      "noiquy": "Nội quy lao động",
+      "doitheo": "Biên bản đối thoại",
+      "committee": "Đại hội / Quyết định"
+    }
+  },
+  "RepairKnowledge": {
+    "csDesc": "Khi có hãng/model mới chưa có sổ tay PDF, nhập hãng và model, AI sẽ dựa trên nguyên lý cơ điện quầy bar để suy luận máy trạng thái chuẩn, công tắc giới hạn và 10 cây lỗi thường gặp.",
+    "subtitle": "Chia nhỏ có cấu trúc sổ tay, sơ đồ mạch, bảng mã lỗi · tự suy luận máy trạng thái khi khởi động lạnh · học khép kín từ các ca sửa chữa",
+    "measuredPh": "VD: Thanh nhiệt đo 530Ω bình thường, đầu vào SSR 12V bình thường nhưng không có đầu ra",
+    "casesTitle": "Thư viện ca sửa chữa thực tế (case-based learning)",
+    "rootCausePh": "VD: Rơ-le bán dẫn (SSR) trên bo mạch bị cháy đầu ra, không cấp điện cho thanh nhiệt",
+    "catPosLong": "💻 POS & IT (máy cảm ứng / máy in hóa đơn / máy in tem / switch)",
+    "modelPh": "VD: ET-99S, FT-16, TM-T82, KM-150A",
+    "catBarLong": "🧋 Quầy bar (máy dán miệng ly / máy định lượng đường / máy ủ trà / máy làm đá)",
+    "brandPh": "VD: Yi Fang, Hong Mao, Hoshizaki, Epson, Delta",
+    "partsPh": "VD: Thay rơ-le bán dẫn 25A (SSR-25DA)",
+    "casesSubtitle": "Ghi lại từ các ca sửa tại chỗ để AI ngày càng chính xác",
+    "rootCauseReq": "Nguyên nhân gốc sau khi tháo máy *",
+    "techNotePh": "VD: Tránh đặt nơi ẩm ướt, siết lại ốc đầu cos mỗi 6 tháng",
+    "chunkContentPh": "Mô tả chi tiết các bước kiểm tra, giá trị chuẩn và cách xử lý bất thường...",
+    "searchPh": "Tìm model, mã lỗi (E01), mã linh kiện...",
+    "catFactoryLong": "🏭 Xưởng trung tâm (máy nấu đường / nồi nấu trà / bơm tuần hoàn)",
+    "chunkContent": "Nội dung (SOP, giá trị điện trở, các bước)",
+    "typeErrorCode": "Bảng mã lỗi",
+    "chunkTitlePh": "VD: Kiểm tra mòn dao và quy trình thay dao máy dán miệng ly",
+    "caseTitle": "Ghi nhận kinh nghiệm sửa chữa thực tế",
+    "symptomPh": "VD: E01 nhiệt độ không lên, cuộn màng không chạy",
+    "allCategories": "Tất cả loại (quầy bar / xưởng / IT)",
+    "typeCircuit": "Sơ đồ mạch điện",
+    "storeSafeLong": "Nhân viên cửa hàng tự làm được (an toàn, không tháo máy)",
+    "orderNoPh": "VD: RO-202609-008",
+    "errCauseParts": "Nguyên nhân thực tế và linh kiện thay thế là bắt buộc",
+    "tagsPh": "VD: dao cắt, hao mòn, thay lưỡi",
+    "title": "Sổ tay thiết bị & kho kiến thức RAG",
+    "runDerive": "Tự suy luận máy trạng thái & cây lỗi",
+    "addChunkTitle": "Thêm đoạn kiến thức sổ tay thiết bị",
+    "catPos": "💻 POS & phần cứng/phần mềm IT",
+    "csTitle": "Công cụ suy luận máy trạng thái thiết bị",
+    "techOnlyLong": "Chỉ kỹ thuật viên (cần tháo máy đo đạc)",
+    "noChunks": "Không có đoạn kiến thức phù hợp",
+    "targetModelPh": "VD: YiFang-ET-99S",
+    "partsReq": "Linh kiện đã thay & mã linh kiện *",
+    "errBrandModel": "Vui lòng nhập hãng và model thiết bị",
+    "measured": "Điện trở / điện áp đo được",
+    "addChunkBtn": "Tải lên / thêm đoạn sổ tay",
+    "derivedParts": "Mã linh kiện dự phòng chuẩn:",
+    "tags": "Thẻ (cách nhau bằng dấu phẩy)",
+    "orderNo": "Số phiếu sửa chữa (không bắt buộc)",
+    "techNote": "Kinh nghiệm & đề xuất phòng ngừa",
+    "errTitleContent": "Tiêu đề và nội dung là bắt buộc",
+    "type": {
+      "maintenance_sop": "SOP vệ sinh bảo dưỡng",
+      "real_case": "Phản hồi thực tế của kỹ thuật viên",
+      "error_code": "Bảng mã lỗi",
+      "circuit_diagram": "Sơ đồ mạch điện",
+      "troubleshooting_tree": "Cây xử lý sự cố",
+      "exploded_view": "Sơ đồ tháo rời linh kiện"
+    },
+    "coldStartBtn": "Suy luận máy trạng thái",
+    "logCaseBtn": "Ghi nhận ca sửa chữa",
+    "catBar": "🧋 Thiết bị quầy bar",
+    "catFactory": "🏭 Thiết bị xưởng trung tâm",
+    "typeSop": "SOP vệ sinh bảo dưỡng",
+    "typeCases": "Ca thực tế của kỹ thuật viên",
+    "derivedStates": "Máy trạng thái suy luận:",
+    "measurements": "⚡ Số liệu đo: ",
+    "savedToKb": "Đã lưu vào kho kiến thức",
+    "allTypes": "Tất cả loại dữ liệu",
+    "officialSpec": "Quy chuẩn kỹ thuật chính hãng",
+    "targetModel": "Model thiết bị",
+    "symptom": "Hiện tượng tại chỗ",
+    "reported": "Hiện tượng báo cáo: ",
+    "rootCause": "Nguyên nhân thực tế: ",
+    "partsReplaced": "Linh kiện thay thế: ",
+    "fileCase": "Lưu vào thư viện",
+    "errDerive": "Suy luận thất bại",
+    "errNetwork": "Lỗi kết nối",
+    "errSave": "Lưu thất bại",
+    "errConnection": "Kết nối bất thường",
+    "storeSafe": "Cửa hàng tự làm được",
+    "techOnly": "Chỉ kỹ thuật viên",
+    "equipmentCategory": "Loại thiết bị",
+    "brand": "Hãng",
+    "model": "Model",
+    "chunkType": "Loại đoạn",
+    "chunkTitle": "Tiêu đề đoạn",
+    "saveChunk": "Lưu đoạn",
+    "equipmentModel": "Model thiết bị",
+    "source": "Nguồn: ",
+    "cancel": "Hủy",
+    "derivedOk": "Đã suy luận: {name}",
+    "caseDesc": "Ghi nguyên nhân thực tế và số liệu đo từ ca sửa tại chỗ, AI sẽ tự học và ưu tiên đề xuất cách xử lý này cho lỗi tương tự lần sau."
+  },
+  "RepairAssistant": {
+    "inputPhTech": "Nhập hiện tượng hoặc điểm đo (VD: điện trở thanh nhiệt, không có xung 24V, công tắc cam E02)...",
+    "techModeDesc": "[Chế độ kỹ thuật viên] Đo mạch (Ω/V), gợi ý mã linh kiện chính hãng, kiểm tra cam / công tắc hành trình và phản hồi sửa chữa",
+    "inputPhStore": "Mô tả lỗi hoặc mã lỗi (VD: máy dán miệng ly E01, máy định lượng đường ra không chuẩn, máy in hết giấy)...",
+    "storeModeDesc": "[Chế độ cửa hàng] An toàn tại chỗ: kiểm tra 3 bước không tháo máy, không xử lý được sẽ tự tạo phiếu sửa chữa",
+    "qp": {
+      "fac1": {
+        "text": "Máy nấu đường SC-150L đang khuấy thì dừng đột ngột, màn hình báo VFD-OC",
+        "label": "Máy nấu đường quá tải biến tần"
+      },
+      "pos2": {
+        "text": "Máy in hóa đơn Epson đèn đỏ nháy liên tục, bấm nút đẩy giấy không phản hồi, dao cắt bị kẹt",
+        "label": "Máy in hóa đơn kẹt giấy, đèn đỏ nhấp nháy"
+      },
+      "fac2": {
+        "text": "Cảm biến PT100 của nồi nấu trà báo 98 độ nhưng nước chưa sôi",
+        "label": "Cảm biến nhiệt nồi nấu trà bị lệch"
+      },
+      "pos3": {
+        "text": "Chạm góc trên bên phải màn hình POS lại nhảy sang trái, viền màn hình có vẻ bị hơi nước",
+        "label": "Màn hình cảm ứng POS nhảy lung tung"
+      },
+      "bar3": {
+        "text": "Máy định lượng đường ra ít hẳn ở mức đường 100%, đầu ra bị kết tinh nhỏ giọt",
+        "label": "Máy định lượng đường ra không chuẩn"
+      },
+      "pos1": {
+        "text": "Sau khi thanh toán trên POS ngăn kéo tiền không bật ra, máy in hóa đơn vẫn bình thường",
+        "label": "Ngăn kéo tiền không tự mở"
+      },
+      "fac3": {
+        "text": "Hộp giảm tốc của máy nấu đường tự động kêu lạch cạch như kim loại va đập khi chạy",
+        "label": "Hộp giảm tốc kêu lạ"
+      },
+      "pos4": {
+        "text": "Máy in ở quầy bar không in được phiếu đồ uống, dây mạng vẫn cắm",
+        "label": "Máy in hóa đơn mất mạng"
+      },
+      "bar1": {
+        "text": "Máy dán miệng ly Yi Fang báo E01, hoàn toàn không có nhiệt",
+        "label": "E01 tấm nhiệt không nóng"
+      },
+      "bar4": {
+        "text": "Máy dán miệng ly ép xuống rồi kẹt không lên, kêu bíp bíp",
+        "label": "Máy dán miệng ly kẹt khi ép"
+      },
+      "bar2": {
+        "text": "Máy dán miệng ly E04, màng quay liên tục không dừng",
+        "label": "E04 màng chạy không dừng / lỗi mắt cảm biến"
+      }
+    },
+    "searching": "Đang tra cứu mã lỗi chính hãng, sơ đồ mạch và máy trạng thái...",
+    "ticketOk": "✓ Đã tạo phiếu sửa chữa! Đang chuyển đến danh sách phiếu...",
+    "subtitle": "Cây lỗi SOP · tra cứu sổ tay RAG · học khép kín",
+    "submitTicket": "🚀 Gửi phiếu sửa chữa (cử kỹ thuật viên đến)",
+    "errSubmit": "Gửi thất bại, vui lòng tự ghi nhận ở tab Phiếu sửa chữa",
+    "draftTitle": "AI đã soạn sẵn phiếu sửa chữa",
+    "ragSources": "Nguồn tra cứu RAG:",
+    "title": "Trung tâm AI sửa chữa",
+    "catPos": "POS & IT",
+    "roleUser": "Nhân viên cửa hàng / kỹ thuật viên",
+    "roleStoreAi": "AI xử lý nhanh tại cửa hàng",
+    "roleTechAi": "AI kỹ thuật viên",
+    "storeMode": "Chế độ xử lý nhanh tại cửa hàng",
+    "techMode": "Chế độ kỹ thuật viên",
+    "errCreate": "Tạo phiếu sửa chữa thất bại",
+    "storeSafetyLabel": "Nguyên tắc an toàn cửa hàng:",
+    "tickTested": "Bấm để đánh dấu đã kiểm tra",
+    "chk": {
+      "consumable": "📦 Vật tư / dây",
+      "ohms": "⚡ Đo điện trở",
+      "voltage": "🔌 Đo điện áp",
+      "cleaning": "🧽 Vệ sinh",
+      "restart": "🔄 Khởi động lại"
+    },
+    "expected": "✓ Bình thường: ",
+    "ifFailed": "✗ Nếu không cải thiện: ",
+    "catFactory": "Xưởng trung tâm",
+    "draftTried": "Đã kiểm tra: ",
+    "categoryLabel": "Loại thiết bị:",
+    "targetLabel": "Thiết bị:",
+    "quickAsk": "Câu hỏi nhanh:",
+    "draftEquipment": "Thiết bị: ",
+    "draftCode": "Mã lỗi: ",
+    "draftSummary": "Tóm tắt: ",
+    "techCase": "Ca thực tế:",
+    "catBar": "Thiết bị quầy bar",
+    "priority": "Mức ưu tiên: ",
+    "onSiteIssue": "Bất thường tại chỗ",
+    "urgent": "Khẩn cấp",
+    "diagnose": "Chẩn đoán",
+    "high": "Cao",
+    "welcomeStore": "Xin chào! Tôi là **AI xử lý nhanh thiết bị cửa hàng** 🤖\n\nDành cho cửa hàng: **không tháo máy, an toàn, kiểm tra 3 bước**. Hãy chọn thiết bị bên dưới hoặc nhập hiện tượng (VD: \"máy dán miệng ly E01\", \"máy định lượng đường ra ít\", \"máy in hóa đơn kẹt giấy\"), tôi sẽ hướng dẫn bạn xử lý ngay!",
+    "welcomeTech": "Xin chào kỹ thuật viên! Tôi là **AI sửa chữa cơ điện chuyên nghiệp** ⚡\n\nCó **sơ đồ mạch chính hãng, chuẩn đo điện trở (Ω) / điện áp (V), kiểm tra cam và công tắc hành trình** cùng **cơ sở dữ liệu mã linh kiện**. Hãy chọn model hoặc nhập mã lỗi để chẩn đoán chuyên sâu.",
+    "switchedStore": "🔄 Đã chuyển sang **[Chế độ xử lý nhanh tại cửa hàng]**: ưu tiên an toàn (không tháo máy, không chạm điện mạnh). Nếu 3 bước không xử lý được sẽ đề xuất \"Gửi phiếu sửa chữa\".",
+    "switchedTech": "🔄 Đã chuyển sang **[Chế độ kỹ thuật viên]**: giá trị đo đồng hồ vạn năng (Ω/V), chân đấu nối sơ đồ mạch, mã linh kiện chính hãng và ca sửa thực tế.",
+    "diagError": "Xin lỗi, có lỗi khi chẩn đoán: {msg}",
+    "tryLater": "vui lòng thử lại sau",
+    "networkError": "Kết nối bất thường, vui lòng kiểm tra mạng.",
+    "stepN": "Bước {n}: {title}",
+    "stepsTitle": "Danh sách kiểm tra từng bước ({n} bước):",
+    "storeSafety": "Nguyên tắc an toàn cửa hàng: <s>tuyệt đối không tháo vỏ máy hay chạm tay vào khuôn nhiệt (trên 160°C)</s>. Làm theo hướng dẫn AI để kiểm tra nguồn điện, vệ sinh và màng.",
+    "techSafety": "Nguyên tắc làm việc cơ điện: khi đo điện trở <s>bắt buộc ngắt hoàn toàn nguồn tổng</s>; đo khi có điện 24VDC/220VAC phải mang đồ cách điện."
+  },
+  "AuditAi": {
+    "readyHint": "Có thể hỏi về quy trình, bố trí luồng làm việc, công thái học (tránh chấn thương cổ tay / xoay người quá nhiều), bày trí quầy bar, chống gian lận hủy nguyên liệu, hoặc chụp ảnh hiện trường để thảo luận.",
+    "kbContentPh": "Dán nội dung quy định, kích thước công thái học, mức phạt hoặc chi tiết SOP...",
+    "inputPh": "Nhập câu hỏi hoặc thảo luận với chuyên gia về luồng làm việc, bố trí, an toàn...",
+    "kbTitlePh": "Tiêu đề (VD: yêu cầu khoảng cách đặt máy dán miệng ly, mức phạt hủy giả)",
+    "suggestEmpty": "Sau khi gửi tin nhắn, gợi ý và câu trả lời của chuyên gia sẽ hiển thị ở đây.",
+    "kbTitle": "Kho kiến thức chuyên gia kiểm toán · bổ sung dữ liệu huấn luyện bất cứ lúc nào",
+    "noAccess": "Chỉ bộ phận kiểm toán mới dùng được AI kiểm toán",
+    "photoOnly": "(Đã tải ảnh hiện trường lên để chẩn đoán)",
+    "logSaved": "Đã tự tóm tắt và lưu vào nhật ký kiểm toán!",
+    "suggestPanel": "Gợi ý & câu trả lời (1/3)",
+    "kbEmpty": "Chưa có dữ liệu huấn luyện bổ sung",
+    "thinking": "Chuyên gia đang phân tích…",
+    "ready": "Chuyên gia kiểm toán đã sẵn sàng",
+    "uploadPhoto": "Chụp hoặc tải ảnh kiểm tra",
+    "clickToAsk": "Bấm vào thẻ để hỏi tiếp",
+    "removePeriod": "Không đính kèm dữ liệu tiêu hao nữa",
+    "storePh": "Chọn hoặc nhập cửa hàng",
+    "title": "AI thảo luận kiểm toán",
+    "noChats": "Chưa có cuộc trò chuyện",
+    "kbAdd": "Thêm vào kho kiến thức",
+    "untitled": "Cuộc trò chuyện không tiêu đề",
+    "toInput": "Đưa vào ô nhập",
+    "expert": "Chuyên gia tư vấn",
+    "auditLog": "Nhật ký kiểm toán",
+    "inspection": "Kiểm tra hiện trường",
+    "genLog": "Tạo nhật ký",
+    "sitePhoto": "Ảnh hiện trường",
+    "quoteAsk": "Hỏi tiếp",
+    "knowledge": "Kho kiến thức",
+    "newChat": "Cuộc trò chuyện mới",
+    "modeDiscuss": "Thảo luận",
+    "modeGuide": "Hướng dẫn",
+    "preview": "Xem trước",
+    "sendFailed": "Gửi thất bại",
+    "kind": {
+      "sop": "Quy trình SOP",
+      "ergonomics": "Công thái học & bố trí",
+      "hygiene": "Tiêu chuẩn vệ sinh",
+      "rules": "Quy định xử phạt",
+      "other": "Tài liệu bổ sung"
+    },
+    "suggestArea": "Khu gợi ý",
+    "suggestOn": "đang bật (1/3)",
+    "suggestOff": "đã tắt",
+    "store": "cửa hàng",
+    "periodLoaded": "Đã đính kèm dữ liệu tiêu hao nguyên liệu {store} {period}",
+    "hint1": "Nên bố trí máy dán miệng ly và thùng đá thế nào cho đúng công thái học?",
+    "hint2": "Phát hiện nguyên liệu đã báo hủy vẫn dùng ở quầy bar, quy trình xử lý chuẩn là gì?",
+    "hint3": "Trọng điểm kiểm tra phân khu khăn lau và dọn dẹp ngay (Clean as you go)?",
+    "hint4": "Làm sao ngăn thu tiền riêng qua điện thoại công vụ và nhóm Zalo cá nhân?",
+    "followUp": "Với đề xuất \"{item}\", cửa hàng nên thực hiện cụ thể thế nào?",
+    "refSuggestion": " (tham khảo đề xuất: {item})",
+    "analyzeErgo": "Hãy phân tích điều chỉnh công thái học cho \"{item}\""
+  },
+  "CompanyPlan": {
+    "loadFailed": "Tải thất bại",
+    "networkError": "Lỗi mạng, vui lòng thử lại sau",
+    "orderFailed": "Tạo đơn hàng thất bại",
+    "loading": "Đang tải…",
+    "company": "Công ty",
+    "enterpriseFull": "Gói Doanh nghiệp tùy chỉnh",
+    "companyPlan": "Gói Công ty",
+    "enterprise": "Gói Doanh nghiệp",
+    "enterpriseDesc": "Không giới hạn thành viên; mọi mô-đun đã mở ở cấp MAX; tính năng tính điểm không giới hạn; CHAT mở mọi mô hình và tạo ảnh / video; thêm / chỉnh tính năng không giới hạn.",
+    "companyDesc": "Không giới hạn thành viên; các mô-đun CSKH, đặt phòng, marketing đã mở ở cấp MAX. Gồm CHAT miễn phí và 1 lần chỉnh tính năng miễn phí mỗi tháng.",
+    "inUse": "Đang dùng {plan}",
+    "expires": ", hết hạn {date}",
+    "notActive": "Chưa kích hoạt gói Công ty",
+    "yearly": "Theo năm (giá {n} tháng)",
+    "monthly": "Theo tháng",
+    "payNeedsAdmin": "Thanh toán phải do <b>chủ công ty hoặc quản trị viên</b> thực hiện.",
+    "priceBreakdown": "Chi tiết giá (USD / tháng)",
+    "yearlyTotal": "Tổng theo năm (${m}/tháng × {n})",
+    "monthlyTotal": "Tổng mỗi tháng",
+    "contractNote": "Mô-đun, số người dùng ERP và số cửa hàng do nền tảng thiết lập theo hợp đồng; liên hệ chúng tôi nếu cần điều chỉnh.",
+    "credits": "Điểm",
+    "enterpriseCredits": "Gói Doanh nghiệp không giới hạn điểm, thành viên dùng tính năng tính điểm không bị trừ.",
+    "wallet": "Ví công ty",
+    "monthlyGift": "Điểm tặng tháng này (${n}/tháng, không cộng dồn)",
+    "paidBalance": "Số dư nạp",
+    "deductOrder": "Khi thành viên dùng tính năng tính điểm (tạo nội dung marketing, bàn tròn thông minh, AI Agent…), sẽ trừ điểm tặng tháng này trước rồi mới trừ tiền nạp.",
+    "topUp": "Nạp {label}",
+    "getsCredits": "Nhận ${n} điểm",
+    "topUpWho": "Nạp tiền phải do chủ, quản trị viên, quản lý hoặc nhân viên tài chính thực hiện.",
+    "topUpAfterActive": "Kích hoạt gói Công ty để nạp tiền vào ví công ty.",
+    "renew": "Gia hạn",
+    "activate": "Thanh toán kích hoạt",
+    "payBtn": "{action} (${total} USD)",
+    "payNote": "Có hiệu lực ngay sau khi thanh toán; gia hạn sẽ cộng tiếp từ ngày hết hạn hiện tại. Không tự động gia hạn."
+  },
+  "PosMenu": {
+    "subtitle": "Tải ảnh, tên và mô tả đa ngôn ngữ; kiosk hiển thị theo ngôn ngữ",
+    "importBtn": "Nhập thực đơn hàng loạt (Excel/CSV)",
+    "uploadImage": "Tải ảnh (không bắt buộc)",
+    "itemNamePh": "Tên món (ngôn ngữ chính)",
+    "mainDescPh": "Mô tả chính",
+    "descPh": "Mô tả (không bắt buộc)",
+    "pricePh": "Giá",
+    "multilangContent": "Nội dung đa ngôn ngữ",
+    "aiTranslate": "Dịch bằng AI",
+    "title": "Chỉnh sửa thực đơn",
+    "addCategory": "Thêm danh mục",
+    "categoryName": "Tên danh mục",
+    "addItem": "Thêm món",
+    "chooseCategory": "Chọn danh mục",
+    "changeImage": "Đổi ảnh",
+    "multilang": "Đa ngôn ngữ",
+    "all": "Tất cả",
+    "global": "Toàn hệ thống",
+    "add": "Thêm",
+    "preview": "Xem trước",
+    "remove": "Xóa",
+    "image": "Ảnh",
+    "disable": "Ngừng bán",
+    "enable": "Mở bán",
+    "save": "Lưu",
+    "cancel": "Hủy",
+    "store": "Cửa hàng",
+    "revision": "Phiên bản {n}",
+    "namePhLang": "Tên {lang}",
+    "descPhLang": "Mô tả {lang}",
+    "storeOnly": "Riêng {name}"
+  },
+  "PosMenuImport": {
+    "_meta": {
+      "title": "Nhập / cập nhật thực đơn POS hàng loạt",
+      "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Danh mục chưa có sẽ tự tạo; món trùng tên sẽ tự cập nhật, ngược lại thêm mới.",
+      "template": "Mau thuc don POS",
+      "sheet": "Mon"
+    },
+    "name": {
+      "label": "Tên món",
+      "example": "Trà sữa trân châu"
+    },
+    "category": {
+      "label": "Danh mục",
+      "example": "Trà truyền thống"
+    },
+    "price": {
+      "label": "Giá bán"
+    },
+    "description": {
+      "label": "Mô tả",
+      "example": "Vị sữa đậm đà cùng trân châu nấu mới"
+    },
+    "barcode": {
+      "label": "Mã vạch"
+    }
+  },
+  "PosStores": {
+    "loading": "Đang tải…",
+    "title": "Cửa hàng & thiết bị",
+    "subtitle": "Mỗi cửa hàng một máy Debian. Nhập device_key vào kiosk hoặc pos-bridge.",
+    "importBtn": "Nhập cửa hàng hàng loạt (Excel/CSV)",
+    "storeName": "Tên cửa hàng",
+    "addStore": "Thêm cửa hàng",
+    "terminal": "Thiết bị: {name}",
+    "hideKey": "Ẩn khóa",
+    "showKey": "Hiện khóa",
+    "copyKey": "Sao chép khóa",
+    "lastSync": "Đồng bộ lần cuối: ",
+    "never": "chưa có",
+    "noTerminal": "Chưa có thiết bị",
+    "noStores": "Chưa có cửa hàng"
+  },
+  "PosStoresImport": {
+    "_meta": {
+      "title": "Nhập cửa hàng hàng loạt",
+      "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Điền tên cửa hàng và mã (không bắt buộc).",
+      "template": "Mau cua hang POS",
+      "sheet": "Cua hang"
+    },
+    "name": {
+      "label": "Tên cửa hàng",
+      "example": "Cửa hàng Xinyi"
+    },
+    "slug": {
+      "label": "Mã (slug)"
+    }
+  },
+  "PosOrders": {
+    "title": "Quản lý đơn hàng",
+    "all": "Tất cả",
+    "status": {
+      "pending": "Chờ xử lý",
+      "preparing": "Đang làm",
+      "ready": "Sẵn sàng",
+      "done": "Hoàn tất",
+      "cancelled": "Đã hủy"
+    },
+    "type": {
+      "dine_in": "Tại chỗ",
+      "takeout": "Mang đi",
+      "delivery": "Giao hàng"
+    },
+    "table": "Bàn {n}",
+    "note": "Ghi chú: {note}",
+    "empty": "Chưa có đơn hàng"
   }
 }

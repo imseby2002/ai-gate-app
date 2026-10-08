@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
 
     let done = r.done
     if (typeof done === 'string') {
-      done = ['true', '1', '是', 'yes', '已完成', 'done', 'v'].includes(done.trim().toLowerCase())
+      done = ['true', '1', '是', 'yes', '已完成', 'done', 'v', 'có', 'rồi', 'đã xong', 'hoàn thành'].includes(done.trim().toLowerCase())
     } else if (done === undefined || done === null || done === '') {
       done = false
     }

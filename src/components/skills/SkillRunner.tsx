@@ -5,6 +5,7 @@ import { Sparkles, Loader2, Coins, ArrowLeft, Copy, Check, BookOpen, Trash2, Upl
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils/cn'
 
 interface SkillField {
@@ -36,21 +37,27 @@ interface KnowledgeSource {
   created_at: string
 }
 
-const CATEGORY_LABEL: Record<string, string> = {
-  copywriting: '文案',
-  video: '短影音',
-  illustration: '配圖',
-  research: '研究',
-  audio: '語音',
-  presentation: '簡報',
-  social: '社群',
-}
 
 /**
  * 共用 skill 執行器：依 module 列出對應 skill，填表單→執行→顯示結果。
  * 行銷中心「專家模式」與「思維決策」共用此元件。
  */
 export function SkillRunner({ module, title }: { module: string; title: string }) {
+  const t = useTranslations('SkillRunner')
+  const ts = useTranslations('Skills')
+  // skill 定義（label / 欄位）在 lib/skills/registry 以中文撰寫；有翻譯就套用，沒有就沿用原文
+  const tr = (key: string, fallback: string) => (ts.has(key) ? ts(key) : fallback)
+  const localize = (s: SkillInfo): SkillInfo => ({
+    ...s,
+    label: tr(`${s.id}.label`, s.label),
+    description: tr(`${s.id}.description`, s.description),
+    fields: s.fields.map(f => ({
+      ...f,
+      label: tr(`${s.id}.fields.${f.name}.label`, f.label),
+      placeholder: f.placeholder && tr(`${s.id}.fields.${f.name}.placeholder`, f.placeholder),
+      options: f.options?.map(o => ({ ...o, label: tr(`${s.id}.fields.${f.name}.options.${o.value}`, o.label) })),
+    })),
+  })
   const [skills, setSkills] = useState<SkillInfo[]>([])
   const [balance, setBalance] = useState<number | null>(null)
   const [selected, setSelected] = useState<SkillInfo | null>(null)
@@ -76,10 +83,10 @@ export function SkillRunner({ module, title }: { module: string; title: string }
     fetch(`/api/skills?module=${encodeURIComponent(module)}`)
       .then(r => r.json())
       .then(d => {
-        setSkills(d.skills ?? [])
+        setSkills((d.skills ?? []).map(localize))
         if (typeof d.balance === 'number') setBalance(d.balance)
       })
-      .catch(() => setError('載入 skill 清單失敗'))
+      .catch(() => setError(t('loadFailed')))
   }, [module])
 
   function openSkill(s: SkillInfo) {
@@ -124,7 +131,7 @@ export function SkillRunner({ module, title }: { module: string; title: string }
       })
       const data = await res.json()
       if (!res.ok) {
-        setKError(res.status === 403 ? '訓練專家知識需 PRO 以上方案' : (data.error ?? '新增失敗'))
+        setKError(res.status === 403 ? t('trainNeedPro') : (data.error ?? t('addFailed')))
         return
       }
       if (data.source) setKSources(v => [data.source, ...v])
@@ -133,7 +140,7 @@ export function SkillRunner({ module, title }: { module: string; title: string }
       setKText('')
       setKName('')
     } catch {
-      setKError('連線失敗')
+      setKError(t('networkError'))
     } finally {
       setKBusy(false)
     }
@@ -150,16 +157,16 @@ export function SkillRunner({ module, title }: { module: string; title: string }
       const up = await fetch('/api/marketing/upload-file', { method: 'POST', body: form })
       const upData = await up.json()
       if (!up.ok) {
-        setKError(upData.error ?? '檔案上傳失敗')
+        setKError(upData.error ?? t('uploadFailed'))
         return
       }
       if (!upData.textContent) {
-        setKError('此檔案無法萃取文字內容（僅支援 docx / xlsx / csv / txt / pdf）')
+        setKError(t('noText'))
         return
       }
       await addKnowledge({ type: 'file', text: upData.textContent, name: upData.name })
     } catch {
-      setKError('檔案處理失敗')
+      setKError(t('fileFailed'))
     } finally {
       setKBusy(false)
       if (fileRef.current) fileRef.current.value = ''
@@ -179,7 +186,7 @@ export function SkillRunner({ module, title }: { module: string; title: string }
     if (!selected) return
     const missing = selected.fields.find(f => f.required && !values[f.name]?.trim())
     if (missing) {
-      setError(`請填寫：${missing.label}`)
+      setError(t('fillRequired', { field: missing.label }))
       return
     }
     setRunning(true)
@@ -193,8 +200,8 @@ export function SkillRunner({ module, title }: { module: string; title: string }
       })
       const data = await res.json()
       if (!res.ok) {
-        if (res.status === 402) setError(`點數不足，本次需要約 ${data.required ?? selected.priceCredits} 點`)
-        else setError(data.error ?? '執行失敗')
+        if (res.status === 402) setError(t('insufficient', { n: data.required ?? selected.priceCredits }))
+        else setError(data.error ?? t('runFailed'))
         if (typeof data.balance === 'number') setBalance(data.balance)
         return
       }
@@ -202,7 +209,7 @@ export function SkillRunner({ module, title }: { module: string; title: string }
       setLastCost(data.creditsSpent ?? null)
       if (typeof data.balance === 'number') setBalance(data.balance)
     } catch {
-      setError('連線失敗')
+      setError(t('networkError'))
     } finally {
       setRunning(false)
     }
@@ -224,7 +231,7 @@ export function SkillRunner({ module, title }: { module: string; title: string }
         {balance != null && (
           <div className="flex items-center gap-1.5 text-sm text-gray-600 bg-gray-100 px-3 py-1.5 rounded-full">
             <Coins className="h-4 w-4 text-amber-500" />
-            餘額 {balance.toFixed(2)} 點
+            {t('balance', { n: balance.toFixed(2) })}
           </div>
         )}
       </div>
@@ -237,14 +244,14 @@ export function SkillRunner({ module, title }: { module: string; title: string }
                 s.hasKnowledge ? 'border-amber-300 ring-1 ring-amber-100 hover:border-amber-400' : 'hover:border-indigo-400')}>
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-[11px] font-medium text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
-                  {CATEGORY_LABEL[s.category] ?? s.category}
+                  {t.has(`category.${s.category}`) ? t(`category.${s.category}`) : s.category}
                 </span>
-                <span className="text-xs text-gray-400">{s.priceCredits} 點起</span>
+                <span className="text-xs text-gray-400">{t('fromCredits', { n: s.priceCredits })}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="font-semibold text-gray-800 text-sm">{s.label}</span>
                 {s.hasKnowledge
-                  ? <span className="text-[10px] font-semibold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-full">🔥 專屬知識庫</span>
+                  ? <span className="text-[10px] font-semibold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-full">🔥 {t('ownKnowledge')}</span>
                   : <span className="text-[10px] font-medium text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">Prompt</span>}
               </div>
               <div className="text-xs text-gray-500 mt-1 leading-relaxed">{s.description}</div>
@@ -252,7 +259,7 @@ export function SkillRunner({ module, title }: { module: string; title: string }
           ))}
           {skills.length === 0 && !error && (
             <div className="col-span-full text-center text-sm text-gray-400 py-10">
-              <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" /> 載入中…
+              <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" /> {t('loading')}
             </div>
           )}
         </div>
@@ -260,7 +267,7 @@ export function SkillRunner({ module, title }: { module: string; title: string }
         <div>
           <button onClick={() => setSelected(null)}
             className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 mb-4">
-            <ArrowLeft className="h-4 w-4" /> 返回
+            <ArrowLeft className="h-4 w-4" /> {t('back')}
           </button>
 
           <div className="mb-4">
@@ -297,17 +304,17 @@ export function SkillRunner({ module, title }: { module: string; title: string }
           {error && <div className="mt-3 text-sm text-rose-600 bg-rose-50 px-3 py-2 rounded-lg">{error}</div>}
 
           <Button onClick={run} disabled={running} className="mt-4 w-full">
-            {running ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> 生成中…</> : '執行'}
+            {running ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> {t('generating')}</> : t('run')}
           </Button>
 
           {output && (
             <div className="mt-5 border rounded-xl bg-white">
               <div className="flex items-center justify-between px-4 py-2 border-b">
                 <span className="text-xs text-gray-500">
-                  結果{lastCost != null && ` ・ 本次扣 ${lastCost.toFixed(2)} 點`}
+                  {t('result')}{lastCost != null && ` ・ ${t('charged', { n: lastCost.toFixed(2) })}`}
                 </span>
                 <button onClick={copyOutput} className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-800">
-                  {copied ? <><Check className="h-3.5 w-3.5" /> 已複製</> : <><Copy className="h-3.5 w-3.5" /> 複製</>}
+                  {copied ? <><Check className="h-3.5 w-3.5" /> {t('copied')}</> : <><Copy className="h-3.5 w-3.5" /> {t('copy')}</>}
                 </button>
               </div>
               <pre className={cn('whitespace-pre-wrap break-words text-sm text-gray-800 px-4 py-3 font-sans')}>
@@ -320,13 +327,13 @@ export function SkillRunner({ module, title }: { module: string; title: string }
           <div className="mt-6 border rounded-xl bg-white">
             <div className="flex items-center gap-2 px-4 py-3 border-b">
               <BookOpen className="h-4 w-4 text-indigo-600" />
-              <span className="text-sm font-semibold text-gray-800">訓練這位專家</span>
-              <span className="text-[11px] text-gray-400">上傳連結／文字／檔案，執行時自動參考</span>
+              <span className="text-sm font-semibold text-gray-800">{t('trainTitle')}</span>
+              <span className="text-[11px] text-gray-400">{t('trainHint')}</span>
             </div>
 
             {!kCanBuild ? (
               <div className="px-4 py-4 text-sm text-gray-500">
-                訓練專屬知識庫為 <span className="font-medium text-indigo-600">PRO 以上方案</span> 功能。升級後可讓這位專家學習你上傳的爆款案例、風格與資料。
+                {t('trainLocked')}
               </div>
             ) : (
               <div className="px-4 py-4 space-y-3">
@@ -335,7 +342,7 @@ export function SkillRunner({ module, title }: { module: string; title: string }
                     {kSources.map(s => (
                       <li key={s.id} className="flex items-center gap-2 text-sm bg-gray-50 rounded-lg px-3 py-2">
                         <span className="text-[10px] font-medium text-gray-500 bg-white border rounded px-1.5 py-0.5">
-                          {s.type === 'url' ? '連結' : s.type === 'file' ? '檔案' : '文字'}
+                          {t(`srcType.${s.type}`)}
                         </span>
                         {s.source_url ? (
                           <a href={s.source_url} target="_blank" rel="noreferrer"
@@ -343,7 +350,7 @@ export function SkillRunner({ module, title }: { module: string; title: string }
                         ) : (
                           <span className="flex-1 truncate text-gray-700">{s.name}</span>
                         )}
-                        <span className="text-[11px] text-gray-400">{s.char_count} 字</span>
+                        <span className="text-[11px] text-gray-400">{t('chars', { n: s.char_count })}</span>
                         <button onClick={() => delKnowledge(s.id)} className="text-gray-400 hover:text-rose-500">
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -353,18 +360,18 @@ export function SkillRunner({ module, title }: { module: string; title: string }
                 )}
 
                 <div className="flex gap-1 text-xs">
-                  {(['url', 'text', 'file'] as const).map(t => (
-                    <button key={t} onClick={() => { setKTab(t); setKError('') }}
+                  {(['url', 'text', 'file'] as const).map(k => (
+                    <button key={k} onClick={() => { setKTab(k); setKError('') }}
                       className={cn('px-3 py-1.5 rounded-full border',
-                        kTab === t ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'bg-white text-gray-500 hover:text-gray-800')}>
-                      {t === 'url' ? '網址連結' : t === 'text' ? '貼上文字' : '上傳檔案'}
+                        kTab === k ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'bg-white text-gray-500 hover:text-gray-800')}>
+                      {t(`tab.${k}`)}
                     </button>
                   ))}
                 </div>
 
                 {kTab === 'url' && (
                   <div className="flex gap-2">
-                    <Input placeholder="https://…（文章 / 貼文 / 網頁）" value={kUrl}
+                    <Input placeholder={t('urlPh')} value={kUrl}
                       onChange={e => setKUrl(e.target.value)} />
                     <Button variant="outline" disabled={kBusy || !kUrl.trim()}
                       onClick={() => addKnowledge({ type: 'url', url: kUrl.trim() })}>
@@ -375,13 +382,13 @@ export function SkillRunner({ module, title }: { module: string; title: string }
 
                 {kTab === 'text' && (
                   <div className="space-y-2">
-                    <Input placeholder="這份知識的名稱（選填）" value={kName}
+                    <Input placeholder={t('namePh')} value={kName}
                       onChange={e => setKName(e.target.value)} />
-                    <Textarea rows={4} placeholder="貼上爆款案例、方法論、風格範例等文字…" value={kText}
+                    <Textarea rows={4} placeholder={t('textPh')} value={kText}
                       onChange={e => setKText(e.target.value)} />
                     <Button variant="outline" disabled={kBusy || !kText.trim()}
                       onClick={() => addKnowledge({ type: 'text', text: kText.trim(), name: kName.trim() })}>
-                      {kBusy ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> 新增中…</> : <><Plus className="h-4 w-4 mr-2" /> 加入知識</>}
+                      {kBusy ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> {t('adding')}</> : <><Plus className="h-4 w-4 mr-2" /> {t('addKnowledge')}</>}
                     </Button>
                   </div>
                 )}
@@ -391,9 +398,9 @@ export function SkillRunner({ module, title }: { module: string; title: string }
                     <input ref={fileRef} type="file" accept=".docx,.xlsx,.xls,.csv,.txt,.pdf" className="hidden"
                       onChange={e => { const f = e.target.files?.[0]; if (f) addFile(f) }} />
                     <Button variant="outline" disabled={kBusy} onClick={() => fileRef.current?.click()}>
-                      {kBusy ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> 處理中…</> : <><Upload className="h-4 w-4 mr-2" /> 選擇檔案</>}
+                      {kBusy ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> {t('processing')}</> : <><Upload className="h-4 w-4 mr-2" /> {t('chooseFile')}</>}
                     </Button>
-                    <p className="text-[11px] text-gray-400 mt-1.5">支援 docx / xlsx / csv / txt / pdf，自動萃取文字</p>
+                    <p className="text-[11px] text-gray-400 mt-1.5">{t('fileHint')}</p>
                   </div>
                 )}
 

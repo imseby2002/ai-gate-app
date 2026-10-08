@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import {
   X,
   Plus,
@@ -33,6 +34,7 @@ export function SubjectManagementModal({
   onRefresh,
   accountBook = 'FT'
 }: SubjectManagementModalProps) {
+  const t = useTranslations('FinanceSubjects')
   const [activeClass, setActiveClass] = useState<'asset' | 'liability' | 'income' | 'expense'>('asset')
   const [search, setSearch] = useState('')
   const [editing, setEditing] = useState<SubjectItem | null>(null)
@@ -95,7 +97,7 @@ export function SubjectManagementModal({
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.name.trim()) {
-      setErr('請輸入科目名稱')
+      setErr(t('errName'))
       return
     }
     setSaving(true)
@@ -120,7 +122,7 @@ export function SubjectManagementModal({
         body: JSON.stringify(payload)
       })
       const d = await res.json()
-      if (!res.ok) throw new Error(d.error || '儲存失敗')
+      if (!res.ok) throw new Error(d.error || t('saveFailed'))
 
       setShowAdd(false)
       setEditing(null)
@@ -133,7 +135,7 @@ export function SubjectManagementModal({
   }
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`確定要刪除科目「${name}」嗎？若該科目有交易關聯可能影響統計。`)) return
+    if (!confirm(t('confirmDelete', { name }))) return
     try {
       const res = await fetch('/api/fin/subjects', {
         method: 'DELETE',
@@ -142,12 +144,12 @@ export function SubjectManagementModal({
       })
       if (!res.ok) {
         const d = await res.json()
-        alert(d.error || '刪除失敗')
+        alert(d.error || t('deleteFailed'))
         return
       }
       onRefresh()
     } catch {
-      alert('刪除失敗')
+      alert(t('deleteFailed'))
     }
   }
 
@@ -157,9 +159,9 @@ export function SubjectManagementModal({
         {/* Header */}
         <div className="flex items-center justify-between border-b pb-3 shrink-0">
           <div>
-            <h3 className="font-bold text-lg">項目科目設定（主檔管理）</h3>
+            <h3 className="font-bold text-lg">{t('mgmtTitle')}</h3>
             <p className="text-xs text-muted-foreground mt-0.5">
-              維護各類別科目之大類（目錄）、明細名稱、期初金額與常態性質。
+              {t('mgmtDesc')}
             </p>
           </div>
           <button onClick={onClose} className="p-1 rounded-md text-muted-foreground hover:text-foreground">
@@ -171,7 +173,7 @@ export function SubjectManagementModal({
         <div className="flex items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-1 bg-muted p-1 rounded-lg">
             {(['asset', 'liability', 'income', 'expense'] as const).map(c => {
-              const label = c === 'asset' ? '資產' : c === 'liability' ? '負債' : c === 'income' ? '收入' : '支出'
+              const label = t(`cls.${c}`)
               const count = subjects.filter(s => s.class === c).length
               return (
                 <button
@@ -190,7 +192,7 @@ export function SubjectManagementModal({
 
           <Button size="sm" onClick={() => startAdd()} className="h-8 text-xs gap-1">
             <Plus className="h-3.5 w-3.5" />
-            新增科目
+            {t('addSubject')}
           </Button>
         </div>
 
@@ -200,7 +202,7 @@ export function SubjectManagementModal({
           <Input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder={`搜尋${activeClass === 'asset' ? '資產' : activeClass === 'liability' ? '負債' : activeClass === 'income' ? '收入' : '支出'}大類或科目名稱...`}
+            placeholder={t('searchPh', { cls: t(`cls.${activeClass}`) })}
             className="pl-9 h-8 text-xs"
           />
         </div>
@@ -209,7 +211,7 @@ export function SubjectManagementModal({
         {showAdd && (
           <form onSubmit={handleSave} className="p-4 border rounded-xl bg-muted/30 space-y-3 shrink-0">
             <div className="font-semibold text-xs flex items-center justify-between">
-              <span>{editing ? `編輯科目：${editing.name}` : `新增${activeClass === 'asset' ? '資產' : activeClass === 'liability' ? '負債' : activeClass === 'income' ? '收入' : '支出'}科目`}</span>
+              <span>{editing ? t('editSubject', { name: editing.name }) : t('newSubjectOf', { cls: t(`cls.${activeClass}`) })}</span>
               <button type="button" onClick={() => setShowAdd(false)} className="text-muted-foreground hover:text-foreground">
                 <X className="h-4 w-4" />
               </button>
@@ -224,26 +226,26 @@ export function SubjectManagementModal({
 
             <div className="grid grid-cols-2 gap-3 text-xs">
               <div>
-                <label className="block text-2xs font-medium text-muted-foreground mb-1">大類名稱 (目錄/父層)</label>
+                <label className="block text-2xs font-medium text-muted-foreground mb-1">{t('parentName')}</label>
                 <Input
                   value={formData.parent_name}
                   onChange={e => setFormData(p => ({ ...p, parent_name: e.target.value }))}
-                  placeholder="例如：現金、飲料原料、其它收入"
+                  placeholder={t('parentPh')}
                   className="h-8 text-xs"
                 />
               </div>
               <div>
-                <label className="block text-2xs font-medium text-muted-foreground mb-1">科目明細名稱 *</label>
+                <label className="block text-2xs font-medium text-muted-foreground mb-1">{t('subjectNameReq')}</label>
                 <Input
                   value={formData.name}
                   onChange={e => setFormData(p => ({ ...p, name: e.target.value }))}
-                  placeholder="例如：保險櫃、奶精、DT VNPAY"
+                  placeholder={t('subjectNamePh')}
                   required
                   className="h-8 text-xs font-semibold"
                 />
               </div>
               <div>
-                <label className="block text-2xs font-medium text-muted-foreground mb-1">期初餘額 (NT$)</label>
+                <label className="block text-2xs font-medium text-muted-foreground mb-1">{t('openingBalance')}</label>
                 <Input
                   type="number"
                   value={formData.initial_balance}
@@ -252,25 +254,25 @@ export function SubjectManagementModal({
                 />
               </div>
               <div>
-                <label className="block text-2xs font-medium text-muted-foreground mb-1">性質類型</label>
+                <label className="block text-2xs font-medium text-muted-foreground mb-1">{t('styleLabel')}</label>
                 <select
                   value={formData.style}
                   onChange={e => setFormData(p => ({ ...p, style: e.target.value }))}
                   className="w-full h-8 px-2 text-xs border rounded-md bg-background"
                 >
-                  <option value="常態性">常態性</option>
-                  <option value="非常態性">非常態性</option>
+                  <option value="常態性">{t('styleRegular')}</option>
+                  <option value="非常態性">{t('styleIrregular')}</option>
                 </select>
               </div>
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-1">
               <Button type="button" variant="ghost" size="sm" onClick={() => setShowAdd(false)} className="h-7 text-xs">
-                取消
+                {t('cancel')}
               </Button>
               <Button type="submit" size="sm" disabled={saving} className="h-7 text-xs">
                 {saving && <Loader2 className="h-3 w-3 animate-spin mr-1" />}
-                {editing ? '儲存變更' : '新增建置'}
+                {editing ? t('saveChanges') : t('create')}
               </Button>
             </div>
           </form>
@@ -279,7 +281,7 @@ export function SubjectManagementModal({
         {/* 科目清單列表 */}
         <div className="flex-1 overflow-y-auto border rounded-xl divide-y text-xs font-sans">
           {filtered.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">查無符合科目</div>
+            <div className="text-center py-12 text-muted-foreground">{t('noMatch')}</div>
           ) : (
             filtered.map(item => (
               <div key={item.id} className="p-3 flex items-center justify-between hover:bg-muted/40 transition-colors">
@@ -290,12 +292,12 @@ export function SubjectManagementModal({
                       {item.parent_name}
                     </Badge>
                     <Badge variant="secondary" className="text-2xs font-normal">
-                      {item.style}
+                      {item.style === '常態性' ? t('styleRegular') : item.style === '非常態性' ? t('styleIrregular') : item.style}
                     </Badge>
                   </div>
                   <div className="text-2xs text-muted-foreground mt-0.5 flex items-center gap-3">
-                    <span>期初餘額: <b className="font-mono text-foreground tabular-nums">NT$ {item.initial_balance.toLocaleString('zh-TW')}</b></span>
-                    <span>排序: {item.sort_order}</span>
+                    <span>{t('openingBalanceLabel')} <b className="font-mono text-foreground tabular-nums">NT$ {item.initial_balance.toLocaleString('zh-TW')}</b></span>
+                    <span>{t('sortLabel')} {item.sort_order}</span>
                   </div>
                 </div>
 
@@ -305,7 +307,7 @@ export function SubjectManagementModal({
                     variant="ghost"
                     className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
                     onClick={() => startEdit(item)}
-                    title="編輯"
+                    title={t('edit')}
                   >
                     <Pencil className="h-3.5 w-3.5" />
                   </Button>
@@ -314,7 +316,7 @@ export function SubjectManagementModal({
                     variant="ghost"
                     className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
                     onClick={() => handleDelete(item.id, item.name)}
-                    title="刪除"
+                    title={t('delete')}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
@@ -326,8 +328,8 @@ export function SubjectManagementModal({
 
         {/* Footer */}
         <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t shrink-0">
-          <span>共 {filtered.length} 個科目</span>
-          <Button size="sm" variant="outline" onClick={onClose}>關閉</Button>
+          <span>{t('total', { n: filtered.length })}</span>
+          <Button size="sm" variant="outline" onClick={onClose}>{t('close')}</Button>
         </div>
       </Card>
     </div>

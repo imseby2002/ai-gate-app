@@ -42,6 +42,8 @@ export interface ExcelImportModalProps {
   onSuccess?: () => void
   onSubmit: (rows: Record<string, unknown>[]) => Promise<BulkImportResult>
   extraHelp?: string[]
+  // 翻譯命名空間（例："WorkImport"）：有 `${ns}.${key}.label|example|description`、`${ns}._meta.title|description|template|sheet` 就套用，沒有沿用原值
+  columnsNs?: string
 }
 
 export function ExcelImportModal({
@@ -54,8 +56,24 @@ export function ExcelImportModal({
   onSuccess,
   onSubmit,
   extraHelp,
+  columnsNs,
 }: ExcelImportModalProps) {
   const t = useTranslations('ExcelImport')
+  const tAll = useTranslations()
+  if (columnsNs) {
+    const tr = <V,>(k: string, fb: V): string | V => (tAll.has(k) ? tAll(k) : fb)
+    // 視窗標題／說明／範本檔名也可放在 `${columnsNs}._meta.*`
+    title = tr(`${columnsNs}._meta.title`, title)
+    description = tr(`${columnsNs}._meta.description`, description)
+    templateFilename = tr(`${columnsNs}._meta.template`, templateFilename)
+    sheetName = tr(`${columnsNs}._meta.sheet`, sheetName)
+    columns = columns.map(c => ({
+      ...c,
+      label: tr(`${columnsNs}.${c.key}.label`, c.label),
+      example: tr(`${columnsNs}.${c.key}.example`, c.example),
+      description: tr(`${columnsNs}.${c.key}.description`, c.description),
+    }))
+  }
   const [file, setFile] = useState<File | null>(null)
   const [parsing, setParsing] = useState(false)
   const [submitting, setSubmitting] = useState(false)

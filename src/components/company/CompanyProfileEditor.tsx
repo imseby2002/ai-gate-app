@@ -20,20 +20,26 @@ import { ProductLaunchesSection } from '@/components/marketing/ProductLaunchesSe
 const selCls = 'h-9 rounded-md border border-input bg-transparent px-3 text-sm'
 const ta = 'w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm'
 
-const INDUSTRY_OPTIONS = ['科技/軟體', '製造業', '零售/電商', '金融服務', '醫療健康', '餐飲/消費', '教育培訓', '房地產', '物流/運輸', '廣告/行銷', '旅宿/民宿', '其他']
-const EMPLOYEE_OPTIONS = ['1-10人', '11-50人', '51-200人', '201-500人', '501-1000人', '1000人以上']
-const TONE_OPTIONS = ['專業/正式', '活潑/年輕', '溫暖/親切', '創新/前衛', '奢華/高端', '親民/平易']
+// 產業別／員工人數：資料庫存中文原值（既有資料相容），畫面依語系顯示 CompanyProfile.industry.* / employees.*
+const INDUSTRY_OPTIONS: [string, string][] = [
+  ['科技/軟體', 'tech'], ['製造業', 'manufacturing'], ['零售/電商', 'retail'], ['金融服務', 'finance'], ['醫療健康', 'health'], ['餐飲/消費', 'food'],
+  ['教育培訓', 'education'], ['房地產', 'realEstate'], ['物流/運輸', 'logistics'], ['廣告/行銷', 'advertising'], ['旅宿/民宿', 'hospitality'], ['其他', 'other'],
+]
+const EMPLOYEE_OPTIONS: [string, string][] = [['1-10人', 'e1'], ['11-50人', 'e2'], ['51-200人', 'e3'], ['201-500人', 'e4'], ['501-1000人', 'e5'], ['1000人以上', 'e6']]
+// 語氣／特色／標籤是寫進資料、給 AI 讀的文字：依目前語系插入對應文字
+const TONE_KEYS = ['formal', 'young', 'warm', 'innovative', 'luxury', 'friendly'] as const
 
 export type CompanyProfileTab = 'basic' | 'brand' | 'products' | 'stores' | 'files'
-const TABS: [CompanyProfileTab, string, React.ReactNode][] = [
-  ['basic', '基本資料', <Landmark key="b" className="h-4 w-4" />],
-  ['brand', '品牌', <Palette key="br" className="h-4 w-4" />],
-  ['products', '產品', <UtensilsCrossed key="p" className="h-4 w-4" />],
-  ['stores', '門市', <Building2 key="s" className="h-4 w-4" />],
-  ['files', '素材', <FileText key="f" className="h-4 w-4" />],
+const TABS: [CompanyProfileTab, React.ReactNode][] = [
+  ['basic', <Landmark key="b" className="h-4 w-4" />],
+  ['brand', <Palette key="br" className="h-4 w-4" />],
+  ['products', <UtensilsCrossed key="p" className="h-4 w-4" />],
+  ['stores', <Building2 key="s" className="h-4 w-4" />],
+  ['files', <FileText key="f" className="h-4 w-4" />],
 ]
 
 export function CompanyProfileEditor({ initialTab = 'basic' }: { initialTab?: CompanyProfileTab }) {
+  const tc = useTranslations('CompanyProfile')
   const [tab, setTab] = useState<CompanyProfileTab>(initialTab)
   const [allowed, setAllowed] = useState<boolean | null>(null)
 
@@ -43,16 +49,16 @@ export function CompanyProfileEditor({ initialTab = 'basic' }: { initialTab?: Co
   if (!allowed) return (
     <div className="rounded-xl border bg-card p-8 text-center space-y-2">
       <AlertCircle className="h-10 w-10 mx-auto text-amber-400" />
-      <p className="font-semibold">需要公司管理者或行銷權限才能編輯公司資料</p>
+      <p className="font-semibold">{tc('noPermission')}</p>
     </div>
   )
 
   return (
     <div className="space-y-4">
       <div className="flex gap-1 p-1 bg-muted rounded-xl w-fit flex-wrap">
-        {TABS.map(([id, label, icon]) => (
+        {TABS.map(([id, icon]) => (
           <button key={id} type="button" onClick={() => setTab(id)}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${tab === id ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground'}`}>{icon}{label}</button>
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${tab === id ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground'}`}>{icon}{tc(`tab.${id}`)}</button>
         ))}
       </div>
       {tab === 'basic' ? <BasicTab />
@@ -69,6 +75,7 @@ interface Basic { legalName: string; industry: string; employees: string; capita
 const emptyBasic = (): Basic => ({ legalName: '', industry: '', employees: '', capital: '', founded: '', address: '' })
 
 function BasicTab() {
+  const tc = useTranslations('CompanyProfile')
   const [f, setF] = useState<Basic | null>(null)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
@@ -85,7 +92,7 @@ function BasicTab() {
     setSaving(true); setMsg('')
     const r = await fetch('/api/marketing/company-data', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(f) })
     setSaving(false)
-    setMsg(r.ok ? '已儲存' : '儲存失敗')
+    setMsg(r.ok ? 'ok' : 'fail')
   }
 
   if (!f) return <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
@@ -94,27 +101,29 @@ function BasicTab() {
   return (
     <div className="rounded-xl border bg-card p-5 space-y-4">
       <div className="grid sm:grid-cols-2 gap-4">
-        <Field label="公司法定名稱" hint="登記名稱，品牌名稱請至「品牌」分頁"><Input value={f.legalName} onChange={e => set('legalName', e.target.value)} placeholder="例如：XX 股份有限公司" /></Field>
-        <Field label="產業別">
+        <Field label={tc('legalName')} hint={tc('legalNameHint')}><Input value={f.legalName} onChange={e => set('legalName', e.target.value)} placeholder={tc('legalNamePh')} /></Field>
+        <Field label={tc('industry.label')}>
           <select className={`${selCls} w-full`} value={f.industry} onChange={e => set('industry', e.target.value)}>
-            <option value="">請選擇</option>
-            {[...new Set([...INDUSTRY_OPTIONS, ...(f.industry ? [f.industry] : [])])].map(o => <option key={o}>{o}</option>)}
+            <option value="">{tc('pleaseSelect')}</option>
+            {INDUSTRY_OPTIONS.map(([v, k]) => <option key={v} value={v}>{tc(`industry.${k}`)}</option>)}
+            {f.industry && !INDUSTRY_OPTIONS.some(([v]) => v === f.industry) && <option value={f.industry}>{f.industry}</option>}
           </select>
         </Field>
-        <Field label="員工人數">
+        <Field label={tc('employees.label')}>
           <select className={`${selCls} w-full`} value={f.employees} onChange={e => set('employees', e.target.value)}>
-            <option value="">請選擇</option>
-            {[...new Set([...EMPLOYEE_OPTIONS, ...(f.employees ? [f.employees] : [])])].map(o => <option key={o}>{o}</option>)}
+            <option value="">{tc('pleaseSelect')}</option>
+            {EMPLOYEE_OPTIONS.map(([v, k]) => <option key={v} value={v}>{tc(`employees.${k}`)}</option>)}
+            {f.employees && !EMPLOYEE_OPTIONS.some(([v]) => v === f.employees) && <option value={f.employees}>{f.employees}</option>}
           </select>
         </Field>
-        <Field label="資本額"><Input value={f.capital} onChange={e => set('capital', e.target.value)} placeholder="例如：新台幣 1,000 萬元" /></Field>
-        <Field label="成立年份"><Input value={f.founded} onChange={e => set('founded', e.target.value)} placeholder="例如：2010" /></Field>
+        <Field label={tc('capital')}><Input value={f.capital} onChange={e => set('capital', e.target.value)} placeholder={tc('capitalPh')} /></Field>
+        <Field label={tc('founded')}><Input value={f.founded} onChange={e => set('founded', e.target.value)} placeholder={tc('foundedPh')} /></Field>
       </div>
-      <Field label="公司地址"><Input value={f.address} onChange={e => set('address', e.target.value)} placeholder="縣市 + 區 + 街道" /></Field>
-      <p className="text-xs text-muted-foreground">官方網站、目標客群、賣點、品牌故事等請至「品牌」分頁；產品與門市請至各自分頁。</p>
+      <Field label={tc('address')}><Input value={f.address} onChange={e => set('address', e.target.value)} placeholder={tc('addressPh')} /></Field>
+      <p className="text-xs text-muted-foreground">{tc('basicHint')}</p>
       <div className="flex items-center gap-3 pt-1">
-        <Button onClick={save} disabled={saving} className="gap-1.5">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}儲存基本資料</Button>
-        {msg && <span className={`text-sm ${msg === '已儲存' ? 'text-emerald-600' : 'text-red-600'}`}>{msg}</span>}
+        <Button onClick={save} disabled={saving} className="gap-1.5">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{tc('saveBasic')}</Button>
+        {msg && <span className={`text-sm ${msg === 'ok' ? 'text-emerald-600' : 'text-red-600'}`}>{tc(msg === 'ok' ? 'saved' : 'saveFailed')}</span>}
       </div>
     </div>
   )
@@ -122,14 +131,15 @@ function BasicTab() {
 
 // ─────────────────────── 素材 ───────────────────────
 interface CompanyFile { url: string; name: string; category: 'logo' | 'image' | 'document' | 'faq'; mimeType: string; sizeKb: number; textContent?: string }
-const FILE_CATEGORIES: [CompanyFile['category'], string, string][] = [
-  ['logo', 'Logo / 品牌標誌', '.jpg,.jpeg,.png,.svg,.webp'],
-  ['image', '產品 / 情境圖片', '.jpg,.jpeg,.png,.webp,.gif'],
-  ['document', '公司簡介 / 型錄', '.pdf,.docx,.doc,.txt'],
-  ['faq', 'FAQ / 對答資料', '.xlsx,.xls,.csv,.docx,.doc,.txt'],
+const FILE_CATEGORIES: [CompanyFile['category'], string][] = [
+  ['logo', '.jpg,.jpeg,.png,.svg,.webp'],
+  ['image', '.jpg,.jpeg,.png,.webp,.gif'],
+  ['document', '.pdf,.docx,.doc,.txt'],
+  ['faq', '.xlsx,.xls,.csv,.docx,.doc,.txt'],
 ]
 
 function FilesTab() {
+  const tc = useTranslations('CompanyProfile')
   const [files, setFiles] = useState<CompanyFile[] | null>(null)
   const [uploading, setUploading] = useState(false)
   const [err, setErr] = useState('')
@@ -141,7 +151,7 @@ function FilesTab() {
   async function persist(next: CompanyFile[]) {
     setFiles(next)
     const r = await fetch('/api/marketing/company-data', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ files: next }) })
-    if (!r.ok) setErr('儲存失敗')
+    if (!r.ok) setErr(tc('saveFailed'))
   }
 
   async function upload(file: File, category: CompanyFile['category']) {
@@ -167,14 +177,14 @@ function FilesTab() {
   return (
     <div className="rounded-xl border bg-card p-5 space-y-4">
       <div className="grid sm:grid-cols-2 gap-4">
-        {FILE_CATEGORIES.map(([cat, label, accept]) => (
+        {FILE_CATEGORIES.map(([cat, accept]) => (
           <div key={cat} className="rounded-xl border p-4 space-y-2">
-            <div className="text-xs font-semibold">{label}</div>
+            <div className="text-xs font-semibold">{tc(`fileCat.${cat}`)}</div>
             {files.filter(f => f.category === cat).map(f => (
               <div key={f.url} className="flex items-center gap-2 text-xs bg-muted/50 rounded-lg px-3 py-2">
                 <FileText className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
                 <span className="flex-1 truncate">{f.name}</span>
-                {f.textContent && <span className="text-emerald-600 text-[10px]">已萃取</span>}
+                {f.textContent && <span className="text-emerald-600 text-[10px]">{tc('extracted')}</span>}
                 <button type="button" onClick={() => persist(files.filter(x => x.url !== f.url))} className="text-muted-foreground hover:text-red-500">
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
@@ -182,14 +192,14 @@ function FilesTab() {
             ))}
             <label className="flex items-center gap-2 px-3 py-2 rounded-lg border-2 border-dashed text-xs text-muted-foreground cursor-pointer hover:border-primary/50 hover:text-primary transition-colors">
               {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-              上傳檔案
+              {tc('uploadFile')}
               <input type="file" accept={accept} className="hidden" disabled={uploading}
                 onChange={e => { const f = e.target.files?.[0]; if (f) { upload(f, cat); e.target.value = '' } }} />
             </label>
           </div>
         ))}
       </div>
-      <p className="text-xs text-muted-foreground">Excel / Word / PDF 會自動萃取文字，供 AI 行銷、客服回覆使用。上傳或刪除即自動儲存。</p>
+      <p className="text-xs text-muted-foreground">{tc('filesHint')}</p>
       {err && <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700"><AlertCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />{err}</div>}
     </div>
   )
@@ -220,6 +230,7 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 
 function BrandTab() {
   const t = useTranslations('MktPage')
+  const tc = useTranslations('CompanyProfile')
   const [b, setB] = useState<Brand | null>(null)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
@@ -289,7 +300,7 @@ function BrandTab() {
 
         <Field label={t('toneLabel')} hint={t('toneHint')}>
           <div className="flex flex-wrap gap-1.5 mb-2">
-            {TONE_OPTIONS.map(o => (
+            {TONE_KEYS.map(k => tc(`tone.${k}`)).map(o => (
               <button key={o} type="button" onClick={() => setB({ ...b, tone: o })}
                 className={`px-2.5 py-1 rounded-md border text-xs transition-colors ${b.tone === o ? 'border-primary bg-primary/10 text-primary' : 'hover:bg-muted'}`}>{o}</button>
             ))}
@@ -311,7 +322,7 @@ function BrandTab() {
 }
 
 // ─────────────────────── 門市圖文資產 ───────────────────────
-const STORE_FEATURE_PRESETS = ['免費WiFi', '充電插座', '獨立包廂', '打卡拍照牆', '寵物友善', '近捷運站', '戶外座位', '無障礙空間']
+const STORE_FEATURE_KEYS = ['wifi', 'outlets', 'privateRoom', 'photoWall', 'petFriendly', 'nearMrt', 'outdoor', 'accessible'] as const
 interface StoreWithMarketing {
   id: string; code: string; name: string; short_name?: string; region?: string; unit_type?: string; address?: string; active?: boolean
   profile_id?: string | null; photos: string[]; story: string; opening_hours: string; google_maps_url: string
@@ -320,6 +331,7 @@ interface StoreWithMarketing {
 
 function StoresTab() {
   const t = useTranslations('MktPage')
+  const tc = useTranslations('CompanyProfile')
   const [stores, setStores] = useState<StoreWithMarketing[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -662,7 +674,7 @@ function StoresTab() {
             <div>
               <div className="text-xs font-semibold mb-1.5">{t('storeFeatureTagsLabel')}</div>
               <div className="flex flex-wrap gap-1.5">
-                {STORE_FEATURE_PRESETS.map(f => {
+                {STORE_FEATURE_KEYS.map(k => tc(`storeFeature.${k}`)).map(f => {
                   const on = (editing.features || []).includes(f)
                   return (
                     <button
@@ -728,7 +740,7 @@ function StoresTab() {
 }
 
 // ─────────────────────── 產品圖文資產 ───────────────────────
-const PRODUCT_TAG_PRESETS = ['新品上市', '人氣熱銷', '招牌必喝', '季節限定', '拍照打卡', '低卡輕盈', '主廚推薦']
+const PRODUCT_TAG_KEYS = ['new', 'bestseller', 'signature', 'seasonal', 'photogenic', 'light', 'chefPick'] as const
 interface ProductProfile {
   id: string; product_code: string; name: string; category: string; price: number
   images: string[]; slogan: string; description: string; flavor_notes: string; tags: string[]
@@ -740,6 +752,7 @@ interface CandidateProduct {
 
 function ProductsTab() {
   const t = useTranslations('MktPage')
+  const tc = useTranslations('CompanyProfile')
   const [products, setProducts] = useState<ProductProfile[]>([])
   const [candidates, setCandidates] = useState<CandidateProduct[]>([])
   const [loading, setLoading] = useState(true)
@@ -801,12 +814,12 @@ function ProductsTab() {
     setEditing({
       name: c.name,
       price: c.price,
-      category: '飲料',
+      category: tc('defaultCategory'),
       slogan: '',
       description: c.note || '',
       flavor_notes: '',
       images: c.image_url ? [c.image_url] : [],
-      tags: ['新品上市'],
+      tags: [tc('productTag.new')],
       pos_item_id: c.source === 'pos' ? c.id : null,
       recipe_id: c.source === 'recipe' ? c.id : null,
     })
@@ -910,7 +923,7 @@ function ProductsTab() {
           <Button
             size="sm"
             onClick={() => setEditing({
-              name: '', category: '飲料', price: 0, images: [], slogan: '', description: '', flavor_notes: '', tags: ['新品上市']
+              name: '', category: tc('defaultCategory'), price: 0, images: [], slogan: '', description: '', flavor_notes: '', tags: [tc('productTag.new')]
             })}
             className="h-9 gap-1 text-xs"
           >
@@ -1045,7 +1058,7 @@ function ProductsTab() {
               </div>
               <Field label={t('categoryLabel')}>
                 <Input
-                  value={editing.category ?? '一般'}
+                  value={editing.category ?? ''}
                   onChange={e => setEditing({ ...editing, category: e.target.value })}
                   placeholder={t('categoryPlaceholder')}
                 />
@@ -1162,7 +1175,7 @@ function ProductsTab() {
             <div>
               <div className="text-xs font-semibold mb-1.5">{t('marketingTagsLabel')}</div>
               <div className="flex flex-wrap gap-1.5">
-                {PRODUCT_TAG_PRESETS.map(tag => {
+                {PRODUCT_TAG_KEYS.map(k => tc(`productTag.${k}`)).map(tag => {
                   const on = (editing.tags || []).includes(tag)
                   return (
                     <button

@@ -107,6 +107,7 @@ export default function RdLogsPage() {
           title="批次匯入研發日誌"
           description="支援 .xlsx, .xls 與 .csv 檔案。請包含日誌標題與內容。"
           columns={RD_LOGS_IMPORT_COLUMNS}
+          columnsNs="RdLogsImport"
           templateFilename="研發日誌範本"
           sheetName="研發日誌"
           onClose={() => setShowImport(false)}

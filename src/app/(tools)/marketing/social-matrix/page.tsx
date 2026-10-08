@@ -99,11 +99,11 @@ function SocialMatrixContent() {
   })
 
   // 3. Campaign & Radar & Copy Matrix State
-  const [industry, setIndustry] = useState('越南中越 (峴港/會安/巴拿山) 豪華包車與在地中文秘書服務')
-  const [coreProduct, setCoreProduct] = useState('全新7-16人座商務車、雙語中文司機、機場快速通關接送、行程客製保險全包')
-  const [targetAudience, setTargetAudience] = useState('台灣家庭出遊、自由行背包客、公司員旅與商務考察團')
-  const [offer, setOffer] = useState('出發前14天預訂享早鳥 9 折，加贈全團越南 5G 吃到飽上網卡與私房海鮮餐廳折扣')
-  const [ctaLink, setCtaLink] = useState('LINE 官方客服：@danang_tour 或 官網即時預約')
+  const [industry, setIndustry] = useState(t('s1.industry'))
+  const [coreProduct, setCoreProduct] = useState(t('s1.product'))
+  const [targetAudience, setTargetAudience] = useState(t('s1.audience'))
+  const [offer, setOffer] = useState(t('s1.offer'))
+  const [ctaLink, setCtaLink] = useState(t('s1.cta'))
   const [selectedPlatforms, setSelectedPlatforms] = useState<SocialPlatform[]>(['facebook', 'threads', 'dcard', 'instagram'])
 
   const [isGenerating, setIsGenerating] = useState(false)
@@ -1499,11 +1499,11 @@ function SocialMatrixContent() {
                   <span className="text-xs text-muted-foreground">{t('quickSample')}</span>
                   <button
                     onClick={() => {
-                      setIndustry('越南中越 (峴港/會安/巴拿山) 豪華包車與在地中文秘書服務')
-                      setCoreProduct('全新7-16人座商務車、雙語中文司機、機場快速通關接送、行程客製保險全包')
-                      setTargetAudience('台灣家庭出遊、自由行背包客、公司員旅與商務考察團')
-                      setOffer('出發前14天預訂享早鳥 9 折，加贈全團越南 5G 吃到飽上網卡與私房海鮮餐廳折扣')
-                      setCtaLink('LINE 官方客服：@danang_tour 或 官網即時預約')
+                      setIndustry(t('s1.industry'))
+                      setCoreProduct(t('s1.product'))
+                      setTargetAudience(t('s1.audience'))
+                      setOffer(t('s1.offer'))
+                      setCtaLink(t('s1.cta'))
                     }}
                     className="text-xs px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
                   >
@@ -1511,11 +1511,11 @@ function SocialMatrixContent() {
                   </button>
                   <button
                     onClick={() => {
-                      setIndustry('宜蘭礁溪溫泉包棟親子特色民宿')
-                      setCoreProduct('獨棟日式庭院、私人冷熱雙泉、電動麻將桌、兒童球池、烤肉庭院')
-                      setTargetAudience('三代同堂家庭、好友聚會包棟、週末度假客')
-                      setOffer('平日預訂贈送現採無毒蔬果早餐籃與礁溪在地溫泉伴手禮盒')
-                      setCtaLink('官方 LINE 諮詢：@yilan_hotspring')
+                      setIndustry(t('s2.industry'))
+                      setCoreProduct(t('s2.product'))
+                      setTargetAudience(t('s2.audience'))
+                      setOffer(t('s2.offer'))
+                      setCtaLink(t('s2.cta'))
                     }}
                     className="text-xs px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
                   >

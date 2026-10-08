@@ -4461,7 +4461,13 @@
     "save": "Save",
     "cancel": "Cancel",
     "ownerOnlyDone": "Only the owner can mark done",
-    "deadlineFieldLabel": "Due date"
+    "deadlineFieldLabel": "Due date",
+    "importBtn": "Batch import (Excel/CSV)",
+    "importTitle": "Batch import tasks",
+    "importDesc": "Supports .xlsx, .xls and .csv files. Fill in task title, status note, deadline, etc.",
+    "importTemplate": "Task list template",
+    "importSheet": "Tasks",
+    "expand": "Expand"
   },
   "Pos": {
     "title": "Order",
@@ -5231,7 +5237,13 @@
     "qty": "Qty",
     "amount": "Amount",
     "noPurchaseRecords": "No purchase records yet",
-    "date": "Date"
+    "date": "Date",
+    "linkSlugLabel": "Form URL code (lowercase letters / numbers, e.g. ice-abc)",
+    "pinReset": "Reset vendor password (already set; leave blank to keep)",
+    "pinSet": "Set vendor's initial password (at least 6 characters)",
+    "vendorUrl": "Vendor URL: {url} (after saving, give the URL and password to the vendor; they can change the password after signing in)",
+    "slugPlaceholder": "code",
+    "noSubdomain": "Your company has no subdomain yet, so only the old private link can be used for now"
   },
   "AgentPage": {
     "statusQueued": "Queued",
@@ -6579,7 +6591,12 @@
     "moneyLossValue": "{n}",
     "notifiedHr": "HR notified ({n} items over threshold)",
     "noOverItems": "No items currently over threshold",
-    "notifyFailed": "Notification failed"
+    "notifyFailed": "Notification failed",
+    "pushConfirm": "Send R&D recipe \"{name}\" to the marketing department to prepare its launch?",
+    "pushDone": "✅ \"{name}\" has been sent to marketing!\nMarketing can continue in \"Marketing → Product assets → New product launch pipeline\" to plan the VIP early-access period and launch schedule.",
+    "pushFailed": "Failed to send",
+    "pushTitle": "Send to marketing to start a product launch",
+    "pushBtn": "Send to launch"
   },
   "AuditPlatform": {
     "knowledgeCoreStatus": "COMPANY KNOWLEDGE CORE — shared enterprise knowledge layer connected",
@@ -6989,7 +7006,11 @@
     "unscheduled": "Unscheduled",
     "editContentTitle": "Edit Content",
     "addContentTitle": "Add Content",
-    "scheduledDateLabel": "Scheduled Date"
+    "scheduledDateLabel": "Scheduled Date",
+    "tabCompany": "Company profile",
+    "tabCampaigns": "Campaign Center (AI / results)",
+    "tabCrm": "Member CRM & VIP",
+    "templatesLink": "Visual Styles & Ads"
   },
   "HrPage": {
     "staffFulltime": "Full-time",
@@ -7613,7 +7634,110 @@
     "viNameLabel": "Vietnamese name",
     "yearSuffix": "{y}",
     "zhNameLabel": "Chinese name *",
-    "zhNamePlaceholder": "e.g. Electricity"
+    "zhNamePlaceholder": "e.g. Electricity",
+    "cf": {
+      "errTransfer": "A transfer needs different source and destination accounts",
+      "payee": "Payee / vendor / customer",
+      "fromAccountReq": "From account *",
+      "toAccountReq": "To account *",
+      "invoicePh": "e.g. AB12345678",
+      "summaryPh": "e.g. bought tea leaves, store sales",
+      "amountReq": "Amount *",
+      "receiveAccount": "Receiving account (to)",
+      "payAccount": "Paying account (from)",
+      "incomeSubject": "Income account (from)",
+      "expenseSubject": "Expense account (to)",
+      "chooseSubject": "-- Choose account --",
+      "payeePh": "e.g. Ha, vendor name",
+      "errSave": "Save failed, please try again",
+      "errAmount": "Please enter a valid amount",
+      "errDate": "Please choose an entry date",
+      "editTitle": "Edit entry",
+      "newTitle": "New entry",
+      "typeIncome": "Income (+)",
+      "typeExpense": "Expense (-)",
+      "typeTransfer": "Transfer (⇄)",
+      "dateReq": "Entry date *",
+      "notesPh": "Other details",
+      "txType": "Transaction type",
+      "summary": "Summary",
+      "invoice": "Invoice no.",
+      "notes": "Notes",
+      "closeExit": "Close",
+      "saving": "Saving…",
+      "addEntry": "Add",
+      "confirmSave": "Save",
+      "cancel": "Cancel",
+      "importDesc": "Supports .xlsx, .xls and .csv files. Include date, type (income/expense), amount, etc.",
+      "emptyHint": "Change the year/month or account filter, or click \"New entry\"",
+      "noAccess": "Only the cashier / general affairs unit can use cashier features",
+      "mdbBatches": "MDB batches / undo",
+      "noAccessHint": "Please sign in with an admin account and try again",
+      "title": "IMT ERP Cashier",
+      "importMdb": "Import ledger file (.mdb)",
+      "searchPh": "Enter keywords...",
+      "clearFilter": "Clear filter (show all)",
+      "empty": "No matching entries",
+      "confirmDelete": "Delete this entry?",
+      "loading": "Loading entries…",
+      "colAmount": "Amount",
+      "importTitle": "Batch import cash book",
+      "filteringBy": "Filtering by account:",
+      "colDate": "Date / day",
+      "colNotes": "Notes / invoice",
+      "tabPnl": "Sales & P&L report",
+      "importTemplate": "Cash book template",
+      "searchLabel": "Search:",
+      "cashBank": "Cash / bank",
+      "ledgerName": "Ledger:",
+      "todayDate": "Today:",
+      "shown": "Showing:",
+      "monthIncome": "Month income:",
+      "monthExpense": "Month expense:",
+      "monthNet": "Net:",
+      "todayIncome": "Today income:",
+      "todayExpense": "Today expense:",
+      "tabCashflow": "Cash book",
+      "tabPricing": "Material pricing",
+      "tabStoreExpenses": "Store expenses",
+      "tabVendors": "Vendors",
+      "subJournal": "Journal",
+      "subToday": "Today",
+      "subMonth": "This month",
+      "subRegular": "Fixed deposits",
+      "subProject": "Projects",
+      "addRecord": "New entry",
+      "more": "More",
+      "batchImport": "Batch import",
+      "toAccount": "Destination account",
+      "depositAccount": "Deposit account",
+      "editRecord": "Edit entry",
+      "deleteRecord": "Delete entry",
+      "importSheet": "Entries",
+      "colFrom": "From",
+      "colTo": "To",
+      "colPayee": "Payee",
+      "colStatus": "Type",
+      "colBalance": "Balance",
+      "colSummary": "Summary",
+      "colActions": "Actions",
+      "income": "Income",
+      "expense": "Expense",
+      "transfer": "Transfer",
+      "badgeIn": "In",
+      "badgeOut": "Out",
+      "badgeTransfer": "Trf",
+      "addedCount": "{n} added",
+      "importErrors": "Import errors ({n})",
+      "rowsUnit": "rows",
+      "searchMode": {
+        "all": "Search all",
+        "desc": "Summary",
+        "category": "Account",
+        "payee": "Payee",
+        "notes": "Notes / invoice"
+      }
+    }
   },
   "StoreCoachPage": {
     "fillRegTitleAndClause": "Please fill in the regulation title and specific clause content",
@@ -10236,10 +10360,1708 @@
     "optAvail": "🟢 Available",
     "optRented": "🔴 Rented out",
     "optMaint": "🟡 Maintenance",
-    "fFeatureNotes": "Notes"
+    "fFeatureNotes": "Notes",
+    "s1": {
+      "industry": "Central Vietnam (Da Nang / Hoi An / Ba Na Hills) luxury private car hire with local Chinese-speaking assistants",
+      "product": "Brand-new 7–16 seat vans, bilingual drivers, fast-track airport transfers, custom itineraries with full insurance",
+      "audience": "Taiwanese family trips, independent backpackers, company outings and business delegations",
+      "offer": "Book 14 days ahead for 10% early-bird off, plus unlimited 5G SIMs for the group and a seafood restaurant discount",
+      "cta": "LINE official: @danang_tour or book on our website"
+    },
+    "s2": {
+      "industry": "Family-friendly whole-house hot spring homestay in Jiaoxi, Yilan",
+      "product": "Detached house with Japanese garden, private hot & cold springs, mahjong table, kids' ball pit, BBQ courtyard",
+      "audience": "Multi-generation families, friends booking the whole house, weekend getaways",
+      "offer": "Weekday stays include a fresh organic breakfast basket and a local hot-spring gift box",
+      "cta": "Ask us on LINE: @yilan_hotspring"
+    }
   },
   "MktCampaignsPage": {
     "title": "Campaign Center",
     "subtitle": "Plan, create and track offline, online and hybrid campaigns in one place"
+  },
+  "Feedback": {
+    "title": "Feedback",
+    "thanks": "Sent — thanks for your feedback!",
+    "type": {
+      "bug": "🐛 Bug report",
+      "ai_error": "🤖 Wrong AI answer",
+      "feature": "✨ Feature request",
+      "text_change": "🎨 UI / wording change"
+    },
+    "titlePh": "Title (short summary)",
+    "descPh": "Describe what happened and what you expected",
+    "submit": "Submit"
+  },
+  "Skills": {
+    "viral-video-copywriting": {
+      "label": "Viral short-video script",
+      "description": "Hooks, storyboard script and voice-over for short videos (Reels / Douyin / Shorts).",
+      "fields": {
+        "topic": {
+          "label": "Video topic",
+          "placeholder": "e.g. 3 quick tips to organize a small kitchen"
+        },
+        "product": {
+          "label": "Featured product / service"
+        },
+        "duration": {
+          "label": "Video length (seconds)"
+        },
+        "style": {
+          "label": "Style",
+          "options": {
+            "energetic": "Fast-paced, energetic",
+            "storytelling": "Storytelling",
+            "educational": "Educational tips"
+          }
+        }
+      }
+    },
+    "ecommerce-copywriter": {
+      "label": "E-commerce product copy",
+      "description": "Turns product info into ready-to-list descriptions (selling points, specs, use cases).",
+      "fields": {
+        "productName": {
+          "label": "Product name",
+          "placeholder": "e.g. Stainless insulated tumbler 500ml"
+        },
+        "features": {
+          "label": "Selling points / specs",
+          "placeholder": "Material, capacity, insulation hours, use cases…"
+        },
+        "audience": {
+          "label": "Target audience",
+          "placeholder": "e.g. commuters, gym-goers"
+        },
+        "tone": {
+          "label": "Tone",
+          "options": {
+            "professional": "Professional & trustworthy",
+            "warm": "Friendly & warm",
+            "playful": "Playful & fun"
+          }
+        }
+      }
+    },
+    "product-marketing-copywriter": {
+      "label": "Promotional copy",
+      "description": "Multiple versions of marketing copy and ad headlines for ads / promotions.",
+      "fields": {
+        "product": {
+          "label": "Product / service"
+        },
+        "campaign": {
+          "label": "Campaign / theme",
+          "placeholder": "e.g. Mother's Day 20% off, limited time"
+        },
+        "platform": {
+          "label": "Ad platform",
+          "options": {
+            "google": "Google Search Ads"
+          }
+        },
+        "usp": {
+          "label": "Key advantage",
+          "placeholder": "How you differ from competitors, limited-time offers…"
+        }
+      }
+    },
+    "article-illustrator": {
+      "label": "Auto article illustrations",
+      "description": "Analyzes an article, writes an image prompt per section and generates the images.",
+      "fields": {
+        "article": {
+          "label": "Article content",
+          "placeholder": "Paste the full article…"
+        },
+        "numImages": {
+          "label": "Number of images"
+        },
+        "aspectRatio": {
+          "label": "Aspect ratio",
+          "options": {
+            "16:9": "16:9 landscape",
+            "1:1": "1:1 square",
+            "9:16": "9:16 portrait"
+          }
+        }
+      }
+    },
+    "market-research-reports": {
+      "label": "Market research report",
+      "description": "Structured market / competitor analysis report.",
+      "fields": {
+        "topic": {
+          "label": "Research topic / industry",
+          "placeholder": "e.g. Taiwan pour-over coffee equipment market"
+        },
+        "competitors": {
+          "label": "Main competitors",
+          "placeholder": "Known competing brands (optional)"
+        },
+        "focus": {
+          "label": "Focus",
+          "options": {
+            "overview": "Market overview",
+            "competitor": "Competitor analysis",
+            "entry": "Entry strategy"
+          }
+        }
+      }
+    },
+    "product-video-creator": {
+      "label": "Product video planner",
+      "description": "Product video storyboard, video-generation prompts and voice-over script, plus 1 key visual reference image.",
+      "fields": {
+        "product": {
+          "label": "Product name"
+        },
+        "features": {
+          "label": "Selling points / specs"
+        },
+        "duration": {
+          "label": "Video length (seconds)"
+        },
+        "aspectRatio": {
+          "label": "Aspect ratio",
+          "options": {
+            "9:16": "9:16 portrait (short video)",
+            "16:9": "16:9 landscape",
+            "1:1": "1:1 square"
+          }
+        }
+      }
+    },
+    "ecommerce-video-marketing": {
+      "label": "Shoppable short-video script",
+      "description": "Sales short-video script: voice-over, pacing, CTA and platform recommendations.",
+      "fields": {
+        "product": {
+          "label": "Product / service"
+        },
+        "sellingPoints": {
+          "label": "Key selling points / offer"
+        },
+        "platform": {
+          "label": "Platform",
+          "options": {
+            "tiktok": "Douyin / TikTok",
+            "shopee": "Shopee Live / video"
+          }
+        }
+      }
+    },
+    "tts-voice-synthesis": {
+      "label": "AI voice-over",
+      "description": "Converts a script into a voice-over and returns a downloadable audio file.",
+      "fields": {
+        "text": {
+          "label": "Voice-over script",
+          "placeholder": "Paste the text to voice…"
+        },
+        "voice": {
+          "label": "Voice",
+          "options": {
+            "default": "Default",
+            "female": "Female",
+            "male": "Male"
+          }
+        }
+      }
+    },
+    "ppt-generator": {
+      "label": "Presentation generator (PPTX)",
+      "description": "Plans slides from a topic and produces a downloadable .pptx file.",
+      "fields": {
+        "topic": {
+          "label": "Presentation topic",
+          "placeholder": "e.g. 2026 brand marketing strategy"
+        },
+        "context": {
+          "label": "Key points / supporting material",
+          "placeholder": "Points, data and sections to cover…"
+        },
+        "numSlides": {
+          "label": "Number of slides"
+        },
+        "audience": {
+          "label": "Audience",
+          "placeholder": "e.g. managers, clients, investors"
+        }
+      }
+    },
+    "social-account-coach": {
+      "label": "Social account growth coach",
+      "description": "Analyzes your positioning and audience, then gives post ideas, a growth diagnosis and actionable to-dos.",
+      "fields": {
+        "platform": {
+          "label": "Platform",
+          "options": {
+            "xiaohongshu": "Xiaohongshu"
+          }
+        },
+        "niche": {
+          "label": "Account niche / topic",
+          "placeholder": "e.g. home organizing tips, personal finance"
+        },
+        "recent": {
+          "label": "Recent content or stats (optional)",
+          "placeholder": "Paste a few recent posts, follower count, engagement rate… for a sharper analysis"
+        },
+        "goal": {
+          "label": "Current goal",
+          "options": {
+            "growth": "Followers / reach",
+            "engagement": "Engagement / comments",
+            "conversion": "Sales / monetization"
+          }
+        }
+      }
+    },
+    "viral-content-planner": {
+      "label": "Viral content planner",
+      "description": "Plans highly shareable topics with a growth-hacking mindset: hooks, retention structure and share triggers.",
+      "fields": {
+        "topic": {
+          "label": "Content area / topic",
+          "placeholder": "e.g. budget food reviews, career growth"
+        },
+        "format": {
+          "label": "Content format",
+          "options": {
+            "short_video": "Short video",
+            "long_video": "Long video",
+            "thread": "Image post / thread"
+          }
+        },
+        "audience": {
+          "label": "Target audience",
+          "placeholder": "e.g. office workers aged 25-35"
+        },
+        "goal": {
+          "label": "Distribution goal",
+          "placeholder": "e.g. followers, brand awareness, traffic"
+        }
+      }
+    },
+    "kol-persona-writer": {
+      "label": "Social persona copy",
+      "description": "Writes on-brand social posts that match your voice samples and persona.",
+      "fields": {
+        "persona": {
+          "label": "Persona / voice",
+          "placeholder": "e.g. a calm, warm finance blogger who talks like a friend, never preachy — or paste a few past posts as style samples"
+        },
+        "topic": {
+          "label": "What this post is about",
+          "placeholder": "e.g. sharing a budgeting app, promoting a new course"
+        },
+        "platform": {
+          "label": "Platform",
+          "options": {
+            "xiaohongshu": "Xiaohongshu"
+          }
+        }
+      }
+    },
+    "live-stream-copywriter": {
+      "label": "Livestream copy",
+      "description": "Stream announcements, live voice-over lines and fan interaction scripts with a showy, sales-ready feel.",
+      "fields": {
+        "persona": {
+          "label": "Host / nickname & style",
+          "placeholder": "e.g. nickname Fan, lively and dramatic, playful with fans"
+        },
+        "occasion": {
+          "label": "Use",
+          "options": {
+            "preview": "Stream announcement",
+            "voiceover": "Short-video voice-over",
+            "interaction": "Live interaction / comment replies",
+            "post": "Status post"
+          }
+        },
+        "points": {
+          "label": "Key points this time",
+          "placeholder": "e.g. live at 8pm tonight playing a new game, merch giveaway, thanks to fans"
+        }
+      }
+    }
+  },
+  "SkillRunner": {
+    "loadFailed": "Failed to load the expert list",
+    "trainNeedPro": "Training an expert requires PRO or above",
+    "addFailed": "Failed to add",
+    "networkError": "Connection failed",
+    "uploadFailed": "File upload failed",
+    "noText": "Couldn't extract text from this file (docx / xlsx / csv / txt / pdf only)",
+    "fileFailed": "File processing failed",
+    "fillRequired": "Please fill in: {field}",
+    "insufficient": "Not enough credits — this run needs about {n}",
+    "runFailed": "Run failed",
+    "balance": "Balance {n} credits",
+    "category": {
+      "copywriting": "Copywriting",
+      "video": "Short video",
+      "illustration": "Illustration",
+      "research": "Research",
+      "audio": "Audio",
+      "presentation": "Presentation",
+      "social": "Social"
+    },
+    "fromCredits": "From {n} credits",
+    "ownKnowledge": "Built-in knowledge base",
+    "loading": "Loading…",
+    "back": "Back",
+    "generating": "Generating…",
+    "run": "Run",
+    "result": "Result",
+    "charged": "{n} credits used",
+    "copied": "Copied",
+    "copy": "Copy",
+    "trainTitle": "Train this expert",
+    "trainHint": "Add links / text / files — used automatically when it runs",
+    "trainLocked": "Training a dedicated knowledge base is a PRO-and-above feature. Upgrade to let this expert learn from the viral examples, styles and material you upload.",
+    "srcType": {
+      "url": "Link",
+      "file": "File",
+      "text": "Text"
+    },
+    "chars": "{n} chars",
+    "tab": {
+      "url": "URL",
+      "text": "Paste text",
+      "file": "Upload file"
+    },
+    "urlPh": "https://… (article / post / web page)",
+    "namePh": "Name for this knowledge (optional)",
+    "textPh": "Paste viral examples, methods, style samples…",
+    "adding": "Adding…",
+    "addKnowledge": "Add knowledge",
+    "processing": "Processing…",
+    "chooseFile": "Choose file",
+    "fileHint": "Supports docx / xlsx / csv / txt / pdf; text is extracted automatically"
+  },
+  "CompanyProfile": {
+    "noPermission": "Company admin or marketing permission is required to edit the company profile",
+    "tab": {
+      "basic": "Basic info",
+      "brand": "Brand",
+      "products": "Products",
+      "stores": "Stores",
+      "files": "Assets"
+    },
+    "legalName": "Legal company name",
+    "legalNameHint": "Registered name — set the brand name in the Brand tab",
+    "legalNamePh": "e.g. XX Co., Ltd.",
+    "pleaseSelect": "Please select",
+    "industry": {
+      "label": "Industry",
+      "tech": "Tech / software",
+      "manufacturing": "Manufacturing",
+      "retail": "Retail / e-commerce",
+      "finance": "Financial services",
+      "health": "Healthcare",
+      "food": "Food & beverage / consumer",
+      "education": "Education & training",
+      "realEstate": "Real estate",
+      "logistics": "Logistics / transport",
+      "advertising": "Advertising / marketing",
+      "hospitality": "Hotels / guesthouses",
+      "other": "Other"
+    },
+    "employees": {
+      "label": "Employees",
+      "e1": "1-10",
+      "e2": "11-50",
+      "e3": "51-200",
+      "e4": "201-500",
+      "e5": "501-1000",
+      "e6": "1000+"
+    },
+    "capital": "Registered capital",
+    "capitalPh": "e.g. NT$10 million",
+    "founded": "Year founded",
+    "foundedPh": "e.g. 2010",
+    "address": "Company address",
+    "addressPh": "City + district + street",
+    "basicHint": "Website, target audience, selling points and brand story go in the Brand tab; products and stores have their own tabs.",
+    "saveBasic": "Save basic info",
+    "saved": "Saved",
+    "saveFailed": "Save failed",
+    "fileCat": {
+      "logo": "Logo / brand mark",
+      "image": "Product / lifestyle images",
+      "document": "Company profile / catalog",
+      "faq": "FAQ / Q&A data"
+    },
+    "extracted": "Extracted",
+    "uploadFile": "Upload file",
+    "filesHint": "Text is extracted automatically from Excel / Word / PDF for AI marketing and customer-service replies. Uploads and deletions save automatically.",
+    "tone": {
+      "formal": "Professional / formal",
+      "young": "Lively / youthful",
+      "warm": "Warm / friendly",
+      "innovative": "Innovative / cutting-edge",
+      "luxury": "Luxury / premium",
+      "friendly": "Approachable / down-to-earth"
+    },
+    "storeFeature": {
+      "wifi": "Free Wi-Fi",
+      "outlets": "Power outlets",
+      "privateRoom": "Private rooms",
+      "photoWall": "Photo wall",
+      "petFriendly": "Pet-friendly",
+      "nearMrt": "Near metro station",
+      "outdoor": "Outdoor seating",
+      "accessible": "Wheelchair accessible"
+    },
+    "productTag": {
+      "new": "New arrival",
+      "bestseller": "Best seller",
+      "signature": "Signature drink",
+      "seasonal": "Seasonal",
+      "photogenic": "Photogenic",
+      "light": "Low-calorie",
+      "chefPick": "Chef's pick"
+    },
+    "defaultCategory": "Drinks"
+  },
+  "WorkImport": {
+    "title": {
+      "label": "Task title",
+      "example": "Finish Q3 menu R&D testing"
+    },
+    "status": {
+      "label": "Status note",
+      "example": "In progress"
+    },
+    "done": {
+      "label": "Done?",
+      "example": "No"
+    },
+    "deadline": {
+      "label": "Deadline"
+    }
+  },
+  "FinancePageImport": {
+    "date": {
+      "label": "Date"
+    },
+    "type": {
+      "label": "Type",
+      "example": "expense"
+    },
+    "category": {
+      "label": "Category",
+      "example": "Purchasing"
+    },
+    "amount": {
+      "label": "Amount"
+    },
+    "description": {
+      "label": "Summary",
+      "example": "Office supplies purchase"
+    },
+    "account_name": {
+      "label": "Account name",
+      "example": "Petty cash"
+    },
+    "pay_coll_name": {
+      "label": "Payee",
+      "example": "John Chen"
+    }
+  },
+  "FinanceSubjects": {
+    "hint": "Click an account to filter the entries on the right",
+    "allSubjects": "📁 All accounts",
+    "prevMonth": "‹ Prev month",
+    "nextMonth": "Next month ›",
+    "jumpThisMonth": "Jump to this month",
+    "thisMonth": "This month",
+    "settings": "Account settings",
+    "selected": "Selected",
+    "cls": {
+      "asset": "Assets",
+      "liability": "Liabilities",
+      "income": "Income",
+      "expense": "Expenses"
+    },
+    "other": "Other",
+    "year": "Year",
+    "mgmtDesc": "Maintain each class's groups (folders), account names, opening balances and recurrence type.",
+    "subjectNamePh": "e.g. Safe, Creamer, DT VNPAY",
+    "parentPh": "e.g. Cash, Drink ingredients, Other income",
+    "mgmtTitle": "Account settings (master data)",
+    "parentName": "Group name (folder / parent)",
+    "openingBalance": "Opening balance",
+    "subjectNameReq": "Account name *",
+    "errName": "Please enter an account name",
+    "noMatch": "No matching accounts",
+    "saveFailed": "Save failed",
+    "deleteFailed": "Delete failed",
+    "addSubject": "New account",
+    "styleLabel": "Type",
+    "saveChanges": "Save changes",
+    "create": "Create",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "close": "Close",
+    "monthN": "Month {n}",
+    "searchPh": "Search {cls} groups or account names...",
+    "editSubject": "Edit account: {name}",
+    "newSubjectOf": "New {cls} account",
+    "confirmDelete": "Delete account \"{name}\"? If it has linked transactions, reports may be affected.",
+    "styleRegular": "Recurring",
+    "styleIrregular": "Non-recurring",
+    "openingBalanceLabel": "Opening balance:",
+    "sortLabel": "Order:",
+    "total": "{n} accounts"
+  },
+  "FinanceMdb": {
+    "reLogin": "Please sign in again",
+    "uploadFailed": "Upload failed: {msg}",
+    "parseFailed": "Failed to parse",
+    "importFailed": "Import failed",
+    "zTitle": "Import ledger & accounts (.mdb)",
+    "zDesc": "Upload the bookkeeping database; the system builds the account tree and imports transactions without duplicates.",
+    "parsing": "Parsing database…",
+    "chooseMdb": "Click to choose a .mdb file",
+    "supportsMdb": "Supports MymoneyData.mdb bookkeeping databases",
+    "bookName": "Ledger: ",
+    "dateRange": "Date range: ",
+    "importableRows": "Importable entries",
+    "rowsN": "{n}",
+    "autoSubjects": "Accounts to build",
+    "itemsN": "{n}",
+    "totalIncome": "Total income",
+    "totalExpense": "Total expense",
+    "writeMode": "Write mode (safeguards & overwrite)",
+    "modeAppend": "Append new only (recommended)",
+    "modeAppendDesc": "De-duplicates by voucher number: existing transactions are skipped and only new ones are added.",
+    "modeClean": "Clear and re-import (clean overwrite)",
+    "modeCleanDesc": "Clears previous MDB data before writing everything again, so deleted vouchers don't linger. Manual entries are not affected.",
+    "alignTree": "Build & align account tree ({n} accounts)",
+    "alignTreeDesc": "Using <code>ITEM_DATA</code> in the MDB, the system builds the asset, liability, income and expense account tree with opening balances, and maps all payment accounts.",
+    "detected": "Found {e} format errors and {w} possible year typos",
+    "viewErrors": "View error details",
+    "viewErrorsHint": "Click \"View error details\" to see the voucher number, date, item and reason for each problem so you can check and fix it.",
+    "allOk": "All entries passed the format check.",
+    "rechoose": "Choose again",
+    "writing": "Writing to database…",
+    "confirmClean": "Clear old data and re-import",
+    "confirmAppend": "Import and build accounts",
+    "done": "Import complete!",
+    "importedN": "Imported <b>{n}</b> transactions",
+    "clearedN": " (cleared {n} previous MDB rows for a clean re-import)",
+    "skippedN": ", skipped {n}",
+    "createdSummary": "; built/updated <b>{s}</b> accounts in the tree and created <b>{a}</b> cash accounts.",
+    "issuesN": "This import has {n} errors or warnings",
+    "viewErrorsN": "View errors ({n})",
+    "finish": "Done — go to Cashier",
+    "loadLogsFailed": "Failed to load import history",
+    "networkError": "Connection error",
+    "revertFailed": "Undo failed",
+    "revertedN": "Batch undone ({n} vouchers removed)",
+    "typeDelete": "Type DELETE to confirm",
+    "clearFailed": "Clear failed",
+    "clearedAllN": "All MDB history cleared ({n} vouchers removed)",
+    "bTitle": "MDB import history & batch undo",
+    "bDesc": "If imported data is wrong or you want to reload it, safely undo a whole batch in one click (manual entries are kept 100%).",
+    "bookCode": "Ledger code: <b>{book}</b> ({n} imports)",
+    "clearAllBtn": "Clear all MDB-imported entries",
+    "loadingLogs": "Loading import batches…",
+    "noLogs": "No MDB imports yet",
+    "noLogsHint": "Use \"Import ledger file (.mdb)\" on the Cashier page to import a bookkeeping database.",
+    "statusReverted": "Reverted",
+    "statusActive": "Active",
+    "revertBtn": "Undo this batch",
+    "importedRows": "Imported: ",
+    "builtSubjects": "Accounts built: ",
+    "notRecorded": "Not recorded",
+    "revertedAt": "This batch was undone on {at}; all its entries were removed.",
+    "closeWindow": "Close",
+    "revertConfirmTitle": "Undo this MDB batch?",
+    "revertConfirmBody": "You are about to undo <b>{file}</b>, imported on <b>{at}</b>.",
+    "revertWillDelete": "All <b>{n}</b> vouchers in this batch will be deleted.",
+    "manualKept": "All cashier entries you created manually <b>are kept and not affected</b>.",
+    "confirmRevert": "Undo and remove",
+    "cancel": "Cancel",
+    "clearAllTitle": "Warning: clear all MDB-imported transactions",
+    "clearAllBody": "This removes <b>every transaction imported from MDB</b> (all batches) from the cash book.",
+    "irreversible": "This cannot be undone — make sure you want a completely clean ledger.",
+    "manualAndTreeKept": "Manual entries and the existing account tree are kept.",
+    "typeDeleteHint": "To avoid accidents, type <b>DELETE</b> below to confirm:",
+    "typeDeletePh": "Type DELETE",
+    "confirmClearAll": "Clear all MDB vouchers",
+    "rpTitle": "=== MDB import diagnostic report ===",
+    "rpBook": "Ledger: {book} | File: {file}",
+    "rpCounts": "Errors: {e} | Warnings: {w}",
+    "rpGenerated": "Generated: {at}",
+    "rpItem": "[#{i}] Voucher MAKE_NO: {no} | Date: {date} | Severity: {sev} ({type})",
+    "sevError": "Error",
+    "sevWarning": "Warning",
+    "rpProblem": "Problem:",
+    "rpDesc": "Details:",
+    "rpFix": "Suggested fix:",
+    "rpRaw": "Raw entries:",
+    "rpRow": "Class:{cls} | Item:{item} | In:{inn} | Out:{out} | Note:{note}",
+    "eTitle": "MDB import issues & error details",
+    "eBook": "Ledger: {book}",
+    "eDesc": "Lists the voucher number, items involved and reason for each problem entry so you can check and fix it.",
+    "fAll": "All ({n})",
+    "fError": "Errors ({n})",
+    "fWarning": "Warnings / likely typos ({n})",
+    "reportCopied": "Report copied",
+    "copyReport": "Copy diagnostic report",
+    "eSearchPh": "Search voucher no. (MAKE_NO), date, item, note...",
+    "eNone": "No matching issues",
+    "eNoneHint": "All entries in this file can be imported normally",
+    "voucherNo": "Voucher #{no}",
+    "dateN": "Date: {date}",
+    "skipped": "Skipped",
+    "importedCheck": "Imported (please check)",
+    "collapseRaw": "Hide raw entries",
+    "viewRaw": "Show raw entries",
+    "suggestion": "Suggested action:",
+    "rawInfo": "Raw MDB paired entries ({n} rows):",
+    "colClass": "Class",
+    "colItem": "Item",
+    "colIn": "In",
+    "colOut": "Out",
+    "colNote": "Note",
+    "eFooter": "{n} items (errors: {e}, warnings: {w})"
+  },
+  "HrImport": {
+    "employee": {
+      "name": {
+        "label": "Name",
+        "example": "John Wang"
+      },
+      "phone": {
+        "label": "Phone"
+      },
+      "department": {
+        "label": "Department"
+      },
+      "position": {
+        "label": "Job title",
+        "example": "Store staff"
+      },
+      "staff_category": {
+        "label": "Full/part-time"
+      },
+      "employment_type": {
+        "label": "Employment type"
+      },
+      "hire_date": {
+        "label": "Start date"
+      },
+      "base_salary": {
+        "label": "Base salary"
+      },
+      "hourly_rate": {
+        "label": "Hourly rate"
+      },
+      "store": {
+        "label": "Store"
+      },
+      "attendance_no": {
+        "label": "Attendance ID"
+      },
+      "bank_account": {
+        "label": "Bank account"
+      },
+      "bank_name": {
+        "label": "Bank"
+      },
+      "id_number": {
+        "label": "ID number"
+      },
+      "status": {
+        "label": "Status"
+      },
+      "notes": {
+        "label": "Notes"
+      },
+      "_meta": {
+        "title": "Batch import / update employees",
+        "description": "Supports .xlsx, .xls and .csv files. Existing employees (same name and ID number) are updated; others are added.",
+        "template": "Employee template",
+        "sheet": "Employees"
+      }
+    },
+    "payroll": {
+      "name": {
+        "label": "Employee name",
+        "example": "John Wang"
+      },
+      "year": {
+        "label": "Year"
+      },
+      "month": {
+        "label": "Month"
+      },
+      "base_salary": {
+        "label": "Base salary"
+      },
+      "allowances": {
+        "label": "Allowances"
+      },
+      "deductions": {
+        "label": "Deductions"
+      },
+      "bonus": {
+        "label": "Bonus"
+      },
+      "notes": {
+        "label": "Notes"
+      },
+      "_meta": {
+        "title": "Batch import / update monthly payroll",
+        "description": "Supports .xlsx, .xls and .csv files. An employee's existing payroll for that month is overwritten; missing employees are created automatically.",
+        "template": "Payroll template",
+        "sheet": "Payroll"
+      }
+    },
+    "candidate": {
+      "name": {
+        "label": "Name",
+        "example": "David Lee"
+      },
+      "phone": {
+        "label": "Phone"
+      },
+      "position": {
+        "label": "Position applied",
+        "example": "Drink maker"
+      },
+      "store": {
+        "label": "Store applied"
+      },
+      "staff_category": {
+        "label": "Full/part-time"
+      },
+      "stage": {
+        "label": "Stage"
+      },
+      "birthday": {
+        "label": "Birthday"
+      },
+      "id_number": {
+        "label": "ID number"
+      },
+      "_meta": {
+        "title": "Batch import / update candidates",
+        "description": "Supports .xlsx, .xls and .csv files. Matching phone, email or ID number updates the candidate; otherwise a new one is added.",
+        "template": "Candidate template",
+        "sheet": "Candidates"
+      }
+    },
+    "evaluation": {
+      "name": {
+        "label": "Employee name",
+        "example": "John Wang"
+      },
+      "attendance_no": {
+        "label": "Attendance ID"
+      },
+      "year": {
+        "label": "Year"
+      },
+      "month": {
+        "label": "Month"
+      },
+      "bonus": {
+        "label": "Bonus"
+      },
+      "reward": {
+        "label": "Reward amount"
+      },
+      "penalty": {
+        "label": "Penalty deduction"
+      },
+      "score": {
+        "label": "Score"
+      },
+      "notes": {
+        "label": "Comments",
+        "example": "Good attendance, excellent performance"
+      },
+      "_meta": {
+        "title": "Batch import / update reviews, rewards & penalties",
+        "description": "Supports .xlsx, .xls and .csv files. Fill in the employee name or attendance ID.",
+        "template": "Review template",
+        "sheet": "Reviews"
+      }
+    },
+    "insurance": {
+      "name": {
+        "label": "Employee name",
+        "example": "John Wang"
+      },
+      "id_number": {
+        "label": "ID number"
+      },
+      "attendance_no": {
+        "label": "Attendance ID"
+      },
+      "insurance_required": {
+        "label": "Insurance required?"
+      },
+      "insurance_status": {
+        "label": "Insurance status"
+      },
+      "insurance_number": {
+        "label": "Insurance no."
+      },
+      "insurance_salary": {
+        "label": "Insured salary"
+      },
+      "_meta": {
+        "title": "Batch import / update insurance",
+        "description": "Supports .xlsx, .xls and .csv files. Matches by employee name, ID number or attendance ID to update insurance status, number and insured salary.",
+        "template": "Insurance template",
+        "sheet": "Insurance"
+      }
+    },
+    "leave": {
+      "name": {
+        "label": "Employee name",
+        "example": "John Wang"
+      },
+      "attendance_no": {
+        "label": "Attendance ID"
+      },
+      "leave_type": {
+        "label": "Leave type"
+      },
+      "start_date": {
+        "label": "Start date"
+      },
+      "end_date": {
+        "label": "End date"
+      },
+      "days": {
+        "label": "Days"
+      },
+      "reason": {
+        "label": "Reason",
+        "example": "Family matters"
+      },
+      "status": {
+        "label": "Approval status"
+      },
+      "notes": {
+        "label": "Notes"
+      },
+      "_meta": {
+        "title": "Batch import leave records",
+        "description": "Supports .xlsx, .xls and .csv files. Fill in the employee name or attendance ID.",
+        "template": "Leave template",
+        "sheet": "Leave"
+      }
+    }
+  },
+  "UnitsImport": {
+    "code": {
+      "label": "Unit code"
+    },
+    "name": {
+      "label": "Unit name"
+    },
+    "unit_type": {
+      "label": "Type"
+    },
+    "short_name": {
+      "label": "Short name"
+    },
+    "region": {
+      "label": "Region",
+      "example": "Ho Chi Minh City"
+    },
+    "base_hourly_rate": {
+      "label": "Base hourly rate"
+    },
+    "electricity_no": {
+      "label": "Electricity meter no."
+    },
+    "water_no": {
+      "label": "Water meter no."
+    },
+    "address": {
+      "label": "Address",
+      "example": "District 1, Ho Chi Minh City..."
+    },
+    "active": {
+      "label": "Active"
+    },
+    "_meta": {
+      "title": "Batch import / update units",
+      "description": "Supports .xlsx, .xls and .csv files. Units with a matching code are updated; others are added.",
+      "template": "Units template",
+      "sheet": "Units"
+    }
+  },
+  "AffairsImport": {
+    "title": {
+      "label": "Document title",
+      "example": "Store lease agreement — Zhongxiao branch"
+    },
+    "doc_type": {
+      "label": "Document type"
+    },
+    "store_code": {
+      "label": "Store code"
+    },
+    "counterparty": {
+      "label": "Counterparty / landlord",
+      "example": "Landlord David Wang"
+    },
+    "effective_date": {
+      "label": "Effective from"
+    },
+    "expiry_date": {
+      "label": "Expiry date"
+    },
+    "deposit": {
+      "label": "Deposit"
+    },
+    "monthly_rent": {
+      "label": "Monthly rent / fee"
+    },
+    "payment_day": {
+      "label": "Monthly payment day"
+    },
+    "notes": {
+      "label": "Notes",
+      "example": "Two months deposit; tenant pays utilities"
+    },
+    "_meta": {
+      "title": "Batch import licenses & leases",
+      "description": "Supports .xlsx, .xls and .csv files. Documents with a matching title are updated.",
+      "template": "Licenses and leases template",
+      "sheet": "Documents"
+    }
+  },
+  "RdLogsImport": {
+    "title": {
+      "label": "Log title",
+      "example": "Recipe flavor test notes"
+    },
+    "summary": {
+      "label": "Log content",
+      "example": "Sweetness down 5%, tea aroma clearly stronger..."
+    },
+    "date": {
+      "label": "Date"
+    },
+    "_meta": {
+      "title": "Batch import R&D logs",
+      "description": "Supports .xlsx, .xls and .csv files. Include a log title and content.",
+      "template": "R&D log template",
+      "sheet": "R&D logs"
+    }
+  },
+  "StoreExpensesImport": {
+    "store": {
+      "code": {
+        "label": "Store code"
+      },
+      "name": {
+        "label": "Store name"
+      },
+      "region": {
+        "label": "Region",
+        "example": "Ho Chi Minh City"
+      },
+      "active": {
+        "label": "Active"
+      },
+      "_meta": {
+        "title": "Batch import stores / regions",
+        "description": "Supports .xlsx, .xls and .csv files. Stores with a matching code are updated.",
+        "template": "Store template",
+        "sheet": "Stores"
+      }
+    },
+    "category": {
+      "code": {
+        "label": "Account code"
+      },
+      "name": {
+        "label": "Account name",
+        "example": "Water bill"
+      },
+      "entry_method": {
+        "label": "Entry method"
+      },
+      "vendor_service": {
+        "label": "Vendor type"
+      },
+      "sort": {
+        "label": "Order"
+      },
+      "_meta": {
+        "title": "Batch import expense accounts",
+        "description": "Supports .xlsx, .xls and .csv files. Accounts with a matching code are updated.",
+        "template": "Expense account template",
+        "sheet": "Accounts"
+      }
+    },
+    "vendor": {
+      "name": {
+        "label": "Vendor name",
+        "example": "Taiwan Gas"
+      },
+      "service": {
+        "label": "Service"
+      },
+      "regions": {
+        "label": "Regions covered"
+      },
+      "active": {
+        "label": "Active"
+      },
+      "_meta": {
+        "title": "Batch import vendors",
+        "description": "Supports .xlsx, .xls and .csv files. Vendors with a matching tax ID or name are updated.",
+        "template": "Vendor template",
+        "sheet": "Vendors"
+      }
+    }
+  },
+  "VendorsImport": {
+    "vendor": {
+      "name": {
+        "label": "Vendor name",
+        "example": "Taiwan Tea Supplier"
+      },
+      "tax_id": {
+        "label": "Tax ID"
+      },
+      "service": {
+        "label": "Category"
+      },
+      "contact": {
+        "label": "Contact",
+        "example": "Mr. Chen"
+      },
+      "phone": {
+        "label": "Phone"
+      },
+      "address": {
+        "label": "Address",
+        "example": "Da'an District, Taipei..."
+      },
+      "products": {
+        "label": "Products",
+        "example": "Tea leaves, raw materials"
+      },
+      "pay_terms": {
+        "label": "Payment terms"
+      },
+      "billing_cycle": {
+        "label": "Billing cycle"
+      },
+      "billing_day": {
+        "label": "Billing day"
+      },
+      "active": {
+        "label": "Active"
+      },
+      "_meta": {
+        "title": "Batch import / update vendors",
+        "description": "Supports .xlsx, .xls and .csv files. Vendors with a matching tax ID or name are updated; others are added.",
+        "template": "Vendor template",
+        "sheet": "Vendors"
+      }
+    },
+    "purchase": {
+      "purchased_on": {
+        "label": "Purchase date"
+      },
+      "product": {
+        "label": "Item",
+        "example": "Premium Ceylon black tea"
+      },
+      "qty": {
+        "label": "Qty"
+      },
+      "amount": {
+        "label": "Amount"
+      },
+      "note": {
+        "label": "Notes",
+        "example": "First delivery"
+      },
+      "_meta": {
+        "title": "Batch import purchases",
+        "description": "Supports .xlsx, .xls and .csv files. Fill in purchase date, item and amount.",
+        "template": "Purchase template",
+        "sheet": "Purchases"
+      }
+    }
+  },
+  "PersonnelImport": {
+    "name": {
+      "label": "Name",
+      "example": "Nguyen Thi Phuong"
+    },
+    "gender": {
+      "label": "Gender"
+    },
+    "native_place": {
+      "label": "Hometown",
+      "example": "Ho Chi Minh City"
+    },
+    "birthday": {
+      "label": "Birthday"
+    },
+    "id_number": {
+      "label": "ID number"
+    },
+    "education": {
+      "label": "Education"
+    },
+    "phone": {
+      "label": "Phone"
+    },
+    "email": {
+      "label": "Personal email"
+    },
+    "company_email": {
+      "label": "Company email"
+    },
+    "position": {
+      "label": "Position",
+      "example": "Store manager"
+    },
+    "store": {
+      "label": "Store"
+    },
+    "staff_category": {
+      "label": "Full/part-time"
+    },
+    "payroll_no": {
+      "label": "Payroll no."
+    },
+    "address": {
+      "label": "Address",
+      "example": "District 1, Ho Chi Minh City"
+    },
+    "_meta": {
+      "title": "Batch import / update personnel",
+      "description": "Supports Excel (.xlsx) and CSV files. Matching ID number, email or name + phone updates the record; otherwise a new one is added.",
+      "template": "Personnel template",
+      "sheet": "Personnel"
+    }
+  },
+  "ShiftImport": {
+    "employee_name": {
+      "label": "Employee name",
+      "example": "John Wang"
+    },
+    "work_date": {
+      "label": "Work date"
+    },
+    "slot_code": {
+      "label": "Shift"
+    },
+    "_meta": {
+      "title": "Batch import shift schedule",
+      "description": "Supports .xlsx, .xls and .csv files. Fill in employee name, work date (YYYY-MM-DD) and shift (早 / 午 / 晚 = morning / noon / evening).",
+      "template": "Shift template",
+      "sheet": "Shifts"
+    }
+  },
+  "HrUnion": {
+    "subtitle": "Member management, welfare, collective agreements and financial reports compliant with the Vietnam General Confederation of Labour (Tổng Liên đoàn Lao động)",
+    "noDocs": "No agreements or dialogue minutes filed yet. Upload officially stamped PDFs for permanent archiving.",
+    "noBenefits": "No benefit requests yet. Birthday, marriage, maternity, hospital and hardship requests can be submitted and approved online.",
+    "totalIncome": "Total income (1% dues & 2% funding)",
+    "exportReport": "Export union financial report (Mẫu B14-CĐ & B15-CĐ)",
+    "tabDocs": "Collective agreements & dialogue",
+    "docsTitle": "Collective labour agreement (TƯLĐTT) and quarterly statutory dialogue minutes",
+    "totalExpense": "Total expenses (welfare, activities)",
+    "requestTitle": "Request union benefit",
+    "tabFinances": "Union finances",
+    "noMembers": "No union members yet. Click \"Add member\" at the top right to record a membership.",
+    "docTitlePh": "e.g. Collective labour agreement 2026-2028 (stamped)",
+    "entryTitle": "Union finance entry",
+    "code2": "2% company union funding",
+    "tabBenefits": "Benefits & welfare",
+    "noEntries": "No union transactions yet. Click \"Add entry\" at the top right to record income or welfare spending.",
+    "code3": "Welfare & hardship aid",
+    "cardNumber": "Union card no.",
+    "balance": "Union balance",
+    "title": "Trade Union (Công đoàn cơ sở)",
+    "uploadDocTitle": "Upload collective agreement / minutes",
+    "receiptNo": "Receipt / voucher no.",
+    "addMemberTitle": "Add union member",
+    "code1": "1% member dues",
+    "tabMembers": "Members",
+    "bhxhNumber": "Social insurance no. (BHXH)",
+    "code4": "Activities",
+    "statusApproved": "Approved",
+    "statusPending": "Pending",
+    "active": "Active member",
+    "statusPaid": "✓ Paid",
+    "reasonPh": "e.g. discharge certificate on file, wedding gift",
+    "code5": "Administration",
+    "amountVndReq": "Amount (VND) *",
+    "benefitsTitle": "Statutory benefits & welfare approvals",
+    "idNumber": "ID number (CCCD)",
+    "summaryPh": "e.g. July union dues allocation",
+    "reasonVoucher": "Reason / voucher no.",
+    "choosePdf": "Choose scanned PDF",
+    "amountReq": "Amount (VND) *",
+    "bhxh": "Social insurance (BHXH):",
+    "uploadDoc": "Upload agreement / minutes",
+    "addEntry": "Add entry (income / expense)",
+    "storeDept": "Store / department",
+    "requestBenefit": "Request benefit",
+    "income": "Income",
+    "expense": "Expense",
+    "ledger": "Transactions",
+    "pleaseChoose": "— Select —",
+    "addMember": "Add member",
+    "employeeNameReq": "Employee name *",
+    "chooseMemberReq": "Member *",
+    "benefitTypeReq": "Benefit type *",
+    "docCategoryReq": "Category *",
+    "docTitleReq": "Title *",
+    "confirmUpload": "Upload & file",
+    "joinDate": "Joined:",
+    "requestDate": "Requested:",
+    "effective": "Effective:",
+    "expiry": "Expires:",
+    "saveFailed": "Save failed",
+    "confirmSave": "Save",
+    "requestFailed": "Request failed",
+    "submitRequest": "Submit",
+    "uploadFailed": "Upload failed",
+    "entryFailed": "Failed to save entry",
+    "typeReq": "Type *",
+    "itemCode": "Item code",
+    "summary": "Summary",
+    "confirmEntry": "Save entry",
+    "cardNo": "Card no.:",
+    "note": "Note:",
+    "remark": "Notes:",
+    "voucher": "Voucher:",
+    "hq": "HQ",
+    "member": "Member",
+    "cancel": "Cancel",
+    "other": "Other",
+    "memberCount": "{n} union members",
+    "benefit": {
+      "birthday": "Birthday gift",
+      "marriage": "Wedding gift",
+      "maternity": "Maternity allowance",
+      "hospital": "Hospitalisation visit",
+      "relief": "Hardship relief",
+      "other": "Other benefit"
+    },
+    "docCat": {
+      "tuldtt": "Collective labour agreement (TƯLĐTT)",
+      "noiquy": "Internal work rules",
+      "doitheo": "Statutory dialogue minutes",
+      "committee": "Committee meetings & election decisions"
+    }
+  },
+  "RepairKnowledge": {
+    "csDesc": "For a new brand/model without a PDF manual yet, enter the brand and model and AI derives the standard state machine, limit switches and 10 most common fault trees from drink-bar electromechanical principles.",
+    "subtitle": "Structured chunks of manuals, wiring diagrams and error codes · cold-start state-machine derivation · closed-loop learning from technician repairs",
+    "measuredPh": "e.g. heater 530Ω OK, SSR input 12V OK but no output",
+    "casesTitle": "Technician repair case library (case-based learning)",
+    "rootCausePh": "e.g. mainboard SSR output burnt open, no power to the heater",
+    "catPosLong": "💻 POS & IT (touch terminal / receipt printer / label printer / switch)",
+    "modelPh": "e.g. ET-99S, FT-16, TM-T82, KM-150A",
+    "catBarLong": "🧋 Store bar (sealer / syrup dispenser / tea brewer / ice maker)",
+    "brandPh": "e.g. Yi Fang, Hong Mao, Hoshizaki, Epson, Delta",
+    "partsPh": "e.g. replaced 25A solid-state relay (SSR-25DA)",
+    "casesSubtitle": "Filled in from real on-site repairs to keep improving AI accuracy",
+    "rootCauseReq": "Actual root cause (after disassembly) *",
+    "techNotePh": "e.g. keep it away from damp areas; tighten terminal screws every six months",
+    "chunkContentPh": "Describe troubleshooting steps, normal values and how to handle faults...",
+    "searchPh": "Search model, error code (E01), part no....",
+    "catFactoryLong": "🏭 Central factory (sugar cooker / tea kettle / circulation pump)",
+    "chunkContent": "Content (SOP, resistance values, steps)",
+    "typeErrorCode": "Error codes",
+    "chunkTitlePh": "e.g. Sealer cutter wear check & replacement steps",
+    "caseTitle": "Log a completed repair (feedback loop)",
+    "symptomPh": "e.g. E01 temperature won't rise, film roll stuck",
+    "allCategories": "All categories (bar / factory / IT)",
+    "typeCircuit": "Wiring diagram",
+    "storeSafeLong": "Store staff can do it (safe, no disassembly)",
+    "orderNoPh": "e.g. RO-202609-008",
+    "errCauseParts": "Root cause and replaced parts are required",
+    "tagsPh": "e.g. cutter, wear, blade replacement",
+    "title": "Equipment manuals & RAG knowledge base",
+    "runDerive": "Derive state machine & fault tree",
+    "addChunkTitle": "Add equipment manual knowledge chunk",
+    "catPos": "💻 POS & IT hardware/software",
+    "csTitle": "Equipment cold-start state machine engine",
+    "techOnlyLong": "Technician only (needs disassembly & measurement)",
+    "noChunks": "No matching knowledge chunks",
+    "targetModelPh": "e.g. YiFang-ET-99S",
+    "partsReq": "Parts replaced & part numbers *",
+    "errBrandModel": "Please enter the equipment brand and model",
+    "measured": "Measured resistance or voltage",
+    "addChunkBtn": "Upload / add manual chunk",
+    "derivedParts": "Derived standard spare parts:",
+    "tags": "Tags (comma-separated)",
+    "orderNo": "Work order no. (optional)",
+    "techNote": "Technician notes & prevention tips",
+    "errTitleContent": "Title and content are required",
+    "type": {
+      "maintenance_sop": "Cleaning & maintenance SOP",
+      "real_case": "Technician field cases",
+      "error_code": "Error codes",
+      "circuit_diagram": "Wiring diagram",
+      "troubleshooting_tree": "Troubleshooting tree",
+      "exploded_view": "Exploded parts view"
+    },
+    "coldStartBtn": "Cold-start state machine",
+    "logCaseBtn": "Log a repair case",
+    "catBar": "🧋 Store bar equipment",
+    "catFactory": "🏭 Central factory equipment",
+    "typeSop": "Cleaning & maintenance SOP",
+    "typeCases": "Technician field cases",
+    "derivedStates": "Derived state machine:",
+    "measurements": "⚡ Measurements: ",
+    "savedToKb": "Added to knowledge base",
+    "allTypes": "All types",
+    "officialSpec": "Official technical spec",
+    "targetModel": "Equipment model",
+    "symptom": "Reported symptom",
+    "reported": "Reported: ",
+    "rootCause": "Root cause: ",
+    "partsReplaced": "Parts replaced: ",
+    "fileCase": "Save to library",
+    "errDerive": "Derivation failed",
+    "errNetwork": "Connection failed",
+    "errSave": "Save failed",
+    "errConnection": "Connection error",
+    "storeSafe": "Store-safe",
+    "techOnly": "Technician only",
+    "equipmentCategory": "Equipment category",
+    "brand": "Brand",
+    "model": "Model",
+    "chunkType": "Chunk type",
+    "chunkTitle": "Chunk title",
+    "saveChunk": "Save chunk",
+    "equipmentModel": "Equipment model",
+    "source": "Source: ",
+    "cancel": "Cancel",
+    "derivedOk": "Derived: {name}",
+    "caseDesc": "Record the real cause and measurements from an on-site repair; AI learns from it and recommends the same fix first next time a similar fault occurs."
+  },
+  "RepairAssistant": {
+    "inputPhTech": "Enter symptoms or test points (e.g. heater resistance, no 24V pulse, E02 cam micro-switch)...",
+    "techModeDesc": "[Technician mode] Circuit measurements (Ω/V), OEM part numbers, cam/micro-switch checks and repair feedback",
+    "inputPhStore": "Describe the fault or code (e.g. sealer E01, syrup dispenser inaccurate, printer out of paper)...",
+    "storeModeDesc": "[Store mode] Safety first: 3-step checks without disassembly, then an automatic repair order if unresolved",
+    "qp": {
+      "fac1": {
+        "text": "The SC-150L sugar cooker stops mid-stir and the panel shows VFD-OC",
+        "label": "Sugar cooker VFD overload trip"
+      },
+      "pos2": {
+        "text": "The Epson receipt printer's red light keeps blinking, the feed button does nothing and the cutter is stuck",
+        "label": "Receipt printer jam, red light blinking"
+      },
+      "fac2": {
+        "text": "The tea kettle PT100 sensor shows 98°C but the water isn't boiling",
+        "label": "Tea kettle temperature sensor drift"
+      },
+      "pos3": {
+        "text": "Tapping the top right of the POS touchscreen jumps to the left; there seems to be moisture on the bezel",
+        "label": "POS touchscreen erratic"
+      },
+      "bar3": {
+        "text": "The syrup dispenser gives clearly less syrup on full sugar, and the outlet drips crystallised syrup",
+        "label": "Syrup dispenser inaccurate"
+      },
+      "pos1": {
+        "text": "After checkout on the POS the cash drawer doesn't open; the receipt printer works",
+        "label": "Cash drawer won't open"
+      },
+      "fac3": {
+        "text": "The automatic sugar cooker's gearbox makes a clicking metal knocking noise while running",
+        "label": "Gearbox noise"
+      },
+      "pos4": {
+        "text": "The bar printer won't print any drink tickets; the network cable is plugged in",
+        "label": "Receipt printer offline"
+      },
+      "bar1": {
+        "text": "The Yi Fang sealer shows E01 and has no heat at all",
+        "label": "E01 heater plate not heating"
+      },
+      "bar4": {
+        "text": "The sealer presses down and gets stuck, beeping",
+        "label": "Sealer stuck pressing cup"
+      },
+      "bar2": {
+        "text": "Sealer E04, the film keeps spinning and won't stop",
+        "label": "E04 film won't stop / sensor fault"
+      }
+    },
+    "searching": "Searching OEM error codes, wiring diagrams and state machines...",
+    "ticketOk": "✓ Repair order created! Opening the order list...",
+    "subtitle": "SOP fault trees · RAG manual search · closed-loop learning",
+    "submitTicket": "🚀 Submit repair order (send a technician)",
+    "errSubmit": "Submit failed — please log it manually in the Repair orders tab",
+    "draftTitle": "AI drafted a repair order",
+    "ragSources": "RAG sources:",
+    "title": "Repair AI hub",
+    "catPos": "POS & IT",
+    "roleUser": "Store staff / technician",
+    "roleStoreAi": "Store quick-fix AI",
+    "roleTechAi": "Technician AI",
+    "storeMode": "Store quick-fix mode",
+    "techMode": "Technician mode",
+    "errCreate": "Failed to create repair order",
+    "storeSafetyLabel": "Store safety rule:",
+    "tickTested": "Tick when tested",
+    "chk": {
+      "consumable": "📦 Consumables / wiring",
+      "ohms": "⚡ Resistance",
+      "voltage": "🔌 Voltage",
+      "cleaning": "🧽 Cleaning",
+      "restart": "🔄 Restart"
+    },
+    "expected": "✓ Expected: ",
+    "ifFailed": "✗ If not fixed: ",
+    "catFactory": "Central factory",
+    "draftTried": "Already checked: ",
+    "categoryLabel": "Equipment:",
+    "targetLabel": "Equipment:",
+    "quickAsk": "Quick questions:",
+    "draftEquipment": "Equipment: ",
+    "draftCode": "Error code: ",
+    "draftSummary": "Summary: ",
+    "techCase": "Field case:",
+    "catBar": "Bar equipment",
+    "priority": "Priority: ",
+    "onSiteIssue": "On-site issue",
+    "urgent": "Urgent",
+    "diagnose": "Diagnose",
+    "high": "High",
+    "welcomeStore": "Hi! I'm the **Store Equipment Quick-Fix AI** 🤖\n\nBuilt for stores: **no disassembly, safe, 3-step checks**. Pick a device below or describe the problem (e.g. \"sealer E01\", \"syrup dispenser gives less syrup\", \"receipt printer jammed\") and I'll guide you through a quick fix!",
+    "welcomeTech": "Hi, technician! I'm the **Electromechanical Repair AI** ⚡\n\nI have **OEM wiring diagrams, resistance (Ω) / voltage (V) reference values, cam and micro-switch limit checks** and a **parts number database**. Choose a model or enter an error code to start an in-depth diagnosis.",
+    "switchedStore": "🔄 Switched to **[Store quick-fix mode]**: safety first (no disassembly, no high voltage). If 3 steps don't fix it, a one-click repair order is offered.",
+    "switchedTech": "🔄 Switched to **[Technician mode]**: multimeter values (Ω/V), wiring pinouts, OEM part numbers and real repair cases.",
+    "diagError": "Sorry, something went wrong during diagnosis: {msg}",
+    "tryLater": "please try again later",
+    "networkError": "Connection problem — please check your network.",
+    "stepN": "Step {n}: {title}",
+    "stepsTitle": "Step-by-step checklist ({n} steps):",
+    "storeSafety": "Store safety rule: <s>never open any casing or touch the heating die (above 160°C)</s>. Follow the AI's power, cleaning and film checks.",
+    "techSafety": "Electrical work rule: <s>always cut main power completely</s> before measuring resistance; wear insulated gear for live 24VDC/220VAC measurements."
+  },
+  "AuditAi": {
+    "readyHint": "Ask about procedures, workflow layout, ergonomics (wrist strain / excessive turning), bar presentation, ingredient write-off fraud — or upload a site photo to discuss.",
+    "kbContentPh": "Paste rules, ergonomic heights, penalty details or SOP steps...",
+    "inputPh": "Ask a question or discuss workflow, layout, safety compliance...",
+    "kbTitlePh": "Title (e.g. sealer spacing requirements, fake write-off penalty rules)",
+    "suggestEmpty": "After you send a message, the expert's suggestions appear here.",
+    "kbTitle": "Audit expert knowledge base · add training material anytime",
+    "noAccess": "Only the audit unit can use Audit AI",
+    "photoOnly": "(Uploaded a site photo for diagnosis)",
+    "logSaved": "Summarized and saved to the audit log!",
+    "suggestPanel": "Suggestions & answers (1/3)",
+    "kbEmpty": "No training material yet",
+    "thinking": "Audit expert is analysing…",
+    "ready": "Audit expert is ready",
+    "uploadPhoto": "Take or upload an inspection photo",
+    "clickToAsk": "Click a card to follow up",
+    "removePeriod": "Stop attaching usage data",
+    "storePh": "Choose or type a store",
+    "title": "Audit AI",
+    "noChats": "No chats yet",
+    "kbAdd": "Add to knowledge base",
+    "untitled": "Untitled chat",
+    "toInput": "Insert into input",
+    "expert": "Expert advisor",
+    "auditLog": "Audit log",
+    "inspection": "Site inspection",
+    "genLog": "Create log",
+    "sitePhoto": "Site photo",
+    "quoteAsk": "Follow up",
+    "knowledge": "Knowledge base",
+    "newChat": "New chat",
+    "modeDiscuss": "Discuss",
+    "modeGuide": "Guide",
+    "preview": "Preview",
+    "sendFailed": "Send failed",
+    "kind": {
+      "sop": "SOP procedures",
+      "ergonomics": "Ergonomics & layout",
+      "hygiene": "Hygiene standards",
+      "rules": "Penalty rules",
+      "other": "Other material"
+    },
+    "suggestArea": "Suggestions panel",
+    "suggestOn": "on (1/3)",
+    "suggestOff": "off",
+    "store": "store",
+    "periodLoaded": "Attached {store} {period} ingredient usage data",
+    "hint1": "How should the sealer and ice bin be arranged to be ergonomic?",
+    "hint2": "Written-off ingredients were found still in use at the bar — what's the standard procedure?",
+    "hint3": "Audit points for cloth zoning and clean-as-you-go?",
+    "hint4": "How do we prevent private payments via store phones and personal Zalo groups?",
+    "followUp": "How exactly should stores carry out this suggestion: \"{item}\"?",
+    "refSuggestion": " (see suggestion: {item})",
+    "analyzeErgo": "Please analyse ergonomic adjustments for \"{item}\""
+  },
+  "CompanyPlan": {
+    "loadFailed": "Failed to load",
+    "networkError": "Network error, please try again later",
+    "orderFailed": "Failed to create order",
+    "loading": "Loading…",
+    "company": "Company",
+    "enterpriseFull": "Custom Enterprise plan",
+    "companyPlan": "Company plan",
+    "enterprise": "Enterprise plan",
+    "enterpriseDesc": "Unlimited members; all enabled modules at MAX level; unlimited credit-based features; CHAT with all models plus image / video generation; unlimited feature additions / changes.",
+    "companyDesc": "Unlimited members; enabled customer service, booking and marketing modules at MAX level. Includes free CHAT and 1 free feature tweak per month.",
+    "inUse": "{plan} active",
+    "expires": ", expires {date}",
+    "notActive": "Company plan not active yet",
+    "yearly": "Yearly (price of {n} months)",
+    "monthly": "Monthly",
+    "payNeedsAdmin": "Payment must be made by <b>the company owner or an admin</b>.",
+    "priceBreakdown": "Price breakdown (USD / month)",
+    "yearlyTotal": "Yearly total (${m}/month × {n})",
+    "monthlyTotal": "Monthly total",
+    "contractNote": "Enabled modules, ERP seats and store count are set by the platform per your contract — contact us to change them.",
+    "credits": "Credits",
+    "enterpriseCredits": "Enterprise has unlimited credits; members are never charged credits.",
+    "wallet": "Company wallet",
+    "monthlyGift": "This month's free credits (${n}/month, no rollover)",
+    "paidBalance": "Top-up balance",
+    "deductOrder": "When members use credit-based features (marketing generation, roundtable, AI Agent…), free monthly credits are used first, then top-ups.",
+    "topUp": "Top up {label}",
+    "getsCredits": "Get ${n} credits",
+    "topUpWho": "Top-ups must be made by the owner, an admin, a manager or finance staff.",
+    "topUpAfterActive": "Activate the company plan to top up the company wallet.",
+    "renew": "Renew",
+    "activate": "Pay & activate",
+    "payBtn": "{action} (${total} USD)",
+    "payNote": "Takes effect immediately after payment; renewals extend from the current expiry date. Nothing renews automatically."
+  },
+  "PosMenu": {
+    "subtitle": "Upload images and multilingual names / descriptions; the kiosk shows them by language",
+    "importBtn": "Batch import menu (Excel/CSV)",
+    "uploadImage": "Upload image (optional)",
+    "itemNamePh": "Item name (main language)",
+    "mainDescPh": "Main description",
+    "descPh": "Description (optional)",
+    "pricePh": "Price",
+    "multilangContent": "Translations",
+    "aiTranslate": "AI translate",
+    "title": "Menu editor",
+    "addCategory": "New category",
+    "categoryName": "Category name",
+    "addItem": "New item",
+    "chooseCategory": "Choose category",
+    "changeImage": "Change image",
+    "multilang": "Languages",
+    "all": "All",
+    "global": "All stores",
+    "add": "Add",
+    "preview": "Preview",
+    "remove": "Remove",
+    "image": "Image",
+    "disable": "Disable",
+    "enable": "Enable",
+    "save": "Save",
+    "cancel": "Cancel",
+    "store": "Store",
+    "revision": "Version {n}",
+    "namePhLang": "{lang} name",
+    "descPhLang": "{lang} description",
+    "storeOnly": "{name} only"
+  },
+  "PosMenuImport": {
+    "_meta": {
+      "title": "Batch import / update POS menu",
+      "description": "Supports .xlsx, .xls and .csv files. Missing categories are created; items with a matching name are updated, others are added.",
+      "template": "POS menu template",
+      "sheet": "Menu items"
+    },
+    "name": {
+      "label": "Item name",
+      "example": "Bubble milk tea"
+    },
+    "category": {
+      "label": "Category",
+      "example": "Classic tea"
+    },
+    "price": {
+      "label": "Price"
+    },
+    "description": {
+      "label": "Description",
+      "example": "Rich milk tea with freshly cooked boba pearls"
+    },
+    "barcode": {
+      "label": "Barcode"
+    }
+  },
+  "PosStores": {
+    "loading": "Loading…",
+    "title": "Stores & terminals",
+    "subtitle": "One Debian terminal per store. Enter the device_key in the kiosk or pos-bridge.",
+    "importBtn": "Batch import stores (Excel/CSV)",
+    "storeName": "Store name",
+    "addStore": "Add store",
+    "terminal": "Terminal: {name}",
+    "hideKey": "Hide key",
+    "showKey": "Show key",
+    "copyKey": "Copy key",
+    "lastSync": "Last sync: ",
+    "never": "never",
+    "noTerminal": "No terminal yet",
+    "noStores": "No stores yet"
+  },
+  "PosStoresImport": {
+    "_meta": {
+      "title": "Batch import stores",
+      "description": "Supports .xlsx, .xls and .csv files. Fill in store name and code (optional).",
+      "template": "POS store template",
+      "sheet": "Stores"
+    },
+    "name": {
+      "label": "Store name",
+      "example": "Xinyi flagship"
+    },
+    "slug": {
+      "label": "Code (slug)"
+    }
+  },
+  "PosOrders": {
+    "title": "Orders",
+    "all": "All",
+    "status": {
+      "pending": "Pending",
+      "preparing": "Preparing",
+      "ready": "Ready",
+      "done": "Done",
+      "cancelled": "Cancelled"
+    },
+    "type": {
+      "dine_in": "Dine-in",
+      "takeout": "Takeout",
+      "delivery": "Delivery"
+    },
+    "table": "Table {n}",
+    "note": "Note: {note}",
+    "empty": "No orders yet"
   }
 }

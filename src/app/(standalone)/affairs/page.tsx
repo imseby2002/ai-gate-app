@@ -223,6 +223,7 @@ function DocsTab() {
           title="批次匯入外務證照與租約"
           description="支援 .xlsx, .xls 與 .csv 檔案。若文件標題相符將自動更新。"
           columns={AFFAIRS_DOC_IMPORT_COLUMNS}
+          columnsNs="AffairsImport"
           templateFilename="外務證照與門市租約範本"
           sheetName="合約證照清單"
           onClose={() => setShowImport(false)}

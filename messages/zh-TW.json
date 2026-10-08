@@ -4461,7 +4461,13 @@
     "save": "儲存",
     "cancel": "取消",
     "ownerOnlyDone": "僅持有人可標記完成",
-    "deadlineFieldLabel": "執行截止日"
+    "deadlineFieldLabel": "執行截止日",
+    "importBtn": "批次匯入 (Excel/CSV)",
+    "importTitle": "批次匯入任務",
+    "importDesc": "支援 .xlsx, .xls 與 .csv 檔案。請填寫任務標題、狀態說明、截止日等。",
+    "importTemplate": "任務清單範本",
+    "importSheet": "任務清單",
+    "expand": "展開"
   },
   "Pos": {
     "title": "點單",
@@ -5231,7 +5237,13 @@
     "qty": "數量",
     "amount": "金額",
     "noPurchaseRecords": "尚無採購紀錄",
-    "date": "日期"
+    "date": "日期",
+    "linkSlugLabel": "填表網址代號（小寫英文／數字，例如 ice-abc）",
+    "pinReset": "重設廠商密碼（已設定，留空不變）",
+    "pinSet": "設定廠商初始密碼（至少 6 碼）",
+    "vendorUrl": "廠商網址：{url}（儲存後把網址與密碼交給廠商，廠商登入後可自行改密碼）",
+    "slugPlaceholder": "代號",
+    "noSubdomain": "公司尚未設定專屬子網域，暫時只能使用舊的私密連結"
   },
   "AgentPage": {
     "statusQueued": "排隊中",
@@ -6579,7 +6591,12 @@
     "moneyLossValue": "{n} 元",
     "notifiedHr": "已通知人事（{n} 項超標）",
     "noOverItems": "目前無超標項目",
-    "notifyFailed": "通知失敗"
+    "notifyFailed": "通知失敗",
+    "pushConfirm": "確定將研發配方【{name}】推送至行銷部門進行新品上架包裝？",
+    "pushDone": "✅ 已成功將【{name}】推送至行銷部門！\n行銷人員可在「行銷系統 → 產品圖文 → 新品上架流水線」接續籌備 VIP 優先專享期與上市排程。",
+    "pushFailed": "推送失敗",
+    "pushTitle": "推送至行銷部門發起新品上市",
+    "pushBtn": "推送上架"
   },
   "AuditPlatform": {
     "knowledgeCoreStatus": "COMPANY KNOWLEDGE CORE 共享企業知識底層連動中",
@@ -6989,7 +7006,11 @@
     "unscheduled": "未排",
     "editContentTitle": "編輯內容",
     "addContentTitle": "新增內容",
-    "scheduledDateLabel": "排程日"
+    "scheduledDateLabel": "排程日",
+    "tabCompany": "公司資料",
+    "tabCampaigns": "活動企劃中心 (AI/成效)",
+    "tabCrm": "會員 CRM & VIP",
+    "templatesLink": "視覺風格與廣告"
   },
   "HrPage": {
     "staffFulltime": "正職",
@@ -7613,7 +7634,110 @@
     "viNameLabel": "越文名",
     "yearSuffix": "{y}年",
     "zhNameLabel": "中文名 *",
-    "zhNamePlaceholder": "例：電費"
+    "zhNamePlaceholder": "例：電費",
+    "cf": {
+      "errTransfer": "轉帳需指定不同的轉出與轉入帳戶",
+      "payee": "收付人 / 廠商 / 客戶",
+      "fromAccountReq": "轉出帳戶 (從項目) *",
+      "toAccountReq": "轉入帳戶 (至項目) *",
+      "invoicePh": "例：AB12345678",
+      "summaryPh": "例：買茶葉、門市營業額",
+      "amountReq": "金額 (NT$) *",
+      "receiveAccount": "收款帳戶 (至項目)",
+      "payAccount": "付款帳戶 (從項目)",
+      "incomeSubject": "收入科目 (從項目)",
+      "expenseSubject": "支出科目 (至項目)",
+      "chooseSubject": "-- 選擇科目 --",
+      "payeePh": "例：ha、廠商名稱",
+      "errSave": "儲存失敗，請重試",
+      "errAmount": "請輸入有效金額",
+      "errDate": "請選擇記帳日期",
+      "editTitle": "編輯帳務記錄",
+      "newTitle": "新增帳務記錄",
+      "typeIncome": "收入 (+)",
+      "typeExpense": "支出 (-)",
+      "typeTransfer": "轉帳 (⇄)",
+      "dateReq": "記帳日期 *",
+      "notesPh": "其他補充說明",
+      "txType": "交易類型",
+      "summary": "摘要說明",
+      "invoice": "發票號碼",
+      "notes": "詳細備註",
+      "closeExit": "關閉退出",
+      "saving": "儲存中…",
+      "addEntry": "新增加入",
+      "confirmSave": "確認儲存",
+      "cancel": "取消",
+      "importDesc": "支援 .xlsx, .xls 與 .csv 檔案。請包含日期、類型（收入/支出）、金額等。",
+      "emptyHint": "請切換年份月份、科目樹篩選或點擊「新增記錄」",
+      "noAccess": "僅出納總務單位可使用出納總務功能",
+      "mdbBatches": "MDB 批次管理 / 撤回",
+      "noAccessHint": "請以管理者帳號登入後再試",
+      "title": "IMT ERP 出納系統",
+      "importMdb": "匯入記帳檔 (.mdb)",
+      "searchPh": "輸入搜尋關鍵字...",
+      "clearFilter": "清除篩選（顯示全部）",
+      "empty": "無符合條件的帳務分錄",
+      "confirmDelete": "確定刪除此筆記錄？",
+      "loading": "正在讀取帳務記錄…",
+      "colAmount": "金額 (NT$)",
+      "importTitle": "批次匯入出納帳務",
+      "filteringBy": "目前篩選科目：",
+      "colDate": "日期 / 星期",
+      "colNotes": "備註 / 發票",
+      "tabPnl": "業績損益報表",
+      "importTemplate": "出納帳務範本",
+      "searchLabel": "資料搜尋：",
+      "cashBank": "現金/銀行",
+      "ledgerName": "帳本名稱:",
+      "todayDate": "本日日期:",
+      "shown": "顯示筆數:",
+      "monthIncome": "本月收入:",
+      "monthExpense": "本月支出:",
+      "monthNet": "收支餘額:",
+      "todayIncome": "本日收入:",
+      "todayExpense": "本日支出:",
+      "tabCashflow": "出納帳務",
+      "tabPricing": "物料定價",
+      "tabStoreExpenses": "門市費用",
+      "tabVendors": "廠商資料",
+      "subJournal": "帳務記錄",
+      "subToday": "本日收支",
+      "subMonth": "本月收支",
+      "subRegular": "定期存款",
+      "subProject": "專案記錄",
+      "addRecord": "新增記錄",
+      "more": "其他功能",
+      "batchImport": "批次匯入",
+      "toAccount": "轉入帳戶",
+      "depositAccount": "存入帳戶",
+      "editRecord": "修改記錄",
+      "deleteRecord": "刪除記錄",
+      "importSheet": "收支紀錄",
+      "colFrom": "從項目",
+      "colTo": "至項目",
+      "colPayee": "收付人",
+      "colStatus": "狀態",
+      "colBalance": "餘額",
+      "colSummary": "摘要",
+      "colActions": "操作",
+      "income": "收入",
+      "expense": "支出",
+      "transfer": "轉帳",
+      "badgeIn": "入",
+      "badgeOut": "支",
+      "badgeTransfer": "轉",
+      "addedCount": "已新增 {n} 筆",
+      "importErrors": "匯入錯誤紀錄 ({n})",
+      "rowsUnit": "筆",
+      "searchMode": {
+        "all": "全部搜尋",
+        "desc": "摘要搜尋",
+        "category": "項目搜尋",
+        "payee": "收付人搜尋",
+        "notes": "備註發票搜尋"
+      }
+    }
   },
   "StoreCoachPage": {
     "fillRegTitleAndClause": "請填寫規範標題與具體條款內容",
@@ -10236,10 +10360,1708 @@
     "optAvail": "🟢 開放租用 (Available)",
     "optRented": "🔴 專屬租出中 (Rented Out)",
     "optMaint": "🟡 維護中 (Maintenance)",
-    "fFeatureNotes": "特色備註"
+    "fFeatureNotes": "特色備註",
+    "s1": {
+      "industry": "越南中越 (峴港/會安/巴拿山) 豪華包車與在地中文秘書服務",
+      "product": "全新7-16人座商務車、雙語中文司機、機場快速通關接送、行程客製保險全包",
+      "audience": "台灣家庭出遊、自由行背包客、公司員旅與商務考察團",
+      "offer": "出發前14天預訂享早鳥 9 折，加贈全團越南 5G 吃到飽上網卡與私房海鮮餐廳折扣",
+      "cta": "LINE 官方客服：@danang_tour 或 官網即時預約"
+    },
+    "s2": {
+      "industry": "宜蘭礁溪溫泉包棟親子特色民宿",
+      "product": "獨棟日式庭院、私人冷熱雙泉、電動麻將桌、兒童球池、烤肉庭院",
+      "audience": "三代同堂家庭、好友聚會包棟、週末度假客",
+      "offer": "平日預訂贈送現採無毒蔬果早餐籃與礁溪在地溫泉伴手禮盒",
+      "cta": "官方 LINE 諮詢：@yilan_hotspring"
+    }
   },
   "MktCampaignsPage": {
     "title": "活動企劃中心",
     "subtitle": "實體、線上、混合活動都在這裡新增、企劃與追蹤成效"
+  },
+  "Feedback": {
+    "title": "意見反映",
+    "thanks": "已送出，感謝回報！",
+    "type": {
+      "bug": "🐛 錯誤回報",
+      "ai_error": "🤖 AI 回答錯誤",
+      "feature": "✨ 功能建議",
+      "text_change": "🎨 介面/文字調整"
+    },
+    "titlePh": "標題（簡短描述）",
+    "descPh": "詳細說明發生了什麼、預期應該怎樣",
+    "submit": "送出"
+  },
+  "Skills": {
+    "viral-video-copywriting": {
+      "label": "短影音爆款腳本",
+      "description": "產出短影音（Reels / 抖音 / Shorts）的鉤子、分鏡腳本與口播。",
+      "fields": {
+        "topic": {
+          "label": "影片主題",
+          "placeholder": "例：3 招快速收納小廚房"
+        },
+        "product": {
+          "label": "置入商品 / 服務"
+        },
+        "duration": {
+          "label": "影片長度（秒）"
+        },
+        "style": {
+          "label": "風格",
+          "options": {
+            "energetic": "快節奏帶動",
+            "storytelling": "故事敘事",
+            "educational": "知識乾貨"
+          }
+        }
+      }
+    },
+    "ecommerce-copywriter": {
+      "label": "電商商品文案",
+      "description": "依商品資訊產出可直接上架的商品描述（賣點、規格、情境）。",
+      "fields": {
+        "productName": {
+          "label": "商品名稱",
+          "placeholder": "例：保溫不鏽鋼隨行杯 500ml"
+        },
+        "features": {
+          "label": "賣點 / 規格",
+          "placeholder": "材質、容量、保溫時數、適用情境…"
+        },
+        "audience": {
+          "label": "目標客群",
+          "placeholder": "例：通勤上班族、健身族群"
+        },
+        "tone": {
+          "label": "語氣",
+          "options": {
+            "professional": "專業可信",
+            "warm": "親切溫暖",
+            "playful": "活潑趣味"
+          }
+        }
+      }
+    },
+    "product-marketing-copywriter": {
+      "label": "行銷推廣文案",
+      "description": "針對廣告 / 促銷活動產出多版本行銷文案與廣告標題。",
+      "fields": {
+        "product": {
+          "label": "商品 / 服務"
+        },
+        "campaign": {
+          "label": "活動 / 主題",
+          "placeholder": "例：母親節限時 8 折"
+        },
+        "platform": {
+          "label": "投放平台",
+          "options": {
+            "google": "Google 搜尋廣告"
+          }
+        },
+        "usp": {
+          "label": "核心優勢",
+          "placeholder": "與競品的差異、限時優惠…"
+        }
+      }
+    },
+    "article-illustrator": {
+      "label": "文章自動配圖",
+      "description": "解析文章內容，產生每段配圖提示詞並生成圖片。",
+      "fields": {
+        "article": {
+          "label": "文章內容",
+          "placeholder": "貼上文章全文…"
+        },
+        "numImages": {
+          "label": "配圖張數"
+        },
+        "aspectRatio": {
+          "label": "圖片比例",
+          "options": {
+            "16:9": "16:9 橫式",
+            "1:1": "1:1 方形",
+            "9:16": "9:16 直式"
+          }
+        }
+      }
+    },
+    "market-research-reports": {
+      "label": "市場研究報告",
+      "description": "產出結構化市場 / 競品分析報告。",
+      "fields": {
+        "topic": {
+          "label": "研究主題 / 產業",
+          "placeholder": "例：台灣手沖咖啡器材市場"
+        },
+        "competitors": {
+          "label": "主要競品",
+          "placeholder": "已知的競爭品牌（選填）"
+        },
+        "focus": {
+          "label": "分析重點",
+          "options": {
+            "overview": "市場總覽",
+            "competitor": "競品分析",
+            "entry": "進入策略"
+          }
+        }
+      }
+    },
+    "product-video-creator": {
+      "label": "商品影片企劃師",
+      "description": "產出商品影片分鏡、影片生成 prompt、配音稿，並生成 1 張關鍵視覺參考圖。",
+      "fields": {
+        "product": {
+          "label": "商品名稱"
+        },
+        "features": {
+          "label": "賣點 / 規格"
+        },
+        "duration": {
+          "label": "影片長度（秒）"
+        },
+        "aspectRatio": {
+          "label": "畫面比例",
+          "options": {
+            "9:16": "9:16 直式（短影音）",
+            "16:9": "16:9 橫式",
+            "1:1": "1:1 方形"
+          }
+        }
+      }
+    },
+    "ecommerce-video-marketing": {
+      "label": "電商帶貨短影片腳本",
+      "description": "產出帶貨短影片腳本：口播、節奏、CTA 與平台投放建議。",
+      "fields": {
+        "product": {
+          "label": "商品 / 服務"
+        },
+        "sellingPoints": {
+          "label": "主打賣點 / 優惠"
+        },
+        "platform": {
+          "label": "投放平台",
+          "options": {
+            "tiktok": "抖音 / TikTok",
+            "shopee": "蝦皮直播 / 影片"
+          }
+        }
+      }
+    },
+    "tts-voice-synthesis": {
+      "label": "AI 語音配音",
+      "description": "將文字稿合成為語音配音，回傳可下載的音檔。",
+      "fields": {
+        "text": {
+          "label": "配音文字稿",
+          "placeholder": "貼上要配音的文字…"
+        },
+        "voice": {
+          "label": "音色",
+          "options": {
+            "default": "預設",
+            "female": "女聲",
+            "male": "男聲"
+          }
+        }
+      }
+    },
+    "ppt-generator": {
+      "label": "簡報生成（PPTX）",
+      "description": "依主題自動規劃投影片並產出可下載的 .pptx 簡報檔。",
+      "fields": {
+        "topic": {
+          "label": "簡報主題",
+          "placeholder": "例：2026 年品牌行銷策略"
+        },
+        "context": {
+          "label": "內容重點 / 補充資料",
+          "placeholder": "要涵蓋的重點、數據、章節…"
+        },
+        "numSlides": {
+          "label": "投影片張數"
+        },
+        "audience": {
+          "label": "對象",
+          "placeholder": "例：主管、客戶、投資人"
+        }
+      }
+    },
+    "social-account-coach": {
+      "label": "社群帳號運營教練",
+      "description": "分析你的帳號定位與受眾，產出貼文方向、成長診斷與可執行待辦。",
+      "fields": {
+        "platform": {
+          "label": "平台",
+          "options": {
+            "xiaohongshu": "小紅書"
+          }
+        },
+        "niche": {
+          "label": "帳號定位 / 主題",
+          "placeholder": "例：居家收納教學、個人理財"
+        },
+        "recent": {
+          "label": "近期內容或數據（選填）",
+          "placeholder": "貼上幾則近期貼文、追蹤數、互動率等，分析更精準"
+        },
+        "goal": {
+          "label": "當前目標",
+          "options": {
+            "growth": "漲粉 / 觸及",
+            "engagement": "互動 / 留言",
+            "conversion": "導購 / 變現"
+          }
+        }
+      }
+    },
+    "viral-content-planner": {
+      "label": "病毒內容企劃師",
+      "description": "用增長黑客思維規劃高傳播選題：鉤子、留存結構與分享誘因。",
+      "fields": {
+        "topic": {
+          "label": "內容領域 / 主題",
+          "placeholder": "例：平價美食開箱、職場成長"
+        },
+        "format": {
+          "label": "內容形式",
+          "options": {
+            "short_video": "短影音",
+            "long_video": "長影片",
+            "thread": "圖文 / 串文"
+          }
+        },
+        "audience": {
+          "label": "目標受眾",
+          "placeholder": "例：25-35 歲上班族"
+        },
+        "goal": {
+          "label": "傳播目標",
+          "placeholder": "例：漲粉、品牌曝光、導流"
+        }
+      }
+    },
+    "kol-persona-writer": {
+      "label": "社群人設文案",
+      "description": "依你的語氣樣本與人設，產出風格一致的社群貼文。",
+      "fields": {
+        "persona": {
+          "label": "人設 / 語氣描述",
+          "placeholder": "例：理性溫暖的理財部落客，講話像朋友、不說教；或直接貼上你過往幾則貼文當風格樣本"
+        },
+        "topic": {
+          "label": "這篇要寫什麼",
+          "placeholder": "例：分享一個記帳 App、宣傳新課程"
+        },
+        "platform": {
+          "label": "平台",
+          "options": {
+            "xiaohongshu": "小紅書"
+          }
+        }
+      }
+    },
+    "live-stream-copywriter": {
+      "label": "開播／直播文案",
+      "description": "產出開播預告、直播口播與粉絲互動話術，帶營業感與節目效果。",
+      "fields": {
+        "persona": {
+          "label": "主播 / 暱稱與風格",
+          "placeholder": "例：暱稱小帆，活潑戲精、會跟粉絲撒嬌互動"
+        },
+        "occasion": {
+          "label": "用途",
+          "options": {
+            "preview": "開播預告",
+            "voiceover": "短視頻口播",
+            "interaction": "直播互動 / 留言回覆",
+            "post": "動態文案"
+          }
+        },
+        "points": {
+          "label": "本次重點 / 內容",
+          "placeholder": "例：今晚 8 點開播玩新遊戲、抽周邊、感謝粉絲應援"
+        }
+      }
+    }
+  },
+  "SkillRunner": {
+    "loadFailed": "載入 skill 清單失敗",
+    "trainNeedPro": "訓練專家知識需 PRO 以上方案",
+    "addFailed": "新增失敗",
+    "networkError": "連線失敗",
+    "uploadFailed": "檔案上傳失敗",
+    "noText": "此檔案無法萃取文字內容（僅支援 docx / xlsx / csv / txt / pdf）",
+    "fileFailed": "檔案處理失敗",
+    "fillRequired": "請填寫：{field}",
+    "insufficient": "點數不足，本次需要約 {n} 點",
+    "runFailed": "執行失敗",
+    "balance": "餘額 {n} 點",
+    "category": {
+      "copywriting": "文案",
+      "video": "短影音",
+      "illustration": "配圖",
+      "research": "研究",
+      "audio": "語音",
+      "presentation": "簡報",
+      "social": "社群"
+    },
+    "fromCredits": "{n} 點起",
+    "ownKnowledge": "專屬知識庫",
+    "loading": "載入中…",
+    "back": "返回",
+    "generating": "生成中…",
+    "run": "執行",
+    "result": "結果",
+    "charged": "本次扣 {n} 點",
+    "copied": "已複製",
+    "copy": "複製",
+    "trainTitle": "訓練這位專家",
+    "trainHint": "上傳連結／文字／檔案，執行時自動參考",
+    "trainLocked": "訓練專屬知識庫為 PRO 以上方案功能。升級後可讓這位專家學習你上傳的爆款案例、風格與資料。",
+    "srcType": {
+      "url": "連結",
+      "file": "檔案",
+      "text": "文字"
+    },
+    "chars": "{n} 字",
+    "tab": {
+      "url": "網址連結",
+      "text": "貼上文字",
+      "file": "上傳檔案"
+    },
+    "urlPh": "https://…（文章 / 貼文 / 網頁）",
+    "namePh": "這份知識的名稱（選填）",
+    "textPh": "貼上爆款案例、方法論、風格範例等文字…",
+    "adding": "新增中…",
+    "addKnowledge": "加入知識",
+    "processing": "處理中…",
+    "chooseFile": "選擇檔案",
+    "fileHint": "支援 docx / xlsx / csv / txt / pdf，自動萃取文字"
+  },
+  "CompanyProfile": {
+    "noPermission": "需要公司管理者或行銷權限才能編輯公司資料",
+    "tab": {
+      "basic": "基本資料",
+      "brand": "品牌",
+      "products": "產品",
+      "stores": "門市",
+      "files": "素材"
+    },
+    "legalName": "公司法定名稱",
+    "legalNameHint": "登記名稱，品牌名稱請至「品牌」分頁",
+    "legalNamePh": "例如：XX 股份有限公司",
+    "pleaseSelect": "請選擇",
+    "industry": {
+      "label": "產業別",
+      "tech": "科技/軟體",
+      "manufacturing": "製造業",
+      "retail": "零售/電商",
+      "finance": "金融服務",
+      "health": "醫療健康",
+      "food": "餐飲/消費",
+      "education": "教育培訓",
+      "realEstate": "房地產",
+      "logistics": "物流/運輸",
+      "advertising": "廣告/行銷",
+      "hospitality": "旅宿/民宿",
+      "other": "其他"
+    },
+    "employees": {
+      "label": "員工人數",
+      "e1": "1-10人",
+      "e2": "11-50人",
+      "e3": "51-200人",
+      "e4": "201-500人",
+      "e5": "501-1000人",
+      "e6": "1000人以上"
+    },
+    "capital": "資本額",
+    "capitalPh": "例如：新台幣 1,000 萬元",
+    "founded": "成立年份",
+    "foundedPh": "例如：2010",
+    "address": "公司地址",
+    "addressPh": "縣市 + 區 + 街道",
+    "basicHint": "官方網站、目標客群、賣點、品牌故事等請至「品牌」分頁；產品與門市請至各自分頁。",
+    "saveBasic": "儲存基本資料",
+    "saved": "已儲存",
+    "saveFailed": "儲存失敗",
+    "fileCat": {
+      "logo": "Logo / 品牌標誌",
+      "image": "產品 / 情境圖片",
+      "document": "公司簡介 / 型錄",
+      "faq": "FAQ / 對答資料"
+    },
+    "extracted": "已萃取",
+    "uploadFile": "上傳檔案",
+    "filesHint": "Excel / Word / PDF 會自動萃取文字，供 AI 行銷、客服回覆使用。上傳或刪除即自動儲存。",
+    "tone": {
+      "formal": "專業/正式",
+      "young": "活潑/年輕",
+      "warm": "溫暖/親切",
+      "innovative": "創新/前衛",
+      "luxury": "奢華/高端",
+      "friendly": "親民/平易"
+    },
+    "storeFeature": {
+      "wifi": "免費WiFi",
+      "outlets": "充電插座",
+      "privateRoom": "獨立包廂",
+      "photoWall": "打卡拍照牆",
+      "petFriendly": "寵物友善",
+      "nearMrt": "近捷運站",
+      "outdoor": "戶外座位",
+      "accessible": "無障礙空間"
+    },
+    "productTag": {
+      "new": "新品上市",
+      "bestseller": "人氣熱銷",
+      "signature": "招牌必喝",
+      "seasonal": "季節限定",
+      "photogenic": "拍照打卡",
+      "light": "低卡輕盈",
+      "chefPick": "主廚推薦"
+    },
+    "defaultCategory": "飲料"
+  },
+  "WorkImport": {
+    "title": {
+      "label": "任務標題",
+      "example": "完成第三季菜單研發測試"
+    },
+    "status": {
+      "label": "狀態說明",
+      "example": "進行中"
+    },
+    "done": {
+      "label": "是否已完成",
+      "example": "否"
+    },
+    "deadline": {
+      "label": "截止日"
+    }
+  },
+  "FinancePageImport": {
+    "date": {
+      "label": "日期"
+    },
+    "type": {
+      "label": "類型",
+      "example": "支出"
+    },
+    "category": {
+      "label": "分類",
+      "example": "採購費"
+    },
+    "amount": {
+      "label": "金額"
+    },
+    "description": {
+      "label": "摘要",
+      "example": "辦公室耗材採購"
+    },
+    "account_name": {
+      "label": "帳戶名稱",
+      "example": "零用金"
+    },
+    "pay_coll_name": {
+      "label": "收付人",
+      "example": "陳小明"
+    }
+  },
+  "FinanceSubjects": {
+    "hint": "點擊科目即可快速篩選右側帳務",
+    "allSubjects": "📁 全部科目",
+    "prevMonth": "‹ 上個月",
+    "nextMonth": "下個月 ›",
+    "jumpThisMonth": "跳至本月",
+    "thisMonth": "設為本月",
+    "settings": "項目設定",
+    "selected": "選取中",
+    "cls": {
+      "asset": "資產",
+      "liability": "負債",
+      "income": "收入",
+      "expense": "支出"
+    },
+    "other": "其他",
+    "year": "年份",
+    "mgmtDesc": "維護各類別科目之大類（目錄）、明細名稱、期初金額與常態性質。",
+    "subjectNamePh": "例如：保險櫃、奶精、DT VNPAY",
+    "parentPh": "例如：現金、飲料原料、其它收入",
+    "mgmtTitle": "項目科目設定（主檔管理）",
+    "parentName": "大類名稱 (目錄/父層)",
+    "openingBalance": "期初餘額 (NT$)",
+    "subjectNameReq": "科目明細名稱 *",
+    "errName": "請輸入科目名稱",
+    "noMatch": "查無符合科目",
+    "saveFailed": "儲存失敗",
+    "deleteFailed": "刪除失敗",
+    "addSubject": "新增科目",
+    "styleLabel": "性質類型",
+    "saveChanges": "儲存變更",
+    "create": "新增建置",
+    "cancel": "取消",
+    "edit": "編輯",
+    "delete": "刪除",
+    "close": "關閉",
+    "monthN": "{n}月",
+    "searchPh": "搜尋{cls}大類或科目名稱...",
+    "editSubject": "編輯科目：{name}",
+    "newSubjectOf": "新增{cls}科目",
+    "confirmDelete": "確定要刪除科目「{name}」嗎？若該科目有交易關聯可能影響統計。",
+    "styleRegular": "常態性",
+    "styleIrregular": "非常態性",
+    "openingBalanceLabel": "期初餘額:",
+    "sortLabel": "排序:",
+    "total": "共 {n} 個科目"
+  },
+  "FinanceMdb": {
+    "reLogin": "請重新登入",
+    "uploadFailed": "上傳失敗：{msg}",
+    "parseFailed": "解析失敗",
+    "importFailed": "匯入失敗",
+    "zTitle": "匯入流水帳與科目（.mdb）",
+    "zDesc": "上傳記帳資料庫，系統將自動建置樹狀科目主檔並去重匯入交易。",
+    "parsing": "正在解析資料庫中…",
+    "chooseMdb": "點擊選擇 .mdb 檔案",
+    "supportsMdb": "支援 MymoneyData.mdb 記帳資料庫",
+    "bookName": "帳本名稱：",
+    "dateRange": "日期區間：",
+    "importableRows": "可匯入交易分錄",
+    "rowsN": "{n} 筆",
+    "autoSubjects": "自動建置科目",
+    "itemsN": "{n} 個",
+    "totalIncome": "總收入",
+    "totalExpense": "總支出",
+    "writeMode": "寫入模式選擇（防呆與覆蓋機制）",
+    "modeAppend": "增量補充（預設推薦）",
+    "modeAppendDesc": "依流水單號自動去重，已存在的交易略過，僅補入新單據。",
+    "modeClean": "清空並重新匯入（乾淨覆蓋）",
+    "modeCleanDesc": "先清除歷史 MDB 舊資料再完整寫入，避免舊刪除單據殘留。手動帳目完全不受影響。",
+    "alignTree": "自動建置與對齊科目樹（{n} 個科目）",
+    "alignTreeDesc": "系統將依 MDB 中的 <code>ITEM_DATA</code> 自動建立資產、負債、收入、支出樹狀科目與期初金額，並同步對應所有收付帳戶。",
+    "detected": "偵測到 {e} 筆格式錯誤，{w} 筆疑似年份筆誤",
+    "viewErrors": "檢視詳細錯誤明細",
+    "viewErrorsHint": "點擊「檢視詳細錯誤明細」可查看具體在哪一筆流水號、日期、項目及出錯原因，方便您後續核對與修改。",
+    "allOk": "所有分錄格式檢查完全正確，無任何格式異常。",
+    "rechoose": "重新選擇",
+    "writing": "正在寫入資料庫…",
+    "confirmClean": "確認清空舊檔並全新重匯",
+    "confirmAppend": "確認匯入並建置科目",
+    "done": "匯入完成！",
+    "importedN": "已成功匯入 <b>{n}</b> 筆交易",
+    "clearedN": "（已自動清空先前 {n} 筆舊 MDB 資料，達成乾淨重匯）",
+    "skippedN": "，略過 {n} 筆",
+    "createdSummary": "，自動建置/更新 <b>{s}</b> 個樹狀科目，新建 <b>{a}</b> 個資金帳戶。",
+    "issuesN": "本次匯入共有 {n} 筆異常或警告記錄",
+    "viewErrorsN": "查看錯誤明細 ({n})",
+    "finish": "完成並進入出納系統",
+    "loadLogsFailed": "載入匯入紀錄失敗",
+    "networkError": "連線錯誤",
+    "revertFailed": "撤回失敗",
+    "revertedN": "已成功撤回此批次（共清除 {n} 筆單據）",
+    "typeDelete": "請輸入 DELETE 確認清空",
+    "clearFailed": "清空失敗",
+    "clearedAllN": "已成功清空所有 MDB 歷史資料（共清除 {n} 筆單據）",
+    "bTitle": "MDB 匯入歷史與批次撤回管理",
+    "bDesc": "若匯入資料有誤或欲重新倒帳，可一鍵安全撤回整批流水帳（手動建立之帳目 100% 完整保留）。",
+    "bookCode": "帳本代碼：<b>{book}</b>（共 {n} 次匯入紀錄）",
+    "clearAllBtn": "清空所有 MDB 匯入流水帳",
+    "loadingLogs": "正在載入匯入批次紀錄…",
+    "noLogs": "尚無任何 MDB 匯入歷史紀錄",
+    "noLogsHint": "可點選出納頁面「匯入記帳檔 (.mdb)」導入帳務小管家資料庫。",
+    "statusReverted": "已撤回 (Reverted)",
+    "statusActive": "生效中 (Active)",
+    "revertBtn": "撤回此批資料",
+    "importedRows": "匯入筆數：",
+    "builtSubjects": "建置科目：",
+    "notRecorded": "未記錄",
+    "revertedAt": "此批次已於 {at} 撤回，所有流水帳已全數移除。",
+    "closeWindow": "關閉視窗",
+    "revertConfirmTitle": "確認撤回此批 MDB 資料？",
+    "revertConfirmBody": "您即將撤回於 <b>{at}</b> 匯入之 <b>{file}</b>。",
+    "revertWillDelete": "將完全刪除該批次之 <b>{n}</b> 筆流水單據。",
+    "manualKept": "您在系統中手工建立的所有出納記錄將<b>完整保留，不受影響</b>。",
+    "confirmRevert": "確認撤回清除",
+    "cancel": "取消",
+    "clearAllTitle": "高防護警告：清空全部 MDB 匯入交易",
+    "clearAllBody": "此操作將自出納流水帳中，清除<b>所有由 MDB 匯入的交易單據</b>（包含所有批次）。",
+    "irreversible": "此操作不可撤銷，請確認您欲完全乾淨重整帳本。",
+    "manualAndTreeKept": "手動建立的收支單據與已建立的科目樹將繼續保留。",
+    "typeDeleteHint": "為避免誤觸，請在下方輸入 <b>DELETE</b> 確認執行：",
+    "typeDeletePh": "輸入 DELETE",
+    "confirmClearAll": "確認清空全部 MDB 單據",
+    "rpTitle": "=== MDB 匯入錯誤診斷報告 ===",
+    "rpBook": "帳本: {book} | 檔案: {file}",
+    "rpCounts": "總錯誤數: {e} 筆 | 總警告數: {w} 筆",
+    "rpGenerated": "產生時間: {at}",
+    "rpItem": "[#{i}] 流水號 MAKE_NO: {no} | 日期: {date} | 類型: {sev} ({type})",
+    "sevError": "錯誤",
+    "sevWarning": "警告",
+    "rpProblem": "問題:",
+    "rpDesc": "說明:",
+    "rpFix": "建議修復:",
+    "rpRaw": "原始分錄:",
+    "rpRow": "類別:{cls} | 項目:{item} | 存入:{inn} | 支出:{out} | 摘要:{note}",
+    "eTitle": "MDB 匯入異常與錯誤詳細診斷",
+    "eBook": "帳本: {book}",
+    "eDesc": "列出每筆異常分錄的流水號、涉及項目與詳細原因，方便您在資料庫或系統中比對修改。",
+    "fAll": "全部 ({n})",
+    "fError": "錯誤 ({n})",
+    "fWarning": "警告/疑似錯字 ({n})",
+    "reportCopied": "已複製報告",
+    "copyReport": "複製錯誤診斷報告",
+    "eSearchPh": "搜尋流水號 (MAKE_NO)、日期、項目名稱、備註...",
+    "eNone": "查無符合條件的異常或錯誤",
+    "eNoneHint": "此檔案的分錄均可正常匯入與處理",
+    "voucherNo": "流水號 #{no}",
+    "dateN": "日期: {date}",
+    "skipped": "略過未匯入",
+    "importedCheck": "已匯入(建議核對)",
+    "collapseRaw": "收合原始分錄",
+    "viewRaw": "查看原始分錄",
+    "suggestion": "建議處理：",
+    "rawInfo": "MDB 原始成對分錄資訊（共 {n} 列）：",
+    "colClass": "類別",
+    "colItem": "項目名稱",
+    "colIn": "存入",
+    "colOut": "支出",
+    "colNote": "摘要備註",
+    "eFooter": "共 {n} 筆項目（錯誤: {e}，警告: {w}）"
+  },
+  "HrImport": {
+    "employee": {
+      "name": {
+        "label": "姓名",
+        "example": "王小明"
+      },
+      "phone": {
+        "label": "電話"
+      },
+      "department": {
+        "label": "部門"
+      },
+      "position": {
+        "label": "職稱",
+        "example": "店員"
+      },
+      "staff_category": {
+        "label": "正兼職"
+      },
+      "employment_type": {
+        "label": "聘用類型"
+      },
+      "hire_date": {
+        "label": "到職日"
+      },
+      "base_salary": {
+        "label": "底薪"
+      },
+      "hourly_rate": {
+        "label": "時薪"
+      },
+      "store": {
+        "label": "門市"
+      },
+      "attendance_no": {
+        "label": "考勤工號"
+      },
+      "bank_account": {
+        "label": "銀行帳號"
+      },
+      "bank_name": {
+        "label": "收款銀行"
+      },
+      "id_number": {
+        "label": "身分證字號"
+      },
+      "status": {
+        "label": "狀態"
+      },
+      "notes": {
+        "label": "備註"
+      },
+      "_meta": {
+        "title": "批次匯入 / 更新員工資料",
+        "description": "支援 .xlsx, .xls 與 .csv 檔案。若姓名與身分證號已存在將自動更新，否則新增。",
+        "template": "員工名單範本",
+        "sheet": "員工資料"
+      }
+    },
+    "payroll": {
+      "name": {
+        "label": "員工姓名",
+        "example": "王小明"
+      },
+      "year": {
+        "label": "年"
+      },
+      "month": {
+        "label": "月"
+      },
+      "base_salary": {
+        "label": "底薪"
+      },
+      "allowances": {
+        "label": "加給"
+      },
+      "deductions": {
+        "label": "扣除"
+      },
+      "bonus": {
+        "label": "獎金"
+      },
+      "notes": {
+        "label": "備註"
+      },
+      "_meta": {
+        "title": "批次匯入 / 更新月度薪資",
+        "description": "支援 .xlsx, .xls 與 .csv 檔案。若名單中已有該員工當月薪資將自動覆蓋更新，未建立之員工將自動建立。",
+        "template": "薪資資料範本",
+        "sheet": "月薪資表"
+      }
+    },
+    "candidate": {
+      "name": {
+        "label": "姓名",
+        "example": "李大同"
+      },
+      "phone": {
+        "label": "電話"
+      },
+      "position": {
+        "label": "應徵職務",
+        "example": "調飲師"
+      },
+      "store": {
+        "label": "應徵門市"
+      },
+      "staff_category": {
+        "label": "正兼職"
+      },
+      "stage": {
+        "label": "應徵階段"
+      },
+      "birthday": {
+        "label": "生日"
+      },
+      "id_number": {
+        "label": "身分證號"
+      },
+      "_meta": {
+        "title": "批次匯入 / 更新應徵者名單",
+        "description": "支援 .xlsx, .xls 與 .csv 檔案。若電話、Email 或身分證號相符將自動更新，否則新增。",
+        "template": "應徵者名單範本",
+        "sheet": "應徵者清單"
+      }
+    },
+    "evaluation": {
+      "name": {
+        "label": "員工姓名",
+        "example": "王小明"
+      },
+      "attendance_no": {
+        "label": "考勤工號"
+      },
+      "year": {
+        "label": "年"
+      },
+      "month": {
+        "label": "月"
+      },
+      "bonus": {
+        "label": "獎金"
+      },
+      "reward": {
+        "label": "獎勵金額"
+      },
+      "penalty": {
+        "label": "懲罰扣款"
+      },
+      "score": {
+        "label": "評分"
+      },
+      "notes": {
+        "label": "評語備註",
+        "example": "出勤良好表現優異"
+      },
+      "_meta": {
+        "title": "批次匯入 / 更新考核獎懲資料",
+        "description": "支援 .xlsx, .xls 與 .csv 檔案。請填寫員工姓名或考勤工號。",
+        "template": "員工考核獎懲範本",
+        "sheet": "考核獎懲"
+      }
+    },
+    "insurance": {
+      "name": {
+        "label": "員工姓名",
+        "example": "王小明"
+      },
+      "id_number": {
+        "label": "身分證號"
+      },
+      "attendance_no": {
+        "label": "考勤工號"
+      },
+      "insurance_required": {
+        "label": "是否需投保"
+      },
+      "insurance_status": {
+        "label": "投保狀態"
+      },
+      "insurance_number": {
+        "label": "保險證號"
+      },
+      "insurance_salary": {
+        "label": "投保薪資"
+      },
+      "_meta": {
+        "title": "批次匯入 / 更新勞健保資料",
+        "description": "支援 .xlsx, .xls 與 .csv 檔案。可比對員工姓名、身分證號或考勤工號更新投保狀態、證號與投保薪資。",
+        "template": "員工投保資料範本",
+        "sheet": "投保名單"
+      }
+    },
+    "leave": {
+      "name": {
+        "label": "員工姓名",
+        "example": "王小明"
+      },
+      "attendance_no": {
+        "label": "考勤工號"
+      },
+      "leave_type": {
+        "label": "假別"
+      },
+      "start_date": {
+        "label": "開始日期"
+      },
+      "end_date": {
+        "label": "結束日期"
+      },
+      "days": {
+        "label": "天數"
+      },
+      "reason": {
+        "label": "事由",
+        "example": "家庭事宜"
+      },
+      "status": {
+        "label": "審核狀態"
+      },
+      "notes": {
+        "label": "備註"
+      },
+      "_meta": {
+        "title": "批次匯入請假紀錄",
+        "description": "支援 .xlsx, .xls 與 .csv 檔案。請填寫員工姓名或考勤工號。",
+        "template": "請假紀錄範本",
+        "sheet": "請假清單"
+      }
+    }
+  },
+  "UnitsImport": {
+    "code": {
+      "label": "單位編號"
+    },
+    "name": {
+      "label": "單位名稱"
+    },
+    "unit_type": {
+      "label": "類型"
+    },
+    "short_name": {
+      "label": "簡稱"
+    },
+    "region": {
+      "label": "區域",
+      "example": "胡志明"
+    },
+    "base_hourly_rate": {
+      "label": "基本時薪"
+    },
+    "electricity_no": {
+      "label": "電號"
+    },
+    "water_no": {
+      "label": "水號"
+    },
+    "address": {
+      "label": "地址",
+      "example": "胡志明市第一郡..."
+    },
+    "active": {
+      "label": "啟用狀態"
+    },
+    "_meta": {
+      "title": "批次匯入 / 更新單位資料",
+      "description": "支援 .xlsx, .xls 與 .csv 檔案。若單位編號相符將自動更新，否則新增。",
+      "template": "單位資料範本",
+      "sheet": "單位清單"
+    }
+  },
+  "AffairsImport": {
+    "title": {
+      "label": "文件標題",
+      "example": "台北忠孝門市房屋租賃契約書"
+    },
+    "doc_type": {
+      "label": "文件類別"
+    },
+    "store_code": {
+      "label": "門市代碼"
+    },
+    "counterparty": {
+      "label": "簽約對象/出租人",
+      "example": "房東 王大明"
+    },
+    "effective_date": {
+      "label": "生效起日"
+    },
+    "expiry_date": {
+      "label": "到期日"
+    },
+    "deposit": {
+      "label": "押金"
+    },
+    "monthly_rent": {
+      "label": "月租金/費用"
+    },
+    "payment_day": {
+      "label": "每月繳款日"
+    },
+    "notes": {
+      "label": "備註",
+      "example": "押金兩個月，水電自付"
+    },
+    "_meta": {
+      "title": "批次匯入外務證照與租約",
+      "description": "支援 .xlsx, .xls 與 .csv 檔案。若文件標題相符將自動更新。",
+      "template": "外務證照與門市租約範本",
+      "sheet": "合約證照清單"
+    }
+  },
+  "RdLogsImport": {
+    "title": {
+      "label": "日誌標題",
+      "example": "配方風味測試紀錄"
+    },
+    "summary": {
+      "label": "日誌內容",
+      "example": "甜度降5%，茶香明顯提升..."
+    },
+    "date": {
+      "label": "日期"
+    },
+    "_meta": {
+      "title": "批次匯入研發日誌",
+      "description": "支援 .xlsx, .xls 與 .csv 檔案。請包含日誌標題與內容。",
+      "template": "研發日誌範本",
+      "sheet": "研發日誌"
+    }
+  },
+  "StoreExpensesImport": {
+    "store": {
+      "code": {
+        "label": "門市編碼"
+      },
+      "name": {
+        "label": "門市名稱"
+      },
+      "region": {
+        "label": "區域",
+        "example": "胡志明"
+      },
+      "active": {
+        "label": "啟用狀態"
+      },
+      "_meta": {
+        "title": "批次匯入門市 / 區域",
+        "description": "支援 .xlsx, .xls 與 .csv 檔案。若門市代碼相符將自動更新。",
+        "template": "門市資料範本",
+        "sheet": "門市清單"
+      }
+    },
+    "category": {
+      "code": {
+        "label": "科目編碼"
+      },
+      "name": {
+        "label": "科目名稱",
+        "example": "水費"
+      },
+      "entry_method": {
+        "label": "填寫方式"
+      },
+      "vendor_service": {
+        "label": "廠商別"
+      },
+      "sort": {
+        "label": "排序"
+      },
+      "_meta": {
+        "title": "批次匯入費用科目",
+        "description": "支援 .xlsx, .xls 與 .csv 檔案。若科目代碼相符將自動更新。",
+        "template": "費用科目範本",
+        "sheet": "科目清單"
+      }
+    },
+    "vendor": {
+      "name": {
+        "label": "廠商名稱",
+        "example": "台灣瓦斯"
+      },
+      "service": {
+        "label": "服務別"
+      },
+      "regions": {
+        "label": "涵蓋區域"
+      },
+      "active": {
+        "label": "啟用狀態"
+      },
+      "_meta": {
+        "title": "批次匯入廠商資料",
+        "description": "支援 .xlsx, .xls 與 .csv 檔案。若統編或廠商名稱相符將自動更新。",
+        "template": "廠商資料範本",
+        "sheet": "廠商名冊"
+      }
+    }
+  },
+  "VendorsImport": {
+    "vendor": {
+      "name": {
+        "label": "廠商名稱",
+        "example": "台灣茶葉供應商"
+      },
+      "tax_id": {
+        "label": "統一編號"
+      },
+      "service": {
+        "label": "類別"
+      },
+      "contact": {
+        "label": "聯絡人",
+        "example": "陳先生"
+      },
+      "phone": {
+        "label": "電話"
+      },
+      "address": {
+        "label": "地址",
+        "example": "台北市大安區..."
+      },
+      "products": {
+        "label": "提供產品",
+        "example": "茶葉、原物料"
+      },
+      "pay_terms": {
+        "label": "付款方式"
+      },
+      "billing_cycle": {
+        "label": "結帳週期"
+      },
+      "billing_day": {
+        "label": "結帳日"
+      },
+      "active": {
+        "label": "啟用狀態"
+      },
+      "_meta": {
+        "title": "批次匯入 / 更新廠商資料",
+        "description": "支援 .xlsx, .xls 與 .csv 檔案。若統編或廠商名稱相符將自動更新，否則新增。",
+        "template": "廠商資料範本",
+        "sheet": "廠商名冊"
+      }
+    },
+    "purchase": {
+      "purchased_on": {
+        "label": "採購日期"
+      },
+      "product": {
+        "label": "採購品項",
+        "example": "高級錫蘭紅茶"
+      },
+      "qty": {
+        "label": "數量"
+      },
+      "amount": {
+        "label": "金額"
+      },
+      "note": {
+        "label": "備註",
+        "example": "第一批進貨"
+      },
+      "_meta": {
+        "title": "批次匯入採購紀錄",
+        "description": "支援 .xlsx, .xls 與 .csv 檔案。請填寫採購日期、採購品項與金額。",
+        "template": "採購紀錄範本",
+        "sheet": "採購清單"
+      }
+    }
+  },
+  "PersonnelImport": {
+    "name": {
+      "label": "姓名",
+      "example": "阮小芳"
+    },
+    "gender": {
+      "label": "性別"
+    },
+    "native_place": {
+      "label": "籍貫",
+      "example": "胡志明市"
+    },
+    "birthday": {
+      "label": "生日"
+    },
+    "id_number": {
+      "label": "身分證號"
+    },
+    "education": {
+      "label": "學歷"
+    },
+    "phone": {
+      "label": "電話"
+    },
+    "email": {
+      "label": "個人Email"
+    },
+    "company_email": {
+      "label": "公司Email"
+    },
+    "position": {
+      "label": "職務",
+      "example": "店長"
+    },
+    "store": {
+      "label": "門市"
+    },
+    "staff_category": {
+      "label": "正兼職"
+    },
+    "payroll_no": {
+      "label": "薪資編號"
+    },
+    "address": {
+      "label": "地址",
+      "example": "胡志明市第一郡"
+    },
+    "_meta": {
+      "title": "批次匯入 / 更新人員資料",
+      "description": "支援 Excel (.xlsx) 與 CSV 檔。若身分證號、Email 或姓名電話相符將自動更新，否則新增。",
+      "template": "人員資料範本",
+      "sheet": "人員名冊"
+    }
+  },
+  "ShiftImport": {
+    "employee_name": {
+      "label": "員工姓名",
+      "example": "王小明"
+    },
+    "work_date": {
+      "label": "工作日期"
+    },
+    "slot_code": {
+      "label": "時段"
+    },
+    "_meta": {
+      "title": "批次匯入排班表",
+      "description": "支援 .xlsx, .xls 與 .csv 檔案。請填寫員工姓名、工作日期（YYYY-MM-DD）與時段（如：早、午、晚）。",
+      "template": "門市排班範本",
+      "sheet": "排班表"
+    }
+  },
+  "HrUnion": {
+    "subtitle": "符合越南總工會 (Tổng Liên đoàn Lao động) 規範之會員管理、福利慰問、集體協議與財務報表",
+    "noDocs": "目前尚未歸檔集體協議與勞資對話文件。支援上傳經官方核准戳印之 PDF 永久存檔。",
+    "noBenefits": "目前尚無慰問金申請記錄。支援生日、結婚、生育、住院、急難救助線上申請與簽核。",
+    "totalIncome": "總收入 (Thu đoàn phí 1% & kinh phí 2%)",
+    "exportReport": "匯出總工會財務報表 (Mẫu B14-CĐ & B15-CĐ)",
+    "tabDocs": "集體協議與勞資對話 (TƯLĐTT & Đối thoại)",
+    "docsTitle": "集體勞動協議書 (TƯLĐTT) 及每季法定勞資對話會議紀錄",
+    "totalExpense": "總支出 (Chi thăm hỏi, phong trào)",
+    "requestTitle": "申請工會福利／慰問金 (Chế độ & Thăm hỏi)",
+    "tabFinances": "工會財務收支 (Tài chính Công đoàn)",
+    "noMembers": "尚無工會會員資料。點擊右上「新增工會會員」記錄加入申請。",
+    "docTitlePh": "如：集體勞動協議書 2026-2028 (已蓋聯團戳印)",
+    "entryTitle": "工會財務記帳 (Thu - Chi tài chính)",
+    "code2": "2% 企業經費 (Kinh phí công đoàn)",
+    "tabBenefits": "福利與慰問申請 (Chế độ & Thăm hỏi)",
+    "noEntries": "尚無工會收支流水。點擊右上「記帳」新增收入或慰問支出。",
+    "code3": "慰問與急難補助 (Thăm hỏi trợ cấp)",
+    "cardNumber": "工會會員卡號 (Số thẻ đoàn viên)",
+    "balance": "工會結餘 (Kết dư tài chính)",
+    "title": "工會系統 (Công đoàn cơ sở)",
+    "uploadDocTitle": "上傳集體協議與會議紀錄 (TƯLĐTT)",
+    "receiptNo": "收據 / 憑證號 (Chứng từ)",
+    "addMemberTitle": "新增工會會員 (Đoàn viên)",
+    "code1": "1% 會員會費 (Đoàn phí)",
+    "tabMembers": "會員檔案庫 (Đoàn viên)",
+    "bhxhNumber": "社保號碼 (Mã số BHXH)",
+    "code4": "活動推廣 (Phong trào)",
+    "statusApproved": "已核准待發 (Đã duyệt)",
+    "statusPending": "待審核 (Chờ duyệt)",
+    "active": "在會 (Đoàn viên)",
+    "statusPaid": "✓ 已撥款 (Đã chi)",
+    "reasonPh": "如：出院證明書備查、結婚賀禮",
+    "code5": "行政管理 (Quản lý)",
+    "amountVndReq": "慰問金額 (VND) *",
+    "benefitsTitle": "法定福利發放與慰問簽核",
+    "idNumber": "身分證號 (CCCD)",
+    "summaryPh": "如：提撥7月份工會會費",
+    "reasonVoucher": "事由說明 / 憑證號",
+    "choosePdf": "選擇 PDF 掃描檔",
+    "amountReq": "金額 (VND) *",
+    "bhxh": "社保號 BHXH:",
+    "uploadDoc": "上傳協議／會議紀錄",
+    "addEntry": "記帳（收入／支出）",
+    "storeDept": "任職門市 / 部門",
+    "requestBenefit": "申請福利／慰問金",
+    "income": "收入 (Thu)",
+    "expense": "支出 (Chi)",
+    "ledger": "財務流水帳明細",
+    "pleaseChoose": "— 請選擇 —",
+    "addMember": "新增工會會員",
+    "employeeNameReq": "員工姓名 *",
+    "chooseMemberReq": "選擇會員 *",
+    "benefitTypeReq": "福利種類 *",
+    "docCategoryReq": "文件分類 *",
+    "docTitleReq": "文件標題 *",
+    "confirmUpload": "確認上傳歸檔",
+    "joinDate": "入會日期:",
+    "requestDate": "申請日:",
+    "effective": "生效日:",
+    "expiry": "到期日:",
+    "saveFailed": "儲存失敗",
+    "confirmSave": "確認儲存",
+    "requestFailed": "申請失敗",
+    "submitRequest": "送出申請",
+    "uploadFailed": "上傳失敗",
+    "entryFailed": "記帳失敗",
+    "typeReq": "類型 *",
+    "itemCode": "項目代碼",
+    "summary": "說明摘要",
+    "confirmEntry": "確認記帳",
+    "cardNo": "卡號:",
+    "note": "說明:",
+    "remark": "備註:",
+    "voucher": "憑證:",
+    "hq": "總部",
+    "member": "會員",
+    "cancel": "取消",
+    "other": "其他",
+    "memberCount": "共 {n} 名工會會員",
+    "benefit": {
+      "birthday": "生日禮金 (Sinh nhật)",
+      "marriage": "結婚禮金 (Kết hôn)",
+      "maternity": "生育津貼 (Sinh con)",
+      "hospital": "住院慰問 (Nằm viện)",
+      "relief": "急難救助 (Trợ cấp khó khăn)",
+      "other": "其他福利 (Khác)"
+    },
+    "docCat": {
+      "tuldtt": "集體勞動協議書 (TƯLĐTT)",
+      "noiquy": "內部工作規章 (Nội quy lao động)",
+      "doitheo": "法定勞資對話紀錄 (Biên bản đối thoại)",
+      "committee": "執委會會議與選舉批文 (Đại hội / Quyết định)"
+    }
+  },
+  "RepairKnowledge": {
+    "csDesc": "當引進全新品牌型號且尚未建立 PDF 手冊時，輸入品牌與型號，AI 將依據水吧機電公理推導標準狀態機、極限開關與 10 大常見故障樹。",
+    "subtitle": "原廠說明書、線路圖、代碼表結構化切片・冷啟動狀態機自動推導・技師修復閉環學習",
+    "measuredPh": "如：加熱棒量得 530Ω 正常，SSR 輸入端 12V 正常但無輸出",
+    "casesTitle": "技師實戰修復經驗閉環庫 (Case-Based Learning)",
+    "rootCausePh": "如：主板固態繼電器 (SSR) 輸出端擊穿斷路，無法供電給加熱棒",
+    "catPosLong": "💻 POS 與資訊軟硬體 (觸控機/出單機/標籤機/交換機)",
+    "modelPh": "如：ET-99S、FT-16、TM-T82、KM-150A",
+    "catBarLong": "🧋 門市吧檯設備 (封口機/果糖機/萃茶機/製冰機)",
+    "brandPh": "如：益芳、宏茂、Hoshizaki、Epson、台達",
+    "partsPh": "如：更換 25A 固態繼電器 (SSR-25DA)",
+    "casesSubtitle": "經由實際到府維修回填，持續反哺 AI 判斷精確度",
+    "rootCauseReq": "拆機排查之真實根因 (Root Cause) *",
+    "techNotePh": "如：建議門市避免於潮濕處放置，每半年緊固端子螺絲",
+    "chunkContentPh": "請詳述排查步驟、正常標準值與異常處置方式...",
+    "searchPh": "搜尋機型、故障碼 (E01)、零件料號...",
+    "catFactoryLong": "🏭 中央工廠設備 (炒糖機/煮茶鍋/循環泵)",
+    "chunkContent": "切片正文內容 (支援 SOP、電阻值、步驟)",
+    "typeErrorCode": "故障代碼表 (Error Code)",
+    "chunkTitlePh": "如：益芳封口機切刀磨損判斷與更換工序",
+    "caseTitle": "登記技師完修實戰經驗 (閉環反哺)",
+    "symptomPh": "如：E01 溫度不上升、膠膜捲不動",
+    "allCategories": "所有類別 (吧檯/工廠/IT)",
+    "typeCircuit": "電路接線圖 (Circuit)",
+    "storeSafeLong": "門市人員可執行 (免拆機安全)",
+    "orderNoPh": "如 RO-202609-008",
+    "errCauseParts": "故障真實原因與更換零件為必填",
+    "tagsPh": "如：切刀, 耗損, 刀片更換",
+    "title": "設備手冊與 RAG 知識庫",
+    "runDerive": "自動推導機電狀態機與故障樹",
+    "addChunkTitle": "新增/收錄設備手冊知識切片",
+    "catPos": "💻 POS 與資訊軟硬體",
+    "csTitle": "設備冷啟動狀態機推導引擎",
+    "techOnlyLong": "技師專用 (需拆機量測)",
+    "noChunks": "查無符合條件之知識切片",
+    "targetModelPh": "如：益芳-ET-99S",
+    "partsReq": "實際更換料件與料號 *",
+    "errBrandModel": "請輸入設備品牌與型號",
+    "measured": "實測電阻值或電壓紀錄",
+    "addChunkBtn": "上傳/新增手冊切片",
+    "derivedParts": "推導標準備品料號：",
+    "tags": "標籤 (逗號分隔)",
+    "orderNo": "工單編號 (可選)",
+    "techNote": "技師心得與預防建議",
+    "errTitleContent": "標題與內容為必填",
+    "type": {
+      "maintenance_sop": "保養清潔 SOP",
+      "real_case": "技師實戰回饋",
+      "error_code": "故障代碼表",
+      "circuit_diagram": "電路接線圖",
+      "troubleshooting_tree": "故障排查樹",
+      "exploded_view": "零件爆炸圖"
+    },
+    "coldStartBtn": "冷啟動狀態機推導",
+    "logCaseBtn": "登記技師完修案例",
+    "catBar": "🧋 門市吧檯設備",
+    "catFactory": "🏭 中央工廠設備",
+    "typeSop": "清潔保養 SOP",
+    "typeCases": "技師實戰回饋案例",
+    "derivedStates": "推導機電狀態機：",
+    "measurements": "⚡ 量測紀錄：",
+    "savedToKb": "已收錄至知識庫",
+    "allTypes": "所有資料類型",
+    "officialSpec": "官方技術規範",
+    "targetModel": "目標設備機型",
+    "symptom": "現場回報現象",
+    "reported": "回報異常：",
+    "rootCause": "真實成因：",
+    "partsReplaced": "更換零件：",
+    "fileCase": "歸檔學習庫",
+    "errDerive": "推導失敗",
+    "errNetwork": "連線失敗",
+    "errSave": "儲存失敗",
+    "errConnection": "連線異常",
+    "storeSafe": "門市可用",
+    "techOnly": "技師專屬",
+    "equipmentCategory": "設備類別",
+    "brand": "品牌廠商",
+    "model": "設備型號",
+    "chunkType": "切片類型",
+    "chunkTitle": "切片標題",
+    "saveChunk": "儲存切片",
+    "equipmentModel": "設備機型",
+    "source": "來源：",
+    "cancel": "取消",
+    "derivedOk": "已成功推導：{name}",
+    "caseDesc": "將到府修復的真實故障原因與實測數值寫入系統，AI 將自動學習並在下一次類似故障中優先推薦該處置方案。"
+  },
+  "RepairAssistant": {
+    "inputPhTech": "輸入機電現象或測量點（例：量測發熱管阻值、24V 脈衝未輸出、E02 凸輪微動開關）...",
+    "techModeDesc": "【技師模式】深入電路量測 (Ω/V)、原廠料號建議、凸輪微動檢驗與修復經驗回饋",
+    "inputPhStore": "描述門市故障或代碼（例：封口機 E01、果糖機出糖不準、出單機缺紙）...",
+    "storeModeDesc": "【門市模式】嚴格守護現場安全，免拆機 3 步排查，未果自動無縫產出報修單",
+    "qp": {
+      "fac1": {
+        "text": "SC-150L 炒糖機攪拌到一半突然停機，面板顯示 VFD-OC",
+        "label": "炒糖機變頻過載跳脫"
+      },
+      "pos2": {
+        "text": "Epson 出單機紅燈一直閃，按進紙鍵沒反應，切刀卡住",
+        "label": "出單機卡紙紅燈閃爍"
+      },
+      "fac2": {
+        "text": "煮茶鍋 PT100 溫度感測器顯示 98度但水根本沒滾",
+        "label": "大煮茶鍋溫控感測漂移"
+      },
+      "pos3": {
+        "text": "POS 觸控螢幕點右上角會跳到左邊，邊框好像有水氣",
+        "label": "POS 觸控螢幕亂跳"
+      },
+      "bar3": {
+        "text": "果糖機全糖出糖量明顯變少，而且出口有結晶滴糖",
+        "label": "果糖機出糖不準"
+      },
+      "pos1": {
+        "text": "POS 結帳後收銀錢箱不會彈開，出單機是好的",
+        "label": "錢箱無法自動彈開"
+      },
+      "fac3": {
+        "text": "自動炒糖機減速箱運轉時有喀喀金屬撞擊異音",
+        "label": "減速機傳動異音"
+      },
+      "pos4": {
+        "text": "吧台出單機完全印不出飲料單，網線有插著",
+        "label": "出單機網路斷線"
+      },
+      "bar1": {
+        "text": "益芳封口機顯示 E01，完全沒有溫度",
+        "label": "E01 發熱板不熱"
+      },
+      "bar4": {
+        "text": "封口機下壓後卡住上不來，發出逼逼叫聲",
+        "label": "封口機卡杯下壓超時"
+      },
+      "bar2": {
+        "text": "封口機 E04，膠膜一直狂轉不停止",
+        "label": "E04 膠膜不停/電眼異常"
+      }
+    },
+    "searching": "正在檢索原廠故障代碼庫、電路接線圖與機電狀態機...",
+    "ticketOk": "✓ 報修工單已成功建立！正在跳轉至工單列表...",
+    "subtitle": "SOP 故障樹・RAG 手冊檢索・閉環學習",
+    "submitTicket": "🚀 一鍵送出報修工單（指派工務技師到府）",
+    "errSubmit": "送出失敗，請手動前往報修單分頁登記",
+    "draftTitle": "AI 已自動彙整報修工單草稿",
+    "ragSources": "RAG 知識檢索依據：",
+    "title": "維修 AI 智慧中樞",
+    "catPos": "POS與資訊軟硬體",
+    "roleUser": "門市人員 / 技師",
+    "roleStoreAi": "門市快速排除 AI",
+    "roleTechAi": "專業技師工程 AI",
+    "storeMode": "門市快速排除模式",
+    "techMode": "專業技師工程模式",
+    "errCreate": "報修單建立失敗",
+    "storeSafetyLabel": "門市安全原則：",
+    "tickTested": "點擊勾選已測試",
+    "chk": {
+      "consumable": "📦 耗材/線路",
+      "ohms": "⚡ 電阻測量",
+      "voltage": "🔌 電壓量測",
+      "cleaning": "🧽 清潔維護",
+      "restart": "🔄 重啟確認"
+    },
+    "expected": "✓ 正常預期：",
+    "ifFailed": "✗ 若無改善：",
+    "catFactory": "中央工廠設備",
+    "draftTried": "已排查項目：",
+    "categoryLabel": "設備類別：",
+    "targetLabel": "目標設備：",
+    "quickAsk": "快速提問：",
+    "draftEquipment": "申報設備：",
+    "draftCode": "故障代碼：",
+    "draftSummary": "狀況概述：",
+    "techCase": "技師實戰:",
+    "catBar": "吧檯設備",
+    "priority": "優先級：",
+    "onSiteIssue": "現場異常",
+    "urgent": "緊急",
+    "diagnose": "排查",
+    "high": "高",
+    "welcomeStore": "您好！我是 **門市設備快速排除 AI** 🤖\n\n專為門市現場打造：**不拆機、防呆安全、3步驟排查**。請在下方點選設備或直接輸入異常現象（如「封口機 E01」、「果糖機出糖變少」、「出單機卡紙」），我將第一時間引導您快速解決！",
+    "welcomeTech": "您好，工程技師！我是 **專業機電與工務維修 AI** ⚡\n\n具備**原廠電路圖、阻值(Ω)電壓(V)量測標準、凸輪微動極限判定**與**零件料號資料庫**。請選擇機型或輸入故障碼，讓我們進行深入排查。",
+    "switchedStore": "🔄 已切換為 **【門市快速排除模式】**：強調現場防呆安全（免拆機、不碰強電），若 3 步驟無法解決將自動提供「一鍵報修」轉派工。",
+    "switchedTech": "🔄 已切換為 **【專業技師工程模式】**：提供三用電表測量數值 (Ω/V)、電路圖接線針腳、原廠零件料號與真實修復案例。",
+    "diagError": "抱歉，系統排查時發生問題：{msg}",
+    "tryLater": "請稍候再試",
+    "networkError": "連線異常，請檢查網路連線。",
+    "stepN": "第 {n} 步：{title}",
+    "stepsTitle": "步驟式排查清單 ({n} 步)：",
+    "storeSafety": "門市安全原則：<s>嚴禁拆卸任何機殼外殼或手碰加熱模具（160°C以上）</s>。依 AI 指引進行電源、清潔與紙膜檢查。",
+    "techSafety": "機電作業原則：三用電表量測阻值<s>務必完全切斷總電源</s>；帶電量測 24VDC/220VAC 需佩戴絕緣裝備。"
+  },
+  "AuditAi": {
+    "readyHint": "可直接詢問操作流程、動線設計、人體工學（防手腕受傷/轉身過頻）、吧台擺設美觀、原料作廢防弊，或拍照上傳現場照片直接討論。",
+    "kbContentPh": "請貼上規範內容、人體工學高度尺寸、罰則說明或 SOP 細節...",
+    "inputPh": "輸入提問或與專家探討流程動線、擺放、安全合規...",
+    "kbTitlePh": "標題（如：水吧封口機擺放間距要求、假作廢罰則標準）",
+    "suggestEmpty": "發送訊息後，專家建議與答案將獨立顯示於此。",
+    "kbTitle": "稽核專家知識庫・隨時補充訓練資料",
+    "noAccess": "僅稽核單位可使用稽核討論AI",
+    "photoOnly": "（上傳現場照片並請求診斷）",
+    "logSaved": "已自動摘要並存入稽核日誌！",
+    "suggestPanel": "建議與答案專區 (1/3)",
+    "kbEmpty": "目前尚未建立補充訓練資料",
+    "thinking": "稽核專家思考分析中…",
+    "ready": "稽核專家對話已就緒",
+    "uploadPhoto": "拍照或上傳巡檢照片",
+    "clickToAsk": "點擊卡片可直接追問",
+    "removePeriod": "不再附上耗用數據",
+    "storePh": "選擇或輸入門市",
+    "title": "稽核討論AI",
+    "noChats": "尚無歷史對話",
+    "kbAdd": "新增至知識庫",
+    "untitled": "無標題對話",
+    "toInput": "帶入輸入框",
+    "expert": "專家顧問",
+    "auditLog": "稽核日誌",
+    "inspection": "現場巡檢",
+    "genLog": "生成日誌",
+    "sitePhoto": "現場照片",
+    "quoteAsk": "引用追問",
+    "knowledge": "知識庫",
+    "newChat": "新對話",
+    "modeDiscuss": "討論",
+    "modeGuide": "導引",
+    "preview": "預覽",
+    "sendFailed": "發送失敗",
+    "kind": {
+      "sop": "SOP 流程規範",
+      "ergonomics": "人體工學與擺放",
+      "hygiene": "環境衛生標準",
+      "rules": "罰則規章",
+      "other": "補充資料"
+    },
+    "suggestArea": "建議答案區",
+    "suggestOn": "已開啟 (1/3)",
+    "suggestOff": "已關閉",
+    "store": "門市",
+    "periodLoaded": "已帶入 {store} {period} 原料耗用數據",
+    "hint1": "水吧封口機與冰槽動線如何調整才符合人體工學？",
+    "hint2": "現場發現已按作廢的原料仍在吧台，標準處置流程為何？",
+    "hint3": "抹布分區與隨手清（Clean as you go）稽核重點？",
+    "hint4": "門市公務機與個人 Zalo 私群該如何防杜私下收款？",
+    "followUp": "針對這項建議「{item}」，如何更具體在門市執行？",
+    "refSuggestion": "（參考建議：{item}）",
+    "analyzeErgo": "請針對「{item}」進行人體工學調整分析"
+  },
+  "CompanyPlan": {
+    "loadFailed": "載入失敗",
+    "networkError": "網路錯誤，請稍後再試",
+    "orderFailed": "建立訂單失敗",
+    "loading": "載入中…",
+    "company": "公司",
+    "enterpriseFull": "專屬客製-企業版",
+    "companyPlan": "公司版",
+    "enterprise": "企業版",
+    "enterpriseDesc": "成員不限人數；開通模組皆為 MAX 等級；點數功能不限用量；CHAT 開放全部模型與生圖／影片；功能新增／調整不限次數。",
+    "companyDesc": "成員不限人數；開通的客服、訂房、行銷模組皆為 MAX 等級。含 CHAT 免費對話與每月 1 次免費功能微調。",
+    "inUse": "{plan}使用中",
+    "expires": "，到期日 {date}",
+    "notActive": "尚未啟用公司版",
+    "yearly": "年繳（{n} 個月價格）",
+    "monthly": "月繳",
+    "payNeedsAdmin": "付款需由<b>公司負責人或管理員</b>操作。",
+    "priceBreakdown": "計價明細（美元／月）",
+    "yearlyTotal": "年繳合計（每月 ${m} × {n}）",
+    "monthlyTotal": "每月合計",
+    "contractNote": "開通模組、ERP 人數與門市數由平台依合約設定，如需調整請聯繫我們。",
+    "credits": "點數",
+    "enterpriseCredits": "企業版不限點數，成員使用點數功能不會扣點。",
+    "wallet": "公司錢包",
+    "monthlyGift": "本月贈點（每月 ${n}，不累積）",
+    "paidBalance": "儲值餘額",
+    "deductOrder": "成員使用行銷生成、智慧圓桌、AI Agent 等扣點功能時，先扣本月贈點，再扣儲值。",
+    "topUp": "儲值 {label}",
+    "getsCredits": "得 ${n} 點",
+    "topUpWho": "儲值需由負責人、管理員、經理或財務人員操作。",
+    "topUpAfterActive": "啟用公司版後即可儲值公司錢包。",
+    "renew": "續約",
+    "activate": "付款啟用",
+    "payBtn": "{action}（${total} 美元）",
+    "payNote": "付款後立即生效；續約會從原到期日往後延長。到期前不會自動續訂。"
+  },
+  "PosMenu": {
+    "subtitle": "上傳圖片、多語系名稱與描述，Kiosk 依語言顯示",
+    "importBtn": "批次匯入菜單 (Excel/CSV)",
+    "uploadImage": "上傳圖片（選填）",
+    "itemNamePh": "品名（主語言）",
+    "mainDescPh": "主描述（繁中）",
+    "descPh": "描述（選填）",
+    "pricePh": "價格（元）",
+    "multilangContent": "多語系內容",
+    "aiTranslate": "AI 翻譯",
+    "title": "菜單編輯",
+    "addCategory": "新增分類",
+    "categoryName": "分類名稱",
+    "addItem": "新增品項",
+    "chooseCategory": "選擇分類",
+    "changeImage": "更換圖片",
+    "multilang": "多語系",
+    "all": "全部",
+    "global": "全域",
+    "add": "新增",
+    "preview": "預覽",
+    "remove": "移除",
+    "image": "圖片",
+    "disable": "停用",
+    "enable": "啟用",
+    "save": "儲存",
+    "cancel": "取消",
+    "store": "門市",
+    "revision": "版本 {n}",
+    "namePhLang": "{lang} 名稱",
+    "descPhLang": "{lang} 描述",
+    "storeOnly": "{name} 專屬"
+  },
+  "PosMenuImport": {
+    "_meta": {
+      "title": "批次匯入 / 更新 POS 菜單",
+      "description": "支援 .xlsx, .xls 與 .csv 檔案。若分類不存在將自動建立，若品項名稱相符將自動更新，否則新增。",
+      "template": "POS菜單範本",
+      "sheet": "菜單品項"
+    },
+    "name": {
+      "label": "商品名稱",
+      "example": "珍珠奶茶"
+    },
+    "category": {
+      "label": "商品分類",
+      "example": "經典茶飲"
+    },
+    "price": {
+      "label": "售價(元)"
+    },
+    "description": {
+      "label": "商品描述",
+      "example": "濃郁奶香搭配現煮波霸珍珠"
+    },
+    "barcode": {
+      "label": "條碼"
+    }
+  },
+  "PosStores": {
+    "loading": "載入中…",
+    "title": "門市與終端",
+    "subtitle": "每間門市一台 Debian 終端。將 device_key 填入 Kiosk 或 pos-bridge。",
+    "importBtn": "批次匯入門市 (Excel/CSV)",
+    "storeName": "門市名稱",
+    "addStore": "新增門市",
+    "terminal": "終端：{name}",
+    "hideKey": "隱藏金鑰",
+    "showKey": "顯示金鑰",
+    "copyKey": "複製金鑰",
+    "lastSync": "上次同步：",
+    "never": "尚未",
+    "noTerminal": "尚無終端",
+    "noStores": "尚無門市"
+  },
+  "PosStoresImport": {
+    "_meta": {
+      "title": "批次匯入門市",
+      "description": "支援 .xlsx, .xls 與 .csv 檔案。請填寫門市名稱與代碼（可選）。",
+      "template": "POS門市清單範本",
+      "sheet": "門市清單"
+    },
+    "name": {
+      "label": "門市名稱",
+      "example": "信義旗艦店"
+    },
+    "slug": {
+      "label": "代碼 (Slug)"
+    }
+  },
+  "PosOrders": {
+    "title": "訂單管理",
+    "all": "全部",
+    "status": {
+      "pending": "待處理",
+      "preparing": "製作中",
+      "ready": "可取餐",
+      "done": "完成",
+      "cancelled": "取消"
+    },
+    "type": {
+      "dine_in": "內用",
+      "takeout": "外帶",
+      "delivery": "外送"
+    },
+    "table": "桌 {n}",
+    "note": "備註：{note}",
+    "empty": "尚無訂單"
   }
 }

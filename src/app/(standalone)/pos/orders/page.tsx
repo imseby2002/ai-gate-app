@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { createClient } from '@/lib/supabase/client'
 import { ClipboardList } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import type { PosCartLine, PosOrderStatus } from '@/lib/pos/types'
 
 interface OrderRow {
@@ -21,21 +22,18 @@ interface OrderRow {
   pos_stores: { name: string }
 }
 
-const STATUS: { id: PosOrderStatus; label: string }[] = [
-  { id: 'pending', label: '待處理' },
-  { id: 'preparing', label: '製作中' },
-  { id: 'ready', label: '可取餐' },
-  { id: 'done', label: '完成' },
-  { id: 'cancelled', label: '取消' },
+// 顯示文字在 PosOrders.status.* / PosOrders.type.*
+const STATUS: { id: PosOrderStatus }[] = [
+  { id: 'pending' }, { id: 'preparing' }, { id: 'ready' }, { id: 'done' }, { id: 'cancelled' },
 ]
-
-const TYPE_LABEL: Record<string, string> = { dine_in: '內用', takeout: '外帶', delivery: '外送' }
+const ORDER_TYPES = ['dine_in', 'takeout', 'delivery']
 
 function fmt(cents: number) {
   return `$${(cents / 100).toFixed(0)}`
 }
 
 export default function PosOrdersPage() {
+  const t = useTranslations('PosOrders')
   const [orders, setOrders] = useState<OrderRow[]>([])
   const [filter, setFilter] = useState<string>('')
 
@@ -70,13 +68,13 @@ export default function PosOrdersPage() {
     <div className="mx-auto max-w-3xl px-6 py-6 space-y-5">
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0"><ClipboardList className="h-5 w-5 text-primary" /></div>
-        <h1 className="text-2xl font-bold">訂單管理</h1>
+        <h1 className="text-2xl font-bold">{t('title')}</h1>
       </div>
       <div className="flex flex-wrap gap-2">
-        <Button size="sm" variant={!filter ? 'default' : 'outline'} onClick={() => setFilter('')}>全部</Button>
+        <Button size="sm" variant={!filter ? 'default' : 'outline'} onClick={() => setFilter('')}>{t('all')}</Button>
         {STATUS.map(s => (
           <Button key={s.id} size="sm" variant={filter === s.id ? 'default' : 'outline'} onClick={() => setFilter(s.id)}>
-            {s.label}
+            {t(`status.${s.id}`)}
           </Button>
         ))}
       </div>
@@ -86,9 +84,9 @@ export default function PosOrdersPage() {
           <Card key={o.id} className="space-y-2 p-4">
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-mono font-semibold">{o.order_no}</span>
-              <Badge>{TYPE_LABEL[o.order_type] ?? o.order_type}</Badge>
-              {o.table_label && <Badge variant="outline">桌 {o.table_label}</Badge>}
-              <Badge variant="secondary">{STATUS.find(s => s.id === o.status)?.label}</Badge>
+              <Badge>{ORDER_TYPES.includes(o.order_type) ? t(`type.${o.order_type}`) : o.order_type}</Badge>
+              {o.table_label && <Badge variant="outline">{t('table', { n: o.table_label })}</Badge>}
+              <Badge variant="secondary">{STATUS.some(s => s.id === o.status) ? t(`status.${o.status}`) : o.status}</Badge>
               <span className="ml-auto text-sm text-muted-foreground">{o.pos_stores?.name}</span>
             </div>
             <ul className="text-sm">
@@ -101,18 +99,18 @@ export default function PosOrdersPage() {
                 </li>
               ))}
             </ul>
-            {o.note && <p className="text-xs text-muted-foreground">備註：{o.note}</p>}
+            {o.note && <p className="text-xs text-muted-foreground">{t('note', { note: o.note })}</p>}
             <div className="flex items-center justify-between border-t pt-2">
               <span className="font-semibold">{fmt(o.total_cents)}</span>
               <div className="flex gap-1">
                 {STATUS.filter(s => s.id !== o.status && s.id !== 'cancelled').map(s => (
-                  <Button key={s.id} size="sm" variant="outline" onClick={() => setStatus(o.id, s.id)}>{s.label}</Button>
+                  <Button key={s.id} size="sm" variant="outline" onClick={() => setStatus(o.id, s.id)}>{t(`status.${s.id}`)}</Button>
                 ))}
               </div>
             </div>
           </Card>
         ))}
-        {orders.length === 0 && <p className="text-sm text-muted-foreground">尚無訂單</p>}
+        {orders.length === 0 && <p className="text-sm text-muted-foreground">{t('empty')}</p>}
       </div>
     </div>
   )

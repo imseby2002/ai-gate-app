@@ -3,16 +3,12 @@
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { MessageSquarePlus, X, Loader2, CheckCircle2 } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 
 type FbType = 'bug' | 'feature' | 'text_change' | 'ai_error'
 
-const TYPE_OPTIONS: { key: FbType; label: string }[] = [
-  { key: 'bug', label: '🐛 錯誤回報' },
-  { key: 'ai_error', label: '🤖 AI 回答錯誤' },
-  { key: 'feature', label: '✨ 功能建議' },
-  { key: 'text_change', label: '🎨 介面/文字調整' },
-]
+const TYPE_OPTIONS: FbType[] = ['bug', 'ai_error', 'feature', 'text_change']
 
 // 公開頁（未登入即可見）不顯示：訪客不需要、也無法對應到帳號/公司
 const PUBLIC_PREFIXES = [
@@ -24,6 +20,7 @@ const PUBLIC_PREFIXES = [
 // 埋在 (tools)/feedback 底下沒人找得到的獨立頁面。送出時帶上目前所在路徑
 // 當作 source，後端 /api/feedback 會一併記錄使用者當下所屬公司。
 export function GlobalFeedbackWidget() {
+  const t = useTranslations('Feedback')
   const pathname = usePathname()
   const [loggedIn, setLoggedIn] = useState(false)
   const [open, setOpen] = useState(false)
@@ -80,7 +77,7 @@ export function GlobalFeedbackWidget() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        title="意見反映"
+        title={t('title')}
         className={`fixed right-5 z-40 h-11 w-11 rounded-full shadow-lg flex items-center justify-center text-white hover:scale-105 transition-transform ${isCsInbox ? 'bottom-24 md:bottom-5' : 'bottom-5'}`}
         style={{ background: 'var(--primary)' }}
       >
@@ -94,7 +91,7 @@ export function GlobalFeedbackWidget() {
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-sm">意見反映</h3>
+              <h3 className="font-semibold text-sm">{t('title')}</h3>
               <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600">
                 <X className="h-4 w-4" />
               </button>
@@ -103,34 +100,34 @@ export function GlobalFeedbackWidget() {
             {done ? (
               <div className="py-6 flex flex-col items-center gap-2 text-emerald-600">
                 <CheckCircle2 className="h-6 w-6" />
-                <p className="text-sm">已送出，感謝回報！</p>
+                <p className="text-sm">{t('thanks')}</p>
               </div>
             ) : (
               <>
                 <div className="grid grid-cols-2 gap-1.5">
-                  {TYPE_OPTIONS.map(t => (
+                  {TYPE_OPTIONS.map(k => (
                     <button
-                      key={t.key}
+                      key={k}
                       type="button"
-                      onClick={() => setType(t.key)}
+                      onClick={() => setType(k)}
                       className={`text-xs px-2 py-1.5 rounded-lg border text-left transition-colors ${
-                        type === t.key ? 'border-primary bg-primary/5 font-medium' : 'border-gray-200 text-gray-500 hover:bg-gray-50'
+                        type === k ? 'border-primary bg-primary/5 font-medium' : 'border-gray-200 text-gray-500 hover:bg-gray-50'
                       }`}
                     >
-                      {t.label}
+                      {t(`type.${k}`)}
                     </button>
                   ))}
                 </div>
                 <input
                   value={title}
                   onChange={e => setTitle(e.target.value)}
-                  placeholder="標題（簡短描述）"
+                  placeholder={t('titlePh')}
                   className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2"
                 />
                 <textarea
                   value={description}
                   onChange={e => setDescription(e.target.value)}
-                  placeholder="詳細說明發生了什麼、預期應該怎樣"
+                  placeholder={t('descPh')}
                   rows={4}
                   className="w-full px-3 py-2 rounded-lg border text-sm outline-none focus:ring-2 resize-none"
                 />
@@ -141,7 +138,7 @@ export function GlobalFeedbackWidget() {
                   className="w-full h-9 rounded-lg text-sm font-semibold text-white flex items-center justify-center gap-2 disabled:opacity-60"
                   style={{ background: 'var(--primary)' }}
                 >
-                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : '送出'}
+                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : t('submit')}
                 </button>
               </>
             )}

@@ -235,7 +235,7 @@ export default function RdPage() {
 
   // 推送至行銷部新品上架流水線
   const submitToMarketingLaunch = async (r: Recipe) => {
-    if (!confirm(`確定將研發配方【${r.name}】推送至行銷部門進行新品上架包裝？`)) return
+    if (!confirm(t('pushConfirm', { name: r.name }))) return
     try {
       const res = await fetch('/api/mkt/launches', {
         method: 'POST',
@@ -250,12 +250,12 @@ export default function RdPage() {
       })
       const j = await res.json()
       if (res.ok) {
-        alert(`✅ 已成功將【${r.name}】推送至行銷部門！\n行銷人員可在「行銷系統 → 產品圖文 → 新品上架流水線」接續籌備 VIP 優先專享期與上市排程。`)
+        alert(t('pushDone', { name: r.name }))
       } else {
-        alert(j.error || '推送失敗')
+        alert(j.error || t('pushFailed'))
       }
     } catch (e: any) {
-      alert(e.message || '推送失敗')
+      alert(e.message || t('pushFailed'))
     }
   }
 
@@ -611,10 +611,10 @@ export default function RdPage() {
                             size="sm"
                             className="h-8 px-2 gap-1 text-xs text-primary border-primary/30 hover:bg-primary/10 font-semibold"
                             onClick={() => submitToMarketingLaunch(r)}
-                            title="推送至行銷部門發起新品上市"
+                            title={t('pushTitle')}
                           >
                             <Rocket className="h-3.5 w-3.5" />
-                            推送上架
+                            {t('pushBtn')}
                           </Button>
                           <Button
                             variant="ghost"
