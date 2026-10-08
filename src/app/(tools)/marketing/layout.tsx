@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { Megaphone, Palette, LayoutDashboard, Phone, Menu, Search, Wand2, Crown, Brain, NotebookPen, MapPin, Fingerprint, GitBranch, Share2, Sparkles, Building2, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { Megaphone, Palette, LayoutDashboard, Phone, Menu, Search, Wand2, Crown, Brain, NotebookPen, CalendarCheck, Fingerprint, GitBranch, Share2, Sparkles, Building2, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 interface NavItem {
@@ -37,7 +37,7 @@ const SECTIONS: { titleKey: string; items: NavItem[] }[] = [
         ],
       },
       { href: '/prospect-call',    labelKey: 'nav.prospect', icon: Phone },
-      { href: '/marketing/offline', labelKey: 'nav.offline', icon: MapPin },
+      { href: '/marketing/campaigns', labelKey: 'nav.campaigns', icon: CalendarCheck, match: ['/marketing/offline'] },
     ],
   },
   {

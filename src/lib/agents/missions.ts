@@ -80,7 +80,7 @@ export async function buildMarketingInventory(admin: Admin, ownerId: string): Pr
     admin.from('mkt_content').select('id', { count: 'exact', head: true }).eq('owner_id', ownerId),
     admin.from('mkt_content').select('id', { count: 'exact', head: true }).eq('owner_id', ownerId).eq('status', 'approved'),
     admin.from('mkt_calendar').select('title, channel, scheduled_date, status').eq('owner_id', ownerId).gte('scheduled_date', today).order('scheduled_date').limit(30),
-    admin.from('mkt_offline').select('type, budget, status').eq('owner_id', ownerId).limit(20),
+    admin.from('mkt_campaigns').select('channel_type, type:category, budget, status').eq('owner_id', ownerId).limit(20),
     admin.from('mkt_delivery').select('platform, status, monthly_orders, monthly_revenue').eq('owner_id', ownerId).limit(30),
     getCompanyContextMd(admin, ownerId),
   ])

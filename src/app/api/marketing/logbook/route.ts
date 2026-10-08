@@ -101,8 +101,8 @@ export async function GET(req: NextRequest) {
       .gte('created_at', since)
       .order('created_at', { ascending: false })
       .limit(50),
-    // F. 實體行銷活動
-    c.admin.from('mkt_offline')
+    // F. 行銷活動（活動企劃中心）
+    c.admin.from('mkt_campaigns')
       .select('id, owner_id, title, store, budget, status, created_at')
       .eq('owner_id', c.ownerId)
       .gte('created_at', since)
@@ -225,16 +225,16 @@ export async function GET(req: NextRequest) {
     })
   }
 
-  // 6. 門市實體物料活動
+  // 6. 行銷活動（活動企劃中心）
   for (const off of offlineRes.data ?? []) {
     items.push({
       id: 'off_' + off.id,
       type: 'event',
       category: 'offline',
-      title: `實體行銷：${off.title}`,
+      title: `行銷活動：${off.title}`,
       summary: `${off.store ? `門市：${off.store} | ` : ''}預算：NT$ ${off.budget ?? 0} | 狀態：${off.status}`,
       details: { store: off.store, budget: off.budget, status: off.status },
-      staff: '實體推廣',
+      staff: '活動企劃',
       status: off.status,
       created_at: off.created_at,
     })
@@ -397,7 +397,7 @@ export async function POST(req: NextRequest) {
       .eq('owner_id', c.ownerId)
       .gte('created_at', since)
       .limit(30),
-    c.admin.from('mkt_offline')
+    c.admin.from('mkt_campaigns')
       .select('title, store, budget, status')
       .eq('owner_id', c.ownerId)
       .gte('created_at', since)
