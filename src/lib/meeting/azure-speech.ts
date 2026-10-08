@@ -59,14 +59,14 @@ export async function startAzureRecognition(options: {
 
   // 實體會議：啟用多人語音分離 (ConversationTranscriber Diarization)
   if (options.mode === 'in_person') {
-    const transcriber = new SpeechSDK.ConversationTranscriber(speechConfig, audioConfig, autoDetectConfig)
+    const transcriber = SpeechSDK.ConversationTranscriber.FromConfig(speechConfig, autoDetectConfig, audioConfig)
 
     transcriber.transcribed = (_s, e) => {
       if (e.result.reason === SpeechSDK.ResultReason.RecognizedSpeech && e.result.text?.trim()) {
         const text = e.result.text.trim()
         const speakerRaw = e.result.speakerId || 'Guest-1'
         const speakerLabel = formatSpeakerLabel(speakerRaw)
-        const lang = resolveLanguage(e.result, options.defaultLang)
+        const lang = resolveLanguage(e.result as unknown as SpeechSDKType.SpeechRecognitionResult, options.defaultLang)
         options.onRecognized(text, speakerLabel, lang)
       }
     }
@@ -100,7 +100,7 @@ export async function startAzureRecognition(options: {
   }
 
   // 線上會議：單人獨立收音辨識 (SpeechRecognizer)
-  const recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, autoDetectConfig, audioConfig)
+  const recognizer = SpeechSDK.SpeechRecognizer.FromConfig(speechConfig, autoDetectConfig, audioConfig)
 
   recognizer.recognized = (_s, e) => {
     if (e.result.reason === SpeechSDK.ResultReason.RecognizedSpeech && e.result.text?.trim()) {

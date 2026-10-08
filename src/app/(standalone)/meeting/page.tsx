@@ -505,7 +505,7 @@ export default function MeetingPage() {
     } catch (e) {
       console.error('[Meeting] addLine exception:', e)
     }
-  }, [supabase, meeting, me, myLang])
+  }, [supabase, meeting, me, inputLang])
 
   const cleanupRec = useCallback(() => {
     if (restartTimerRef.current) {
