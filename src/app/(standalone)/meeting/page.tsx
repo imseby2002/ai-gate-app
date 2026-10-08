@@ -6,11 +6,46 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Mic, MicOff, Copy, LogOut, Plus, Users, Video, VideoOff } from 'lucide-react'
+import {
+  Mic, MicOff, Copy, LogOut, Plus, Users, Video, VideoOff,
+  Building2, Store, CheckCircle2, AlertCircle, Languages,
+  Sparkles, Radio, Eye
+} from 'lucide-react'
 
 // ── 型別 ──────────────────────────────────────────────────────────
 interface Me { id: string; name: string }
-interface Meeting { id: string; title: string; room_code: string; host_id: string; source_lang: string }
+interface Meeting {
+  id: string
+  title: string
+  room_code: string
+  host_id: string
+  source_lang: string
+  department?: string
+  meeting_mode?: 'online' | 'in_person'
+  stores?: string[]
+  context_keywords?: string
+}
+
+interface DeptOption {
+  key: string
+  label: string
+  icon: string
+}
+
+interface StoreOption {
+  id: string
+  code: string
+  name: string
+  short_name: string
+}
+
+interface VoiceProfile {
+  status: string
+  language: string
+  audio_url: string
+  updated_at?: string
+}
+
 interface Line {
   id: string
   speaker_id: string
@@ -97,11 +132,33 @@ export default function MeetingPage() {
   const [lines, setLines] = useState<Line[]>([])
   const [participants, setParticipants] = useState<string[]>([])
 
+  const [departments, setDepartments] = useState<DeptOption[]>([])
+  const [storeList, setStoreList] = useState<StoreOption[]>([])
+  const [voiceProfile, setVoiceProfile] = useState<VoiceProfile | null>(null)
+  const [fixedSentences, setFixedSentences] = useState<Record<string, string>>({})
+
   const [newTitle, setNewTitle] = useState('')
+  const [selectedDept, setSelectedDept] = useState('store')
+  const [selectedMode, setSelectedMode] = useState<'online' | 'in_person'>('in_person')
+  const [selectedStores, setSelectedStores] = useState<string[]>([])
+  const [contextKeywords, setContextKeywords] = useState('')
   const [joinCode, setJoinCode] = useState('')
   const [myLang, setMyLang] = useState<string>(TRANSLATABLE.has(locale) ? locale : 'zh-TW')
   const [err, setErr] = useState('')
   const [copied, setCopied] = useState(false)
+
+  // ── 檢視模式：bilingual (雙語) / translation_only (只看翻譯) / original_only (只看原文) ──
+  const [viewMode, setViewMode] = useState<'bilingual' | 'translation_only' | 'original_only'>('bilingual')
+
+  // ── 聲紋語音包錄音 Modal 狀態 ──
+  const [showVoiceModal, setShowVoiceModal] = useState(false)
+  const [voiceLang, setVoiceLang] = useState<'zh-TW' | 'vi'>(locale === 'vi' ? 'vi' : 'zh-TW')
+  const [isRecordingVoice, setIsRecordingVoice] = useState(false)
+  const [voiceAudioUrl, setVoiceAudioUrl] = useState<string | null>(null)
+  const [voiceSaving, setVoiceSaving] = useState(false)
+  const [voiceSuccess, setVoiceSuccess] = useState(false)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
 
   const [recording, setRecording] = useState(false)
   const [micDenied, setMicDenied] = useState(false)
@@ -121,7 +178,7 @@ export default function MeetingPage() {
   const videoBoxRef = useRef<HTMLDivElement | null>(null)
   const jaasApiRef = useRef<JaasApi | null>(null)
 
-  // ── 載入使用者 ──
+  // ── 載入使用者與單位/門市元數據 ──
   useEffect(() => {
     let alive = true
     ;(async () => {
@@ -130,9 +187,25 @@ export default function MeetingPage() {
       if (!user || !alive) return
       const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single()
       setMe({ id: user.id, name: profile?.full_name || user.email || 'me' })
+
+      // 載入會議元數據（部門、門市、員工聲紋狀態）
+      try {
+        const res = await fetch(`/api/meeting/meta?locale=${locale}`)
+        if (res.ok) {
+          const data = await res.json()
+          if (!alive) return
+          if (Array.isArray(data.departments)) setDepartments(data.departments)
+          if (Array.isArray(data.stores)) setStoreList(data.stores)
+          if (data.voiceProfile) setVoiceProfile(data.voiceProfile)
+          if (data.fixedSentences) setFixedSentences(data.fixedSentences)
+          if (data.user?.department) setSelectedDept(data.user.department)
+        }
+      } catch (e) {
+        console.warn('[Meeting] Failed to load meta:', e)
+      }
     })()
     return () => { alive = false }
-  }, [supabase])
+  }, [supabase, locale])
 
   // ── 進入會議後：載入既有逐字稿 + 參與者 ──
   const loadMeetingData = useCallback(async (m: Meeting) => {
@@ -214,19 +287,34 @@ export default function MeetingPage() {
   // ── 自動捲到底 ──
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [lines.length])
 
-  // ── 檢視者：把非本語言的逐字翻成自己的介面語言 ──
+  // ── 上下文滑動視窗意譯：把非本語言的逐字翻譯成介面語言 ──
   const [, forceTick] = useState(0)
   useEffect(() => {
-    if (!TRANSLATABLE.has(locale)) return
+    if (!TRANSLATABLE.has(locale) || !meeting) return
     const need = Array.from(
       new Set(lines.filter(l => l.source_lang !== locale).map(l => l.content.trim()).filter(Boolean)),
     ).filter(txt => !transCache.has(tkey(locale, txt)))
     if (!need.length) return
     let alive = true
-    fetch('/api/work/translate', {
+
+    // 滑動視窗上下文資料
+    const context = {
+      title: meeting.title,
+      department: meeting.department,
+      stores: meeting.stores,
+      keywords: meeting.context_keywords,
+      participants,
+      history: lines.slice(-5).map(l => ({
+        speaker: l.speaker_name,
+        text: l.content,
+        translated: transCache.get(tkey(locale, l.content.trim())),
+      })),
+    }
+
+    fetch('/api/meeting/translate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ texts: need, target: locale }),
+      body: JSON.stringify({ texts: need, target: locale, context }),
     })
       .then(r => r.json())
       .then(d => {
@@ -236,7 +324,7 @@ export default function MeetingPage() {
       })
       .catch(() => {})
     return () => { alive = false }
-  }, [lines, locale])
+  }, [lines, locale, meeting, participants])
 
   function translatedOf(l: Line): string | null {
     if (l.source_lang === locale || !TRANSLATABLE.has(locale)) return null
@@ -244,33 +332,157 @@ export default function MeetingPage() {
     return tr && tr !== l.content.trim() ? tr : null
   }
 
-  // ── 建立 / 加入 ──
+  // ── 門市切換 ──
+  const toggleStore = (code: string) => {
+    setSelectedStores(prev =>
+      prev.includes(code) ? prev.filter(c => c !== code) : [...prev, code]
+    )
+  }
+
+  // ── 建立會議 ──
   async function createMeeting() {
     setErr('')
+    const deptObj = departments.find(d => d.key === selectedDept)
+    const storeNames = selectedStores
+      .map(c => storeList.find(s => s.code === c)?.name || c)
+      .join(', ')
+
+    // 彙整關鍵字：手動輸入 + 門市名稱
+    const combinedKeywords = [
+      storeNames,
+      contextKeywords.trim(),
+    ].filter(Boolean).join(', ')
+
+    const autoTitle = newTitle.trim() || `${deptObj?.label || '營運'}會議${storeNames ? ` (${storeNames})` : ''}`
+
     const { data, error } = await supabase
       .from('meetings')
-      .insert({ title: newTitle.trim(), source_lang: myLang })
-      .select('id, title, room_code, host_id, source_lang')
+      .insert({
+        title: autoTitle,
+        source_lang: myLang,
+        department: selectedDept,
+        meeting_mode: selectedMode,
+        stores: selectedStores,
+        context_keywords: combinedKeywords,
+      })
+      .select('id, title, room_code, host_id, source_lang, department, meeting_mode, stores, context_keywords')
       .single()
-    if (error || !data) { setErr(t('createFailed')); return }
+
+    if (error || !data) {
+      console.error('[Meeting] create error:', error)
+      setErr(t('createFailed'))
+      return
+    }
+
     await supabase.from('meeting_participants').insert({ meeting_id: data.id, name: me?.name ?? '' })
     const m = data as Meeting
     setMeeting(m)
     loadMeetingData(m)
   }
 
+  // ── 加入會議 ──
   async function joinMeeting() {
     setErr('')
     const code = joinCode.trim()
     if (!code) return
     const { data, error } = await supabase.rpc('join_meeting', { p_code: code })
     const row = (Array.isArray(data) ? data[0] : data) as
-      | { id: string; title: string; host_id: string; source_lang: string }
+      | {
+          id: string
+          title: string
+          host_id: string
+          source_lang: string
+          department?: string
+          meeting_mode?: 'online' | 'in_person'
+          stores?: string[]
+          context_keywords?: string
+        }
       | undefined
     if (error || !row) { setErr(t('notFound')); return }
-    const m: Meeting = { id: row.id, title: row.title, room_code: code.toUpperCase(), host_id: row.host_id, source_lang: row.source_lang }
+    const m: Meeting = {
+      id: row.id,
+      title: row.title,
+      room_code: code.toUpperCase(),
+      host_id: row.host_id,
+      source_lang: row.source_lang,
+      department: row.department,
+      meeting_mode: row.meeting_mode,
+      stores: row.stores,
+      context_keywords: row.context_keywords,
+    }
     setMeeting(m)
     loadMeetingData(m)
+  }
+
+  // ── 聲紋語音包錄製流程 ──
+  const startVoiceRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      audioChunksRef.current = []
+      const mr = new MediaRecorder(stream)
+      mr.ondataavailable = e => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data)
+      }
+      mr.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+        const url = URL.createObjectURL(audioBlob)
+        setVoiceAudioUrl(url)
+        stream.getTracks().forEach(t => t.stop())
+      }
+      mediaRecorderRef.current = mr
+      mr.start()
+      setIsRecordingVoice(true)
+    } catch {
+      alert(t('micDenied'))
+    }
+  }
+
+  const stopVoiceRecording = () => {
+    if (mediaRecorderRef.current && isRecordingVoice) {
+      mediaRecorderRef.current.stop()
+      setIsRecordingVoice(false)
+    }
+  }
+
+  const saveVoiceProfile = async () => {
+    if (!audioChunksRef.current.length) return
+    setVoiceSaving(true)
+    try {
+      const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+      const reader = new FileReader()
+      reader.readAsDataURL(audioBlob)
+      reader.onloadend = async () => {
+        const base64data = reader.result as string
+        const fixedText = fixedSentences[voiceLang] || ''
+
+        const res = await fetch('/api/meeting/voice-profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            language: voiceLang === 'vi' ? 'vi-VN' : 'zh-TW',
+            fixed_text: fixedText,
+            audio_url: base64data.slice(0, 100) + '...',
+          }),
+        })
+
+        if (res.ok) {
+          const d = await res.json()
+          setVoiceProfile(d.voiceProfile)
+          setVoiceSuccess(true)
+          setTimeout(() => {
+            setShowVoiceModal(false)
+            setVoiceSuccess(false)
+            setVoiceAudioUrl(null)
+          }, 1500)
+        } else {
+          alert('上傳失敗，請稍後再試')
+        }
+        setVoiceSaving(false)
+      }
+    } catch {
+      alert('上傳失敗')
+      setVoiceSaving(false)
+    }
   }
 
   // ── 麥克風辨識寫入資料庫 ──
@@ -541,16 +753,42 @@ export default function MeetingPage() {
     } catch {}
   }
 
-  // ── 大廳 ──
+  // ── 大廳畫面 ──
   if (!meeting) {
     return (
       <div className="mx-auto max-w-2xl space-y-5 p-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0"><Video className="h-5 w-5 text-primary" /></div>
-          <div>
-            <h1 className="text-2xl font-bold">{t('title')}</h1>
-            <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+              <Video className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold">{t('title')}</h1>
+              <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
+            </div>
           </div>
+
+          {/* 員工聲紋狀態指示卡 */}
+          <button
+            onClick={() => setShowVoiceModal(true)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border transition-colors ${
+              voiceProfile?.status === 'enrolled'
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400'
+                : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-400'
+            }`}
+          >
+            {voiceProfile?.status === 'enrolled' ? (
+              <>
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                <span>{t('voiceProfileEnrolled')}</span>
+              </>
+            ) : (
+              <>
+                <AlertCircle className="h-3.5 w-3.5 text-amber-600 animate-pulse" />
+                <span>{t('voiceProfilePending')}</span>
+              </>
+            )}
+          </button>
         </div>
 
         {!srSupported && (
@@ -561,12 +799,115 @@ export default function MeetingPage() {
 
         <LangPicker value={myLang} onChange={setMyLang} label={t('myLang')} />
 
-        <Card className="space-y-3 p-4">
-          <p className="text-sm font-medium">{t('createHeading')}</p>
-          <Input value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder={t('titlePh')} />
-          <Button onClick={createMeeting} className="gap-1.5"><Plus className="h-4 w-4" />{t('create')}</Button>
+        {/* 建立會議表單 */}
+        <Card className="space-y-4 p-5">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold">{t('createHeading')}</p>
+
+            {/* 會議模式切換：實體會議 vs 線上會議 */}
+            <div className="flex items-center rounded-lg border bg-muted/40 p-0.5 text-xs">
+              <button
+                type="button"
+                onClick={() => setSelectedMode('in_person')}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-md transition-all ${
+                  selectedMode === 'in_person'
+                    ? 'bg-background font-medium text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Building2 className="h-3.5 w-3.5" />
+                {t('modeInPerson')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedMode('online')}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-md transition-all ${
+                  selectedMode === 'online'
+                    ? 'bg-background font-medium text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Video className="h-3.5 w-3.5" />
+                {t('modeOnline')}
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {/* 會議主題 */}
+            <div>
+              <Input
+                value={newTitle}
+                onChange={e => setNewTitle(e.target.value)}
+                placeholder="會議主題（例：河內門市設備報修與夏季物料備貨盤點）"
+              />
+            </div>
+
+            {/* 主責部門選單 */}
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {departments.map(d => (
+                <button
+                  key={d.key}
+                  type="button"
+                  onClick={() => setSelectedDept(d.key)}
+                  className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-xs transition-all ${
+                    selectedDept === d.key
+                      ? 'border-primary bg-primary/10 font-semibold text-primary'
+                      : 'border-border bg-background hover:bg-muted/50 text-muted-foreground'
+                  }`}
+                >
+                  <span className="text-sm">{d.icon}</span>
+                  <span className="truncate">{d.label}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* 關聯門市選取 */}
+            {storeList.length > 0 && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                  <Store className="h-3.5 w-3.5" />
+                  {t('storesLabel')}
+                </label>
+                <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-1 rounded-md border bg-muted/20">
+                  {storeList.map(s => {
+                    const active = selectedStores.includes(s.code)
+                    return (
+                      <button
+                        key={s.code}
+                        type="button"
+                        onClick={() => toggleStore(s.code)}
+                        className={`px-2 py-0.5 rounded text-xs transition-all ${
+                          active
+                            ? 'bg-primary text-primary-foreground font-medium'
+                            : 'bg-background border text-muted-foreground hover:bg-muted'
+                        }`}
+                      >
+                        {s.name}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* 專有名詞 / 背景關鍵字 */}
+            <div>
+              <Input
+                value={contextKeywords}
+                onChange={e => setContextKeywords(e.target.value)}
+                placeholder={t('keywordsPh')}
+                className="text-xs"
+              />
+            </div>
+          </div>
+
+          <Button onClick={createMeeting} className="w-full gap-1.5">
+            <Plus className="h-4 w-4" />{t('create')}
+          </Button>
         </Card>
 
+        {/* 加入會議 */}
         <Card className="space-y-3 p-4">
           <p className="text-sm font-medium">{t('joinHeading')}</p>
           <div className="flex gap-2">
@@ -582,35 +923,150 @@ export default function MeetingPage() {
         </Card>
 
         {err && <p className="text-sm text-red-500">{err}</p>}
+
+        {/* 員工聲紋語音包錄製 Modal */}
+        {showVoiceModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <Card className="max-w-md w-full p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  <h3 className="font-bold text-base">{t('voiceEnrollTitle')}</h3>
+                </div>
+                <button onClick={() => setShowVoiceModal(false)} className="text-muted-foreground hover:text-foreground text-sm">✕</button>
+              </div>
+
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                {t('voiceEnrollDesc')}
+              </p>
+
+              {/* 語言選擇 */}
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant={voiceLang === 'zh-TW' ? 'default' : 'outline'}
+                  onClick={() => setVoiceLang('zh-TW')}
+                  className="flex-1 text-xs"
+                >
+                  中文語句
+                </Button>
+                <Button
+                  size="sm"
+                  variant={voiceLang === 'vi' ? 'default' : 'outline'}
+                  onClick={() => setVoiceLang('vi')}
+                  className="flex-1 text-xs"
+                >
+                  Tiếng Việt
+                </Button>
+              </div>
+
+              {/* 固定朗讀語句 */}
+              <div className="rounded-lg border bg-muted/40 p-3 text-sm font-medium leading-relaxed select-none">
+                {voiceLang === 'zh-TW'
+                  ? (fixedSentences['zh-TW'] || '我是台灣極渴與 FEELING TEA 的夥伴，今天在門市與辦公室參與營運盤點與各部門會議，確認設備與物料品質。')
+                  : (fixedSentences['vi'] || 'Tôi là nhân viên của FEELING TEA, hôm nay tham gia cuộc họp vận hành và kiểm kê cửa hàng, xác nhận chất lượng thiết bị và nguyên vật liệu.')}
+              </div>
+
+              {/* 錄音操作 */}
+              <div className="flex flex-col items-center gap-3 py-2">
+                {isRecordingVoice ? (
+                  <Button variant="destructive" onClick={stopVoiceRecording} className="gap-2">
+                    <span className="h-2 w-2 animate-pulse rounded-full bg-white" />
+                    {t('voiceStopRec')}
+                  </Button>
+                ) : (
+                  <Button onClick={startVoiceRecording} className="gap-2">
+                    <Mic className="h-4 w-4" />
+                    {voiceAudioUrl ? '重新錄製' : t('voiceStartRec')}
+                  </Button>
+                )}
+
+                {voiceAudioUrl && (
+                  <audio src={voiceAudioUrl} controls className="w-full h-9 mt-1" />
+                )}
+              </div>
+
+              {voiceSuccess ? (
+                <p className="text-center text-sm font-semibold text-emerald-600">{t('voiceUploadSuccess')}</p>
+              ) : (
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button variant="outline" onClick={() => setShowVoiceModal(false)} size="sm">取消</Button>
+                  <Button onClick={saveVoiceProfile} disabled={!voiceAudioUrl || voiceSaving} size="sm">
+                    {voiceSaving ? t('voiceUploading') : t('voiceUpload')}
+                  </Button>
+                </div>
+              )}
+            </Card>
+          </div>
+        )}
       </div>
     )
   }
 
-  // ── 會議中 ──
+  // ── 會議進行中畫面 ──
+  const isHost = me?.id === meeting.host_id
+  const deptObj = departments.find(d => d.key === meeting.department)
+
   return (
     <div className="mx-auto flex h-full max-w-2xl flex-col gap-3 p-6">
+      {/* 頂部會議資訊 */}
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="truncate text-xl font-bold">{meeting.title || t('title')}</h1>
-          <button onClick={copyCode} className="mt-0.5 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-            <span>{t('roomCode')}：</span>
-            <span className="font-mono text-base font-bold tracking-widest text-foreground">{meeting.room_code}</span>
-            <Copy className="h-3.5 w-3.5" />
-            {copied && <span className="text-xs text-emerald-600">{t('copied')}</span>}
-          </button>
-          {participants.length > 0 && (
-            <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-              <Users className="h-3 w-3" />{t('participants')}（{participants.length}）：{participants.join('、')}
-            </p>
-          )}
+        <div className="min-w-0 space-y-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="truncate text-xl font-bold">{meeting.title || t('title')}</h1>
+            {/* 會議模式徽章 */}
+            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium border ${
+              meeting.meeting_mode === 'in_person'
+                ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400'
+                : 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400'
+            }`}>
+              {meeting.meeting_mode === 'in_person' ? <Building2 className="h-3 w-3" /> : <Video className="h-3 w-3" />}
+              {meeting.meeting_mode === 'in_person' ? t('modeInPerson') : t('modeOnline')}
+            </span>
+
+            {/* 部門徽章 */}
+            {deptObj && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] bg-muted border text-muted-foreground">
+                <span>{deptObj.icon}</span>
+                <span>{deptObj.label}</span>
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <button onClick={copyCode} className="inline-flex items-center gap-1.5 hover:text-foreground">
+              <span>{t('roomCode')}：</span>
+              <span className="font-mono text-sm font-bold tracking-widest text-foreground">{meeting.room_code}</span>
+              <Copy className="h-3.5 w-3.5" />
+              {copied && <span className="text-emerald-600">{t('copied')}</span>}
+            </button>
+
+            {participants.length > 0 && (
+              <span className="flex items-center gap-1">
+                <Users className="h-3 w-3" />
+                <span>{participants.length} 人</span>
+              </span>
+            )}
+          </div>
         </div>
+
         <Button variant="ghost" size="sm" onClick={leaveMeeting} className="shrink-0 gap-1.5">
           <LogOut className="h-4 w-4" />{t('leave')}
         </Button>
       </div>
 
-      <div className="flex items-center gap-2 border-y py-2">
+      {/* 實體會議非主持人閱覽模式提醒 */}
+      {meeting.meeting_mode === 'in_person' && !isHost && (
+        <div className="rounded-lg bg-amber-50/70 border border-amber-200/60 p-2 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-300 flex items-center gap-1.5">
+          <Radio className="h-3.5 w-3.5 shrink-0 text-amber-600" />
+          <span>{t('inPersonNotice')}</span>
+        </div>
+      )}
+
+      {/* 控制列：語言選擇、麥克風、視訊、三段式檢視切換 */}
+      <div className="flex items-center gap-2 border-y py-2 flex-wrap">
         <LangPicker value={myLang} onChange={setMyLang} label={t('myLang')} disabled={recording} compact />
+
         {srSupported ? (
           recording ? (
             <Button size="sm" variant="destructive" onClick={stopRec} className="gap-1.5">
@@ -624,13 +1080,59 @@ export default function MeetingPage() {
         ) : (
           <span className="text-xs text-muted-foreground">{t('unsupported')}</span>
         )}
+
         {recording && (
           <span className="flex items-center gap-1.5 text-xs text-red-500">
             <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" />{t('listening')}
           </span>
         )}
-        {JAAS_APP_ID && (
-          <div className="ml-auto">
+
+        {/* 檢視模式三段式切換 */}
+        <div className="flex items-center rounded-lg border bg-muted/40 p-0.5 text-xs ml-auto">
+          <button
+            type="button"
+            onClick={() => setViewMode('bilingual')}
+            className={`flex items-center gap-1 px-2 py-0.5 rounded transition-all ${
+              viewMode === 'bilingual'
+                ? 'bg-background font-medium text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+            title="原文與譯文雙語對照"
+          >
+            <Languages className="h-3 w-3" />
+            <span className="hidden sm:inline">{t('viewBilingual')}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('translation_only')}
+            className={`flex items-center gap-1 px-2 py-0.5 rounded transition-all ${
+              viewMode === 'translation_only'
+                ? 'bg-background font-medium text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+            title="純淨翻譯字幕"
+          >
+            <Eye className="h-3 w-3" />
+            <span className="hidden sm:inline">{t('viewTranslationOnly')}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('original_only')}
+            className={`flex items-center gap-1 px-2 py-0.5 rounded transition-all ${
+              viewMode === 'original_only'
+                ? 'bg-background font-medium text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+            title="純原文紀錄"
+          >
+            <span className="text-[11px] font-mono">Txt</span>
+            <span className="hidden sm:inline">{t('viewOriginalOnly')}</span>
+          </button>
+        </div>
+
+        {/* 視訊按鈕（線上會議模式才展示） */}
+        {JAAS_APP_ID && meeting.meeting_mode === 'online' && (
+          <div>
             {video ? (
               <Button size="sm" variant="outline" onClick={stopVideo} className="gap-1.5">
                 <VideoOff className="h-4 w-4" />{t('videoStop')}
@@ -648,23 +1150,50 @@ export default function MeetingPage() {
 
       {video && <div ref={videoBoxRef} className="h-72 w-full overflow-hidden rounded-lg border bg-black" />}
 
-      <div className="flex-1 space-y-2 overflow-y-auto rounded-lg border p-3">
+      {/* 逐字稿與翻譯輸出區 */}
+      <div className="flex-1 space-y-3 overflow-y-auto rounded-lg border p-3">
         {lines.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">{t('empty')}</p>
         ) : (
           lines.map(l => {
             const tr = translatedOf(l)
             const mine = l.speaker_id === me?.id
+
             return (
-              <div key={l.id} className="text-sm">
+              <div key={l.id} className="text-sm border-b pb-2 last:border-b-0">
                 <div className="flex items-baseline gap-2">
-                  <span className={`font-medium ${mine ? 'text-blue-600 dark:text-blue-400' : ''}`}>
+                  <span className={`font-medium ${mine ? 'text-blue-600 dark:text-blue-400' : 'text-foreground'}`}>
                     {mine ? t('you') : (l.speaker_name || '—')}
                   </span>
                   <span className="text-[11px] text-muted-foreground">{fmtTime(l.created_at)}</span>
+                  {l.source_lang && (
+                    <span className="text-[10px] text-muted-foreground/60 uppercase">({l.source_lang})</span>
+                  )}
                 </div>
-                <p className="whitespace-pre-wrap break-words">{l.content}</p>
-                {tr && <p className="mt-0.5 whitespace-pre-wrap break-words text-[13px] text-muted-foreground">↳ {tr}</p>}
+
+                {/* 純原文模式 */}
+                {viewMode === 'original_only' && (
+                  <p className="mt-0.5 whitespace-pre-wrap break-words">{l.content}</p>
+                )}
+
+                {/* 純翻譯模式 */}
+                {viewMode === 'translation_only' && (
+                  <p className="mt-0.5 whitespace-pre-wrap break-words text-foreground font-normal">
+                    {tr || l.content}
+                  </p>
+                )}
+
+                {/* 雙語對照模式（預設） */}
+                {viewMode === 'bilingual' && (
+                  <>
+                    <p className="mt-0.5 whitespace-pre-wrap break-words">{l.content}</p>
+                    {tr && (
+                      <p className="mt-1 whitespace-pre-wrap break-words text-[13px] text-blue-700 dark:text-blue-300 bg-blue-50/70 dark:bg-blue-950/40 px-2.5 py-1.5 rounded-md border border-blue-100 dark:border-blue-900/30">
+                        ↳ {tr}
+                      </p>
+                    )}
+                  </>
+                )}
               </div>
             )
           })
