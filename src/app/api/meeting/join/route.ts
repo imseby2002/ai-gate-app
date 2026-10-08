@@ -36,11 +36,15 @@ export async function POST(req: NextRequest) {
     }
 
     // 加入參與者
-    await db.from('meeting_participants').upsert({
-      meeting_id: meeting.id,
-      user_id: user.id,
-      name: userName,
-    }, { onConflict: 'meeting_id,user_id' }).catch(() => {})
+    try {
+      await db.from('meeting_participants').upsert({
+        meeting_id: meeting.id,
+        user_id: user.id,
+        name: userName,
+      }, { onConflict: 'meeting_id,user_id' })
+    } catch (pErr) {
+      console.warn('[api/meeting/join] participant upsert warning:', pErr)
+    }
 
     return NextResponse.json({ meeting })
   } catch (err: unknown) {

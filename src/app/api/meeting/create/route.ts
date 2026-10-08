@@ -93,11 +93,15 @@ export async function POST(req: NextRequest) {
 
     // 將主持人自動加入參與者
     if (createdMeeting?.id) {
-      await db.from('meeting_participants').insert({
-        meeting_id: createdMeeting.id,
-        user_id: user.id,
-        name: userName,
-      }).catch(() => {})
+      try {
+        await db.from('meeting_participants').insert({
+          meeting_id: createdMeeting.id,
+          user_id: user.id,
+          name: userName,
+        })
+      } catch (pErr) {
+        console.warn('[api/meeting/create] participant insert warning:', pErr)
+      }
     }
 
     return NextResponse.json({ meeting: createdMeeting })
