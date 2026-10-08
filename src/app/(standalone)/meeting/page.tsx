@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input'
 import {
   Mic, MicOff, Copy, LogOut, Plus, Users, Video, VideoOff,
   Building2, Store, CheckCircle2, AlertCircle, Languages,
-  Sparkles, Radio, Eye
+  Sparkles, Radio, Eye, Loader2
 } from 'lucide-react'
 import { fetchAzureSpeechToken, startAzureRecognition, type AzureRecognitionController } from '@/lib/meeting/azure-speech'
 
@@ -159,6 +159,8 @@ export default function MeetingPage() {
     TRANSLATABLE.has(locale) ? locale : 'zh-TW'
   )
   const [err, setErr] = useState('')
+  const [creating, setCreating] = useState(false)
+  const [joining, setJoining] = useState(false)
   const [copied, setCopied] = useState(false)
 
   // ── 檢視模式：bilingual (雙語) / translation_only (只看翻譯) / original_only (只看原文) ──
@@ -358,61 +360,52 @@ export default function MeetingPage() {
   // ── 建立會議 ──
   async function createMeeting() {
     setErr('')
-    const selectedDeptObjs = departments.filter(d => selectedDepts.includes(d.key))
-    const deptLabels = selectedDeptObjs.map(d => d.label).join('、')
-    const storeNames = selectedStores
-      .map(c => storeList.find(s => s.code === c)?.name || c)
-      .join(', ')
+    setCreating(true)
+    try {
+      const selectedDeptObjs = departments.filter(d => selectedDepts.includes(d.key))
+      const deptLabels = selectedDeptObjs.map(d => d.label).join('、')
+      const storeNames = selectedStores
+        .map(c => storeList.find(s => s.code === c)?.name || c)
+        .join(', ')
 
-    // 彙整關鍵字：手動輸入 + 門市名稱 + 跨部門名稱
-    const combinedKeywords = [
-      deptLabels ? `跨部門領域: ${deptLabels}` : '',
-      storeNames,
-      contextKeywords.trim(),
-    ].filter(Boolean).join(', ')
+      // 彙整關鍵字：手動輸入 + 門市名稱 + 跨部門名稱
+      const combinedKeywords = [
+        deptLabels ? `跨部門領域: ${deptLabels}` : '',
+        storeNames,
+        contextKeywords.trim(),
+      ].filter(Boolean).join(', ')
 
-    const autoTitle = newTitle.trim() || `${deptLabels || '跨部門'}會議${storeNames ? ` (${storeNames})` : ''}`
+      const autoTitle = newTitle.trim() || `${deptLabels || '跨部門'}會議${storeNames ? ` (${storeNames})` : ''}`
 
-    let createdRow: Meeting | null = null
-    const { data, error } = await supabase
-      .from('meetings')
-      .insert({
-        title: autoTitle,
-        source_lang: inputLang === 'auto' ? 'zh-TW' : inputLang,
-        department: selectedDepts.join(','),
-        departments: selectedDepts,
-        meeting_mode: selectedMode,
-        stores: selectedStores,
-        context_keywords: combinedKeywords,
-      })
-      .select('*')
-      .single()
-
-    if (!error && data) {
-      createdRow = data as Meeting
-    } else {
-      console.warn('[Meeting] create with v2 fields failed, falling back:', error)
-      // 容錯降級：若資料庫尚未執行 migration（缺少欄位），以基礎欄位建立
-      const fb = await supabase
-        .from('meetings')
-        .insert({
+      const res = await fetch('/api/meeting/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           title: autoTitle,
           source_lang: inputLang === 'auto' ? 'zh-TW' : inputLang,
-        })
-        .select('*')
-        .single()
-      if (fb.data) {
-        createdRow = fb.data as Meeting
-      } else {
-        console.error('[Meeting] create fallback also failed:', fb.error)
-        setErr(error?.message || fb.error?.message || t('createFailed'))
+          department: selectedDepts.join(','),
+          departments: selectedDepts,
+          meeting_mode: selectedMode,
+          stores: selectedStores,
+          context_keywords: combinedKeywords,
+        }),
+      })
+
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json.meeting) {
+        setErr(json.error || t('createFailed'))
         return
       }
-    }
 
-    await supabase.from('meeting_participants').insert({ meeting_id: createdRow.id, name: me?.name ?? '' }).catch(() => {})
-    setMeeting(createdRow)
-    loadMeetingData(createdRow)
+      const createdRow = json.meeting as Meeting
+      setMeeting(createdRow)
+      loadMeetingData(createdRow)
+    } catch (e: unknown) {
+      console.error('[Meeting] createMeeting failed:', e)
+      setErr(e instanceof Error ? e.message : t('createFailed'))
+    } finally {
+      setCreating(false)
+    }
   }
 
   // ── 加入會議 ──
@@ -421,44 +414,40 @@ export default function MeetingPage() {
     const code = joinCode.trim().toUpperCase()
     if (!code) return
 
-    let row: Record<string, unknown> | null = null
-    const { data, error } = await supabase.rpc('join_meeting', { p_code: code })
-    if (!error && data) {
-      row = (Array.isArray(data) ? data[0] : data) as Record<string, unknown>
-    } else {
-      console.warn('[Meeting] join_meeting RPC error, falling back to direct query:', error)
-      const { data: mData, error: mErr } = await supabase
-        .from('meetings')
-        .select('*')
-        .eq('room_code', code)
-        .eq('is_active', true)
-        .maybeSingle()
-      if (mData) {
-        row = mData as Record<string, unknown>
-        if (me?.id) {
-          await supabase.from('meeting_participants').insert({ meeting_id: mData.id, user_id: me.id, name: me.name || '' }).catch(() => {})
-        }
-      } else {
-        setErr(mErr?.message || t('notFound'))
+    setJoining(true)
+    try {
+      const res = await fetch('/api/meeting/join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      })
+
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json.meeting) {
+        setErr(json.error || t('notFound'))
         return
       }
-    }
 
-    if (!row) { setErr(t('notFound')); return }
-    const m: Meeting = {
-      id: String(row.id),
-      title: String(row.title || ''),
-      room_code: code,
-      host_id: String(row.host_id || ''),
-      source_lang: String(row.source_lang || 'zh-TW'),
-      department: row.department as string | undefined,
-      departments: row.departments as string[] | undefined,
-      meeting_mode: row.meeting_mode as 'online' | 'in_person' | undefined,
-      stores: row.stores as string[] | undefined,
-      context_keywords: row.context_keywords as string | undefined,
+      const m: Meeting = {
+        id: String(json.meeting.id),
+        title: String(json.meeting.title || ''),
+        room_code: code,
+        host_id: String(json.meeting.host_id || ''),
+        source_lang: String(json.meeting.source_lang || 'zh-TW'),
+        department: json.meeting.department as string | undefined,
+        departments: json.meeting.departments as string[] | undefined,
+        meeting_mode: json.meeting.meeting_mode as 'online' | 'in_person' | undefined,
+        stores: json.meeting.stores as string[] | undefined,
+        context_keywords: json.meeting.context_keywords as string | undefined,
+      }
+      setMeeting(m)
+      loadMeetingData(m)
+    } catch (e: unknown) {
+      console.error('[Meeting] joinMeeting failed:', e)
+      setErr(e instanceof Error ? e.message : t('notFound'))
+    } finally {
+      setJoining(false)
     }
-    setMeeting(m)
-    loadMeetingData(m)
   }
 
   // ── 麥克風辨識寫入資料庫 ──
@@ -934,8 +923,27 @@ export default function MeetingPage() {
             </div>
           </div>
 
-          <Button onClick={createMeeting} className="w-full gap-1.5">
-            <Plus className="h-4 w-4" />{t('create')}
+          {err && (
+            <div className="flex items-start gap-2 rounded-lg bg-red-50 p-3 text-xs text-red-700 dark:bg-red-950/40 dark:text-red-300 border border-red-200 dark:border-red-900/50">
+              <AlertCircle className="h-4 w-4 shrink-0 text-red-600 mt-0.5" />
+              <div className="space-y-0.5">
+                <p className="font-semibold">建立會議失敗</p>
+                <p className="break-all">{err}</p>
+              </div>
+            </div>
+          )}
+
+          <Button onClick={createMeeting} disabled={creating} className="w-full gap-1.5">
+            {creating ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                建立中…
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4" />{t('create')}
+              </>
+            )}
           </Button>
         </Card>
 
@@ -949,12 +957,13 @@ export default function MeetingPage() {
               onKeyDown={e => { if (e.key === 'Enter') joinMeeting() }}
               placeholder={t('roomCodePh')}
               className="font-mono tracking-widest uppercase"
+              disabled={joining}
             />
-            <Button variant="outline" onClick={joinMeeting} disabled={!joinCode.trim()}>{t('join')}</Button>
+            <Button variant="outline" onClick={joinMeeting} disabled={!joinCode.trim() || joining} className="gap-1.5">
+              {joining ? <Loader2 className="h-4 w-4 animate-spin" /> : t('join')}
+            </Button>
           </div>
         </Card>
-
-        {err && <p className="text-sm text-red-500">{err}</p>}
       </div>
     )
   }
