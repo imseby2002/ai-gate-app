@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations, useLocale } from 'next-intl'
 import { useState } from 'react'
 import {
   AlertTriangle,
@@ -35,6 +36,8 @@ export function MdbErrorDrawer({
   filename,
   importedAt
 }: MdbErrorDrawerProps) {
+  const t = useTranslations('FinanceMdb')
+  const locale = useLocale()
   const [filterSeverity, setFilterSeverity] = useState<'all' | 'error' | 'warning'>('all')
   const [search, setSearch] = useState('')
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -66,19 +69,19 @@ export function MdbErrorDrawer({
 
   const handleCopyReport = () => {
     const text = [
-      `=== MDB 匯入錯誤診斷報告 ===`,
-      `帳本: ${bookName} | 檔案: ${filename || 'MymoneyData.mdb'}`,
-      `總錯誤數: ${errorCount} 筆 | 總警告數: ${warningCount} 筆`,
-      `產生時間: ${new Date().toLocaleString('zh-TW')}`,
+      t('rpTitle'),
+      t('rpBook', { book: bookName, file: filename || 'MymoneyData.mdb' }),
+      t('rpCounts', { e: errorCount, w: warningCount }),
+      t('rpGenerated', { at: new Date().toLocaleString(locale) }),
       `----------------------------------------`,
       ...errors.map((e, idx) => {
         return [
-          `[#${idx + 1}] 流水號 MAKE_NO: ${e.make_no} | 日期: ${e.date || '無'} | 類型: ${e.severity === 'error' ? '錯誤' : '警告'} (${e.type})`,
-          `  問題: ${e.title}`,
-          `  說明: ${e.description}`,
-          `  建議修復: ${e.suggested_fix}`,
-          `  原始分錄:`,
-          ...e.raw_rows.map(r => `    - 類別:${r.item_class} | 項目:${r.item_note} | 存入:${r.in_mount} | 支出:${r.out_mount} | 摘要:${r.data_note}`),
+          t('rpItem', { i: idx + 1, no: e.make_no, date: e.date || '—', sev: e.severity === 'error' ? t('sevError') : t('sevWarning'), type: e.type }),
+          `  ${t('rpProblem')} ${e.title}`,
+          `  ${t('rpDesc')} ${e.description}`,
+          `  ${t('rpFix')} ${e.suggested_fix}`,
+          `  ${t('rpRaw')}`,
+          ...e.raw_rows.map(r => `    - ${t('rpRow', { cls: r.item_class, item: r.item_note, inn: r.in_mount, out: r.out_mount, note: r.data_note })}`),
           ``
         ].join('\n')
       })
@@ -97,11 +100,11 @@ export function MdbErrorDrawer({
           <div>
             <div className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-amber-500" />
-              <h2 className="text-lg font-bold">MDB 匯入異常與錯誤詳細診斷</h2>
-              <Badge variant="outline" className="text-xs font-mono">帳本: {bookName}</Badge>
+              <h2 className="text-lg font-bold">{t('eTitle')}</h2>
+              <Badge variant="outline" className="text-xs font-mono">{t('eBook', { book: bookName })}</Badge>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              列出每筆異常分錄的流水號、涉及項目與詳細原因，方便您在資料庫或系統中比對修改。
+              {t('eDesc')}
             </p>
           </div>
           <button
@@ -122,7 +125,7 @@ export function MdbErrorDrawer({
                 onClick={() => setFilterSeverity('all')}
                 className="h-8 text-xs"
               >
-                全部 ({errors.length})
+                {t('fAll', { n: errors.length })}
               </Button>
               <Button
                 size="sm"
@@ -131,7 +134,7 @@ export function MdbErrorDrawer({
                 className="h-8 text-xs gap-1"
               >
                 <AlertCircle className="h-3.5 w-3.5" />
-                錯誤 ({errorCount})
+                {t('fError', { n: errorCount })}
               </Button>
               <Button
                 size="sm"
@@ -140,7 +143,7 @@ export function MdbErrorDrawer({
                 className="h-8 text-xs gap-1 text-amber-600"
               >
                 <AlertTriangle className="h-3.5 w-3.5" />
-                警告/疑似錯字 ({warningCount})
+                {t('fWarning', { n: warningCount })}
               </Button>
             </div>
 
@@ -151,7 +154,7 @@ export function MdbErrorDrawer({
               className="h-8 text-xs gap-1.5 shrink-0"
             >
               {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
-              {copied ? '已複製報告' : '複製錯誤診斷報告'}
+              {copied ? t('reportCopied') : t('copyReport')}
             </Button>
           </div>
 
@@ -160,7 +163,7 @@ export function MdbErrorDrawer({
             <Input
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="搜尋流水號 (MAKE_NO)、日期、項目名稱、備註..."
+              placeholder={t('eSearchPh')}
               className="pl-9 h-8 text-xs"
             />
           </div>
@@ -171,8 +174,8 @@ export function MdbErrorDrawer({
           {filtered.length === 0 ? (
             <div className="text-center py-16 text-muted-foreground space-y-2">
               <Check className="h-10 w-10 mx-auto text-emerald-500 opacity-60" />
-              <p className="text-sm font-medium">查無符合條件的異常或錯誤</p>
-              <p className="text-xs text-muted-foreground">此檔案的分錄均可正常匯入與處理</p>
+              <p className="text-sm font-medium">{t('eNone')}</p>
+              <p className="text-xs text-muted-foreground">{t('eNoneHint')}</p>
             </div>
           ) : (
             filtered.map((item, idx) => {
@@ -199,17 +202,17 @@ export function MdbErrorDrawer({
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-semibold text-sm">{item.title}</span>
                           <Badge variant="outline" className="text-2xs font-mono">
-                            流水號 #{item.make_no}
+                            {t('voucherNo', { no: item.make_no })}
                           </Badge>
                           {item.date && (
                             <Badge variant="secondary" className="text-2xs font-mono">
-                              日期: {item.date}
+                              {t('dateN', { date: item.date })}
                             </Badge>
                           )}
                           <span className={`text-2xs px-1.5 py-0.5 rounded font-medium ${
                             isErr ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
                           }`}>
-                            {isErr ? '略過未匯入' : '已匯入(建議核對)'}
+                            {isErr ? t('skipped') : t('importedCheck')}
                           </span>
                         </div>
                         <p className="text-xs text-foreground/80 mt-1 leading-relaxed">
@@ -221,7 +224,7 @@ export function MdbErrorDrawer({
                     <button
                       onClick={() => setExpandedId(isExpanded ? null : item.id)}
                       className="p-1 text-muted-foreground hover:text-foreground shrink-0 rounded transition-colors"
-                      title={isExpanded ? '收合原始分錄' : '查看原始分錄'}
+                      title={isExpanded ? t('collapseRaw') : t('viewRaw')}
                     >
                       {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                     </button>
@@ -229,7 +232,7 @@ export function MdbErrorDrawer({
 
                   {/* Suggestion Fix */}
                   <div className="mt-3 pl-8 text-xs text-muted-foreground flex items-center gap-1.5">
-                    <span className="font-medium text-foreground">💡 建議處理：</span>
+                    <span className="font-medium text-foreground">💡 {t('suggestion')}</span>
                     <span>{item.suggested_fix}</span>
                   </div>
 
@@ -237,17 +240,17 @@ export function MdbErrorDrawer({
                   {isExpanded && item.raw_rows && item.raw_rows.length > 0 && (
                     <div className="mt-3 pl-8 pt-2 border-t border-border/50">
                       <div className="text-2xs font-medium text-muted-foreground mb-1.5">
-                        MDB 原始成對分錄資訊（共 {item.raw_rows.length} 列）：
+                        {t('rawInfo', { n: item.raw_rows.length })}
                       </div>
                       <div className="bg-background rounded-lg border border-border/70 overflow-hidden">
                         <table className="w-full text-2xs text-left border-collapse">
                           <thead className="bg-muted/60 text-muted-foreground font-medium border-b border-border/50">
                             <tr>
-                              <th className="px-2 py-1">類別</th>
-                              <th className="px-2 py-1">項目名稱</th>
-                              <th className="px-2 py-1 text-right">存入</th>
-                              <th className="px-2 py-1 text-right">支出</th>
-                              <th className="px-2 py-1">摘要備註</th>
+                              <th className="px-2 py-1">{t('colClass')}</th>
+                              <th className="px-2 py-1">{t('colItem')}</th>
+                              <th className="px-2 py-1 text-right">{t('colIn')}</th>
+                              <th className="px-2 py-1 text-right">{t('colOut')}</th>
+                              <th className="px-2 py-1">{t('colNote')}</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-border/40 font-mono">
@@ -279,9 +282,9 @@ export function MdbErrorDrawer({
 
         {/* Footer */}
         <div className="p-4 border-t border-border bg-card flex items-center justify-between text-xs text-muted-foreground">
-          <span>共 {filtered.length} 筆項目（錯誤: {errorCount}，警告: {warningCount}）</span>
+          <span>{t('eFooter', { n: filtered.length, e: errorCount, w: warningCount })}</span>
           <Button size="sm" variant="default" onClick={onClose}>
-            關閉視窗
+            {t('closeWindow')}
           </Button>
         </div>
       </div>
