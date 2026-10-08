@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, type ChangeEvent } from 'react'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import {
   ClipboardCheck, Loader2, AlertCircle, Send, Plus, Trash2,
   BookOpen, X, MessageCircle, Lightbulb, Compass, ScrollText,
@@ -15,15 +16,11 @@ import { Input } from '@/components/ui/input'
 interface ChatLite { id: string; store: string; title: string; mode: string; updated_at: string }
 interface Msg { id?: string; role: string; content: string; suggestion: string; photo_url?: string }
 interface Know { id: string; kind: string; title: string; content: string }
-const KIND_LABELS: Record<string, string> = {
-  sop: 'SOP 流程規範',
-  ergonomics: '人體工學與擺放',
-  hygiene: '環境衛生標準',
-  rules: '罰則規章',
-  other: '補充資料',
-}
+// 顯示文字在 AuditAi.kind.*
+const KIND_KEYS = ['sop', 'ergonomics', 'hygiene', 'rules', 'other']
 
 export default function AuditAiPage() {
+  const t = useTranslations('AuditAi')
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
   const [chats, setChats] = useState<ChatLite[]>([])
   const [chatId, setChatId] = useState('')
@@ -129,7 +126,7 @@ export default function AuditAiPage() {
 
     setMessages(m => [...m, {
       role: 'user',
-      content: messageToSend || '（上傳現場照片並請求診斷）',
+      content: messageToSend || t('photoOnly'),
       suggestion: '',
       photo_url: photoSending,
     }])
@@ -158,7 +155,7 @@ export default function AuditAiPage() {
     if (!res.ok) {
       setMessages(m => [...m, {
         role: 'assistant',
-        content: `⚠️ ${d.error ?? '發送失敗'}`,
+        content: `⚠️ ${d.error ?? t('sendFailed')}`,
         suggestion: ''
       }])
       return
@@ -188,7 +185,7 @@ export default function AuditAiPage() {
     })
     setSummarizing(false)
     if (res.ok) {
-      setLogNotice('已自動摘要並存入稽核日誌！')
+      setLogNotice(t('logSaved'))
       setTimeout(() => setLogNotice(''), 3500)
     }
   }
@@ -198,7 +195,7 @@ export default function AuditAiPage() {
       <div className="flex h-full items-center justify-center p-8">
         <div className="text-center space-y-2">
           <AlertCircle className="h-12 w-12 mx-auto text-amber-400" />
-          <p className="font-semibold">僅稽核單位可使用稽核討論AI</p>
+          <p className="font-semibold">{t('noAccess')}</p>
         </div>
       </div>
     )
@@ -221,9 +218,9 @@ export default function AuditAiPage() {
         </div>
         <div>
           <h1 className="text-xl font-bold flex items-center gap-2">
-            稽核討論AI
+            {t('title')}
             <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-              專家顧問
+              {t('expert')}
             </span>
           </h1>
         </div>
@@ -236,7 +233,7 @@ export default function AuditAiPage() {
             value={store}
             onChange={e => setStore(e.target.value)}
             className="w-32 h-8 text-xs"
-            placeholder="選擇或輸入門市"
+            placeholder={t('storePh')}
           />
           <datalist id="store-list">
             {stores.map(s => <option key={s} value={s} />)}
@@ -247,18 +244,18 @@ export default function AuditAiPage() {
         <div className="ml-auto flex items-center gap-2">
           <Button size="sm" variant="outline" className="gap-1.5 h-8 text-xs" onClick={() => setShowKnow(true)}>
             <BookOpen className="h-3.5 w-3.5" />
-            知識庫
+            {t('knowledge')}
           </Button>
           <Link href="/audit-logs">
             <Button size="sm" variant="outline" className="gap-1.5 h-8 text-xs">
               <ScrollText className="h-3.5 w-3.5" />
-              稽核日誌
+              {t('auditLog')}
             </Button>
           </Link>
           <Link href="/audit-inspection">
             <Button size="sm" variant="outline" className="gap-1.5 h-8 text-xs text-primary border-primary/30">
               <ClipboardCheck className="h-3.5 w-3.5" />
-              現場巡檢
+              {t('inspection')}
             </Button>
           </Link>
         </div>
@@ -270,11 +267,11 @@ export default function AuditAiPage() {
         <div className="w-56 shrink-0 flex flex-col gap-2 min-h-0 hidden md:flex">
           <Button size="sm" className="gap-1.5 w-full" onClick={newChat}>
             <Plus className="h-4 w-4" />
-            新對話
+            {t('newChat')}
           </Button>
           <div className="flex-1 overflow-y-auto space-y-1 pr-1 border rounded-lg p-1.5 bg-muted/20">
             {chats.length === 0 ? (
-              <div className="text-xs text-center text-muted-foreground py-6">尚無歷史對話</div>
+              <div className="text-xs text-center text-muted-foreground py-6">{t('noChats')}</div>
             ) : (
               chats.map(c => (
                 <div
@@ -285,7 +282,7 @@ export default function AuditAiPage() {
                   onClick={() => loadChat(c.id)}
                 >
                   <MessageCircle className="h-3.5 w-3.5 shrink-0 opacity-60" />
-                  <span className="truncate flex-1">{c.title || '無標題對話'}</span>
+                  <span className="truncate flex-1">{c.title || t('untitled')}</span>
                   <button
                     onClick={e => { e.stopPropagation(); delChat(c.id) }}
                     className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-500"
@@ -310,7 +307,7 @@ export default function AuditAiPage() {
                 }`}
               >
                 <MessageCircle className="h-3.5 w-3.5" />
-                討論
+                {t('modeDiscuss')}
               </button>
               <button
                 onClick={() => setMode('guide')}
@@ -319,7 +316,7 @@ export default function AuditAiPage() {
                 }`}
               >
                 <Compass className="h-3.5 w-3.5" />
-                導引
+                {t('modeGuide')}
               </button>
             </div>
 
@@ -333,13 +330,13 @@ export default function AuditAiPage() {
               }`}
             >
               <Lightbulb className="h-3.5 w-3.5 text-amber-500" />
-              建議答案區 {suggest ? '已開啟 (1/3)' : '已關閉'}
+              {t('suggestArea')} {suggest ? t('suggestOn') : t('suggestOff')}
             </button>
 
             {period && (
               <span className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium border border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-900/50 dark:bg-indigo-950/40 dark:text-indigo-300">
-                已帶入 {store || '門市'} {period.year}/{String(period.month).padStart(2, '0')} 原料耗用數據
-                <button onClick={() => setPeriod(null)} title="不再附上耗用數據"><X className="h-3 w-3" /></button>
+                {t('periodLoaded', { store: store || t('store'), period: `${period.year}/${String(period.month).padStart(2, '0')}` })}
+                <button onClick={() => setPeriod(null)} title={t('removePeriod')}><X className="h-3 w-3" /></button>
               </span>
             )}
 
@@ -352,7 +349,7 @@ export default function AuditAiPage() {
                 disabled={summarizing}
               >
                 {summarizing ? <Loader2 className="h-3 w-3 animate-spin" /> : <ScrollText className="h-3 w-3" />}
-                生成日誌
+                {t('genLog')}
               </Button>
             )}
             {logNotice && (
@@ -370,16 +367,16 @@ export default function AuditAiPage() {
                     <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/40 flex items-center justify-center text-amber-600 mb-3">
                       <Sparkles className="h-6 w-6" />
                     </div>
-                    <p className="font-medium text-foreground">稽核專家對話已就緒</p>
+                    <p className="font-medium text-foreground">{t('ready')}</p>
                     <p className="text-xs mt-1 max-w-md">
-                      可直接詢問操作流程、動線設計、人體工學（防手腕受傷/轉身過頻）、吧台擺設美觀、原料作廢防弊，或拍照上傳現場照片直接討論。
+                      {t('readyHint')}
                     </p>
                     <div className="flex flex-wrap justify-center gap-2 mt-4 max-w-lg">
                       {[
-                        '水吧封口機與冰槽動線如何調整才符合人體工學？',
-                        '現場發現已按作廢的原料仍在吧台，標準處置流程為何？',
-                        '抹布分區與隨手清（Clean as you go）稽核重點？',
-                        '門市公務機與個人 Zalo 私群該如何防杜私下收款？',
+                        t('hint1'),
+                        t('hint2'),
+                        t('hint3'),
+                        t('hint4'),
                       ].map((hint, idx) => (
                         <button
                           key={idx}
@@ -408,7 +405,7 @@ export default function AuditAiPage() {
                           <div className="mb-2">
                             <img
                               src={m.photo_url}
-                              alt="現場照片"
+                              alt={t('sitePhoto')}
                               className="max-h-56 rounded-lg border object-cover"
                             />
                           </div>
@@ -421,7 +418,7 @@ export default function AuditAiPage() {
                 {sending && (
                   <div className="flex items-center gap-2 text-xs text-muted-foreground py-2 pl-2">
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    稽核專家思考分析中…
+                    {t('thinking')}
                   </div>
                 )}
               </div>
@@ -429,7 +426,7 @@ export default function AuditAiPage() {
               {/* 照片預覽條 */}
               {photoPreview && (
                 <div className="relative inline-block mt-2">
-                  <img src={photoPreview} alt="預覽" className="h-16 w-24 object-cover rounded-lg border" />
+                  <img src={photoPreview} alt={t('preview')} className="h-16 w-24 object-cover rounded-lg border" />
                   <button
                     onClick={() => setPhotoPreview('')}
                     className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center text-xs shadow-sm"
@@ -453,7 +450,7 @@ export default function AuditAiPage() {
                   variant="outline"
                   className="h-10 w-10 shrink-0 text-muted-foreground hover:text-foreground"
                   onClick={() => fileInputRef.current?.click()}
-                  title="拍照或上傳巡檢照片"
+                  title={t('uploadPhoto')}
                 >
                   <Camera className="h-4 w-4" />
                 </Button>
@@ -461,7 +458,7 @@ export default function AuditAiPage() {
                   value={input}
                   onChange={e => setInput(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
-                  placeholder="輸入提問或與專家探討流程動線、擺放、安全合規..."
+                  placeholder={t('inputPh')}
                   className="flex-1 h-10 text-sm"
                 />
                 <Button
@@ -481,15 +478,15 @@ export default function AuditAiPage() {
                 <div className="flex items-center justify-between border-b pb-2 mb-2">
                   <div className="flex items-center gap-1.5 font-semibold text-xs text-amber-900 dark:text-amber-200">
                     <Lightbulb className="h-4 w-4 text-amber-600" />
-                    建議與答案專區 (1/3)
+                    {t('suggestPanel')}
                   </div>
-                  <span className="text-[10px] text-muted-foreground">點擊卡片可直接追問</span>
+                  <span className="text-[10px] text-muted-foreground">{t('clickToAsk')}</span>
                 </div>
 
                 <div className="flex-1 overflow-y-auto space-y-2 pr-1 text-xs">
                   {suggestionItems.length === 0 ? (
                     <div className="text-center text-muted-foreground py-10">
-                      發送訊息後，專家建議與答案將獨立顯示於此。
+                      {t('suggestEmpty')}
                     </div>
                   ) : (
                     suggestionItems.map((item, idx) => (
@@ -499,20 +496,20 @@ export default function AuditAiPage() {
                         </div>
                         <div className="flex items-center gap-1.5 pt-1 border-t">
                           <button
-                            onClick={() => send(`針對這項建議「${item.replace(/^[0-9\.\-\*・\s]+/, '')}」，如何更具體在門市執行？`)}
+                            onClick={() => send(t('followUp', { item: item.replace(/^[0-9\.\-\*・\s]+/, '') }))}
                             className="text-[11px] text-amber-700 hover:text-amber-800 dark:text-amber-400 flex items-center gap-0.5"
                           >
                             <MessageCircle className="h-3 w-3" />
-                            引用追問
+                            {t('quoteAsk')}
                           </button>
                           <button
                             onClick={() => {
-                              setInput(prev => prev ? `${prev}（參考建議：${item}）` : `請針對「${item}」進行人體工學調整分析`)
+                              setInput(prev => prev ? `${prev}${t('refSuggestion', { item })}` : t('analyzeErgo', { item }))
                             }}
                             className="text-[11px] text-muted-foreground hover:text-foreground ml-auto flex items-center gap-0.5"
                           >
                             <ArrowRight className="h-3 w-3" />
-                            帶入輸入框
+                            {t('toInput')}
                           </button>
                         </div>
                       </Card>
@@ -533,6 +530,7 @@ export default function AuditAiPage() {
 
 // 知識庫管理彈窗
 function KnowledgeModal({ onClose }: { onClose: () => void }) {
+  const t = useTranslations('AuditAi')
   const [items, setItems] = useState<Know[]>([])
   const [loading, setLoading] = useState(true)
   const [title, setTitle] = useState('')
@@ -580,7 +578,7 @@ function KnowledgeModal({ onClose }: { onClose: () => void }) {
         <div className="flex items-center justify-between pb-3 border-b">
           <div className="flex items-center gap-2">
             <BookOpen className="h-5 w-5 text-amber-600" />
-            <h2 className="text-base font-bold">稽核專家知識庫・隨時補充訓練資料</h2>
+            <h2 className="text-base font-bold">{t('kbTitle')}</h2>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
             <X className="h-5 w-5" />
@@ -595,29 +593,29 @@ function KnowledgeModal({ onClose }: { onClose: () => void }) {
               onChange={e => setKind(e.target.value)}
               className="h-9 px-2 text-xs border rounded-md bg-background"
             >
-              <option value="sop">SOP 流程規範</option>
-              <option value="ergonomics">人體工學與擺放</option>
-              <option value="hygiene">環境衛生標準</option>
-              <option value="rules">罰則規章</option>
-              <option value="other">補充資料</option>
+              <option value="sop">{t('kind.sop')}</option>
+              <option value="ergonomics">{t('kind.ergonomics')}</option>
+              <option value="hygiene">{t('kind.hygiene')}</option>
+              <option value="rules">{t('kind.rules')}</option>
+              <option value="other">{t('kind.other')}</option>
             </select>
             <Input
               value={title}
               onChange={e => setTitle(e.target.value)}
-              placeholder="標題（如：水吧封口機擺放間距要求、假作廢罰則標準）"
+              placeholder={t('kbTitlePh')}
               className="h-9 text-xs flex-1"
             />
           </div>
           <textarea
             value={content}
             onChange={e => setContent(e.target.value)}
-            placeholder="請貼上規範內容、人體工學高度尺寸、罰則說明或 SOP 細節..."
+            placeholder={t('kbContentPh')}
             className="w-full h-20 p-2 text-xs border rounded-md bg-background resize-none"
           />
           <div className="flex justify-end">
             <Button size="sm" onClick={handleAdd} disabled={adding || !title.trim() || !content.trim()} className="gap-1 text-xs">
               {adding ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
-              新增至知識庫
+              {t('kbAdd')}
             </Button>
           </div>
         </div>
@@ -627,13 +625,13 @@ function KnowledgeModal({ onClose }: { onClose: () => void }) {
           {loading ? (
             <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
           ) : items.length === 0 ? (
-            <div className="text-center text-xs text-muted-foreground py-6">目前尚未建立補充訓練資料</div>
+            <div className="text-center text-xs text-muted-foreground py-6">{t('kbEmpty')}</div>
           ) : (
             items.map(it => (
               <div key={it.id} className="p-3 border rounded-lg bg-muted/20 space-y-1 group">
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 font-medium">
-                    {KIND_LABELS[it.kind] || it.kind}
+                    {KIND_KEYS.includes(it.kind) ? t(`kind.${it.kind}`) : it.kind}
                   </span>
                   <span className="font-semibold text-xs text-foreground flex-1">{it.title}</span>
                   <button onClick={() => handleDelete(it.id)} className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-500">
