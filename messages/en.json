@@ -11918,5 +11918,114 @@
     "activate": "Pay & activate",
     "payBtn": "{action} (${total} USD)",
     "payNote": "Takes effect immediately after payment; renewals extend from the current expiry date. Nothing renews automatically."
+  },
+  "PosMenu": {
+    "subtitle": "Upload images and multilingual names / descriptions; the kiosk shows them by language",
+    "importBtn": "Batch import menu (Excel/CSV)",
+    "uploadImage": "Upload image (optional)",
+    "itemNamePh": "Item name (main language)",
+    "mainDescPh": "Main description",
+    "descPh": "Description (optional)",
+    "pricePh": "Price",
+    "multilangContent": "Translations",
+    "aiTranslate": "AI translate",
+    "title": "Menu editor",
+    "addCategory": "New category",
+    "categoryName": "Category name",
+    "addItem": "New item",
+    "chooseCategory": "Choose category",
+    "changeImage": "Change image",
+    "multilang": "Languages",
+    "all": "All",
+    "global": "All stores",
+    "add": "Add",
+    "preview": "Preview",
+    "remove": "Remove",
+    "image": "Image",
+    "disable": "Disable",
+    "enable": "Enable",
+    "save": "Save",
+    "cancel": "Cancel",
+    "store": "Store",
+    "revision": "Version {n}",
+    "namePhLang": "{lang} name",
+    "descPhLang": "{lang} description",
+    "storeOnly": "{name} only"
+  },
+  "PosMenuImport": {
+    "_meta": {
+      "title": "Batch import / update POS menu",
+      "description": "Supports .xlsx, .xls and .csv files. Missing categories are created; items with a matching name are updated, others are added.",
+      "template": "POS menu template",
+      "sheet": "Menu items"
+    },
+    "name": {
+      "label": "Item name",
+      "example": "Bubble milk tea"
+    },
+    "category": {
+      "label": "Category",
+      "example": "Classic tea"
+    },
+    "price": {
+      "label": "Price"
+    },
+    "description": {
+      "label": "Description",
+      "example": "Rich milk tea with freshly cooked boba pearls"
+    },
+    "barcode": {
+      "label": "Barcode"
+    }
+  },
+  "PosStores": {
+    "loading": "Loading…",
+    "title": "Stores & terminals",
+    "subtitle": "One Debian terminal per store. Enter the device_key in the kiosk or pos-bridge.",
+    "importBtn": "Batch import stores (Excel/CSV)",
+    "storeName": "Store name",
+    "addStore": "Add store",
+    "terminal": "Terminal: {name}",
+    "hideKey": "Hide key",
+    "showKey": "Show key",
+    "copyKey": "Copy key",
+    "lastSync": "Last sync: ",
+    "never": "never",
+    "noTerminal": "No terminal yet",
+    "noStores": "No stores yet"
+  },
+  "PosStoresImport": {
+    "_meta": {
+      "title": "Batch import stores",
+      "description": "Supports .xlsx, .xls and .csv files. Fill in store name and code (optional).",
+      "template": "POS store template",
+      "sheet": "Stores"
+    },
+    "name": {
+      "label": "Store name",
+      "example": "Xinyi flagship"
+    },
+    "slug": {
+      "label": "Code (slug)"
+    }
+  },
+  "PosOrders": {
+    "title": "Orders",
+    "all": "All",
+    "status": {
+      "pending": "Pending",
+      "preparing": "Preparing",
+      "ready": "Ready",
+      "done": "Done",
+      "cancelled": "Cancelled"
+    },
+    "type": {
+      "dine_in": "Dine-in",
+      "takeout": "Takeout",
+      "delivery": "Delivery"
+    },
+    "table": "Table {n}",
+    "note": "Note: {note}",
+    "empty": "No orders yet"
   }
 }

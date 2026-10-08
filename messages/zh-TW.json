@@ -11918,5 +11918,114 @@
     "activate": "付款啟用",
     "payBtn": "{action}（${total} 美元）",
     "payNote": "付款後立即生效；續約會從原到期日往後延長。到期前不會自動續訂。"
+  },
+  "PosMenu": {
+    "subtitle": "上傳圖片、多語系名稱與描述，Kiosk 依語言顯示",
+    "importBtn": "批次匯入菜單 (Excel/CSV)",
+    "uploadImage": "上傳圖片（選填）",
+    "itemNamePh": "品名（主語言）",
+    "mainDescPh": "主描述（繁中）",
+    "descPh": "描述（選填）",
+    "pricePh": "價格（元）",
+    "multilangContent": "多語系內容",
+    "aiTranslate": "AI 翻譯",
+    "title": "菜單編輯",
+    "addCategory": "新增分類",
+    "categoryName": "分類名稱",
+    "addItem": "新增品項",
+    "chooseCategory": "選擇分類",
+    "changeImage": "更換圖片",
+    "multilang": "多語系",
+    "all": "全部",
+    "global": "全域",
+    "add": "新增",
+    "preview": "預覽",
+    "remove": "移除",
+    "image": "圖片",
+    "disable": "停用",
+    "enable": "啟用",
+    "save": "儲存",
+    "cancel": "取消",
+    "store": "門市",
+    "revision": "版本 {n}",
+    "namePhLang": "{lang} 名稱",
+    "descPhLang": "{lang} 描述",
+    "storeOnly": "{name} 專屬"
+  },
+  "PosMenuImport": {
+    "_meta": {
+      "title": "批次匯入 / 更新 POS 菜單",
+      "description": "支援 .xlsx, .xls 與 .csv 檔案。若分類不存在將自動建立，若品項名稱相符將自動更新，否則新增。",
+      "template": "POS菜單範本",
+      "sheet": "菜單品項"
+    },
+    "name": {
+      "label": "商品名稱",
+      "example": "珍珠奶茶"
+    },
+    "category": {
+      "label": "商品分類",
+      "example": "經典茶飲"
+    },
+    "price": {
+      "label": "售價(元)"
+    },
+    "description": {
+      "label": "商品描述",
+      "example": "濃郁奶香搭配現煮波霸珍珠"
+    },
+    "barcode": {
+      "label": "條碼"
+    }
+  },
+  "PosStores": {
+    "loading": "載入中…",
+    "title": "門市與終端",
+    "subtitle": "每間門市一台 Debian 終端。將 device_key 填入 Kiosk 或 pos-bridge。",
+    "importBtn": "批次匯入門市 (Excel/CSV)",
+    "storeName": "門市名稱",
+    "addStore": "新增門市",
+    "terminal": "終端：{name}",
+    "hideKey": "隱藏金鑰",
+    "showKey": "顯示金鑰",
+    "copyKey": "複製金鑰",
+    "lastSync": "上次同步：",
+    "never": "尚未",
+    "noTerminal": "尚無終端",
+    "noStores": "尚無門市"
+  },
+  "PosStoresImport": {
+    "_meta": {
+      "title": "批次匯入門市",
+      "description": "支援 .xlsx, .xls 與 .csv 檔案。請填寫門市名稱與代碼（可選）。",
+      "template": "POS門市清單範本",
+      "sheet": "門市清單"
+    },
+    "name": {
+      "label": "門市名稱",
+      "example": "信義旗艦店"
+    },
+    "slug": {
+      "label": "代碼 (Slug)"
+    }
+  },
+  "PosOrders": {
+    "title": "訂單管理",
+    "all": "全部",
+    "status": {
+      "pending": "待處理",
+      "preparing": "製作中",
+      "ready": "可取餐",
+      "done": "完成",
+      "cancelled": "取消"
+    },
+    "type": {
+      "dine_in": "內用",
+      "takeout": "外帶",
+      "delivery": "外送"
+    },
+    "table": "桌 {n}",
+    "note": "備註：{note}",
+    "empty": "尚無訂單"
   }
 }

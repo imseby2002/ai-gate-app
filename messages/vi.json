@@ -11825,5 +11825,114 @@
     "activate": "Thanh toán kích hoạt",
     "payBtn": "{action} (${total} USD)",
     "payNote": "Có hiệu lực ngay sau khi thanh toán; gia hạn sẽ cộng tiếp từ ngày hết hạn hiện tại. Không tự động gia hạn."
+  },
+  "PosMenu": {
+    "subtitle": "Tải ảnh, tên và mô tả đa ngôn ngữ; kiosk hiển thị theo ngôn ngữ",
+    "importBtn": "Nhập thực đơn hàng loạt (Excel/CSV)",
+    "uploadImage": "Tải ảnh (không bắt buộc)",
+    "itemNamePh": "Tên món (ngôn ngữ chính)",
+    "mainDescPh": "Mô tả chính",
+    "descPh": "Mô tả (không bắt buộc)",
+    "pricePh": "Giá",
+    "multilangContent": "Nội dung đa ngôn ngữ",
+    "aiTranslate": "Dịch bằng AI",
+    "title": "Chỉnh sửa thực đơn",
+    "addCategory": "Thêm danh mục",
+    "categoryName": "Tên danh mục",
+    "addItem": "Thêm món",
+    "chooseCategory": "Chọn danh mục",
+    "changeImage": "Đổi ảnh",
+    "multilang": "Đa ngôn ngữ",
+    "all": "Tất cả",
+    "global": "Toàn hệ thống",
+    "add": "Thêm",
+    "preview": "Xem trước",
+    "remove": "Xóa",
+    "image": "Ảnh",
+    "disable": "Ngừng bán",
+    "enable": "Mở bán",
+    "save": "Lưu",
+    "cancel": "Hủy",
+    "store": "Cửa hàng",
+    "revision": "Phiên bản {n}",
+    "namePhLang": "Tên {lang}",
+    "descPhLang": "Mô tả {lang}",
+    "storeOnly": "Riêng {name}"
+  },
+  "PosMenuImport": {
+    "_meta": {
+      "title": "Nhập / cập nhật thực đơn POS hàng loạt",
+      "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Danh mục chưa có sẽ tự tạo; món trùng tên sẽ tự cập nhật, ngược lại thêm mới.",
+      "template": "Mau thuc don POS",
+      "sheet": "Mon"
+    },
+    "name": {
+      "label": "Tên món",
+      "example": "Trà sữa trân châu"
+    },
+    "category": {
+      "label": "Danh mục",
+      "example": "Trà truyền thống"
+    },
+    "price": {
+      "label": "Giá bán"
+    },
+    "description": {
+      "label": "Mô tả",
+      "example": "Vị sữa đậm đà cùng trân châu nấu mới"
+    },
+    "barcode": {
+      "label": "Mã vạch"
+    }
+  },
+  "PosStores": {
+    "loading": "Đang tải…",
+    "title": "Cửa hàng & thiết bị",
+    "subtitle": "Mỗi cửa hàng một máy Debian. Nhập device_key vào kiosk hoặc pos-bridge.",
+    "importBtn": "Nhập cửa hàng hàng loạt (Excel/CSV)",
+    "storeName": "Tên cửa hàng",
+    "addStore": "Thêm cửa hàng",
+    "terminal": "Thiết bị: {name}",
+    "hideKey": "Ẩn khóa",
+    "showKey": "Hiện khóa",
+    "copyKey": "Sao chép khóa",
+    "lastSync": "Đồng bộ lần cuối: ",
+    "never": "chưa có",
+    "noTerminal": "Chưa có thiết bị",
+    "noStores": "Chưa có cửa hàng"
+  },
+  "PosStoresImport": {
+    "_meta": {
+      "title": "Nhập cửa hàng hàng loạt",
+      "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Điền tên cửa hàng và mã (không bắt buộc).",
+      "template": "Mau cua hang POS",
+      "sheet": "Cua hang"
+    },
+    "name": {
+      "label": "Tên cửa hàng",
+      "example": "Cửa hàng Xinyi"
+    },
+    "slug": {
+      "label": "Mã (slug)"
+    }
+  },
+  "PosOrders": {
+    "title": "Quản lý đơn hàng",
+    "all": "Tất cả",
+    "status": {
+      "pending": "Chờ xử lý",
+      "preparing": "Đang làm",
+      "ready": "Sẵn sàng",
+      "done": "Hoàn tất",
+      "cancelled": "Đã hủy"
+    },
+    "type": {
+      "dine_in": "Tại chỗ",
+      "takeout": "Mang đi",
+      "delivery": "Giao hàng"
+    },
+    "table": "Bàn {n}",
+    "note": "Ghi chú: {note}",
+    "empty": "Chưa có đơn hàng"
   }
 }

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { FileSpreadsheet, Monitor, Eye, EyeOff, Copy, Check } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { ExcelImportModal } from '@/components/common/ExcelImportModal'
 import type { ImportColumn } from '@/lib/excel/universal-import'
 
@@ -21,6 +22,7 @@ interface StoreRow {
 }
 
 export default function PosStoresPage() {
+  const t = useTranslations('PosStores')
   const [stores, setStores] = useState<StoreRow[]>([])
   const [name, setName] = useState('')
   const [loading, setLoading] = useState(true)
@@ -60,7 +62,7 @@ export default function PosStoresPage() {
     load()
   }
 
-  if (loading) return <p className="p-6 text-muted-foreground">載入中…</p>
+  if (loading) return <p className="p-6 text-muted-foreground">{t('loading')}</p>
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-6 space-y-5">
@@ -68,12 +70,12 @@ export default function PosStoresPage() {
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0"><Monitor className="h-5 w-5 text-primary" /></div>
           <div>
-            <h1 className="text-2xl font-bold">門市與終端</h1>
-            <p className="text-sm text-muted-foreground">每間門市一台 Debian 終端。將 device_key 填入 Kiosk 或 pos-bridge。</p>
+            <h1 className="text-2xl font-bold">{t('title')}</h1>
+            <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
           </div>
         </div>
         <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowImport(true)}>
-          <FileSpreadsheet className="h-4 w-4 text-emerald-600" />批次匯入門市 (Excel/CSV)
+          <FileSpreadsheet className="h-4 w-4 text-emerald-600" />{t('importBtn')}
         </Button>
       </div>
 
@@ -82,6 +84,7 @@ export default function PosStoresPage() {
           title="批次匯入門市"
           description="支援 .xlsx, .xls 與 .csv 檔案。請填寫門市名稱與代碼（可選）。"
           columns={POS_STORE_IMPORT_COLUMNS}
+          columnsNs="PosStoresImport"
           templateFilename="POS門市清單範本"
           sheetName="門市清單"
           onClose={() => setShowImport(false)}
@@ -98,8 +101,8 @@ export default function PosStoresPage() {
       )}
 
       <Card className="flex gap-2 p-3">
-        <Input value={name} onChange={e => setName(e.target.value)} placeholder="門市名稱" />
-        <Button onClick={create} disabled={!name.trim()}>新增門市</Button>
+        <Input value={name} onChange={e => setName(e.target.value)} placeholder={t('storeName')} />
+        <Button onClick={create} disabled={!name.trim()}>{t('addStore')}</Button>
       </Card>
 
       <div className="space-y-3">
@@ -111,32 +114,32 @@ export default function PosStoresPage() {
               <p className="text-xs text-muted-foreground">slug: {s.slug}</p>
               {term ? (
                 <>
-                  <p className="text-xs">終端：{term.name}</p>
+                  <p className="text-xs">{t('terminal', { name: term.name })}</p>
                   <div className="flex items-center gap-1.5 rounded bg-muted p-2">
                     <p className="flex-1 break-all font-mono text-xs">
                       {revealed.has(term.id) ? term.device_key : `${term.device_key.slice(0, 8)}${'•'.repeat(12)}`}
                     </p>
-                    <button type="button" onClick={() => toggleReveal(term.id)} className="shrink-0 text-muted-foreground hover:text-foreground" title={revealed.has(term.id) ? '隱藏金鑰' : '顯示金鑰'}>
+                    <button type="button" onClick={() => toggleReveal(term.id)} className="shrink-0 text-muted-foreground hover:text-foreground" title={revealed.has(term.id) ? t('hideKey') : t('showKey')}>
                       {revealed.has(term.id) ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                     </button>
-                    <button type="button" onClick={() => copyKey(term.id, term.device_key)} className="shrink-0 text-muted-foreground hover:text-foreground" title="複製金鑰">
+                    <button type="button" onClick={() => copyKey(term.id, term.device_key)} className="shrink-0 text-muted-foreground hover:text-foreground" title={t('copyKey')}>
                       {copied === term.id ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
                     </button>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    上次同步：{term.last_sync_at ? new Date(term.last_sync_at).toLocaleString() : '尚未'}
+                    {t('lastSync')}{term.last_sync_at ? new Date(term.last_sync_at).toLocaleString() : t('never')}
                   </p>
                   <p className="text-xs">
                     Kiosk：<code className="rounded bg-muted px-1">/pos/kiosk?key={term.device_key.slice(0, 8)}…</code>
                   </p>
                 </>
               ) : (
-                <p className="text-xs text-amber-600">尚無終端</p>
+                <p className="text-xs text-amber-600">{t('noTerminal')}</p>
               )}
             </Card>
           )
         })}
-        {stores.length === 0 && <p className="text-sm text-muted-foreground">尚無門市</p>}
+        {stores.length === 0 && <p className="text-sm text-muted-foreground">{t('noStores')}</p>}
       </div>
     </div>
   )

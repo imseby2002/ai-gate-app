@@ -11,6 +11,7 @@ import type { PosCategory, PosItem } from '@/lib/pos/types'
 import type { PosTranslations } from '@/lib/pos/i18n'
 import { DEFAULT_MODIFIER_GROUPS } from '@/lib/pos/types'
 import { Loader2, Sparkles, Upload, FileSpreadsheet, UtensilsCrossed } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { ExcelImportModal } from '@/components/common/ExcelImportModal'
 import type { ImportColumn } from '@/lib/excel/universal-import'
 
@@ -35,6 +36,7 @@ function fmt(cents: number) {
 }
 
 export default function PosMenuPage() {
+  const t = useTranslations('PosMenu')
   const [stores, setStores] = useState<Store[]>([])
   const [storeFilter, setStoreFilter] = useState<string>('all')
   const [categories, setCategories] = useState<PosCategory[]>([])
@@ -69,8 +71,8 @@ export default function PosMenuPage() {
   useEffect(() => { load() }, [load])
 
   const scopeLabel = (storeId: string | null) => {
-    if (!storeId) return '全域'
-    return stores.find(s => s.id === storeId)?.name ?? '門市'
+    if (!storeId) return t('global')
+    return stores.find(s => s.id === storeId)?.name ?? t('store')
   }
 
   async function addCategory() {
@@ -194,14 +196,14 @@ export default function PosMenuPage() {
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0"><UtensilsCrossed className="h-5 w-5 text-primary" /></div>
           <div>
-            <h1 className="text-2xl font-bold">菜單編輯</h1>
-            <p className="text-sm text-muted-foreground">上傳圖片、多語系名稱與描述，Kiosk 依語言顯示</p>
+            <h1 className="text-2xl font-bold">{t('title')}</h1>
+            <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant="secondary">版本 {revision}</Badge>
+          <Badge variant="secondary">{t('revision', { n: revision })}</Badge>
           <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowImport(true)}>
-            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />批次匯入菜單 (Excel/CSV)
+            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />{t('importBtn')}
           </Button>
         </div>
       </div>
@@ -211,6 +213,7 @@ export default function PosMenuPage() {
           title="批次匯入 / 更新 POS 菜單"
           description="支援 .xlsx, .xls 與 .csv 檔案。若分類不存在將自動建立，若品項名稱相符將自動更新，否則新增。"
           columns={POS_MENU_IMPORT_COLUMNS}
+          columnsNs="PosMenuImport"
           templateFilename="POS菜單範本"
           sheetName="菜單品項"
           onClose={() => setShowImport(false)}
@@ -227,45 +230,45 @@ export default function PosMenuPage() {
       )}
 
       <div className="flex flex-wrap gap-2">
-        <Button size="sm" variant={storeFilter === 'all' ? 'default' : 'outline'} onClick={() => setStoreFilter('all')}>全部</Button>
+        <Button size="sm" variant={storeFilter === 'all' ? 'default' : 'outline'} onClick={() => setStoreFilter('all')}>{t('all')}</Button>
         {stores.map(s => (
           <Button key={s.id} size="sm" variant={storeFilter === s.id ? 'default' : 'outline'} onClick={() => setStoreFilter(s.id)}>{s.name}</Button>
         ))}
       </div>
 
       <Card className="space-y-3 p-4">
-        <p className="font-medium">新增分類</p>
+        <p className="font-medium">{t('addCategory')}</p>
         <div className="flex flex-wrap gap-2">
-          <Input className="max-w-xs" value={catName} onChange={e => setCatName(e.target.value)} placeholder="分類名稱" />
+          <Input className="max-w-xs" value={catName} onChange={e => setCatName(e.target.value)} placeholder={t('categoryName')} />
           <select className="h-9 rounded-md border px-2 text-sm" value={catScope} onChange={e => setCatScope(e.target.value)}>
-            <option value="">全域</option>
-            {stores.map(s => <option key={s.id} value={s.id}>{s.name} 專屬</option>)}
+            <option value="">{t('global')}</option>
+            {stores.map(s => <option key={s.id} value={s.id}>{t('storeOnly', { name: s.name })}</option>)}
           </select>
-          <Button onClick={addCategory} disabled={!catName.trim()}>新增</Button>
+          <Button onClick={addCategory} disabled={!catName.trim()}>{t('add')}</Button>
         </div>
       </Card>
 
       <Card className="space-y-3 p-4">
-        <p className="font-medium">新增品項</p>
+        <p className="font-medium">{t('addItem')}</p>
         <div className="grid gap-2 sm:grid-cols-2">
           <select className="h-9 rounded-md border px-2 text-sm" value={itemCat} onChange={e => setItemCat(e.target.value)}>
-            <option value="">選擇分類</option>
+            <option value="">{t('chooseCategory')}</option>
             {categories.map(c => (
               <option key={c.id} value={c.id}>{c.name} ({scopeLabel(c.store_id)})</option>
             ))}
           </select>
-          <Input value={itemName} onChange={e => setItemName(e.target.value)} placeholder="品名（主語言）" />
-          <Input type="number" value={itemPrice} onChange={e => setItemPrice(e.target.value)} placeholder="價格（元）" />
+          <Input value={itemName} onChange={e => setItemName(e.target.value)} placeholder={t('itemNamePh')} />
+          <Input type="number" value={itemPrice} onChange={e => setItemPrice(e.target.value)} placeholder={t('pricePh')} />
           <select className="h-9 rounded-md border px-2 text-sm" value={itemScope} onChange={e => setItemScope(e.target.value)}>
-            <option value="">全域</option>
+            <option value="">{t('global')}</option>
             {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
-          <Textarea className="sm:col-span-2" value={itemDesc} onChange={e => setItemDesc(e.target.value)} placeholder="描述（選填）" rows={2} />
+          <Textarea className="sm:col-span-2" value={itemDesc} onChange={e => setItemDesc(e.target.value)} placeholder={t('descPh')} rows={2} />
         </div>
         <div className="flex items-center gap-3">
           <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border bg-muted">
             {itemImage ? (
-              <Image src={itemImage} alt="預覽" fill className="object-cover" unoptimized />
+              <Image src={itemImage} alt={t('preview')} fill className="object-cover" unoptimized />
             ) : (
               <div className="flex h-full items-center justify-center text-muted-foreground">
                 <Upload className="h-5 w-5" />
@@ -281,14 +284,14 @@ export default function PosMenuPage() {
             />
             <span className="inline-flex h-9 items-center rounded-md border px-3 text-sm font-medium hover:bg-accent">
               {newUploading ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Upload className="mr-1 h-4 w-4" />}
-              {itemImage ? '更換圖片' : '上傳圖片（選填）'}
+              {itemImage ? t('changeImage') : t('uploadImage')}
             </span>
           </label>
           {itemImage && (
-            <Button size="sm" variant="ghost" onClick={() => setItemImage('')}>移除</Button>
+            <Button size="sm" variant="ghost" onClick={() => setItemImage('')}>{t('remove')}</Button>
           )}
         </div>
-        <Button onClick={addItem} disabled={!itemName.trim() || !itemCat || newUploading}>新增品項</Button>
+        <Button onClick={addItem} disabled={!itemName.trim() || !itemCat || newUploading}>{t('addItem')}</Button>
       </Card>
 
       <div className="space-y-4">
@@ -317,12 +320,12 @@ export default function PosMenuPage() {
                         <label className="inline-flex cursor-pointer">
                           <input type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) uploadImage(item.id, f) }} />
                           <span className="inline-flex h-8 items-center rounded-md border px-3 text-xs font-medium hover:bg-accent">
-                            <Upload className="mr-1 h-3 w-3" />圖片
+                            <Upload className="mr-1 h-3 w-3" />{t('image')}
                           </span>
                         </label>
-                        <Button size="sm" variant="outline" onClick={() => startEdit(item)}>多語系</Button>
+                        <Button size="sm" variant="outline" onClick={() => startEdit(item)}>{t('multilang')}</Button>
                         <Button size="sm" variant="ghost" onClick={() => toggleItem(item.id, !item.is_active)}>
-                          {item.is_active ? '停用' : '啟用'}
+                          {item.is_active ? t('disable') : t('enable')}
                         </Button>
                       </div>
                     </div>
@@ -331,17 +334,17 @@ export default function PosMenuPage() {
                   {editId === item.id && (
                     <div className="mt-4 space-y-3 rounded-xl border bg-muted/20 p-4">
                       <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium">多語系內容</p>
+                        <p className="text-sm font-medium">{t('multilangContent')}</p>
                         <Button size="sm" variant="secondary" onClick={autoTranslate} disabled={translating}>
                           {translating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="mr-1 h-4 w-4" />}
-                          AI 翻譯
+                          {t('aiTranslate')}
                         </Button>
                       </div>
-                      <Textarea value={editDesc} onChange={e => setEditDesc(e.target.value)} placeholder="主描述（繁中）" rows={2} />
+                      <Textarea value={editDesc} onChange={e => setEditDesc(e.target.value)} placeholder={t('mainDescPh')} rows={2} />
                       {LOCALES.map(loc => (
                         <div key={loc.code} className="grid gap-2 sm:grid-cols-2">
                           <Input
-                            placeholder={`${loc.label} 名稱`}
+                            placeholder={t('namePhLang', { lang: loc.label })}
                             value={editTranslations[loc.code]?.name ?? ''}
                             onChange={e => setEditTranslations(prev => ({
                               ...prev,
@@ -349,7 +352,7 @@ export default function PosMenuPage() {
                             }))}
                           />
                           <Input
-                            placeholder={`${loc.label} 描述`}
+                            placeholder={t('descPhLang', { lang: loc.label })}
                             value={editTranslations[loc.code]?.description ?? ''}
                             onChange={e => setEditTranslations(prev => ({
                               ...prev,
@@ -359,8 +362,8 @@ export default function PosMenuPage() {
                         </div>
                       ))}
                       <div className="flex gap-2">
-                        <Button size="sm" onClick={saveEdit}>儲存</Button>
-                        <Button size="sm" variant="ghost" onClick={() => setEditId(null)}>取消</Button>
+                        <Button size="sm" onClick={saveEdit}>{t('save')}</Button>
+                        <Button size="sm" variant="ghost" onClick={() => setEditId(null)}>{t('cancel')}</Button>
                       </div>
                     </div>
                   )}
