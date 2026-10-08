@@ -11,6 +11,7 @@ import {
   Building2, Store, CheckCircle2, AlertCircle, Languages,
   Sparkles, Radio, Eye
 } from 'lucide-react'
+import { fetchAzureSpeechToken, startAzureRecognition, type AzureRecognitionController } from '@/lib/meeting/azure-speech'
 
 // ── 型別 ──────────────────────────────────────────────────────────
 interface Me { id: string; name: string }
@@ -161,9 +162,11 @@ export default function MeetingPage() {
   const audioChunksRef = useRef<Blob[]>([])
 
   const [recording, setRecording] = useState(false)
+  const [speechEngine, setSpeechEngine] = useState<'azure' | 'web_speech' | null>(null)
   const [micDenied, setMicDenied] = useState(false)
-  const srSupported = typeof window !== 'undefined' && !!getSRCtor()
+  const srSupported = typeof window !== 'undefined' && (!!getSRCtor() || !!navigator?.mediaDevices)
 
+  const azureControllerRef = useRef<AzureRecognitionController | null>(null)
   const recRef = useRef<SpeechRec | null>(null)
   const recordingRef = useRef(false)
   const restartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -486,18 +489,21 @@ export default function MeetingPage() {
   }
 
   // ── 麥克風辨識寫入資料庫 ──
-  const addLine = useCallback(async (text: string) => {
+  const addLine = useCallback(async (text: string, speakerName?: string, lang?: string) => {
     const clean = text.trim()
     if (!clean || !meeting) return
+
+    const finalSpeaker = speakerName || me?.name || ''
+    const finalLang = lang || myLang
 
     try {
       let { data, error } = await supabase
         .from('meeting_lines')
         .insert({
           meeting_id: meeting.id,
-          speaker_name: me?.name ?? '',
+          speaker_name: finalSpeaker,
           content: clean,
-          source_lang: myLang,
+          source_lang: finalLang,
         })
         .select('*')
         .single()
@@ -509,9 +515,9 @@ export default function MeetingPage() {
           .from('meeting_lines')
           .insert({
             meeting_id: meeting.id,
-            speaker_name: me?.name ?? '',
+            speaker_name: finalSpeaker,
             content: clean,
-            source_lang: myLang,
+            source_lang: finalLang,
           })
           .select('*')
           .single()
@@ -607,8 +613,6 @@ export default function MeetingPage() {
   }, [cleanupRec, myLang, addLine])
 
   const startRec = useCallback(async () => {
-    const Ctor = getSRCtor()
-    if (!Ctor) return
     setMicDenied(false)
     recordingRef.current = true
     setRecording(true)
@@ -637,12 +641,50 @@ export default function MeetingPage() {
       }
     } catch {}
 
+    // 先嘗試啟用 Azure AI 語音識別與多人聲紋分離
+    try {
+      const tokenData = await fetchAzureSpeechToken()
+      if (tokenData.configured && tokenData.token && tokenData.region) {
+        const ctrl = await startAzureRecognition({
+          token: tokenData.token,
+          region: tokenData.region,
+          mode: meeting?.meeting_mode || 'online',
+          defaultLang: myLang,
+          onRecognized: (text, speakerLabel, detectedLang) => {
+            lastActiveRef.current = Date.now()
+            void addLine(text, speakerLabel, detectedLang)
+          },
+          onError: (err) => {
+            console.warn('[Meeting] Azure Speech error, fallback to Web Speech:', err)
+            if (azureControllerRef.current) {
+              void azureControllerRef.current.stop()
+              azureControllerRef.current = null
+            }
+            setSpeechEngine('web_speech')
+            startRecognizerInstance()
+          },
+        })
+        azureControllerRef.current = ctrl
+        setSpeechEngine('azure')
+        return
+      }
+    } catch (e) {
+      console.warn('[Meeting] Azure Speech start failed, falling back:', e)
+    }
+
+    // 若未配置 Azure 或建立失敗，降級為瀏覽器 Web Speech API
+    setSpeechEngine('web_speech')
     startRecognizerInstance()
-  }, [startRecognizerInstance])
+  }, [meeting, myLang, addLine, startRecognizerInstance])
 
   const stopRec = useCallback(() => {
     recordingRef.current = false
     setRecording(false)
+    setSpeechEngine(null)
+    if (azureControllerRef.current) {
+      void azureControllerRef.current.stop()
+      azureControllerRef.current = null
+    }
     cleanupRec()
     if (wakeLockRef.current) {
       try { void wakeLockRef.current.release() } catch {}
@@ -660,16 +702,18 @@ export default function MeetingPage() {
 
     const interval = setInterval(() => {
       if (!recordingRef.current) return
-      // 若超過 45 秒沒有任何識別活動（防範 Chrome Google 語音後端連線卡死且未觸發 onend）
-      const idle = Date.now() - lastActiveRef.current
-      if (idle > 45000) {
-        console.log('[Meeting] Watchdog: recognition idle > 45s, refreshing instance...')
-        startRecognizerInstance()
+      // 僅在 Web Speech API 模式下需要看門狗定時檢查重啟
+      if (speechEngine === 'web_speech') {
+        const idle = Date.now() - lastActiveRef.current
+        if (idle > 45000) {
+          console.log('[Meeting] Watchdog: recognition idle > 45s, refreshing instance...')
+          startRecognizerInstance()
+        }
       }
     }, 10000)
 
     const handleVisibility = () => {
-      if (document.visibilityState === 'visible' && recordingRef.current) {
+      if (document.visibilityState === 'visible' && recordingRef.current && speechEngine === 'web_speech') {
         if (Date.now() - lastActiveRef.current > 15000) {
           startRecognizerInstance()
         }
@@ -1083,7 +1127,15 @@ export default function MeetingPage() {
 
         {recording && (
           <span className="flex items-center gap-1.5 text-xs text-red-500">
-            <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" />{t('listening')}
+            <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
+            {speechEngine === 'azure' ? (
+              <span className="font-medium text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                <Sparkles className="h-3 w-3" />
+                {meeting.meeting_mode === 'in_person' ? 'Azure 聲紋分離中' : 'Azure AI 語音'}
+              </span>
+            ) : (
+              t('listening')
+            )}
           </span>
         )}
 
@@ -1162,7 +1214,13 @@ export default function MeetingPage() {
             return (
               <div key={l.id} className="text-sm border-b pb-2 last:border-b-0">
                 <div className="flex items-baseline gap-2">
-                  <span className={`font-medium ${mine ? 'text-blue-600 dark:text-blue-400' : 'text-foreground'}`}>
+                  <span className={`font-medium ${
+                    l.speaker_name?.startsWith('講者')
+                      ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-200 px-1.5 py-0.5 rounded text-xs font-semibold'
+                      : mine
+                      ? 'text-blue-600 dark:text-blue-400'
+                      : 'text-foreground'
+                  }`}>
                     {mine ? t('you') : (l.speaker_name || '—')}
                   </span>
                   <span className="text-[11px] text-muted-foreground">{fmtTime(l.created_at)}</span>
