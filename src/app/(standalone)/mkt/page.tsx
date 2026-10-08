@@ -7,7 +7,7 @@ import {
   Loader2, AlertCircle, Megaphone, CalendarDays, Plus, Trash2, Pencil,
   X, Save, Sparkles, Check, RotateCcw, CalendarPlus, Bike, Star, ExternalLink,
   BarChart3, Building2, Globe,
-  CheckCircle2, Search, Tag, Eye, BookOpen, Users, Rocket
+  CheckCircle2, Search, Tag, Eye, BookOpen, Users, Rocket, FileText, Download
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -70,6 +70,8 @@ export default function MktPage() {
             {t('openMarketingCenter')} <ExternalLink className="h-3 w-3" />
           </a>
           <Link href="/marketing/logbook"><Button variant="outline" size="sm" className="gap-1.5"><BookOpen className="h-4 w-4" />{t('marketingLog')}</Button></Link>
+          <a href="/api/docs/marketing-manual" target="_blank" rel="noreferrer"><Button variant="outline" size="sm" className="gap-1.5"><FileText className="h-4 w-4" />{t('manual')}</Button></a>
+          <a href="/api/docs/marketing-manual?download=1" title={t('manualDownload')}><Button variant="outline" size="sm" className="px-2"><Download className="h-4 w-4" /></Button></a>
         </div>
       </div>
 

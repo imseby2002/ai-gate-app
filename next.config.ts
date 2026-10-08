@@ -10,6 +10,10 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.resolve(__dirname),
   },
+  // 說明書 PDF 由 API 讀檔回傳，需打包進該函式
+  outputFileTracingIncludes: {
+    '/api/docs/marketing-manual': ['./docs/marketing-manual.pdf'],
+  },
   typescript: {
     // 避免歷史邊緣頁面型別推導差異阻礙 Vercel 上線部署
     ignoreBuildErrors: true,

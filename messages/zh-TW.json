@@ -1704,7 +1704,9 @@
       "collapse": "收合選單",
       "expand": "展開選單",
       "erpMkt": "ERP 行銷系統",
-      "campaigns": "活動企劃中心"
+      "campaigns": "活動企劃中心",
+      "manual": "使用說明書",
+      "manualDownload": "下載使用說明書（PDF）"
     },
     "section": {
       "create": "製作",
@@ -7010,7 +7012,9 @@
     "tabCompany": "公司資料",
     "tabCampaigns": "活動企劃中心 (AI/成效)",
     "tabCrm": "會員 CRM & VIP",
-    "templatesLink": "視覺風格與廣告"
+    "templatesLink": "視覺風格與廣告",
+    "manual": "使用說明書",
+    "manualDownload": "下載使用說明書（PDF）"
   },
   "HrPage": {
     "staffFulltime": "正職",

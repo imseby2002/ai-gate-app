@@ -1704,7 +1704,9 @@
       "collapse": "Collapse menu",
       "expand": "Expand menu",
       "erpMkt": "ERP Marketing",
-      "campaigns": "Campaigns"
+      "campaigns": "Campaigns",
+      "manual": "User manual",
+      "manualDownload": "Download user manual (PDF)"
     },
     "section": {
       "create": "Create",
@@ -7010,7 +7012,9 @@
     "tabCompany": "Company profile",
     "tabCampaigns": "Campaign Center (AI / results)",
     "tabCrm": "Member CRM & VIP",
-    "templatesLink": "Visual Styles & Ads"
+    "templatesLink": "Visual Styles & Ads",
+    "manual": "User manual",
+    "manualDownload": "Download user manual (PDF)"
   },
   "HrPage": {
     "staffFulltime": "Full-time",
