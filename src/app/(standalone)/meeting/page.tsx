@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
@@ -111,6 +111,7 @@ export default function MeetingPage() {
   const recordingRef = useRef(false)
   const restartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const wakeLockRef = useRef<{ release: () => Promise<void> | void } | null>(null)
+  const audioKeepAliveRef = useRef<AudioContext | null>(null)
   const lastActiveRef = useRef<number>(Date.now())
   const bottomRef = useRef<HTMLDivElement | null>(null)
 
@@ -409,6 +410,21 @@ export default function MeetingPage() {
       } catch {}
     }
 
+    // 啟動近乎靜音的 AudioContext，防止 Chrome 將背景分頁判定為閒置並凍結語音輸入
+    try {
+      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+      if (AudioCtx && !audioKeepAliveRef.current) {
+        const ctx = new AudioCtx()
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        gain.gain.setValueAtTime(0.00001, ctx.currentTime)
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        osc.start()
+        audioKeepAliveRef.current = ctx
+      }
+    } catch {}
+
     startRecognizerInstance()
   }, [startRecognizerInstance])
 
@@ -419,6 +435,10 @@ export default function MeetingPage() {
     if (wakeLockRef.current) {
       try { void wakeLockRef.current.release() } catch {}
       wakeLockRef.current = null
+    }
+    if (audioKeepAliveRef.current) {
+      try { void audioKeepAliveRef.current.close() } catch {}
+      audioKeepAliveRef.current = null
     }
   }, [cleanupRec])
 
