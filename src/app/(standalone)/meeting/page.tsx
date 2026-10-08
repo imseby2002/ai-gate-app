@@ -167,7 +167,13 @@ export default function MeetingPage() {
   const [recording, setRecording] = useState(false)
   const [speechEngine, setSpeechEngine] = useState<'azure' | 'web_speech' | null>(null)
   const [micDenied, setMicDenied] = useState(false)
-  const srSupported = typeof window !== 'undefined' && (!!getSRCtor() || !!navigator?.mediaDevices)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  const srSupported = mounted && typeof window !== 'undefined' && (!!getSRCtor() || !!navigator?.mediaDevices)
 
   const azureControllerRef = useRef<AzureRecognitionController | null>(null)
   const recRef = useRef<SpeechRec | null>(null)
@@ -367,6 +373,7 @@ export default function MeetingPage() {
 
     const autoTitle = newTitle.trim() || `${deptLabels || '跨部門'}會議${storeNames ? ` (${storeNames})` : ''}`
 
+    let createdRow: Meeting | null = null
     const { data, error } = await supabase
       .from('meetings')
       .insert({
@@ -378,52 +385,77 @@ export default function MeetingPage() {
         stores: selectedStores,
         context_keywords: combinedKeywords,
       })
-      .select('id, title, room_code, host_id, source_lang, department, departments, meeting_mode, stores, context_keywords')
+      .select('*')
       .single()
 
-    if (error || !data) {
-      console.error('[Meeting] create error:', error)
-      setErr(t('createFailed'))
-      return
+    if (!error && data) {
+      createdRow = data as Meeting
+    } else {
+      console.warn('[Meeting] create with v2 fields failed, falling back:', error)
+      // 容錯降級：若資料庫尚未執行 migration（缺少欄位），以基礎欄位建立
+      const fb = await supabase
+        .from('meetings')
+        .insert({
+          title: autoTitle,
+          source_lang: inputLang === 'auto' ? 'zh-TW' : inputLang,
+        })
+        .select('*')
+        .single()
+      if (fb.data) {
+        createdRow = fb.data as Meeting
+      } else {
+        console.error('[Meeting] create fallback also failed:', fb.error)
+        setErr(error?.message || fb.error?.message || t('createFailed'))
+        return
+      }
     }
 
-    await supabase.from('meeting_participants').insert({ meeting_id: data.id, name: me?.name ?? '' })
-    const m = data as Meeting
-    setMeeting(m)
-    loadMeetingData(m)
+    await supabase.from('meeting_participants').insert({ meeting_id: createdRow.id, name: me?.name ?? '' }).catch(() => {})
+    setMeeting(createdRow)
+    loadMeetingData(createdRow)
   }
 
   // ── 加入會議 ──
   async function joinMeeting() {
     setErr('')
-    const code = joinCode.trim()
+    const code = joinCode.trim().toUpperCase()
     if (!code) return
+
+    let row: Record<string, unknown> | null = null
     const { data, error } = await supabase.rpc('join_meeting', { p_code: code })
-    const row = (Array.isArray(data) ? data[0] : data) as
-      | {
-          id: string
-          title: string
-          host_id: string
-          source_lang: string
-          department?: string
-          departments?: string[]
-          meeting_mode?: 'online' | 'in_person'
-          stores?: string[]
-          context_keywords?: string
+    if (!error && data) {
+      row = (Array.isArray(data) ? data[0] : data) as Record<string, unknown>
+    } else {
+      console.warn('[Meeting] join_meeting RPC error, falling back to direct query:', error)
+      const { data: mData, error: mErr } = await supabase
+        .from('meetings')
+        .select('*')
+        .eq('room_code', code)
+        .eq('is_active', true)
+        .maybeSingle()
+      if (mData) {
+        row = mData as Record<string, unknown>
+        if (me?.id) {
+          await supabase.from('meeting_participants').insert({ meeting_id: mData.id, user_id: me.id, name: me.name || '' }).catch(() => {})
         }
-      | undefined
-    if (error || !row) { setErr(t('notFound')); return }
+      } else {
+        setErr(mErr?.message || t('notFound'))
+        return
+      }
+    }
+
+    if (!row) { setErr(t('notFound')); return }
     const m: Meeting = {
-      id: row.id,
-      title: row.title,
-      room_code: code.toUpperCase(),
-      host_id: row.host_id,
-      source_lang: row.source_lang,
-      department: row.department,
-      departments: row.departments,
-      meeting_mode: row.meeting_mode,
-      stores: row.stores,
-      context_keywords: row.context_keywords,
+      id: String(row.id),
+      title: String(row.title || ''),
+      room_code: code,
+      host_id: String(row.host_id || ''),
+      source_lang: String(row.source_lang || 'zh-TW'),
+      department: row.department as string | undefined,
+      departments: row.departments as string[] | undefined,
+      meeting_mode: row.meeting_mode as 'online' | 'in_person' | undefined,
+      stores: row.stores as string[] | undefined,
+      context_keywords: row.context_keywords as string | undefined,
     }
     setMeeting(m)
     loadMeetingData(m)
