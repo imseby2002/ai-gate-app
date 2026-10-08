@@ -40,6 +40,9 @@ export interface CompanyPlanConfig {
 export interface CompanyPriceLine {
   label: string
   usd: number
+  // 前端依語系翻譯：CompanyPlan.line.<key>（label 為中文備援，結帳單據沿用 label）
+  key?: string
+  params?: Record<string, number>
 }
 
 export function isCompanyPaidModule(id: string): id is CompanyPaidModule {
@@ -47,22 +50,22 @@ export function isCompanyPaidModule(id: string): id is CompanyPaidModule {
 }
 
 export function calcCompanyMonthlyPrice(config: CompanyPlanConfig): { lines: CompanyPriceLine[]; monthlyUsd: number } {
-  const lines: CompanyPriceLine[] = [{ label: '公司基本費', usd: COMPANY_BASE_USD }]
+  const lines: CompanyPriceLine[] = [{ label: '公司基本費', usd: COMPANY_BASE_USD, key: 'base' }]
 
   for (const id of Object.keys(COMPANY_MODULE_PRICES_USD) as CompanyPaidModule[]) {
-    if (config.modules.includes(id)) lines.push({ label: COMPANY_MODULE_LABELS[id], usd: COMPANY_MODULE_PRICES_USD[id] })
+    if (config.modules.includes(id)) lines.push({ label: COMPANY_MODULE_LABELS[id], usd: COMPANY_MODULE_PRICES_USD[id], key: `module_${id}` })
   }
 
   const seats = Math.max(0, Math.floor(config.erpSeats))
   if (seats > 0) {
     const extra = Math.max(0, seats - ERP_INCLUDED_SEATS)
-    lines.push({ label: `ERP 基本包（${seats} 人，含 ${ERP_INCLUDED_SEATS} 人）`, usd: ERP_BASE_USD + extra * ERP_EXTRA_SEAT_USD })
+    lines.push({ label: `ERP 基本包（${seats} 人，含 ${ERP_INCLUDED_SEATS} 人）`, usd: ERP_BASE_USD + extra * ERP_EXTRA_SEAT_USD, key: 'erp', params: { seats, included: ERP_INCLUDED_SEATS } })
   }
 
   const stores = Math.max(0, Math.floor(config.retailStores))
-  if (stores > 0) lines.push({ label: `ERP 門市零售包（${stores} 家門市）`, usd: stores * RETAIL_STORE_USD })
+  if (stores > 0) lines.push({ label: `ERP 門市零售包（${stores} 家門市）`, usd: stores * RETAIL_STORE_USD, key: 'retail', params: { stores } })
 
-  if (config.customDomain) lines.push({ label: '自訂網域', usd: CUSTOM_DOMAIN_USD })
+  if (config.customDomain) lines.push({ label: '自訂網域', usd: CUSTOM_DOMAIN_USD, key: 'domain' })
 
   return { lines, monthlyUsd: lines.reduce((sum, l) => sum + l.usd, 0) }
 }

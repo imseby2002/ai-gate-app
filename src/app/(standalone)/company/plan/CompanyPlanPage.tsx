@@ -138,7 +138,7 @@ export function CompanyPlanPage({ isOwnerOrAdmin }: { isOwnerOrAdmin: boolean })
           <div className="font-semibold text-foreground">{t('priceBreakdown')}</div>
           {data.price.lines.map(l => (
             <div key={l.label} className="flex justify-between text-muted-foreground tabular-nums">
-              <span>{l.label}</span><span>${l.usd}</span>
+              <span>{l.key && t.has(`line.${l.key}`) ? t(`line.${l.key}`, l.params ?? {}) : l.label}</span><span>${l.usd}</span>
             </div>
           ))}
           <div className="flex justify-between border-t pt-2 font-bold text-foreground tabular-nums">

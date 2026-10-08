@@ -11061,7 +11061,44 @@
     "colIn": "存入",
     "colOut": "支出",
     "colNote": "摘要備註",
-    "eFooter": "共 {n} 筆項目（錯誤: {e}，警告: {w}）"
+    "eFooter": "共 {n} 筆項目（錯誤: {e}，警告: {w}）",
+    "err": {
+      "invalidCount": {
+        "title": "分錄列數不完整（實際 {n} 列，預期成對 2 列）",
+        "desc": "複式記帳每筆交易必須包含借貸兩列。目前有 {n} 列，可能在原軟體中被單邊刪除或資料損毀。",
+        "fix": "請檢查流水號 #{no} 的分錄完整性。"
+      },
+      "badDate": {
+        "title": "日期格式錯誤無法解析（\"{date}\"）",
+        "desc": "分錄日期未符合 YYYY/MM/DD 格式，系統無法確認正確記帳日期。",
+        "fix": "請開啟流水號 #{no} 並重新填寫日期。"
+      },
+      "yearRange": {
+        "title": "日期年份疑似筆誤（{year}年）",
+        "desc": "分錄項目為「{a}」與「{b}」，備註為「{note}」，日期為 \"{date}\"。該資料仍已成功匯入，但建議核對。",
+        "fix": "請在原始檔案或系統中修改年份為正確西元年。"
+      },
+      "noAsset": {
+        "title": "分錄缺少資產項目（雙方類別為「{ca}」與「{cb}」）",
+        "desc": "分錄一列為「{ca} - {a}」，另一列為「{cb} - {b}」，無任何資產資金帳戶，無法判定資金流向。",
+        "fix": "請檢查流水號 #{no}，將其中一列指定為正確的收付款帳戶。"
+      },
+      "zeroTransfer": {
+        "title": "轉帳金額為 0",
+        "desc": "從「{from}」轉至「{to}」之金額為 0，已略過匯入。",
+        "fix": "若此筆為有效轉帳，請補上金額。"
+      },
+      "unknownClass": {
+        "title": "非收支分錄類別（\"{cls}\"）",
+        "desc": "項目「{item}」之類別「{cls}」非標準收入或支出，無法自動入帳。",
+        "fix": "請檢查該科目設定是否正確。"
+      },
+      "zeroAmount": {
+        "title": "收支金額為 0",
+        "desc": "項目「{item}」金額為 0，已略過匯入。",
+        "fix": "若此筆為有效收支，請補上金額。"
+      }
+    }
   },
   "HrImport": {
     "employee": {
@@ -11982,7 +12019,17 @@
     "renew": "續約",
     "activate": "付款啟用",
     "payBtn": "{action}（${total} 美元）",
-    "payNote": "付款後立即生效；續約會從原到期日往後延長。到期前不會自動續訂。"
+    "payNote": "付款後立即生效；續約會從原到期日往後延長。到期前不會自動續訂。",
+    "line": {
+      "base": "公司基本費",
+      "module_cs": "客服 CS",
+      "module_booking": "訂房 BOOKING",
+      "module_marketing": "行銷 MARKETING",
+      "erp": "ERP 基本包（{seats} 人，含 {included} 人）",
+      "retail": "ERP 門市零售包（{stores} 家門市）",
+      "domain": "自訂網域",
+      "enterprise": "專屬客製-企業版"
+    }
   },
   "PosMenu": {
     "subtitle": "上傳圖片、多語系名稱與描述，Kiosk 依語言顯示",

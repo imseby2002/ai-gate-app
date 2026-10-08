@@ -43,6 +43,9 @@ export interface MdbErrorInfo {
   title: string
   description: string
   suggested_fix: string
+  // 前端依語系翻譯用：FinanceMdb.err.<msg_key>.title|desc|fix，title/description 為中文備援
+  msg_key?: string
+  msg_params?: Record<string, string | number>
   raw_rows: {
     make_no: number
     date: string
@@ -207,6 +210,7 @@ export function parseZeroMdb(buffer: Buffer): ZeroParseResult {
         title: `分錄列數不完整（實際 ${rows.length} 列，預期成對 2 列）`,
         description: `複式記帳每筆交易必須包含借貸兩列。目前有 ${rows.length} 列，可能在原軟體中被單邊刪除或資料損毀。`,
         suggested_fix: `請檢查流水號 #${make_no} 的分錄完整性。`,
+        msg_key: 'invalidCount', msg_params: { n: rows.length, no: make_no },
         raw_rows: formatRows(rows),
       })
       continue
@@ -226,6 +230,7 @@ export function parseZeroMdb(buffer: Buffer): ZeroParseResult {
         title: `日期格式錯誤無法解析（"${dateRaw}"）`,
         description: `分錄日期未符合 YYYY/MM/DD 格式，系統無法確認正確記帳日期。`,
         suggested_fix: `請開啟流水號 #${make_no} 並重新填寫日期。`,
+        msg_key: 'badDate', msg_params: { date: dateRaw, no: make_no },
         raw_rows: formatRows(rows),
       })
       continue
@@ -244,6 +249,7 @@ export function parseZeroMdb(buffer: Buffer): ZeroParseResult {
         title: `日期年份疑似筆誤（${year}年）`,
         description: `分錄項目為「${t(a.ITEM_NOTE)}」與「${t(b.ITEM_NOTE)}」，備註為「${t(a.DATA_NOTE) || t(b.DATA_NOTE)}」，日期為 "${dateRaw}"。該資料仍已成功匯入，但建議核對。`,
         suggested_fix: `請在原始檔案或系統中修改年份為正確西元年。`,
+        msg_key: 'yearRange', msg_params: { year, a: t(a.ITEM_NOTE), b: t(b.ITEM_NOTE), note: t(a.DATA_NOTE) || t(b.DATA_NOTE), date: dateRaw },
         raw_rows: formatRows(rows),
       })
     } else {
@@ -263,6 +269,7 @@ export function parseZeroMdb(buffer: Buffer): ZeroParseResult {
         title: `分錄缺少資產項目（雙方類別為「${t(a.ITEM_CLASS)}」與「${t(b.ITEM_CLASS)}」）`,
         description: `分錄一列為「${t(a.ITEM_CLASS)} - ${t(a.ITEM_NOTE)}」，另一列為「${t(b.ITEM_CLASS)} - ${t(b.ITEM_NOTE)}」，無任何資產資金帳戶，無法判定資金流向。`,
         suggested_fix: `請檢查流水號 #${make_no}，將其中一列指定為正確的收付款帳戶。`,
+        msg_key: 'noAsset', msg_params: { ca: t(a.ITEM_CLASS), cb: t(b.ITEM_CLASS), a: t(a.ITEM_NOTE), b: t(b.ITEM_NOTE), no: make_no },
         raw_rows: formatRows(rows),
       })
       continue
@@ -286,6 +293,7 @@ export function parseZeroMdb(buffer: Buffer): ZeroParseResult {
           title: `轉帳金額為 0`,
           description: `從「${t(fromRow.ITEM_NOTE)}」轉至「${t(toRow.ITEM_NOTE)}」之金額為 0，已略過匯入。`,
           suggested_fix: `若此筆為有效轉帳，請補上金額。`,
+          msg_key: 'zeroTransfer', msg_params: { from: t(fromRow.ITEM_NOTE), to: t(toRow.ITEM_NOTE) },
           raw_rows: formatRows(rows),
         })
         continue
@@ -322,6 +330,7 @@ export function parseZeroMdb(buffer: Buffer): ZeroParseResult {
         title: `非收支分錄類別（"${otherClass}"）`,
         description: `項目「${t(otherRow.ITEM_NOTE)}」之類別「${otherClass}」非標準收入或支出，無法自動入帳。`,
         suggested_fix: `請檢查該科目設定是否正確。`,
+        msg_key: 'unknownClass', msg_params: { cls: otherClass, item: t(otherRow.ITEM_NOTE) },
         raw_rows: formatRows(rows),
       })
       continue
@@ -339,6 +348,7 @@ export function parseZeroMdb(buffer: Buffer): ZeroParseResult {
         title: `收支金額為 0`,
         description: `項目「${t(otherRow.ITEM_NOTE)}」金額為 0，已略過匯入。`,
         suggested_fix: `若此筆為有效收支，請補上金額。`,
+        msg_key: 'zeroAmount', msg_params: { item: t(otherRow.ITEM_NOTE) },
         raw_rows: formatRows(rows),
       })
       continue

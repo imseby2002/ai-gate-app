@@ -10968,7 +10968,44 @@
     "colIn": "Thu",
     "colOut": "Chi",
     "colNote": "Diễn giải / ghi chú",
-    "eFooter": "Tổng {n} mục (lỗi: {e}, cảnh báo: {w})"
+    "eFooter": "Tổng {n} mục (lỗi: {e}, cảnh báo: {w})",
+    "err": {
+      "invalidCount": {
+        "title": "Bút toán không đủ dòng (thực tế {n} dòng, cần 2 dòng theo cặp)",
+        "desc": "Mỗi giao dịch kế toán kép phải có hai dòng nợ và có. Hiện có {n} dòng, có thể đã bị xóa một bên trong phần mềm gốc hoặc dữ liệu bị hỏng.",
+        "fix": "Vui lòng kiểm tra tính đầy đủ của chứng từ #{no}."
+      },
+      "badDate": {
+        "title": "Ngày sai định dạng, không đọc được (\"{date}\")",
+        "desc": "Ngày của bút toán không theo định dạng YYYY/MM/DD, hệ thống không xác định được ngày ghi sổ.",
+        "fix": "Vui lòng mở chứng từ #{no} và nhập lại ngày."
+      },
+      "yearRange": {
+        "title": "Năm nghi bị nhập sai ({year})",
+        "desc": "Mục \"{a}\" và \"{b}\", ghi chú \"{note}\", ngày \"{date}\". Dữ liệu vẫn đã được nhập nhưng nên kiểm tra lại.",
+        "fix": "Vui lòng sửa năm cho đúng trong tệp gốc hoặc trong hệ thống."
+      },
+      "noAsset": {
+        "title": "Bút toán thiếu dòng tài sản (hai bên là \"{ca}\" và \"{cb}\")",
+        "desc": "Một dòng là \"{ca} - {a}\", dòng kia là \"{cb} - {b}\", không có tài khoản tiền nên không xác định được dòng tiền.",
+        "fix": "Vui lòng kiểm tra chứng từ #{no}, chỉ định một dòng là tài khoản thu chi đúng."
+      },
+      "zeroTransfer": {
+        "title": "Số tiền chuyển khoản bằng 0",
+        "desc": "Chuyển từ \"{from}\" sang \"{to}\" có số tiền 0, đã bỏ qua không nhập.",
+        "fix": "Nếu đây là chuyển khoản hợp lệ, vui lòng bổ sung số tiền."
+      },
+      "unknownClass": {
+        "title": "Loại không phải thu/chi (\"{cls}\")",
+        "desc": "Mục \"{item}\" thuộc loại \"{cls}\", không phải thu hoặc chi chuẩn nên không thể tự ghi sổ.",
+        "fix": "Vui lòng kiểm tra cài đặt khoản mục này."
+      },
+      "zeroAmount": {
+        "title": "Số tiền thu chi bằng 0",
+        "desc": "Mục \"{item}\" có số tiền 0, đã bỏ qua không nhập.",
+        "fix": "Nếu đây là khoản thu chi hợp lệ, vui lòng bổ sung số tiền."
+      }
+    }
   },
   "HrImport": {
     "employee": {
@@ -11889,7 +11926,17 @@
     "renew": "Gia hạn",
     "activate": "Thanh toán kích hoạt",
     "payBtn": "{action} (${total} USD)",
-    "payNote": "Có hiệu lực ngay sau khi thanh toán; gia hạn sẽ cộng tiếp từ ngày hết hạn hiện tại. Không tự động gia hạn."
+    "payNote": "Có hiệu lực ngay sau khi thanh toán; gia hạn sẽ cộng tiếp từ ngày hết hạn hiện tại. Không tự động gia hạn.",
+    "line": {
+      "base": "Phí cơ bản công ty",
+      "module_cs": "Chăm sóc khách hàng (CS)",
+      "module_booking": "Đặt phòng (BOOKING)",
+      "module_marketing": "Marketing",
+      "erp": "Gói ERP cơ bản ({seats} người, đã gồm {included} người)",
+      "retail": "Gói bán lẻ ERP ({stores} cửa hàng)",
+      "domain": "Tên miền riêng",
+      "enterprise": "Gói Doanh nghiệp tùy chỉnh"
+    }
   },
   "PosMenu": {
     "subtitle": "Tải ảnh, tên và mô tả đa ngôn ngữ; kiosk hiển thị theo ngôn ngữ",

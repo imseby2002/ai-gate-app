@@ -31,13 +31,20 @@ interface MdbErrorDrawerProps {
 export function MdbErrorDrawer({
   open,
   onClose,
-  errors,
+  errors: rawErrors,
   bookName = 'FT',
   filename,
   importedAt
 }: MdbErrorDrawerProps) {
   const t = useTranslations('FinanceMdb')
   const locale = useLocale()
+  // 伺服器回傳 msg_key/msg_params 時依語系翻譯；舊紀錄沒有就沿用中文原文
+  const errors = rawErrors.map(e => {
+    const k = e.msg_key
+    if (!k || !t.has(`err.${k}.title`)) return e
+    const p = e.msg_params ?? {}
+    return { ...e, title: t(`err.${k}.title`, p), description: t(`err.${k}.desc`, p), suggested_fix: t(`err.${k}.fix`, p) }
+  })
   const [filterSeverity, setFilterSeverity] = useState<'all' | 'error' | 'warning'>('all')
   const [search, setSearch] = useState('')
   const [expandedId, setExpandedId] = useState<string | null>(null)

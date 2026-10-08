@@ -11061,7 +11061,44 @@
     "colIn": "In",
     "colOut": "Out",
     "colNote": "Note",
-    "eFooter": "{n} items (errors: {e}, warnings: {w})"
+    "eFooter": "{n} items (errors: {e}, warnings: {w})",
+    "err": {
+      "invalidCount": {
+        "title": "Incomplete entry ({n} rows, expected a pair of 2)",
+        "desc": "Every double-entry transaction needs a debit and a credit row. It has {n} rows — one side may have been deleted in the original software, or the data is corrupted.",
+        "fix": "Check that voucher #{no} is complete."
+      },
+      "badDate": {
+        "title": "Unreadable date (\"{date}\")",
+        "desc": "The entry date isn't in YYYY/MM/DD format, so the posting date can't be determined.",
+        "fix": "Open voucher #{no} and re-enter the date."
+      },
+      "yearRange": {
+        "title": "Year looks like a typo ({year})",
+        "desc": "Items \"{a}\" and \"{b}\", note \"{note}\", date \"{date}\". It was still imported, but please check it.",
+        "fix": "Correct the year in the original file or in the system."
+      },
+      "noAsset": {
+        "title": "Entry has no asset row (classes \"{ca}\" and \"{cb}\")",
+        "desc": "One row is \"{ca} - {a}\" and the other \"{cb} - {b}\"; with no asset (cash) account, the money flow can't be determined.",
+        "fix": "Check voucher #{no} and set one row to the correct payment account."
+      },
+      "zeroTransfer": {
+        "title": "Transfer amount is 0",
+        "desc": "The transfer from \"{from}\" to \"{to}\" is 0 and was skipped.",
+        "fix": "If this is a real transfer, add the amount."
+      },
+      "unknownClass": {
+        "title": "Not an income/expense class (\"{cls}\")",
+        "desc": "Item \"{item}\" has class \"{cls}\", which isn't standard income or expense, so it can't be posted automatically.",
+        "fix": "Check that this account is set up correctly."
+      },
+      "zeroAmount": {
+        "title": "Amount is 0",
+        "desc": "Item \"{item}\" has an amount of 0 and was skipped.",
+        "fix": "If this is a real income/expense, add the amount."
+      }
+    }
   },
   "HrImport": {
     "employee": {
@@ -11982,7 +12019,17 @@
     "renew": "Renew",
     "activate": "Pay & activate",
     "payBtn": "{action} (${total} USD)",
-    "payNote": "Takes effect immediately after payment; renewals extend from the current expiry date. Nothing renews automatically."
+    "payNote": "Takes effect immediately after payment; renewals extend from the current expiry date. Nothing renews automatically.",
+    "line": {
+      "base": "Company base fee",
+      "module_cs": "Customer service (CS)",
+      "module_booking": "Booking",
+      "module_marketing": "Marketing",
+      "erp": "ERP base package ({seats} users, {included} included)",
+      "retail": "ERP retail store package ({stores} stores)",
+      "domain": "Custom domain",
+      "enterprise": "Custom Enterprise plan"
+    }
   },
   "PosMenu": {
     "subtitle": "Upload images and multilingual names / descriptions; the kiosk shows them by language",
