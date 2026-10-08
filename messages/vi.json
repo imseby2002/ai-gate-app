@@ -6874,7 +6874,11 @@
     "unscheduled": "Chưa lên lịch",
     "editContentTitle": "Sửa nội dung",
     "addContentTitle": "Thêm nội dung",
-    "scheduledDateLabel": "Ngày lên lịch"
+    "scheduledDateLabel": "Ngày lên lịch",
+    "tabCompany": "Hồ sơ công ty",
+    "tabCampaigns": "Trung tâm chiến dịch (AI / hiệu quả)",
+    "tabCrm": "CRM hội viên & VIP",
+    "templatesLink": "Phong cách hình ảnh & quảng cáo"
   },
   "HrPage": {
     "staffFulltime": "Chính thức",
@@ -10126,5 +10130,453 @@
   "MktCampaignsPage": {
     "title": "Trung tâm chiến dịch",
     "subtitle": "Lập kế hoạch, tạo và theo dõi chiến dịch trực tiếp, trực tuyến và kết hợp tại một nơi"
+  },
+  "Feedback": {
+    "title": "Góp ý",
+    "thanks": "Đã gửi, cảm ơn bạn đã góp ý!",
+    "type": {
+      "bug": "🐛 Báo lỗi",
+      "ai_error": "🤖 AI trả lời sai",
+      "feature": "✨ Đề xuất tính năng",
+      "text_change": "🎨 Chỉnh giao diện / văn bản"
+    },
+    "titlePh": "Tiêu đề (mô tả ngắn)",
+    "descPh": "Mô tả chi tiết điều đã xảy ra và kết quả mong muốn",
+    "submit": "Gửi"
+  },
+  "Skills": {
+    "viral-video-copywriting": {
+      "label": "Kịch bản video ngắn viral",
+      "description": "Tạo câu mở đầu, kịch bản phân cảnh và lời thoại cho video ngắn (Reels / Douyin / Shorts).",
+      "fields": {
+        "topic": {
+          "label": "Chủ đề video",
+          "placeholder": "VD: 3 mẹo sắp xếp bếp nhỏ nhanh gọn"
+        },
+        "product": {
+          "label": "Sản phẩm / dịch vụ lồng ghép"
+        },
+        "duration": {
+          "label": "Thời lượng video (giây)"
+        },
+        "style": {
+          "label": "Phong cách",
+          "options": {
+            "energetic": "Nhịp nhanh, sôi động",
+            "storytelling": "Kể chuyện",
+            "educational": "Kiến thức hữu ích"
+          }
+        }
+      }
+    },
+    "ecommerce-copywriter": {
+      "label": "Mô tả sản phẩm thương mại điện tử",
+      "description": "Tạo mô tả sản phẩm sẵn sàng đăng bán từ thông tin sản phẩm (điểm nổi bật, thông số, tình huống sử dụng).",
+      "fields": {
+        "productName": {
+          "label": "Tên sản phẩm",
+          "placeholder": "VD: Bình giữ nhiệt inox 500ml"
+        },
+        "features": {
+          "label": "Điểm nổi bật / thông số",
+          "placeholder": "Chất liệu, dung tích, thời gian giữ nhiệt, tình huống sử dụng…"
+        },
+        "audience": {
+          "label": "Khách hàng mục tiêu",
+          "placeholder": "VD: dân văn phòng, người tập gym"
+        },
+        "tone": {
+          "label": "Giọng văn",
+          "options": {
+            "professional": "Chuyên nghiệp, đáng tin",
+            "warm": "Thân thiện, ấm áp",
+            "playful": "Vui nhộn, sinh động"
+          }
+        }
+      }
+    },
+    "product-marketing-copywriter": {
+      "label": "Nội dung quảng bá",
+      "description": "Tạo nhiều phiên bản nội dung và tiêu đề quảng cáo cho chiến dịch quảng cáo / khuyến mãi.",
+      "fields": {
+        "product": {
+          "label": "Sản phẩm / dịch vụ"
+        },
+        "campaign": {
+          "label": "Chiến dịch / chủ đề",
+          "placeholder": "VD: Ngày của Mẹ giảm 20% có thời hạn"
+        },
+        "platform": {
+          "label": "Nền tảng quảng cáo",
+          "options": {
+            "google": "Quảng cáo tìm kiếm Google"
+          }
+        },
+        "usp": {
+          "label": "Lợi thế cốt lõi",
+          "placeholder": "Khác biệt so với đối thủ, ưu đãi có thời hạn…"
+        }
+      }
+    },
+    "article-illustrator": {
+      "label": "Tự động minh họa bài viết",
+      "description": "Phân tích bài viết, tạo prompt hình minh họa cho từng đoạn và sinh ảnh.",
+      "fields": {
+        "article": {
+          "label": "Nội dung bài viết",
+          "placeholder": "Dán toàn bộ bài viết…"
+        },
+        "numImages": {
+          "label": "Số lượng ảnh"
+        },
+        "aspectRatio": {
+          "label": "Tỷ lệ ảnh",
+          "options": {
+            "16:9": "16:9 ngang",
+            "1:1": "1:1 vuông",
+            "9:16": "9:16 dọc"
+          }
+        }
+      }
+    },
+    "market-research-reports": {
+      "label": "Báo cáo nghiên cứu thị trường",
+      "description": "Tạo báo cáo phân tích thị trường / đối thủ có cấu trúc.",
+      "fields": {
+        "topic": {
+          "label": "Chủ đề nghiên cứu / ngành",
+          "placeholder": "VD: Thị trường dụng cụ cà phê pha tay tại Đài Loan"
+        },
+        "competitors": {
+          "label": "Đối thủ chính",
+          "placeholder": "Các thương hiệu cạnh tranh đã biết (không bắt buộc)"
+        },
+        "focus": {
+          "label": "Trọng tâm phân tích",
+          "options": {
+            "overview": "Tổng quan thị trường",
+            "competitor": "Phân tích đối thủ",
+            "entry": "Chiến lược thâm nhập"
+          }
+        }
+      }
+    },
+    "product-video-creator": {
+      "label": "Lên kế hoạch video sản phẩm",
+      "description": "Tạo phân cảnh video sản phẩm, prompt tạo video, kịch bản lồng tiếng và 1 ảnh tham chiếu key visual.",
+      "fields": {
+        "product": {
+          "label": "Tên sản phẩm"
+        },
+        "features": {
+          "label": "Điểm nổi bật / thông số"
+        },
+        "duration": {
+          "label": "Thời lượng video (giây)"
+        },
+        "aspectRatio": {
+          "label": "Tỷ lệ khung hình",
+          "options": {
+            "9:16": "9:16 dọc (video ngắn)",
+            "16:9": "16:9 ngang",
+            "1:1": "1:1 vuông"
+          }
+        }
+      }
+    },
+    "ecommerce-video-marketing": {
+      "label": "Kịch bản video ngắn bán hàng",
+      "description": "Kịch bản video ngắn bán hàng: lời thoại, nhịp độ, CTA và gợi ý nền tảng đăng.",
+      "fields": {
+        "product": {
+          "label": "Sản phẩm / dịch vụ"
+        },
+        "sellingPoints": {
+          "label": "Điểm bán hàng chính / ưu đãi"
+        },
+        "platform": {
+          "label": "Nền tảng đăng",
+          "options": {
+            "tiktok": "Douyin / TikTok",
+            "shopee": "Shopee Live / video"
+          }
+        }
+      }
+    },
+    "tts-voice-synthesis": {
+      "label": "Lồng tiếng AI",
+      "description": "Chuyển văn bản thành giọng đọc và trả về file âm thanh có thể tải xuống.",
+      "fields": {
+        "text": {
+          "label": "Văn bản lồng tiếng",
+          "placeholder": "Dán văn bản cần lồng tiếng…"
+        },
+        "voice": {
+          "label": "Giọng đọc",
+          "options": {
+            "default": "Mặc định",
+            "female": "Giọng nữ",
+            "male": "Giọng nam"
+          }
+        }
+      }
+    },
+    "ppt-generator": {
+      "label": "Tạo bài thuyết trình (PPTX)",
+      "description": "Tự lên bố cục slide theo chủ đề và xuất file .pptx có thể tải xuống.",
+      "fields": {
+        "topic": {
+          "label": "Chủ đề thuyết trình",
+          "placeholder": "VD: Chiến lược marketing thương hiệu 2026"
+        },
+        "context": {
+          "label": "Nội dung chính / tư liệu bổ sung",
+          "placeholder": "Các ý chính, số liệu, chương mục cần có…"
+        },
+        "numSlides": {
+          "label": "Số slide"
+        },
+        "audience": {
+          "label": "Đối tượng",
+          "placeholder": "VD: quản lý, khách hàng, nhà đầu tư"
+        }
+      }
+    },
+    "social-account-coach": {
+      "label": "Huấn luyện vận hành tài khoản MXH",
+      "description": "Phân tích định vị và khán giả của tài khoản, đưa ra hướng nội dung, chẩn đoán tăng trưởng và việc cần làm.",
+      "fields": {
+        "platform": {
+          "label": "Nền tảng",
+          "options": {
+            "xiaohongshu": "Xiaohongshu"
+          }
+        },
+        "niche": {
+          "label": "Định vị / chủ đề tài khoản",
+          "placeholder": "VD: mẹo sắp xếp nhà cửa, tài chính cá nhân"
+        },
+        "recent": {
+          "label": "Nội dung hoặc số liệu gần đây (không bắt buộc)",
+          "placeholder": "Dán vài bài đăng gần đây, số người theo dõi, tỷ lệ tương tác… để phân tích chính xác hơn"
+        },
+        "goal": {
+          "label": "Mục tiêu hiện tại",
+          "options": {
+            "growth": "Tăng follower / tiếp cận",
+            "engagement": "Tương tác / bình luận",
+            "conversion": "Chuyển đổi / kiếm tiền"
+          }
+        }
+      }
+    },
+    "viral-content-planner": {
+      "label": "Lên kế hoạch nội dung viral",
+      "description": "Lên ý tưởng chủ đề dễ lan truyền theo tư duy growth hacking: câu mở đầu, cấu trúc giữ chân và động lực chia sẻ.",
+      "fields": {
+        "topic": {
+          "label": "Lĩnh vực / chủ đề nội dung",
+          "placeholder": "VD: review món ăn bình dân, phát triển sự nghiệp"
+        },
+        "format": {
+          "label": "Định dạng nội dung",
+          "options": {
+            "short_video": "Video ngắn",
+            "long_video": "Video dài",
+            "thread": "Bài ảnh / chuỗi bài"
+          }
+        },
+        "audience": {
+          "label": "Khán giả mục tiêu",
+          "placeholder": "VD: dân văn phòng 25-35 tuổi"
+        },
+        "goal": {
+          "label": "Mục tiêu lan truyền",
+          "placeholder": "VD: tăng follower, nhận diện thương hiệu, kéo traffic"
+        }
+      }
+    },
+    "kol-persona-writer": {
+      "label": "Nội dung theo persona",
+      "description": "Viết bài đăng mạng xã hội nhất quán với giọng văn mẫu và persona của bạn.",
+      "fields": {
+        "persona": {
+          "label": "Persona / giọng văn",
+          "placeholder": "VD: blogger tài chính lý trí, ấm áp, nói chuyện như bạn bè, không lên lớp; hoặc dán vài bài cũ làm mẫu phong cách"
+        },
+        "topic": {
+          "label": "Bài này viết về gì",
+          "placeholder": "VD: chia sẻ app ghi chép chi tiêu, quảng bá khóa học mới"
+        },
+        "platform": {
+          "label": "Nền tảng",
+          "options": {
+            "xiaohongshu": "Xiaohongshu"
+          }
+        }
+      }
+    },
+    "live-stream-copywriter": {
+      "label": "Nội dung livestream",
+      "description": "Tạo thông báo lên sóng, lời thoại livestream và kịch bản tương tác với fan, có tính giải trí và bán hàng.",
+      "fields": {
+        "persona": {
+          "label": "Người dẫn / biệt danh & phong cách",
+          "placeholder": "VD: biệt danh Phàm, hoạt bát, lầy lội, hay làm nũng với fan"
+        },
+        "occasion": {
+          "label": "Mục đích",
+          "options": {
+            "preview": "Thông báo lên sóng",
+            "voiceover": "Lời thoại video ngắn",
+            "interaction": "Tương tác livestream / trả lời bình luận",
+            "post": "Bài đăng trạng thái"
+          }
+        },
+        "points": {
+          "label": "Nội dung chính lần này",
+          "placeholder": "VD: 8 giờ tối nay lên sóng chơi game mới, bốc thăm quà, cảm ơn fan ủng hộ"
+        }
+      }
+    }
+  },
+  "SkillRunner": {
+    "loadFailed": "Không tải được danh sách chuyên gia",
+    "trainNeedPro": "Huấn luyện chuyên gia cần gói PRO trở lên",
+    "addFailed": "Thêm thất bại",
+    "networkError": "Lỗi kết nối",
+    "uploadFailed": "Tải tệp lên thất bại",
+    "noText": "Không trích xuất được văn bản từ tệp này (chỉ hỗ trợ docx / xlsx / csv / txt / pdf)",
+    "fileFailed": "Xử lý tệp thất bại",
+    "fillRequired": "Vui lòng điền: {field}",
+    "insufficient": "Không đủ điểm, lần này cần khoảng {n} điểm",
+    "runFailed": "Chạy thất bại",
+    "balance": "Số dư {n} điểm",
+    "category": {
+      "copywriting": "Nội dung",
+      "video": "Video ngắn",
+      "illustration": "Hình minh họa",
+      "research": "Nghiên cứu",
+      "audio": "Âm thanh",
+      "presentation": "Thuyết trình",
+      "social": "Mạng xã hội"
+    },
+    "fromCredits": "Từ {n} điểm",
+    "ownKnowledge": "Kho kiến thức riêng",
+    "loading": "Đang tải…",
+    "back": "Quay lại",
+    "generating": "Đang tạo…",
+    "run": "Chạy",
+    "result": "Kết quả",
+    "charged": "Đã trừ {n} điểm",
+    "copied": "Đã sao chép",
+    "copy": "Sao chép",
+    "trainTitle": "Huấn luyện chuyên gia này",
+    "trainHint": "Thêm liên kết / văn bản / tệp, tự động tham chiếu khi chạy",
+    "trainLocked": "Huấn luyện kho kiến thức riêng là tính năng của gói PRO trở lên. Nâng cấp để chuyên gia học từ các ví dụ viral, phong cách và tài liệu bạn tải lên.",
+    "srcType": {
+      "url": "Liên kết",
+      "file": "Tệp",
+      "text": "Văn bản"
+    },
+    "chars": "{n} ký tự",
+    "tab": {
+      "url": "Đường dẫn URL",
+      "text": "Dán văn bản",
+      "file": "Tải tệp lên"
+    },
+    "urlPh": "https://… (bài viết / bài đăng / trang web)",
+    "namePh": "Tên của kiến thức này (không bắt buộc)",
+    "textPh": "Dán ví dụ viral, phương pháp, mẫu phong cách…",
+    "adding": "Đang thêm…",
+    "addKnowledge": "Thêm kiến thức",
+    "processing": "Đang xử lý…",
+    "chooseFile": "Chọn tệp",
+    "fileHint": "Hỗ trợ docx / xlsx / csv / txt / pdf, tự động trích xuất văn bản"
+  },
+  "CompanyProfile": {
+    "noPermission": "Cần quyền quản trị công ty hoặc quyền marketing để chỉnh sửa hồ sơ công ty",
+    "tab": {
+      "basic": "Thông tin cơ bản",
+      "brand": "Thương hiệu",
+      "products": "Sản phẩm",
+      "stores": "Cửa hàng",
+      "files": "Tư liệu"
+    },
+    "legalName": "Tên pháp lý của công ty",
+    "legalNameHint": "Tên đăng ký; tên thương hiệu nhập ở tab \"Thương hiệu\"",
+    "legalNamePh": "VD: Công ty TNHH XX",
+    "pleaseSelect": "Vui lòng chọn",
+    "industry": {
+      "label": "Ngành nghề",
+      "tech": "Công nghệ / phần mềm",
+      "manufacturing": "Sản xuất",
+      "retail": "Bán lẻ / thương mại điện tử",
+      "finance": "Dịch vụ tài chính",
+      "health": "Y tế / sức khỏe",
+      "food": "F&B / tiêu dùng",
+      "education": "Giáo dục / đào tạo",
+      "realEstate": "Bất động sản",
+      "logistics": "Logistics / vận tải",
+      "advertising": "Quảng cáo / marketing",
+      "hospitality": "Khách sạn / homestay",
+      "other": "Khác"
+    },
+    "employees": {
+      "label": "Số nhân viên",
+      "e1": "1-10 người",
+      "e2": "11-50 người",
+      "e3": "51-200 người",
+      "e4": "201-500 người",
+      "e5": "501-1000 người",
+      "e6": "Trên 1000 người"
+    },
+    "capital": "Vốn điều lệ",
+    "capitalPh": "VD: 10 tỷ VND",
+    "founded": "Năm thành lập",
+    "foundedPh": "VD: 2010",
+    "address": "Địa chỉ công ty",
+    "addressPh": "Tỉnh/TP + quận/huyện + đường",
+    "basicHint": "Website, khách hàng mục tiêu, điểm bán hàng, câu chuyện thương hiệu… nhập ở tab \"Thương hiệu\"; sản phẩm và cửa hàng nhập ở tab riêng.",
+    "saveBasic": "Lưu thông tin cơ bản",
+    "saved": "Đã lưu",
+    "saveFailed": "Lưu thất bại",
+    "fileCat": {
+      "logo": "Logo / biểu tượng thương hiệu",
+      "image": "Ảnh sản phẩm / bối cảnh",
+      "document": "Giới thiệu công ty / catalogue",
+      "faq": "FAQ / dữ liệu hỏi đáp"
+    },
+    "extracted": "Đã trích xuất",
+    "uploadFile": "Tải tệp lên",
+    "filesHint": "Excel / Word / PDF sẽ được tự động trích xuất văn bản để AI dùng cho marketing và trả lời khách hàng. Tải lên hoặc xóa sẽ tự động lưu.",
+    "tone": {
+      "formal": "Chuyên nghiệp / trang trọng",
+      "young": "Sôi nổi / trẻ trung",
+      "warm": "Ấm áp / thân thiện",
+      "innovative": "Sáng tạo / tiên phong",
+      "luxury": "Sang trọng / cao cấp",
+      "friendly": "Gần gũi / bình dân"
+    },
+    "storeFeature": {
+      "wifi": "WiFi miễn phí",
+      "outlets": "Ổ cắm sạc",
+      "privateRoom": "Phòng riêng",
+      "photoWall": "Góc chụp ảnh check-in",
+      "petFriendly": "Thân thiện thú cưng",
+      "nearMrt": "Gần ga tàu điện",
+      "outdoor": "Chỗ ngồi ngoài trời",
+      "accessible": "Lối đi cho người khuyết tật"
+    },
+    "productTag": {
+      "new": "Sản phẩm mới",
+      "bestseller": "Bán chạy",
+      "signature": "Món đặc trưng",
+      "seasonal": "Giới hạn theo mùa",
+      "photogenic": "Đẹp để check-in",
+      "light": "Ít calo",
+      "chefPick": "Đầu bếp đề xuất"
+    },
+    "defaultCategory": "Đồ uống"
   }
 }

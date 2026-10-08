@@ -6967,7 +6967,11 @@
     "unscheduled": "未排",
     "editContentTitle": "編輯內容",
     "addContentTitle": "新增內容",
-    "scheduledDateLabel": "排程日"
+    "scheduledDateLabel": "排程日",
+    "tabCompany": "公司資料",
+    "tabCampaigns": "活動企劃中心 (AI/成效)",
+    "tabCrm": "會員 CRM & VIP",
+    "templatesLink": "視覺風格與廣告"
   },
   "HrPage": {
     "staffFulltime": "正職",
@@ -10219,5 +10223,453 @@
   "MktCampaignsPage": {
     "title": "活動企劃中心",
     "subtitle": "實體、線上、混合活動都在這裡新增、企劃與追蹤成效"
+  },
+  "Feedback": {
+    "title": "意見反映",
+    "thanks": "已送出，感謝回報！",
+    "type": {
+      "bug": "🐛 錯誤回報",
+      "ai_error": "🤖 AI 回答錯誤",
+      "feature": "✨ 功能建議",
+      "text_change": "🎨 介面/文字調整"
+    },
+    "titlePh": "標題（簡短描述）",
+    "descPh": "詳細說明發生了什麼、預期應該怎樣",
+    "submit": "送出"
+  },
+  "Skills": {
+    "viral-video-copywriting": {
+      "label": "短影音爆款腳本",
+      "description": "產出短影音（Reels / 抖音 / Shorts）的鉤子、分鏡腳本與口播。",
+      "fields": {
+        "topic": {
+          "label": "影片主題",
+          "placeholder": "例：3 招快速收納小廚房"
+        },
+        "product": {
+          "label": "置入商品 / 服務"
+        },
+        "duration": {
+          "label": "影片長度（秒）"
+        },
+        "style": {
+          "label": "風格",
+          "options": {
+            "energetic": "快節奏帶動",
+            "storytelling": "故事敘事",
+            "educational": "知識乾貨"
+          }
+        }
+      }
+    },
+    "ecommerce-copywriter": {
+      "label": "電商商品文案",
+      "description": "依商品資訊產出可直接上架的商品描述（賣點、規格、情境）。",
+      "fields": {
+        "productName": {
+          "label": "商品名稱",
+          "placeholder": "例：保溫不鏽鋼隨行杯 500ml"
+        },
+        "features": {
+          "label": "賣點 / 規格",
+          "placeholder": "材質、容量、保溫時數、適用情境…"
+        },
+        "audience": {
+          "label": "目標客群",
+          "placeholder": "例：通勤上班族、健身族群"
+        },
+        "tone": {
+          "label": "語氣",
+          "options": {
+            "professional": "專業可信",
+            "warm": "親切溫暖",
+            "playful": "活潑趣味"
+          }
+        }
+      }
+    },
+    "product-marketing-copywriter": {
+      "label": "行銷推廣文案",
+      "description": "針對廣告 / 促銷活動產出多版本行銷文案與廣告標題。",
+      "fields": {
+        "product": {
+          "label": "商品 / 服務"
+        },
+        "campaign": {
+          "label": "活動 / 主題",
+          "placeholder": "例：母親節限時 8 折"
+        },
+        "platform": {
+          "label": "投放平台",
+          "options": {
+            "google": "Google 搜尋廣告"
+          }
+        },
+        "usp": {
+          "label": "核心優勢",
+          "placeholder": "與競品的差異、限時優惠…"
+        }
+      }
+    },
+    "article-illustrator": {
+      "label": "文章自動配圖",
+      "description": "解析文章內容，產生每段配圖提示詞並生成圖片。",
+      "fields": {
+        "article": {
+          "label": "文章內容",
+          "placeholder": "貼上文章全文…"
+        },
+        "numImages": {
+          "label": "配圖張數"
+        },
+        "aspectRatio": {
+          "label": "圖片比例",
+          "options": {
+            "16:9": "16:9 橫式",
+            "1:1": "1:1 方形",
+            "9:16": "9:16 直式"
+          }
+        }
+      }
+    },
+    "market-research-reports": {
+      "label": "市場研究報告",
+      "description": "產出結構化市場 / 競品分析報告。",
+      "fields": {
+        "topic": {
+          "label": "研究主題 / 產業",
+          "placeholder": "例：台灣手沖咖啡器材市場"
+        },
+        "competitors": {
+          "label": "主要競品",
+          "placeholder": "已知的競爭品牌（選填）"
+        },
+        "focus": {
+          "label": "分析重點",
+          "options": {
+            "overview": "市場總覽",
+            "competitor": "競品分析",
+            "entry": "進入策略"
+          }
+        }
+      }
+    },
+    "product-video-creator": {
+      "label": "商品影片企劃師",
+      "description": "產出商品影片分鏡、影片生成 prompt、配音稿，並生成 1 張關鍵視覺參考圖。",
+      "fields": {
+        "product": {
+          "label": "商品名稱"
+        },
+        "features": {
+          "label": "賣點 / 規格"
+        },
+        "duration": {
+          "label": "影片長度（秒）"
+        },
+        "aspectRatio": {
+          "label": "畫面比例",
+          "options": {
+            "9:16": "9:16 直式（短影音）",
+            "16:9": "16:9 橫式",
+            "1:1": "1:1 方形"
+          }
+        }
+      }
+    },
+    "ecommerce-video-marketing": {
+      "label": "電商帶貨短影片腳本",
+      "description": "產出帶貨短影片腳本：口播、節奏、CTA 與平台投放建議。",
+      "fields": {
+        "product": {
+          "label": "商品 / 服務"
+        },
+        "sellingPoints": {
+          "label": "主打賣點 / 優惠"
+        },
+        "platform": {
+          "label": "投放平台",
+          "options": {
+            "tiktok": "抖音 / TikTok",
+            "shopee": "蝦皮直播 / 影片"
+          }
+        }
+      }
+    },
+    "tts-voice-synthesis": {
+      "label": "AI 語音配音",
+      "description": "將文字稿合成為語音配音，回傳可下載的音檔。",
+      "fields": {
+        "text": {
+          "label": "配音文字稿",
+          "placeholder": "貼上要配音的文字…"
+        },
+        "voice": {
+          "label": "音色",
+          "options": {
+            "default": "預設",
+            "female": "女聲",
+            "male": "男聲"
+          }
+        }
+      }
+    },
+    "ppt-generator": {
+      "label": "簡報生成（PPTX）",
+      "description": "依主題自動規劃投影片並產出可下載的 .pptx 簡報檔。",
+      "fields": {
+        "topic": {
+          "label": "簡報主題",
+          "placeholder": "例：2026 年品牌行銷策略"
+        },
+        "context": {
+          "label": "內容重點 / 補充資料",
+          "placeholder": "要涵蓋的重點、數據、章節…"
+        },
+        "numSlides": {
+          "label": "投影片張數"
+        },
+        "audience": {
+          "label": "對象",
+          "placeholder": "例：主管、客戶、投資人"
+        }
+      }
+    },
+    "social-account-coach": {
+      "label": "社群帳號運營教練",
+      "description": "分析你的帳號定位與受眾，產出貼文方向、成長診斷與可執行待辦。",
+      "fields": {
+        "platform": {
+          "label": "平台",
+          "options": {
+            "xiaohongshu": "小紅書"
+          }
+        },
+        "niche": {
+          "label": "帳號定位 / 主題",
+          "placeholder": "例：居家收納教學、個人理財"
+        },
+        "recent": {
+          "label": "近期內容或數據（選填）",
+          "placeholder": "貼上幾則近期貼文、追蹤數、互動率等，分析更精準"
+        },
+        "goal": {
+          "label": "當前目標",
+          "options": {
+            "growth": "漲粉 / 觸及",
+            "engagement": "互動 / 留言",
+            "conversion": "導購 / 變現"
+          }
+        }
+      }
+    },
+    "viral-content-planner": {
+      "label": "病毒內容企劃師",
+      "description": "用增長黑客思維規劃高傳播選題：鉤子、留存結構與分享誘因。",
+      "fields": {
+        "topic": {
+          "label": "內容領域 / 主題",
+          "placeholder": "例：平價美食開箱、職場成長"
+        },
+        "format": {
+          "label": "內容形式",
+          "options": {
+            "short_video": "短影音",
+            "long_video": "長影片",
+            "thread": "圖文 / 串文"
+          }
+        },
+        "audience": {
+          "label": "目標受眾",
+          "placeholder": "例：25-35 歲上班族"
+        },
+        "goal": {
+          "label": "傳播目標",
+          "placeholder": "例：漲粉、品牌曝光、導流"
+        }
+      }
+    },
+    "kol-persona-writer": {
+      "label": "社群人設文案",
+      "description": "依你的語氣樣本與人設，產出風格一致的社群貼文。",
+      "fields": {
+        "persona": {
+          "label": "人設 / 語氣描述",
+          "placeholder": "例：理性溫暖的理財部落客，講話像朋友、不說教；或直接貼上你過往幾則貼文當風格樣本"
+        },
+        "topic": {
+          "label": "這篇要寫什麼",
+          "placeholder": "例：分享一個記帳 App、宣傳新課程"
+        },
+        "platform": {
+          "label": "平台",
+          "options": {
+            "xiaohongshu": "小紅書"
+          }
+        }
+      }
+    },
+    "live-stream-copywriter": {
+      "label": "開播／直播文案",
+      "description": "產出開播預告、直播口播與粉絲互動話術，帶營業感與節目效果。",
+      "fields": {
+        "persona": {
+          "label": "主播 / 暱稱與風格",
+          "placeholder": "例：暱稱小帆，活潑戲精、會跟粉絲撒嬌互動"
+        },
+        "occasion": {
+          "label": "用途",
+          "options": {
+            "preview": "開播預告",
+            "voiceover": "短視頻口播",
+            "interaction": "直播互動 / 留言回覆",
+            "post": "動態文案"
+          }
+        },
+        "points": {
+          "label": "本次重點 / 內容",
+          "placeholder": "例：今晚 8 點開播玩新遊戲、抽周邊、感謝粉絲應援"
+        }
+      }
+    }
+  },
+  "SkillRunner": {
+    "loadFailed": "載入 skill 清單失敗",
+    "trainNeedPro": "訓練專家知識需 PRO 以上方案",
+    "addFailed": "新增失敗",
+    "networkError": "連線失敗",
+    "uploadFailed": "檔案上傳失敗",
+    "noText": "此檔案無法萃取文字內容（僅支援 docx / xlsx / csv / txt / pdf）",
+    "fileFailed": "檔案處理失敗",
+    "fillRequired": "請填寫：{field}",
+    "insufficient": "點數不足，本次需要約 {n} 點",
+    "runFailed": "執行失敗",
+    "balance": "餘額 {n} 點",
+    "category": {
+      "copywriting": "文案",
+      "video": "短影音",
+      "illustration": "配圖",
+      "research": "研究",
+      "audio": "語音",
+      "presentation": "簡報",
+      "social": "社群"
+    },
+    "fromCredits": "{n} 點起",
+    "ownKnowledge": "專屬知識庫",
+    "loading": "載入中…",
+    "back": "返回",
+    "generating": "生成中…",
+    "run": "執行",
+    "result": "結果",
+    "charged": "本次扣 {n} 點",
+    "copied": "已複製",
+    "copy": "複製",
+    "trainTitle": "訓練這位專家",
+    "trainHint": "上傳連結／文字／檔案，執行時自動參考",
+    "trainLocked": "訓練專屬知識庫為 PRO 以上方案功能。升級後可讓這位專家學習你上傳的爆款案例、風格與資料。",
+    "srcType": {
+      "url": "連結",
+      "file": "檔案",
+      "text": "文字"
+    },
+    "chars": "{n} 字",
+    "tab": {
+      "url": "網址連結",
+      "text": "貼上文字",
+      "file": "上傳檔案"
+    },
+    "urlPh": "https://…（文章 / 貼文 / 網頁）",
+    "namePh": "這份知識的名稱（選填）",
+    "textPh": "貼上爆款案例、方法論、風格範例等文字…",
+    "adding": "新增中…",
+    "addKnowledge": "加入知識",
+    "processing": "處理中…",
+    "chooseFile": "選擇檔案",
+    "fileHint": "支援 docx / xlsx / csv / txt / pdf，自動萃取文字"
+  },
+  "CompanyProfile": {
+    "noPermission": "需要公司管理者或行銷權限才能編輯公司資料",
+    "tab": {
+      "basic": "基本資料",
+      "brand": "品牌",
+      "products": "產品",
+      "stores": "門市",
+      "files": "素材"
+    },
+    "legalName": "公司法定名稱",
+    "legalNameHint": "登記名稱，品牌名稱請至「品牌」分頁",
+    "legalNamePh": "例如：XX 股份有限公司",
+    "pleaseSelect": "請選擇",
+    "industry": {
+      "label": "產業別",
+      "tech": "科技/軟體",
+      "manufacturing": "製造業",
+      "retail": "零售/電商",
+      "finance": "金融服務",
+      "health": "醫療健康",
+      "food": "餐飲/消費",
+      "education": "教育培訓",
+      "realEstate": "房地產",
+      "logistics": "物流/運輸",
+      "advertising": "廣告/行銷",
+      "hospitality": "旅宿/民宿",
+      "other": "其他"
+    },
+    "employees": {
+      "label": "員工人數",
+      "e1": "1-10人",
+      "e2": "11-50人",
+      "e3": "51-200人",
+      "e4": "201-500人",
+      "e5": "501-1000人",
+      "e6": "1000人以上"
+    },
+    "capital": "資本額",
+    "capitalPh": "例如：新台幣 1,000 萬元",
+    "founded": "成立年份",
+    "foundedPh": "例如：2010",
+    "address": "公司地址",
+    "addressPh": "縣市 + 區 + 街道",
+    "basicHint": "官方網站、目標客群、賣點、品牌故事等請至「品牌」分頁；產品與門市請至各自分頁。",
+    "saveBasic": "儲存基本資料",
+    "saved": "已儲存",
+    "saveFailed": "儲存失敗",
+    "fileCat": {
+      "logo": "Logo / 品牌標誌",
+      "image": "產品 / 情境圖片",
+      "document": "公司簡介 / 型錄",
+      "faq": "FAQ / 對答資料"
+    },
+    "extracted": "已萃取",
+    "uploadFile": "上傳檔案",
+    "filesHint": "Excel / Word / PDF 會自動萃取文字，供 AI 行銷、客服回覆使用。上傳或刪除即自動儲存。",
+    "tone": {
+      "formal": "專業/正式",
+      "young": "活潑/年輕",
+      "warm": "溫暖/親切",
+      "innovative": "創新/前衛",
+      "luxury": "奢華/高端",
+      "friendly": "親民/平易"
+    },
+    "storeFeature": {
+      "wifi": "免費WiFi",
+      "outlets": "充電插座",
+      "privateRoom": "獨立包廂",
+      "photoWall": "打卡拍照牆",
+      "petFriendly": "寵物友善",
+      "nearMrt": "近捷運站",
+      "outdoor": "戶外座位",
+      "accessible": "無障礙空間"
+    },
+    "productTag": {
+      "new": "新品上市",
+      "bestseller": "人氣熱銷",
+      "signature": "招牌必喝",
+      "seasonal": "季節限定",
+      "photogenic": "拍照打卡",
+      "light": "低卡輕盈",
+      "chefPick": "主廚推薦"
+    },
+    "defaultCategory": "飲料"
   }
 }

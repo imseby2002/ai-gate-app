@@ -58,7 +58,7 @@ export default function MktPage() {
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-gradient-to-r from-amber-500 to-rose-600 text-white hover:opacity-95 transition-opacity shadow-sm"
           >
             <Sparkles className="h-3.5 w-3.5" />
-            視覺風格與廣告 <ExternalLink className="h-3 w-3" />
+            {t('templatesLink')} <ExternalLink className="h-3 w-3" />
           </a>
           <a
             href={typeof window !== 'undefined' && window.location.hostname.endsWith('im-tourist.com') ? 'https://marketing.im-tourist.com' : '/marketing'}
@@ -93,10 +93,10 @@ export default function MktPage() {
 
       <div className="flex gap-1 p-1 bg-muted rounded-xl w-fit flex-wrap">
         {([
-          ['company', '公司資料', <Building2 key="c0" className="h-4 w-4" />],
+          ['company', t('tabCompany'), <Building2 key="c0" className="h-4 w-4" />],
           ['generate', t('tabGenerate'), <Sparkles key="g" className="h-4 w-4" />],
-          ['campaigns', '活動企劃中心 (AI/成效)', <Sparkles key="cp" className="h-4 w-4 text-purple-500" />],
-          ['crm', '會員 CRM & VIP', <Users key="crm" className="h-4 w-4" />],
+          ['campaigns', t('tabCampaigns'), <Sparkles key="cp" className="h-4 w-4 text-purple-500" />],
+          ['crm', t('tabCrm'), <Users key="crm" className="h-4 w-4" />],
           ['delivery', t('tabDelivery'), <Bike key="d" className="h-4 w-4" />],
           ['analytics', t('tabAnalytics'), <BarChart3 key="a" className="h-4 w-4" />],
           ['calendar', t('tabCalendar'), <CalendarDays key="c" className="h-4 w-4" />]

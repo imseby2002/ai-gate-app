@@ -6967,7 +6967,11 @@
     "unscheduled": "Unscheduled",
     "editContentTitle": "Edit Content",
     "addContentTitle": "Add Content",
-    "scheduledDateLabel": "Scheduled Date"
+    "scheduledDateLabel": "Scheduled Date",
+    "tabCompany": "Company profile",
+    "tabCampaigns": "Campaign Center (AI / results)",
+    "tabCrm": "Member CRM & VIP",
+    "templatesLink": "Visual Styles & Ads"
   },
   "HrPage": {
     "staffFulltime": "Full-time",
@@ -10219,5 +10223,453 @@
   "MktCampaignsPage": {
     "title": "Campaign Center",
     "subtitle": "Plan, create and track offline, online and hybrid campaigns in one place"
+  },
+  "Feedback": {
+    "title": "Feedback",
+    "thanks": "Sent — thanks for your feedback!",
+    "type": {
+      "bug": "🐛 Bug report",
+      "ai_error": "🤖 Wrong AI answer",
+      "feature": "✨ Feature request",
+      "text_change": "🎨 UI / wording change"
+    },
+    "titlePh": "Title (short summary)",
+    "descPh": "Describe what happened and what you expected",
+    "submit": "Submit"
+  },
+  "Skills": {
+    "viral-video-copywriting": {
+      "label": "Viral short-video script",
+      "description": "Hooks, storyboard script and voice-over for short videos (Reels / Douyin / Shorts).",
+      "fields": {
+        "topic": {
+          "label": "Video topic",
+          "placeholder": "e.g. 3 quick tips to organize a small kitchen"
+        },
+        "product": {
+          "label": "Featured product / service"
+        },
+        "duration": {
+          "label": "Video length (seconds)"
+        },
+        "style": {
+          "label": "Style",
+          "options": {
+            "energetic": "Fast-paced, energetic",
+            "storytelling": "Storytelling",
+            "educational": "Educational tips"
+          }
+        }
+      }
+    },
+    "ecommerce-copywriter": {
+      "label": "E-commerce product copy",
+      "description": "Turns product info into ready-to-list descriptions (selling points, specs, use cases).",
+      "fields": {
+        "productName": {
+          "label": "Product name",
+          "placeholder": "e.g. Stainless insulated tumbler 500ml"
+        },
+        "features": {
+          "label": "Selling points / specs",
+          "placeholder": "Material, capacity, insulation hours, use cases…"
+        },
+        "audience": {
+          "label": "Target audience",
+          "placeholder": "e.g. commuters, gym-goers"
+        },
+        "tone": {
+          "label": "Tone",
+          "options": {
+            "professional": "Professional & trustworthy",
+            "warm": "Friendly & warm",
+            "playful": "Playful & fun"
+          }
+        }
+      }
+    },
+    "product-marketing-copywriter": {
+      "label": "Promotional copy",
+      "description": "Multiple versions of marketing copy and ad headlines for ads / promotions.",
+      "fields": {
+        "product": {
+          "label": "Product / service"
+        },
+        "campaign": {
+          "label": "Campaign / theme",
+          "placeholder": "e.g. Mother's Day 20% off, limited time"
+        },
+        "platform": {
+          "label": "Ad platform",
+          "options": {
+            "google": "Google Search Ads"
+          }
+        },
+        "usp": {
+          "label": "Key advantage",
+          "placeholder": "How you differ from competitors, limited-time offers…"
+        }
+      }
+    },
+    "article-illustrator": {
+      "label": "Auto article illustrations",
+      "description": "Analyzes an article, writes an image prompt per section and generates the images.",
+      "fields": {
+        "article": {
+          "label": "Article content",
+          "placeholder": "Paste the full article…"
+        },
+        "numImages": {
+          "label": "Number of images"
+        },
+        "aspectRatio": {
+          "label": "Aspect ratio",
+          "options": {
+            "16:9": "16:9 landscape",
+            "1:1": "1:1 square",
+            "9:16": "9:16 portrait"
+          }
+        }
+      }
+    },
+    "market-research-reports": {
+      "label": "Market research report",
+      "description": "Structured market / competitor analysis report.",
+      "fields": {
+        "topic": {
+          "label": "Research topic / industry",
+          "placeholder": "e.g. Taiwan pour-over coffee equipment market"
+        },
+        "competitors": {
+          "label": "Main competitors",
+          "placeholder": "Known competing brands (optional)"
+        },
+        "focus": {
+          "label": "Focus",
+          "options": {
+            "overview": "Market overview",
+            "competitor": "Competitor analysis",
+            "entry": "Entry strategy"
+          }
+        }
+      }
+    },
+    "product-video-creator": {
+      "label": "Product video planner",
+      "description": "Product video storyboard, video-generation prompts and voice-over script, plus 1 key visual reference image.",
+      "fields": {
+        "product": {
+          "label": "Product name"
+        },
+        "features": {
+          "label": "Selling points / specs"
+        },
+        "duration": {
+          "label": "Video length (seconds)"
+        },
+        "aspectRatio": {
+          "label": "Aspect ratio",
+          "options": {
+            "9:16": "9:16 portrait (short video)",
+            "16:9": "16:9 landscape",
+            "1:1": "1:1 square"
+          }
+        }
+      }
+    },
+    "ecommerce-video-marketing": {
+      "label": "Shoppable short-video script",
+      "description": "Sales short-video script: voice-over, pacing, CTA and platform recommendations.",
+      "fields": {
+        "product": {
+          "label": "Product / service"
+        },
+        "sellingPoints": {
+          "label": "Key selling points / offer"
+        },
+        "platform": {
+          "label": "Platform",
+          "options": {
+            "tiktok": "Douyin / TikTok",
+            "shopee": "Shopee Live / video"
+          }
+        }
+      }
+    },
+    "tts-voice-synthesis": {
+      "label": "AI voice-over",
+      "description": "Converts a script into a voice-over and returns a downloadable audio file.",
+      "fields": {
+        "text": {
+          "label": "Voice-over script",
+          "placeholder": "Paste the text to voice…"
+        },
+        "voice": {
+          "label": "Voice",
+          "options": {
+            "default": "Default",
+            "female": "Female",
+            "male": "Male"
+          }
+        }
+      }
+    },
+    "ppt-generator": {
+      "label": "Presentation generator (PPTX)",
+      "description": "Plans slides from a topic and produces a downloadable .pptx file.",
+      "fields": {
+        "topic": {
+          "label": "Presentation topic",
+          "placeholder": "e.g. 2026 brand marketing strategy"
+        },
+        "context": {
+          "label": "Key points / supporting material",
+          "placeholder": "Points, data and sections to cover…"
+        },
+        "numSlides": {
+          "label": "Number of slides"
+        },
+        "audience": {
+          "label": "Audience",
+          "placeholder": "e.g. managers, clients, investors"
+        }
+      }
+    },
+    "social-account-coach": {
+      "label": "Social account growth coach",
+      "description": "Analyzes your positioning and audience, then gives post ideas, a growth diagnosis and actionable to-dos.",
+      "fields": {
+        "platform": {
+          "label": "Platform",
+          "options": {
+            "xiaohongshu": "Xiaohongshu"
+          }
+        },
+        "niche": {
+          "label": "Account niche / topic",
+          "placeholder": "e.g. home organizing tips, personal finance"
+        },
+        "recent": {
+          "label": "Recent content or stats (optional)",
+          "placeholder": "Paste a few recent posts, follower count, engagement rate… for a sharper analysis"
+        },
+        "goal": {
+          "label": "Current goal",
+          "options": {
+            "growth": "Followers / reach",
+            "engagement": "Engagement / comments",
+            "conversion": "Sales / monetization"
+          }
+        }
+      }
+    },
+    "viral-content-planner": {
+      "label": "Viral content planner",
+      "description": "Plans highly shareable topics with a growth-hacking mindset: hooks, retention structure and share triggers.",
+      "fields": {
+        "topic": {
+          "label": "Content area / topic",
+          "placeholder": "e.g. budget food reviews, career growth"
+        },
+        "format": {
+          "label": "Content format",
+          "options": {
+            "short_video": "Short video",
+            "long_video": "Long video",
+            "thread": "Image post / thread"
+          }
+        },
+        "audience": {
+          "label": "Target audience",
+          "placeholder": "e.g. office workers aged 25-35"
+        },
+        "goal": {
+          "label": "Distribution goal",
+          "placeholder": "e.g. followers, brand awareness, traffic"
+        }
+      }
+    },
+    "kol-persona-writer": {
+      "label": "Social persona copy",
+      "description": "Writes on-brand social posts that match your voice samples and persona.",
+      "fields": {
+        "persona": {
+          "label": "Persona / voice",
+          "placeholder": "e.g. a calm, warm finance blogger who talks like a friend, never preachy — or paste a few past posts as style samples"
+        },
+        "topic": {
+          "label": "What this post is about",
+          "placeholder": "e.g. sharing a budgeting app, promoting a new course"
+        },
+        "platform": {
+          "label": "Platform",
+          "options": {
+            "xiaohongshu": "Xiaohongshu"
+          }
+        }
+      }
+    },
+    "live-stream-copywriter": {
+      "label": "Livestream copy",
+      "description": "Stream announcements, live voice-over lines and fan interaction scripts with a showy, sales-ready feel.",
+      "fields": {
+        "persona": {
+          "label": "Host / nickname & style",
+          "placeholder": "e.g. nickname Fan, lively and dramatic, playful with fans"
+        },
+        "occasion": {
+          "label": "Use",
+          "options": {
+            "preview": "Stream announcement",
+            "voiceover": "Short-video voice-over",
+            "interaction": "Live interaction / comment replies",
+            "post": "Status post"
+          }
+        },
+        "points": {
+          "label": "Key points this time",
+          "placeholder": "e.g. live at 8pm tonight playing a new game, merch giveaway, thanks to fans"
+        }
+      }
+    }
+  },
+  "SkillRunner": {
+    "loadFailed": "Failed to load the expert list",
+    "trainNeedPro": "Training an expert requires PRO or above",
+    "addFailed": "Failed to add",
+    "networkError": "Connection failed",
+    "uploadFailed": "File upload failed",
+    "noText": "Couldn't extract text from this file (docx / xlsx / csv / txt / pdf only)",
+    "fileFailed": "File processing failed",
+    "fillRequired": "Please fill in: {field}",
+    "insufficient": "Not enough credits — this run needs about {n}",
+    "runFailed": "Run failed",
+    "balance": "Balance {n} credits",
+    "category": {
+      "copywriting": "Copywriting",
+      "video": "Short video",
+      "illustration": "Illustration",
+      "research": "Research",
+      "audio": "Audio",
+      "presentation": "Presentation",
+      "social": "Social"
+    },
+    "fromCredits": "From {n} credits",
+    "ownKnowledge": "Built-in knowledge base",
+    "loading": "Loading…",
+    "back": "Back",
+    "generating": "Generating…",
+    "run": "Run",
+    "result": "Result",
+    "charged": "{n} credits used",
+    "copied": "Copied",
+    "copy": "Copy",
+    "trainTitle": "Train this expert",
+    "trainHint": "Add links / text / files — used automatically when it runs",
+    "trainLocked": "Training a dedicated knowledge base is a PRO-and-above feature. Upgrade to let this expert learn from the viral examples, styles and material you upload.",
+    "srcType": {
+      "url": "Link",
+      "file": "File",
+      "text": "Text"
+    },
+    "chars": "{n} chars",
+    "tab": {
+      "url": "URL",
+      "text": "Paste text",
+      "file": "Upload file"
+    },
+    "urlPh": "https://… (article / post / web page)",
+    "namePh": "Name for this knowledge (optional)",
+    "textPh": "Paste viral examples, methods, style samples…",
+    "adding": "Adding…",
+    "addKnowledge": "Add knowledge",
+    "processing": "Processing…",
+    "chooseFile": "Choose file",
+    "fileHint": "Supports docx / xlsx / csv / txt / pdf; text is extracted automatically"
+  },
+  "CompanyProfile": {
+    "noPermission": "Company admin or marketing permission is required to edit the company profile",
+    "tab": {
+      "basic": "Basic info",
+      "brand": "Brand",
+      "products": "Products",
+      "stores": "Stores",
+      "files": "Assets"
+    },
+    "legalName": "Legal company name",
+    "legalNameHint": "Registered name — set the brand name in the Brand tab",
+    "legalNamePh": "e.g. XX Co., Ltd.",
+    "pleaseSelect": "Please select",
+    "industry": {
+      "label": "Industry",
+      "tech": "Tech / software",
+      "manufacturing": "Manufacturing",
+      "retail": "Retail / e-commerce",
+      "finance": "Financial services",
+      "health": "Healthcare",
+      "food": "Food & beverage / consumer",
+      "education": "Education & training",
+      "realEstate": "Real estate",
+      "logistics": "Logistics / transport",
+      "advertising": "Advertising / marketing",
+      "hospitality": "Hotels / guesthouses",
+      "other": "Other"
+    },
+    "employees": {
+      "label": "Employees",
+      "e1": "1-10",
+      "e2": "11-50",
+      "e3": "51-200",
+      "e4": "201-500",
+      "e5": "501-1000",
+      "e6": "1000+"
+    },
+    "capital": "Registered capital",
+    "capitalPh": "e.g. NT$10 million",
+    "founded": "Year founded",
+    "foundedPh": "e.g. 2010",
+    "address": "Company address",
+    "addressPh": "City + district + street",
+    "basicHint": "Website, target audience, selling points and brand story go in the Brand tab; products and stores have their own tabs.",
+    "saveBasic": "Save basic info",
+    "saved": "Saved",
+    "saveFailed": "Save failed",
+    "fileCat": {
+      "logo": "Logo / brand mark",
+      "image": "Product / lifestyle images",
+      "document": "Company profile / catalog",
+      "faq": "FAQ / Q&A data"
+    },
+    "extracted": "Extracted",
+    "uploadFile": "Upload file",
+    "filesHint": "Text is extracted automatically from Excel / Word / PDF for AI marketing and customer-service replies. Uploads and deletions save automatically.",
+    "tone": {
+      "formal": "Professional / formal",
+      "young": "Lively / youthful",
+      "warm": "Warm / friendly",
+      "innovative": "Innovative / cutting-edge",
+      "luxury": "Luxury / premium",
+      "friendly": "Approachable / down-to-earth"
+    },
+    "storeFeature": {
+      "wifi": "Free Wi-Fi",
+      "outlets": "Power outlets",
+      "privateRoom": "Private rooms",
+      "photoWall": "Photo wall",
+      "petFriendly": "Pet-friendly",
+      "nearMrt": "Near metro station",
+      "outdoor": "Outdoor seating",
+      "accessible": "Wheelchair accessible"
+    },
+    "productTag": {
+      "new": "New arrival",
+      "bestseller": "Best seller",
+      "signature": "Signature drink",
+      "seasonal": "Seasonal",
+      "photogenic": "Photogenic",
+      "light": "Low-calorie",
+      "chefPick": "Chef's pick"
+    },
+    "defaultCategory": "Drinks"
   }
 }
