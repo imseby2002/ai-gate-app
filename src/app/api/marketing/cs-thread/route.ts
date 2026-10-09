@@ -6,6 +6,7 @@
  * 對話氣泡來源 = cs_messages（每列含客戶訊息 message 與回覆 reply，
  * reply 由 intent 區分 'agent'（真人）或 AI）。
  */
+import { loadChannelCredentials } from '@/lib/channels/resolve'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getBnbContext } from '@/lib/bnb/context'
@@ -122,13 +123,8 @@ export async function GET(req: NextRequest) {
     const stillMissingLine = missingList.filter(c => (c.platform === 'line' || c.platform === 'line-oa') && !nameMap.has(c.from_id))
     if (stillMissingLine.length > 0) {
       try {
-        const { data: cred } = await supabase
-          .from('social_platform_credentials')
-          .select('credentials')
-          .eq('user_id', ctx.ownerId)
-          .eq('platform', 'line')
-          .maybeSingle()
-        const token = cred?.credentials?.line_channel_access_token || cred?.credentials?.channel_access_token
+        const cred = await loadChannelCredentials(ctx.ownerId, 'line', 'cs')
+        const token = cred.line_channel_access_token || cred.channel_access_token
         if (token) {
           const toFetch = stillMissingLine.slice(0, 15)
           await Promise.allSettled(toFetch.map(async (c) => {

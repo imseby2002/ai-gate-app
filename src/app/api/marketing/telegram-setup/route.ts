@@ -4,21 +4,15 @@
  */
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { loadChannelCredentials } from '@/lib/channels/resolve'
 
 export async function POST() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  // Load bot token from credentials
-  const { data: cred } = await supabase
-    .from('social_platform_credentials')
-    .select('credentials')
-    .eq('user_id', user.id)
-    .eq('platform', 'telegram')
-    .single()
-
-  const botToken = (cred?.credentials as Record<string, string> | null)?.telegram_bot_token ?? ''
+  // Bot token：公司「官方帳號」中指定給客服的 Telegram 優先，否則沿用舊設定
+  const botToken = (await loadChannelCredentials(user.id, 'telegram', 'cs')).telegram_bot_token ?? ''
   if (!botToken) {
     return NextResponse.json({ error: '尚未設定 Bot Token' }, { status: 400 })
   }

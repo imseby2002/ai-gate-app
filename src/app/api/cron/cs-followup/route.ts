@@ -11,6 +11,7 @@
  *  - 每位客人每平台「只跟進一次」（cs_followups 去重）。
  *  - 已下單（新訂單待跟進工單）或真人接管中（人工客服請求未結）→ 不跟進。
  */
+import { loadChannelCredentials } from '@/lib/channels/resolve'
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendToCustomer } from '@/lib/cs/send'
@@ -69,6 +70,12 @@ export async function GET(req: Request) {
       .eq('is_connected', true)
       .in('platform', META_PLATFORMS)
     const connected = [...new Set((creds ?? []).map(c => c.platform as string))]
+    // 公司「官方帳號」中指定給客服的 Meta 帳號也算已連線
+    for (const p of META_PLATFORMS) {
+      if (connected.includes(p)) continue
+      const c = await loadChannelCredentials(userId, p, 'cs')
+      if (c.fb_page_access_token || c.ig_access_token || c.whatsapp_access_token) connected.push(p)
+    }
     if (!connected.length) continue
 
     // 候選客人：最後訊息落在 8～22h 窗口

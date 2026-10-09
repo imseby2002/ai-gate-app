@@ -1,5 +1,6 @@
 // HR 通知：站內恆存；Telegram/Email 依 hr_settings 開關（best-effort，不 throw）。
-// Telegram/ZALO 憑證沿用 social_platform_credentials（後台可設定，不寫死）。
+// Telegram/ZALO 憑證：公司「官方帳號」中指定給人事的帳號，未設定時沿用 social_platform_credentials。
+import { loadChannelCredentials } from '@/lib/channels/resolve'
 import { Resend } from 'resend'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendToCustomer } from '@/lib/cs/send'
@@ -34,11 +35,8 @@ export async function notifyHR(ownerId: string, notice: HRNotice): Promise<void>
   // Telegram（收件人 = social credentials 的 telegram_admin_chat_id）
   if (setting.notify_telegram) {
     try {
-      const { data: cred } = await admin
-        .from('social_platform_credentials').select('credentials')
-        .eq('user_id', ownerId).eq('platform', 'telegram').single()
-      const chatId = (cred?.credentials as Record<string, string> | undefined)?.telegram_admin_chat_id
-      if (chatId) await sendToCustomer(ownerId, 'telegram', chatId, text)
+      const chatId = (await loadChannelCredentials(ownerId, 'telegram', 'hr')).telegram_admin_chat_id
+      if (chatId) await sendToCustomer(ownerId, 'telegram', chatId, text, { module: 'hr' })
     } catch { /* best-effort */ }
   }
 
@@ -70,7 +68,7 @@ export async function notifyApplicant(
 
   if (channel === 'zalo') {
     if (!candidate.zalo_user_id) return { ok: false, error: '應徵者尚未加入 ZALO OA（無 user id）' }
-    const r = await sendToCustomer(ownerId, 'zalo', candidate.zalo_user_id, `${subject}\n\n${message}`)
+    const r = await sendToCustomer(ownerId, 'zalo', candidate.zalo_user_id, `${subject}\n\n${message}`, { module: 'hr' })
     return r.ok ? { ok: true, channel: 'zalo' } : { ok: false, error: r.error, channel: 'zalo' }
   }
 

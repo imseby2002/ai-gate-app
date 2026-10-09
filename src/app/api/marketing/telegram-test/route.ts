@@ -4,16 +4,11 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { loadChannelCredentials } from '@/lib/channels/resolve'
 
+// 公司「官方帳號」中指定給客服的 Telegram 優先，否則沿用舊設定
 async function getBotToken(userId: string): Promise<string> {
-  const supabase = await createClient()
-  const { data } = await supabase
-    .from('social_platform_credentials')
-    .select('credentials')
-    .eq('user_id', userId)
-    .eq('platform', 'telegram')
-    .single()
-  return (data?.credentials as Record<string, string> | null)?.telegram_bot_token ?? ''
+  return (await loadChannelCredentials(userId, 'telegram', 'cs')).telegram_bot_token ?? ''
 }
 
 export async function GET() {

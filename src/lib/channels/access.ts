@@ -6,6 +6,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isSuperAdminUser } from '@/lib/auth/admin-check'
+import { resolveActiveCompanyId } from '@/lib/company/activeCompany'
 import { CHANNEL_MODULES, type ChannelModuleId } from './platforms'
 
 export interface ChannelAccess {
@@ -28,26 +29,28 @@ export async function getChannelAccess(): Promise<ChannelAccessResult> {
 
   const admin = createAdminClient()
   const { data: profile } = await admin.from('profiles').select('user_type, email, units, company_id').eq('id', user.id).single()
-  if (!profile?.company_id) return { ok: false, status: 403 }
+  const isSuperAdmin = isSuperAdminUser(user, profile)
+  // 與 unit-access 一致：有切換公司 cookie 時以切換後的公司為準
+  const companyId = await resolveActiveCompanyId(admin, user.id, isSuperAdmin, profile?.company_id ?? null)
+  if (!companyId) return { ok: false, status: 403 }
 
   const { data: member } = await admin.from('company_members')
     .select('role')
-    .eq('company_id', profile.company_id)
+    .eq('company_id', companyId)
     .eq('member_id', user.id)
     .eq('status', 'active')
     .maybeSingle()
-  const isSuperAdmin = isSuperAdminUser(user, profile)
   if (!member && !isSuperAdmin) return { ok: false, status: 403 }
 
   const isCompanyAdmin = isSuperAdmin || member?.role === 'owner' || member?.role === 'admin'
-  const units: string[] = profile.units ?? []
+  const units: string[] = profile?.units ?? []
   const managedModules: ChannelModuleId[] = isCompanyAdmin
     ? CHANNEL_MODULES.map(m => m.id)
     : member?.role === 'manager'
       ? CHANNEL_MODULES.filter(m => m.units.some(u => units.includes(u))).map(m => m.id)
       : []
 
-  return { ok: true, userId: user.id, companyId: profile.company_id, admin, isCompanyAdmin, managedModules }
+  return { ok: true, userId: user.id, companyId, admin, isCompanyAdmin, managedModules }
 }
 
 /** 是否可修改／刪除這個帳號 */

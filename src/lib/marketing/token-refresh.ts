@@ -1,5 +1,6 @@
 // 非永久權杖自動更新（由 /api/cron/refresh-tokens 每小時執行）
-// 只處理「會過期、且平台提供更新機制」的憑證，更新結果直接寫回 social_platform_credentials.credentials：
+// 只處理「會過期、且平台提供更新機制」的憑證，更新結果直接寫回 social_platform_credentials.credentials
+// 與公司官方帳號 channel_accounts.credentials（Zalo OA）：
 //   Zalo（行銷 'Zalo'、客服 'zalo'）  access token 約 25 小時；用 refresh token 換新（refresh token 單次有效，會一併換新）
 //     https://developers.zalo.me/docs/official-account/bat-dau/xac-thuc-va-uy-quyen-cho-ung-dung-new
 //   TikTok                           access token 24 小時；refresh token 365 天
@@ -118,30 +119,65 @@ const REFRESHERS: Refresher[] = [
 
 export interface RefreshResult { userId: string; platform: string; ok: boolean; error?: string }
 
+// 公司「官方帳號」（channel_accounts）中可自動更新的平台；欄位與客服 'zalo' 列相同
+const CHANNEL_REFRESHERS: Record<string, Refresher | undefined> = {
+  zalo_oa: REFRESHERS.find(r => r.platform === 'zalo'),
+}
+
+async function runRefresher(refresher: Refresher, creds: Creds): Promise<{ patch: Patch | null; error?: string }> {
+  try {
+    let patch = await refresher.run(creds)
+    if (!patch) return { patch: null }
+    patch = { ...patch, last_refresh_error: '' }
+    if (patch.access_token || patch.zalo_oa_access_token) patch.token_refreshed_at = new Date().toISOString()
+    return { patch }
+  } catch (e) {
+    const error = e instanceof Error ? e.message : String(e)
+    return { patch: { last_refresh_error: `${new Date().toISOString().slice(0, 16).replace('T', ' ')} ${error}`.slice(0, 300) }, error }
+  }
+}
+
 export async function refreshExpiringTokens(): Promise<RefreshResult[]> {
   const admin = createAdminClient()
+  const results: RefreshResult[] = []
+
+  // 1) 公司官方帳號
+  const { data: accounts } = await admin
+    .from('channel_accounts')
+    .select('id, platform, credentials')
+    .in('platform', Object.keys(CHANNEL_REFRESHERS))
+    .eq('is_connected', true)
+  // Refresh Token 單次有效：同一組 refresh token 若也存在舊設定裡，只在官方帳號這邊更新
+  const handledRefreshTokens = new Set<string>()
+  for (const a of accounts ?? []) {
+    const refresher = CHANNEL_REFRESHERS[a.platform as string]
+    const creds = (a.credentials ?? {}) as Creds
+    if (!refresher) continue
+    if (creds.zalo_refresh_token) handledRefreshTokens.add(creds.zalo_refresh_token)
+    const { patch, error } = await runRefresher(refresher, creds)
+    if (!patch) continue
+    const { error: dbErr } = await admin
+      .from('channel_accounts')
+      .update({ credentials: { ...creds, ...patch }, updated_at: new Date().toISOString() })
+      .eq('id', a.id)
+    results.push({ userId: `channel:${a.id}`, platform: a.platform as string, ok: !error && !dbErr, error: error ?? dbErr?.message })
+  }
+
+  // 2) 舊設定 social_platform_credentials
   const { data: rows } = await admin
     .from('social_platform_credentials')
     .select('user_id, platform, credentials')
     .in('platform', REFRESHERS.map(r => r.platform))
     .eq('is_connected', true)
 
-  const results: RefreshResult[] = []
   for (const row of rows ?? []) {
     const refresher = REFRESHERS.find(r => r.platform === row.platform)
     const creds = (row.credentials ?? {}) as Creds
     if (!refresher) continue
-    let patch: Patch | null
-    let error: string | undefined
-    try {
-      patch = await refresher.run(creds)
-      if (!patch) continue
-      patch = { ...patch, last_refresh_error: '' }
-      if (patch.access_token || patch.zalo_oa_access_token) patch.token_refreshed_at = new Date().toISOString()
-    } catch (e) {
-      error = e instanceof Error ? e.message : String(e)
-      patch = { last_refresh_error: `${new Date().toISOString().slice(0, 16).replace('T', ' ')} ${error}`.slice(0, 300) }
-    }
+    const rt = creds.zalo_refresh_token || (row.platform === 'Zalo' ? creds.refresh_token : '')
+    if (rt && handledRefreshTokens.has(rt)) continue
+    const { patch, error } = await runRefresher(refresher, creds)
+    if (!patch) continue
     const { error: dbErr } = await admin
       .from('social_platform_credentials')
       .update({ credentials: { ...creds, ...patch } })

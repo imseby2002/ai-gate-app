@@ -8353,7 +8353,9 @@
     "fieldVerifyTokenLabel": "Verify Token（自訂任意字串，與 Meta 後台一致）",
     "fieldAppSecretLabel": "App Secret（Meta App 密鑰）",
     "fieldIgAccessTokenLabel": "Access Token（同綁定粉專的 Page Access Token）",
-    "fieldAdminChatIdLabel": "管理員 Chat ID（選填）"
+    "fieldAdminChatIdLabel": "管理員 Chat ID（選填）",
+    "managedByChannels": "此平台已改由公司「官方帳號」設定（{name}），客服以那組帳號為準。",
+    "manageChannels": "前往官方帳號"
   },
   "CsCorrectionsPanel": {
     "title": "AI 回答修正",

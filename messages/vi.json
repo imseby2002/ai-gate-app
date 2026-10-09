@@ -8260,7 +8260,9 @@
     "fieldVerifyTokenLabel": "Verify Token (chuỗi tự chọn, phải khớp với trang quản trị Meta)",
     "fieldAppSecretLabel": "App Secret (khóa bí mật của Meta App)",
     "fieldIgAccessTokenLabel": "Access Token (giống Page Access Token của Trang đã liên kết)",
-    "fieldAdminChatIdLabel": "Chat ID Quản Trị Viên (không bắt buộc)"
+    "fieldAdminChatIdLabel": "Chat ID Quản Trị Viên (không bắt buộc)",
+    "managedByChannels": "Nền tảng này đã được thiết lập trong Tài khoản chính thức của công ty ({name}); CSKH sẽ dùng tài khoản đó.",
+    "manageChannels": "Mở Tài khoản chính thức"
   },
   "CsCorrectionsPanel": {
     "title": "Sửa Lỗi Phản Hồi AI",

@@ -87,7 +87,7 @@ async function sendToRole(ownerId: string, ch: RoleChannel, title: string, body:
   const text = `${title}\n\n${body}`
   // 1. Telegram
   if (ch.telegram) {
-    try { await sendToCustomer(ownerId, 'telegram', ch.telegram, text) } catch { /* best-effort */ }
+    try { await sendToCustomer(ownerId, 'telegram', ch.telegram, text, { module: 'affairs' }) } catch { /* best-effort */ }
   }
   // 2. Email
   if (ch.email && process.env.RESEND_API_KEY) {
@@ -102,7 +102,7 @@ async function sendToRole(ownerId: string, ch: RoleChannel, title: string, body:
   // 3. ZALO 個人 (透過 Zalo OA 主動推播)
   if (ch.zalo) {
     try {
-      await sendToCustomer(ownerId, 'zalo', ch.zalo, text)
+      await sendToCustomer(ownerId, 'zalo', ch.zalo, text, { module: 'affairs' })
     } catch { /* best-effort */ }
   }
 }
