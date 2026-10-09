@@ -115,9 +115,11 @@ body {
   background: linear-gradient(145deg, oklch(0.18 0.01 262) 0%, oklch(0.16 0.005 262) 100%);
 }
 
-/* Smooth page transitions */
+/* Smooth page transitions
+   用 backwards 而非 both：動畫結束後不保留 transform，否則頁面容器會成為 position: fixed 的
+   包含區塊，裡面的全螢幕彈窗（fixed inset-0）會被裁成容器大小。 */
 main > * {
-  animation: fade-up 0.25s ease both;
+  animation: fade-up 0.25s ease backwards;
 }
 @keyframes fade-up {
   from { opacity: 0; transform: translateY(6px); }
