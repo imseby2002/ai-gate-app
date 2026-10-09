@@ -67,6 +67,11 @@ export function Field({ label, children, className = '' }: { label: string; chil
 }
 
 export function Modal({ title, onClose, children, wide }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto" onClick={onClose}>
       <div className={`bg-card rounded-xl shadow-xl w-full ${wide ? 'max-w-4xl' : 'max-w-2xl'} my-4`} onClick={e => e.stopPropagation()}>
