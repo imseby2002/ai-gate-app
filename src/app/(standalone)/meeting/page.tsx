@@ -9,9 +9,12 @@ import { Input } from '@/components/ui/input'
 import {
   Mic, MicOff, Copy, LogOut, Plus, Users, Video, VideoOff,
   Building2, Store, CheckCircle2, AlertCircle, Languages,
-  Sparkles, Radio, Eye, Loader2
+  Sparkles, Radio, Eye, Loader2, Download, History, Trash2
 } from 'lucide-react'
-import { fetchAzureSpeechToken, startAzureRecognition, type AzureRecognitionController } from '@/lib/meeting/azure-speech'
+import {
+  fetchAzureSpeechToken, preloadAzureSpeechSdk, startAzureRecognition,
+  type AzureRecognitionController, type AzureSpeechToken,
+} from '@/lib/meeting/azure-speech'
 
 // ── 型別 ──────────────────────────────────────────────────────────
 interface Me { id: string; name: string }
@@ -26,6 +29,7 @@ interface Meeting {
   meeting_mode?: 'online' | 'in_person'
   stores?: string[]
   context_keywords?: string
+  created_at?: string
 }
 
 interface DeptOption {
@@ -120,6 +124,23 @@ function loadJaasScript(appId: string): Promise<void> {
 const transCache = new Map<string, string>()
 const tkey = (locale: string, text: string) => `${locale}:${text}`
 
+function fmtDate(iso: string) {
+  const d = new Date(iso)
+  return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`
+}
+
+// 會議代碼存在網址（?room=），頁面重新載入或新版部署後可自動回到同一場會議
+function setRoomParam(code: string | null) {
+  if (typeof window === 'undefined') return
+  const url = new URL(window.location.href)
+  if (code) url.searchParams.set('room', code)
+  else url.searchParams.delete('room')
+  window.history.replaceState(window.history.state, '', url.toString())
+}
+
+// Azure 連線中斷時的重試次數上限（超過才改用瀏覽器語音辨識）
+const AZURE_MAX_RETRIES = 5
+
 function fmtTime(iso: string) {
   const d = new Date(iso)
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
@@ -144,6 +165,9 @@ export default function MeetingPage() {
   const [selectedStores, setSelectedStores] = useState<string[]>([])
   const [contextKeywords, setContextKeywords] = useState('')
   const [joinCode, setJoinCode] = useState('')
+  const [history, setHistory] = useState<Meeting[]>([])
+  const [downloading, setDownloading] = useState(false)
+  const [interim, setInterim] = useState<{ text: string; speaker?: string } | null>(null)
 
   const toggleDept = (key: string) => {
     setSelectedDepts(prev =>
@@ -178,6 +202,10 @@ export default function MeetingPage() {
   const srSupported = mounted && typeof window !== 'undefined' && (!!getSRCtor() || !!navigator?.mediaDevices)
 
   const azureControllerRef = useRef<AzureRecognitionController | null>(null)
+  const azureRetryRef = useRef(0)
+  const azureTokenRef = useRef<{ data: AzureSpeechToken; at: number } | null>(null)
+  const speechEngineRef = useRef<'azure' | 'web_speech' | null>(null)
+  const autoJoinTriedRef = useRef(false)
   const recRef = useRef<SpeechRec | null>(null)
   const recordingRef = useRef(false)
   const restartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -228,6 +256,24 @@ export default function MeetingPage() {
     setLines((ls ?? []) as Line[])
     setParticipants(((ps ?? []) as { name: string }[]).map(p => p.name).filter(Boolean))
   }, [supabase])
+
+  // ── 進入會議：記住代碼、預載 Azure SDK 與 token，按下錄音即可立即開始 ──
+  useEffect(() => {
+    if (!meeting) return
+    setRoomParam(meeting.room_code)
+    void preloadAzureSpeechSdk().catch(() => {})
+    void fetchAzureSpeechToken().then(data => {
+      if (data.configured) azureTokenRef.current = { data, at: Date.now() }
+    })
+  }, [meeting])
+
+  // ── 錄音中離開／重新整理頁面前提醒 ──
+  useEffect(() => {
+    if (!recording) return
+    const onBeforeUnload = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = '' }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [recording])
 
   // ── Realtime：逐字稿即時同步 + 斷線自動重連 ──
   useEffect(() => {
@@ -350,6 +396,87 @@ export default function MeetingPage() {
     return tr && tr !== l.content.trim() ? tr : null
   }
 
+  // ── 網址帶有 ?room=：自動回到該場會議（重新整理、新版部署或分頁被系統回收後）──
+  useEffect(() => {
+    if (!me || meeting || autoJoinTriedRef.current) return
+    autoJoinTriedRef.current = true
+    const code = new URLSearchParams(window.location.search).get('room')
+    if (code) void joinMeeting(code)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [me, meeting])
+
+  // ── 大廳：我主持或參加過的會議 ──
+  useEffect(() => {
+    if (meeting || !me) return
+    supabase.from('meetings')
+      .select('id, title, room_code, host_id, source_lang, department, departments, meeting_mode, stores, context_keywords, created_at')
+      .order('created_at', { ascending: false })
+      .limit(50)
+      .then(({ data }) => setHistory((data ?? []) as Meeting[]))
+  }, [supabase, meeting, me])
+
+  // 主持人：刪除整場會議（含逐字稿）；其他參與者：從自己的紀錄移除
+  async function deleteMeeting(m: Meeting) {
+    const isHost = m.host_id === me?.id
+    if (!confirm(isHost ? t('confirmDelete', { title: m.title || m.room_code }) : t('confirmRemove', { title: m.title || m.room_code }))) return
+    const { error } = isHost
+      ? await supabase.from('meetings').delete().eq('id', m.id)
+      : await supabase.from('meeting_participants').delete().eq('meeting_id', m.id).eq('user_id', me?.id ?? '')
+    if (error) { setErr(t('deleteFailed')); return }
+    setHistory(h => h.filter(x => x.id !== m.id))
+  }
+
+  function openMeeting(m: Meeting) {
+    setErr('')
+    setMeeting(m)
+    loadMeetingData(m)
+  }
+
+  // ── 下載會議紀錄（原文＋譯文） ──
+  async function downloadRecord() {
+    if (!meeting) return
+    setDownloading(true)
+    try {
+      const need = Array.from(new Set(
+        lines.filter(l => l.source_lang !== targetLang).map(l => l.content.trim()).filter(Boolean),
+      )).filter(txt => !transCache.has(tkey(targetLang, txt)))
+      for (let i = 0; i < need.length; i += 40) {
+        const chunk = need.slice(i, i + 40)
+        try {
+          const r = await fetch('/api/meeting/translate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ texts: chunk, target: targetLang, context: { title: meeting.title, keywords: meeting.context_keywords } }),
+          })
+          const d = await r.json()
+          if (Array.isArray(d.translations)) chunk.forEach((txt, j) => transCache.set(tkey(targetLang, txt), d.translations[j] ?? txt))
+        } catch {}
+      }
+      const langLabel = TARGET_LANGS.find(l => l.code === targetLang)?.label ?? ''
+      const head = [
+        `${t('title')}：${meeting.title || '—'}`,
+        `${t('roomCode')}：${meeting.room_code}`,
+        meeting.created_at ? `${t('date')}：${fmtDate(meeting.created_at)}` : '',
+        participants.length ? `${t('participants')}：${participants.join('、')}` : '',
+        `${t('translateTo')}：${langLabel}`,
+      ].filter(Boolean)
+      const body = lines.map(l => {
+        const tr = translatedOf(l)
+        const first = `[${fmtDate(l.created_at)} ${fmtTime(l.created_at)}] ${l.speaker_name || '—'}：${l.content}`
+        return tr ? `${first}\n    ↳ ${tr}` : first
+      })
+      const blob = new Blob(['\ufeff' + [...head, '', ...body].join('\n') + '\n'], { type: 'text/plain;charset=utf-8' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${t('title')}_${(meeting.title || meeting.room_code).replace(/[\\/:*?"<>|]/g, '_')}_${meeting.created_at ? fmtDate(meeting.created_at).replace(/\//g, '') : meeting.room_code}.txt`
+      a.click()
+      URL.revokeObjectURL(url)
+    } finally {
+      setDownloading(false)
+    }
+  }
+
   // ── 門市切換 ──
   const toggleStore = (code: string) => {
     setSelectedStores(prev =>
@@ -409,9 +536,9 @@ export default function MeetingPage() {
   }
 
   // ── 加入會議 ──
-  async function joinMeeting() {
+  async function joinMeeting(codeOverride?: string) {
     setErr('')
-    const code = joinCode.trim().toUpperCase()
+    const code = (codeOverride ?? joinCode).trim().toUpperCase()
     if (!code) return
 
     setJoining(true)
@@ -425,6 +552,7 @@ export default function MeetingPage() {
       const json = await res.json().catch(() => ({}))
       if (!res.ok || !json.meeting) {
         setErr(json.error || t('notFound'))
+        if (codeOverride) setRoomParam(null)
         return
       }
 
@@ -439,6 +567,7 @@ export default function MeetingPage() {
         meeting_mode: json.meeting.meeting_mode as 'online' | 'in_person' | undefined,
         stores: json.meeting.stores as string[] | undefined,
         context_keywords: json.meeting.context_keywords as string | undefined,
+        created_at: json.meeting.created_at as string | undefined,
       }
       setMeeting(m)
       loadMeetingData(m)
@@ -527,10 +656,13 @@ export default function MeetingPage() {
 
       rec.onresult = (e: SREvent) => {
         lastActiveRef.current = Date.now()
+        let pending = ''
         for (let i = e.resultIndex; i < e.results.length; i++) {
           const r = e.results[i]
           if (r.isFinal) void addLine(r[0].transcript)
+          else pending += r[0].transcript
         }
+        setInterim(pending.trim() ? { text: pending.trim() } : null)
       }
 
       rec.onerror = (ev: { error: string }) => {
@@ -574,18 +706,83 @@ export default function MeetingPage() {
     }
   }, [cleanupRec, inputLang, addLine])
 
+  const startWebSpeech = useCallback(() => {
+    speechEngineRef.current = 'web_speech'
+    setSpeechEngine('web_speech')
+    startRecognizerInstance()
+  }, [startRecognizerInstance])
+
+  // 啟動 Azure；連線中斷時以新 token 重連，連續失敗超過上限才改用瀏覽器語音辨識
+  const startAzure = useCallback(async (): Promise<boolean> => {
+    try {
+      const cached = azureTokenRef.current
+      const tokenData = cached && Date.now() - cached.at < 8 * 60 * 1000
+        ? cached.data
+        : await fetchAzureSpeechToken()
+      azureTokenRef.current = null
+      if (!tokenData.configured || !tokenData.token || !tokenData.region) return false
+      if (!recordingRef.current) return true
+
+      const ctrl = await startAzureRecognition({
+        token: tokenData.token,
+        region: tokenData.region,
+        mode: meeting?.meeting_mode || 'online',
+        defaultLang: inputLang,
+        onInterim: (text, speaker) => {
+          lastActiveRef.current = Date.now()
+          setInterim({ text, speaker })
+        },
+        onRecognized: (text, speakerLabel, detectedLang) => {
+          lastActiveRef.current = Date.now()
+          azureRetryRef.current = 0
+          setInterim(null)
+          void addLine(text, speakerLabel, detectedLang)
+        },
+        onError: (err) => {
+          azureControllerRef.current = null
+          setInterim(null)
+          if (!recordingRef.current) return
+          const attempt = ++azureRetryRef.current
+          if (attempt > AZURE_MAX_RETRIES) {
+            console.warn('[Meeting] Azure Speech failed repeatedly, fallback to Web Speech:', err)
+            startWebSpeech()
+            return
+          }
+          console.warn(`[Meeting] Azure Speech disconnected, reconnecting (${attempt}/${AZURE_MAX_RETRIES}):`, err)
+          if (restartTimerRef.current) clearTimeout(restartTimerRef.current)
+          restartTimerRef.current = setTimeout(() => {
+            if (!recordingRef.current) return
+            void startAzure().then(ok => { if (!ok && recordingRef.current) startWebSpeech() })
+          }, Math.min(1000 * attempt, 5000))
+        },
+      })
+      if (!recordingRef.current) {
+        void ctrl.stop()
+        return true
+      }
+      azureControllerRef.current = ctrl
+      speechEngineRef.current = 'azure'
+      setSpeechEngine('azure')
+      return true
+    } catch (e) {
+      console.warn('[Meeting] Azure Speech start failed:', e)
+      return false
+    }
+  }, [meeting, inputLang, addLine, startWebSpeech])
+
   const startRec = useCallback(async () => {
     setMicDenied(false)
     recordingRef.current = true
     setRecording(true)
     lastActiveRef.current = Date.now()
+    azureRetryRef.current = 0
 
-    // 請求 Screen Wake Lock 避免會議期間因螢幕休眠被作業系統凍結
+    // 請求 Screen Wake Lock 避免會議期間因螢幕休眠被作業系統凍結（不阻塞錄音啟動）
     if (typeof navigator !== 'undefined' && 'wakeLock' in navigator) {
-      try {
-        const lock = await (navigator as unknown as { wakeLock: { request: (t: string) => Promise<{ release: () => Promise<void> }> } }).wakeLock.request('screen')
-        wakeLockRef.current = lock
-      } catch {}
+      void (navigator as unknown as { wakeLock: { request: (t: string) => Promise<{ release: () => Promise<void> }> } }).wakeLock
+        .request('screen')
+        .then(lock => { wakeLockRef.current = lock })
+        .catch(() => {})
     }
 
     // 啟動近乎靜音的 AudioContext，防止 Chrome 將背景分頁判定為閒置並凍結語音輸入
@@ -603,46 +800,17 @@ export default function MeetingPage() {
       }
     } catch {}
 
-    // 先嘗試啟用 Azure AI 語音識別與多人聲紋分離
-    try {
-      const tokenData = await fetchAzureSpeechToken()
-      if (tokenData.configured && tokenData.token && tokenData.region) {
-        const ctrl = await startAzureRecognition({
-          token: tokenData.token,
-          region: tokenData.region,
-          mode: meeting?.meeting_mode || 'online',
-          defaultLang: inputLang === 'auto' ? 'zh-TW' : inputLang,
-          onRecognized: (text, speakerLabel, detectedLang) => {
-            lastActiveRef.current = Date.now()
-            void addLine(text, speakerLabel, detectedLang)
-          },
-          onError: (err) => {
-            console.warn('[Meeting] Azure Speech error, fallback to Web Speech:', err)
-            if (azureControllerRef.current) {
-              void azureControllerRef.current.stop()
-              azureControllerRef.current = null
-            }
-            setSpeechEngine('web_speech')
-            startRecognizerInstance()
-          },
-        })
-        azureControllerRef.current = ctrl
-        setSpeechEngine('azure')
-        return
-      }
-    } catch (e) {
-      console.warn('[Meeting] Azure Speech start failed, falling back:', e)
-    }
-
-    // 若未配置 Azure 或建立失敗，降級為瀏覽器 Web Speech API
-    setSpeechEngine('web_speech')
-    startRecognizerInstance()
-  }, [meeting, inputLang, addLine, startRecognizerInstance])
+    // 先嘗試 Azure AI 語音識別與多人聲紋分離；未配置或建立失敗則降級為瀏覽器 Web Speech API
+    if (await startAzure()) return
+    if (recordingRef.current) startWebSpeech()
+  }, [startAzure, startWebSpeech])
 
   const stopRec = useCallback(() => {
     recordingRef.current = false
     setRecording(false)
     setSpeechEngine(null)
+    speechEngineRef.current = null
+    setInterim(null)
     if (azureControllerRef.current) {
       void azureControllerRef.current.stop()
       azureControllerRef.current = null
@@ -665,7 +833,7 @@ export default function MeetingPage() {
     const interval = setInterval(() => {
       if (!recordingRef.current) return
       // 僅在 Web Speech API 模式下需要看門狗定時檢查重啟
-      if (speechEngine === 'web_speech') {
+      if (speechEngineRef.current === 'web_speech') {
         const idle = Date.now() - lastActiveRef.current
         if (idle > 45000) {
           console.log('[Meeting] Watchdog: recognition idle > 45s, refreshing instance...')
@@ -675,7 +843,7 @@ export default function MeetingPage() {
     }, 10000)
 
     const handleVisibility = () => {
-      if (document.visibilityState === 'visible' && recordingRef.current && speechEngine === 'web_speech') {
+      if (document.visibilityState === 'visible' && recordingRef.current && speechEngineRef.current === 'web_speech') {
         if (Date.now() - lastActiveRef.current > 15000) {
           startRecognizerInstance()
         }
@@ -743,6 +911,7 @@ export default function MeetingPage() {
   function leaveMeeting() {
     stopRec()
     stopVideo()
+    setRoomParam(null)
     setMeeting(null)
     setLines([])
     setParticipants([])
@@ -959,10 +1128,41 @@ export default function MeetingPage() {
               className="font-mono tracking-widest uppercase"
               disabled={joining}
             />
-            <Button variant="outline" onClick={joinMeeting} disabled={!joinCode.trim() || joining} className="gap-1.5">
+            <Button variant="outline" onClick={() => joinMeeting()} disabled={!joinCode.trim() || joining} className="gap-1.5">
               {joining ? <Loader2 className="h-4 w-4 animate-spin" /> : t('join')}
             </Button>
           </div>
+        </Card>
+
+        {/* 我的會議紀錄 */}
+        <Card className="space-y-2 p-4">
+          <p className="flex items-center gap-1.5 text-sm font-medium"><History className="h-4 w-4" />{t('history')}</p>
+          {history.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{t('historyEmpty')}</p>
+          ) : (
+            <div className="divide-y">
+              {history.map(m => (
+                <div key={m.id} className="flex items-center gap-2">
+                  <button
+                    onClick={() => openMeeting(m)}
+                    className="flex min-w-0 flex-1 items-center justify-between gap-3 py-2 text-left text-sm hover:text-primary"
+                  >
+                    <span className="truncate">{m.title || t('title')}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      {m.created_at ? `${fmtDate(m.created_at)} ${fmtTime(m.created_at)}` : ''} · <span className="font-mono">{m.room_code}</span>
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => deleteMeeting(m)}
+                    title={m.host_id === me?.id ? t('delete') : t('removeFromList')}
+                    className="shrink-0 rounded p-1.5 text-muted-foreground hover:bg-red-50 hover:text-red-500"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </Card>
       </div>
     )
@@ -1122,6 +1322,10 @@ export default function MeetingPage() {
           </button>
         </div>
 
+        <Button size="sm" variant="outline" onClick={downloadRecord} disabled={downloading || lines.length === 0} className="gap-1.5">
+          <Download className="h-4 w-4" />{downloading ? t('downloading') : t('download')}
+        </Button>
+
         {/* 視訊按鈕（線上會議模式才展示） */}
         {JAAS_APP_ID && meeting.meeting_mode === 'online' && (
           <div>
@@ -1144,7 +1348,7 @@ export default function MeetingPage() {
 
       {/* 逐字稿與翻譯輸出區 */}
       <div className="flex-1 space-y-3 overflow-y-auto rounded-lg border p-3">
-        {lines.length === 0 ? (
+        {lines.length === 0 && !interim ? (
           <p className="py-8 text-center text-sm text-muted-foreground">{t('empty')}</p>
         ) : (
           lines.map(l => {
@@ -1195,6 +1399,13 @@ export default function MeetingPage() {
               </div>
             )
           })
+        )}
+        {/* 辨識中（尚未定稿）的即時文字 */}
+        {interim && (
+          <div className="text-sm text-muted-foreground italic">
+            {interim.speaker && <span className="mr-2 not-italic text-xs font-semibold">{interim.speaker}</span>}
+            {interim.text}…
+          </div>
         )}
         <div ref={bottomRef} />
       </div>
