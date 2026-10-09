@@ -12367,7 +12367,9 @@
       "p4": "Khi gia hạn với chủ nhà, có kỹ thuật đàm phán nào để giảm giá thuê?",
       "p5": "Mở quán trà sữa cần làm việc với những cơ quan nhà nước nào, mỗi nơi cần chuẩn bị gì?",
       "p6": "Điều kiện vào TTTM khu dân cư và không thuộc khu dân cư khác nhau thế nào?"
-    }
+    },
+    "manualDoc": "Hướng dẫn sử dụng",
+    "manualDownload": "Tải hướng dẫn sử dụng (PDF)"
   },
   "ChannelAccounts": {
     "title": "Tài khoản chính thức",

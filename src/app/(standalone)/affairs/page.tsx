@@ -7,7 +7,7 @@ import {
   FileText, Upload, Loader2, AlertCircle, Plus, Trash2, X, Bell,
   Building2, CalendarClock, ExternalLink, FileSpreadsheet, Sparkles,
   CheckCircle2, AlertTriangle, ShieldCheck, DollarSign, ChevronDown, ChevronUp,
-  MapPin, Users, TrendingUp, Bot
+  MapPin, Users, TrendingUp, Bot, BookOpen, Download
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -139,6 +139,14 @@ export default function AffairsPage() {
           <h1 className="text-2xl font-bold">{t('title')}</h1>
         </div>
         <div className="ml-auto flex items-center gap-2">
+          <a href="/api/docs/affairs-manual" target="_blank" rel="noreferrer">
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <BookOpen className="h-4 w-4" />{tx('manualDoc')}
+            </Button>
+          </a>
+          <a href="/api/docs/affairs-manual?download=1" title={tx('manualDownload')}>
+            <Button variant="outline" size="sm" className="px-2"><Download className="h-4 w-4" /></Button>
+          </a>
           <Link href="/office">
             <Button variant="outline" size="sm" className="gap-1.5">
               <Building2 className="h-4 w-4" />{t('companyPortal')}

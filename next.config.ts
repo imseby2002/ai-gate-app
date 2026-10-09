@@ -13,6 +13,7 @@ const nextConfig: NextConfig = {
   // 說明書 PDF 由 API 讀檔回傳，需打包進該函式
   outputFileTracingIncludes: {
     '/api/docs/marketing-manual': ['./docs/marketing-manual.pdf', './docs/marketing-manual.en.pdf', './docs/marketing-manual.vi.pdf'],
+    '/api/docs/affairs-manual': ['./docs/affairs-manual.pdf', './docs/affairs-manual.en.pdf', './docs/affairs-manual.vi.pdf'],
   },
   typescript: {
     // 避免歷史邊緣頁面型別推導差異阻礙 Vercel 上線部署
