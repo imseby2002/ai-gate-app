@@ -99,6 +99,7 @@ export async function POST(req: NextRequest) {
     phone: call.phone,
     shortUrl,
     label: mapping.label,
+    ownerId: call.user_id,
   })
 
   await sb.from('ivr_join_events').insert({

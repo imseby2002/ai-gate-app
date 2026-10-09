@@ -85,7 +85,7 @@ const PLATFORMS: Platform[] = [
   },
   {
     id: 'Zalo', name: 'Zalo OA（發文）', color: '#0068FF',
-    note: '發表文章用，與客服頻道綁定的 Zalo 憑證分開儲存。',
+    note: '發表文章用，與客服頻道綁定的 Zalo 憑證分開儲存。填 ZNS 範本 ID 後，越南門號的簡訊與 IVR 會先用此 OA 發 ZNS，失敗再改走 SMS。',
     docUrl: 'https://developers.zalo.me/docs/official-account/article',
     fields: [
       { key: 'access_token', label: 'OA Access Token', placeholder: '...', secret: true },
@@ -93,6 +93,7 @@ const PLATFORMS: Platform[] = [
       { key: 'app_id', label: 'App ID（自動更新權杖用）', placeholder: '...', secret: false },
       { key: 'secret_key', label: 'Secret Key（自動更新權杖用）', placeholder: '...', secret: true },
       { key: 'refresh_token', label: 'Refresh Token（自動更新權杖用）', placeholder: '...', secret: true },
+      { key: 'zns_template_id', label: 'ZNS 範本 ID（越南簡訊 / IVR 用）', placeholder: '例：123456', secret: false },
     ],
   },
   {
