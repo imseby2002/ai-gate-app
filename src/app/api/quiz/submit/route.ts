@@ -1,34 +1,36 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { QUIZZES } from '@/lib/quiz'
+import { QUIZZES, isQuizLang } from '@/lib/quiz'
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null) as
-    { quiz_id?: unknown; name?: unknown; answers?: unknown } | null
+    { quiz_id?: unknown; name?: unknown; lang?: unknown; answers?: unknown } | null
   const quiz = typeof body?.quiz_id === 'string' ? QUIZZES[body.quiz_id] : undefined
   const name = typeof body?.name === 'string' ? body.name.trim().slice(0, 50) : ''
+  const lang = isQuizLang(body?.lang) ? body.lang : null
   const raw = body?.answers && typeof body.answers === 'object' ? body.answers as Record<string, unknown> : null
   if (!quiz || !name || !raw) {
     return NextResponse.json({ error: 'invalid' }, { status: 400 })
   }
 
   const answers: Record<string, string> = {}
-  const keys = Object.keys(quiz.key)
-  for (const k of keys) {
-    const v = raw[k]
+  for (const q of quiz.questions) {
+    const v = raw[q.id]
     if (typeof v !== 'string' || !['A', 'B', 'C'].includes(v)) {
       return NextResponse.json({ error: 'incomplete' }, { status: 400 })
     }
-    answers[k] = v
+    answers[q.id] = v
   }
-  const score = keys.filter(k => answers[k] === quiz.key[k].answer).length
+  const total = quiz.questions.length
+  const score = quiz.questions.filter(q => answers[q.id] === q.answer).length
 
   const { error } = await createAdminClient().from('quiz_submissions').insert({
     quiz_id: body!.quiz_id,
     name,
+    lang,
     answers,
     score,
-    total: keys.length,
+    total,
     user_agent: req.headers.get('user-agent')?.slice(0, 300) ?? null,
   })
   if (error) {
@@ -36,6 +38,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'save_failed' }, { status: 500 })
   }
 
-  // 交卷後回傳正確答案與解說，讓作答者對照
-  return NextResponse.json({ score, total: keys.length, key: quiz.key })
+  // 交卷後回傳正確答案與三語解說，前端依目前選擇的語言顯示
+  const key = Object.fromEntries(quiz.questions.map(q => [q.id, { answer: q.answer, explanation: q.explanation }]))
+  return NextResponse.json({ score, total, key })
 }
