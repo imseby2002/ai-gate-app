@@ -41,7 +41,8 @@ export async function startAzureRecognition(options: {
   token: string
   region: string
   mode: 'online' | 'in_person'
-  defaultLang: string
+  /** 辨識語言（app 代碼 zh-TW / vi / en），第一個為主要語言；只有一個時不做自動偵測 */
+  languages: string[]
   onRecognized: (text: string, speakerLabel?: string, detectedLang?: string) => void
   onInterim?: (text: string, speakerLabel?: string) => void
   onError?: (err: unknown) => void
@@ -49,21 +50,25 @@ export async function startAzureRecognition(options: {
   const SpeechSDK = await preloadAzureSpeechSdk()
 
   const speechConfig = SpeechSDK.SpeechConfig.fromAuthorizationToken(options.token, options.region)
-  // 指定單一語言時不做自動偵測，避免誤判
-  const fixedLang = ({ 'zh-TW': 'zh-TW', vi: 'vi-VN', en: 'en-US' } as Record<string, string>)[options.defaultLang]
+  const LOCALES: Record<string, string> = { 'zh-TW': 'zh-TW', vi: 'vi-VN', en: 'en-US' }
+  const locales = options.languages.map(l => LOCALES[l]).filter(Boolean)
+  if (!locales.length) locales.push('zh-TW')
+  const primaryLang = options.languages.find(l => LOCALES[l]) ?? 'zh-TW'
+
+  // 只有一種語言時不做自動偵測，避免誤判
   let autoDetectConfig: SpeechSDKType.AutoDetectSourceLanguageConfig | null = null
-  if (fixedLang) {
-    speechConfig.speechRecognitionLanguage = fixedLang
+  if (locales.length === 1) {
+    speechConfig.speechRecognitionLanguage = locales[0]
   } else {
-    autoDetectConfig = SpeechSDK.AutoDetectSourceLanguageConfig.fromLanguages(['vi-VN', 'zh-TW', 'en-US'])
+    autoDetectConfig = SpeechSDK.AutoDetectSourceLanguageConfig.fromLanguages(locales)
     // 持續語言偵測：每句重新判斷中/越/英（預設 AtStart 只在開頭判斷一次，之後整段鎖定同一語言）
     autoDetectConfig.mode = SpeechSDK.LanguageIdMode.Continuous
   }
 
   const audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput()
 
-  function resolveLanguage(result: SpeechSDKType.SpeechRecognitionResult, fallback: string): string {
-    const defaultFallback = fallback === 'auto' ? 'zh-TW' : fallback
+  // 偵測不出語言時以主要語言為準
+  function resolveLanguage(result: SpeechSDKType.SpeechRecognitionResult): string {
     try {
       const autoRes = SpeechSDK.AutoDetectSourceLanguageResult.fromResult(result)
       if (autoRes?.language) {
@@ -72,7 +77,7 @@ export async function startAzureRecognition(options: {
         if (autoRes.language.toLowerCase().startsWith('en')) return 'en'
       }
     } catch {}
-    return defaultFallback
+    return primaryLang
   }
 
   let stopped = false
@@ -108,7 +113,7 @@ export async function startAzureRecognition(options: {
         const text = e.result.text.trim()
         const speakerRaw = e.result.speakerId || 'Guest-1'
         const speakerLabel = formatSpeakerLabel(speakerRaw)
-        const lang = resolveLanguage(e.result as unknown as SpeechSDKType.SpeechRecognitionResult, options.defaultLang)
+        const lang = resolveLanguage(e.result as unknown as SpeechSDKType.SpeechRecognitionResult)
         options.onRecognized(text, speakerLabel, lang)
       }
     }
@@ -155,7 +160,7 @@ export async function startAzureRecognition(options: {
   recognizer.recognized = (_s, e) => {
     if (e.result.reason === SpeechSDK.ResultReason.RecognizedSpeech && e.result.text?.trim()) {
       const text = e.result.text.trim()
-      const lang = resolveLanguage(e.result, options.defaultLang)
+      const lang = resolveLanguage(e.result)
       options.onRecognized(text, undefined, lang)
     }
   }

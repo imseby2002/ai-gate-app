@@ -4329,6 +4329,8 @@
     }
   },
   "Meeting": {
+    "primaryLangLabel": "Main language (spoken by most attendees)",
+    "otherLangsLabel": "Other languages spoken (optional, multi-select; none = main language only)",
     "translateTo": "Translate to",
     "noTranslation": "No translation",
     "download": "Download record",
