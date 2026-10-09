@@ -3,7 +3,7 @@ import { getTranslations } from 'next-intl/server'
 import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { SettingsForm } from '@/components/settings/SettingsForm'
 import Link from 'next/link'
-import { Building2, ArrowRight } from 'lucide-react'
+import { Building2, ArrowRight, MessageCircle } from 'lucide-react'
 import { CompanyMembershipSection } from '@/components/settings/CompanyMembershipSection'
 
 export default async function SettingsPage() {
@@ -50,6 +50,21 @@ export default async function SettingsPage() {
             <h2 className="text-lg font-bold">{t('page.dataTitle')}</h2>
             <p className="text-muted-foreground text-sm mt-0.5">
               {t('page.dataDesc')}
+            </p>
+          </div>
+          <ArrowRight className="h-5 w-5 text-muted-foreground shrink-0" />
+        </Link>
+
+        {/* 官方帳號（Zalo OA / LINE / WhatsApp…）公司統一管理 */}
+        <Link href="/company/channels"
+          className="flex items-center gap-4 rounded-2xl border p-5 hover:bg-muted/50 transition-colors">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+            <MessageCircle className="h-5 w-5 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg font-bold">{t('page.channelsTitle')}</h2>
+            <p className="text-muted-foreground text-sm mt-0.5">
+              {t('page.channelsDesc')}
             </p>
           </div>
           <ArrowRight className="h-5 w-5 text-muted-foreground shrink-0" />
