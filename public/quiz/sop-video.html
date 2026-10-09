@@ -3,351 +3,312 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kiểm Tra Thực Chiến SOP Sản Xuất Video Ngắn</title>
+    <title>SOP Video Quiz</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen py-6 px-4">
     <div class="max-w-md mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <!-- Header -->
         <div class="bg-indigo-600 px-6 py-6 text-white text-center">
-            <h1 class="text-xl font-bold">Bài Kiểm Tra SOP Video Ngắn</h1>
-            <p class="text-xs text-indigo-100 mt-1">Vui lòng hoàn thành 10 câu hỏi trắc nghiệm dưới đây</p>
+            <div id="langSwitch" class="flex justify-center gap-1 mb-4"></div>
+            <h1 id="title" class="text-xl font-bold"></h1>
+            <p id="subtitle" class="text-xs text-indigo-100 mt-1"></p>
         </div>
 
+        <div id="loading" class="p-6 text-center text-sm text-slate-500">…</div>
+
         <!-- Form container -->
-        <form id="quizForm" class="p-6 space-y-6">
-            <!-- Name -->
+        <form id="quizForm" class="hidden p-6 space-y-6" onsubmit="return false">
             <div class="space-y-2">
-                <label for="name" class="text-xs font-semibold text-indigo-600 uppercase tracking-wider">Họ và tên</label>
-                <input id="name" type="text" maxlength="50" placeholder="Nhập họ và tên của bạn" class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <label id="nameLabel" for="name" class="text-xs font-semibold text-indigo-600 uppercase tracking-wider"></label>
+                <input id="name" type="text" maxlength="50" class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
             </div>
 
-            <!-- Question 1 -->
-            <div class="space-y-3">
-                <span class="text-xs font-semibold text-indigo-600 uppercase tracking-wider">Câu hỏi 1 / 10</span>
-                <p class="font-medium text-sm text-slate-900">Theo quy chuẩn SOP của giai đoạn Vàng Hook (0~3 giây đầu tiên), hành động nào sau đây bị cấm tuyệt đối?</p>
-                <div class="space-y-2">
-                    <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer text-sm">
-                        <input type="radio" name="q1" value="A" class="text-indigo-600 focus:ring-indigo-500">
-                        <span>Sử dụng màn giới thiệu bản thân truyền thống.</span>
-                    </label>
-                    <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer text-sm">
-                        <input type="radio" name="q1" value="B" class="text-indigo-600 focus:ring-indigo-500">
-                        <span>Sử dụng hiệu ứng chuyển cảnh động.</span>
-                    </label>
-                    <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer text-sm">
-                        <input type="radio" name="q1" value="C" class="text-indigo-600 focus:ring-indigo-500">
-                        <span>Làm nổi bật vấn đề/nỗi đau ngay lập tức.</span>
-                    </label>
-                </div>
-            </div>
+            <div id="questions" class="space-y-6"></div>
 
-            <!-- Question 2 -->
-            <div class="space-y-3 pt-4 border-t border-slate-100">
-                <span class="text-xs font-semibold text-indigo-600 uppercase tracking-wider">Câu hỏi 2 / 10</span>
-                <p class="font-medium text-sm text-slate-900">Trong nguyên tắc thiết kế nhịp điệu cắt dựng, thời lượng tối đa cho phép đối với bất kỳ một khung hình đơn lẻ nào là bao nhiêu?</p>
-                <div class="space-y-2">
-                    <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer text-sm">
-                        <input type="radio" name="q2" value="A" class="text-indigo-600 focus:ring-indigo-500">
-                        <span>5.0 giây.</span>
-                    </label>
-                    <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer text-sm">
-                        <input type="radio" name="q2" value="B" class="text-indigo-600 focus:ring-indigo-500">
-                        <span>2.5 giây.</span>
-                    </label>
-                    <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer text-sm">
-                        <input type="radio" name="q2" value="C" class="text-indigo-600 focus:ring-indigo-500">
-                        <span>10.0 giây.</span>
-                    </label>
-                </div>
-            </div>
-
-            <!-- Question 3 -->
-            <div class="space-y-3 pt-4 border-t border-slate-100">
-                <span class="text-xs font-semibold text-indigo-600 uppercase tracking-wider">Câu hỏi 3 / 10</span>
-                <p class="font-medium text-sm text-slate-900">Khi xử lý âm thanh cho video ngắn, tỷ lệ âm lượng tiêu chuẩn của nhạc nền (BGM) so với giọng nói là bao nhiêu?</p>
-                <div class="space-y-2">
-                    <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer text-sm">
-                        <input type="radio" name="q3" value="A" class="text-indigo-600 focus:ring-indigo-500">
-                        <span>Từ 15% đến 20%.</span>
-                    </label>
-                    <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer text-sm">
-                        <input type="radio" name="q3" value="B" class="text-indigo-600 focus:ring-indigo-500">
-                        <span>Từ 50% đến 60%.</span>
-                    </label>
-                    <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer text-sm">
-                        <input type="radio" name="q3" value="C" class="text-indigo-600 focus:ring-indigo-500">
-                        <span>Bằng 100% bằng giọng nói.</span>
-                    </label>
-                </div>
-            </div>
-
-            <!-- Question 4 -->
-            <div class="space-y-3 pt-4 border-t border-slate-100">
-                <span class="text-xs font-semibold text-indigo-600 uppercase tracking-wider">Câu hỏi 4 / 10</span>
-                <p class="font-medium text-sm text-slate-900">Khung tường thuật nào phù hợp nhất khi nội dung video cần trình bày thông tin hiệu suất cao, danh sách hoặc cẩm nang tóm tắt?</p>
-                <div class="space-y-2">
-                    <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer text-sm">
-                        <input type="radio" name="q4" value="A" class="text-indigo-600 focus:ring-indigo-500">
-                        <span>Khung ASMR / Cảm giác đắm chìm.</span>
-                    </label>
-                    <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer text-sm">
-                        <input type="radio" name="q4" value="B" class="text-indigo-600 focus:ring-indigo-500">
-                        <span>Khung Tựa đề / Cẩm nang danh sách.</span>
-                    </label>
-                    <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer text-sm">
-                        <input type="radio" name="q4" value="C" class="text-indigo-600 focus:ring-indigo-500">
-                        <span>Khung Thử thách & Giới hạn.</span>
-                    </label>
-                </div>
-            </div>
-
-            <!-- Question 5 -->
-            <div class="space-y-3 pt-4 border-t border-slate-100">
-                <span class="text-xs font-semibold text-indigo-600 uppercase tracking-wider">Câu hỏi 5 / 10</span>
-                <p class="font-medium text-sm text-slate-900">Theo quy định về Lời kêu gọi hành động (Call to Action - CTA), mỗi video được phép thiết lập tối đa bao nhiêu hành động chính?</p>
-                <div class="space-y-2">
-                    <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer text-sm">
-                        <input type="radio" name="q5" value="A" class="text-indigo-600 focus:ring-indigo-500">
-                        <span>Tối đa 3 hành động tùy ý.</span>
-                    </label>
-                    <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer text-sm">
-                        <input type="radio" name="q5" value="B" class="text-indigo-600 focus:ring-indigo-500">
-                        <span>Càng nhiều càng tốt để tăng tương tác.</span>
-                    </label>
-                    <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer text-sm">
-                        <input type="radio" name="q5" value="C" class="text-indigo-600 focus:ring-indigo-500">
-                        <span>Đúng 1 hành động duy nhất.</span>
-                    </label>
-                </div>
-            </div>
-
-            <!-- Question 6 -->
-            <div class="space-y-3 pt-4 border-t border-slate-100">
-                <span class="text-xs font-semibold text-indigo-600 uppercase tracking-wider">Câu hỏi 6 / 10</span>
-                <p class="font-medium text-sm text-slate-900">Mục đích chính của việc sử dụng tiền tố góc nhìn chìm đắm (như POV:) ở phần tiêu đề hoặc đầu video là gì?</p>
-                <div class="space-y-2">
-                    <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer text-sm">
-                        <input type="radio" name="q6" value="A" class="text-indigo-600 focus:ring-indigo-500">
-                        <span>Chuyển đổi tâm lý người xem và nâng cao tỷ lệ giữ chân ở 3 giây đầu.</span>
-                    </label>
-                    <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer text-sm">
-                        <input type="radio" name="q6" value="B" class="text-indigo-600 focus:ring-indigo-500">
-                        <span>Làm cho tiêu đề dài hơn để dễ đọc.</span>
-                    </label>
-                    <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer text-sm">
-                        <input type="radio" name="q6" value="C" class="text-indigo-600 focus:ring-indigo-500">
-                        <span>Trang trí cho khung hình sinh động hơn.</span>
-                    </label>
-                </div>
-            </div>
-
-            <!-- Question 7 -->
-            <div class="space-y-3 pt-4 border-t border-slate-100">
-                <span class="text-xs font-semibold text-indigo-600 uppercase tracking-wider">Câu hỏi 7 / 10</span>
-                <p class="font-medium text-sm text-slate-900">Khi thực hiện thao tác cắt dựng để tạo vòng lặp liền mạch (Seamless Loop), thao tác đối với âm thanh ở cuối video là gì?</p>
-                <div class="space-y-2">
-                    <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer text-sm">
-                        <input type="radio" name="q7" value="A" class="text-indigo-600 focus:ring-indigo-500">
-                        <span>Giữ nguyên toàn bộ âm thanh kết thúc.</span>
-                    </label>
-                    <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer text-sm">
-                        <input type="radio" name="q7" value="B" class="text-indigo-600 focus:ring-indigo-500">
-                        <span>Xóa bỏ sóng suy giảm cuối cùng và cắt bớt khoảng trắng.</span>
-                    </label>
-                    <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer text-sm">
-                        <input type="radio" name="q7" value="C" class="text-indigo-600 focus:ring-indigo-500">
-                        <span>Tăng âm lượng phần kết thúc lên gấp đôi.</span>
-                    </label>
-                </div>
-            </div>
-
-            <!-- Question 8 -->
-            <div class="space-y-3 pt-4 border-t border-slate-100">
-                <span class="text-xs font-semibold text-indigo-600 uppercase tracking-wider">Câu hỏi 8 / 10</span>
-                <p class="font-medium text-sm text-slate-900">Trong hệ thống phân cấp quy tắc, yếu tố nào sau đây thuộc về nhóm "Quy tắc cứng" (Hard Rules) bắt buộc phải tuân thủ?</p>
-                <div class="space-y-2">
-                    <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer text-sm">
-                        <input type="radio" name="q8" value="A" class="text-indigo-600 focus:ring-indigo-500">
-                        <span>Chủ đề đơn nhất và 3 giây đầu rõ ràng.</span>
-                    </label>
-                    <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer text-sm">
-                        <input type="radio" name="q8" value="B" class="text-indigo-600 focus:ring-indigo-500">
-                        <span>Màu sắc bộ lọc và phong cách chữ nghệ thuật.</span>
-                    </label>
-                    <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer text-sm">
-                        <input type="radio" name="q8" value="C" class="text-indigo-600 focus:ring-indigo-500">
-                        <span>Thời lượng tổng thể video cố định chính xác 45 giây.</span>
-                    </label>
-                </div>
-            </div>
-
-            <!-- Question 9 -->
-            <div class="space-y-3 pt-4 border-t border-slate-100">
-                <span class="text-xs font-semibold text-indigo-600 uppercase tracking-wider">Câu hỏi 9 / 10</span>
-                <p class="font-medium text-sm text-slate-900">Phương pháp nào thường được áp dụng khi muốn tận dụng yếu tố "Cố ý để lộ hạt sạn/lỗi nhỏ" để thúc đẩy chỉ số bình luận?</p>
-                <div class="space-y-2">
-                    <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer text-sm">
-                        <input type="radio" name="q9" value="A" class="text-indigo-600 focus:ring-indigo-500">
-                        <span>Cố tình viết sai một lỗi chính tả cực nhỏ trong phụ đề.</span>
-                    </label>
-                    <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer text-sm">
-                        <input type="radio" name="q9" value="B" class="text-indigo-600 focus:ring-indigo-500">
-                        <span>Cố tình cắt ngang video giữa chừng.</span>
-                    </label>
-                    <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer text-sm">
-                        <input type="radio" name="q9" value="C" class="text-indigo-600 focus:ring-indigo-500">
-                        <span>Không bật tiếng khi đăng video.</span>
-                    </label>
-                </div>
-            </div>
-
-            <!-- Question 10 -->
-            <div class="space-y-3 pt-4 border-t border-slate-100">
-                <span class="text-xs font-semibold text-indigo-600 uppercase tracking-wider">Câu hỏi 10 / 10</span>
-                <p class="font-medium text-sm text-slate-900">Tiêu chuẩn đánh giá đạt của "Bài kiểm tra nhắm mắt" (Closed-eyes test) trước khi xuất bản video là gì?</p>
-                <div class="space-y-2">
-                    <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer text-sm">
-                        <input type="radio" name="q10" value="A" class="text-indigo-600 focus:ring-indigo-500">
-                        <span>Nghe thấy âm thanh rè ở cuối video.</span>
-                    </label>
-                    <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer text-sm">
-                        <input type="radio" name="q10" value="B" class="text-indigo-600 focus:ring-indigo-500">
-                        <span>Không nhận ra rõ ràng dấu vết kết thúc và khởi động lại vòng lặp.</span>
-                    </label>
-                    <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer text-sm">
-                        <input type="radio" name="q10" value="C" class="text-indigo-600 focus:ring-indigo-500">
-                        <span>Phát hiện rõ ràng điểm ngắt quãng của câu nói.</span>
-                    </label>
-                </div>
-            </div>
-
-            <!-- Submit Button -->
             <div class="pt-4">
-                <button id="submitBtn" type="button" onclick="submitQuiz()" class="w-full bg-indigo-600 text-white font-semibold py-3.5 px-4 rounded-xl shadow-md hover:bg-indigo-700 active:bg-indigo-800 transition-colors">
-                    Nộp Bài
-                </button>
+                <button id="submitBtn" type="button" onclick="submitQuiz()" class="w-full bg-indigo-600 text-white font-semibold py-3.5 px-4 rounded-xl shadow-md hover:bg-indigo-700 active:bg-indigo-800 transition-colors disabled:opacity-60"></button>
             </div>
         </form>
 
         <!-- Result Box (Hidden initially) -->
-        <div id="resultBox" class="hidden p-6 bg-slate-50 border-t border-slate-200 text-center">
-            <h2 id="resultTitle" class="text-lg font-bold text-slate-900"></h2>
-            <p id="resultDesc" class="text-sm text-slate-600 mt-2"></p>
+        <div id="resultBox" class="hidden p-6 border-t text-center">
+            <h2 id="resultTitle" class="text-lg font-bold"></h2>
+            <p id="resultDesc" class="text-sm mt-2"></p>
         </div>
 
         <!-- Review (Hidden initially) -->
         <div id="reviewBox" class="hidden p-6 border-t border-slate-200 space-y-4">
-            <h2 class="text-base font-bold text-slate-900">Đáp án & Giải thích chi tiết</h2>
+            <h2 id="reviewTitle" class="text-base font-bold text-slate-900"></h2>
             <div id="reviewList" class="space-y-4"></div>
         </div>
     </div>
 
     <script>
+        const QUIZ_ID = 'sop-video';
+        const LANGS = [
+            { code: 'zh', label: '中文', html: 'zh-Hant' },
+            { code: 'en', label: 'English', html: 'en' },
+            { code: 'vi', label: 'Tiếng Việt', html: 'vi' },
+        ];
+        const T = {
+            zh: {
+                subtitle: '請完成以下 10 題選擇題',
+                name: '姓名', namePh: '請輸入你的姓名',
+                q: (i, n) => `第 ${i} 題 / 共 ${n} 題`,
+                submit: '交卷', submitting: '交卷中...', submitted: '已交卷',
+                needName: '交卷前請先輸入姓名！',
+                needAll: '交卷前請回答所有題目！',
+                failed: '交卷失敗，請再試一次！',
+                loadFailed: '題目載入失敗，請重新整理頁面。',
+                result: (s, t) => `你的成績：${s} / ${t} 分`,
+                great: '太棒了！你已經完全掌握短影音製作 SOP。',
+                good: '不錯！可以再複習 SOP 中的一些細節。',
+                poor: '實戰前請再仔細複習 SOP 文件！',
+                review: '正確答案與詳細說明',
+                right: '✓ 答對', wrong: '✗ 答錯',
+                chose: c => `你選 ${c}`,
+                correct: '正確答案',
+                qn: i => `第 ${i} 題`,
+            },
+            en: {
+                subtitle: 'Please complete the 10 multiple-choice questions below',
+                name: 'Full name', namePh: 'Enter your full name',
+                q: (i, n) => `Question ${i} / ${n}`,
+                submit: 'Submit', submitting: 'Submitting...', submitted: 'Submitted',
+                needName: 'Please enter your name before submitting!',
+                needAll: 'Please answer all questions before submitting!',
+                failed: 'Submission failed, please try again!',
+                loadFailed: 'Failed to load the questions. Please refresh the page.',
+                result: (s, t) => `Your score: ${s} / ${t}`,
+                great: 'Excellent! You have a solid grasp of the short video production SOP.',
+                good: 'Good job! You may want to review a few details in the SOP.',
+                poor: 'Please review the SOP more carefully before putting it into practice!',
+                review: 'Answers & Detailed Explanations',
+                right: '✓ Correct', wrong: '✗ Wrong',
+                chose: c => `You chose ${c}`,
+                correct: 'Correct answer',
+                qn: i => `Question ${i}`,
+            },
+            vi: {
+                subtitle: 'Vui lòng hoàn thành 10 câu hỏi trắc nghiệm dưới đây',
+                name: 'Họ và tên', namePh: 'Nhập họ và tên của bạn',
+                q: (i, n) => `Câu hỏi ${i} / ${n}`,
+                submit: 'Nộp Bài', submitting: 'Đang nộp bài...', submitted: 'Đã nộp bài',
+                needName: 'Vui lòng nhập họ và tên trước khi nộp bài!',
+                needAll: 'Vui lòng trả lời tất cả các câu hỏi trước khi nộp bài!',
+                failed: 'Nộp bài thất bại, vui lòng thử lại!',
+                loadFailed: 'Không tải được câu hỏi, vui lòng tải lại trang.',
+                result: (s, t) => `Kết quả của bạn: ${s} / ${t} điểm`,
+                great: 'Xuất sắc! Bạn đã nắm rất vững bộ SOP sản xuất video ngắn.',
+                good: 'Khá tốt! Bạn có thể xem lại một số chi tiết nhỏ trong SOP.',
+                poor: 'Cần xem lại tài liệu SOP kỹ hơn trước khi thực chiến nhé!',
+                review: 'Đáp án & Giải thích chi tiết',
+                right: '✓ Đúng', wrong: '✗ Sai',
+                chose: c => `Bạn chọn ${c}`,
+                correct: 'Đáp án đúng',
+                qn: i => `Câu ${i}`,
+            },
+        };
+
+        let lang = pickLang();
+        let quiz = null;      // { title, questions }
+        let result = null;    // { score, total, key, answers }
+        let submitting = false;
+
+        function pickLang() {
+            try {
+                const saved = localStorage.getItem('quizLang');
+                if (T[saved]) return saved;
+            } catch (e) {}
+            const nav = (navigator.language || '').toLowerCase();
+            if (nav.startsWith('zh')) return 'zh';
+            if (nav.startsWith('en')) return 'en';
+            return 'vi';
+        }
+
+        function setLang(code) {
+            lang = code;
+            try { localStorage.setItem('quizLang', code); } catch (e) {}
+            render();
+        }
+
+        function el(tag, className, text) {
+            const e = document.createElement(tag);
+            if (className) e.className = className;
+            if (text !== undefined) e.textContent = text;
+            return e;
+        }
+
+        function renderLangSwitch() {
+            const box = document.getElementById('langSwitch');
+            box.innerHTML = '';
+            LANGS.forEach(l => {
+                const b = el('button', `px-3 py-1 rounded-full text-xs font-semibold transition-colors ${l.code === lang ? 'bg-white text-indigo-700' : 'bg-indigo-500/60 text-white hover:bg-indigo-500'}`, l.label);
+                b.type = 'button';
+                b.onclick = () => setLang(l.code);
+                box.appendChild(b);
+            });
+        }
+
+        function renderQuestions() {
+            const box = document.getElementById('questions');
+            // 保留已選的答案，切換語言不會清掉
+            const picked = {};
+            box.querySelectorAll('input:checked').forEach(i => picked[i.name] = i.value);
+            box.innerHTML = '';
+            const n = quiz.questions.length;
+            quiz.questions.forEach((q, idx) => {
+                const wrap = el('div', `space-y-3 ${idx ? 'pt-4 border-t border-slate-100' : ''}`);
+                wrap.appendChild(el('span', 'text-xs font-semibold text-indigo-600 uppercase tracking-wider', T[lang].q(idx + 1, n)));
+                wrap.appendChild(el('p', 'font-medium text-sm text-slate-900', q.question[lang]));
+                const opts = el('div', 'space-y-2');
+                ['A', 'B', 'C'].forEach(opt => {
+                    let cls = 'flex items-center gap-3 p-3 rounded-xl border cursor-pointer text-sm ';
+                    if (result) {
+                        const k = result.key[q.id];
+                        if (opt === k.answer) cls += 'border-emerald-400 bg-emerald-50';
+                        else if (opt === result.answers[q.id]) cls += 'border-rose-400 bg-rose-50';
+                        else cls += 'border-slate-200';
+                    } else {
+                        cls += 'border-slate-200 hover:bg-slate-50';
+                    }
+                    const label = el('label', cls);
+                    const input = el('input', 'text-indigo-600 focus:ring-indigo-500');
+                    input.type = 'radio';
+                    input.name = q.id;
+                    input.value = opt;
+                    const chosen = result ? result.answers[q.id] : picked[q.id];
+                    if (chosen === opt) input.checked = true;
+                    if (result || submitting) input.disabled = true;
+                    label.appendChild(input);
+                    label.appendChild(el('span', '', `${opt}. ${q.options[opt][lang]}`));
+                    opts.appendChild(label);
+                });
+                wrap.appendChild(opts);
+                box.appendChild(wrap);
+            });
+        }
+
+        function renderResult() {
+            const resultBox = document.getElementById('resultBox');
+            const reviewBox = document.getElementById('reviewBox');
+            if (!result) {
+                resultBox.classList.add('hidden');
+                reviewBox.classList.add('hidden');
+                return;
+            }
+            const t = T[lang];
+            const { score, total } = result;
+            const tier = score >= 9
+                ? ['great', 'bg-emerald-50 border-emerald-200', 'text-emerald-800']
+                : score >= 7
+                    ? ['good', 'bg-amber-50 border-amber-200', 'text-amber-800']
+                    : ['poor', 'bg-rose-50 border-rose-200', 'text-rose-800'];
+            resultBox.className = `p-6 border-t text-center ${tier[1]}`;
+            document.getElementById('resultTitle').className = `text-lg font-bold ${tier[2]}`;
+            document.getElementById('resultTitle').textContent = t.result(score, total);
+            document.getElementById('resultDesc').className = `text-sm mt-2 ${tier[2]}`;
+            document.getElementById('resultDesc').textContent = t[tier[0]];
+
+            document.getElementById('reviewTitle').textContent = t.review;
+            const list = document.getElementById('reviewList');
+            list.innerHTML = '';
+            quiz.questions.forEach((q, i) => {
+                const k = result.key[q.id];
+                const mine = result.answers[q.id];
+                const ok = mine === k.answer;
+                const item = el('div', `p-4 rounded-xl border text-sm space-y-2 ${ok ? 'border-emerald-200 bg-emerald-50/50' : 'border-rose-200 bg-rose-50/50'}`);
+                item.appendChild(el('div', `font-semibold ${ok ? 'text-emerald-700' : 'text-rose-700'}`, `${t.qn(i + 1)}: ${ok ? t.right : t.wrong} — ${t.chose(mine)}`));
+                item.appendChild(el('div', 'text-slate-900', `${t.correct}: ${k.answer}. ${q.options[k.answer][lang]}`));
+                item.appendChild(el('div', 'text-slate-600 leading-relaxed', k.explanation[lang]));
+                list.appendChild(item);
+            });
+            resultBox.classList.remove('hidden');
+            reviewBox.classList.remove('hidden');
+        }
+
+        function renderSubmitBtn() {
+            const btn = document.getElementById('submitBtn');
+            const t = T[lang];
+            btn.disabled = !!result || submitting;
+            btn.textContent = result ? t.submitted : submitting ? t.submitting : t.submit;
+        }
+
+        function render() {
+            const l = LANGS.find(x => x.code === lang);
+            document.documentElement.lang = l.html;
+            renderLangSwitch();
+            const t = T[lang];
+            document.getElementById('subtitle').textContent = t.subtitle;
+            document.getElementById('nameLabel').textContent = t.name;
+            document.getElementById('name').placeholder = t.namePh;
+            if (!quiz) return;
+            document.title = quiz.title[lang];
+            document.getElementById('title').textContent = quiz.title[lang];
+            renderQuestions();
+            renderSubmitBtn();
+            renderResult();
+        }
+
         async function submitQuiz() {
-            const total = 10;
-            const name = document.getElementById('name').value.trim();
+            const t = T[lang];
+            const nameInput = document.getElementById('name');
+            const name = nameInput.value.trim();
             if (!name) {
-                alert('Vui lòng nhập họ và tên trước khi nộp bài!');
-                document.getElementById('name').focus();
+                alert(t.needName);
+                nameInput.focus();
                 return;
             }
 
             const answers = {};
-            for (let i = 1; i <= total; i++) {
-                const selected = document.querySelector(`input[name="q${i}"]:checked`);
+            for (const q of quiz.questions) {
+                const selected = document.querySelector(`input[name="${q.id}"]:checked`);
                 if (!selected) {
-                    alert('Vui lòng trả lời tất cả các câu hỏi trước khi nộp bài!');
+                    alert(t.needAll);
                     return;
                 }
-                answers[`q${i}`] = selected.value;
+                answers[q.id] = selected.value;
             }
 
-            const btn = document.getElementById('submitBtn');
-            btn.disabled = true;
-            btn.innerText = 'Đang nộp bài...';
+            submitting = true;
+            nameInput.disabled = true;
+            render();
 
-            let score, key;
             try {
                 const res = await fetch('/api/quiz/submit', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ quiz_id: 'sop-video', name, answers })
+                    body: JSON.stringify({ quiz_id: QUIZ_ID, name, lang, answers })
                 });
                 if (!res.ok) throw new Error(String(res.status));
                 const data = await res.json();
-                score = data.score;
-                key = data.key;
+                result = { score: data.score, total: data.total, key: data.key, answers };
             } catch (e) {
-                alert('Nộp bài thất bại, vui lòng thử lại!');
-                btn.disabled = false;
-                btn.innerText = 'Nộp Bài';
+                alert(T[lang].failed);
+                nameInput.disabled = false;
+            }
+            submitting = false;
+            render();
+            if (result) document.getElementById('resultBox').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        async function load() {
+            render();
+            try {
+                const res = await fetch(`/api/quiz/${QUIZ_ID}`);
+                if (!res.ok) throw new Error(String(res.status));
+                quiz = await res.json();
+            } catch (e) {
+                document.getElementById('loading').textContent = T[lang].loadFailed;
                 return;
             }
-
-            btn.innerText = 'Đã nộp bài';
-            document.querySelectorAll('#quizForm input').forEach(el => el.disabled = true);
-
-            const resultBox = document.getElementById('resultBox');
-            const resultTitle = document.getElementById('resultTitle');
-            const resultDesc = document.getElementById('resultDesc');
-
-            resultBox.classList.remove('hidden');
-            resultTitle.innerText = `Kết quả của bạn: ${score} / ${total} điểm`;
-
-            if (score >= 9) {
-                resultDesc.innerText = 'Xuất sắc! Bạn đã nắm rất vững bộ SOP sản xuất video ngắn.';
-                resultBox.className = "p-6 bg-emerald-50 border-t border-emerald-200 text-center";
-                resultTitle.className = "text-lg font-bold text-emerald-800";
-            } else if (score >= 7) {
-                resultDesc.innerText = 'Khá tốt! Bạn có thể xem lại một số chi tiết nhỏ trong SOP.';
-                resultBox.className = "p-6 bg-amber-50 border-t border-amber-200 text-center";
-                resultTitle.className = "text-lg font-bold text-amber-800";
-            } else {
-                resultDesc.innerText = 'Cần xem lại tài liệu SOP kỹ hơn trước khi thực chiến nhé!';
-                resultBox.className = "p-6 bg-rose-50 border-t border-rose-200 text-center";
-                resultTitle.className = "text-lg font-bold text-rose-800";
-            }
-
-            renderReview(answers, key);
-            resultBox.scrollIntoView({ behavior: 'smooth' });
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('quizForm').classList.remove('hidden');
+            render();
         }
 
-        function renderReview(answers, key) {
-            const list = document.getElementById('reviewList');
-            list.innerHTML = '';
-            Object.keys(key).forEach((q, i) => {
-                const k = key[q];
-                const mine = answers[q];
-                const ok = mine === k.answer;
-
-                // Tô màu đáp án trong bài làm
-                document.querySelectorAll(`input[name="${q}"]`).forEach(input => {
-                    const label = input.closest('label');
-                    if (input.value === k.answer) label.classList.add('border-emerald-400', 'bg-emerald-50');
-                    else if (input.value === mine) label.classList.add('border-rose-400', 'bg-rose-50');
-                });
-
-                const item = document.createElement('div');
-                item.className = `p-4 rounded-xl border text-sm space-y-2 ${ok ? 'border-emerald-200 bg-emerald-50/50' : 'border-rose-200 bg-rose-50/50'}`;
-
-                const head = document.createElement('div');
-                head.className = `font-semibold ${ok ? 'text-emerald-700' : 'text-rose-700'}`;
-                head.textContent = `Câu ${i + 1}: ${ok ? '✓ Đúng' : '✗ Sai'} — Bạn chọn ${mine}`;
-
-                const correct = document.createElement('div');
-                correct.className = 'text-slate-900';
-                correct.textContent = `Đáp án đúng: ${k.answer}. ${k.text}`;
-
-                const exp = document.createElement('div');
-                exp.className = 'text-slate-600 leading-relaxed';
-                exp.textContent = k.explanation;
-
-                item.append(head, correct, exp);
-                list.appendChild(item);
-            });
-            document.getElementById('reviewBox').classList.remove('hidden');
-        }
+        load();
     </script>
 </body>
 </html>
