@@ -101,12 +101,16 @@ export async function middleware(request: NextRequest) {
       pathname === '/' ||
       pathname.startsWith('/intro') ||
       pathname.startsWith('/privacy') ||
+      pathname.startsWith('/quiz/') ||
+      pathname.startsWith('/api/quiz/') ||
       pathname.startsWith('/esim') ||
       pathname.startsWith('/api/esim') ||
       pathname.startsWith('/book/') ||
       pathname.startsWith('/api/book/') ||
       pathname.startsWith('/apply') ||
       pathname.startsWith('/payslip') ||
+      pathname.startsWith('/e/') ||
+      pathname.startsWith('/v/') ||
       pathname.startsWith('/vendor/') ||
       pathname.startsWith('/shift/') ||
       pathname.startsWith('/f/') ||

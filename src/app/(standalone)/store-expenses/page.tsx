@@ -91,12 +91,13 @@ export default function StoreExpensesPage() {
 }
 
 // ── 廠商填報 ──
-interface Vendor { id: string; name: string; service: string; regions: string[]; fill_token: string; active: boolean }
+interface Vendor { id: string; name: string; service: string; regions: string[]; fill_token: string; active: boolean; link_slug?: string | null; has_pin?: boolean }
 
 function VendorsTab() {
   const t = useTranslations('StoreExpenses')
   const SERVICE_LABEL: Record<string, string> = { gas: t('serviceGas'), electric: t('serviceElectric'), water: t('serviceWater'), ice: t('serviceIce'), '': '—' }
   const [vendors, setVendors] = useState<Vendor[]>([])
+  const [companySlug, setCompanySlug] = useState<string | null>(null)
   const [regions, setRegions] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<Partial<Vendor> | null>(null)
@@ -110,7 +111,7 @@ function VendorsTab() {
     setLoading(true)
     fetch('/api/fin/vendors').then(r => (r.ok ? r.json() : null)).then(d => {
       if (!alive) return
-      if (d) { setVendors(d.vendors ?? []); setRegions(d.regions ?? []) }
+      if (d) { setVendors(d.vendors ?? []); setRegions(d.regions ?? []); setCompanySlug(d.company_slug ?? null) }
       setLoading(false)
     })
     return () => { alive = false }
@@ -130,7 +131,8 @@ function VendorsTab() {
     if (!confirm(t('confirmDeleteVendor', { name: v.name }))) return
     await fetch('/api/fin/vendors', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: v.id }) }); reload()
   }
-  const copyLink = (v: Vendor) => { navigator.clipboard?.writeText(`${origin}/vendor/${v.fill_token}`); alert(t('linkCopied')) }
+  // 設好網址代號與密碼時複製好記的新網址，否則沿用舊的私密連結
+  const copyLink = (v: Vendor) => { navigator.clipboard?.writeText(companySlug && v.link_slug && v.has_pin ? `https://${companySlug}.im-tourist.com/v/${v.link_slug}` : `${origin}/vendor/${v.fill_token}`); alert(t('linkCopied')) }
   const toggleRegion = (r: string) => setEditing(e => {
     if (!e) return e
     const cur = e.regions ?? []
@@ -156,6 +158,7 @@ function VendorsTab() {
           title="批次匯入廠商資料"
           description="支援 .xlsx, .xls 與 .csv 檔案。若統編或廠商名稱相符將自動更新。"
           columns={VENDOR_IMPORT_COLUMNS}
+          columnsNs="StoreExpensesImport.vendor"
           templateFilename="廠商資料範本"
           sheetName="廠商名冊"
           onClose={() => setShowImport(false)}
@@ -575,6 +578,7 @@ function StoresTab() {
           title="批次匯入門市 / 區域"
           description="支援 .xlsx, .xls 與 .csv 檔案。若門市代碼相符將自動更新。"
           columns={STORE_IMPORT_COLUMNS}
+          columnsNs="StoreExpensesImport.store"
           templateFilename="門市資料範本"
           sheetName="門市清單"
           onClose={() => setShowImport(false)}
@@ -669,6 +673,7 @@ function CategoriesTab() {
           title="批次匯入費用科目"
           description="支援 .xlsx, .xls 與 .csv 檔案。若科目代碼相符將自動更新。"
           columns={CATEGORY_IMPORT_COLUMNS}
+          columnsNs="StoreExpensesImport.category"
           templateFilename="費用科目範本"
           sheetName="科目清單"
           onClose={() => setShowImport(false)}

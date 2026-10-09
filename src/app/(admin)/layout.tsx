@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { Zap, Users, BarChart3, Settings, Home, FileText, Link2, Headphones, LifeBuoy, Bot, Building2, MessageSquare, Bell, BedDouble, Megaphone, Landmark, Scale, UserCog, Briefcase, Database } from 'lucide-react'
+import { Zap, Users, BarChart3, Settings, Home, FileText, Link2, Headphones, LifeBuoy, Bot, Building2, MessageSquare, Bell, BedDouble, Megaphone, Landmark, Scale, UserCog, Briefcase, Database, ClipboardCheck } from 'lucide-react'
 import Link from 'next/link'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -40,6 +40,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: '/admin/module-plans/agent', label: 'AI Agent 方案管理', icon: UserCog },
     { href: '/admin/module-plans/resume', label: '職場助手方案管理', icon: Briefcase },
     { href: '/admin/cs-setup-requests', label: 'CS 協助請求', icon: LifeBuoy },
+    { href: '/admin/quiz', label: '測驗成績', icon: ClipboardCheck },
     { href: '/admin/notify-settings', label: '通知設定', icon: Bell },
     { href: '/admin/db-backup', label: '資料庫備份', icon: Database },
     { href: '/admin/agents', label: 'Agent 管理', icon: Bot },

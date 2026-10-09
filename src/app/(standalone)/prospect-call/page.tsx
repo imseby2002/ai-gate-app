@@ -527,7 +527,7 @@ export default function ProspectCallPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          recipients: [{ email: to, group: 'default', name: '測試' }],
+          recipients: [{ email: to, group: 'default', name: t('extra.testName') }],
           groups: {},
           defaultSubject: t('s6e.testSubject'),
           defaultBody: t('s6e.testBody'),
@@ -642,10 +642,10 @@ export default function ProspectCallPage() {
     await fetch(`/api/marketing/prospect-orgs?id=${encodeURIComponent(o.id)}`, { method: 'DELETE' }).catch(() => { })
   }
   const exportCsv = () => {
-    const header = ['名稱', '分類', '電話', '地址', '狀態', '搜尋次數', '已選取']
+    const header = [t('extra.colName'), t('extra.colCategory'), t('extra.colPhone'), t('extra.colAddress'), t('extra.colStatus'), t('extra.colSearchCount'), t('extra.colSelected')]
     const rows = orgs.map(o => [
       o.name, o.aiCategory ?? '', o.phoneNormalized ?? '', o.address ?? '',
-      o.callStatus === 'called' ? '已撥' : o.callStatus === 'joined' ? '已加入' : '',
+      o.callStatus === 'called' ? t('extra.called') : o.callStatus === 'joined' ? t('extra.joined') : '',
       String(o.searchCount ?? 1), o.selected ? 'Y' : 'N',
     ])
     const esc = (c: string) => `"${String(c).replace(/"/g, '""')}"`
@@ -981,7 +981,7 @@ export default function ProspectCallPage() {
         const mergeData = await mergeRes.json()
         if (mergeRes.ok && Array.isArray(mergeData.orgs)) {
           mergedOrgs = mergeData.orgs.map(dbRowToOrg)
-          dedupNote = `（新增 ${mergeData.added}、重複 ${mergeData.duplicated}）`
+          dedupNote = t('extra.dedup', { added: mergeData.added, dup: mergeData.duplicated })
         }
       } catch { /* 合併失敗則沿用本次結果 */ }
       setOrgs(mergedOrgs)
@@ -1484,7 +1484,7 @@ export default function ProspectCallPage() {
                     <span className="ml-1 text-[10px] text-gray-400 font-normal">{t('s6p.callerIdHint')}</span>
                   </label>
                   <input value={config.birdCallerId} onChange={e => setC('birdCallerId', e.target.value)}
-                    placeholder="+886xxxxxxxxx (Twilio 驗證號碼) / +84xxxxxxxxx (Stringee 外顯)"
+                    placeholder={t('extra.callerIdPh')}
                     className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
                   {!config.birdCallerId.trim() && (
                     <p className="text-[10px] text-amber-500 mt-1">{t('s6p.callerIdWarn')}</p>
@@ -1550,17 +1550,17 @@ export default function ProspectCallPage() {
             </Section>
 
             {/* Step 7: 撥號後按鍵加入社群 */}
-            <Section title="撥號後按鍵加入社群" icon={Phone}
+            <Section title={t('extra.keyJoinTitle')} icon={Phone}
               open={openSections.mapping} onToggle={() => toggleSection('mapping')}>
               <p className="text-xs text-gray-500 mb-3">
-                客戶聽完語音後按數字鍵，系統自動以簡訊／ZNS 傳送加入連結（LINE／WhatsApp／ZALO）。語音腳本內請提示按鍵說明，例：「加 LINE 請按 1」。未設定則維持純語音播報。
+                {t('extra.keyJoinDesc')}
               </p>
               <div className="space-y-2">
                 {km.map((m, i) => (
                   <div key={i} className="flex flex-wrap items-center gap-2 p-2 rounded-lg border bg-gray-50">
                     <input value={m.digit} maxLength={1}
                       onChange={e => updateMapping(i, { digit: e.target.value.replace(/\D/g, '').slice(0, 1) })}
-                      placeholder="鍵"
+                      placeholder={t('extra.keyPh')}
                       className="w-10 h-8 px-2 rounded-lg border text-sm text-center outline-none focus:ring-2 bg-white" />
                     <select value={m.channel} onChange={e => updateMapping(i, { channel: e.target.value as JoinChannel })}
                       className="h-8 px-2 rounded-lg border text-sm outline-none focus:ring-2 bg-white">
@@ -1570,12 +1570,12 @@ export default function ProspectCallPage() {
                     </select>
                     <select value={m.target_type} onChange={e => updateMapping(i, { target_type: e.target.value as JoinTarget })}
                       className="h-8 px-2 rounded-lg border text-sm outline-none focus:ring-2 bg-white">
-                      <option value="official">官方帳號</option>
-                      <option value="group">群組</option>
-                      <option value="personal">個人</option>
+                      <option value="official">{t('extra.official')}</option>
+                      <option value="group">{t('extra.group')}</option>
+                      <option value="personal">{t('extra.personal')}</option>
                     </select>
                     <input value={m.join_url} onChange={e => updateMapping(i, { join_url: e.target.value })}
-                      placeholder="加入連結 https://..."
+                      placeholder={t('extra.joinUrlPh')}
                       className="flex-1 min-w-[180px] h-8 px-2 rounded-lg border text-sm outline-none focus:ring-2 bg-white" />
                     <button type="button" onClick={() => removeMapping(i)}
                       className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500">
@@ -1585,7 +1585,7 @@ export default function ProspectCallPage() {
                 ))}
                 <button type="button" onClick={addMapping}
                   className="flex items-center gap-1.5 w-full py-2 rounded-lg border-2 border-dashed text-xs text-gray-500 hover:bg-gray-50 transition-colors justify-center">
-                  <Plus className="h-3.5 w-3.5" />新增按鍵
+                  <Plus className="h-3.5 w-3.5" />{t('extra.addKey')}
                 </button>
               </div>
             </Section>
@@ -1742,7 +1742,7 @@ export default function ProspectCallPage() {
                     <textarea value={tpl.body} onChange={e => updateSmsTemplate(tpl.id, { body: e.target.value })}
                       rows={3} placeholder={t('sms.body')}
                       className="w-full px-2 py-1.5 rounded-lg border text-xs outline-none focus:ring-2 resize-none bg-white" />
-                    <div className="text-[10px] text-gray-400 text-right">{tpl.body.length} 字</div>
+                    <div className="text-[10px] text-gray-400 text-right">{t('extra.chars', { n: tpl.body.length })}</div>
                   </div>
                 ))}
                 <button type="button" onClick={addSmsTemplate}
@@ -1831,8 +1831,8 @@ export default function ProspectCallPage() {
               <button type="button" onClick={saveProgress}
                 className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-medium border hover:bg-gray-50 transition-colors">
                 {progressSaved
-                  ? <><CheckCircle2 className="h-4 w-4 text-green-500" />已存檔</>
-                  : <>💾 存檔進度（可改天續做）</>}
+                  ? <><CheckCircle2 className="h-4 w-4 text-green-500" />{t('extra.saved')}</>
+                  : <>💾 {t('extra.saveProgress')}</>}
               </button>
 
               {(Object.keys(stepStatus).length > 0) && (
@@ -2117,13 +2117,13 @@ export default function ProspectCallPage() {
             {activeTab === 'phone' && orgs.length > 0 && (
               <div className="border rounded-xl">
                 <div className="flex items-center justify-between px-4 py-3 border-b">
-                  <span className="text-xs font-medium text-gray-700">客戶名單（{orgs.length}）· 已選 {selectedOrgs.length}</span>
+                  <span className="text-xs font-medium text-gray-700">{t('extra.listHeader', { n: orgs.length, sel: selectedOrgs.length })}</span>
                   <div className="flex items-center gap-2">
                     <button type="button" onClick={exportCsv}
-                      className="px-2.5 py-1 rounded-lg border text-[11px] hover:bg-gray-50">⬇️ 匯出 CSV</button>
+                      className="px-2.5 py-1 rounded-lg border text-[11px] hover:bg-gray-50">⬇️ {t('extra.exportCsv')}</button>
                     <button type="button"
-                      onClick={() => { if (confirm('確定清空整份客戶名單？此動作無法復原。')) { setOrgs([]); fetch('/api/marketing/prospect-orgs', { method: 'DELETE' }).catch(() => {}) } }}
-                      className="px-2.5 py-1 rounded-lg border text-[11px] text-red-500 hover:bg-red-50">清空</button>
+                      onClick={() => { if (confirm(t('extra.confirmClear'))) { setOrgs([]); fetch('/api/marketing/prospect-orgs', { method: 'DELETE' }).catch(() => {}) } }}
+                      className="px-2.5 py-1 rounded-lg border text-[11px] text-red-500 hover:bg-red-50">{t('extra.clear')}</button>
                   </div>
                 </div>
                 <div className="max-h-72 overflow-y-auto divide-y">
@@ -2134,8 +2134,8 @@ export default function ProspectCallPage() {
                       <div className="flex-1 min-w-0">
                         <div className="font-medium truncate">
                           {o.name}
-                          {o.callStatus === 'called' && <span className="ml-1.5 px-1 py-0.5 rounded bg-amber-100 text-amber-700">已撥</span>}
-                          {o.callStatus === 'joined' && <span className="ml-1.5 px-1 py-0.5 rounded bg-green-100 text-green-700">已加入</span>}
+                          {o.callStatus === 'called' && <span className="ml-1.5 px-1 py-0.5 rounded bg-amber-100 text-amber-700">{t('extra.called')}</span>}
+                          {o.callStatus === 'joined' && <span className="ml-1.5 px-1 py-0.5 rounded bg-green-100 text-green-700">{t('extra.joined')}</span>}
                           {(o.searchCount ?? 1) > 1 && <span className="ml-1.5 text-gray-400">×{o.searchCount}</span>}
                         </div>
                         {o.address && <div className="text-gray-400 truncate">{o.address}</div>}

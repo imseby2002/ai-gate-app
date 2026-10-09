@@ -6,6 +6,7 @@ import { ArrowLeft, Save, Loader2, Wifi, WifiOff, ExternalLink, Lock } from 'luc
 import PlatformGuidePanel from '@/components/PlatformGuidePanel'
 import TokenRefreshStatus from '@/components/TokenRefreshStatus'
 import { MARKETING_GUIDES } from '@/lib/platform-guides'
+import { useTranslations } from 'next-intl'
 
 type Field = { key: string; label: string; placeholder: string; secret: boolean }
 type Platform = {
@@ -135,6 +136,12 @@ interface PlatformState {
 }
 
 export function MarketingPlatforms({ canSettings }: { canSettings: boolean }) {
+  const tr = useTranslations('MktPlatforms')
+  // 平台名稱／說明／欄位名稱：有翻譯就用翻譯，否則用 PLATFORMS 內的原文
+  const pt = (id: string, field: string, fallback: string) => {
+    const k = `p.${id.replace(/[^A-Za-z0-9]/g, '_')}.${field}`
+    return tr.has(k) ? tr(k) : fallback
+  }
   const [status, setStatus] = useState<Record<string, PlatformState>>({})
   const [inputs, setInputs] = useState<Record<string, Record<string, string>>>({})
   const [loading, setLoading] = useState(true)
@@ -153,12 +160,12 @@ export function MarketingPlatforms({ canSettings }: { canSettings: boolean }) {
         const i = d.insights_last_30d ?? {}
         setAdsResult({
           ok: !!d.ok,
-          text: `${d.adAccountId}｜${d.account.name}｜${d.account.currency}｜狀態：${d.account.status_label}｜近 30 天觸及 ${i.reach ?? 0}、曝光 ${i.impressions ?? 0}、花費 ${i.spend ?? 0}`,
+          text: tr('adsOk', { acc: d.adAccountId, name: d.account.name, cur: d.account.currency, status: d.account.status_label, reach: i.reach ?? 0, imp: i.impressions ?? 0, spend: i.spend ?? 0 }),
         })
       } else {
-        setAdsResult({ ok: false, text: `${d.adAccountId ? d.adAccountId + '：' : ''}${d.error ?? '測試失敗'}` })
+        setAdsResult({ ok: false, text: `${d.adAccountId ? d.adAccountId + '：' : ''}${d.error ?? tr('testFailed')}` })
       }
-    } catch { setAdsResult({ ok: false, text: '網路錯誤' }) }
+    } catch { setAdsResult({ ok: false, text: tr('netErr') }) }
     finally { setAdsTesting(false) }
   }
 
@@ -172,12 +179,12 @@ export function MarketingPlatforms({ canSettings }: { canSettings: boolean }) {
       const d = await res.json()
       if (d.ok) {
         const t = d.totals_last_7d ?? {}
-        const hosts = ((d.by_host_last_7d ?? []) as { host: string; sessions: number }[]).map(h => `${h.host || '(未知)'} ${h.sessions}`).join('、')
-        setGa4Result({ ok: true, text: `資源 ${d.propertyId}｜近 7 天 sessions ${t.sessions ?? 0}、使用者 ${t.totalUsers ?? 0}、新使用者 ${t.newUsers ?? 0}、瀏覽量 ${t.screenPageViews ?? 0}${hosts ? `｜各網站 sessions：${hosts}` : ''}` })
+        const hosts = ((d.by_host_last_7d ?? []) as { host: string; sessions: number }[]).map(h => `${h.host || tr('unknown')} ${h.sessions}`).join(', ')
+        setGa4Result({ ok: true, text: tr('ga4Ok', { pid: d.propertyId, s: t.sessions ?? 0, u: t.totalUsers ?? 0, nu: t.newUsers ?? 0, pv: t.screenPageViews ?? 0 }) + (hosts ? tr('ga4Hosts', { hosts }) : '') })
       } else {
-        setGa4Result({ ok: false, text: `${d.serviceAccount ? d.serviceAccount + '：' : ''}${d.error ?? '測試失敗'}` })
+        setGa4Result({ ok: false, text: `${d.serviceAccount ? d.serviceAccount + '：' : ''}${d.error ?? tr('testFailed')}` })
       }
-    } catch { setGa4Result({ ok: false, text: '網路錯誤' }) }
+    } catch { setGa4Result({ ok: false, text: tr('netErr') }) }
     finally { setGa4Testing(false) }
   }
 
@@ -216,9 +223,9 @@ export function MarketingPlatforms({ canSettings }: { canSettings: boolean }) {
         body: JSON.stringify({ platform: pid, credentials: inputs[pid] ?? {} }),
       })
       const data = await res.json()
-      if (!res.ok) setMsg(`${pid}：${data.error ?? '儲存失敗'}`)
-      else { setMsg(`${pid} 已儲存`); load() }
-    } catch { setMsg(`${pid}：網路錯誤`) }
+      if (!res.ok) setMsg(`${pid}: ${data.error ?? tr('saveFailed')}`)
+      else { setMsg(tr('saved', { pid })); load() }
+    } catch { setMsg(`${pid}: ${tr('netErr')}`) }
     finally { setSaving(null); setTimeout(() => setMsg(null), 3000) }
   }
 
@@ -227,13 +234,13 @@ export function MarketingPlatforms({ canSettings }: { canSettings: boolean }) {
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-5 sm:py-8">
         <div className="flex items-center gap-3 mb-5">
           <Link href="/marketing-auto" className="text-muted-foreground hover:text-foreground"><ArrowLeft className="h-5 w-5" /></Link>
-          <h1 className="text-lg sm:text-xl font-bold">發文平台連結</h1>
+          <h1 className="text-lg sm:text-xl font-bold">{tr('title')}</h1>
         </div>
 
         {!canSettings && (
           <div className="mb-5 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/40 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
             <Lock className="h-4 w-4 mt-0.5 shrink-0" />
-            <span>平台連結需由<strong>負責人或管理員（IT）</strong>設定。如需綁定請洽負責人開通管理員權限。</span>
+            <span>{tr.rich('needAdmin', { b: c => <strong>{c}</strong> })}</span>
           </div>
         )}
 
@@ -253,18 +260,18 @@ export function MarketingPlatforms({ canSettings }: { canSettings: boolean }) {
                   <div className="flex items-center justify-between gap-3 mb-3">
                     <div className="flex items-center gap-2">
                       <span className="w-3 h-3 rounded-full shrink-0" style={{ background: p.color }} />
-                      <span className="font-semibold">{p.name}</span>
+                      <span className="font-semibold">{pt(p.id, 'name', p.name)}</span>
                     </div>
                     <span className={`flex items-center gap-1.5 text-xs font-medium ${connected ? 'text-emerald-600' : 'text-muted-foreground'}`}>
-                      {connected ? <><Wifi className="h-3.5 w-3.5" /> 已連線</> : <><WifiOff className="h-3.5 w-3.5" /> 未綁定</>}
+                      {connected ? <><Wifi className="h-3.5 w-3.5" /> {tr('connected')}</> : <><WifiOff className="h-3.5 w-3.5" /> {tr('notLinked')}</>}
                     </span>
                   </div>
 
                   <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
-                    {p.note}
+                    {pt(p.id, 'note', p.note)}
                     <a href={p.docUrl} target="_blank" rel="noopener noreferrer"
                       className="inline-flex items-center gap-0.5 ml-1 text-primary hover:underline">
-                      官方文件 <ExternalLink className="h-3 w-3" />
+                      {tr('docs')} <ExternalLink className="h-3 w-3" />
                     </a>
                   </p>
 
@@ -274,10 +281,10 @@ export function MarketingPlatforms({ canSettings }: { canSettings: boolean }) {
                   <div className="space-y-3">
                     {p.fields.map(f => {
                       const masked = st?.preview?.[f.key]
-                      const ph = f.secret && masked ? `已設定 ${masked}（留空不變更）` : f.placeholder
+                      const ph = f.secret && masked ? tr('maskedPh', { masked }) : f.placeholder
                       return (
                         <div key={f.key}>
-                          <label className="text-[11px] font-medium text-muted-foreground">{f.label}</label>
+                          <label className="text-[11px] font-medium text-muted-foreground">{pt(p.id, `f_${f.key}`, f.label)}</label>
                           <input
                             type={f.secret ? 'password' : 'text'}
                             autoComplete="off"
@@ -297,7 +304,7 @@ export function MarketingPlatforms({ canSettings }: { canSettings: boolean }) {
                       <button onClick={() => save(p.id)} disabled={saving === p.id}
                         className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50 hover:opacity-90 transition-opacity">
                         {saving === p.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                        儲存
+                        {tr('save')}
                       </button>
                     </div>
                   )}
@@ -307,7 +314,7 @@ export function MarketingPlatforms({ canSettings }: { canSettings: boolean }) {
                       <button onClick={testGa4} disabled={ga4Testing}
                         className="flex items-center gap-1.5 px-4 py-2 rounded-lg border text-sm font-medium disabled:opacity-50 hover:bg-accent transition-colors">
                         {ga4Testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wifi className="h-4 w-4" />}
-                        測試 GA4 連線（唯讀）
+                        {tr('testGa4')}
                       </button>
                       {ga4Result && (
                         <p className={`text-xs rounded-lg px-3 py-2 ${ga4Result.ok ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400' : 'bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-400'}`}>
@@ -322,7 +329,7 @@ export function MarketingPlatforms({ canSettings }: { canSettings: boolean }) {
                       <button onClick={testMetaAds} disabled={adsTesting}
                         className="flex items-center gap-1.5 px-4 py-2 rounded-lg border text-sm font-medium disabled:opacity-50 hover:bg-accent transition-colors">
                         {adsTesting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wifi className="h-4 w-4" />}
-                        測試 Meta 廣告連線（唯讀，不會花錢）
+                        {tr('testAds')}
                       </button>
                       {adsResult && (
                         <p className={`text-xs rounded-lg px-3 py-2 ${adsResult.ok ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400' : 'bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-400'}`}>

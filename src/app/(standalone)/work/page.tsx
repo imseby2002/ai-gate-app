@@ -415,17 +415,18 @@ export default function WorkPage() {
         />
         <Button onClick={add} disabled={!title.trim()}>{t('add')}</Button>
         <Button size="sm" variant="outline" className="gap-1.5 shrink-0" onClick={() => setShowImport(true)}>
-          <FileSpreadsheet className="h-4 w-4 text-emerald-600" />批次匯入 (Excel/CSV)
+          <FileSpreadsheet className="h-4 w-4 text-emerald-600" />{t('importBtn')}
         </Button>
       </Card>
 
       {showImport && (
         <ExcelImportModal
-          title="批次匯入任務"
-          description="支援 .xlsx, .xls 與 .csv 檔案。請填寫任務標題、狀態說明、截止日等。"
+          title={t('importTitle')}
+          description={t('importDesc')}
           columns={WORK_IMPORT_COLUMNS}
-          templateFilename="任務清單範本"
-          sheetName="任務清單"
+          columnsNs="WorkImport"
+          templateFilename={t('importTemplate')}
+          sheetName={t('importSheet')}
           onClose={() => setShowImport(false)}
           onSuccess={() => setTick(t => t + 1)}
           onSubmit={async rows => {
@@ -692,7 +693,7 @@ function ItemRow({
     <Card className={`p-3 ${item.done ? 'opacity-70' : ''}`}>
       {/* 精簡列：標題 + 目前狀態 + deadline（一眼可看完） */}
       <div className="flex items-center gap-2">
-        <button onClick={() => setExpanded(v => !v)} className="shrink-0 text-xs text-muted-foreground hover:text-foreground" title="展開">
+        <button onClick={() => setExpanded(v => !v)} className="shrink-0 text-xs text-muted-foreground hover:text-foreground" title={t('expand')}>
           {expanded ? '▾' : '▸'}
         </button>
         {expanded ? (

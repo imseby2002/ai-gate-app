@@ -1859,8 +1859,8 @@ const VIDEO_TYPES: { id: string }[] = [
 const DURATION_OPTIONS = [
   { value: '5',  hint: 'KLING' },
   { value: '10', hint: 'KLING' },
+  { value: '12', hint: 'SORA' },
   { value: '25', hint: 'Google VEO3' },
-  { value: '60', hint: 'SORA' },
 ]
 
 function Unit7VideoScript({
@@ -2248,7 +2248,7 @@ function Unit7VideoScript({
 // ─── Unit 8: 影片產出 ─────────────────────────────────────────────────────────
 
 type VideoModel = 'kling-standard' | 'kling-pro' | 'kling-img2video' | 'veo3' | 'veo3-img2video' | 'sora' | 'sora-img2video'
-type VideoDuration = '5' | '10' | '25' | '60'
+type VideoDuration = '5' | '10' | '12' | '25'
 
 interface GeneratedVideo {
   scriptId: number
@@ -2273,8 +2273,8 @@ interface Unit8Data {
 const DURATION_CARDS: { duration: VideoDuration; provider: string }[] = [
   { duration: '5',  provider: 'KLING' },
   { duration: '10', provider: 'KLING' },
+  { duration: '12', provider: 'SORA' },
   { duration: '25', provider: 'Google VEO3' },
-  { duration: '60', provider: 'SORA' },
 ]
 
 function resolveModel(duration: VideoDuration, klingQuality: 'standard' | 'pro', useImg2Video: boolean): VideoModel {
@@ -2768,7 +2768,7 @@ const IMAGE_UPLOAD_PLATFORMS = [
   { id: 'Facebook',   label: 'Facebook',   icon: '📘' },
   { id: 'Instagram',  label: 'Instagram',  icon: '📸' },
   { id: 'Threads',    label: 'Threads',    icon: '🧵' },
-  { id: 'LINE VOOM',  label: 'LINE 官方帳號群發',  icon: '💚' },
+  { id: 'LINE VOOM',  label: 'LINE OA',  icon: '💚' },
   { id: 'Zalo',       label: 'Zalo',       icon: '🟦' },
   { id: 'LinkedIn',   label: 'LinkedIn',   icon: '💼' },
   { id: 'Twitter/X',  label: 'Twitter/X',  icon: '🐦' },
@@ -3142,6 +3142,7 @@ function Unit10ProspectMarketing({
 }) {
   const t = useTranslations('MA')
   const locale = useLocale()
+  const answerLang = locale === 'vi' ? 'tiếng Việt' : locale === 'en' ? 'English' : '繁體中文'
   const [activeTab, setActiveTab] = useState<'phone' | 'email' | 'sms'>('phone')
 
   // ── Phone tab state ──────────────────────────────────────────────────────
@@ -3309,7 +3310,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
         body: JSON.stringify({
           recipients: emailRecipients,
           groups,
-          defaultSubject: unit4Data?.results?.email_subject ?? '行銷訊息',
+          defaultSubject: unit4Data?.results?.email_subject ?? t('x.mktMessage'),
           defaultBody: unit4Data?.results?.email_body ?? '',
           fromName,
           fromEmail,
@@ -3450,14 +3451,14 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
   const generateSmsText = async () => {
     setGeneratingSms(true)
     try {
-      const companyName = unit2Data?.companyName || '我們'
+      const companyName = unit2Data?.companyName || t('x.we')
       const brandCore = unit2Data?.description || unit2Data?.brandTone || ''
       const res = await fetch('/api/marketing/copy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           copyTypes: ['sms_promo'],
-          userInstructions: `請以繁體中文為「${companyName}」撰寫一則 70 字以內的吸睛促銷簡訊。要求：繁體中文、文字簡潔有力、包含限時優惠或行動呼籲，並在結尾預留短網址位置「詳情: https://...」。核心理念：${brandCore}`,
+          userInstructions: `請以${answerLang}為「${companyName}」撰寫一則 70 字以內的吸睛促銷簡訊。要求：使用${answerLang}、文字簡潔有力、包含限時優惠或行動呼籲，並在結尾預留短網址位置「詳情: https://...」。核心理念：${brandCore}`,
           companyData: unit2Data,
         }),
       })
@@ -3473,8 +3474,8 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
   }
 
   const startSendingSms = async () => {
-    if (!smsText.trim()) { setSmsError('簡訊內容不可為空'); return }
-    if (smsPhones.length === 0) { setSmsError('請提供至少一組有效電話號碼'); return }
+    if (!smsText.trim()) { setSmsError(t('x.smsEmpty')); return }
+    if (smsPhones.length === 0) { setSmsError(t('x.needPhone')); return }
     setSmsSending(true); setSmsError(''); setSmsResults([])
     try {
       const res = await fetch('/api/marketing/sms-send', {
@@ -3509,7 +3510,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
 
       {/* Tabs */}
       <div className="flex gap-1 border-b">
-        {([['phone', `📞 ${t('u10.tabPhone')}`], ['email', `📧 ${t('u10.tabEmail')}`], ['sms', '💬 簡訊 (SMS)']] as const).map(([tab, label]) => (
+        {([['phone', `📞 ${t('u10.tabPhone')}`], ['email', `📧 ${t('u10.tabEmail')}`], ['sms', `💬 ${t('x.smsTab')}`]] as const).map(([tab, label]) => (
           <button key={tab} onClick={() => setActiveTab(tab)}
             className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
               activeTab === tab
@@ -3770,7 +3771,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
           <PhoneCall className="h-3.5 w-3.5" /> {t('u10.callProvider')}
         </div>
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-xs font-medium text-emerald-700">
-          <CheckCircle2 className="h-3.5 w-3.5" /> 支援真實號碼外顯 (Verified Caller ID)
+          <CheckCircle2 className="h-3.5 w-3.5" /> {t('x.verifiedCallerId')}
         </div>
       </div>
 
@@ -3778,31 +3779,31 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
       <div className="p-4 rounded-xl bg-gradient-to-r from-indigo-50 via-sky-50 to-blue-50 border border-indigo-200">
         <div className="text-xs font-bold text-indigo-900 mb-2 flex items-center gap-1.5">
           <Zap className="h-4 w-4 text-indigo-600" />
-          全球智慧多國語音外呼系統 (Smart Voice Routing)
+          {t('x.voiceRouting')}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
           <div className="bg-white/90 p-2.5 rounded-lg border border-indigo-100 flex items-start gap-2 shadow-xs">
             <span className="text-base">🇹🇼</span>
             <div>
-              <div className="font-semibold text-gray-800">台灣門號 (09xx / +886)</div>
-              <div className="text-[11px] text-gray-500">走 <span className="font-mono font-medium text-indigo-700">Twilio Voice</span></div>
-              <div className="text-[10px] text-indigo-600 mt-0.5 font-medium">支援驗證主叫號碼 (Verified ID) · 免租號</div>
+              <div className="font-semibold text-gray-800">{t('x.twNumber')}</div>
+              <div className="text-[11px] text-gray-500">{t('x.via')} <span className="font-mono font-medium text-indigo-700">Twilio Voice</span></div>
+              <div className="text-[10px] text-indigo-600 mt-0.5 font-medium">{t('x.twVoiceNote')}</div>
             </div>
           </div>
           <div className="bg-white/90 p-2.5 rounded-lg border border-sky-100 flex items-start gap-2 shadow-xs">
             <span className="text-base">🇻🇳</span>
             <div>
-              <div className="font-semibold text-gray-800">越南門號 (+84)</div>
-              <div className="text-[11px] text-gray-500">走 <span className="font-mono font-medium text-sky-700">Stringee Voice</span></div>
-              <div className="text-[10px] text-sky-600 mt-0.5 font-medium">越南本地直撥 · 約 $0.8~$1.2/分 · 境內線路</div>
+              <div className="font-semibold text-gray-800">{t('x.vnNumber')}</div>
+              <div className="text-[11px] text-gray-500">{t('x.via')} <span className="font-mono font-medium text-sky-700">Stringee Voice</span></div>
+              <div className="text-[10px] text-sky-600 mt-0.5 font-medium">{t('x.vnVoiceNote')}</div>
             </div>
           </div>
           <div className="bg-white/90 p-2.5 rounded-lg border border-blue-100 flex items-start gap-2 shadow-xs">
             <span className="text-base">🌐</span>
             <div>
-              <div className="font-semibold text-gray-800">全球其他國家</div>
-              <div className="text-[11px] text-gray-500">走 <span className="font-mono font-medium text-blue-700">Twilio / Bird</span></div>
-              <div className="text-[10px] text-blue-600 mt-0.5 font-medium">國際頂級 CPaaS · 高接通率</div>
+              <div className="font-semibold text-gray-800">{t('x.otherCountries')}</div>
+              <div className="text-[11px] text-gray-500">{t('x.via')} <span className="font-mono font-medium text-blue-700">Twilio / Bird</span></div>
+              <div className="text-[10px] text-blue-600 mt-0.5 font-medium">{t('x.intlVoiceNote')}</div>
             </div>
           </div>
         </div>
@@ -3822,13 +3823,13 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1.5 flex items-center justify-between">
               <span>{t('u10.birdCallerId')}</span>
-              <span className="text-[10px] text-gray-400 font-normal">受話端螢幕顯示</span>
+              <span className="text-[10px] text-gray-400 font-normal">{t('x.callerDisplay')}</span>
             </label>
             <input value={callerId} onChange={e => setCallerId(e.target.value)}
               className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2 bg-white font-mono"
-              placeholder="+886912345678 或 84xxxxxxxxx" />
+              placeholder={t('x.callerIdPh')} />
             <p className="text-[10px] text-gray-500 mt-1">
-              💡 填寫於 Twilio 免費通過驗證的真實電話（Verified Caller ID），撥出時對方手機將直接顯示您本人電話。
+              💡 {t('x.callerIdHelp')}
             </p>
           </div>
         </div>
@@ -3840,8 +3841,9 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
           <label className="text-sm font-semibold">{t('u10.phoneScript')}</label>
           <select value={scriptLang} onChange={e => setScriptLang(e.target.value)}
             className="h-7 px-2 rounded-lg border text-xs outline-none focus:ring-1 bg-white">
-            {['繁體中文', '越南語', 'English', '簡體中文', '日本語'].map(l =>
-              <option key={l}>{l}</option>)}
+            {/* value 送進 AI 提示詞；顯示用各語言的原生名稱 */}
+            {([['繁體中文', '繁體中文'], ['越南語', 'Tiếng Việt'], ['English', 'English'], ['簡體中文', '简体中文'], ['日本語', '日本語']] as const).map(([v, label]) =>
+              <option key={v} value={v}>{label}</option>)}
           </select>
           <button onClick={generateScript} disabled={generatingScript}
             className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg border transition-colors hover:bg-gray-50 disabled:opacity-50 ml-auto"
@@ -3875,27 +3877,27 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
         </label>
         <textarea value={phoneInput} onChange={e => handlePhoneInput(e.target.value)} rows={5}
           className="w-full px-3 py-2.5 rounded-lg border text-sm outline-none focus:ring-2 resize-none font-mono"
-          placeholder={'+886912345678 (台灣)\n+84901234567 (越南)\n+12025550123 (國際)'} />
+          placeholder={t('x.phonesPh')} />
         <p className="text-[10px] text-gray-400">{t('u10.phoneHint')}</p>
 
         {/* Live routing breakdown statistics */}
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <span className="px-2 py-1 rounded-md bg-gray-100 font-medium text-gray-700">
-            總計：<strong>{phoneBreakdown.total}</strong> 門號
+            {t.rich('x.totalNumbers', { n: phoneBreakdown.total, b: c => <strong>{c}</strong> })}
           </span>
           {phoneBreakdown.tw > 0 && (
             <span className="px-2 py-1 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200">
-              🇹🇼 台灣：<strong>{phoneBreakdown.tw}</strong> (Twilio Voice)
+              🇹🇼 {t('x.tw')}<strong>{phoneBreakdown.tw}</strong> (Twilio Voice)
             </span>
           )}
           {phoneBreakdown.vn > 0 && (
             <span className="px-2 py-1 rounded-md bg-sky-50 text-sky-700 border border-sky-200">
-              🇻🇳 越南：<strong>{phoneBreakdown.vn}</strong> (Stringee Voice)
+              🇻🇳 {t('x.vn')}<strong>{phoneBreakdown.vn}</strong> (Stringee Voice)
             </span>
           )}
           {phoneBreakdown.intl > 0 && (
             <span className="px-2 py-1 rounded-md bg-blue-50 text-blue-700 border border-blue-200">
-              🌐 國際：<strong>{phoneBreakdown.intl}</strong> (Twilio)
+              🌐 {t('x.intl')}<strong>{phoneBreakdown.intl}</strong> (Twilio)
             </span>
           )}
         </div>
@@ -3970,38 +3972,38 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
           <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-50 via-teal-50 to-blue-50 border border-emerald-200">
             <div className="text-xs font-bold text-emerald-800 mb-2 flex items-center gap-1.5">
               <Zap className="h-4 w-4 text-emerald-600" />
-              全球智慧多國分流簡訊系統 (Smart SMS Routing)
+              {t('x.smsRouting')}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
               <div className="bg-white/90 p-2.5 rounded-lg border border-emerald-100 flex items-start gap-2 shadow-xs">
                 <span className="text-base">🇹🇼</span>
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-gray-800 flex items-center justify-between">
-                    <span>台灣門號 (09xx / +886)</span>
+                    <span>{t('x.twNumber')}</span>
                     {smsGetBalance !== null && (
                       <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded-full">
-                        剩餘 {smsGetBalance} 點
+                        {t('x.pointsLeft', { n: smsGetBalance })}
                       </span>
                     )}
                   </div>
-                  <div className="text-[11px] text-gray-500">走 <span className="font-mono font-medium text-emerald-700">sms-get.com</span> (已綁定帳號)</div>
-                  <div className="text-[10px] text-emerald-600 mt-0.5 font-medium">本地直連通道 · 約 $0.72~$0.86/則</div>
+                  <div className="text-[11px] text-gray-500">{t('x.via')} <span className="font-mono font-medium text-emerald-700">sms-get.com</span> {t('x.linked')}</div>
+                  <div className="text-[10px] text-emerald-600 mt-0.5 font-medium">{t('x.twSmsNote')}</div>
                 </div>
               </div>
               <div className="bg-white/90 p-2.5 rounded-lg border border-teal-100 flex items-start gap-2 shadow-xs">
                 <span className="text-base">🇻🇳</span>
                 <div>
-                  <div className="font-semibold text-gray-800">越南門號 (+84)</div>
-                  <div className="text-[11px] text-gray-500">走 <span className="font-mono font-medium text-teal-700">Stringee / ZNS</span></div>
-                  <div className="text-[10px] text-teal-600 mt-0.5 font-medium">品牌簡訊/Zalo · 約 $0.3~$0.8/則</div>
+                  <div className="font-semibold text-gray-800">{t('x.vnNumber')}</div>
+                  <div className="text-[11px] text-gray-500">{t('x.via')} <span className="font-mono font-medium text-teal-700">Stringee / ZNS</span></div>
+                  <div className="text-[10px] text-teal-600 mt-0.5 font-medium">{t('x.vnSmsNote')}</div>
                 </div>
               </div>
               <div className="bg-white/90 p-2.5 rounded-lg border border-blue-100 flex items-start gap-2 shadow-xs">
                 <span className="text-base">🌐</span>
                 <div>
-                  <div className="font-semibold text-gray-800">其他國際門號</div>
-                  <div className="text-[11px] text-gray-500">走 <span className="font-mono font-medium text-blue-700">Twilio (備援 Bird)</span></div>
-                  <div className="text-[10px] text-blue-600 mt-0.5 font-medium">全球 180+ 國直達</div>
+                  <div className="font-semibold text-gray-800">{t('x.otherIntl')}</div>
+                  <div className="text-[11px] text-gray-500">{t('x.via')} <span className="font-mono font-medium text-blue-700">{t('x.twilioBird')}</span></div>
+                  <div className="text-[10px] text-blue-600 mt-0.5 font-medium">{t('x.intlSmsNote')}</div>
                 </div>
               </div>
             </div>
@@ -4012,7 +4014,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
             <div className="flex items-center justify-between">
               <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
                 <MessageSquareIcon className="h-4 w-4 text-indigo-600" />
-                簡訊推廣內容 (SMS Content)
+                {t('x.smsContent')}
               </label>
               <div className="flex items-center gap-2">
                 {unit4Data?.results && (
@@ -4028,7 +4030,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
                     }}
                     className="text-xs px-2.5 py-1 rounded-lg border border-indigo-200 text-indigo-600 hover:bg-indigo-50 transition-colors"
                   >
-                    帶入單元4文案
+                    {t('x.useUnit4')}
                   </button>
                 )}
                 <button
@@ -4038,7 +4040,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
                   style={{ background: 'var(--primary)' }}
                 >
                   {generatingSms ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                  AI 產生 70 字精準簡訊
+                  {t('x.aiSms')}
                 </button>
               </div>
             </div>
@@ -4046,7 +4048,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
             <textarea
               value={smsText}
               onChange={e => setSmsText(e.target.value)}
-              placeholder="請輸入簡訊內容... 支援變數 {name} (客戶名稱)。&#10;例：【喬民宿】親愛的{name}，感謝支持！本週專屬住宿優惠已發送，點擊查看詳情: https://example.com/promo 回覆 STOP 停閱"
+              placeholder={t('x.smsPh')}
               rows={4}
               className="w-full p-3 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-indigo-400 font-sans"
             />
@@ -4054,14 +4056,14 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
             {/* Character & segment calculator */}
             <div className="flex items-center justify-between text-xs text-gray-500 px-1">
               <div className="flex items-center gap-2">
-                <span>當前字數：<strong className={smsText.length > 70 ? 'text-amber-600 font-semibold' : 'text-gray-800'}>{smsText.length}</strong> 字</span>
+                <span>{t('x.charCount')}<strong className={smsText.length > 70 ? 'text-amber-600 font-semibold' : 'text-gray-800'}>{smsText.length}</strong></span>
                 <span className="text-gray-300">|</span>
-                <span>預估則數：<span className="font-semibold text-indigo-600">{Math.max(1, Math.ceil(smsText.length / 70))}</span> 則 / 門號</span>
+                <span>{t('x.segments', { n: Math.max(1, Math.ceil(smsText.length / 70)) })}</span>
                 {smsText.length > 70 && (
-                  <span className="text-[11px] text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">超過 70 字將自動以長簡訊拼接發送</span>
+                  <span className="text-[11px] text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">{t('x.longSms')}</span>
                 )}
               </div>
-              <span className="text-[11px] text-gray-400">標準中文單則上限 70 字</span>
+              <span className="text-[11px] text-gray-400">{t('x.smsLimit')}</span>
             </div>
           </div>
 
@@ -4070,7 +4072,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
             <div className="flex items-center justify-between">
               <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
                 <Smartphone className="h-4 w-4 text-emerald-600" />
-                收件電話號碼清單
+                {t('x.recipients')}
               </label>
               <div className="flex items-center gap-2">
                 {phones.length > 0 && (
@@ -4081,7 +4083,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
                     }}
                     className="text-xs px-2.5 py-1 rounded-lg border border-emerald-200 text-emerald-700 hover:bg-emerald-50 transition-colors"
                   >
-                    帶入語音名單 ({phones.length} 支)
+                    {t('x.usePhoneList', { n: phones.length })}
                   </button>
                 )}
               </div>
@@ -4090,7 +4092,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
             <textarea
               value={smsPhoneInput}
               onChange={e => handleSmsPhoneInputChange(e.target.value)}
-              placeholder="請輸入目標電話號碼，支援以換行、逗號或分號分隔。例如：&#10;0912345678 (台灣)&#10;+84912345678 (越南)&#10;+12025550123 (國際)"
+              placeholder={t('x.smsPhonesPh')}
               rows={4}
               className="w-full p-3 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-indigo-400 font-mono"
             />
@@ -4098,21 +4100,21 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
             {/* Live routing breakdown statistics */}
             <div className="flex flex-wrap items-center gap-2 text-xs">
               <span className="px-2 py-1 rounded-md bg-gray-100 font-medium text-gray-700">
-                總計：<strong>{smsBreakdown.total}</strong> 門號
+                {t.rich('x.totalNumbers', { n: smsBreakdown.total, b: c => <strong>{c}</strong> })}
               </span>
               {smsBreakdown.tw > 0 && (
                 <span className="px-2 py-1 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  🇹🇼 台灣：<strong>{smsBreakdown.tw}</strong> (sms-get.com)
+                  🇹🇼 {t('x.tw')}<strong>{smsBreakdown.tw}</strong> (sms-get.com)
                 </span>
               )}
               {smsBreakdown.vn > 0 && (
                 <span className="px-2 py-1 rounded-md bg-teal-50 text-teal-700 border border-teal-200">
-                  🇻🇳 越南：<strong>{smsBreakdown.vn}</strong> (Stringee / ZNS)
+                  🇻🇳 {t('x.vn')}<strong>{smsBreakdown.vn}</strong> (Stringee / ZNS)
                 </span>
               )}
               {smsBreakdown.intl > 0 && (
                 <span className="px-2 py-1 rounded-md bg-blue-50 text-blue-700 border border-blue-200">
-                  🌐 國際：<strong>{smsBreakdown.intl}</strong> (Twilio)
+                  🌐 {t('x.intl')}<strong>{smsBreakdown.intl}</strong> (Twilio)
                 </span>
               )}
             </div>
@@ -4135,12 +4137,12 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
             {smsSending ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                正在批次發送 {smsPhones.length} 則簡訊...
+                {t('x.sending', { n: smsPhones.length })}
               </>
             ) : (
               <>
                 <Send className="h-4 w-4" />
-                開始批次發送簡訊 ({smsPhones.length} 支門號)
+                {t('x.startSend', { n: smsPhones.length })}
               </>
             )}
           </button>
@@ -4149,9 +4151,9 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
           {smsResults.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center gap-3">
-                <span className="text-sm font-semibold text-gray-700">簡訊發送結果</span>
+                <span className="text-sm font-semibold text-gray-700">{t('x.smsResult')}</span>
                 <span className="text-xs text-green-600 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
-                  成功 {smsResults.filter(r => r.ok).length} / 共 {smsResults.length} 則
+                  {t('x.okOfTotal', { ok: smsResults.filter(r => r.ok).length, total: smsResults.length })}
                 </span>
               </div>
               <div className="max-h-64 overflow-y-auto space-y-1.5">
@@ -4173,7 +4175,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
                     </span>
                     {r.ok ? (
                       <span className="text-green-700 ml-auto font-mono text-[11px]">
-                        已送達 {r.messageId ? `(${r.messageId})` : ''}
+                        {t('x.delivered')} {r.messageId ? `(${r.messageId})` : ''}
                       </span>
                     ) : (
                       <span className="text-red-600 ml-auto truncate max-w-[200px]">{r.error}</span>
@@ -4183,7 +4185,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
               </div>
               {savedData?.lastSmsBatch && (
                 <div className="text-[10px] text-gray-400">
-                  上次發送時間：{new Date(savedData.lastSmsBatch.sentAt).toLocaleString(locale)}
+                  {t('x.lastSent')}{new Date(savedData.lastSmsBatch.sentAt).toLocaleString(locale)}
                 </div>
               )}
             </div>
@@ -4191,7 +4193,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
 
           {/* Environment variables notice */}
           <div className="p-3 rounded-xl bg-gray-50 border border-gray-200 text-xs text-gray-600 space-y-1.5">
-            <div className="font-semibold text-gray-800">各通道金鑰設定（於 .env.local 或伺服器環境變數）：</div>
+            <div className="font-semibold text-gray-800">{t('x.keysNote')}</div>
             <div className="flex gap-2 flex-wrap text-[11px]">
               <span className="bg-white border px-1.5 py-0.5 rounded text-gray-700 font-mono">SMSGET_USERNAME</span>
               <span className="bg-white border px-1.5 py-0.5 rounded text-gray-700 font-mono">SMSGET_PASSWORD</span>
@@ -4669,6 +4671,7 @@ function ComingSoon({ unit }: { unit: UnitDef }) {
 
 // ─── 方案鎖定卡：單元未達方案時取代單元內容 ─────────────────────────────────────
 function UnitPlanLock({ requiredPlan, currentPlan }: { requiredPlan: string | null; currentPlan: string }) {
+  const t = useTranslations('MA')
   return (
     <div className="flex items-center justify-center min-h-[280px]">
       <div className="max-w-sm w-full rounded-2xl border bg-white p-8 text-center space-y-4">
@@ -4676,11 +4679,11 @@ function UnitPlanLock({ requiredPlan, currentPlan }: { requiredPlan: string | nu
           <Lock className="h-5 w-5 text-muted-foreground" />
         </div>
         <p className="text-sm text-muted-foreground">
-          此單元需 {requiredPlan} 方案，目前方案：{currentPlan === 'free' ? '免費' : currentPlan.toUpperCase()}
+          {t('x.planNeed', { need: requiredPlan ?? '', cur: currentPlan === 'free' ? t('x.free') : currentPlan.toUpperCase() })}
         </p>
         <a href="/marketing/plan"
           className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-lg text-sm font-semibold text-primary-foreground bg-primary">
-          查看方案並升級
+          {t('x.viewPlans')}
         </a>
       </div>
     </div>
@@ -4708,10 +4711,10 @@ export default function MarketingAutoPage() {
   const mf = planInfo?.features
   // 尚未載入（planInfo=null）時不鎖，避免閃爍；載入後依權限判斷
   const unitLockRequires: Record<number, string | null> = {
-    6:  mf && !mf.imageGen ? 'CORE 以上' : null,
-    8:  mf && !mf.videoGen ? 'PRO 以上' : null,
-    9:  mf && !mf.uploadPlatforms ? 'CORE 以上' : null,
-    10: mf && !mf.aiCallEmail && mf.prospectMarketing === 'collectOnly' ? 'CORE 以上' : null,
+    6:  mf && !mf.imageGen ? t('x.corePlus') : null,
+    8:  mf && !mf.videoGen ? t('x.proPlus') : null,
+    9:  mf && !mf.uploadPlatforms ? t('x.corePlus') : null,
+    10: mf && !mf.aiCallEmail && mf.prospectMarketing === 'collectOnly' ? t('x.corePlus') : null,
     11: mf && !mf.avatarMarketing ? 'MAX' : null,
   }
 
@@ -5105,7 +5108,7 @@ export default function MarketingAutoPage() {
             <a
               href={campaignId ? `/marketing-pipeline?campaign=${campaignId}` : '/marketing-pipeline'}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-xs shadow-sm transition-all active:scale-95"
-              title="開啟行銷流水線全自動執行"
+              title={t('x.openPipeline')}
             >
               <Zap className="h-3.5 w-3.5" />
               <span>{t('mp.automation')}</span>

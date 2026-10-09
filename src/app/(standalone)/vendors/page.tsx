@@ -38,6 +38,7 @@ interface Vendor {
   id: string; name: string; service: string; regions: string[]; fill_token: string; active: boolean
   tax_id: string; address: string; phone: string; contact: string; products: string
   pay_terms: string; billing_cycle: string; billing_day: number | null
+  link_slug: string | null; has_pin: boolean; new_pin?: string
 }
 interface Purchase { id: string; purchased_on: string; product: string; qty: number; amount: number; note: string }
 
@@ -48,6 +49,7 @@ export default function VendorsPage() {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
   const [vendors, setVendors] = useState<Vendor[]>([])
   const [regions, setRegions] = useState<string[]>([])
+  const [companySlug, setCompanySlug] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [sel, setSel] = useState<string | null>(null)
   const [q, setQ] = useState('')
@@ -57,7 +59,7 @@ export default function VendorsPage() {
 
   useEffect(() => {
     fetch('/api/fin/vendors').then(r => { if (r.status === 403) { setIsAdmin(false); return null } setIsAdmin(true); return r.json() })
-      .then(d => { if (d) { setVendors(d.vendors ?? []); setRegions(d.regions ?? []) } setLoading(false) })
+      .then(d => { if (d) { setVendors(d.vendors ?? []); setRegions(d.regions ?? []); setCompanySlug(d.company_slug ?? null) } setLoading(false) })
   }, [tick])
 
   if (isAdmin === false) return (
@@ -86,6 +88,7 @@ export default function VendorsPage() {
           title="批次匯入 / 更新廠商資料"
           description="支援 .xlsx, .xls 與 .csv 檔案。若統編或廠商名稱相符將自動更新，否則新增。"
           columns={VENDOR_IMPORT_COLUMNS}
+          columnsNs="VendorsImport.vendor"
           templateFilename="廠商資料範本"
           sheetName="廠商名冊"
           onClose={() => setShowImport(false)}
@@ -102,7 +105,7 @@ export default function VendorsPage() {
       )}
 
       {loading ? <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
-        : selected ? <VendorDetail vendor={selected} regions={regions} onBack={() => setSel(null)} onSaved={reload} />
+        : selected ? <VendorDetail vendor={selected} regions={regions} companySlug={companySlug} onBack={() => setSel(null)} onSaved={reload} />
         : (
           <div className="space-y-3">
             <PriceCompareBox />
@@ -220,7 +223,7 @@ function PriceCompareBox() {
   )
 }
 
-function VendorDetail({ vendor, regions, onBack, onSaved }: { vendor: Vendor; regions: string[]; onBack: () => void; onSaved: () => void }) {
+function VendorDetail({ vendor, regions, companySlug, onBack, onSaved }: { vendor: Vendor; regions: string[]; companySlug: string | null; onBack: () => void; onSaved: () => void }) {
   const t = useTranslations('Vendors')
   const [f, setF] = useState<Vendor>({ ...vendor })
   const [saving, setSaving] = useState(false)
@@ -230,14 +233,18 @@ function VendorDetail({ vendor, regions, onBack, onSaved }: { vendor: Vendor; re
   const save = async () => {
     setSaving(true); setMsg('')
     const res = await fetch('/api/fin/vendors', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(f) })
-    setSaving(false); setMsg(res.ok ? t('saved') : t('saveFailed')); if (res.ok) onSaved()
+    const d = await res.json().catch(() => ({}))
+    setSaving(false); setMsg(res.ok ? t('saved') : (d.error ?? t('saveFailed')))
+    if (res.ok) { if (f.new_pin) set({ has_pin: true, new_pin: '' }); onSaved() }
   }
   const remove = async () => {
     if (!confirm(t('confirmDeleteVendor', { name: f.name }))) return
     await fetch('/api/fin/vendors', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: f.id }) })
     onSaved(); onBack()
   }
-  const copyLink = () => { navigator.clipboard?.writeText(`${location.origin}/vendor/${f.fill_token}`); setMsg(t('linkCopied')) }
+  // 設好網址代號與密碼且公司有子網域時，提供好記的新網址；否則沿用舊的私密連結
+  const easyUrl = companySlug && vendor.link_slug && vendor.has_pin ? `https://${companySlug}.im-tourist.com/v/${vendor.link_slug}` : null
+  const copyLink = () => { navigator.clipboard?.writeText(easyUrl ?? `${location.origin}/vendor/${f.fill_token}`); setMsg(t('linkCopied')) }
   const toggleRegion = (r: string) => set({ regions: f.regions.includes(r) ? f.regions.filter(x => x !== r) : [...f.regions, r] })
 
   return (
@@ -288,6 +295,17 @@ function VendorDetail({ vendor, regions, onBack, onSaved }: { vendor: Vendor; re
             📌 {f.service === 'electric' ? t('utilityNoticeElectric') : t('utilityNoticeWater')}
           </div>
         )}
+        <div className="grid md:grid-cols-2 gap-2 pt-2 border-t">
+          <label className="space-y-1"><span className="text-xs text-gray-500">{t('linkSlugLabel')}</span>
+            <Input value={f.link_slug ?? ''} onChange={e => set({ link_slug: e.target.value.toLowerCase() })} className="h-9" placeholder="ice-abc" /></label>
+          <label className="space-y-1"><span className="text-xs text-gray-500">{f.has_pin ? t('pinReset') : t('pinSet')}</span>
+            <Input type="text" value={f.new_pin ?? ''} onChange={e => set({ new_pin: e.target.value })} className="h-9" autoComplete="off" /></label>
+          <p className="md:col-span-2 text-xs text-muted-foreground">
+            {companySlug
+              ? t('vendorUrl', { url: `https://${companySlug}.im-tourist.com/v/${f.link_slug || t('slugPlaceholder')}` })
+              : t('noSubdomain')}
+          </p>
+        </div>
         <div className="flex items-center gap-3 text-xs">
           <label className="flex items-center gap-1"><input type="checkbox" checked={f.active} onChange={e => set({ active: e.target.checked })} />{t('active')}</label>
           <button onClick={copyLink} className="flex items-center gap-1 text-primary ml-auto"><Link2 className="h-3.5 w-3.5" />{t('copyFillLink')}</button>
@@ -339,6 +357,7 @@ function PurchaseSection({ vendorId }: { vendorId: string }) {
           title="批次匯入採購紀錄"
           description="支援 .xlsx, .xls 與 .csv 檔案。請填寫採購日期、採購品項與金額。"
           columns={PURCHASE_IMPORT_COLUMNS}
+          columnsNs="VendorsImport.purchase"
           templateFilename="採購紀錄範本"
           sheetName="採購清單"
           onClose={() => setShowImport(false)}

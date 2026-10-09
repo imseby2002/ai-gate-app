@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
+import { useTranslations, useLocale } from 'next-intl'
 import {
   X, Share2, Check, CheckCircle2, AlertCircle, XCircle,
   ExternalLink, Loader2, RefreshCw, Sparkles, Send,
@@ -188,6 +189,15 @@ export function SocialPublishModal({
   initialCopy = '',
   sourceName,
 }: SocialPublishModalProps) {
+  const t = useTranslations('SocialPublish')
+  const locale = useLocale()
+  const answerLang = locale === 'vi' ? 'tiếng Việt' : locale === 'en' ? 'English' : '繁體中文'
+  // 平台名稱／說明：有翻譯就用翻譯，否則用 SOCIAL_PLATFORMS 內的原文
+  const pt = (id: string, field: string, fallback: string) => {
+    const k = `p.${id.replace(/[^A-Za-z0-9]/g, '_')}.${field}`
+    return t.has(k) ? t(k) : fallback
+  }
+  const quickTags = QUICK_TAGS.map((_, i) => t(`tags.t${i}`))
   // 平台憑證連線狀態
   const [credStatus, setCredStatus] = useState<Record<string, boolean>>({})
   const [loadingCreds, setLoadingCreds] = useState(false)
@@ -287,8 +297,8 @@ export function SocialPublishModal({
   const handleGenerateAiCopy = async () => {
     setAiGeneratingCopy(true)
     try {
-      const mediaTitle = media?.title || sourceName || '精選視覺'
-      const promptText = `請為這張行銷視覺圖片撰寫一段生動吸引人、適合社群平台（FB、IG、Threads）的繁體中文發布文案。
+      const mediaTitle = media?.title || sourceName || t('featured')
+      const promptText = `請為這張行銷視覺圖片撰寫一段生動吸引人、適合社群平台（FB、IG、Threads）的${answerLang}發布文案。
 主題/風格：${mediaTitle}
 原本附帶資訊：${copyText || '無'}
 要求：
@@ -314,14 +324,14 @@ export function SocialPublishModal({
           setCopyText(text)
         } else {
           // Fallback simple copy
-          setCopyText(`✨ ${mediaTitle} 重磅登場！\n\n以極致視覺美學打造，為您的品牌帶來前所未有的視覺饗宴與震撼體驗 🔥\n\n立即了解更多或私訊我們，搶先體驗最新亮點！\n\n#品牌視覺 #新品推薦 #行銷靈感 #質感設計 #AI視覺`)
+          setCopyText(t('fallbackCopy', { title: mediaTitle }))
         }
       } else {
         // Fallback simple copy
-        setCopyText(`✨ ${mediaTitle} 重磅登場！\n\n以極致視覺美學打造，為您的品牌帶來前所未有的視覺饗宴與震撼體驗 🔥\n\n立即了解更多或私訊我們，搶先體驗最新亮點！\n\n#品牌視覺 #新品推薦 #行銷靈感 #質感設計 #AI視覺`)
+        setCopyText(t('fallbackCopy', { title: mediaTitle }))
       }
     } catch {
-      setCopyText(`✨ ${media?.title || '精選視覺'} 重磅登場！\n\n極致美感與細節呈現，立即關注我們掌握第一手精彩消息！\n\n#品牌行銷 #質感生活 #新品推薦`)
+      setCopyText(t('fallbackShort', { title: media?.title || t('featured') }))
     } finally {
       setAiGeneratingCopy(false)
     }
@@ -330,17 +340,17 @@ export function SocialPublishModal({
   // 執行上傳發布
   const handlePublish = async () => {
     if (!media?.url) {
-      setPublishError('找不到待發布的媒體素材')
+      setPublishError(t('noMedia'))
       return
     }
 
     if (selectedPlatforms.length === 0) {
-      setPublishError('請至少勾選一個已連線的社群平台')
+      setPublishError(t('needPlatform'))
       return
     }
 
     if (!copyText.trim()) {
-      setPublishError('請輸入社群貼文文案')
+      setPublishError(t('needCopy'))
       return
     }
 
@@ -364,11 +374,11 @@ export function SocialPublishModal({
 
         if (!upRes.ok) {
           const errData = await upRes.json().catch(() => ({}))
-          throw new Error(errData.error || '媒體檔案轉存失敗，請重試')
+          throw new Error(errData.error || t('uploadFailed'))
         }
 
         const upData = await upRes.json()
-        if (!upData.url) throw new Error('無法取得媒體公有連結')
+        if (!upData.url) throw new Error(t('noPublicUrl'))
         resolvedUrl = upData.url
       }
 
@@ -390,9 +400,9 @@ export function SocialPublishModal({
 
       if (!res.ok) {
         if (res.status === 403) {
-          throw new Error(data.error || '目前方案未開放自動上傳平台，請升級至 PRO 以上方案')
+          throw new Error(data.error || t('needPro'))
         }
-        throw new Error(data.error || '發布失敗，請稍後再試')
+        throw new Error(data.error || t('publishFailedRetry'))
       }
 
       const results: UploadResult[] = data.results || []
@@ -428,13 +438,13 @@ export function SocialPublishModal({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-foreground">一鍵串接上傳中心</h2>
+                <h2 className="text-lg font-bold text-foreground">{t('title')}</h2>
                 <Badge variant="secondary" className="text-[11px] bg-blue-500/10 text-blue-600 dark:text-blue-400 font-semibold border-blue-200">
-                  {media.type === 'video' ? '短影音發布' : '圖文發布'}
+                  {media.type === 'video' ? t('videoPost') : t('imagePost')}
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
-                直接將 AI 創作成果發布至 Facebook、Instagram、Threads、TikTok、YouTube 等社群平台
+                {t('subtitle')}
               </p>
             </div>
           </div>
@@ -447,7 +457,7 @@ export function SocialPublishModal({
               className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground px-2.5 py-1.5 rounded-lg border border-border/60 hover:bg-muted transition-colors"
             >
               <ExternalLink className="h-3.5 w-3.5" />
-              <span>憑證設定中心</span>
+              <span>{t('credCenter')}</span>
             </Link>
             <button
               onClick={onClose}
@@ -469,7 +479,7 @@ export function SocialPublishModal({
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span className="font-semibold text-foreground flex items-center gap-1.5">
                       <Eye className="h-3.5 w-3.5 text-primary" />
-                      待發布媒體預覽
+                      {t('preview')}
                     </span>
                     {media.aspectRatio && (
                       <Badge variant="outline" className="text-[10px] px-1.5 py-0">
@@ -497,7 +507,7 @@ export function SocialPublishModal({
                   {sourceName && (
                     <div className="text-[11px] text-muted-foreground flex items-center gap-1 truncate pt-1">
                       <FileText className="h-3 w-3 shrink-0" />
-                      <span className="truncate">來源：{sourceName}</span>
+                      <span className="truncate">{t('source', { s: sourceName ?? '' })}</span>
                     </div>
                   )}
                 </div>
@@ -505,25 +515,25 @@ export function SocialPublishModal({
                 {/* 連線狀況提要 */}
                 <div className="p-3 rounded-xl border bg-card text-xs space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <span className="font-medium text-muted-foreground">社群連線概況</span>
+                    <span className="font-medium text-muted-foreground">{t('status')}</span>
                     <span className="font-semibold text-foreground">
-                      {connectedCount} / {applicablePlatforms.length} 個已綁定
+                      {t('linkedCount', { n: connectedCount, total: applicablePlatforms.length })}
                     </span>
                   </div>
                   {connectedCount === 0 && (
                     <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-[11px] flex items-start gap-2">
                       <ShieldAlert className="h-4 w-4 shrink-0 mt-0.5" />
                       <div>
-                        尚未綁定社群平台發文憑證。請先前往
+                        {t('noCredsA')}
                         <Link
                           href="/marketing-auto/platforms"
                           target="_blank"
                           className="font-bold underline ml-1 inline-flex items-center gap-0.5 text-amber-800 dark:text-amber-300"
                         >
-                          平台連線中心
+                          {t('noCredsLink')}
                           <ArrowUpRight className="h-3 w-3 inline" />
                         </Link>
-                        設定粉專 Token 或 API 金鑰。
+                        {t('noCredsB')}
                       </div>
                     </div>
                   )}
@@ -537,7 +547,7 @@ export function SocialPublishModal({
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
                       <Globe className="h-3.5 w-3.5 text-blue-600" />
-                      選擇發布目標平台
+                      {t('choose')}
                     </label>
                     <div className="flex items-center gap-2">
                       <Button
@@ -547,7 +557,7 @@ export function SocialPublishModal({
                         onClick={selectAllConnected}
                         className="h-6 px-2 text-[11px] text-blue-600 hover:text-blue-700"
                       >
-                        全選已連線
+                        {t('selectAll')}
                       </Button>
                       <Button
                         type="button"
@@ -556,14 +566,14 @@ export function SocialPublishModal({
                         onClick={deselectAll}
                         className="h-6 px-2 text-[11px] text-muted-foreground"
                       >
-                        清除
+                        {t('clear')}
                       </Button>
                       <button
                         type="button"
                         onClick={fetchCredentials}
                         disabled={loadingCreds}
                         className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors"
-                        title="重新整理連線狀態"
+                        title={t('refresh')}
                       >
                         <RefreshCw className={`h-3 w-3 ${loadingCreds ? 'animate-spin' : ''}`} />
                       </button>
@@ -603,12 +613,12 @@ export function SocialPublishModal({
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-1">
                               <span className="font-semibold text-xs text-foreground truncate">
-                                {platform.name}
+                                {pt(platform.id, 'name', platform.name)}
                               </span>
                               {isConnected ? (
                                 <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full shrink-0">
                                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                  已連線
+                                  {t('connected')}
                                 </span>
                               ) : (
                                 <Link
@@ -617,12 +627,12 @@ export function SocialPublishModal({
                                   onClick={e => e.stopPropagation()}
                                   className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground hover:text-primary underline shrink-0"
                                 >
-                                  綁定 ↗
+                                  {t('link')}
                                 </Link>
                               )}
                             </div>
                             <p className="text-[11px] text-muted-foreground truncate mt-0.5">
-                              {platform.description}
+                              {pt(platform.id, 'desc', platform.description)}
                             </p>
                           </div>
                         </div>
@@ -636,7 +646,7 @@ export function SocialPublishModal({
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
                       <FileText className="h-3.5 w-3.5 text-indigo-600" />
-                      貼文文案 / 說明
+                      {t('copyLabel')}
                     </label>
                     <Button
                       type="button"
@@ -651,22 +661,22 @@ export function SocialPublishModal({
                       ) : (
                         <Sparkles className="h-3 w-3" />
                       )}
-                      <span>AI 智慧潤飾文案</span>
+                      <span>{t('aiPolish')}</span>
                     </Button>
                   </div>
 
                   <Textarea
                     value={copyText}
                     onChange={e => setCopyText(e.target.value)}
-                    placeholder="輸入社群貼文內容、促銷亮點、行動呼籲與標籤..."
+                    placeholder={t('copyPh')}
                     rows={4}
                     className="text-xs leading-relaxed resize-y min-h-[90px] rounded-xl"
                   />
 
                   {/* 快速標籤清單 */}
                   <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-                    <span className="text-[11px] text-muted-foreground shrink-0">常用標籤：</span>
-                    {QUICK_TAGS.map(tag => (
+                    <span className="text-[11px] text-muted-foreground shrink-0">{t('quickTags')}</span>
+                    {quickTags.map(tag => (
                       <button
                         key={tag}
                         type="button"
@@ -679,9 +689,9 @@ export function SocialPublishModal({
                   </div>
 
                   <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1">
-                    <span>文案字數：{copyText.length} 字</span>
+                    <span>{t('charCount', { n: copyText.length })}</span>
                     <span className="text-[10px]">
-                      建議：Twitter 限制 280 字｜Threads 限制 500 字｜IG 限制 2,200 字
+                      {t('limits')}
                     </span>
                   </div>
                 </div>
@@ -705,10 +715,10 @@ export function SocialPublishModal({
                   {successCount > 0 ? <CheckCircle2 className="h-8 w-8" /> : <XCircle className="h-8 w-8" />}
                 </div>
                 <h3 className="text-xl font-bold text-foreground">
-                  社群平台發布作業完成
+                  {t('done')}
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  總計執行 {uploadResults?.length ?? 0} 個平台｜成功：<span className="text-emerald-600 font-bold">{successCount}</span> 個｜失敗：<span className="text-rose-600 font-bold">{failCount}</span> 個
+                  {t.rich('summary', { n: uploadResults?.length ?? 0, ok: successCount, fail: failCount, g: c => <span className="text-emerald-600 font-bold">{c}</span>, r: c => <span className="text-rose-600 font-bold">{c}</span> })}
                 </p>
               </div>
 
@@ -735,12 +745,12 @@ export function SocialPublishModal({
                           <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${
                             res.ok ? 'border-emerald-300 text-emerald-700' : 'border-rose-300 text-rose-700'
                           }`}>
-                            {res.ok ? '發布成功' : '發布失敗'}
+                            {res.ok ? t('ok') : t('failed')}
                           </Badge>
                         </div>
                         {res.postId && (
                           <p className="text-[11px] text-muted-foreground truncate font-mono mt-0.5">
-                            貼文 ID: {res.postId}
+                            {t('postId', { id: res.postId ?? '' })}
                           </p>
                         )}
                         {res.error && (
@@ -762,7 +772,7 @@ export function SocialPublishModal({
           {activeStep === 'edit' ? (
             <>
               <div className="text-xs text-muted-foreground">
-                已勾選 <b className="text-foreground">{selectedPlatforms.length}</b> 個平台
+                {t.rich('selected', { n: selectedPlatforms.length, b: c => <b className="text-foreground">{c}</b> })}
               </div>
 
               <div className="flex items-center gap-2">
@@ -772,7 +782,7 @@ export function SocialPublishModal({
                   disabled={publishing}
                   className="text-xs h-9 px-4"
                 >
-                  取消
+                  {t('cancel')}
                 </Button>
 
                 <Button
@@ -783,12 +793,12 @@ export function SocialPublishModal({
                   {publishing ? (
                     <>
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      <span>正在同步發布中...</span>
+                      <span>{t('publishing')}</span>
                     </>
                   ) : (
                     <>
                       <Send className="h-3.5 w-3.5" />
-                      <span>🚀 立即同步發布</span>
+                      <span>🚀 {t('publishNow')}</span>
                     </>
                   )}
                 </Button>
@@ -801,21 +811,21 @@ export function SocialPublishModal({
                 onClick={() => setActiveStep('edit')}
                 className="text-xs h-9 px-4 gap-1.5"
               >
-                ← 返回重新編輯
+                {t('backEdit')}
               </Button>
 
               <div className="flex items-center gap-2">
                 <Link href="/marketing-auto/platforms" target="_blank">
                   <Button variant="outline" className="text-xs h-9 px-3 gap-1">
                     <ExternalLink className="h-3 w-3" />
-                    平台連線管理
+                    {t('manage')}
                   </Button>
                 </Link>
                 <Button
                   onClick={onClose}
                   className="text-xs h-9 px-5 font-semibold bg-emerald-600 hover:bg-emerald-700 text-white"
                 >
-                  完成並關閉
+                  {t('close')}
                 </Button>
               </div>
             </>

@@ -1,4 +1,4 @@
-// 出納物料定價 API：原料、設備、道具、耗材 之三層定價管理
+// 出納物料定價 API：原料、半成品、設備、道具、耗材 之三層定價管理
 // 1. purchase_price: 工廠進貨價 (Factory Cost)
 // 2. export_price: 賣給直營門市價格 (Direct Store Price —— 配方表門市每杯成本核心來源！)
 // 3. dealer_price: 賣給非直營門市/經銷商價格 (Distributor Price)
@@ -58,6 +58,7 @@ export async function GET(req: NextRequest) {
   const counts: Record<string, number> = {
     all: allItems?.length ?? 0,
     raw: 0,        // 原料
+    semi: 0,       // 半成品
     equipment: 0,  // 設備
     consumable: 0, // 耗材
     tool: 0,       // 道具
@@ -67,6 +68,7 @@ export async function GET(req: NextRequest) {
   for (const it of allItems ?? []) {
     const c = it.category || '原料'
     if (c === '原料') counts.raw++
+    else if (c === '半成品') counts.semi++
     else if (c === '設備') counts.equipment++
     else if (c === '耗材') counts.consumable++
     else if (c === '道具') counts.tool++

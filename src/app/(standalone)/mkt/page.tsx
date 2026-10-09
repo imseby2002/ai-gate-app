@@ -5,9 +5,9 @@ import Link from 'next/link'
 import { useTranslations, useLocale } from 'next-intl'
 import {
   Loader2, AlertCircle, Megaphone, CalendarDays, Plus, Trash2, Pencil,
-  X, Save, Sparkles, Check, RotateCcw, CalendarPlus, MapPin, Bike, Star, ExternalLink,
+  X, Save, Sparkles, Check, RotateCcw, CalendarPlus, Bike, Star, ExternalLink,
   BarChart3, Building2, Globe,
-  CheckCircle2, Search, Tag, Eye, BookOpen, Users, Rocket
+  CheckCircle2, Search, Tag, Eye, BookOpen, Users, Rocket, FileText, Download
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,7 +18,7 @@ import { CompanyProfileEditor, type CompanyProfileTab } from '@/components/compa
 
 const selCls = 'h-9 rounded-md border border-input bg-transparent px-3 text-sm'
 const ta = 'w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm'
-type Tab = 'company' | 'generate' | 'campaigns' | 'crm' | 'delivery' | 'analytics' | 'calendar' | 'offline'
+type Tab = 'company' | 'generate' | 'campaigns' | 'crm' | 'delivery' | 'analytics' | 'calendar'
 
 export default function MktPage() {
   const t = useTranslations('MktPage')
@@ -32,7 +32,8 @@ export default function MktPage() {
       // 支援 /mkt?tab=products 等直接開啟公司資料指定分頁
       const q = new URLSearchParams(window.location.search).get('tab')
       if (q && ['basic', 'brand', 'stores', 'products', 'files'].includes(q)) { setTab('company'); setCompanyTab(q as CompanyProfileTab) }
-      else if (q && ['generate', 'campaigns', 'crm', 'delivery', 'analytics', 'calendar', 'offline'].includes(q)) setTab(q as Tab)
+      else if (q === 'offline') setTab('campaigns') // 實體行銷已併入活動企劃中心
+      else if (q && ['generate', 'campaigns', 'crm', 'delivery', 'analytics', 'calendar'].includes(q)) setTab(q as Tab)
     })
   }, [])
 
@@ -57,7 +58,7 @@ export default function MktPage() {
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-gradient-to-r from-amber-500 to-rose-600 text-white hover:opacity-95 transition-opacity shadow-sm"
           >
             <Sparkles className="h-3.5 w-3.5" />
-            視覺風格與廣告 <ExternalLink className="h-3 w-3" />
+            {t('templatesLink')} <ExternalLink className="h-3 w-3" />
           </a>
           <a
             href={typeof window !== 'undefined' && window.location.hostname.endsWith('im-tourist.com') ? 'https://marketing.im-tourist.com' : '/marketing'}
@@ -69,6 +70,8 @@ export default function MktPage() {
             {t('openMarketingCenter')} <ExternalLink className="h-3 w-3" />
           </a>
           <Link href="/marketing/logbook"><Button variant="outline" size="sm" className="gap-1.5"><BookOpen className="h-4 w-4" />{t('marketingLog')}</Button></Link>
+          <a href="/api/docs/marketing-manual" target="_blank" rel="noreferrer"><Button variant="outline" size="sm" className="gap-1.5"><FileText className="h-4 w-4" />{t('manual')}</Button></a>
+          <a href="/api/docs/marketing-manual?download=1" title={t('manualDownload')}><Button variant="outline" size="sm" className="px-2"><Download className="h-4 w-4" /></Button></a>
         </div>
       </div>
 
@@ -92,11 +95,10 @@ export default function MktPage() {
 
       <div className="flex gap-1 p-1 bg-muted rounded-xl w-fit flex-wrap">
         {([
-          ['company', '公司資料', <Building2 key="c0" className="h-4 w-4" />],
+          ['company', t('tabCompany'), <Building2 key="c0" className="h-4 w-4" />],
           ['generate', t('tabGenerate'), <Sparkles key="g" className="h-4 w-4" />],
-          ['campaigns', '活動企劃中心 (AI/成效)', <Sparkles key="cp" className="h-4 w-4 text-purple-500" />],
-          ['offline', t('tabOffline'), <MapPin key="o" className="h-4 w-4" />],
-          ['crm', '會員 CRM & VIP', <Users key="crm" className="h-4 w-4" />],
+          ['campaigns', t('tabCampaigns'), <Sparkles key="cp" className="h-4 w-4 text-purple-500" />],
+          ['crm', t('tabCrm'), <Users key="crm" className="h-4 w-4" />],
           ['delivery', t('tabDelivery'), <Bike key="d" className="h-4 w-4" />],
           ['analytics', t('tabAnalytics'), <BarChart3 key="a" className="h-4 w-4" />],
           ['calendar', t('tabCalendar'), <CalendarDays key="c" className="h-4 w-4" />]
@@ -108,7 +110,6 @@ export default function MktPage() {
       {tab === 'company' ? <CompanyProfileEditor key={companyTab} initialTab={companyTab} />
         : tab === 'generate' ? <GenerateTab />
         : tab === 'campaigns' ? <CampaignsTab />
-        : tab === 'offline' ? <OfflineTab />
         : tab === 'crm' ? <CrmTab />
         : tab === 'delivery' ? <DeliveryTab />
         : tab === 'analytics' ? <AnalyticsTab />
@@ -298,143 +299,8 @@ function ContentDetail({ id, onClose, onChanged }: { id: string; onClose: () => 
   )
 }
 
-// ─────────────────────── 實體行銷 ───────────────────────
-const OFFLINE_TYPE_IDS = ['material', 'event', 'outdoor', 'partner'] as const
-const getOfflineTypeLabel = (t: (key: string) => string): Record<string, string> =>
-  Object.fromEntries(OFFLINE_TYPE_IDS.map(id => [id, t(`offlineType_${id}`)]))
-interface Offline {
-  id: string; type: string; title: string; store: string; status: string
-  start_date: string | null; end_date: string | null; budget: number; counterparty: string; photo_url: string; note: string
-}
+// ─────────────────────── 共用 ───────────────────────
 const fmtNum = (n: number, locale: string) => Math.round(n).toLocaleString(locale === 'vi' ? 'vi-VN' : locale === 'en' ? 'en-US' : 'zh-TW')
-const blankOffline = (type: string): Partial<Offline> => ({ type, title: '', store: '', status: 'planned', start_date: '', end_date: '', budget: 0, counterparty: '', photo_url: '', note: '' })
-
-function OfflineTab() {
-  const t = useTranslations('MktPage')
-  const locale = useLocale()
-  const OFFLINE_TYPE_LABEL = getOfflineTypeLabel(t)
-  const OFFLINE_TYPE: [string, string][] = OFFLINE_TYPE_IDS.map(id => [id, OFFLINE_TYPE_LABEL[id]])
-  const OFFLINE_STATUS_LABEL: Record<string, string> = { planned: t('offlineStatus_planned'), active: t('offlineStatus_active'), installed: t('offlineStatus_installed'), done: t('offlineStatus_done'), cancelled: t('offlineStatus_cancelled') }
-  const OFFLINE_STATUS_VARIANT: Record<string, 'secondary' | 'default' | 'success' | 'warning'> = { planned: 'secondary', active: 'warning', installed: 'default', done: 'success', cancelled: 'secondary' }
-  const [type, setType] = useState('')
-  const [status, setStatus] = useState('')
-  const [items, setItems] = useState<Offline[]>([])
-  const [loading, setLoading] = useState(true)
-  const [editing, setEditing] = useState<Partial<Offline> | null>(null)
-  const [saving, setSaving] = useState(false)
-  const [err, setErr] = useState('')
-
-  const load = useCallback(async () => {
-    setLoading(true)
-    const sp = new URLSearchParams(); if (type) sp.set('type', type); if (status) sp.set('status', status)
-    const r = await fetch('/api/mkt/offline?' + sp.toString())
-    const j = await r.json().catch(() => ({}))
-    setItems(j.items ?? [])
-    setLoading(false)
-  }, [type, status])
-  useEffect(() => { load() }, [load])
-
-  async function save() {
-    if (!editing) return
-    if (!String(editing.title ?? '').trim()) { setErr(t('titleRequired')); return }
-    setSaving(true); setErr('')
-    const method = editing.id ? 'PATCH' : 'POST'
-    const r = await fetch('/api/mkt/offline', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editing) })
-    const j = await r.json().catch(() => ({})); setSaving(false)
-    if (!r.ok) { setErr(j.error || t('saveFailed')); return }
-    setEditing(null); load()
-  }
-  async function del(id: string) {
-    if (!confirm(t('confirmDelete'))) return
-    await fetch('/api/mkt/offline', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
-    load()
-  }
-
-  return (
-    <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">{t('offlineTabDesc')}</p>
-      <div className="flex flex-wrap items-center gap-2">
-        <select value={type} onChange={e => setType(e.target.value)} className={selCls}>
-          <option value="">{t('allTypes')}</option>
-          {OFFLINE_TYPE.map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-        </select>
-        <select value={status} onChange={e => setStatus(e.target.value)} className={selCls}>
-          <option value="">{t('allStatuses')}</option>
-          {Object.entries(OFFLINE_STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-        </select>
-        <Button size="sm" className="ml-auto gap-1.5" onClick={() => { setErr(''); setEditing(blankOffline(type || 'material')) }}><Plus className="h-4 w-4" />{t('add')}</Button>
-      </div>
-
-      {loading ? <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-        : items.length === 0 ? <div className="text-center py-16 text-muted-foreground text-sm">{t('noOfflineItems')}</div>
-        : (
-          <div className="grid gap-3 sm:grid-cols-2">
-            {items.map(i => (
-              <div key={i.id} className="rounded-xl border bg-card overflow-hidden">
-                {i.photo_url && <img src={i.photo_url} alt="" className="w-full h-32 object-cover" />}
-                <div className="p-4">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">{OFFLINE_TYPE_LABEL[i.type] ?? i.type}</Badge>
-                    <Badge variant={OFFLINE_STATUS_VARIANT[i.status] ?? 'secondary'} className="text-[10px] px-1.5 py-0">{OFFLINE_STATUS_LABEL[i.status] ?? i.status}</Badge>
-                    <span className="font-medium">{i.title}</span>
-                  </div>
-                  <div className="mt-1 text-sm text-muted-foreground space-x-2">
-                    {i.store && <span>{t('storeColonLabel')}{i.store}</span>}
-                    {i.counterparty && <span>· {i.counterparty}</span>}
-                  </div>
-                  <div className="mt-1 text-xs text-muted-foreground space-x-2">
-                    {(i.start_date || i.end_date) && <span>{i.start_date ?? ''}{i.end_date ? `～${i.end_date}` : ''}</span>}
-                    {i.budget > 0 && <span>· {t('budgetLabel')} {fmtNum(i.budget, locale)}</span>}
-                  </div>
-                  {i.note && <p className="mt-1 text-sm">{i.note}</p>}
-                  <div className="mt-2 flex justify-end gap-1">
-                    <button onClick={() => { setErr(''); setEditing({ ...i, start_date: i.start_date ?? '', end_date: i.end_date ?? '' }) }} className="p-1.5 rounded hover:bg-muted text-muted-foreground"><Pencil className="h-4 w-4" /></button>
-                    <button onClick={() => del(i.id)} className="p-1.5 rounded hover:bg-muted text-red-500"><Trash2 className="h-4 w-4" /></button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-      {editing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setEditing(null)}>
-          <div className="w-full max-w-lg rounded-xl bg-card p-5 shadow-xl max-h-[92vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">{editing.id ? t('editOfflineTitle') : t('addOfflineTitle')}</h2>
-              <button onClick={() => setEditing(null)} className="p-1 rounded hover:bg-muted"><X className="h-5 w-5" /></button>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label={t('typeLabel')}>
-                <select value={editing.type ?? 'material'} onChange={e => setEditing({ ...editing, type: e.target.value })} className={`w-full ${selCls}`}>
-                  {OFFLINE_TYPE.map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                </select>
-              </Field>
-              <Field label={t('statusLabel')}>
-                <select value={editing.status ?? 'planned'} onChange={e => setEditing({ ...editing, status: e.target.value })} className={`w-full ${selCls}`}>
-                  {Object.entries(OFFLINE_STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                </select>
-              </Field>
-              <div className="col-span-2"><Field label={t('offlineTitleLabel')}><Input value={editing.title ?? ''} onChange={e => setEditing({ ...editing, title: e.target.value })} placeholder={t('offlineTitlePlaceholder')} /></Field></div>
-              <Field label={t('storeLabel')}><Input value={editing.store ?? ''} onChange={e => setEditing({ ...editing, store: e.target.value })} placeholder={t('storeEmptyMeansAll')} /></Field>
-              <Field label={t('counterpartyLabel')}><Input value={editing.counterparty ?? ''} onChange={e => setEditing({ ...editing, counterparty: e.target.value })} /></Field>
-              <Field label={t('startDateLabel')}><Input type="date" value={editing.start_date ?? ''} onChange={e => setEditing({ ...editing, start_date: e.target.value })} /></Field>
-              <Field label={t('endDateLabel')}><Input type="date" value={editing.end_date ?? ''} onChange={e => setEditing({ ...editing, end_date: e.target.value })} /></Field>
-              <Field label={t('budgetCostLabel')}><Input type="number" value={String(editing.budget ?? 0)} onChange={e => setEditing({ ...editing, budget: Number(e.target.value) || 0 })} /></Field>
-              <Field label={t('photoUrlLabel')} hint={t('photoUrlHint')}><Input value={editing.photo_url ?? ''} onChange={e => setEditing({ ...editing, photo_url: e.target.value })} placeholder="https://" /></Field>
-              <div className="col-span-2"><Field label={t('noteLabel')}><textarea rows={2} className={ta} value={editing.note ?? ''} onChange={e => setEditing({ ...editing, note: e.target.value })} /></Field></div>
-            </div>
-            {err && <p className="mt-3 text-sm text-red-500">{err}</p>}
-            <div className="mt-4 flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setEditing(null)}>{t('cancel')}</Button>
-              <Button onClick={save} disabled={saving} className="gap-1.5">{saving && <Loader2 className="h-4 w-4 animate-spin" />}{t('save')}</Button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
 
 // ─────────────────────── 外送平台 ───────────────────────
 const DELIVERY_PLATFORM_IDS = ['grab', 'shopee', 'baemin', 'other'] as const
@@ -589,7 +455,7 @@ interface MktSnap {
 function AnalyticsTab() {
   const t = useTranslations('MktPage')
   const locale = useLocale()
-  const OFFLINE_TYPE_LABEL = getOfflineTypeLabel(t)
+  const tc = useTranslations('Campaigns')
   const DELIVERY_PLATFORM_LABEL = getDeliveryPlatformLabel(t)
   const [snap, setSnap] = useState<MktSnap | null>(null)
   const [loading, setLoading] = useState(true)
@@ -643,7 +509,7 @@ function AnalyticsTab() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {snap.offline.byType.map(ot => (
               <div key={ot.type} className="rounded-lg border bg-card px-3 py-2">
-                <div className="text-xs text-muted-foreground">{OFFLINE_TYPE_LABEL[ot.type] ?? ot.type}</div>
+                <div className="text-xs text-muted-foreground">{tc.has(`category.${ot.type}`) ? tc(`category.${ot.type}`) : ot.type}</div>
                 <div className="mt-0.5 font-semibold">{fmtNum(ot.spend, locale)}</div>
                 <div className="text-xs text-muted-foreground">{t('itemCountLabel', { n: ot.count })}</div>
               </div>

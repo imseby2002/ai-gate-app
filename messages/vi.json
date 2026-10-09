@@ -194,7 +194,147 @@
     "inactive": "Bị tạm dừng",
     "typeEmployee": "Nhân viên",
     "typeAdmin": "Quản trị viên",
-    "typeExternal": "Người dùng bên ngoài"
+    "typeExternal": "Người dùng bên ngoài",
+    "pw": {
+      "tooShort": "Mật khẩu phải có ít nhất 6 ký tự",
+      "mismatch": "Hai mật khẩu không khớp",
+      "title": "Mật khẩu đăng nhập",
+      "descHasBoth": "Tài khoản của bạn đã có thể đăng nhập bằng Email/mật khẩu, và vẫn có thể dùng Google.",
+      "descHasPw": "Tài khoản của bạn đã có thể đăng nhập bằng Email/mật khẩu.",
+      "descGoogle": "Bạn đang đăng nhập bằng Google. Sau khi đặt mật khẩu, cùng tài khoản này cũng có thể đăng nhập bằng Email/mật khẩu.",
+      "descNone": "Đặt mật khẩu đăng nhập.",
+      "newPw": "Mật khẩu mới",
+      "setPw": "Đặt mật khẩu",
+      "minPh": "Ít nhất 6 ký tự",
+      "confirm": "Xác nhận mật khẩu",
+      "againPh": "Nhập lại",
+      "saving": "Đang lưu…",
+      "update": "Cập nhật mật khẩu",
+      "done": "Đã lưu. Từ nay có thể đăng nhập bằng Email/mật khẩu"
+    },
+    "tg": {
+      "testText": "✅ Thiết lập Telegram cho quy trình marketing IMT thành công!\n\nBạn sẽ nhận thông báo duyệt quy trình marketing tại đây.",
+      "testOk": "Đã gửi tin nhắn thử! Vui lòng kiểm tra Telegram đã nhận chưa.",
+      "testFail": "Gửi thất bại, vui lòng kiểm tra Bot Token và Chat ID.",
+      "netErr": "Lỗi mạng, vui lòng thử lại sau.",
+      "topUp": "Nạp tiền",
+      "title": "Tích hợp Telegram",
+      "getToken": "Lấy Bot Token",
+      "desc": "Sau khi thiết lập, quy trình marketing tự động sẽ gửi thông báo duyệt qua Telegram Bot của bạn và nhận phản hồi duyệt hoặc chỉnh sửa.",
+      "fromBotFather": "(lấy từ @BotFather)",
+      "chatId": "Chat ID / tên người dùng",
+      "chatIdHint": "(người nhận thông báo mặc định)",
+      "chatIdPh": "@username hoặc -100xxxxxxxxxx (nhóm)",
+      "chatIdHelp": "Nhắn tin cho <bot>@userinfobot</bot> để xem Chat ID cá nhân; với nhóm, hãy thêm Bot vào nhóm để lấy ID nhóm.",
+      "saving": "Đang lưu…",
+      "save": "Lưu cài đặt",
+      "sending": "Đang gửi…",
+      "sendTest": "Gửi tin nhắn thử",
+      "saved": "Đã lưu",
+      "socialTitle": "Kết nối mạng xã hội",
+      "socialDesc": "Sau khi thiết lập, quy trình marketing sẽ tự động đăng ảnh và video lên từng nền tảng. Lấy Token của mỗi nền tảng tại trang nhà phát triển chính thức."
+    },
+    "social": {
+      "hints": {
+        "fbToken": "Lấy tại Meta Business Suite → Cài đặt → Page Access Token (cần quyền pages_manage_posts)",
+        "fbPageId": "ID số của Trang, xem trong mục Giới thiệu của Trang",
+        "igToken": "Giống Facebook Page Access Token (Instagram được quản lý qua Meta Graph API)",
+        "igUserId": "Gọi /me/accounts trong Meta Graph API Explorer và lấy instagram_business_account.id",
+        "threadsToken": "Lấy sau khi đăng ký quyền Threads API trên Meta for Developers",
+        "threadsUserId": "Gọi https://graph.threads.net/me?access_token=TOKEN để lấy id",
+        "liToken": "Lấy OAuth 2.0 token tại LinkedIn Developer Portal (cần phạm vi w_member_social)",
+        "liUrn": "Cá nhân dùng urn:li:person:'{id}', trang công ty dùng urn:li:organization:'{id}'",
+        "xKey": "Lấy trong mục App Keys của Twitter Developer Portal",
+        "lineToken": "Lấy tại LINE Developers Console → kênh Messaging API → Channel access token",
+        "zaloToken": "Đăng ký OA API trong Zalo Developer Console để lấy OAuth Access Token",
+        "zaloOaId": "ID số của Zalo Official Account",
+        "fbReels": "FB Reels dùng chung Page Access Token và Page ID với Trang Facebook; chỉ cần thiết lập ở mục Facebook phía trên.",
+        "igReels": "IG Reels dùng chung Access Token và IG User ID với Instagram; chỉ cần thiết lập ở mục Instagram phía trên.",
+        "ytClientId": "Tạo OAuth 2.0 Client ID tại Google Cloud Console → APIs & Services → Credentials",
+        "ytRefresh": "Ủy quyền trong OAuth Playground (https://developers.google.com/oauthplayground) để lấy refresh_token",
+        "tiktokToken": "Lấy Access Token sau khi đăng ký quyền Content Posting API trên TikTok for Developers"
+      },
+      "connected": "Đã kết nối",
+      "docs": "Tài liệu",
+      "saving": "Đang lưu…",
+      "save": "Lưu",
+      "clear": "Xóa",
+      "saved": "Đã lưu",
+      "loading": "Đang tải…",
+      "imageGroup": "Nền tảng hình ảnh & văn bản",
+      "videoGroup": "Nền tảng video"
+    },
+    "company": {
+      "needName": "Vui lòng nhập tên công ty",
+      "createFailed": "Tạo thất bại",
+      "created": "Đã tạo “{name}”! Bạn đã trở thành chủ sở hữu công ty.",
+      "needEmail": "Vui lòng nhập Email cần mời",
+      "inviteFailed": "Mời thất bại",
+      "invited": "Đã gửi lời mời tới {email}",
+      "roleFailed": "Cập nhật vai trò thất bại",
+      "roleUpdated": "Đã cập nhật vai trò thành viên",
+      "confirmRemove": "Xóa “{email}” khỏi công ty?",
+      "removeFailed": "Xóa thành viên thất bại",
+      "removed": "Đã xóa thành viên",
+      "loading": "Đang tải thành viên công ty…",
+      "createTitle": "Tạo không gian công ty",
+      "createDesc": "Bạn chưa tham gia công ty nào. Hãy tạo công ty riêng để trở thành chủ sở hữu (Owner) và mời đồng đội cùng chia sẻ tài nguyên thương hiệu, kho kiến thức marketing và cộng tác.",
+      "namePh": "Tên công ty hoặc nhóm (ví dụ: Công ty ABC)",
+      "create": "Tạo công ty",
+      "memberCount": "{n} thành viên (gồm lời mời đang chờ)",
+      "inviteTitle": "Mời đồng nghiệp vào công ty",
+      "emailPh": "Email đồng nghiệp (ví dụ colleague@company.com)",
+      "sendInvite": "Gửi lời mời",
+      "roster": "Danh sách thành viên",
+      "externalInvitee": "Người được mời",
+      "joined": "Đã tham gia",
+      "pending": "Chờ xác nhận",
+      "removeTitle": "Xóa khỏi công ty",
+      "role": {
+        "owner": "Chủ sở hữu",
+        "admin": "Quản trị viên",
+        "manager": "Trưởng bộ phận",
+        "viewer": "Thành viên"
+      }
+    },
+    "page": {
+      "companyTitle": "Công ty & thành viên",
+      "companyDesc": "Quản lý công ty, danh sách thành viên và quyền mời cộng tác.",
+      "dataTitle": "Hồ sơ công ty",
+      "dataDesc": "Thông tin cơ bản, thương hiệu, sản phẩm, cửa hàng và tài nguyên dùng chung toàn công ty, được marketing, CSKH và AI Agent sử dụng trực tiếp."
+    },
+    "whitelist": {
+      "exists": "Email này đã có trong danh sách",
+      "confirmRemove": "Xóa email nhân viên này khỏi danh sách cho phép?",
+      "noteFailed": "Cập nhật ghi chú thất bại",
+      "companyFailed": "Cập nhật công ty thất bại",
+      "ourCompany": "công ty",
+      "titleCompany": "{name} · Danh sách email nhân viên",
+      "title": "Danh sách email nhân viên",
+      "descCompany": "Chỉ email có trong danh sách mới được tự động thêm vào “{name}” làm nhân viên khi đăng ký.",
+      "descAdmin": "Chỉ email trong danh sách mới đăng ký được với tư cách nhân viên; email khác chỉ tham gia như người dùng bên ngoài.",
+      "fixedCompany": "Công ty: {name} (cố định)",
+      "email": "Email nhân viên",
+      "companyAdmin": "Công ty (quản trị tổng chọn)",
+      "allPlatform": "Toàn nền tảng / chưa chỉ định công ty",
+      "company": "Công ty",
+      "noteOptional": "Ghi chú (không bắt buộc)",
+      "notePh": "ví dụ: Phòng kinh doanh - Minh",
+      "add": "Thêm",
+      "loading": "Đang tải…",
+      "empty": "Chưa có email nào. Hãy thêm email nhân viên được phép.",
+      "note": "Ghi chú",
+      "editable": "(có thể sửa)",
+      "addedAt": "Thời gian thêm",
+      "actions": "Thao tác",
+      "global": "Toàn cục / chưa chỉ định",
+      "editCompany": "Nhấn để đổi công ty",
+      "notePh2": "Nhập ghi chú…",
+      "save": "Lưu",
+      "cancel": "Hủy",
+      "editNote": "Nhấn để sửa ghi chú",
+      "remove": "Xóa"
+    }
   },
   "Chat": {
     "placeholder": "Nhập tin nhắn...",
@@ -1234,6 +1374,9 @@
       "csModeAi": "AI đặt trực tiếp",
       "csModeManualHint": "Sau khi khách xác nhận trong chat, hệ thống tạo yêu cầu chờ xác nhận và giữ phòng; bot báo rằng nhân viên sẽ phản hồi kết quả",
       "csModeAiHint": "Sau khi khách xác nhận trong chat, AI tạo đơn đặt phòng chính thức (chờ thanh toán)",
+      "earlyGateLabel": "Chat: gửi mã cổng sớm",
+      "earlyGateOnHint": "Khách nhận phòng hôm nay đến sớm sẽ được bot xác minh và gửi mã cổng để gửi hành lý hoặc nghỉ ở khu vực chung; mã phòng vẫn gửi sau giờ nhận phòng",
+      "earlyGateOffHint": "Không gửi mã nào trước giờ nhận phòng",
       "all": "Tất cả",
       "loadError": "Tải thất bại. Vui lòng làm mới trang hoặc thử lại sau.",
       "empty": "Chưa có yêu cầu đặt phòng",
@@ -1555,10 +1698,15 @@
       "plan": "Gói đăng ký",
       "experts": "Chuyên gia tùy chỉnh",
       "logbook": "Nhật ký Marketing",
-      "offline": "Marketing thực địa",
       "socialMatrix": "Ma trận & Nuôi nick",
       "brand": "Hồ sơ công ty",
-      "aiExpert": "Chuyên gia AI"
+      "aiExpert": "Chuyên gia AI",
+      "collapse": "Thu gọn menu",
+      "expand": "Mở rộng menu",
+      "erpMkt": "ERP Marketing",
+      "campaigns": "Chiến dịch",
+      "manual": "Hướng dẫn sử dụng",
+      "manualDownload": "Tải hướng dẫn sử dụng (PDF)"
     },
     "section": {
       "create": "Sáng tạo",
@@ -1902,6 +2050,27 @@
       "brandTags": "Thẻ thương hiệu",
       "industryTags": "Thẻ ngành",
       "trendingTags": "Thẻ xu hướng"
+    },
+    "studioX": {
+      "pubTitle": "AI Visual Studio - {type}",
+      "copyWithPrompt": "✨【Tác phẩm từ AI Visual Studio】\n\nĐược tạo bằng quy trình \"{type}\": {prompt}\n\nTrải nghiệm ngay hoặc nhắn tin để được tư vấn!\n\n#AIVisual #TiepThiThuongHieu #NoiDungSangTao #ThamMy",
+      "copyNoPrompt": "✨【Tác phẩm từ AI Visual Studio】\n\nĐược tạo tỉ mỉ bằng quy trình \"{type}\" của AI Visual Studio, tôn vinh vẻ đẹp và chi tiết 🔥\n\nTìm hiểu thêm hoặc nhắn tin cho chúng tôi!\n\n#AIVisual #TiepThiThuongHieu #SangTao #ThietKeChatLuong",
+      "videoFailed": "Tạo video thất bại",
+      "videoTimeout": "Tạo video quá thời gian",
+      "publishAll": "Đăng lên mạng xã hội chỉ với một cú nhấp",
+      "publish": "Đăng"
+    },
+    "brandPage": {
+      "title": "Hồ sơ công ty",
+      "desc": "Một bản duy nhất cho toàn công ty: thông tin cơ bản, thương hiệu, sản phẩm, cửa hàng, tư liệu. AI marketing, CSKH và Agent đọc trực tiếp."
+    },
+    "planPage": {
+      "title": "Gói đăng ký",
+      "desc": "Chọn gói phù hợp nhu cầu, nâng cấp bất cứ lúc nào; chi phí tạo nội dung tính riêng bằng điểm nạp trước"
+    },
+    "expertsPage": {
+      "builtin": "Chuyên gia có sẵn",
+      "mine": "Chuyên gia của tôi"
     }
   },
   "Resume": {
@@ -2546,6 +2715,14 @@
       "anchorVideoFailed": "Tạo video người dẫn thất bại",
       "heygenTimeout": "HeyGen quá hạn",
       "unitNotSupported": "Đơn vị {unitId} không hỗ trợ tự chạy"
+    },
+    "x": {
+      "setup": "Thiết lập",
+      "smsOk": "SMS: thành công {success}/{total}",
+      "smsFail": "SMS thất bại: {error}",
+      "mustRead": "Bắt buộc",
+      "loaded": "Đã tải ({name})",
+      "view": "Xem"
     }
   },
   "Prospect": {
@@ -2814,6 +2991,35 @@
       "colPhone": "Điện thoại",
       "colRule": "Quy tắc",
       "unassigned": "Chưa phân bổ"
+    },
+    "extra": {
+      "testName": "Thử nghiệm",
+      "colName": "Tên",
+      "colCategory": "Phân loại",
+      "colPhone": "Điện thoại",
+      "colAddress": "Địa chỉ",
+      "colStatus": "Trạng thái",
+      "colSearchCount": "Số lần tìm",
+      "colSelected": "Đã chọn",
+      "called": "Đã gọi",
+      "joined": "Đã tham gia",
+      "dedup": "({added} mới, {dup} trùng)",
+      "callerIdPh": "+886xxxxxxxxx (số đã xác minh Twilio) / +84xxxxxxxxx (số hiển thị Stringee)",
+      "keyJoinTitle": "Bấm phím sau cuộc gọi để tham gia cộng đồng",
+      "keyJoinDesc": "Sau khi nghe lời nhắn, khách bấm phím số và hệ thống tự gửi liên kết tham gia (LINE/WhatsApp/ZALO) qua SMS/ZNS. Hãy nhắc phím trong kịch bản giọng nói, ví dụ: “Kết bạn Zalo, bấm phím 1”. Nếu không thiết lập, cuộc gọi chỉ phát giọng nói.",
+      "keyPh": "Phím",
+      "official": "Tài khoản chính thức",
+      "group": "Nhóm",
+      "personal": "Cá nhân",
+      "joinUrlPh": "Liên kết tham gia https://...",
+      "addKey": "Thêm phím",
+      "chars": "{n} ký tự",
+      "saved": "Đã lưu",
+      "saveProgress": "Lưu tiến độ (tiếp tục sau)",
+      "listHeader": "Danh sách khách hàng ({n}) · đã chọn {sel}",
+      "exportCsv": "Xuất CSV",
+      "confirmClear": "Xóa toàn bộ danh sách khách hàng? Không thể hoàn tác.",
+      "clear": "Xóa hết"
     }
   },
   "MA": {
@@ -3971,9 +4177,72 @@
       "automation": "Quy trình Marketing",
       "linked": "Đang liên kết",
       "companySettings": "Cài đặt dữ liệu công ty"
+    },
+    "x": {
+      "free": "Miễn phí",
+      "mktMessage": "Tin nhắn marketing",
+      "we": "chúng tôi",
+      "smsEmpty": "Nội dung SMS không được để trống",
+      "needPhone": "Vui lòng cung cấp ít nhất một số điện thoại hợp lệ",
+      "smsTab": "Tin nhắn (SMS)",
+      "verifiedCallerId": "Hiển thị số thật (Verified Caller ID)",
+      "voiceRouting": "Hệ thống gọi thoại đa quốc gia thông minh",
+      "twNumber": "Số Đài Loan (09xx / +886)",
+      "via": "qua",
+      "twVoiceNote": "Hỗ trợ số gọi đã xác minh · không cần thuê số",
+      "vnNumber": "Số Việt Nam (+84)",
+      "vnVoiceNote": "Gọi nội địa Việt Nam · khoảng $0.8–$1.2/phút · tuyến trong nước",
+      "otherCountries": "Các quốc gia khác",
+      "intlVoiceNote": "CPaaS quốc tế hàng đầu · tỉ lệ kết nối cao",
+      "callerDisplay": "hiển thị trên máy người nhận",
+      "callerIdPh": "+886912345678 hoặc 84xxxxxxxxx",
+      "callerIdHelp": "Nhập số điện thoại thật đã xác minh miễn phí trên Twilio (Verified Caller ID); người nhận sẽ thấy số của bạn.",
+      "phonesPh": "+886912345678 (Đài Loan)\n+84901234567 (Việt Nam)\n+12025550123 (quốc tế)",
+      "totalNumbers": "Tổng: <b>{n}</b> số",
+      "tw": "Đài Loan: ",
+      "vn": "Việt Nam: ",
+      "intl": "Quốc tế: ",
+      "smsRouting": "Hệ thống SMS đa quốc gia thông minh",
+      "pointsLeft": "Còn {n} điểm",
+      "linked": "(đã liên kết tài khoản)",
+      "twSmsNote": "Tuyến nội địa trực tiếp · khoảng $0.72–$0.86/tin",
+      "vnSmsNote": "SMS thương hiệu/Zalo · khoảng $0.3–$0.8/tin",
+      "otherIntl": "Số quốc tế khác",
+      "twilioBird": "Twilio (dự phòng Bird)",
+      "intlSmsNote": "Gửi trực tiếp tới hơn 180 quốc gia",
+      "smsContent": "Nội dung SMS",
+      "useUnit4": "Dùng nội dung đơn vị 4",
+      "aiSms": "AI tạo SMS 70 ký tự",
+      "smsPh": "Nhập nội dung SMS… hỗ trợ biến '{name}' (tên khách hàng).\nVD: Chào '{name}', cảm ơn bạn đã ủng hộ! Ưu đãi riêng tuần này: https://example.com/promo Trả lời STOP để hủy",
+      "charCount": "Số ký tự: ",
+      "segments": "Ước tính: {n} tin / số",
+      "longSms": "Trên 70 ký tự sẽ tự động ghép thành SMS dài",
+      "smsLimit": "Giới hạn chuẩn: 70 ký tự/tin (Unicode)",
+      "recipients": "Danh sách số người nhận",
+      "usePhoneList": "Dùng danh sách gọi ({n})",
+      "smsPhonesPh": "Nhập số điện thoại, phân cách bằng xuống dòng, dấu phẩy hoặc chấm phẩy. VD:\n0912345678 (Đài Loan)\n+84912345678 (Việt Nam)\n+12025550123 (quốc tế)",
+      "sending": "Đang gửi {n} SMS…",
+      "startSend": "Gửi SMS tới {n} số",
+      "smsResult": "Kết quả gửi SMS",
+      "okOfTotal": "Thành công {ok} / {total} tin",
+      "delivered": "Đã gửi",
+      "lastSent": "Lần gửi gần nhất: ",
+      "keysNote": "Khóa của từng kênh (đặt trong .env.local hoặc biến môi trường máy chủ):",
+      "planNeed": "Đơn vị này cần gói {need}. Gói hiện tại: {cur}",
+      "viewPlans": "Xem gói & nâng cấp",
+      "corePlus": "CORE trở lên",
+      "proPlus": "PRO trở lên",
+      "openPipeline": "Mở quy trình marketing tự động hoàn toàn"
     }
   },
   "Meeting": {
+    "translateTo": "Dịch sang",
+    "noTranslation": "Không dịch",
+    "download": "Tải biên bản",
+    "downloading": "Đang chuẩn bị…",
+    "history": "Cuộc họp của tôi",
+    "historyEmpty": "Chưa có cuộc họp nào.",
+    "date": "Ngày",
     "title": "Biên bản họp",
     "subtitle": "Ghi chép và dịch trực tiếp cho cuộc họp trực tiếp hoặc trực tuyến",
     "myLang": "Tôi nói",
@@ -4000,7 +4269,34 @@
     "videoStart": "Bật video",
     "videoStop": "Tắt video",
     "videoLoading": "Đang kết nối…",
-    "videoFailed": "Không kết nối được video. Vui lòng thử lại."
+    "videoFailed": "Không kết nối được video. Vui lòng thử lại.",
+    "delete": "Xóa cuộc họp",
+    "removeFromList": "Xóa khỏi danh sách của tôi",
+    "confirmDelete": "Xóa cuộc họp “{title}”? Biên bản sẽ bị xóa với tất cả người tham gia và không thể khôi phục.",
+    "confirmRemove": "Xóa cuộc họp “{title}” khỏi danh sách của bạn? Người khác không bị ảnh hưởng.",
+    "deleteFailed": "Xóa thất bại, vui lòng thử lại sau.",
+    "modeOnline": "Họp trực tuyến (Video)",
+    "modeInPerson": "Họp trực tiếp tại chỗ",
+    "deptLabel": "Phòng ban phụ trách",
+    "storesLabel": "Chi nhánh / Cửa hàng liên quan",
+    "keywordsLabel": "Từ khóa nền tảng / Thuật ngữ chuyên môn",
+    "keywordsPh": "Ví dụ: Royal, Hồ Tùng Mậu, Tủ đông, Bán thành phẩm",
+    "inputLangLabel": "Nhận diện",
+    "targetLangLabel": "Dịch sang",
+    "viewBilingual": "Song ngữ",
+    "viewTranslationOnly": "Chỉ xem bản dịch",
+    "viewOriginalOnly": "Chỉ xem bản gốc",
+    "inPersonNotice": "Chế độ họp trực tiếp: Thiết bị này mặc định ở chế độ phụ đề để tránh tiếng hú phản hồi âm thanh.",
+    "voiceProfileBadge": "Gói giọng nói nhân viên",
+    "voiceProfileEnrolled": "Đã tạo mẫu giọng nói",
+    "voiceProfilePending": "Chưa ghi âm mẫu giọng (Nhấn để ghi âm ngay)",
+    "voiceEnrollTitle": "Ghi âm mẫu giọng nói nhân viên",
+    "voiceEnrollDesc": "Vui lòng đọc to và rõ ràng câu văn cố định bên dưới (khoảng 15 giây). Giúp hệ thống nhận diện chính xác tên người phát biểu khi họp trực tiếp.",
+    "voiceStartRec": "Bắt đầu ghi âm",
+    "voiceStopRec": "Hoàn tất ghi âm",
+    "voiceUpload": "Xác nhận tải lên mẫu giọng",
+    "voiceUploading": "Đang tải lên…",
+    "voiceUploadSuccess": "Đã lưu mẫu giọng nói thành công!"
   },
   "Work": {
     "title": "Hạng mục công việc",
@@ -4074,7 +4370,13 @@
     "save": "Lưu",
     "cancel": "Hủy",
     "ownerOnlyDone": "Chỉ chủ sở hữu mới đánh dấu hoàn thành",
-    "deadlineFieldLabel": "Hạn chót"
+    "deadlineFieldLabel": "Hạn chót",
+    "importBtn": "Nhập hàng loạt (Excel/CSV)",
+    "importTitle": "Nhập công việc hàng loạt",
+    "importDesc": "Hỗ trợ tệp .xlsx, .xls và .csv. Vui lòng điền tiêu đề công việc, ghi chú trạng thái, hạn chót…",
+    "importTemplate": "Mau danh sach cong viec",
+    "importSheet": "Cong viec",
+    "expand": "Mở rộng"
   },
   "Pos": {
     "title": "Gọi món",
@@ -4123,6 +4425,80 @@
       "pudding": "Pudding",
       "grass": "Thạch sương sâm",
       "coconut": "Thạch dừa"
+    }
+  },
+  "FtKiosk": {
+    "welcome": "Xin chào",
+    "chooseDine": "Bạn dùng tại quán hay mang đi?",
+    "dineIn": "Dùng tại quán",
+    "takeaway": "Mang đi",
+    "demo": "Chế độ demo (dữ liệu mẫu, không gửi đơn)",
+    "startOver": "Làm lại",
+    "back": "Quay lại",
+    "menuTitle": "Thực đơn",
+    "from": "từ",
+    "emptyMenu": "Danh mục này chưa có món",
+    "itemCount": "{n} món",
+    "viewCart": "Xem giỏ hàng",
+    "cartTitle": "Giỏ hàng",
+    "emptyCart": "Giỏ hàng trống",
+    "total": "Tổng cộng",
+    "continueOrdering": "Gọi thêm",
+    "checkout": "Thanh toán",
+    "size": "Kích cỡ",
+    "required": "Bắt buộc",
+    "pickExactly": "Chọn {n}",
+    "pickUpTo": "Tối đa {n}",
+    "addToCart": "Thêm vào giỏ",
+    "cancel": "Hủy",
+    "memberTitle": "Tích điểm thành viên",
+    "memberDesc": "Nhập số điện thoại thành viên để tích điểm, hoặc bỏ qua",
+    "memberSkip": "Bỏ qua",
+    "memberConfirm": "Xác nhận",
+    "memberChecking": "Đang kiểm tra…",
+    "clear": "Xóa",
+    "memberYes": "Đã xác nhận thành viên",
+    "memberChange": "Đổi số khác",
+    "next": "Tiếp tục",
+    "memberNo": "Số này chưa là thành viên",
+    "memberNoDesc": "Đơn hàng này sẽ không được tích điểm",
+    "memberContinueNoPoints": "Tiếp tục không tích điểm",
+    "memberRetry": "Nhập lại",
+    "payTitle": "Thanh toán",
+    "payCounter": "Thanh toán tại quầy",
+    "payCounterDesc": "Vui lòng thanh toán tại quầy sau khi đặt (tiền mặt / VNPAY)",
+    "payMember": "Tích điểm cho {phone}",
+    "payGuest": "Khách vãng lai",
+    "placeOrder": "Đặt món",
+    "placing": "Đang gửi…",
+    "doneTitle": "Đặt món thành công",
+    "doneOrderNo": "Mã đơn của bạn",
+    "donePayAtCounter": "Vui lòng mang mã đơn đến quầy để thanh toán và nhận món",
+    "doneBack": "Về màn hình chính ({s})",
+    "setupTitle": "Cài đặt kiosk",
+    "setupDesc": "Nhập device_key của kiosk này",
+    "setupStart": "Bắt đầu",
+    "loading": "Đang tải…",
+    "loadFailed": "Không tải được thực đơn",
+    "retry": "Thử lại",
+    "errors": {
+      "UNKNOWN": "Có lỗi xảy ra, vui lòng liên hệ nhân viên",
+      "PHONE_INVALID": "Vui lòng nhập đúng số di động (10 số, bắt đầu bằng 0)",
+      "STORE_NOT_OPEN": "Cửa hàng hiện đã ngừng phục vụ",
+      "ITEM_OUT_STOCK": "Một số món đã hết, vui lòng chọn lại",
+      "ORDER_TOO_FAST": "Bạn thao tác quá nhanh, vui lòng thử lại sau",
+      "SEND_ORDER_POS_FAIL": "Không gửi được đơn tới cửa hàng, vui lòng liên hệ nhân viên",
+      "FT_UNREACHABLE": "Mất kết nối, vui lòng liên hệ nhân viên",
+      "PERMISSION_ERROR": "Phiên đăng nhập kiosk đã hết hạn, vui lòng liên hệ nhân viên",
+      "INVALID_DEVICE": "Kiosk chưa được cấp quyền, vui lòng liên hệ nhân viên",
+      "CART_INVALID": "Dữ liệu đơn không hợp lệ, vui lòng đặt lại",
+      "SIZE_REQUIRED": "Vui lòng chọn kích cỡ",
+      "OPTION_INVALID": "Tùy chọn không hợp lệ, vui lòng chọn lại",
+      "ITEM_NOT_FOUND": "Món đã ngừng bán, vui lòng đặt lại",
+      "KIOSK_LOGIN_FAILED": "Kiosk đăng nhập thất bại, vui lòng liên hệ nhân viên",
+      "KIOSK_LOGIN_NOT_CONFIGURED": "Kiosk chưa được cài tài khoản cửa hàng, vui lòng liên hệ nhân viên",
+      "STORE_NOT_FOUND": "Không tìm thấy cửa hàng, vui lòng liên hệ nhân viên",
+      "CASH_METHOD_NOT_FOUND": "Chưa hỗ trợ thanh toán tại quầy, vui lòng liên hệ nhân viên"
     }
   },
   "Apply": {
@@ -4340,6 +4716,10 @@
     "useOtherAccount": "Đăng nhập bằng tài khoản khác",
     "switchSystemAdmin": "Chuyển hệ thống khác (Quản trị viên)",
     "registeredCheckEmail": "Đã tạo tài khoản cho bạn! Vui lòng vào hộp thư bấm liên kết xác nhận, sau đó quay lại đăng nhập bằng Email và mật khẩu này (nếu chưa thấy hãy kiểm tra hộp thư rác). Muốn vào ngay có thể chọn Đăng nhập Google ở trên.",
+    "resendVerification": "Gửi lại email xác nhận",
+    "resendVerificationCooldown": "Gửi lại sau {seconds}s",
+    "resendVerificationSent": "Đã gửi lại email xác nhận. Vui lòng kiểm tra hộp thư (và hộp thư rác).",
+    "emailNotConfirmed": "Email này chưa được xác nhận. Vui lòng bấm liên kết trong email xác nhận, hoặc gửi lại bên dưới.",
     "passwordWrong": "Mật khẩu không đúng, vui lòng nhập lại",
     "loginErrorFallback": "Đăng nhập thất bại, vui lòng kiểm tra email và mật khẩu",
     "systemErrorFallback": "Xảy ra sự cố khi xác thực, vui lòng thử lại hoặc dùng Google",
@@ -4844,7 +5224,13 @@
     "qty": "Số lượng",
     "amount": "Số tiền",
     "noPurchaseRecords": "Chưa có lịch sử mua hàng",
-    "date": "Ngày"
+    "date": "Ngày",
+    "linkSlugLabel": "Mã đường dẫn biểu mẫu (chữ thường / số, VD: ice-abc)",
+    "pinReset": "Đặt lại mật khẩu nhà cung cấp (đã có, để trống nếu giữ nguyên)",
+    "pinSet": "Đặt mật khẩu ban đầu cho nhà cung cấp (ít nhất 6 ký tự)",
+    "vendorUrl": "Đường dẫn nhà cung cấp: {url} (sau khi lưu, gửi đường dẫn và mật khẩu cho nhà cung cấp; họ có thể tự đổi mật khẩu sau khi đăng nhập)",
+    "slugPlaceholder": "mã",
+    "noSubdomain": "Công ty chưa thiết lập tên miền con riêng, tạm thời chỉ dùng được liên kết riêng cũ"
   },
   "AgentPage": {
     "statusQueued": "Đang chờ",
@@ -6124,6 +6510,28 @@
     "catEquipment": "Thiết bị máy móc",
     "catTool": "Dụng cụ quầy bar",
     "catConsumable": "Vật tư đóng gói",
+    "catSemi": "Bán thành phẩm",
+    "tabProductPrices": "Giá bán sản phẩm",
+    "kindAll": "Tất cả",
+    "kindDrink": "Đồ uống",
+    "kindCoffee": "Cà phê",
+    "kindFood": "Đồ ăn",
+    "kindBase": "Bán thành phẩm",
+    "excelCost": "Giá vốn Excel",
+    "costRatio": "Tỷ lệ giá vốn",
+    "showMore": "Xem thêm ({n}/{total})",
+    "ppTitle": "Giá bán sản phẩm & tỷ lệ giá vốn",
+    "ppDesc": "Nguồn: Excel \"GIÁ THÀNH ĐỒ UỐNG\" và \"Bảng giá sản phẩm\"",
+    "ppSheetWhitePearl": "Topping trân châu trắng",
+    "ppSheetCombos": "Mọi tổ hợp topping",
+    "ppGroup": "Nhóm",
+    "ppProduct": "Sản phẩm",
+    "ppTopping": "Topping",
+    "ppToppingPrice": "Giá topping",
+    "ppPrice": "Giá bán",
+    "ppRatio": "Tỷ lệ (Giá vốn)",
+    "ppRatio2": "Tỷ lệ (cột 成本)",
+    "ppEmpty": "Chưa có dữ liệu giá bán",
     "searchItemPlaceholder": "Tìm mã, tên hạng mục...",
     "financeApprovedCount": "{n} mục giá theo hạng mục đã được Tài vụ phê duyệt",
     "noPriceData": "Chưa có dữ liệu giá chuẩn trong kho giá Tài vụ",
@@ -6170,7 +6578,12 @@
     "moneyLossValue": "{n} VND",
     "notifiedHr": "Đã thông báo nhân sự ({n} mục vượt ngưỡng)",
     "noOverItems": "Hiện không có mục nào vượt ngưỡng",
-    "notifyFailed": "Thông báo thất bại"
+    "notifyFailed": "Thông báo thất bại",
+    "pushConfirm": "Gửi công thức R&D \"{name}\" sang phòng marketing để chuẩn bị ra mắt sản phẩm mới?",
+    "pushDone": "✅ Đã gửi \"{name}\" sang phòng marketing!\nNhân viên marketing có thể tiếp tục tại \"Hệ thống marketing → Tư liệu sản phẩm → Quy trình ra mắt sản phẩm mới\" để chuẩn bị giai đoạn ưu tiên VIP và lịch ra mắt.",
+    "pushFailed": "Gửi thất bại",
+    "pushTitle": "Gửi sang phòng marketing để ra mắt sản phẩm mới",
+    "pushBtn": "Gửi ra mắt"
   },
   "AuditPlatform": {
     "knowledgeCoreStatus": "COMPANY KNOWLEDGE CORE — lớp kiến thức chung của doanh nghiệp đang liên kết",
@@ -6188,6 +6601,16 @@
     "rawLossLabel": "Thiệt hại biểu kiến gốc",
     "adjustedLossLabel": "Thiệt hại sau hiệu chỉnh tổ hợp",
     "tabMaterial": "📊 Công cụ suy luận tiêu hao nguyên liệu",
+    "newRuleTitle": "Thêm quy tắc (bắt đầu là giả thuyết)",
+    "newRuleTitlePh": "Tiêu đề quy tắc",
+    "newRuleProductPh": "Sản phẩm (trống = tất cả)",
+    "newRuleConditionPh": "Điều kiện, ví dụ: 2 topping",
+    "newRuleDeltaPh": "Điều chỉnh, ví dụ 18 hoặc -10",
+    "newRuleReasonPh": "Nguyên nhân / quan sát thực tế",
+    "newRuleSubmit": "Tạo quy tắc",
+    "noRulesYet": "Chưa có quy tắc. Hãy tạo quy tắc đầu tiên ở trên.",
+    "saveFailed": "Lưu thất bại",
+    "openAuditAi": "Thảo luận với AI kiểm toán",
     "tabCopilot": "🤖 Audit Copilot (Đồng phi công kiểm toán)",
     "fourModes": "4 Chế độ",
     "tabRules": "⚖️ Kho quy tắc phối hợp người-máy (Rule Engine)",
@@ -6344,7 +6767,6 @@
     "tabStores": "Tài sản hình ảnh cửa hàng",
     "tabProducts": "Tài sản hình ảnh sản phẩm",
     "tabGenerate": "Tạo một chạm",
-    "tabOffline": "Marketing thực địa",
     "tabDelivery": "Nền tảng giao hàng",
     "tabAnalytics": "Phân tích hiệu quả",
     "tabCalendar": "Lịch nội dung",
@@ -6493,19 +6915,14 @@
     "approve": "Phê duyệt",
     "reject": "Trả lại",
     "addToCalendar": "Thêm vào lịch",
-    "offlineTabDesc": "Phân phối vật tư cửa hàng và báo cáo lắp đặt, sự kiện khai trương, chiến dịch quảng cáo ngoài trời, hợp tác liên ngành, đều có thể chụp ảnh lưu trữ.",
     "allTypes": "Tất cả loại",
     "allStatuses": "Tất cả trạng thái",
     "add": "Thêm",
-    "noOfflineItems": "Chưa có mục marketing thực địa",
     "storeColonLabel": "Cửa hàng: ",
     "budgetLabel": "Ngân sách",
-    "editOfflineTitle": "Sửa marketing thực địa",
-    "addOfflineTitle": "Thêm marketing thực địa",
     "typeLabel": "Loại",
     "statusLabel": "Trạng thái",
     "offlineTitleLabel": "Tiêu đề *",
-    "offlineTitlePlaceholder": "VD: Lắp poster sản phẩm mới / Thử uống khai trương Đại học Hà Nội",
     "storeLabel": "Cửa hàng",
     "storeEmptyMeansAll": "Để trống = toàn công ty",
     "counterpartyLabel": "Nhà cung cấp／Đối tác",
@@ -6518,15 +6935,6 @@
     "save": "Lưu",
     "titleRequired": "Tiêu đề là bắt buộc",
     "confirmDelete": "Xác nhận xóa?",
-    "offlineType_material": "Vật tư cửa hàng",
-    "offlineType_event": "Sự kiện thực địa",
-    "offlineType_outdoor": "Quảng cáo ngoài trời",
-    "offlineType_partner": "Hợp tác liên ngành",
-    "offlineStatus_planned": "Đang lên kế hoạch",
-    "offlineStatus_active": "Đang tiến hành",
-    "offlineStatus_installed": "Đã lắp đặt",
-    "offlineStatus_done": "Hoàn thành",
-    "offlineStatus_cancelled": "Đã hủy",
     "storeRequired": "Cửa hàng là bắt buộc",
     "onlineLabel": "Đang hoạt động",
     "monthlyOrdersLabel": "Đơn hàng tháng này",
@@ -6560,7 +6968,7 @@
     "generateReportFailed": "Tạo thất bại",
     "deliveryMonthlyRevenueLabel": "Doanh thu giao hàng tháng này",
     "totalMarketingSpendLabel": "Tổng chi phí marketing",
-    "offlineSpendLabel": "Thực địa",
+    "offlineSpendLabel": "Chiến dịch",
     "advertisingLabel": "Quảng cáo",
     "deliveryShareLabel": "Tỷ trọng giao hàng trên doanh thu",
     "pnlPeriodLabel": "Lãi lỗ {period}",
@@ -6570,7 +6978,7 @@
     "publishedLabel": "Đã đăng {n}",
     "deliveryPlatformPerformance": "Hiệu quả nền tảng giao hàng",
     "listedLabel": "Đã lên sàn",
-    "offlineSpendTitle": "Chi phí marketing thực địa",
+    "offlineSpendTitle": "Chi phí chiến dịch",
     "itemCountLabel": "{n} mục",
     "aiMarketingReportTitle": "Báo cáo marketing AI",
     "weeklyReport": "Báo cáo tuần",
@@ -6585,7 +6993,13 @@
     "unscheduled": "Chưa lên lịch",
     "editContentTitle": "Sửa nội dung",
     "addContentTitle": "Thêm nội dung",
-    "scheduledDateLabel": "Ngày lên lịch"
+    "scheduledDateLabel": "Ngày lên lịch",
+    "tabCompany": "Hồ sơ công ty",
+    "tabCampaigns": "Trung tâm chiến dịch (AI / hiệu quả)",
+    "tabCrm": "CRM hội viên & VIP",
+    "templatesLink": "Phong cách hình ảnh & quảng cáo",
+    "manual": "Hướng dẫn sử dụng",
+    "manualDownload": "Tải hướng dẫn sử dụng (PDF)"
   },
   "HrPage": {
     "staffFulltime": "Chính thức",
@@ -6816,6 +7230,7 @@
     "subjectLabel": "Tiêu đề",
     "contentLabel": "Nội dung",
     "send": "Gửi",
+    "empDocsNoApplication": "Nhân viên này không có hồ sơ ứng tuyển liên kết, chưa có tài liệu tải lên.",
     "candidateDocsTitle": "Hồ sơ và nộp giấy tờ của {name}",
     "allDocsSubmitted": "Đã nộp đủ toàn bộ giấy tờ bản cứng cho văn phòng (hoàn tất)",
     "uploadMeansScan": "Tải lên = bản scan",
@@ -7008,6 +7423,7 @@
     "cash": "Tiền mặt",
     "catAll": "Tất cả mặt hàng",
     "catConsumable": "Vật tư ly/túi",
+    "catSemi": "Bán thành phẩm",
     "catEquipment": "Máy móc thiết bị",
     "catRaw": "Nguyên vật liệu",
     "catTool": "Dụng cụ quầy bar",
@@ -7145,6 +7561,7 @@
     "openingBalanceYuanLabel": "Số dư đầu kỳ",
     "openingPrefix": "Đầu kỳ",
     "optConsumable": "Bao bì ly/túi (vật tư tiêu hao)",
+    "optSemi": "Bán thành phẩm",
     "optEquipment": "Máy móc thiết bị (thiết bị)",
     "optRaw": "Nguyên vật liệu (nguyên liệu)",
     "optTool": "Dụng cụ quầy bar (dụng cụ)",
@@ -7206,7 +7623,110 @@
     "viNameLabel": "Tên tiếng Việt",
     "yearSuffix": "Năm {y}",
     "zhNameLabel": "Tên tiếng Trung *",
-    "zhNamePlaceholder": "VD: Tiền điện"
+    "zhNamePlaceholder": "VD: Tiền điện",
+    "cf": {
+      "errTransfer": "Chuyển khoản cần chọn tài khoản chuyển và nhận khác nhau",
+      "payee": "Người thu chi / nhà cung cấp / khách hàng",
+      "fromAccountReq": "Tài khoản chuyển (từ mục) *",
+      "toAccountReq": "Tài khoản nhận (đến mục) *",
+      "invoicePh": "VD: AB12345678",
+      "summaryPh": "VD: mua lá trà, doanh thu cửa hàng",
+      "amountReq": "Số tiền *",
+      "receiveAccount": "Tài khoản nhận tiền (đến mục)",
+      "payAccount": "Tài khoản chi tiền (từ mục)",
+      "incomeSubject": "Khoản mục thu (từ mục)",
+      "expenseSubject": "Khoản mục chi (đến mục)",
+      "chooseSubject": "-- Chọn khoản mục --",
+      "payeePh": "VD: Hà, tên nhà cung cấp",
+      "errSave": "Lưu thất bại, vui lòng thử lại",
+      "errAmount": "Vui lòng nhập số tiền hợp lệ",
+      "errDate": "Vui lòng chọn ngày ghi sổ",
+      "editTitle": "Sửa bút toán",
+      "newTitle": "Thêm bút toán",
+      "typeIncome": "Thu (+)",
+      "typeExpense": "Chi (-)",
+      "typeTransfer": "Chuyển khoản (⇄)",
+      "dateReq": "Ngày ghi sổ *",
+      "notesPh": "Thông tin bổ sung khác",
+      "txType": "Loại giao dịch",
+      "summary": "Diễn giải",
+      "invoice": "Số hóa đơn",
+      "notes": "Ghi chú chi tiết",
+      "closeExit": "Đóng",
+      "saving": "Đang lưu…",
+      "addEntry": "Thêm",
+      "confirmSave": "Xác nhận lưu",
+      "cancel": "Hủy",
+      "importDesc": "Hỗ trợ tệp .xlsx, .xls và .csv. Cần có ngày, loại (thu/chi), số tiền…",
+      "emptyHint": "Hãy đổi năm/tháng, lọc theo cây khoản mục hoặc bấm \"Thêm bút toán\"",
+      "noAccess": "Chỉ bộ phận thủ quỹ / hành chính mới dùng được chức năng thủ quỹ",
+      "mdbBatches": "Quản lý / hoàn tác lô MDB",
+      "noAccessHint": "Vui lòng đăng nhập bằng tài khoản quản trị rồi thử lại",
+      "title": "IMT ERP Thủ quỹ",
+      "importMdb": "Nhập tệp sổ sách (.mdb)",
+      "searchPh": "Nhập từ khóa tìm kiếm...",
+      "clearFilter": "Xóa bộ lọc (hiển thị tất cả)",
+      "empty": "Không có bút toán phù hợp",
+      "confirmDelete": "Xóa bút toán này?",
+      "loading": "Đang tải bút toán…",
+      "colAmount": "Số tiền",
+      "importTitle": "Nhập sổ quỹ hàng loạt",
+      "filteringBy": "Đang lọc theo khoản mục:",
+      "colDate": "Ngày / thứ",
+      "colNotes": "Ghi chú / hóa đơn",
+      "tabPnl": "Báo cáo doanh thu & lãi lỗ",
+      "importTemplate": "Mau so quy",
+      "searchLabel": "Tìm kiếm:",
+      "cashBank": "Tiền mặt / ngân hàng",
+      "ledgerName": "Sổ:",
+      "todayDate": "Hôm nay:",
+      "shown": "Hiển thị:",
+      "monthIncome": "Thu tháng này:",
+      "monthExpense": "Chi tháng này:",
+      "monthNet": "Chênh lệch thu chi:",
+      "todayIncome": "Thu hôm nay:",
+      "todayExpense": "Chi hôm nay:",
+      "tabCashflow": "Sổ quỹ",
+      "tabPricing": "Định giá vật tư",
+      "tabStoreExpenses": "Chi phí cửa hàng",
+      "tabVendors": "Nhà cung cấp",
+      "subJournal": "Sổ ghi chép",
+      "subToday": "Thu chi hôm nay",
+      "subMonth": "Thu chi tháng này",
+      "subRegular": "Tiền gửi có kỳ hạn",
+      "subProject": "Ghi chép dự án",
+      "addRecord": "Thêm bút toán",
+      "more": "Chức năng khác",
+      "batchImport": "Nhập hàng loạt",
+      "toAccount": "Tài khoản nhận",
+      "depositAccount": "Tài khoản gửi vào",
+      "editRecord": "Sửa bút toán",
+      "deleteRecord": "Xóa bút toán",
+      "importSheet": "But toan",
+      "colFrom": "Từ mục",
+      "colTo": "Đến mục",
+      "colPayee": "Người thu chi",
+      "colStatus": "Loại",
+      "colBalance": "Số dư",
+      "colSummary": "Diễn giải",
+      "colActions": "Thao tác",
+      "income": "Thu",
+      "expense": "Chi",
+      "transfer": "Chuyển khoản",
+      "badgeIn": "Thu",
+      "badgeOut": "Chi",
+      "badgeTransfer": "CK",
+      "addedCount": "Đã thêm {n} bút toán",
+      "importErrors": "Lỗi nhập dữ liệu ({n})",
+      "rowsUnit": "dòng",
+      "searchMode": {
+        "all": "Tìm tất cả",
+        "desc": "Diễn giải",
+        "category": "Khoản mục",
+        "payee": "Người thu chi",
+        "notes": "Ghi chú / hóa đơn"
+      }
+    }
   },
   "StoreCoachPage": {
     "fillRegTitleAndClause": "Vui lòng điền tiêu đề quy định và nội dung điều khoản cụ thể",
@@ -7501,7 +8021,36 @@
     "searchLearnedKeywordPlaceholder": "Tìm từ khóa kiến thức đã học...",
     "evidenceLevelShort": "Mức Bằng Chứng {level}",
     "keyPointsColonLabel": "Điểm chính: ",
-    "operationsAdvisorFallback": "Cố Vấn Vận Hành"
+    "operationsAdvisorFallback": "Cố Vấn Vận Hành",
+    "sample": {
+      "sweetTitle": "Nhiều khách phản ánh trà xanh chanh quá ngọt, cổ họng có cảm giác dính",
+      "sweetDesc": "Từ 15:30-17:00, hai nhóm khách mang đi phản ánh ít đường vẫn quá ngọt, tốc độ ra món hơi chậm.",
+      "sweetProduct": "Trà xanh chanh",
+      "bottleTitle": "Giờ cao điểm giao hàng buổi chiều, khâu in phiếu đến dán miệng ly bị nghẽn, dồn 15 ly",
+      "bottleDesc": "Nhân viên pha chế liên tục đi lại giữa thùng trà và máy dán miệng ly, lối lấy đá bị nhân viên order chắn, khiến khách hối đơn.",
+      "bottleProduct": "Tất cả món bán chạy",
+      "coldTitle": "Nhân viên bán thời gian mới căng thẳng, không cười khi nhận order, bị khách quen phàn nàn thái độ lạnh nhạt",
+      "coldDesc": "Nhân viên ca tối mới vào hai tuần, chưa thuộc các phím khuyến mãi trên POS, khi khách hối thì cúi đầu luống cuống, không chào khách.",
+      "coldProduct": "Tiếp xúc phục vụ",
+      "storeTnn": "TNN-01 (Cửa hàng chính Đài Nam)",
+      "storeTpe": "TPE-02 (Cửa hàng Tín Nghĩa, Đài Bắc)",
+      "storeKhh": "KHH-03 (Cửa hàng Arena, Cao Hùng)",
+      "storeSgn": "SGN-01 (Cửa hàng mẫu Quận 1, TP.HCM)",
+      "regCash": "Thu ngân tự ý thu tiền mặt không in hóa đơn POS, công ty xử lý thế nào?",
+      "regExpired": "Nguyên liệu quá hạn sử dụng hoặc nhãn bị sửa, theo lằn ranh đỏ của công ty sẽ xử phạt ra sao?",
+      "regRecipe": "Nhân viên chụp bảng công thức của công ty đăng lên mạng xã hội, trách nhiệm pháp lý thế nào?",
+      "t1Title": "[SOP tổng bộ] Hướng dẫn tẩy cặn sâu thùng giữ nhiệt và khử trùng gioăng khi đóng cửa",
+      "t2Title": "[Thực chứng của giám sát] Gọi số hai luồng giờ cao điểm giao hàng để tránh hối đơn và sót món",
+      "t3Title": "[Ca khiếu nại] Làm lại và mời thử để giữ khách khi đá tan làm nhạt đồ uống",
+      "t4Title": "[Hiệu chuẩn thiết bị] Hướng dẫn hiệu chuẩn hằng tuần vòi đánh sữa và súng đo nhiệt hồng ngoại",
+      "coachUrn": "Tẩy cặn sâu thùng trà giữ nhiệt khi đóng cửa thế nào? Gioăng silicon có được chà bằng miếng cọ không?",
+      "coachDelivery": "Giờ cao điểm shipper đứng trước quầy hối đơn, nên phân luồng và dán phiếu thế nào để không sót?",
+      "coachDiluted": "Khách nói đá tan làm trà nhạt, cửa hàng trưởng nên hướng dẫn nhân viên mới ứng xử thân thiện và làm lại thế nào?",
+      "c4": "Độ mịn của bọt sữa đồ uống nóng và nhiệt độ có chính xác hay không (chuẩn 65°C) ảnh hưởng trực tiếp đến vị ngọt và hương sữa tươi.\nTiêu chuẩn hiệu chuẩn hằng tuần:\n1. Dùng kim thông chuyên dụng làm sạch bốn lỗ vòi đánh sữa, ngâm dung dịch tẩy cặn sữa 15 phút rồi xả hơi 3 lần.\n2. Đo nước 65°C đồng thời bằng súng đo nhiệt hồng ngoại và nhiệt kế thủy ngân chuẩn; sai lệch quá ±1,5°C thì thay pin hoặc hiệu chỉnh hệ số phát xạ.\n3. Đánh thử 200 ml sữa tươi nguyên kem, lớp bọt mịn phải dày 1,5 cm.",
+      "c3": "Khách mua mang đi một ly trà Tứ Quý ít đá, ngồi ở quán 30 phút rồi ra quầy phàn nàn: \"Trà nhạt quá, như nước lọc vậy.\"\nQuy trình xử lý chuẩn của cửa hàng trưởng:\n1. Mỉm cười nhận lại ly ngay, đồng cảm với khách: \"Xin lỗi anh/chị, trà Tứ Quý để lâu đá tan sẽ làm nhạt hương trà thật!\"\n2. Tuyệt đối không cãi \"vì anh/chị để lâu quá\", lập tức làm lại trong 30 giây: \"Em làm ngay cho anh/chị một ly ít đá mới bằng trà vừa pha!\"\n3. Đưa ly mới bằng hai tay và tặng một thẻ thử món mới: \"Đây là trà Tứ Quý vùng cao vừa pha hôm nay, uống lúc còn mát là thơm nhất ạ!\"",
+      "c2": "Trong thời gian khuyến mãi trên app giao hàng, shipper thường tụ tập trước quầy lấy món hối đơn ở cửa hàng chính Đài Nam, khiến khách tại quán thấy áp lực, nhân viên pha chế hay bỏ sót phiếu khi nhiều ly giao hàng chồng nhau.\nGiải pháp đã kiểm chứng:\n1. Lập \"khu chờ giao hàng\" riêng cách quầy lấy món 1,5 m bên phải, kẻ vạch chờ màu xanh, tách hẳn khỏi luồng lấy món của khách tại quán.\n2. Áp dụng \"dán hai phiếu\": một phiếu trên ly, một phiếu trên miệng túi; nhân viên hỗ trợ đối chiếu hai phiếu khớp rồi mới cho vào túi buộc lại, tránh quên ống hút hoặc lấy nhầm.\n3. Tăng thời gian chuẩn bị trên app từ 8 phút lên 12 phút.",
+      "c1": "Vòi xả của thùng trà giữ nhiệt sau thời gian dài sử dụng dễ bám cặn tannin và cặn nước li ti bên trong; nếu không tháo ra ngâm mỗi ngày, trà sẽ có vị chua cũ.\nQuy trình đóng cửa chuẩn:\n1. Trước khi đóng cửa, pha bột acid citric thực phẩm với nước 70°C (tỷ lệ 1:50), đổ vào thùng ngâm 20 phút.\n2. Tháo gioăng silicon của vòi, ngâm trong bát cồn thực phẩm 75%; tuyệt đối không chà bằng miếng cọ thô để tránh trầy xước gây rò rỉ.\n3. Sáng hôm sau, tráng tuần hoàn hai lần bằng nước tinh khiết đun sôi 85°C rồi mới cho trà nền mới vào."
+    }
   },
   "CsHelp": {
     "pageTitle": "Hướng Dẫn Cài Đặt Hệ Thống Chăm Sóc Khách Hàng",
@@ -8607,5 +9156,3213 @@
     "save": "Lưu",
     "resetDefault": "Khôi phục mặc định 2026",
     "sources": "Nguồn pháp lý"
+  },
+  "MktTemplates": {
+    "badFormat": "Vui lòng tải ảnh JPG, PNG hoặc WebP",
+    "fullPos": "[Phong cách / prompt tích cực]:",
+    "fullNeg": "[Loại trừ / prompt tiêu cực]:",
+    "fullAspect": "[Tỉ lệ khung hình đề xuất]:",
+    "tooLarge": "Ảnh tham chiếu quá lớn, vui lòng dùng ảnh nhỏ hơn",
+    "genFailedRetry": "Tạo thất bại, vui lòng thử lại sau",
+    "genFailed": "Tạo thất bại",
+    "thisProduct": "sản phẩm này",
+    "keyPointParen": "(điểm nhấn: {k})",
+    "scriptTitle": "[Kịch bản phân cảnh đầy đủ {title} {cmd}]",
+    "applicability": "Tình huống áp dụng: ",
+    "specLine": "Đề xuất: tỉ lệ {aspect} | thông số: {params}",
+    "topicLine": "Chủ đề: ",
+    "timelineHead": "─── Dòng thời gian phân cảnh ───",
+    "featuredProduct": "sản phẩm nổi bật",
+    "defaultKeyPoint": "chất lượng hàng đầu, ưu đãi có hạn",
+    "productVideo": "video marketing sản phẩm",
+    "fallbackScript": "[Kịch bản lồng tiếng {title}]\n\n“Xin chào mọi người! {name} chính thức ra mắt hôm nay! {kp}Mang đến trải nghiệm cực kỳ đáng giá! Bình luận ngay hoặc nhấn link trên trang để đặt trước, số lượng có hạn!”",
+    "popularItem": "sản phẩm hot này",
+    "fallbackKp": "Không chỉ {k}, ",
+    "fallbackShort": "[Kịch bản lồng tiếng {title}]\n\n“Xin chào mọi người! {name} chính thức ra mắt hôm nay! Nhấn để tìm hiểu thêm!”",
+    "pollSubmitting": "Đang gửi tác vụ đến công cụ video AI…",
+    "needPro": "Gói hiện tại chưa hỗ trợ tạo video, vui lòng nâng cấp lên PRO trở lên.",
+    "submitFailed": "Gửi tác vụ video thất bại",
+    "noTaskId": "Không nhận được ID tác vụ video",
+    "pollSubmitted": "Đã gửi tác vụ, AI đang dựng khung hình và ánh sáng (khoảng 30–60 giây)…",
+    "pollProgress": "Đang dựng video ({p}%)…",
+    "renderFailed": "Dựng video thất bại",
+    "timeout": "Tạo video quá thời gian, vui lòng xem lại trong AI Studio sau.",
+    "hubTag": "Trung tâm sáng tạo phong cách hình ảnh & quảng cáo",
+    "title": "Phong cách hình ảnh & quảng cáo",
+    "subtitle": "Không cần nhớ lệnh! 85 phong cách hình ảnh và 185 mẫu kịch bản video ngắn. Chọn cảm giác hoặc cấu trúc kịch bản, AI tạo ngay hình ảnh và video ngắn thu hút.",
+    "openStudio": "Mở AI Studio (nâng cao)",
+    "tabImage": "Mẫu phong cách hình ảnh",
+    "count85": "85 phong cách",
+    "tabVideo": "Kịch bản video ngắn & quảng cáo",
+    "count185": "185 phân cảnh",
+    "searchImgPh": "Tìm theo cảm giác, từ khóa (vd: đất sét, Black Friday, miễn phí ship, giảm giá, thu nhỏ, lễ hội…)",
+    "imgCount": "Hiển thị <b>{n}</b> phong cách hình ảnh",
+    "zoomTitle": "Phóng to ảnh mẫu và thông số",
+    "fitFor": "Phù hợp: ",
+    "defaultAspect": "Tỉ lệ mặc định {a}",
+    "chooseStyle": "Chọn phong cách này →",
+    "genSettings": "Cài đặt tạo ảnh",
+    "currentStyle": "Đang chọn: ",
+    "visualStyle": "Phong cách hình ảnh",
+    "samplePreview": "Xem trước mẫu",
+    "zoomIn": "Phóng to",
+    "clickZoom": "Nhấn để phóng to",
+    "suggestedParams": "Thông số đề xuất: ",
+    "imgAspect": "Tỉ lệ khung hình ảnh",
+    "imgTopic": "Chủ đề sản phẩm / điểm bán hàng",
+    "imgTopicPh": "vd: bánh crepe matcha thủ công, tai nghe không dây tối giản, giảm 50% miễn phí ship có hạn…",
+    "refPhotos": "Ảnh sản phẩm tham chiếu (không bắt buộc, hỗ trợ tạo từ ảnh",
+    "refMax": ", tối đa {n} ảnh",
+    "refClose": ")",
+    "removeImage": "Xóa ảnh",
+    "loadedN": "Đã tải {n} ảnh tham chiếu",
+    "multiRefNote": "AI chỉ dùng tổ hợp sản phẩm trong các ảnh này",
+    "singleRefNote": "AI sẽ kết hợp phong cách theo hình dạng và bố cục này",
+    "addMorePhotos": "Thêm ảnh sản phẩm",
+    "uploadPhotos": "Nhấn để tải ảnh sản phẩm (JPG / PNG)",
+    "promptSkeleton": "Khung prompt AI",
+    "copied": "Đã sao chép",
+    "copyPrompt": "Sao chép prompt",
+    "engine": "Công cụ tạo",
+    "engineFixed": "Khi có ảnh tham chiếu, luôn dùng Nano Banana Pro (thiết kế lại từ ảnh gốc)",
+    "perImage": "{p} / ảnh",
+    "perImageTested": "{p} / ảnh · đo thực tế",
+    "rendering": "AI đang dựng ảnh marketing ({e})…",
+    "generateNow": "Tạo ảnh marketing ngay ({e})",
+    "imgDone": "Ảnh marketing AI đã hoàn tất!",
+    "styleLine": "Phong cách: {title} ({feeling})",
+    "linkCopied": "Đã sao chép liên kết",
+    "copyImgLink": "Sao chép liên kết ảnh",
+    "downloadHd": "Tải ảnh chất lượng cao",
+    "publishSocial": "Đăng lên mạng xã hội chỉ với một nhấp",
+    "fullSkeleton": "Khung prompt đầy đủ đã dùng",
+    "publishHub": "Trung tâm đăng bài MXH",
+    "multiPlatform": "Đa nền tảng",
+    "publishDesc": "Không cần tải về thủ công! Đăng ngay ảnh này lên Facebook, Instagram, Threads, LINE và các nền tảng khác.",
+    "openPublish": "Mở trung tâm đăng bài và chọn nền tảng",
+    "regenerate": "Tạo lại với cùng thông số (biến thể)",
+    "toStudio": "Mở trong AI Studio để tách nền, chỉnh sửa hoặc chuyển thành video ngắn →",
+    "searchVideoPh": "Tìm lệnh hoặc chủ đề (vd: /hook3sec, nỗi đau, 360, mở hộp, ASMR, Black Friday, so sánh…)",
+    "videoCount": "Hiển thị <b>{n}</b> mẫu phân cảnh marketing",
+    "shots": "{n} cảnh quay",
+    "useScript": "Dùng kịch bản →",
+    "officialStructure": "Cấu trúc phân cảnh",
+    "suggestedLength": "Độ dài đề xuất: khoảng {s} giây",
+    "specSuggest": "Thông số đề xuất: ",
+    "videoName": "Tên sản phẩm / chủ đề",
+    "videoNamePh": "vd: sữa đường đen đặc biệt, tai nghe chống ồn tối giản, hộp quà kỷ niệm…",
+    "videoKey": "Điểm nổi bật / khuyến mãi (không bắt buộc)",
+    "videoKeyPh": "vd: 3 lớp đậm vị, 90% khách quay lại, mua 1 tặng 1 có hạn…",
+    "videoRef": "Ảnh tham chiếu (không bắt buộc, tạo video từ ảnh này)",
+    "refLoaded": "Đã tải ảnh tham chiếu",
+    "refFirstFrame": "Video sẽ dùng ảnh này làm chủ thể và khung hình đầu",
+    "uploadScene": "Nhấn để tải ảnh sản phẩm/bối cảnh (JPG / PNG)",
+    "videoAspect": "Tỉ lệ khung hình video",
+    "scriptCopied": "Đã sao chép kịch bản",
+    "copyScript": "Sao chép toàn bộ phân cảnh",
+    "promptCopied": "Đã sao chép prompt",
+    "copyEnPrompt": "Sao chép prompt tiếng Anh",
+    "expandScript": "AI mở rộng thành kịch bản lồng tiếng đầy đủ kèm chỉ dẫn cảnh quay",
+    "voScript": "Kịch bản lồng tiếng AI",
+    "voCopied": "Đã sao chép kịch bản lồng tiếng",
+    "copyVo": "Sao chép kịch bản",
+    "videoDone": "Video ngắn AI đã hoàn tất!",
+    "downloadVideo": "Tải video",
+    "publishVideo": "Đăng lên Reels / Shorts / TikTok chỉ với một nhấp",
+    "videoBusy": "Công cụ video AI đang xử lý…",
+    "videoGen": "Tạo bằng công cụ video AI (Kling/Haiper)",
+    "haveVideo": "Đã có video? Mở trung tâm đăng bài →",
+    "styleSample": "Mẫu phong cách",
+    "styleMood": "Cảm giác phong cách",
+    "bestSettings": "Thiết lập tốt nhất",
+    "positivePrompt": "Khung prompt (prompt tích cực)",
+    "close": "Đóng",
+    "applyStyle": "Dùng phong cách này và thiết lập tạo ảnh",
+    "imgCopy": "✨【{title}】Hình ảnh mới ra mắt!\n\nThiết kế theo phong cách “{feeling}”, chất lượng và chi tiết tuyệt hảo 🔥{extra}\n\nTìm hiểu thêm hoặc nhắn tin cho chúng tôi ngay!\n\n#ThuongHieu #SanPhamMoi #ThietKeMarketing #NoiBat #PhongCachSong",
+    "imgCopyExtra": "\n\nĐiểm nổi bật: {k}",
+    "videoCopy": "🔥【{title}】Video ngắn chính thức ra mắt!\n\n{product}{key}Phân cảnh chuyên nghiệp giúp giữ chân và chuyển đổi cao, xem ngay điểm nổi bật!\n\n#VideoNgan #Reels #Shorts #TikTok #MarketingThuongHieu",
+    "videoCopyProduct": "Sản phẩm: {p}\n",
+    "videoCopyKey": "Điểm nổi bật: {k}\n\n",
+    "videoStoryboard": "Phân cảnh video",
+    "ar": {
+      "ar11": "Bài IG / ảnh bìa sàn",
+      "ar45": "IG / FB tràn màn hình",
+      "ar34": "Poster sự kiện / khuyến mãi",
+      "ar169": "Banner trang chủ",
+      "ar916": "Story / Reels / TikTok"
+    },
+    "vcat": {
+      "all": "Tất cả mẫu video",
+      "ad_conversion": "Quảng cáo & chuyển đổi",
+      "product_display": "Trưng bày sản phẩm",
+      "social_viral": "Video viral MXH",
+      "trust_authority": "Uy tín thương hiệu",
+      "tutorial_sop": "Hướng dẫn & SOP",
+      "tech_structure": "Cấu trúc & kiểm thử",
+      "events_campaigns": "Sự kiện & chiến dịch"
+    },
+    "cat": {
+      "all": "Tất cả phong cách",
+      "style": "Phong cách hình ảnh",
+      "promo": "Khuyến mãi",
+      "vip": "Thành viên & VIP",
+      "campaign": "Chiến dịch lớn",
+      "holiday": "Lễ hội",
+      "social": "Tương tác MXH",
+      "trust": "Uy tín & đánh giá",
+      "business": "Thông báo kinh doanh"
+    }
+  },
+  "MktPlatforms": {
+    "ga4Hosts": " | phiên theo trang: {hosts}",
+    "p": {
+      "Facebook": {
+        "name": "Trang Facebook",
+        "note": "Dùng chung cho FB Reels. Tạo app trên Meta for Developers, xin quyền pages_manage_posts + pages_read_engagement + pages_show_list rồi tạo Token. Để AI Agent chạy quảng cáo Meta: dùng System User token có quyền ads_management và nhập ID tài khoản quảng cáo.",
+        "f_ad_account_id": "ID tài khoản quảng cáo (không bắt buộc, để Agent chạy quảng cáo)"
+      },
+      "Instagram": {
+        "note": "Dùng chung cho IG Reels. Cần tài khoản IG doanh nghiệp liên kết với Trang Facebook."
+      },
+      "Threads": {
+        "note": "Cần quyền truy cập Threads API."
+      },
+      "LinkedIn": {
+        "note": "Author URN: cá nhân là urn:li:person:xxxx, trang công ty là urn:li:organization:xxxx.",
+        "f_client_id": "Client ID (không bắt buộc, để tự làm mới token)",
+        "f_client_secret": "Client Secret (không bắt buộc, để tự làm mới token)",
+        "f_refresh_token": "Refresh Token (không bắt buộc, chỉ khi LinkedIn cấp)"
+      },
+      "Twitter_X": {
+        "note": "Lấy bốn giá trị này ở trang “Keys and Tokens” trong trang nhà phát triển."
+      },
+      "LINE_VOOM": {
+        "name": "Gửi hàng loạt LINE Official Account",
+        "note": "Dùng Channel Access Token của LINE Official Account để gửi tin cho tất cả bạn bè (tính vào hạn mức tin nhắn hàng tháng theo số bạn bè). Lưu riêng với thông tin LINE của kênh CSKH."
+      },
+      "Zalo": {
+        "name": "Zalo OA (đăng bài)",
+        "note": "Dùng để đăng bài; lưu riêng với thông tin Zalo của kênh CSKH.",
+        "f_app_id": "App ID (để tự làm mới token)",
+        "f_secret_key": "Secret Key (để tự làm mới token)",
+        "f_refresh_token": "Refresh Token (để tự làm mới token)"
+      },
+      "YouTube_Shorts": {
+        "note": "Refresh Token có được sau khi hoàn tất ủy quyền Google OAuth một lần (ví dụ qua OAuth Playground); không thể tạo bằng cách đăng nhập mật khẩu."
+      },
+      "TikTok": {
+        "note": "Cần Access Token có quyền Content Posting API.",
+        "f_client_key": "Client Key (để tự làm mới token)",
+        "f_client_secret": "Client Secret (để tự làm mới token)",
+        "f_refresh_token": "Refresh Token (để tự làm mới token)"
+      },
+      "GA4": {
+        "name": "Google Analytics 4 (lưu lượng website, chỉ đọc)",
+        "note": "Cho phép AI Agent đọc số phiên/người dùng của website. Các bước: ① bật “Google Analytics Data API” trong Google Cloud Console ② tạo tài khoản dịch vụ và tải khóa JSON ③ trong GA4 “Quản trị → Quản lý quyền truy cập tài sản”, thêm email tài khoản dịch vụ với vai trò “Người xem” ④ ID tài sản ở “Quản trị → Chi tiết tài sản”. Khi điền “Measurement ID”, website homestay và trang đăng ký thành viên trên nền tảng sẽ tự gắn mã theo dõi; với website bên ngoài, dán cùng Measurement ID và thêm cả hai tên miền trong “Định cấu hình miền” của luồng dữ liệu GA4 để theo dõi liên miền. Không tính vào số nền tảng của gói.",
+        "f_property_id": "ID tài sản GA4",
+        "f_measurement_id": "Measurement ID (tự gắn mã theo dõi cho website homestay trên nền tảng)",
+        "f_service_account_json": "Khóa JSON tài khoản dịch vụ (dán toàn bộ nội dung tệp)"
+      }
+    },
+    "adsOk": "{acc} | {name} | {cur} | trạng thái: {status} | 30 ngày qua: tiếp cận {reach}, hiển thị {imp}, chi tiêu {spend}",
+    "testFailed": "Kiểm tra thất bại",
+    "netErr": "Lỗi mạng",
+    "unknown": "(không rõ)",
+    "ga4Ok": "Tài sản {pid} | 7 ngày qua: phiên {s}, người dùng {u}, người dùng mới {nu}, lượt xem {pv}",
+    "saveFailed": "Lưu thất bại",
+    "saved": "Đã lưu {pid}",
+    "title": "Kết nối nền tảng đăng bài",
+    "needAdmin": "Kết nối nền tảng phải do <b>chủ sở hữu hoặc quản trị viên (IT)</b> thiết lập. Hãy nhờ chủ sở hữu cấp quyền quản trị.",
+    "connected": "Đã kết nối",
+    "notLinked": "Chưa liên kết",
+    "docs": "Tài liệu chính thức",
+    "maskedPh": "Đã đặt {masked} (để trống để giữ nguyên)",
+    "save": "Lưu",
+    "testGa4": "Kiểm tra kết nối GA4 (chỉ đọc)",
+    "testAds": "Kiểm tra kết nối Meta Ads (chỉ đọc, không tốn tiền)",
+    "guide": {
+      "title": "Hướng dẫn thiết lập từng bước",
+      "docs": "Tài liệu chính thức: "
+    },
+    "token": {
+      "refreshing": "Đang tự làm mới token | token hiện tại hết hạn: {at}",
+      "failed": "Lần tự làm mới gần nhất thất bại: {error} (hãy lấy và dán Refresh Token mới)"
+    }
+  },
+  "SocialPublish": {
+    "imagePost": "Bài đăng hình ảnh",
+    "failed": "Thất bại",
+    "p": {
+      "Facebook": {
+        "name": "Trang Facebook",
+        "desc": "Đăng lên Trang Facebook"
+      },
+      "Instagram": {
+        "name": "Bài đăng Instagram",
+        "desc": "Đăng lên tài khoản Instagram doanh nghiệp"
+      },
+      "Threads": {
+        "desc": "Đăng lên Threads"
+      },
+      "FB_Reels": {
+        "name": "Facebook Reels",
+        "desc": "Đăng video ngắn dọc lên Facebook"
+      },
+      "IG_Reels": {
+        "name": "Instagram Reels",
+        "desc": "Đăng video ngắn dọc lên Instagram"
+      },
+      "YouTube_Shorts": {
+        "name": "YouTube Shorts",
+        "desc": "Đăng Shorts lên kênh YouTube"
+      },
+      "TikTok": {
+        "name": "TikTok",
+        "desc": "Đăng video ngắn lên tài khoản TikTok nhà sáng tạo/thương hiệu"
+      },
+      "LINE_VOOM": {
+        "name": "Gửi hàng loạt LINE OA",
+        "desc": "Gửi tới tất cả bạn bè qua LINE OA (tính vào hạn mức tin nhắn tháng)"
+      },
+      "Twitter_X": {
+        "desc": "Đăng lên tài khoản X"
+      },
+      "LinkedIn": {
+        "desc": "Chia sẻ lên trang cá nhân hoặc trang công ty"
+      },
+      "Zalo": {
+        "desc": "Đăng bài lên Zalo Official Account"
+      }
+    },
+    "tags": {
+      "t0": "#SanPhamMoi",
+      "t1": "#SuKienThuongHieu",
+      "t2": "#UuDaiCoHan",
+      "t3": "#AIVisual",
+      "t4": "#GoiY",
+      "t5": "#PhongCachSong",
+      "t6": "#BanChay"
+    },
+    "featured": "Hình ảnh nổi bật",
+    "fallbackCopy": "✨ {title} chính thức ra mắt!\n\nThiết kế hình ảnh đỉnh cao, mang đến trải nghiệm thương hiệu ấn tượng 🔥\n\nTìm hiểu thêm hoặc nhắn tin cho chúng tôi để trải nghiệm sớm nhất!\n\n#ThuongHieu #SanPhamMoi #YTuongMarketing #ThietKe #AIVisual",
+    "fallbackShort": "✨ {title} chính thức ra mắt!\n\nĐẹp đến từng chi tiết. Theo dõi chúng tôi để nhận tin mới nhất!\n\n#MarketingThuongHieu #PhongCachSong #SanPhamMoi",
+    "noMedia": "Không tìm thấy nội dung để đăng",
+    "needPlatform": "Hãy chọn ít nhất một nền tảng đã kết nối",
+    "needCopy": "Vui lòng nhập nội dung bài đăng",
+    "uploadFailed": "Tải tệp lên thất bại, vui lòng thử lại",
+    "noPublicUrl": "Không lấy được liên kết công khai của tệp",
+    "needPro": "Gói hiện tại chưa hỗ trợ tự động đăng, vui lòng nâng cấp lên PRO trở lên.",
+    "publishFailedRetry": "Đăng thất bại, vui lòng thử lại sau",
+    "title": "Trung tâm đăng bài một chạm",
+    "videoPost": "Video ngắn",
+    "subtitle": "Đăng ngay sản phẩm AI lên Facebook, Instagram, Threads, TikTok, YouTube và các nền tảng khác",
+    "credCenter": "Cài đặt thông tin xác thực",
+    "preview": "Xem trước nội dung",
+    "source": "Nguồn: {s}",
+    "status": "Tình trạng kết nối",
+    "linkedCount": "{n} / {total} đã liên kết",
+    "noCredsA": "Chưa liên kết thông tin đăng bài. Hãy vào",
+    "noCredsLink": "Kết nối nền tảng",
+    "noCredsB": "để thiết lập Token Trang hoặc khóa API.",
+    "choose": "Chọn nền tảng đăng",
+    "selectAll": "Chọn tất cả đã kết nối",
+    "clear": "Bỏ chọn",
+    "refresh": "Làm mới trạng thái kết nối",
+    "connected": "Đã kết nối",
+    "link": "Liên kết ↗",
+    "copyLabel": "Nội dung bài đăng / mô tả",
+    "aiPolish": "AI trau chuốt nội dung",
+    "copyPh": "Nhập nội dung bài đăng, điểm nổi bật, lời kêu gọi và hashtag…",
+    "quickTags": "Thẻ thường dùng: ",
+    "charCount": "{n} ký tự",
+    "limits": "Giới hạn: Twitter 280 | Threads 500 | IG 2.200 ký tự",
+    "done": "Đã đăng xong",
+    "summary": "{n} nền tảng | thành công: <g>{ok}</g> | thất bại: <r>{fail}</r>",
+    "ok": "Đã đăng",
+    "postId": "ID bài: {id}",
+    "selected": "Đã chọn <b>{n}</b> nền tảng",
+    "cancel": "Hủy",
+    "publishing": "Đang đăng…",
+    "publishNow": "Đăng ngay",
+    "backEdit": "← Quay lại chỉnh sửa",
+    "manage": "Quản lý kết nối",
+    "close": "Xong"
+  },
+  "Crm": {
+    "newTitle": "Thêm thành viên",
+    "copy": "Sao chép",
+    "tier": {
+      "general": "Khách thường",
+      "silver": "Bạc",
+      "gold": "Vàng",
+      "vip": "👑 VIP",
+      "vvip": "💎 VVIP"
+    },
+    "col": {
+      "phone": {
+        "label": "Số điện thoại",
+        "desc": "Số điện thoại thành viên (mã định danh)"
+      },
+      "name": {
+        "label": "Tên khách hàng",
+        "desc": "Tên hoặc biệt danh",
+        "ex": "Nguyễn Thị Lan"
+      },
+      "tier": {
+        "label": "Hạng thành viên",
+        "desc": "general (thường), silver (bạc), gold (vàng), vip, vvip"
+      },
+      "total_spend": {
+        "label": "Tổng chi tiêu"
+      },
+      "order_count": {
+        "label": "Số lần mua"
+      },
+      "tags": {
+        "label": "Nhãn khách hàng",
+        "desc": "Nhiều nhãn, phân cách bằng dấu phẩy",
+        "ex": "thích sản phẩm mới, mê trà sữa"
+      },
+      "email": {
+        "label": "Email"
+      },
+      "notes": {
+        "label": "Ghi chú sở thích",
+        "ex": "Ít đá, ít đường; khách quen"
+      }
+    },
+    "needPhone": "Vui lòng nhập số điện thoại",
+    "saveFailed": "Lưu thất bại",
+    "confirmDelete": "Xóa thành viên này?",
+    "importFailed": "Nhập thất bại",
+    "serverErr": "Lỗi kết nối máy chủ",
+    "needBatch": "Vui lòng nhập danh sách cần nhập",
+    "imported": "Đã nhập {n} thành viên!",
+    "needProduct": "Vui lòng nhập tên sản phẩm mới",
+    "pushFailed": "Tạo nội dung thất bại",
+    "totalMembers": "Tổng số thành viên",
+    "vipGroup": "Khách hàng VIP",
+    "vipPerk": "Được ưu tiên trải nghiệm sản phẩm mới",
+    "gold": "Thành viên Vàng",
+    "totalSpend": "Tổng chi tiêu của thành viên",
+    "modeTitle": "Chế độ kết nối CRM hiện tại: tải lên hàng loạt Excel / CSV (giai đoạn 1)",
+    "modeDesc": "Kéo thả bảng tính xuất từ CRM hiện có, tự động ghép cột. Đồng bộ theo lịch (giai đoạn 2) và kết nối API trực tiếp (giai đoạn 3) đang được lên kế hoạch.",
+    "phase1": "Giai đoạn 1: Excel hàng loạt đang hoạt động",
+    "phase23": "Giai đoạn 2/3: đồng bộ tự động đang lên kế hoạch",
+    "searchPh": "Tìm theo tên hoặc số điện thoại…",
+    "allTiers": "Tất cả hạng",
+    "vipFilter": "👑 VIP / VVIP",
+    "vipPush": "Gửi tin sản phẩm mới cho VIP",
+    "importExcel": "Nhập Excel CRM",
+    "pasteText": "Dán văn bản",
+    "addMember": "Thêm thành viên",
+    "empty": "Không có thành viên phù hợp",
+    "emptyHint": "Dùng “Nhập” hoặc “Thêm thành viên” ở trên để tạo danh sách khách hàng.",
+    "thName": "Tên / điện thoại",
+    "thTier": "Hạng",
+    "thTags": "Nhãn",
+    "thSpend": "Tổng chi tiêu",
+    "thOrders": "Số đơn",
+    "thLast": "Lần ghé gần nhất",
+    "thActions": "Thao tác",
+    "unnamed": "(chưa đặt tên)",
+    "times": "{n} lần",
+    "noRecord": "Chưa có",
+    "editTitle": "Sửa thành viên",
+    "phoneReq": "Số điện thoại *",
+    "phonePh": "VD: 0912345678",
+    "namePh": "VD: Nguyễn Thị Lan",
+    "tagsLabel": "Nhãn (phân cách bằng dấu phẩy)",
+    "tagsPh": "VD: thích sản phẩm mới, mê trà sữa, khách quen",
+    "notesLabel": "Ghi chú",
+    "cancel": "Hủy",
+    "saveMember": "Lưu thành viên",
+    "batchTitle": "Nhập nhanh hàng loạt",
+    "batchHint": "Mỗi dòng một người: số điện thoại, tên, hạng",
+    "batchPh": "0912345678, Trần Minh, VIP\n0923456789, Lê Lan, VIP\n0934567890, Phạm Hùng, Vàng",
+    "startBatch": "Bắt đầu nhập",
+    "pushTitle": "Tạo tin nhắn ưu tiên cho VIP",
+    "pushDesc": "Tự động tạo thư mời trải nghiệm sớm và nội dung tin nhắn cho khách VIP / VVIP",
+    "productReq": "Tên sản phẩm sắp ra mắt *",
+    "productPh": "VD: Trà ô long rang sữa đặc biệt",
+    "deadline": "Hạn ưu đãi VIP",
+    "extraNote": "Ghi chú ưu đãi thêm",
+    "extraPh": "VD: đọc số điện thoại tặng một bánh quy thủ công",
+    "generate": "Tạo tin nhắn VIP",
+    "audience": "Nhóm VIP mục tiêu: {n} khách",
+    "clickCopy": "Nhấn để sao chép",
+    "lineTpl": "Mẫu tin LINE OA",
+    "copied": "Đã sao chép",
+    "smsTpl": "Mẫu SMS ngắn",
+    "importTitle": "Nhập bảng tính khách hàng & VIP từ CRM",
+    "importDesc": "Hỗ trợ .xlsx, .xls và .csv. Hệ thống đối chiếu theo số điện thoại và tự cập nhật thành viên (upsert).",
+    "tplFile": "CRM_mau_khach_hang.xlsx",
+    "sheet": "Khách hàng",
+    "help1": "Tên cột khác nhau từ CRM (như “Phone”, “客戶電話”, “SĐT”) được tự động ghép.",
+    "help2": "“Hạng” nhận VIP, VVIP, vàng, bạc hoặc thường và được tự phân loại.",
+    "help3": "“Nhãn” có thể phân cách bằng dấu phẩy (VD: thích sản phẩm mới, khách quen, mê trà sữa)."
+  },
+  "ExcelImport": {
+    "no": "Không",
+    "cancel": "Hủy",
+    "sheetDefault": "Dữ liệu",
+    "parseFailed": "Không đọc được tệp, vui lòng kiểm tra định dạng",
+    "submitErr": "Lỗi khi gửi dữ liệu nhập",
+    "defaultDesc": "Hỗ trợ .xlsx, .xls và .csv; tạo mới hoặc cập nhật hàng loạt (upsert)",
+    "step1": "1. Chuẩn bị bảng tính Excel (hoặc tải mẫu)",
+    "dlXlsx": "Tải mẫu Excel (.xlsx)",
+    "dlCsv": "Mẫu .csv",
+    "required": "Cột bắt buộc: ",
+    "noRequired": "Không có cột bắt buộc (điền tùy ý)",
+    "upsert": "<b>Cập nhật:</b> bản ghi đã có (khớp theo mã/tên) sẽ tự cập nhật; bản ghi mới sẽ được tạo.",
+    "step2": "2. Tải lên tệp Excel / CSV đã điền",
+    "reselect": "Chọn lại",
+    "previewN": "Xem trước ({n} dòng)",
+    "parsing": "Đang đọc bảng tính…",
+    "fileSize": "Dung lượng: {kb} KB · nhấn hoặc kéo thả để thay",
+    "pick": "Nhấn để chọn tệp hoặc kéo thả vào đây",
+    "formats": "Hỗ trợ Microsoft Excel (.xlsx, .xls) và CSV",
+    "previewHead": "{n} dòng đầu (tìm thấy {total} dòng hợp lệ)",
+    "reselectFile": "Chọn tệp khác",
+    "yes": "Có",
+    "checks": "Lưu ý kiểm tra dữ liệu ({n})",
+    "moreChecks": "…và {n} lưu ý khác",
+    "importErr": "Lỗi nhập",
+    "done": "Nhập xong!",
+    "inserted": "Thêm {n}",
+    "updated": ", cập nhật {n}",
+    "importedN": "Đã lưu {n}",
+    "skipped": ", bỏ qua {n}",
+    "notImported": "Dòng chưa nhập ({n}):",
+    "rowN": "Dòng {n}: ",
+    "badFormat": "Sai định dạng",
+    "ready": "Đã tải <b>{n}</b> dòng sẵn sàng nhập",
+    "close": "Đóng",
+    "writing": "Đang lưu…",
+    "confirm": "Nhập / cập nhật ({n})",
+    "another": "Nhập tệp khác"
+  },
+  "Campaigns": {
+    "dueToday": "(hết hạn hôm nay)",
+    "allStores": "Tất cả cửa hàng / kênh",
+    "tbd": "Chưa định",
+    "aiStart": "Bắt đầu lập kế hoạch bằng AI",
+    "newTitle": "Thêm chiến dịch",
+    "ordersN": "{n} đơn",
+    "cupsN": "{n} ly",
+    "channel": {
+      "offline": "Offline",
+      "online": "Online",
+      "hybrid": "Kết hợp"
+    },
+    "category": {
+      "event": "Sự kiện đường phố / pop-up",
+      "material": "Vật phẩm trưng bày tại cửa hàng",
+      "outdoor": "Quảng cáo ngoài trời",
+      "partner": "Hợp tác liên thương hiệu",
+      "social_promo": "Khuyến mãi MXH",
+      "delivery_promo": "Ưu đãi app giao hàng",
+      "member_exclusive": "Ưu đãi riêng thành viên VIP"
+    },
+    "status": {
+      "draft": "Bản nháp",
+      "planned": "Đã lên lịch",
+      "active": "Đang chạy",
+      "ended": "Đã kết thúc",
+      "cancelled": "Đã hủy"
+    },
+    "col": {
+      "sales_date": {
+        "label": "Ngày bán",
+        "desc": "Ngày (VD: 2026-09-20 hoặc 2026/09/20)"
+      },
+      "store": {
+        "label": "Cửa hàng",
+        "desc": "Để trống = tất cả cửa hàng",
+        "ex": "Cửa hàng chính"
+      },
+      "revenue": {
+        "label": "Doanh thu"
+      },
+      "order_count": {
+        "label": "Số đơn"
+      },
+      "cups_sold": {
+        "label": "Số ly bán (số lượng)"
+      },
+      "product_name": {
+        "label": "Tên sản phẩm (không bắt buộc)",
+        "desc": "Để trống nếu là doanh thu cả cửa hàng; điền tên nếu là chi tiết theo sản phẩm",
+        "ex": "Trà ô long rang sữa đặc biệt"
+      },
+      "product_code": {
+        "label": "Mã sản phẩm (không bắt buộc)"
+      },
+      "category": {
+        "label": "Danh mục (không bắt buộc)",
+        "ex": "Dòng trà sữa"
+      }
+    },
+    "importFailed": "Nhập thất bại",
+    "serverErr": "Lỗi kết nối máy chủ",
+    "needName": "Vui lòng nhập tên chiến dịch",
+    "saveFailed": "Lưu thất bại",
+    "confirmDelete": "Xóa chiến dịch này?",
+    "needTopic": "Vui lòng nhập chủ đề hoặc ý tưởng chiến dịch",
+    "aiFailed": "AI lập kế hoạch thất bại",
+    "activeCount": "Chiến dịch đang chạy",
+    "totalBudget": "Tổng ngân sách",
+    "totalCount": "Tổng số chiến dịch",
+    "iposDb": "Cơ sở dữ liệu doanh số iPOS",
+    "iposStats": "Đã nhập {n} dòng doanh số · doanh thu ${rev}",
+    "noIpos": "Chưa có dữ liệu iPOS",
+    "iposRange": "Dữ liệu từ {from} đến {to} ({n} cửa hàng). Phân tích hiệu quả tự so sánh với kỳ trước và cùng kỳ năm trước.",
+    "iposHint": "Kéo thả báo cáo ngày cửa hàng và chi tiết bán hàng iPOS để tự so sánh hiệu quả (PoP, YoY, sau chiến dịch).",
+    "importIpos": "Nhập báo cáo iPOS",
+    "allChannels": "Tất cả kênh",
+    "chOfflineLong": "Offline (cửa hàng / pop-up)",
+    "chOnlineLong": "Online (MXH / giao hàng)",
+    "chHybridLong": "Kết hợp (OMO)",
+    "allStatus": "Tất cả trạng thái",
+    "aiAssistant": "Trợ lý AI lập kế hoạch",
+    "add": "Thêm chiến dịch",
+    "empty": "Chưa có chiến dịch",
+    "emptyHint": "Nhấn “Trợ lý AI lập kế hoạch” ở trên để AI thiết kế chiến dịch chuyển đổi cao cho bạn.",
+    "daysLeft": "(còn {n} ngày)",
+    "storeIs": "Cửa hàng: {s}",
+    "budgetIs": "Ngân sách: ${v}",
+    "now": "Ngay",
+    "analysis": "Hiệu quả",
+    "aiTitle": "Trợ lý AI lập kế hoạch chiến dịch",
+    "aiDesc": "Phân tích thương hiệu và tạo chủ đề, cơ chế ưu đãi, kịch bản tại cửa hàng và danh sách kiểm tra chỉ với một nhấp",
+    "topicReq": "Chủ đề / ý tưởng *",
+    "topicPh": "VD: lễ hội trà mùa thu nếm thử tại cửa hàng, ngày mưa giao hàng ly thứ 2 giảm 20…",
+    "channelLabel": "Kênh",
+    "typeLabel": "Loại",
+    "targetStore": "Cửa hàng mục tiêu",
+    "allStoresPh": "Để trống = tất cả cửa hàng",
+    "budgetPlan": "Ngân sách dự kiến ($)",
+    "budgetPh": "VD: 5000",
+    "extraReq": "Yêu cầu thêm / ý tưởng ưu đãi (không bắt buộc)",
+    "extraPh": "VD: tăng doanh số trà sữa tươi và bánh mới, thu hút học sinh sinh viên…",
+    "aiWorking": "AI đang lập kế hoạch chiến dịch…",
+    "aiDraft": "Bản nháp kế hoạch AI",
+    "readyToUse": "Dùng được ngay",
+    "mechanic": "Cơ chế ưu đãi: ",
+    "script": "Kịch bản tại cửa hàng: ",
+    "social": "Nội dung MXH: ",
+    "checklist": "Danh sách kiểm tra: ",
+    "kpi": "Mục tiêu: ",
+    "replan": "Lập lại",
+    "adopt": "Dùng kế hoạch này và lưu",
+    "editTitle": "Sửa chiến dịch",
+    "nameReq": "Tên chiến dịch *",
+    "namePh": "VD: pop-up mua 1 tặng 1",
+    "statusLabel": "Trạng thái",
+    "storeLabel": "Cửa hàng",
+    "startDate": "Ngày bắt đầu",
+    "endDate": "Ngày kết thúc",
+    "budget": "Ngân sách ($)",
+    "spent": "Chi tiêu thực tế ($)",
+    "imageUrl": "URL hình ảnh chính / ảnh thực tế",
+    "notes": "Ghi chú & điểm chính",
+    "cancel": "Hủy",
+    "save": "Lưu chiến dịch",
+    "reportTitle": "Báo cáo so sánh hiệu quả",
+    "reportDesc": "Dùng giao dịch POS để so sánh thời gian chiến dịch với kỳ trước (PoP), cùng kỳ năm trước (YoY) và hiệu ứng sau chiến dịch",
+    "computing": "Đang tính chỉ số từ dữ liệu POS…",
+    "noData": "Chưa đủ dữ liệu đơn hàng để so sánh",
+    "periodRevenue": "Doanh thu trong chiến dịch",
+    "ordersCups": "{o} đơn · {c} ly",
+    "pop": "Tăng trưởng so kỳ trước (PoP)",
+    "priorIs": "Kỳ trước: ${v}",
+    "yoy": "Tăng trưởng so cùng kỳ (YoY)",
+    "yoyIs": "Cùng kỳ năm trước: ${v}",
+    "roi": "Tỉ suất hoàn vốn (ROI)",
+    "grossIs": "Lợi nhuận gộp tăng thêm: ${v}",
+    "periodsTitle": "So sánh ba kỳ",
+    "thPeriod": "Kỳ",
+    "thRange": "Khoảng thời gian",
+    "thRevenue": "Doanh thu",
+    "thOrders": "Số đơn",
+    "thCups": "Số ly",
+    "thAov": "Giá trị đơn trung bình (AOV)",
+    "rowCurrent": "Thời gian chiến dịch",
+    "rowPrior": "Kỳ trước (cùng độ dài)",
+    "rowYoy": "Cùng kỳ năm trước (YoY)",
+    "postTitle": "Theo dõi sau chiến dịch ({n} ngày sau khi kết thúc)",
+    "postDaily": "Doanh thu TB/ngày sau chiến dịch: ",
+    "postChange": "Thay đổi so với trước: ",
+    "postPending": "Chiến dịch chưa kết thúc; sau khi kết thúc, hệ thống sẽ theo dõi mua lại trong 7–14 ngày.",
+    "dailyCurve": "Doanh số theo ngày trong chiến dịch",
+    "cupsOrders": "{c} ly ({o} đơn)",
+    "importTitle": "Nhập báo cáo doanh số cửa hàng iPOS",
+    "importDesc": "Tải lên báo cáo doanh thu ngày hoặc chi tiết bán hàng xuất từ iPOS (.xlsx / .xls / .csv). Dữ liệu được dùng để so sánh hiệu quả chiến dịch, kỳ trước và cùng kỳ năm trước.",
+    "tplFile": "iPOS_mau_doanh_so.xlsx",
+    "sheet": "Doanh số ngày",
+    "help1": "Tự nhận diện tiêu đề cột tiếng Trung, tiếng Anh (Revenue, Orders, Cups) và tiếng Việt (Doanh thu, Số đơn, Số ly).",
+    "help2": "Hỗ trợ báo cáo ngày toàn cửa hàng (không cần tên món) và danh sách bán theo món (điền tên món để đo hiệu quả từng sản phẩm).",
+    "help3": "Nhập lại cùng cửa hàng và ngày sẽ cập nhật (upsert), không bị cộng trùng."
+  },
+  "MktLogbook": {
+    "save": "Lưu nhật ký",
+    "copyReport": "Sao chép toàn bộ báo cáo",
+    "copy": "Sao chép",
+    "cat": {
+      "ai_chat": "Hội thoại AI",
+      "skill": "Tạo kỹ năng",
+      "campaign": "Chiến dịch",
+      "calendar": "Lịch đăng MXH",
+      "content": "Bản nháp nội dung",
+      "offline": "Quảng bá offline",
+      "delivery": "Nền tảng giao hàng",
+      "brand": "Cài đặt thương hiệu",
+      "manual": "Ghi chép công việc",
+      "general": "Nhật ký chung"
+    },
+    "genFailed": "Tạo thất bại",
+    "addFailed": "Thêm thất bại",
+    "confirmDelete": "Xóa mục nhật ký này?",
+    "noAccess": "Cần quyền đơn vị marketing để xem nhật ký marketing",
+    "title": "Nhật ký marketing",
+    "subtitle": "Toàn bộ hội thoại AI & sự kiện của cả đội",
+    "desc": "Tự động ghi lại điểm chính hội thoại AI của nhân viên, chiến dịch, lịch đăng MXH, bản nháp nội dung và tiến độ offline/giao hàng",
+    "lastDays": "{n} ngày qua",
+    "add": "Thêm nhật ký",
+    "aiReport": "Báo cáo tổng hợp AI",
+    "newTitle": "Thêm nhật ký công việc marketing",
+    "cancel": "Hủy",
+    "titlePh": "Chủ đề / quyết định chính (VD: chốt chiến lược khuyến mãi đồ uống đá hè 2026)…",
+    "brandRules": "Quy tắc thương hiệu",
+    "bodyPh": "Nội dung chi tiết, thảo luận, bước tiếp theo…",
+    "saving": "Đang lưu…",
+    "reportTitle": "Giám đốc marketing AI: báo cáo vận hành & cộng tác",
+    "reportCopied": "Đã sao chép báo cáo",
+    "statTotal": "Nhật ký & sự kiện",
+    "statChats": "Hội thoại AI của nhân viên",
+    "statEvents": "Sự kiện marketing",
+    "statPeople": "Thành viên tham gia",
+    "statCredits": "Điểm đã dùng",
+    "filterPeople": "Lọc theo thành viên",
+    "clearFilter": "Bỏ lọc (hiện tất cả)",
+    "tabAll": "Tất cả ({n})",
+    "tabChats": "Hội thoại AI ({n})",
+    "tabEvents": "Sự kiện ({n})",
+    "tabManual": "Thủ công & tổng kết ({n})",
+    "searchPh": "Tìm theo tên, tiêu đề hoặc nội dung…",
+    "empty": "Không có nhật ký phù hợp trong {n} ngày qua",
+    "delete": "Xóa mục",
+    "credits": "Dùng {n} điểm",
+    "channel": "Kênh: ",
+    "model": "Mô hình: ",
+    "copied": "Đã sao chép"
+  },
+  "MktPlan": {
+    "free": "Miễn phí",
+    "resend": "Gửi lại email xác minh",
+    "upgrade": "Nâng cấp",
+    "orderFailed": "Tạo đơn hàng thất bại",
+    "netErr": "Lỗi mạng, vui lòng thử lại sau",
+    "title": "Gói marketing",
+    "current": "Hiện tại: {plan}",
+    "topUp": "Nạp điểm →",
+    "yearly": "Theo năm (giảm ~20%)",
+    "monthly": "Theo tháng",
+    "giftLeft": "Điểm tặng tháng này còn <b>{r}</b> / {a}",
+    "giftNote": "(hết hạn cuối tháng, không cộng dồn; được dùng trước)",
+    "verifyForGift": "Xác minh email để nhận {n} điểm tặng mỗi tháng",
+    "sent": "Đã gửi, hãy mở hộp thư và nhấn liên kết",
+    "sendFailed": "Gửi thất bại, vui lòng thử lại sau",
+    "inUse": "Đang dùng",
+    "perMonth": "USD/tháng",
+    "save": "Tiết kiệm {n}%",
+    "yearlyTotal": "${n} USD mỗi năm",
+    "currentPlan": "Gói hiện tại",
+    "footnote": "Gói có hiệu lực ngay sau khi thanh toán và không tự gia hạn; hãy mua lại để tiếp tục. Chi phí tạo ảnh, video, video người dẫn, cuộc gọi và email được trừ vào điểm, không bao gồm trong phí gói.",
+    "compare": "So sánh tính năng",
+    "feature": "Tính năng"
+  },
+  "PlanCompare": {
+    "feat": {
+      "pro": {
+        "f0": "10 dự án marketing",
+        "f1": "1 cộng tác viên",
+        "f2": "Trừ điểm theo mức dùng ×1.8 (FREE: ×2)",
+        "f3": "Mọi tính năng tạo đều trừ điểm theo mức dùng"
+      },
+      "team": {
+        "f0": "Gồm toàn bộ CORE",
+        "f1": "Không giới hạn dự án và cộng tác viên",
+        "f2": "Trừ điểm ×1.6",
+        "f3": "Quy trình marketing (tự động hoàn toàn)",
+        "f4": "Ma trận MXH + tặng 1 IP đăng bài chính thức"
+      },
+      "enterprise": {
+        "f0": "Gồm toàn bộ PRO",
+        "f1": "Trừ điểm ×1.4",
+        "f2": "Tính năng tùy chỉnh cho doanh nghiệp"
+      }
+    },
+    "rows": {
+      "r0": "Số dự án",
+      "r1": "Cộng tác viên",
+      "r2": "Hệ số trừ điểm (chi phí thực ×)",
+      "r3": "Thu thập dữ liệu / phân tích / nội dung (theo mức dùng)",
+      "r4": "Tạo ảnh (theo mức dùng)",
+      "r5": "Đăng bài một chạm (11 nền tảng, 0,01 điểm/bài)",
+      "r6": "Tạo video (theo mức dùng)",
+      "r7": "Gọi điện AI + email (theo mức dùng)",
+      "r8": "Marketing người dẫn HeyGen (theo mức dùng)",
+      "r9": "Nhà thiết kế marketing sản phẩm AI (theo mức dùng)",
+      "r10": "AI Studio (theo mức dùng)",
+      "r11": "Viết nội dung GEO (theo mức dùng)",
+      "r12": "Marketing khách hàng tiềm năng (theo mức dùng)",
+      "r13": "Kỹ năng chuyên gia (trừ điểm)",
+      "r14": "Chuyên gia tự tạo (theo mức dùng)",
+      "r15": "Quy trình marketing (tự động hoàn toàn)",
+      "r16": "Ma trận MXH tự đăng bài + nuôi tài khoản",
+      "r17": "IP đăng bài chính thức (hoặc tự chuẩn bị)"
+    },
+    "val": {
+      "1 個": "1",
+      "10 個": "10",
+      "無限": "Không giới hạn",
+      "不可邀請": "Không thể mời",
+      "1 位": "1",
+      "附贈 1 個＋點數加購": "Tặng 1 + mua thêm bằng điểm"
+    }
+  },
+  "Simulation": {
+    "expand": "Xem chi tiết",
+    "behavior": {
+      "share": "Chia sẻ",
+      "like": "Thích",
+      "comment_positive": "Bình luận tích cực",
+      "ignore": "Bỏ qua",
+      "comment_negative": "Bình luận tiêu cực",
+      "report": "Báo cáo"
+    },
+    "risk": {
+      "high": "Rủi ro cao",
+      "medium": "Rủi ro trung bình",
+      "low": "Rủi ro thấp"
+    },
+    "impact": {
+      "high": "Mạnh",
+      "medium": "Trung bình",
+      "low": "Yếu"
+    },
+    "sentiment": "Điểm cảm xúc",
+    "influence": "Ảnh hưởng {n}",
+    "collapse": "Thu gọn",
+    "resonates": "Gây đồng cảm",
+    "concerns": "Lo ngại chính",
+    "overall": "Cảm xúc tổng thể",
+    "positive": "Lan truyền tích cực",
+    "negative": "Truyền miệng tiêu cực",
+    "neutral": "Không ảnh hưởng đáng kể",
+    "camps": "Nhóm người tiêu dùng",
+    "segments": "({n} nhóm)",
+    "crisis": "Rủi ro khủng hoảng truyền thông",
+    "messages": "Thông điệp gây đồng cảm cao",
+    "personas": "Chi tiết persona ({n})",
+    "aiTips": "Gợi ý tối ưu từ AI",
+    "scenario": "Tiêm tình huống (góc nhìn toàn cảnh)",
+    "optional": "Không bắt buộc",
+    "scenarioDesc": "Thêm giả định mới và xem lập trường người tiêu dùng thay đổi thế nào",
+    "scenarioPh": "VD: “đối thủ giảm giá 30%”, “sản phẩm bị lộ lỗi chất lượng”, “được người nổi tiếng quảng bá”…",
+    "rerunning": "Đang mô phỏng lại…",
+    "rerun": "Mô phỏng lại"
+  },
+  "CustomExperts": {
+    "emptyCanBuild": "Chưa có chuyên gia nào — hãy tạo chuyên gia đầu tiên ở trên.",
+    "tabText": "Dán văn bản",
+    "tabFile": "Tải tệp",
+    "title": "Chuyên gia tự tạo",
+    "subtitle": "Đưa URL, tài liệu hoặc văn bản để huấn luyện cố vấn riêng cho lĩnh vực của bạn. Hỏi đáp dùng được theo gói (trừ điểm); tạo và huấn luyện cần gói PRO trở lên.",
+    "needPro": "Tạo chuyên gia cần gói PRO trở lên; bạn vẫn có thể hỏi các chuyên gia đã tạo.",
+    "upgrade": "Nâng cấp gói",
+    "empty": "Chưa có chuyên gia nào.",
+    "noDesc": "(không có mô tả)",
+    "sourceCount": "{n} nguồn kiến thức",
+    "needName": "Vui lòng nhập tên chuyên gia",
+    "createFailed": "Tạo thất bại",
+    "newExpert": "Tạo chuyên gia mới",
+    "namePh": "Tên chuyên gia, VD: cố vấn pháp lý homestay",
+    "descPh": "Mô tả ngắn chuyên môn (không bắt buộc)",
+    "personaPh": "Vai trò / phong cách trả lời (không bắt buộc, VD: bạn là cố vấn pháp lý homestay, luôn trích dẫn điều khoản và lưu ý thực tế)",
+    "create": "Tạo",
+    "back": "Quay lại danh sách",
+    "expert": "Chuyên gia",
+    "sources": "Nguồn kiến thức ({n})",
+    "noSources": "Chưa có nguồn kiến thức.",
+    "ask": "Hỏi chuyên gia",
+    "chars": "{n} ký tự",
+    "addFailed": "Thêm thất bại",
+    "uploadFailed": "Tải lên thất bại",
+    "noText": "Không trích xuất được văn bản từ tệp này",
+    "tabUrl": "URL",
+    "fetch": "Lấy",
+    "textPh": "Dán văn bản dùng làm kiến thức…",
+    "add": "Thêm",
+    "fileHint": "Hỗ trợ PDF / Word / Excel / CSV / TXT, tự trích xuất văn bản",
+    "costHint": "Thêm nguồn sẽ trừ điểm theo độ dài (0,02 mỗi URL + 0,01 mỗi 1.000 ký tự).",
+    "answerFailed": "Trả lời thất bại",
+    "needSource": "Hãy thêm ít nhất một nguồn kiến thức để chuyên gia có căn cứ trả lời.",
+    "questionPh": "Nhập câu hỏi của bạn…",
+    "askBtn": "Hỏi (0,05 điểm)"
+  },
+  "PlanGate": {
+    "needPlan": "Tính năng này cần gói {required}. Gói hiện tại: {current}",
+    "free": "Miễn phí",
+    "upgrade": "Xem gói và nâng cấp",
+    "feature": {
+      "aiStudio": "AI Visual Studio",
+      "productDesigner": "AI Thiết kế Marketing Sản phẩm",
+      "pipeline": "Dây chuyền Marketing",
+      "socialMatrix": "Ma trận Mạng xã hội & Nuôi tài khoản"
+    },
+    "plan": {
+      "proPlus": "PRO trở lên",
+      "corePlus": "CORE trở lên"
+    }
+  },
+  "DrivePicker": {
+    "pickFolder": "Chọn thư mục",
+    "randomPick": "Lấy ảnh ngẫu nhiên",
+    "checking": "Đang kiểm tra kết nối Google Drive…",
+    "notConnected": "Chưa kết nối Google Drive",
+    "goConnect": "Đến cài đặt để kết nối",
+    "refImage": "Ảnh tham khảo",
+    "folderPicked": "Thư mục đã chọn",
+    "fetching": "Đang lấy ảnh…",
+    "another": "Đổi ảnh khác"
+  },
+  "ProductLaunches": {
+    "status": {
+      "rd_submitted": {
+        "label": "R&D đã gửi",
+        "desc": "Chờ Marketing tiếp nhận"
+      },
+      "mkt_prep": {
+        "label": "Marketing đang chuẩn bị",
+        "desc": "Chốt hình ảnh, nội dung và lịch"
+      },
+      "vip_exclusive": {
+        "label": "👑 Dùng thử độc quyền VIP",
+        "desc": "Chỉ thành viên VIP được chọn trước"
+      },
+      "public_released": {
+        "label": "🚀 Mở bán rộng rãi",
+        "desc": "Đang bán trên mọi kênh"
+      },
+      "archived": {
+        "label": "Đã ngừng bán",
+        "desc": "Hết mùa giới hạn"
+      }
+    },
+    "needName": "Vui lòng nhập tên sản phẩm mới",
+    "saveFailed": "Lưu thất bại",
+    "confirmUnlock": "Mở bán【{name}】cho tất cả khách hàng?",
+    "title": "Quy trình ra mắt R&D ↔ Marketing (từ độc quyền VIP đến mở bán)",
+    "subtitle": "R&D đẩy công thức hoàn thiện lên để ra mắt; Marketing đặt thời hạn dùng thử sớm cho VIP, hết hạn tự động hoặc một nhấp mở bán cho mọi khách",
+    "schedule": "Lên lịch ra mắt",
+    "empty": "Chưa có lịch ra mắt nào. Sản phẩm mới do R&D gửi từ bảng công thức sẽ tự hiện ở đây.",
+    "vipExpired": "Hết hạn VIP, có thể mở bán cho mọi khách",
+    "recipeCost": "Chi phí theo công thức: ",
+    "vipWindow": "Dùng thử sớm VIP: ",
+    "fromToday": "Từ hôm nay",
+    "tbd": "Chưa định",
+    "publicDate": "Mở bán rộng rãi: ",
+    "unlock": "Mở bán rộng rãi",
+    "compare": "So sánh hiệu quả",
+    "confirmRemove": "Xóa lịch ra mắt này?",
+    "editTitle": "Thiết lập lịch ra mắt",
+    "name": "Tên sản phẩm mới",
+    "stage": "Giai đoạn hiện tại",
+    "vipStart": "Ngày bắt đầu VIP",
+    "vipEnd": "Ngày kết thúc VIP",
+    "publicDateLabel": "Ngày mở bán rộng rãi",
+    "promo": "Mô tả ưu đãi giai đoạn độc quyền",
+    "promoPh": "VD: VIP dùng thử độc quyền, check-in tặng bao ly",
+    "cancel": "Hủy",
+    "save": "Lưu lịch",
+    "analyticsTitle": "Phân tích doanh số: giai đoạn VIP vs mở bán",
+    "item": "Sản phẩm:【{name}】",
+    "noData": "Chưa đủ dữ liệu bán hàng",
+    "phase1": "Giai đoạn 1: VIP dùng sớm",
+    "days": "{n} ngày",
+    "cups": "ly",
+    "revenue": "Tổng doanh thu: ",
+    "dailyAvg": "TB mỗi ngày: ",
+    "cupsPerDay": "{n} ly/ngày",
+    "phase2": "Giai đoạn 2: Mở bán rộng rãi",
+    "lift": "Mức tăng doanh số TB/ngày: "
+  },
+  "SocialMatrix": {
+    "copied": "Đã sao chép vào bộ nhớ tạm!",
+    "speedFail": "Kiểm tra tốc độ thất bại: {error}",
+    "proxyAdded": "Đã thêm IP proxy vào kho!",
+    "addFailed": "Thêm thất bại",
+    "confirmRemoveProxy": "Xóa IP proxy này khỏi kho?",
+    "proxyRemoved": "Đã xóa IP proxy",
+    "deleteFail": "Xóa thất bại: {error}",
+    "proxyUpdated": "Đã cập nhật thông tin và tên proxy!",
+    "updateFailed": "Cập nhật thất bại",
+    "updateFail": "Cập nhật thất bại: {error}",
+    "confirmBuy": "Hạn mức tặng kèm đã hết. Sẽ trừ {credits} điểm để thuê IP này 30 ngày, tự gia hạn khi hết hạn (giải phóng nếu không đủ điểm). Xác nhận mua?",
+    "leaseOk": "🎉 Thuê IP gốc chính thức thành công!",
+    "leaseFailed": "Thuê thất bại",
+    "leaseFail": "Thuê thất bại: {error}",
+    "confirmRelease": "Hủy thuê IP chính thức này? Nút sẽ bị xóa khỏi kho, các tài khoản đã gắn phải chọn proxy khác.",
+    "released": "Đã hủy thuê",
+    "releaseFailed": "Hủy thuê thất bại",
+    "releaseErr": "Lỗi hủy thuê: {error}",
+    "offListed": "👑 Đã đăng IP cho thuê chính thức!",
+    "listFailed": "Đăng thất bại",
+    "addFail": "Thêm thất bại: {error}",
+    "offUpdated": "Đã cập nhật kho IP chính thức và giá!",
+    "confirmUnlist": "Xóa/gỡ IP cho thuê này khỏi kho chính thức?",
+    "unlisted": "Đã gỡ IP khỏi kho chính thức",
+    "deleteFailed": "Xóa thất bại",
+    "unlistFail": "Gỡ thất bại: {error}",
+    "accAdded": "Đã thêm tài khoản mạng xã hội vào ma trận!",
+    "confirmRemoveAcc": "Xóa tài khoản này?",
+    "accRemoved": "Đã xóa tài khoản mạng xã hội",
+    "warmupDone": "Đã nuôi tài khoản kiểu người thật! Đã chạy nhiệm vụ an toàn cho {n} tài khoản",
+    "warmupFailed": "Nuôi tài khoản thất bại",
+    "warmupErr": "Lỗi nuôi tài khoản: {error}",
+    "radarDone": "Radar AI đã khóa {groups} cộng đồng chất lượng và tạo {copies} bộ nội dung biến thể chống khóa!",
+    "genFailed": "Tạo thất bại",
+    "genErr": "Lỗi tạo: {error}",
+    "planAOk": "Phương án A đã chạy! Đã sao chép nội dung chống trùng và mở trang đăng của {name}",
+    "opFail": "Thao tác thất bại: {error}",
+    "needCopies": "Hãy tạo ma trận nội dung chống khóa ở trên trước",
+    "noMature": "Chưa có tài khoản trưởng thành hoàn tất nuôi 14 ngày (Day 12+)! Hãy nuôi tài khoản trước để đảm bảo an toàn",
+    "publishFailed": "Đăng thất bại",
+    "scheduleErr": "Lỗi lên lịch: {error}",
+    "heroTag": "Hệ thống Marketing Ma trận MXH & Nuôi tài khoản IMT",
+    "heroTitle": "Trung tâm đăng bài ma trận & nuôi tài khoản kiểu người thật",
+    "heroDesc": "Hỗ trợ IP dân cư tĩnh gốc, nuôi tài khoản dần dần 14 ngày kiểu người thật, Phương án A (Copilot người thật) và B (đăng tự động theo lịch), radar cộng đồng AI và kho nội dung chống trùng/chống rủi ro.",
+    "statOnline": "Proxy trực tuyến",
+    "statMature": "Tài khoản trưởng thành",
+    "statWarming": "Đang nuôi (Day 1-11)",
+    "statHealth": "Sức khỏe TB",
+    "tabProxies": "Quản lý kho proxy",
+    "tabAccounts": "Ma trận tài khoản & nuôi tự động",
+    "tabCampaign": "Đăng bài MXH (Phương án A + B)",
+    "myProxies": "Kho proxy của tôi",
+    "market": "Chợ thuê IP gốc chính thức",
+    "noOwn": "Không cần tự chuẩn bị",
+    "adminZone": "Quản trị: kho IP cho thuê",
+    "refresh": "Làm mới",
+    "rentOfficial": "Thuê IP gốc chính thức",
+    "addOwnProxy": "Thêm IP proxy tự có",
+    "adminAdd": "Quản trị: thêm IP cho thuê",
+    "promoQ": "Muốn bỏ qua các bước cài đặt router Wi-Fi và dịch vụ proxy phức tạp?",
+    "official": "IMT chính thức",
+    "promoDesc": "IMT cung cấp trực tiếp băng thông dân cư gốc (Nghi Lan, Đài Loan) và proxy trạm di động 4G Chunghwa Telecom — sạch, độc quyền, không phải IP trung tâm dữ liệu, chống khóa tốt nhất. Thuê chỉ với một nhấp!",
+    "browseMarket": "Xem chợ IP chính thức",
+    "ownGuideTitle": "Hướng dẫn: kết nối IP tĩnh gia đình của bạn vào hệ thống",
+    "ownGuideIntro": "Nếu bạn có băng thông gia đình với IP cố định, hãy cài đặt lần lượt rồi thêm vào kho:",
+    "step1": "Bước 1: Chuyển tiếp cổng trên router",
+    "step1d": "Vào trang quản trị router Wi-Fi, cài Port Forwarding để trỏ cổng ngoài (VD 28899) tới máy trong mạng nội bộ.",
+    "step2": "Bước 2: Khởi động proxy trên máy",
+    "step2d": "Cài <code>gost -L=http://user:pass@:28899</code> trên máy để hệ thống kết nối có xác thực.",
+    "step3": "Bước 3: Nhập vào và gắn tài khoản",
+    "step3d": "Nhấn \"Thêm IP proxy tự có\", nhập IP tĩnh và cổng; kiểm tra tốc độ đạt là có thể gắn tài khoản.",
+    "editNameSettings": "Sửa tên và cài đặt",
+    "kindOfficial": "🏢 Thuê chính thức",
+    "kindHome": "🏠 Gia đình tĩnh",
+    "kindMobile": "📱 Trạm di động 4G",
+    "kindBiz": "🏢 Proxy dân cư thương mại",
+    "addrPort": "Địa chỉ & cổng:",
+    "protocol": "Giao thức:",
+    "isp": "ISP:",
+    "nativeBb": "Băng thông gốc",
+    "location": "Vị trí:",
+    "localNode": "Nút địa phương",
+    "leaseUntil": "Thời hạn thuê đến:",
+    "latency": "Độ trễ:",
+    "boundN": "Đã gắn {n} tài khoản",
+    "editProxy": "Sửa tên và cài đặt proxy",
+    "speedTest": "Kiểm tra tốc độ kết nối",
+    "releaseTitle": "Hủy thuê",
+    "processing": "Đang xử lý...",
+    "release": "Hủy thuê",
+    "deleteOwn": "Xóa proxy tự có",
+    "quota": "IP chính thức kèm gói: {quota} (đã dùng {used})",
+    "quotaExtra": "; IP thêm trả bằng điểm, trừ mỗi 30 ngày và tự gia hạn",
+    "mktTag": "IMT chính thức · kho IP gốc sạch",
+    "mktTitle": "IP dân cư gốc & trạm di động 4G chuyên dụng chống rủi ro MXH",
+    "mktDesc1": "Thuật toán của Facebook, Instagram, Threads, TikTok, Dcard cực kỳ khắt khe với IP trung tâm dữ liệu.",
+    "mktDesc2": "IMT cung cấp 100% băng thông gia đình gốc sạch và trạm di động thật — độc quyền 1:1, không cần cài đặt, thuê và dùng ngay!",
+    "feat1": "100% băng thông dân cư gốc",
+    "feat2": "Độc quyền 1:1",
+    "feat3": "Trạm di động 4G/5G thật",
+    "feat4": "Không cần cài Termux/router",
+    "kindHomeBb": "🏠 Băng thông gia đình tĩnh",
+    "kindMobile5g": "📱 Trạm di động 4G/5G",
+    "leasedByMe": "Bạn đang thuê",
+    "available": "Có thể thuê ngay",
+    "leasedOut": "Đã cho thuê",
+    "carrier": "Nhà mạng (ISP)",
+    "twBb": "Băng thông gốc Đài Loan",
+    "nodeLoc": "Vị trí nút",
+    "twLocal": "Địa phương Đài Loan",
+    "latencyGrade": "Mức độ trễ",
+    "lowLatency": "(độ trễ cực thấp)",
+    "tenantQuota": "Hạn mức độc quyền",
+    "oneTenant": "Độc quyền 1 khách ({cur}/{max})",
+    "offNoteDefault": "IP dân cư gốc sạch được IMT kiểm tra, độ tin cậy thuật toán rất cao — lựa chọn hàng đầu để nuôi tài khoản chính.",
+    "leasePlan": "Gói thuê (độc quyền 30 ngày)",
+    "perMonth": "/ tháng",
+    "creditsPer30": "≈ {n} điểm / 30 ngày",
+    "inPool": "Đã có trong kho (xem)",
+    "activating": "Đang kích hoạt IP độc quyền...",
+    "claimFree": "🎁 Nhận IP tặng kèm gói",
+    "rentWithCredits": "⚡ Thuê với {n} điểm",
+    "full": "🔒 Đã hết suất",
+    "adminPortal": "👑 Khu quản trị nền tảng",
+    "adminTitle": "Quản lý kho IP cho thuê chính thức IMT",
+    "adminDesc": "Quản trị viên nhập, định giá và quản lý máy chủ proxy chính thức tại đây. Nút đã đăng sẽ hiện ngay trong \"🏢 Chợ thuê IP gốc chính thức\" để mọi khách thuê bằng một nhấp.",
+    "invList": "Danh sách kho IP cho thuê chính thức",
+    "invCount": "{n} nút chính thức",
+    "thName": "Tên nút / loại",
+    "thHost": "Máy chủ (Host:Port)",
+    "thProto": "Giao thức / độ trễ",
+    "thIsp": "Nhà mạng (ISP) / thành phố",
+    "thPrice": "Phí tháng (TWD)",
+    "thQuota": "Hạn mức thuê",
+    "thStatus": "Trạng thái",
+    "thActions": "Thao tác",
+    "kHome": "🏠 Gia đình gốc",
+    "kMobile": "📱 Di động 4G",
+    "kBiz": "🏢 Dân cư thương mại",
+    "userLabel": "Tài khoản: {name}",
+    "local": "Địa phương",
+    "stAvail": "Đang cho thuê",
+    "stRented": "Đã cho thuê",
+    "stMaint": "Đang bảo trì",
+    "editPricing": "Sửa giá và thông tin",
+    "unlistDelete": "Gỡ và xóa",
+    "warmTitle": "Quy trình nuôi tài khoản AI 14 ngày kiểu người thật",
+    "warmDesc": "Thuật toán MXH giám sát chặt tài khoản mới trong 2 tuần đầu. Hệ thống dùng IP dân cư riêng mỗi ngày + mô phỏng lướt và tương tác như người thật, tỷ lệ chống khóa đạt 99,4%.",
+    "warming": "Đang chạy nuôi tài khoản AI...",
+    "warmAll": "⚡ Chạy nuôi tài khoản hôm nay cho tất cả",
+    "addAcc": "Thêm tài khoản ma trận",
+    "ph1": "Giai đoạn 1: Ẩn mình",
+    "ph1d": "Đăng nhập lướt ngẫu nhiên 15-30 phút, tích lũy dấu vân tay thiết bị, không đăng bài, không nhắn tin, tránh radar tài khoản mới.",
+    "ph2": "Giai đoạn 2: Tương tác nhẹ",
+    "ph2d": "Lướt chủ đề cùng ngành, thích 3-5 bài viết, theo dõi fanpage chất lượng, xem video để tạo đặc trưng sở thích như người thật.",
+    "ph3": "Giai đoạn 3: Hòa nhập cộng đồng",
+    "ph3d": "Tham gia nhóm/chuyên mục mục tiêu, AI tự viết 1 bình luận tích cực để hòa nhập tự nhiên, tăng trọng số tài khoản.",
+    "ph4": "Giai đoạn 4: Trưởng thành, đăng bài",
+    "ph4d": "Sức khỏe đạt 85% trở lên sẽ mở khóa Phương án A (Copilot) và B (đăng tự động)!",
+    "accMonitor": "Giám sát tài khoản ma trận",
+    "mature": "Đã trưởng thành",
+    "warmDay": "Nuôi Day {n}",
+    "accHealth": "Sức khỏe tài khoản:",
+    "boundProxy": "Proxy cố định:",
+    "defaultProxyName": "IP dân cư gốc",
+    "todayTasks": "Nhiệm vụ hôm nay:",
+    "times": "{a} / {b} lần",
+    "runToday": "Chạy nuôi hôm nay",
+    "liveLog": "Nhật ký trực tiếp nuôi tài khoản & chống khóa",
+    "keepN": "{n} mục mới nhất",
+    "account": "Tài khoản",
+    "campTitle": "Nhập mục tiêu quảng cáo & ngành",
+    "quickSample": "Mẫu nhanh:",
+    "sample1": "🌴 Thuê xe riêng Đà Nẵng",
+    "sample2": "♨️ Biệt thự suối nước nóng Nghi Lan",
+    "fIndustry": "Ngành / mục tiêu quảng cáo *",
+    "fIndustryPh": "VD: Tour xe riêng Đà Nẵng, homestay nguyên căn, thời trang nữ Hàn Quốc...",
+    "fProduct": "Sản phẩm chính & điểm bán hàng độc đáo *",
+    "fProductPh": "VD: Xe 7 chỗ mới, tài xế song ngữ, không phí ẩn...",
+    "fAudience": "Đặc điểm khách hàng mục tiêu",
+    "fAudiencePh": "VD: Gia đình 25-45 tuổi, khách balo, đoàn công tác...",
+    "fOffer": "Ưu đãi / khuyến mãi đặt sớm (Hook)",
+    "fOfferPh": "VD: Giảm 10% đặt sớm, tặng SIM, tư vấn lịch trình miễn phí...",
+    "fCta": "Lời kêu gọi (CTA) / liên kết / LINE ID",
+    "fCtaPh": "VD: LINE chính thức @danang_tour, số điện thoại hoặc link đặt chỗ...",
+    "targetPlatforms": "Nền tảng đăng:",
+    "generating": "Radar AI đang dò tìm và tạo nội dung chống khóa...",
+    "startRadar": "🎯 Chạy radar nhóm AI & tạo kho nội dung chống khóa",
+    "radar": "Radar nhóm mục tiêu AI",
+    "radarSub": "Khai thác nguồn lưu lượng chính xác",
+    "strictHigh": "Duyệt nghiêm",
+    "strictMed": "Duyệt vừa",
+    "strictLow": "Mở, dễ dãi",
+    "strategy": "Chiến lược đề xuất: ",
+    "previewGroup": "Xem trước nhóm",
+    "planAPost": "Phương án A: Đăng thủ công ↗",
+    "copyLib": "Kho nội dung chống khóa ({n} biến thể)",
+    "copyLibDesc": "Mỗi biến thể dùng góc nhìn khán giả khác và dấu vân tay hash riêng, tránh bị nền tảng đối chiếu văn bản.",
+    "planB": "Phương án B: Đăng tự động theo lịch",
+    "hash": "Hash chống trùng:",
+    "copiedShort": "Đã sao chép",
+    "copyAll": "Sao chép toàn bộ",
+    "planAMode": "Phương án A: Chế độ Copilot người thật",
+    "planAModeDesc": "Người dùng nhấn \"Phương án A: Đăng thủ công ↗\" ở danh sách nhóm, hệ thống tự chép nội dung chống trùng và mở khung đăng bài — không rủi ro bị khóa.",
+    "planBDesc": "Chỉ dành cho tài khoản trưởng thành (Day 12+): nhấn nút phía trên để phân bổ nội dung biến thể cho các tài khoản và IP proxy riêng, đăng theo đợt tự động.",
+    "addNode": "Thêm nút IP proxy",
+    "single": "Một proxy",
+    "bulk": "Nhập hàng loạt (ip:port:user:pass)",
+    "pasteList": "Dán danh sách proxy (mỗi dòng một):",
+    "nodeName": "Tên nút",
+    "proxyType": "Loại proxy",
+    "optHome": "🏠 Gia đình tĩnh (cáp/viễn thông)",
+    "optResi": "🏢 Dân cư tĩnh thương mại (IPRoyal/Smartproxy)",
+    "optMobile": "📱 Proxy trạm di động 4G/5G",
+    "fHost": "Địa chỉ IP / Host *",
+    "hostPh": "VD: 211.75.142.88",
+    "fPort": "Cổng (Port) *",
+    "fUser": "Tài khoản (tùy chọn)",
+    "fPass": "Mật khẩu (tùy chọn)",
+    "fCountry": "Mã quốc gia",
+    "fCity": "Thành phố / khu vực",
+    "cityPh": "Nghi Lan / Đài Bắc / Đà Nẵng",
+    "fIsp": "Nhà mạng (ISP)",
+    "ispPh": "VD: nhà cung cấp cáp",
+    "cancel": "Hủy",
+    "confirmAdd": "Xác nhận thêm",
+    "editNode": "Sửa thông tin và tên nút proxy",
+    "aliasPh": "VD: Proxy dân cư IPRoyal của tôi",
+    "fAlias": "Tên proxy / nhãn tùy chỉnh *",
+    "fAliasHint": "(tùy ý đổi, VD: Proxy IPRoyal của tôi, nút 4G điện thoại)",
+    "fProtocol": "Giao thức",
+    "hostPh2": "211.75.142.88 hoặc geo.iproyal.com",
+    "ispPh2": "VD: nhà cung cấp cáp / viễn thông",
+    "fNotes": "Ghi chú (tùy chọn)",
+    "notesPh": "VD: dùng riêng cho tài khoản chính đăng nhóm FB",
+    "saveChanges": "Lưu thay đổi",
+    "addAccTitle": "Thêm tài khoản ma trận MXH",
+    "fPlatform": "Nền tảng *",
+    "optFb": "Facebook (nhóm/fanpage/cá nhân)",
+    "optThreads": "Threads",
+    "optDcard": "Dcard",
+    "optTiktok": "TikTok video ngắn",
+    "fAccName": "Tên tài khoản / biệt danh *",
+    "accNamePh": "VD: Chuyên gia du lịch Đà Nẵng - Hào",
+    "fHandle": "Handle tài khoản",
+    "fBindProxy": "IP proxy gắn cố định (bắt buộc chống rủi ro) *",
+    "pickNode": "Chọn nút proxy...",
+    "srcOfficial": "🏢 [Thuê chính thức] ",
+    "srcOwn": "👤 [Tự có] ",
+    "fWarmDay": "Số ngày nuôi hiện tại (1 - 14)",
+    "warmDayHint": "Tài khoản mới nên bắt đầu từ Day 1; tài khoản cũ dùng lâu có thể đặt thẳng Day 14 (trưởng thành).",
+    "addToMatrix": "Thêm vào ma trận",
+    "adminAddTitle": "Quản trị: thêm IP cho thuê chính thức",
+    "adminAddDesc": "Nút nhập tại đây sẽ được đăng ngay lên \"Chợ thuê IP gốc chính thức\" để khách thuê bằng một nhấp",
+    "fNodeLabel": "Tên nút / nhãn đề xuất *",
+    "nodeLabelPh": "VD: 🇹🇼 IP dân cư gốc Đài Loan #2 (chống khóa A+)",
+    "proxyTypeReq": "Loại proxy *",
+    "optMobileSim": "📱 Trạm di động 4G/5G (SIM thật)",
+    "optResiBw": "🏢 Dân cư tĩnh thương mại (băng thông lớn)",
+    "fProtocolReq": "Giao thức *",
+    "fConnUser": "Tài khoản kết nối (tùy chọn)",
+    "fConnPass": "Mật khẩu kết nối (tùy chọn)",
+    "fCountryCity": "Quốc gia / thành phố",
+    "cityPh3": "Nghi Lan / Đài Bắc",
+    "fLatency": "Độ trễ (ms)",
+    "fPrice": "Giá thuê tháng cho khách (NTD) *",
+    "fMaxTenants": "Số người thuê tối đa (1 = độc quyền) *",
+    "fHighlights": "Điểm nổi bật / ghi chú",
+    "highlightsPh": "VD: IP cố định băng thông gia đình gốc, độ tin cậy rất cao, chống rủi ro Meta / Threads tốt nhất",
+    "confirmList": "Xác nhận đăng cho thuê",
+    "adminEditTitle": "Quản trị: sửa kho IP chính thức & giá",
+    "fNodeNameReq": "Tên nút *",
+    "fHostShort": "Host *",
+    "fMonthly": "Giá thuê tháng (NTD) *",
+    "fLeaseStatus": "Trạng thái thuê *",
+    "optAvail": "🟢 Đang cho thuê",
+    "optRented": "🔴 Đã cho thuê",
+    "optMaint": "🟡 Đang bảo trì",
+    "fFeatureNotes": "Ghi chú đặc điểm",
+    "s1": {
+      "industry": "Thuê xe riêng cao cấp miền Trung Việt Nam (Đà Nẵng / Hội An / Bà Nà) kèm trợ lý nói tiếng Trung",
+      "product": "Xe 7–16 chỗ đời mới, tài xế song ngữ, đón tiễn sân bay ưu tiên, lịch trình tùy chỉnh kèm bảo hiểm trọn gói",
+      "audience": "Gia đình Đài Loan đi du lịch, khách tự túc, du lịch công ty và đoàn khảo sát doanh nghiệp",
+      "offer": "Đặt trước 14 ngày giảm 10%, tặng SIM 5G không giới hạn cho cả đoàn và ưu đãi nhà hàng hải sản",
+      "cta": "LINE chính thức: @danang_tour hoặc đặt ngay trên website"
+    },
+    "s2": {
+      "industry": "Homestay suối nước nóng thuê nguyên căn cho gia đình tại Jiaoxi, Yilan",
+      "product": "Nhà riêng sân vườn kiểu Nhật, hồ nóng lạnh riêng, bàn mạt chược tự động, hồ bóng trẻ em, sân nướng BBQ",
+      "audience": "Gia đình ba thế hệ, nhóm bạn thuê nguyên căn, khách nghỉ cuối tuần",
+      "offer": "Đặt ngày thường tặng giỏ bữa sáng rau củ hữu cơ và hộp quà suối nước nóng địa phương",
+      "cta": "Tư vấn qua LINE: @yilan_hotspring"
+    }
+  },
+  "MktCampaignsPage": {
+    "title": "Trung tâm chiến dịch",
+    "subtitle": "Lập kế hoạch, tạo và theo dõi chiến dịch trực tiếp, trực tuyến và kết hợp tại một nơi"
+  },
+  "Feedback": {
+    "title": "Góp ý",
+    "thanks": "Đã gửi, cảm ơn bạn đã góp ý!",
+    "type": {
+      "bug": "🐛 Báo lỗi",
+      "ai_error": "🤖 AI trả lời sai",
+      "feature": "✨ Đề xuất tính năng",
+      "text_change": "🎨 Chỉnh giao diện / văn bản"
+    },
+    "titlePh": "Tiêu đề (mô tả ngắn)",
+    "descPh": "Mô tả chi tiết điều đã xảy ra và kết quả mong muốn",
+    "submit": "Gửi"
+  },
+  "Skills": {
+    "viral-video-copywriting": {
+      "label": "Kịch bản video ngắn viral",
+      "description": "Tạo câu mở đầu, kịch bản phân cảnh và lời thoại cho video ngắn (Reels / Douyin / Shorts).",
+      "fields": {
+        "topic": {
+          "label": "Chủ đề video",
+          "placeholder": "VD: 3 mẹo sắp xếp bếp nhỏ nhanh gọn"
+        },
+        "product": {
+          "label": "Sản phẩm / dịch vụ lồng ghép"
+        },
+        "duration": {
+          "label": "Thời lượng video (giây)"
+        },
+        "style": {
+          "label": "Phong cách",
+          "options": {
+            "energetic": "Nhịp nhanh, sôi động",
+            "storytelling": "Kể chuyện",
+            "educational": "Kiến thức hữu ích"
+          }
+        }
+      }
+    },
+    "ecommerce-copywriter": {
+      "label": "Mô tả sản phẩm thương mại điện tử",
+      "description": "Tạo mô tả sản phẩm sẵn sàng đăng bán từ thông tin sản phẩm (điểm nổi bật, thông số, tình huống sử dụng).",
+      "fields": {
+        "productName": {
+          "label": "Tên sản phẩm",
+          "placeholder": "VD: Bình giữ nhiệt inox 500ml"
+        },
+        "features": {
+          "label": "Điểm nổi bật / thông số",
+          "placeholder": "Chất liệu, dung tích, thời gian giữ nhiệt, tình huống sử dụng…"
+        },
+        "audience": {
+          "label": "Khách hàng mục tiêu",
+          "placeholder": "VD: dân văn phòng, người tập gym"
+        },
+        "tone": {
+          "label": "Giọng văn",
+          "options": {
+            "professional": "Chuyên nghiệp, đáng tin",
+            "warm": "Thân thiện, ấm áp",
+            "playful": "Vui nhộn, sinh động"
+          }
+        }
+      }
+    },
+    "product-marketing-copywriter": {
+      "label": "Nội dung quảng bá",
+      "description": "Tạo nhiều phiên bản nội dung và tiêu đề quảng cáo cho chiến dịch quảng cáo / khuyến mãi.",
+      "fields": {
+        "product": {
+          "label": "Sản phẩm / dịch vụ"
+        },
+        "campaign": {
+          "label": "Chiến dịch / chủ đề",
+          "placeholder": "VD: Ngày của Mẹ giảm 20% có thời hạn"
+        },
+        "platform": {
+          "label": "Nền tảng quảng cáo",
+          "options": {
+            "google": "Quảng cáo tìm kiếm Google"
+          }
+        },
+        "usp": {
+          "label": "Lợi thế cốt lõi",
+          "placeholder": "Khác biệt so với đối thủ, ưu đãi có thời hạn…"
+        }
+      }
+    },
+    "article-illustrator": {
+      "label": "Tự động minh họa bài viết",
+      "description": "Phân tích bài viết, tạo prompt hình minh họa cho từng đoạn và sinh ảnh.",
+      "fields": {
+        "article": {
+          "label": "Nội dung bài viết",
+          "placeholder": "Dán toàn bộ bài viết…"
+        },
+        "numImages": {
+          "label": "Số lượng ảnh"
+        },
+        "aspectRatio": {
+          "label": "Tỷ lệ ảnh",
+          "options": {
+            "16:9": "16:9 ngang",
+            "1:1": "1:1 vuông",
+            "9:16": "9:16 dọc"
+          }
+        }
+      }
+    },
+    "market-research-reports": {
+      "label": "Báo cáo nghiên cứu thị trường",
+      "description": "Tạo báo cáo phân tích thị trường / đối thủ có cấu trúc.",
+      "fields": {
+        "topic": {
+          "label": "Chủ đề nghiên cứu / ngành",
+          "placeholder": "VD: Thị trường dụng cụ cà phê pha tay tại Đài Loan"
+        },
+        "competitors": {
+          "label": "Đối thủ chính",
+          "placeholder": "Các thương hiệu cạnh tranh đã biết (không bắt buộc)"
+        },
+        "focus": {
+          "label": "Trọng tâm phân tích",
+          "options": {
+            "overview": "Tổng quan thị trường",
+            "competitor": "Phân tích đối thủ",
+            "entry": "Chiến lược thâm nhập"
+          }
+        }
+      }
+    },
+    "product-video-creator": {
+      "label": "Lên kế hoạch video sản phẩm",
+      "description": "Tạo phân cảnh video sản phẩm, prompt tạo video, kịch bản lồng tiếng và 1 ảnh tham chiếu key visual.",
+      "fields": {
+        "product": {
+          "label": "Tên sản phẩm"
+        },
+        "features": {
+          "label": "Điểm nổi bật / thông số"
+        },
+        "duration": {
+          "label": "Thời lượng video (giây)"
+        },
+        "aspectRatio": {
+          "label": "Tỷ lệ khung hình",
+          "options": {
+            "9:16": "9:16 dọc (video ngắn)",
+            "16:9": "16:9 ngang",
+            "1:1": "1:1 vuông"
+          }
+        }
+      }
+    },
+    "ecommerce-video-marketing": {
+      "label": "Kịch bản video ngắn bán hàng",
+      "description": "Kịch bản video ngắn bán hàng: lời thoại, nhịp độ, CTA và gợi ý nền tảng đăng.",
+      "fields": {
+        "product": {
+          "label": "Sản phẩm / dịch vụ"
+        },
+        "sellingPoints": {
+          "label": "Điểm bán hàng chính / ưu đãi"
+        },
+        "platform": {
+          "label": "Nền tảng đăng",
+          "options": {
+            "tiktok": "Douyin / TikTok",
+            "shopee": "Shopee Live / video"
+          }
+        }
+      }
+    },
+    "tts-voice-synthesis": {
+      "label": "Lồng tiếng AI",
+      "description": "Chuyển văn bản thành giọng đọc và trả về file âm thanh có thể tải xuống.",
+      "fields": {
+        "text": {
+          "label": "Văn bản lồng tiếng",
+          "placeholder": "Dán văn bản cần lồng tiếng…"
+        },
+        "voice": {
+          "label": "Giọng đọc",
+          "options": {
+            "default": "Mặc định",
+            "female": "Giọng nữ",
+            "male": "Giọng nam"
+          }
+        }
+      }
+    },
+    "ppt-generator": {
+      "label": "Tạo bài thuyết trình (PPTX)",
+      "description": "Tự lên bố cục slide theo chủ đề và xuất file .pptx có thể tải xuống.",
+      "fields": {
+        "topic": {
+          "label": "Chủ đề thuyết trình",
+          "placeholder": "VD: Chiến lược marketing thương hiệu 2026"
+        },
+        "context": {
+          "label": "Nội dung chính / tư liệu bổ sung",
+          "placeholder": "Các ý chính, số liệu, chương mục cần có…"
+        },
+        "numSlides": {
+          "label": "Số slide"
+        },
+        "audience": {
+          "label": "Đối tượng",
+          "placeholder": "VD: quản lý, khách hàng, nhà đầu tư"
+        }
+      }
+    },
+    "social-account-coach": {
+      "label": "Huấn luyện vận hành tài khoản MXH",
+      "description": "Phân tích định vị và khán giả của tài khoản, đưa ra hướng nội dung, chẩn đoán tăng trưởng và việc cần làm.",
+      "fields": {
+        "platform": {
+          "label": "Nền tảng",
+          "options": {
+            "xiaohongshu": "Xiaohongshu"
+          }
+        },
+        "niche": {
+          "label": "Định vị / chủ đề tài khoản",
+          "placeholder": "VD: mẹo sắp xếp nhà cửa, tài chính cá nhân"
+        },
+        "recent": {
+          "label": "Nội dung hoặc số liệu gần đây (không bắt buộc)",
+          "placeholder": "Dán vài bài đăng gần đây, số người theo dõi, tỷ lệ tương tác… để phân tích chính xác hơn"
+        },
+        "goal": {
+          "label": "Mục tiêu hiện tại",
+          "options": {
+            "growth": "Tăng follower / tiếp cận",
+            "engagement": "Tương tác / bình luận",
+            "conversion": "Chuyển đổi / kiếm tiền"
+          }
+        }
+      }
+    },
+    "viral-content-planner": {
+      "label": "Lên kế hoạch nội dung viral",
+      "description": "Lên ý tưởng chủ đề dễ lan truyền theo tư duy growth hacking: câu mở đầu, cấu trúc giữ chân và động lực chia sẻ.",
+      "fields": {
+        "topic": {
+          "label": "Lĩnh vực / chủ đề nội dung",
+          "placeholder": "VD: review món ăn bình dân, phát triển sự nghiệp"
+        },
+        "format": {
+          "label": "Định dạng nội dung",
+          "options": {
+            "short_video": "Video ngắn",
+            "long_video": "Video dài",
+            "thread": "Bài ảnh / chuỗi bài"
+          }
+        },
+        "audience": {
+          "label": "Khán giả mục tiêu",
+          "placeholder": "VD: dân văn phòng 25-35 tuổi"
+        },
+        "goal": {
+          "label": "Mục tiêu lan truyền",
+          "placeholder": "VD: tăng follower, nhận diện thương hiệu, kéo traffic"
+        }
+      }
+    },
+    "kol-persona-writer": {
+      "label": "Nội dung theo persona",
+      "description": "Viết bài đăng mạng xã hội nhất quán với giọng văn mẫu và persona của bạn.",
+      "fields": {
+        "persona": {
+          "label": "Persona / giọng văn",
+          "placeholder": "VD: blogger tài chính lý trí, ấm áp, nói chuyện như bạn bè, không lên lớp; hoặc dán vài bài cũ làm mẫu phong cách"
+        },
+        "topic": {
+          "label": "Bài này viết về gì",
+          "placeholder": "VD: chia sẻ app ghi chép chi tiêu, quảng bá khóa học mới"
+        },
+        "platform": {
+          "label": "Nền tảng",
+          "options": {
+            "xiaohongshu": "Xiaohongshu"
+          }
+        }
+      }
+    },
+    "live-stream-copywriter": {
+      "label": "Nội dung livestream",
+      "description": "Tạo thông báo lên sóng, lời thoại livestream và kịch bản tương tác với fan, có tính giải trí và bán hàng.",
+      "fields": {
+        "persona": {
+          "label": "Người dẫn / biệt danh & phong cách",
+          "placeholder": "VD: biệt danh Phàm, hoạt bát, lầy lội, hay làm nũng với fan"
+        },
+        "occasion": {
+          "label": "Mục đích",
+          "options": {
+            "preview": "Thông báo lên sóng",
+            "voiceover": "Lời thoại video ngắn",
+            "interaction": "Tương tác livestream / trả lời bình luận",
+            "post": "Bài đăng trạng thái"
+          }
+        },
+        "points": {
+          "label": "Nội dung chính lần này",
+          "placeholder": "VD: 8 giờ tối nay lên sóng chơi game mới, bốc thăm quà, cảm ơn fan ủng hộ"
+        }
+      }
+    }
+  },
+  "SkillRunner": {
+    "loadFailed": "Không tải được danh sách chuyên gia",
+    "trainNeedPro": "Huấn luyện chuyên gia cần gói PRO trở lên",
+    "addFailed": "Thêm thất bại",
+    "networkError": "Lỗi kết nối",
+    "uploadFailed": "Tải tệp lên thất bại",
+    "noText": "Không trích xuất được văn bản từ tệp này (chỉ hỗ trợ docx / xlsx / csv / txt / pdf)",
+    "fileFailed": "Xử lý tệp thất bại",
+    "fillRequired": "Vui lòng điền: {field}",
+    "insufficient": "Không đủ điểm, lần này cần khoảng {n} điểm",
+    "runFailed": "Chạy thất bại",
+    "balance": "Số dư {n} điểm",
+    "category": {
+      "copywriting": "Nội dung",
+      "video": "Video ngắn",
+      "illustration": "Hình minh họa",
+      "research": "Nghiên cứu",
+      "audio": "Âm thanh",
+      "presentation": "Thuyết trình",
+      "social": "Mạng xã hội"
+    },
+    "fromCredits": "Từ {n} điểm",
+    "ownKnowledge": "Kho kiến thức riêng",
+    "loading": "Đang tải…",
+    "back": "Quay lại",
+    "generating": "Đang tạo…",
+    "run": "Chạy",
+    "result": "Kết quả",
+    "charged": "Đã trừ {n} điểm",
+    "copied": "Đã sao chép",
+    "copy": "Sao chép",
+    "trainTitle": "Huấn luyện chuyên gia này",
+    "trainHint": "Thêm liên kết / văn bản / tệp, tự động tham chiếu khi chạy",
+    "trainLocked": "Huấn luyện kho kiến thức riêng là tính năng của gói PRO trở lên. Nâng cấp để chuyên gia học từ các ví dụ viral, phong cách và tài liệu bạn tải lên.",
+    "srcType": {
+      "url": "Liên kết",
+      "file": "Tệp",
+      "text": "Văn bản"
+    },
+    "chars": "{n} ký tự",
+    "tab": {
+      "url": "Đường dẫn URL",
+      "text": "Dán văn bản",
+      "file": "Tải tệp lên"
+    },
+    "urlPh": "https://… (bài viết / bài đăng / trang web)",
+    "namePh": "Tên của kiến thức này (không bắt buộc)",
+    "textPh": "Dán ví dụ viral, phương pháp, mẫu phong cách…",
+    "adding": "Đang thêm…",
+    "addKnowledge": "Thêm kiến thức",
+    "processing": "Đang xử lý…",
+    "chooseFile": "Chọn tệp",
+    "fileHint": "Hỗ trợ docx / xlsx / csv / txt / pdf, tự động trích xuất văn bản"
+  },
+  "CompanyProfile": {
+    "noPermission": "Cần quyền quản trị công ty hoặc quyền marketing để chỉnh sửa hồ sơ công ty",
+    "tab": {
+      "basic": "Thông tin cơ bản",
+      "brand": "Thương hiệu",
+      "products": "Sản phẩm",
+      "stores": "Cửa hàng",
+      "files": "Tư liệu"
+    },
+    "legalName": "Tên pháp lý của công ty",
+    "legalNameHint": "Tên đăng ký; tên thương hiệu nhập ở tab \"Thương hiệu\"",
+    "legalNamePh": "VD: Công ty TNHH XX",
+    "pleaseSelect": "Vui lòng chọn",
+    "industry": {
+      "label": "Ngành nghề",
+      "tech": "Công nghệ / phần mềm",
+      "manufacturing": "Sản xuất",
+      "retail": "Bán lẻ / thương mại điện tử",
+      "finance": "Dịch vụ tài chính",
+      "health": "Y tế / sức khỏe",
+      "food": "F&B / tiêu dùng",
+      "education": "Giáo dục / đào tạo",
+      "realEstate": "Bất động sản",
+      "logistics": "Logistics / vận tải",
+      "advertising": "Quảng cáo / marketing",
+      "hospitality": "Khách sạn / homestay",
+      "other": "Khác"
+    },
+    "employees": {
+      "label": "Số nhân viên",
+      "e1": "1-10 người",
+      "e2": "11-50 người",
+      "e3": "51-200 người",
+      "e4": "201-500 người",
+      "e5": "501-1000 người",
+      "e6": "Trên 1000 người"
+    },
+    "capital": "Vốn điều lệ",
+    "capitalPh": "VD: 10 tỷ VND",
+    "founded": "Năm thành lập",
+    "foundedPh": "VD: 2010",
+    "address": "Địa chỉ công ty",
+    "addressPh": "Tỉnh/TP + quận/huyện + đường",
+    "basicHint": "Website, khách hàng mục tiêu, điểm bán hàng, câu chuyện thương hiệu… nhập ở tab \"Thương hiệu\"; sản phẩm và cửa hàng nhập ở tab riêng.",
+    "saveBasic": "Lưu thông tin cơ bản",
+    "saved": "Đã lưu",
+    "saveFailed": "Lưu thất bại",
+    "fileCat": {
+      "logo": "Logo / biểu tượng thương hiệu",
+      "image": "Ảnh sản phẩm / bối cảnh",
+      "document": "Giới thiệu công ty / catalogue",
+      "faq": "FAQ / dữ liệu hỏi đáp"
+    },
+    "extracted": "Đã trích xuất",
+    "uploadFile": "Tải tệp lên",
+    "filesHint": "Excel / Word / PDF sẽ được tự động trích xuất văn bản để AI dùng cho marketing và trả lời khách hàng. Tải lên hoặc xóa sẽ tự động lưu.",
+    "tone": {
+      "formal": "Chuyên nghiệp / trang trọng",
+      "young": "Sôi nổi / trẻ trung",
+      "warm": "Ấm áp / thân thiện",
+      "innovative": "Sáng tạo / tiên phong",
+      "luxury": "Sang trọng / cao cấp",
+      "friendly": "Gần gũi / bình dân"
+    },
+    "storeFeature": {
+      "wifi": "WiFi miễn phí",
+      "outlets": "Ổ cắm sạc",
+      "privateRoom": "Phòng riêng",
+      "photoWall": "Góc chụp ảnh check-in",
+      "petFriendly": "Thân thiện thú cưng",
+      "nearMrt": "Gần ga tàu điện",
+      "outdoor": "Chỗ ngồi ngoài trời",
+      "accessible": "Lối đi cho người khuyết tật"
+    },
+    "productTag": {
+      "new": "Sản phẩm mới",
+      "bestseller": "Bán chạy",
+      "signature": "Món đặc trưng",
+      "seasonal": "Giới hạn theo mùa",
+      "photogenic": "Đẹp để check-in",
+      "light": "Ít calo",
+      "chefPick": "Đầu bếp đề xuất"
+    },
+    "defaultCategory": "Đồ uống"
+  },
+  "WorkImport": {
+    "title": {
+      "label": "Tiêu đề công việc",
+      "example": "Hoàn thành thử nghiệm thực đơn quý 3"
+    },
+    "status": {
+      "label": "Ghi chú trạng thái",
+      "example": "Đang thực hiện"
+    },
+    "done": {
+      "label": "Đã hoàn thành?",
+      "example": "Không"
+    },
+    "deadline": {
+      "label": "Hạn chót"
+    }
+  },
+  "FinancePageImport": {
+    "date": {
+      "label": "Ngày"
+    },
+    "type": {
+      "label": "Loại",
+      "example": "chi"
+    },
+    "category": {
+      "label": "Phân loại",
+      "example": "Chi phí mua hàng"
+    },
+    "amount": {
+      "label": "Số tiền"
+    },
+    "description": {
+      "label": "Diễn giải",
+      "example": "Mua vật tư văn phòng"
+    },
+    "account_name": {
+      "label": "Tên tài khoản",
+      "example": "Quỹ tiền mặt"
+    },
+    "pay_coll_name": {
+      "label": "Người thu chi",
+      "example": "Nguyễn Văn A"
+    }
+  },
+  "FinanceSubjects": {
+    "hint": "Bấm vào khoản mục để lọc nhanh bút toán bên phải",
+    "allSubjects": "📁 Tất cả khoản mục",
+    "prevMonth": "‹ Tháng trước",
+    "nextMonth": "Tháng sau ›",
+    "jumpThisMonth": "Đến tháng này",
+    "thisMonth": "Tháng này",
+    "settings": "Cài đặt khoản mục",
+    "selected": "Đang chọn",
+    "cls": {
+      "asset": "Tài sản",
+      "liability": "Nợ phải trả",
+      "income": "Thu nhập",
+      "expense": "Chi phí"
+    },
+    "other": "Khác",
+    "year": "Năm",
+    "mgmtDesc": "Quản lý nhóm (thư mục), tên chi tiết, số dư đầu kỳ và tính chất thường xuyên của các khoản mục theo từng loại.",
+    "subjectNamePh": "VD: Két sắt, Bột kem, DT VNPAY",
+    "parentPh": "VD: Tiền mặt, Nguyên liệu đồ uống, Thu nhập khác",
+    "mgmtTitle": "Cài đặt khoản mục (dữ liệu gốc)",
+    "parentName": "Tên nhóm (thư mục / cấp cha)",
+    "openingBalance": "Số dư đầu kỳ",
+    "subjectNameReq": "Tên khoản mục chi tiết *",
+    "errName": "Vui lòng nhập tên khoản mục",
+    "noMatch": "Không tìm thấy khoản mục phù hợp",
+    "saveFailed": "Lưu thất bại",
+    "deleteFailed": "Xóa thất bại",
+    "addSubject": "Thêm khoản mục",
+    "styleLabel": "Tính chất",
+    "saveChanges": "Lưu thay đổi",
+    "create": "Tạo mới",
+    "cancel": "Hủy",
+    "edit": "Sửa",
+    "delete": "Xóa",
+    "close": "Đóng",
+    "monthN": "Tháng {n}",
+    "searchPh": "Tìm nhóm hoặc tên khoản mục {cls}...",
+    "editSubject": "Sửa khoản mục: {name}",
+    "newSubjectOf": "Thêm khoản mục {cls}",
+    "confirmDelete": "Xóa khoản mục \"{name}\"? Nếu khoản mục có giao dịch liên quan, số liệu thống kê có thể bị ảnh hưởng.",
+    "styleRegular": "Thường xuyên",
+    "styleIrregular": "Không thường xuyên",
+    "openingBalanceLabel": "Số dư đầu kỳ:",
+    "sortLabel": "Thứ tự:",
+    "total": "Tổng {n} khoản mục"
+  },
+  "FinanceMdb": {
+    "reLogin": "Vui lòng đăng nhập lại",
+    "uploadFailed": "Tải lên thất bại: {msg}",
+    "parseFailed": "Phân tích thất bại",
+    "importFailed": "Nhập thất bại",
+    "zTitle": "Nhập sổ quỹ & khoản mục (.mdb)",
+    "zDesc": "Tải lên cơ sở dữ liệu sổ sách, hệ thống sẽ tự tạo cây khoản mục và nhập giao dịch (loại bỏ trùng lặp).",
+    "parsing": "Đang phân tích cơ sở dữ liệu…",
+    "chooseMdb": "Bấm để chọn tệp .mdb",
+    "supportsMdb": "Hỗ trợ cơ sở dữ liệu sổ sách MymoneyData.mdb",
+    "bookName": "Sổ: ",
+    "dateRange": "Khoảng thời gian: ",
+    "importableRows": "Bút toán có thể nhập",
+    "rowsN": "{n} bút toán",
+    "autoSubjects": "Khoản mục tự tạo",
+    "itemsN": "{n} mục",
+    "totalIncome": "Tổng thu",
+    "totalExpense": "Tổng chi",
+    "writeMode": "Chế độ ghi (chống nhầm & ghi đè)",
+    "modeAppend": "Bổ sung phần mới (khuyến nghị)",
+    "modeAppendDesc": "Tự loại trùng theo số chứng từ: bỏ qua giao dịch đã có, chỉ thêm chứng từ mới.",
+    "modeClean": "Xóa và nhập lại (ghi đè sạch)",
+    "modeCleanDesc": "Xóa dữ liệu MDB cũ rồi ghi lại toàn bộ, tránh sót chứng từ đã xóa. Bút toán nhập tay hoàn toàn không bị ảnh hưởng.",
+    "alignTree": "Tự tạo và đồng bộ cây khoản mục ({n} khoản mục)",
+    "alignTreeDesc": "Dựa trên <code>ITEM_DATA</code> trong MDB, hệ thống tự tạo cây khoản mục tài sản, nợ, thu, chi cùng số dư đầu kỳ và đồng bộ mọi tài khoản thu chi.",
+    "detected": "Phát hiện {e} lỗi định dạng, {w} dòng nghi sai năm",
+    "viewErrors": "Xem chi tiết lỗi",
+    "viewErrorsHint": "Bấm \"Xem chi tiết lỗi\" để biết cụ thể số chứng từ, ngày, mục và nguyên nhân lỗi, giúp bạn đối chiếu và sửa.",
+    "allOk": "Tất cả bút toán đều đúng định dạng, không có bất thường.",
+    "rechoose": "Chọn lại",
+    "writing": "Đang ghi vào cơ sở dữ liệu…",
+    "confirmClean": "Xác nhận xóa dữ liệu cũ và nhập lại",
+    "confirmAppend": "Xác nhận nhập và tạo khoản mục",
+    "done": "Nhập hoàn tất!",
+    "importedN": "Đã nhập thành công <b>{n}</b> giao dịch",
+    "clearedN": " (đã xóa {n} dòng MDB cũ để nhập lại sạch)",
+    "skippedN": ", bỏ qua {n}",
+    "createdSummary": "; đã tạo/cập nhật <b>{s}</b> khoản mục và tạo mới <b>{a}</b> tài khoản tiền.",
+    "issuesN": "Lần nhập này có {n} lỗi hoặc cảnh báo",
+    "viewErrorsN": "Xem lỗi ({n})",
+    "finish": "Hoàn tất và vào hệ thống thủ quỹ",
+    "loadLogsFailed": "Không tải được lịch sử nhập",
+    "networkError": "Lỗi kết nối",
+    "revertFailed": "Hoàn tác thất bại",
+    "revertedN": "Đã hoàn tác lô này (xóa {n} chứng từ)",
+    "typeDelete": "Vui lòng nhập DELETE để xác nhận xóa",
+    "clearFailed": "Xóa thất bại",
+    "clearedAllN": "Đã xóa toàn bộ dữ liệu MDB ({n} chứng từ)",
+    "bTitle": "Lịch sử nhập MDB & hoàn tác theo lô",
+    "bDesc": "Nếu dữ liệu nhập sai hoặc muốn nhập lại, có thể hoàn tác cả lô chỉ với một lần bấm (bút toán nhập tay được giữ nguyên 100%).",
+    "bookCode": "Mã sổ: <b>{book}</b> ({n} lần nhập)",
+    "clearAllBtn": "Xóa toàn bộ bút toán nhập từ MDB",
+    "loadingLogs": "Đang tải các lô nhập…",
+    "noLogs": "Chưa có lịch sử nhập MDB",
+    "noLogsHint": "Dùng \"Nhập tệp sổ sách (.mdb)\" ở trang Thủ quỹ để nhập cơ sở dữ liệu sổ sách.",
+    "statusReverted": "Đã hoàn tác",
+    "statusActive": "Đang hiệu lực",
+    "revertBtn": "Hoàn tác lô này",
+    "importedRows": "Số dòng nhập: ",
+    "builtSubjects": "Khoản mục đã tạo: ",
+    "notRecorded": "Chưa ghi nhận",
+    "revertedAt": "Lô này đã được hoàn tác lúc {at}, toàn bộ bút toán đã bị xóa.",
+    "closeWindow": "Đóng",
+    "revertConfirmTitle": "Xác nhận hoàn tác lô MDB này?",
+    "revertConfirmBody": "Bạn sắp hoàn tác <b>{file}</b> đã nhập lúc <b>{at}</b>.",
+    "revertWillDelete": "Sẽ xóa hoàn toàn <b>{n}</b> chứng từ của lô này.",
+    "manualKept": "Mọi bút toán thủ quỹ bạn nhập tay <b>được giữ nguyên, không bị ảnh hưởng</b>.",
+    "confirmRevert": "Xác nhận hoàn tác",
+    "cancel": "Hủy",
+    "clearAllTitle": "Cảnh báo: xóa toàn bộ giao dịch nhập từ MDB",
+    "clearAllBody": "Thao tác này sẽ xóa khỏi sổ quỹ <b>mọi giao dịch nhập từ MDB</b> (tất cả các lô).",
+    "irreversible": "Không thể hoàn tác, hãy chắc chắn bạn muốn làm sạch toàn bộ sổ.",
+    "manualAndTreeKept": "Bút toán nhập tay và cây khoản mục hiện có vẫn được giữ.",
+    "typeDeleteHint": "Để tránh bấm nhầm, hãy nhập <b>DELETE</b> bên dưới để xác nhận:",
+    "typeDeletePh": "Nhập DELETE",
+    "confirmClearAll": "Xác nhận xóa toàn bộ chứng từ MDB",
+    "rpTitle": "=== Báo cáo chẩn đoán lỗi nhập MDB ===",
+    "rpBook": "Sổ: {book} | Tệp: {file}",
+    "rpCounts": "Tổng lỗi: {e} | Tổng cảnh báo: {w}",
+    "rpGenerated": "Thời gian tạo: {at}",
+    "rpItem": "[#{i}] Số chứng từ MAKE_NO: {no} | Ngày: {date} | Loại: {sev} ({type})",
+    "sevError": "Lỗi",
+    "sevWarning": "Cảnh báo",
+    "rpProblem": "Vấn đề:",
+    "rpDesc": "Mô tả:",
+    "rpFix": "Đề xuất sửa:",
+    "rpRaw": "Bút toán gốc:",
+    "rpRow": "Loại:{cls} | Mục:{item} | Thu:{inn} | Chi:{out} | Diễn giải:{note}",
+    "eTitle": "Chi tiết lỗi và bất thường khi nhập MDB",
+    "eBook": "Sổ: {book}",
+    "eDesc": "Liệt kê số chứng từ, mục liên quan và nguyên nhân của từng bút toán bất thường để bạn đối chiếu và sửa.",
+    "fAll": "Tất cả ({n})",
+    "fError": "Lỗi ({n})",
+    "fWarning": "Cảnh báo / nghi sai chính tả ({n})",
+    "reportCopied": "Đã sao chép báo cáo",
+    "copyReport": "Sao chép báo cáo chẩn đoán",
+    "eSearchPh": "Tìm số chứng từ (MAKE_NO), ngày, tên mục, ghi chú...",
+    "eNone": "Không có lỗi phù hợp",
+    "eNoneHint": "Mọi bút toán trong tệp này đều nhập bình thường",
+    "voucherNo": "Chứng từ #{no}",
+    "dateN": "Ngày: {date}",
+    "skipped": "Bỏ qua, không nhập",
+    "importedCheck": "Đã nhập (nên kiểm tra)",
+    "collapseRaw": "Thu gọn bút toán gốc",
+    "viewRaw": "Xem bút toán gốc",
+    "suggestion": "Đề xuất xử lý:",
+    "rawInfo": "Bút toán gốc theo cặp trong MDB ({n} dòng):",
+    "colClass": "Loại",
+    "colItem": "Tên mục",
+    "colIn": "Thu",
+    "colOut": "Chi",
+    "colNote": "Diễn giải / ghi chú",
+    "eFooter": "Tổng {n} mục (lỗi: {e}, cảnh báo: {w})",
+    "err": {
+      "invalidCount": {
+        "title": "Bút toán không đủ dòng (thực tế {n} dòng, cần 2 dòng theo cặp)",
+        "desc": "Mỗi giao dịch kế toán kép phải có hai dòng nợ và có. Hiện có {n} dòng, có thể đã bị xóa một bên trong phần mềm gốc hoặc dữ liệu bị hỏng.",
+        "fix": "Vui lòng kiểm tra tính đầy đủ của chứng từ #{no}."
+      },
+      "badDate": {
+        "title": "Ngày sai định dạng, không đọc được (\"{date}\")",
+        "desc": "Ngày của bút toán không theo định dạng YYYY/MM/DD, hệ thống không xác định được ngày ghi sổ.",
+        "fix": "Vui lòng mở chứng từ #{no} và nhập lại ngày."
+      },
+      "yearRange": {
+        "title": "Năm nghi bị nhập sai ({year})",
+        "desc": "Mục \"{a}\" và \"{b}\", ghi chú \"{note}\", ngày \"{date}\". Dữ liệu vẫn đã được nhập nhưng nên kiểm tra lại.",
+        "fix": "Vui lòng sửa năm cho đúng trong tệp gốc hoặc trong hệ thống."
+      },
+      "noAsset": {
+        "title": "Bút toán thiếu dòng tài sản (hai bên là \"{ca}\" và \"{cb}\")",
+        "desc": "Một dòng là \"{ca} - {a}\", dòng kia là \"{cb} - {b}\", không có tài khoản tiền nên không xác định được dòng tiền.",
+        "fix": "Vui lòng kiểm tra chứng từ #{no}, chỉ định một dòng là tài khoản thu chi đúng."
+      },
+      "zeroTransfer": {
+        "title": "Số tiền chuyển khoản bằng 0",
+        "desc": "Chuyển từ \"{from}\" sang \"{to}\" có số tiền 0, đã bỏ qua không nhập.",
+        "fix": "Nếu đây là chuyển khoản hợp lệ, vui lòng bổ sung số tiền."
+      },
+      "unknownClass": {
+        "title": "Loại không phải thu/chi (\"{cls}\")",
+        "desc": "Mục \"{item}\" thuộc loại \"{cls}\", không phải thu hoặc chi chuẩn nên không thể tự ghi sổ.",
+        "fix": "Vui lòng kiểm tra cài đặt khoản mục này."
+      },
+      "zeroAmount": {
+        "title": "Số tiền thu chi bằng 0",
+        "desc": "Mục \"{item}\" có số tiền 0, đã bỏ qua không nhập.",
+        "fix": "Nếu đây là khoản thu chi hợp lệ, vui lòng bổ sung số tiền."
+      }
+    }
+  },
+  "HrImport": {
+    "employee": {
+      "name": {
+        "label": "Họ tên",
+        "example": "Nguyễn Văn Minh"
+      },
+      "phone": {
+        "label": "Điện thoại"
+      },
+      "department": {
+        "label": "Phòng ban"
+      },
+      "position": {
+        "label": "Chức danh",
+        "example": "Nhân viên cửa hàng"
+      },
+      "staff_category": {
+        "label": "Toàn thời gian / bán thời gian"
+      },
+      "employment_type": {
+        "label": "Loại hợp đồng"
+      },
+      "hire_date": {
+        "label": "Ngày vào làm"
+      },
+      "base_salary": {
+        "label": "Lương cơ bản"
+      },
+      "hourly_rate": {
+        "label": "Lương theo giờ"
+      },
+      "store": {
+        "label": "Cửa hàng"
+      },
+      "attendance_no": {
+        "label": "Mã chấm công"
+      },
+      "bank_account": {
+        "label": "Số tài khoản"
+      },
+      "bank_name": {
+        "label": "Ngân hàng nhận"
+      },
+      "id_number": {
+        "label": "Số CCCD"
+      },
+      "status": {
+        "label": "Trạng thái"
+      },
+      "notes": {
+        "label": "Ghi chú"
+      },
+      "_meta": {
+        "title": "Nhập / cập nhật nhân viên hàng loạt",
+        "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Nếu họ tên và số CCCD đã tồn tại sẽ tự cập nhật, ngược lại sẽ thêm mới.",
+        "template": "Mau nhan vien",
+        "sheet": "Nhan vien"
+      }
+    },
+    "payroll": {
+      "name": {
+        "label": "Tên nhân viên",
+        "example": "Nguyễn Văn Minh"
+      },
+      "year": {
+        "label": "Năm"
+      },
+      "month": {
+        "label": "Tháng"
+      },
+      "base_salary": {
+        "label": "Lương cơ bản"
+      },
+      "allowances": {
+        "label": "Phụ cấp"
+      },
+      "deductions": {
+        "label": "Khấu trừ"
+      },
+      "bonus": {
+        "label": "Thưởng"
+      },
+      "notes": {
+        "label": "Ghi chú"
+      },
+      "_meta": {
+        "title": "Nhập / cập nhật bảng lương tháng",
+        "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Lương tháng đã có của nhân viên sẽ được ghi đè; nhân viên chưa có sẽ được tự tạo.",
+        "template": "Mau bang luong",
+        "sheet": "Bang luong"
+      }
+    },
+    "candidate": {
+      "name": {
+        "label": "Họ tên",
+        "example": "Lê Văn Đồng"
+      },
+      "phone": {
+        "label": "Điện thoại"
+      },
+      "position": {
+        "label": "Vị trí ứng tuyển",
+        "example": "Pha chế"
+      },
+      "store": {
+        "label": "Cửa hàng ứng tuyển"
+      },
+      "staff_category": {
+        "label": "Toàn thời gian / bán thời gian"
+      },
+      "stage": {
+        "label": "Giai đoạn tuyển dụng"
+      },
+      "birthday": {
+        "label": "Ngày sinh"
+      },
+      "id_number": {
+        "label": "Số CCCD"
+      },
+      "_meta": {
+        "title": "Nhập / cập nhật ứng viên hàng loạt",
+        "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Nếu trùng điện thoại, email hoặc số CCCD sẽ tự cập nhật, ngược lại thêm mới.",
+        "template": "Mau ung vien",
+        "sheet": "Ung vien"
+      }
+    },
+    "evaluation": {
+      "name": {
+        "label": "Tên nhân viên",
+        "example": "Nguyễn Văn Minh"
+      },
+      "attendance_no": {
+        "label": "Mã chấm công"
+      },
+      "year": {
+        "label": "Năm"
+      },
+      "month": {
+        "label": "Tháng"
+      },
+      "bonus": {
+        "label": "Thưởng"
+      },
+      "reward": {
+        "label": "Tiền thưởng"
+      },
+      "penalty": {
+        "label": "Tiền phạt"
+      },
+      "score": {
+        "label": "Điểm"
+      },
+      "notes": {
+        "label": "Nhận xét",
+        "example": "Chuyên cần tốt, làm việc xuất sắc"
+      },
+      "_meta": {
+        "title": "Nhập / cập nhật đánh giá, khen thưởng & kỷ luật",
+        "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Vui lòng điền tên nhân viên hoặc mã chấm công.",
+        "template": "Mau danh gia",
+        "sheet": "Danh gia"
+      }
+    },
+    "insurance": {
+      "name": {
+        "label": "Tên nhân viên",
+        "example": "Nguyễn Văn Minh"
+      },
+      "id_number": {
+        "label": "Số CCCD"
+      },
+      "attendance_no": {
+        "label": "Mã chấm công"
+      },
+      "insurance_required": {
+        "label": "Cần đóng bảo hiểm?"
+      },
+      "insurance_status": {
+        "label": "Tình trạng bảo hiểm"
+      },
+      "insurance_number": {
+        "label": "Số sổ bảo hiểm"
+      },
+      "insurance_salary": {
+        "label": "Lương đóng bảo hiểm"
+      },
+      "_meta": {
+        "title": "Nhập / cập nhật bảo hiểm hàng loạt",
+        "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Đối chiếu theo tên, số CCCD hoặc mã chấm công để cập nhật tình trạng, số sổ và mức lương đóng bảo hiểm.",
+        "template": "Mau bao hiem",
+        "sheet": "Bao hiem"
+      }
+    },
+    "leave": {
+      "name": {
+        "label": "Tên nhân viên",
+        "example": "Nguyễn Văn Minh"
+      },
+      "attendance_no": {
+        "label": "Mã chấm công"
+      },
+      "leave_type": {
+        "label": "Loại nghỉ phép"
+      },
+      "start_date": {
+        "label": "Ngày bắt đầu"
+      },
+      "end_date": {
+        "label": "Ngày kết thúc"
+      },
+      "days": {
+        "label": "Số ngày"
+      },
+      "reason": {
+        "label": "Lý do",
+        "example": "Việc gia đình"
+      },
+      "status": {
+        "label": "Trạng thái duyệt"
+      },
+      "notes": {
+        "label": "Ghi chú"
+      },
+      "_meta": {
+        "title": "Nhập ngày nghỉ phép hàng loạt",
+        "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Vui lòng điền tên nhân viên hoặc mã chấm công.",
+        "template": "Mau nghi phep",
+        "sheet": "Nghi phep"
+      }
+    }
+  },
+  "UnitsImport": {
+    "code": {
+      "label": "Mã đơn vị"
+    },
+    "name": {
+      "label": "Tên đơn vị"
+    },
+    "unit_type": {
+      "label": "Loại"
+    },
+    "short_name": {
+      "label": "Tên viết tắt"
+    },
+    "region": {
+      "label": "Khu vực",
+      "example": "Hồ Chí Minh"
+    },
+    "base_hourly_rate": {
+      "label": "Lương giờ cơ bản"
+    },
+    "electricity_no": {
+      "label": "Mã số điện"
+    },
+    "water_no": {
+      "label": "Mã số nước"
+    },
+    "address": {
+      "label": "Địa chỉ",
+      "example": "Quận 1, TP. Hồ Chí Minh..."
+    },
+    "active": {
+      "label": "Đang hoạt động"
+    },
+    "_meta": {
+      "title": "Nhập / cập nhật đơn vị hàng loạt",
+      "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Nếu trùng mã đơn vị sẽ tự cập nhật, ngược lại thêm mới.",
+      "template": "Mau don vi",
+      "sheet": "Don vi"
+    }
+  },
+  "AffairsImport": {
+    "title": {
+      "label": "Tiêu đề tài liệu",
+      "example": "Hợp đồng thuê mặt bằng cửa hàng Zhongxiao"
+    },
+    "doc_type": {
+      "label": "Loại tài liệu"
+    },
+    "store_code": {
+      "label": "Mã cửa hàng"
+    },
+    "counterparty": {
+      "label": "Bên ký / bên cho thuê",
+      "example": "Chủ nhà Vương Đại Minh"
+    },
+    "effective_date": {
+      "label": "Ngày hiệu lực"
+    },
+    "expiry_date": {
+      "label": "Ngày hết hạn"
+    },
+    "deposit": {
+      "label": "Tiền cọc"
+    },
+    "monthly_rent": {
+      "label": "Tiền thuê / phí hàng tháng"
+    },
+    "payment_day": {
+      "label": "Ngày thanh toán hàng tháng"
+    },
+    "notes": {
+      "label": "Ghi chú",
+      "example": "Cọc 2 tháng, điện nước tự trả"
+    },
+    "_meta": {
+      "title": "Nhập giấy phép & hợp đồng thuê hàng loạt",
+      "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Nếu trùng tiêu đề tài liệu sẽ tự cập nhật.",
+      "template": "Mau giay phep va hop dong thue",
+      "sheet": "Tai lieu"
+    }
+  },
+  "RdLogsImport": {
+    "title": {
+      "label": "Tiêu đề nhật ký",
+      "example": "Ghi chép thử hương vị công thức"
+    },
+    "summary": {
+      "label": "Nội dung nhật ký",
+      "example": "Giảm độ ngọt 5%, hương trà rõ hơn..."
+    },
+    "date": {
+      "label": "Ngày"
+    },
+    "_meta": {
+      "title": "Nhập nhật ký R&D hàng loạt",
+      "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Cần có tiêu đề và nội dung nhật ký.",
+      "template": "Mau nhat ky RD",
+      "sheet": "Nhat ky RD"
+    }
+  },
+  "StoreExpensesImport": {
+    "store": {
+      "code": {
+        "label": "Mã cửa hàng"
+      },
+      "name": {
+        "label": "Tên cửa hàng"
+      },
+      "region": {
+        "label": "Khu vực",
+        "example": "Hồ Chí Minh"
+      },
+      "active": {
+        "label": "Đang hoạt động"
+      },
+      "_meta": {
+        "title": "Nhập cửa hàng / khu vực hàng loạt",
+        "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Nếu trùng mã cửa hàng sẽ tự cập nhật.",
+        "template": "Mau cua hang",
+        "sheet": "Cua hang"
+      }
+    },
+    "category": {
+      "code": {
+        "label": "Mã khoản mục"
+      },
+      "name": {
+        "label": "Tên khoản mục",
+        "example": "Tiền nước"
+      },
+      "entry_method": {
+        "label": "Cách nhập"
+      },
+      "vendor_service": {
+        "label": "Loại nhà cung cấp"
+      },
+      "sort": {
+        "label": "Thứ tự"
+      },
+      "_meta": {
+        "title": "Nhập khoản mục chi phí hàng loạt",
+        "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Nếu trùng mã khoản mục sẽ tự cập nhật.",
+        "template": "Mau khoan muc chi phi",
+        "sheet": "Khoan muc"
+      }
+    },
+    "vendor": {
+      "name": {
+        "label": "Tên nhà cung cấp",
+        "example": "Công ty gas"
+      },
+      "service": {
+        "label": "Dịch vụ"
+      },
+      "regions": {
+        "label": "Khu vực phục vụ"
+      },
+      "active": {
+        "label": "Đang hoạt động"
+      },
+      "_meta": {
+        "title": "Nhập nhà cung cấp hàng loạt",
+        "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Nếu trùng mã số thuế hoặc tên nhà cung cấp sẽ tự cập nhật.",
+        "template": "Mau nha cung cap",
+        "sheet": "Nha cung cap"
+      }
+    }
+  },
+  "VendorsImport": {
+    "vendor": {
+      "name": {
+        "label": "Tên nhà cung cấp",
+        "example": "Nhà cung cấp trà Đài Loan"
+      },
+      "tax_id": {
+        "label": "Mã số thuế"
+      },
+      "service": {
+        "label": "Loại"
+      },
+      "contact": {
+        "label": "Người liên hệ",
+        "example": "Anh Trần"
+      },
+      "phone": {
+        "label": "Điện thoại"
+      },
+      "address": {
+        "label": "Địa chỉ",
+        "example": "Quận Đại An, Đài Bắc..."
+      },
+      "products": {
+        "label": "Sản phẩm cung cấp",
+        "example": "Lá trà, nguyên liệu"
+      },
+      "pay_terms": {
+        "label": "Hình thức thanh toán"
+      },
+      "billing_cycle": {
+        "label": "Chu kỳ thanh toán"
+      },
+      "billing_day": {
+        "label": "Ngày chốt sổ"
+      },
+      "active": {
+        "label": "Đang hoạt động"
+      },
+      "_meta": {
+        "title": "Nhập / cập nhật nhà cung cấp hàng loạt",
+        "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Nếu trùng mã số thuế hoặc tên sẽ tự cập nhật, ngược lại thêm mới.",
+        "template": "Mau nha cung cap",
+        "sheet": "Nha cung cap"
+      }
+    },
+    "purchase": {
+      "purchased_on": {
+        "label": "Ngày mua"
+      },
+      "product": {
+        "label": "Mặt hàng mua",
+        "example": "Hồng trà Ceylon cao cấp"
+      },
+      "qty": {
+        "label": "Số lượng"
+      },
+      "amount": {
+        "label": "Số tiền"
+      },
+      "note": {
+        "label": "Ghi chú",
+        "example": "Lô nhập đầu tiên"
+      },
+      "_meta": {
+        "title": "Nhập lịch sử mua hàng hàng loạt",
+        "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Vui lòng điền ngày mua, mặt hàng và số tiền.",
+        "template": "Mau mua hang",
+        "sheet": "Mua hang"
+      }
+    }
+  },
+  "PersonnelImport": {
+    "name": {
+      "label": "Họ tên",
+      "example": "Nguyễn Thị Phương"
+    },
+    "gender": {
+      "label": "Giới tính"
+    },
+    "native_place": {
+      "label": "Quê quán",
+      "example": "TP. Hồ Chí Minh"
+    },
+    "birthday": {
+      "label": "Ngày sinh"
+    },
+    "id_number": {
+      "label": "Số CCCD"
+    },
+    "education": {
+      "label": "Trình độ học vấn"
+    },
+    "phone": {
+      "label": "Điện thoại"
+    },
+    "email": {
+      "label": "Email cá nhân"
+    },
+    "company_email": {
+      "label": "Email công ty"
+    },
+    "position": {
+      "label": "Chức vụ",
+      "example": "Cửa hàng trưởng"
+    },
+    "store": {
+      "label": "Cửa hàng"
+    },
+    "staff_category": {
+      "label": "Toàn thời gian / bán thời gian"
+    },
+    "payroll_no": {
+      "label": "Mã lương"
+    },
+    "address": {
+      "label": "Địa chỉ",
+      "example": "Quận 1, TP. Hồ Chí Minh"
+    },
+    "_meta": {
+      "title": "Nhập / cập nhật nhân sự hàng loạt",
+      "description": "Hỗ trợ Excel (.xlsx) và CSV. Nếu trùng số CCCD, email hoặc họ tên + điện thoại sẽ tự cập nhật, ngược lại thêm mới.",
+      "template": "Mau nhan su",
+      "sheet": "Nhan su"
+    }
+  },
+  "ShiftImport": {
+    "employee_name": {
+      "label": "Tên nhân viên",
+      "example": "Nguyễn Văn Minh"
+    },
+    "work_date": {
+      "label": "Ngày làm việc"
+    },
+    "slot_code": {
+      "label": "Ca làm"
+    },
+    "_meta": {
+      "title": "Nhập lịch ca hàng loạt",
+      "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Vui lòng điền tên nhân viên, ngày làm (YYYY-MM-DD) và ca (早 / 午 / 晚 = sáng / trưa / tối).",
+      "template": "Mau xep ca",
+      "sheet": "Lich ca"
+    }
+  },
+  "HrUnion": {
+    "subtitle": "Quản lý đoàn viên, phúc lợi thăm hỏi, thỏa ước tập thể và báo cáo tài chính theo quy định của Tổng Liên đoàn Lao động Việt Nam",
+    "noDocs": "Chưa lưu thỏa ước hay biên bản đối thoại nào. Hỗ trợ tải lên PDF có đóng dấu để lưu trữ lâu dài.",
+    "noBenefits": "Chưa có đề nghị nào. Hỗ trợ đề nghị và duyệt trực tuyến cho sinh nhật, kết hôn, sinh con, nằm viện, trợ cấp khó khăn.",
+    "totalIncome": "Tổng thu (đoàn phí 1% & kinh phí 2%)",
+    "exportReport": "Xuất báo cáo tài chính công đoàn (Mẫu B14-CĐ & B15-CĐ)",
+    "tabDocs": "TƯLĐTT & đối thoại",
+    "docsTitle": "Thỏa ước lao động tập thể (TƯLĐTT) và biên bản đối thoại định kỳ hàng quý",
+    "totalExpense": "Tổng chi (thăm hỏi, phong trào)",
+    "requestTitle": "Đề nghị chế độ & thăm hỏi",
+    "tabFinances": "Tài chính công đoàn",
+    "noMembers": "Chưa có đoàn viên. Bấm \"Thêm đoàn viên\" ở góc trên bên phải để ghi nhận.",
+    "docTitlePh": "VD: Thỏa ước lao động tập thể 2026-2028 (đã đóng dấu)",
+    "entryTitle": "Ghi sổ thu - chi công đoàn",
+    "code2": "Kinh phí công đoàn 2%",
+    "tabBenefits": "Chế độ & thăm hỏi",
+    "noEntries": "Chưa có thu chi. Bấm \"Ghi sổ\" ở góc trên bên phải để thêm khoản thu hoặc chi.",
+    "code3": "Thăm hỏi, trợ cấp",
+    "cardNumber": "Số thẻ đoàn viên",
+    "balance": "Kết dư tài chính",
+    "title": "Công đoàn cơ sở",
+    "uploadDocTitle": "Tải lên thỏa ước tập thể / biên bản",
+    "receiptNo": "Số chứng từ",
+    "addMemberTitle": "Thêm đoàn viên công đoàn",
+    "code1": "Đoàn phí 1%",
+    "tabMembers": "Đoàn viên",
+    "bhxhNumber": "Mã số BHXH",
+    "code4": "Phong trào",
+    "statusApproved": "Đã duyệt",
+    "statusPending": "Chờ duyệt",
+    "active": "Đoàn viên",
+    "statusPaid": "✓ Đã chi",
+    "reasonPh": "VD: giấy ra viện lưu hồ sơ, quà cưới",
+    "code5": "Quản lý",
+    "amountVndReq": "Số tiền (VND) *",
+    "benefitsTitle": "Chi trả chế độ & duyệt thăm hỏi",
+    "idNumber": "Số CCCD",
+    "summaryPh": "VD: Trích đoàn phí tháng 7",
+    "reasonVoucher": "Lý do / số chứng từ",
+    "choosePdf": "Chọn tệp PDF scan",
+    "amountReq": "Số tiền (VND) *",
+    "bhxh": "Mã số BHXH:",
+    "uploadDoc": "Tải lên thỏa ước / biên bản",
+    "addEntry": "Ghi sổ (thu / chi)",
+    "storeDept": "Cửa hàng / phòng ban",
+    "requestBenefit": "Đề nghị trợ cấp / thăm hỏi",
+    "income": "Thu",
+    "expense": "Chi",
+    "ledger": "Sổ thu chi chi tiết",
+    "pleaseChoose": "— Vui lòng chọn —",
+    "addMember": "Thêm đoàn viên",
+    "employeeNameReq": "Tên nhân viên *",
+    "chooseMemberReq": "Chọn đoàn viên *",
+    "benefitTypeReq": "Loại chế độ *",
+    "docCategoryReq": "Phân loại tài liệu *",
+    "docTitleReq": "Tiêu đề tài liệu *",
+    "confirmUpload": "Xác nhận tải lên",
+    "joinDate": "Ngày vào công đoàn:",
+    "requestDate": "Ngày đề nghị:",
+    "effective": "Ngày hiệu lực:",
+    "expiry": "Ngày hết hạn:",
+    "saveFailed": "Lưu thất bại",
+    "confirmSave": "Xác nhận lưu",
+    "requestFailed": "Gửi đề nghị thất bại",
+    "submitRequest": "Gửi đề nghị",
+    "uploadFailed": "Tải lên thất bại",
+    "entryFailed": "Ghi sổ thất bại",
+    "typeReq": "Loại *",
+    "itemCode": "Mã khoản mục",
+    "summary": "Diễn giải",
+    "confirmEntry": "Xác nhận ghi sổ",
+    "cardNo": "Số thẻ:",
+    "note": "Ghi chú:",
+    "remark": "Ghi chú:",
+    "voucher": "Chứng từ:",
+    "hq": "Trụ sở chính",
+    "member": "Đoàn viên",
+    "cancel": "Hủy",
+    "other": "Khác",
+    "memberCount": "Tổng {n} đoàn viên",
+    "benefit": {
+      "birthday": "Quà sinh nhật",
+      "marriage": "Mừng kết hôn",
+      "maternity": "Trợ cấp sinh con",
+      "hospital": "Thăm hỏi nằm viện",
+      "relief": "Trợ cấp khó khăn",
+      "other": "Phúc lợi khác"
+    },
+    "docCat": {
+      "tuldtt": "Thỏa ước lao động tập thể (TƯLĐTT)",
+      "noiquy": "Nội quy lao động",
+      "doitheo": "Biên bản đối thoại",
+      "committee": "Đại hội / Quyết định"
+    }
+  },
+  "RepairKnowledge": {
+    "csDesc": "Khi có hãng/model mới chưa có sổ tay PDF, nhập hãng và model, AI sẽ dựa trên nguyên lý cơ điện quầy bar để suy luận máy trạng thái chuẩn, công tắc giới hạn và 10 cây lỗi thường gặp.",
+    "subtitle": "Chia nhỏ có cấu trúc sổ tay, sơ đồ mạch, bảng mã lỗi · tự suy luận máy trạng thái khi khởi động lạnh · học khép kín từ các ca sửa chữa",
+    "measuredPh": "VD: Thanh nhiệt đo 530Ω bình thường, đầu vào SSR 12V bình thường nhưng không có đầu ra",
+    "casesTitle": "Thư viện ca sửa chữa thực tế (case-based learning)",
+    "rootCausePh": "VD: Rơ-le bán dẫn (SSR) trên bo mạch bị cháy đầu ra, không cấp điện cho thanh nhiệt",
+    "catPosLong": "💻 POS & IT (máy cảm ứng / máy in hóa đơn / máy in tem / switch)",
+    "modelPh": "VD: ET-99S, FT-16, TM-T82, KM-150A",
+    "catBarLong": "🧋 Quầy bar (máy dán miệng ly / máy định lượng đường / máy ủ trà / máy làm đá)",
+    "brandPh": "VD: Yi Fang, Hong Mao, Hoshizaki, Epson, Delta",
+    "partsPh": "VD: Thay rơ-le bán dẫn 25A (SSR-25DA)",
+    "casesSubtitle": "Ghi lại từ các ca sửa tại chỗ để AI ngày càng chính xác",
+    "rootCauseReq": "Nguyên nhân gốc sau khi tháo máy *",
+    "techNotePh": "VD: Tránh đặt nơi ẩm ướt, siết lại ốc đầu cos mỗi 6 tháng",
+    "chunkContentPh": "Mô tả chi tiết các bước kiểm tra, giá trị chuẩn và cách xử lý bất thường...",
+    "searchPh": "Tìm model, mã lỗi (E01), mã linh kiện...",
+    "catFactoryLong": "🏭 Xưởng trung tâm (máy nấu đường / nồi nấu trà / bơm tuần hoàn)",
+    "chunkContent": "Nội dung (SOP, giá trị điện trở, các bước)",
+    "typeErrorCode": "Bảng mã lỗi",
+    "chunkTitlePh": "VD: Kiểm tra mòn dao và quy trình thay dao máy dán miệng ly",
+    "caseTitle": "Ghi nhận kinh nghiệm sửa chữa thực tế",
+    "symptomPh": "VD: E01 nhiệt độ không lên, cuộn màng không chạy",
+    "allCategories": "Tất cả loại (quầy bar / xưởng / IT)",
+    "typeCircuit": "Sơ đồ mạch điện",
+    "storeSafeLong": "Nhân viên cửa hàng tự làm được (an toàn, không tháo máy)",
+    "orderNoPh": "VD: RO-202609-008",
+    "errCauseParts": "Nguyên nhân thực tế và linh kiện thay thế là bắt buộc",
+    "tagsPh": "VD: dao cắt, hao mòn, thay lưỡi",
+    "title": "Sổ tay thiết bị & kho kiến thức RAG",
+    "runDerive": "Tự suy luận máy trạng thái & cây lỗi",
+    "addChunkTitle": "Thêm đoạn kiến thức sổ tay thiết bị",
+    "catPos": "💻 POS & phần cứng/phần mềm IT",
+    "csTitle": "Công cụ suy luận máy trạng thái thiết bị",
+    "techOnlyLong": "Chỉ kỹ thuật viên (cần tháo máy đo đạc)",
+    "noChunks": "Không có đoạn kiến thức phù hợp",
+    "targetModelPh": "VD: YiFang-ET-99S",
+    "partsReq": "Linh kiện đã thay & mã linh kiện *",
+    "errBrandModel": "Vui lòng nhập hãng và model thiết bị",
+    "measured": "Điện trở / điện áp đo được",
+    "addChunkBtn": "Tải lên / thêm đoạn sổ tay",
+    "derivedParts": "Mã linh kiện dự phòng chuẩn:",
+    "tags": "Thẻ (cách nhau bằng dấu phẩy)",
+    "orderNo": "Số phiếu sửa chữa (không bắt buộc)",
+    "techNote": "Kinh nghiệm & đề xuất phòng ngừa",
+    "errTitleContent": "Tiêu đề và nội dung là bắt buộc",
+    "type": {
+      "maintenance_sop": "SOP vệ sinh bảo dưỡng",
+      "real_case": "Phản hồi thực tế của kỹ thuật viên",
+      "error_code": "Bảng mã lỗi",
+      "circuit_diagram": "Sơ đồ mạch điện",
+      "troubleshooting_tree": "Cây xử lý sự cố",
+      "exploded_view": "Sơ đồ tháo rời linh kiện"
+    },
+    "coldStartBtn": "Suy luận máy trạng thái",
+    "logCaseBtn": "Ghi nhận ca sửa chữa",
+    "catBar": "🧋 Thiết bị quầy bar",
+    "catFactory": "🏭 Thiết bị xưởng trung tâm",
+    "typeSop": "SOP vệ sinh bảo dưỡng",
+    "typeCases": "Ca thực tế của kỹ thuật viên",
+    "derivedStates": "Máy trạng thái suy luận:",
+    "measurements": "⚡ Số liệu đo: ",
+    "savedToKb": "Đã lưu vào kho kiến thức",
+    "allTypes": "Tất cả loại dữ liệu",
+    "officialSpec": "Quy chuẩn kỹ thuật chính hãng",
+    "targetModel": "Model thiết bị",
+    "symptom": "Hiện tượng tại chỗ",
+    "reported": "Hiện tượng báo cáo: ",
+    "rootCause": "Nguyên nhân thực tế: ",
+    "partsReplaced": "Linh kiện thay thế: ",
+    "fileCase": "Lưu vào thư viện",
+    "errDerive": "Suy luận thất bại",
+    "errNetwork": "Lỗi kết nối",
+    "errSave": "Lưu thất bại",
+    "errConnection": "Kết nối bất thường",
+    "storeSafe": "Cửa hàng tự làm được",
+    "techOnly": "Chỉ kỹ thuật viên",
+    "equipmentCategory": "Loại thiết bị",
+    "brand": "Hãng",
+    "model": "Model",
+    "chunkType": "Loại đoạn",
+    "chunkTitle": "Tiêu đề đoạn",
+    "saveChunk": "Lưu đoạn",
+    "equipmentModel": "Model thiết bị",
+    "source": "Nguồn: ",
+    "cancel": "Hủy",
+    "derivedOk": "Đã suy luận: {name}",
+    "caseDesc": "Ghi nguyên nhân thực tế và số liệu đo từ ca sửa tại chỗ, AI sẽ tự học và ưu tiên đề xuất cách xử lý này cho lỗi tương tự lần sau."
+  },
+  "RepairAssistant": {
+    "inputPhTech": "Nhập hiện tượng hoặc điểm đo (VD: điện trở thanh nhiệt, không có xung 24V, công tắc cam E02)...",
+    "techModeDesc": "[Chế độ kỹ thuật viên] Đo mạch (Ω/V), gợi ý mã linh kiện chính hãng, kiểm tra cam / công tắc hành trình và phản hồi sửa chữa",
+    "inputPhStore": "Mô tả lỗi hoặc mã lỗi (VD: máy dán miệng ly E01, máy định lượng đường ra không chuẩn, máy in hết giấy)...",
+    "storeModeDesc": "[Chế độ cửa hàng] An toàn tại chỗ: kiểm tra 3 bước không tháo máy, không xử lý được sẽ tự tạo phiếu sửa chữa",
+    "qp": {
+      "fac1": {
+        "text": "Máy nấu đường SC-150L đang khuấy thì dừng đột ngột, màn hình báo VFD-OC",
+        "label": "Máy nấu đường quá tải biến tần"
+      },
+      "pos2": {
+        "text": "Máy in hóa đơn Epson đèn đỏ nháy liên tục, bấm nút đẩy giấy không phản hồi, dao cắt bị kẹt",
+        "label": "Máy in hóa đơn kẹt giấy, đèn đỏ nhấp nháy"
+      },
+      "fac2": {
+        "text": "Cảm biến PT100 của nồi nấu trà báo 98 độ nhưng nước chưa sôi",
+        "label": "Cảm biến nhiệt nồi nấu trà bị lệch"
+      },
+      "pos3": {
+        "text": "Chạm góc trên bên phải màn hình POS lại nhảy sang trái, viền màn hình có vẻ bị hơi nước",
+        "label": "Màn hình cảm ứng POS nhảy lung tung"
+      },
+      "bar3": {
+        "text": "Máy định lượng đường ra ít hẳn ở mức đường 100%, đầu ra bị kết tinh nhỏ giọt",
+        "label": "Máy định lượng đường ra không chuẩn"
+      },
+      "pos1": {
+        "text": "Sau khi thanh toán trên POS ngăn kéo tiền không bật ra, máy in hóa đơn vẫn bình thường",
+        "label": "Ngăn kéo tiền không tự mở"
+      },
+      "fac3": {
+        "text": "Hộp giảm tốc của máy nấu đường tự động kêu lạch cạch như kim loại va đập khi chạy",
+        "label": "Hộp giảm tốc kêu lạ"
+      },
+      "pos4": {
+        "text": "Máy in ở quầy bar không in được phiếu đồ uống, dây mạng vẫn cắm",
+        "label": "Máy in hóa đơn mất mạng"
+      },
+      "bar1": {
+        "text": "Máy dán miệng ly Yi Fang báo E01, hoàn toàn không có nhiệt",
+        "label": "E01 tấm nhiệt không nóng"
+      },
+      "bar4": {
+        "text": "Máy dán miệng ly ép xuống rồi kẹt không lên, kêu bíp bíp",
+        "label": "Máy dán miệng ly kẹt khi ép"
+      },
+      "bar2": {
+        "text": "Máy dán miệng ly E04, màng quay liên tục không dừng",
+        "label": "E04 màng chạy không dừng / lỗi mắt cảm biến"
+      }
+    },
+    "searching": "Đang tra cứu mã lỗi chính hãng, sơ đồ mạch và máy trạng thái...",
+    "ticketOk": "✓ Đã tạo phiếu sửa chữa! Đang chuyển đến danh sách phiếu...",
+    "subtitle": "Cây lỗi SOP · tra cứu sổ tay RAG · học khép kín",
+    "submitTicket": "🚀 Gửi phiếu sửa chữa (cử kỹ thuật viên đến)",
+    "errSubmit": "Gửi thất bại, vui lòng tự ghi nhận ở tab Phiếu sửa chữa",
+    "draftTitle": "AI đã soạn sẵn phiếu sửa chữa",
+    "ragSources": "Nguồn tra cứu RAG:",
+    "title": "Trung tâm AI sửa chữa",
+    "catPos": "POS & IT",
+    "roleUser": "Nhân viên cửa hàng / kỹ thuật viên",
+    "roleStoreAi": "AI xử lý nhanh tại cửa hàng",
+    "roleTechAi": "AI kỹ thuật viên",
+    "storeMode": "Chế độ xử lý nhanh tại cửa hàng",
+    "techMode": "Chế độ kỹ thuật viên",
+    "errCreate": "Tạo phiếu sửa chữa thất bại",
+    "storeSafetyLabel": "Nguyên tắc an toàn cửa hàng:",
+    "tickTested": "Bấm để đánh dấu đã kiểm tra",
+    "chk": {
+      "consumable": "📦 Vật tư / dây",
+      "ohms": "⚡ Đo điện trở",
+      "voltage": "🔌 Đo điện áp",
+      "cleaning": "🧽 Vệ sinh",
+      "restart": "🔄 Khởi động lại"
+    },
+    "expected": "✓ Bình thường: ",
+    "ifFailed": "✗ Nếu không cải thiện: ",
+    "catFactory": "Xưởng trung tâm",
+    "draftTried": "Đã kiểm tra: ",
+    "categoryLabel": "Loại thiết bị:",
+    "targetLabel": "Thiết bị:",
+    "quickAsk": "Câu hỏi nhanh:",
+    "draftEquipment": "Thiết bị: ",
+    "draftCode": "Mã lỗi: ",
+    "draftSummary": "Tóm tắt: ",
+    "techCase": "Ca thực tế:",
+    "catBar": "Thiết bị quầy bar",
+    "priority": "Mức ưu tiên: ",
+    "onSiteIssue": "Bất thường tại chỗ",
+    "urgent": "Khẩn cấp",
+    "diagnose": "Chẩn đoán",
+    "high": "Cao",
+    "welcomeStore": "Xin chào! Tôi là **AI xử lý nhanh thiết bị cửa hàng** 🤖\n\nDành cho cửa hàng: **không tháo máy, an toàn, kiểm tra 3 bước**. Hãy chọn thiết bị bên dưới hoặc nhập hiện tượng (VD: \"máy dán miệng ly E01\", \"máy định lượng đường ra ít\", \"máy in hóa đơn kẹt giấy\"), tôi sẽ hướng dẫn bạn xử lý ngay!",
+    "welcomeTech": "Xin chào kỹ thuật viên! Tôi là **AI sửa chữa cơ điện chuyên nghiệp** ⚡\n\nCó **sơ đồ mạch chính hãng, chuẩn đo điện trở (Ω) / điện áp (V), kiểm tra cam và công tắc hành trình** cùng **cơ sở dữ liệu mã linh kiện**. Hãy chọn model hoặc nhập mã lỗi để chẩn đoán chuyên sâu.",
+    "switchedStore": "🔄 Đã chuyển sang **[Chế độ xử lý nhanh tại cửa hàng]**: ưu tiên an toàn (không tháo máy, không chạm điện mạnh). Nếu 3 bước không xử lý được sẽ đề xuất \"Gửi phiếu sửa chữa\".",
+    "switchedTech": "🔄 Đã chuyển sang **[Chế độ kỹ thuật viên]**: giá trị đo đồng hồ vạn năng (Ω/V), chân đấu nối sơ đồ mạch, mã linh kiện chính hãng và ca sửa thực tế.",
+    "diagError": "Xin lỗi, có lỗi khi chẩn đoán: {msg}",
+    "tryLater": "vui lòng thử lại sau",
+    "networkError": "Kết nối bất thường, vui lòng kiểm tra mạng.",
+    "stepN": "Bước {n}: {title}",
+    "stepsTitle": "Danh sách kiểm tra từng bước ({n} bước):",
+    "storeSafety": "Nguyên tắc an toàn cửa hàng: <s>tuyệt đối không tháo vỏ máy hay chạm tay vào khuôn nhiệt (trên 160°C)</s>. Làm theo hướng dẫn AI để kiểm tra nguồn điện, vệ sinh và màng.",
+    "techSafety": "Nguyên tắc làm việc cơ điện: khi đo điện trở <s>bắt buộc ngắt hoàn toàn nguồn tổng</s>; đo khi có điện 24VDC/220VAC phải mang đồ cách điện."
+  },
+  "AuditAi": {
+    "readyHint": "Có thể hỏi về quy trình, bố trí luồng làm việc, công thái học (tránh chấn thương cổ tay / xoay người quá nhiều), bày trí quầy bar, chống gian lận hủy nguyên liệu, hoặc chụp ảnh hiện trường để thảo luận.",
+    "kbContentPh": "Dán nội dung quy định, kích thước công thái học, mức phạt hoặc chi tiết SOP...",
+    "inputPh": "Nhập câu hỏi hoặc thảo luận với chuyên gia về luồng làm việc, bố trí, an toàn...",
+    "kbTitlePh": "Tiêu đề (VD: yêu cầu khoảng cách đặt máy dán miệng ly, mức phạt hủy giả)",
+    "suggestEmpty": "Sau khi gửi tin nhắn, gợi ý và câu trả lời của chuyên gia sẽ hiển thị ở đây.",
+    "kbTitle": "Kho kiến thức chuyên gia kiểm toán · bổ sung dữ liệu huấn luyện bất cứ lúc nào",
+    "noAccess": "Chỉ bộ phận kiểm toán mới dùng được AI kiểm toán",
+    "photoOnly": "(Đã tải ảnh hiện trường lên để chẩn đoán)",
+    "logSaved": "Đã tự tóm tắt và lưu vào nhật ký kiểm toán!",
+    "suggestPanel": "Gợi ý & câu trả lời (1/3)",
+    "kbEmpty": "Chưa có dữ liệu huấn luyện bổ sung",
+    "thinking": "Chuyên gia đang phân tích…",
+    "ready": "Chuyên gia kiểm toán đã sẵn sàng",
+    "uploadPhoto": "Chụp hoặc tải ảnh kiểm tra",
+    "clickToAsk": "Bấm vào thẻ để hỏi tiếp",
+    "removePeriod": "Không đính kèm dữ liệu tiêu hao nữa",
+    "storePh": "Chọn hoặc nhập cửa hàng",
+    "title": "AI thảo luận kiểm toán",
+    "noChats": "Chưa có cuộc trò chuyện",
+    "kbAdd": "Thêm vào kho kiến thức",
+    "untitled": "Cuộc trò chuyện không tiêu đề",
+    "toInput": "Đưa vào ô nhập",
+    "expert": "Chuyên gia tư vấn",
+    "auditLog": "Nhật ký kiểm toán",
+    "inspection": "Kiểm tra hiện trường",
+    "genLog": "Tạo nhật ký",
+    "sitePhoto": "Ảnh hiện trường",
+    "quoteAsk": "Hỏi tiếp",
+    "knowledge": "Kho kiến thức",
+    "newChat": "Cuộc trò chuyện mới",
+    "modeDiscuss": "Thảo luận",
+    "modeGuide": "Hướng dẫn",
+    "preview": "Xem trước",
+    "sendFailed": "Gửi thất bại",
+    "kind": {
+      "sop": "Quy trình SOP",
+      "ergonomics": "Công thái học & bố trí",
+      "hygiene": "Tiêu chuẩn vệ sinh",
+      "rules": "Quy định xử phạt",
+      "other": "Tài liệu bổ sung"
+    },
+    "suggestArea": "Khu gợi ý",
+    "suggestOn": "đang bật (1/3)",
+    "suggestOff": "đã tắt",
+    "store": "cửa hàng",
+    "periodLoaded": "Đã đính kèm dữ liệu tiêu hao nguyên liệu {store} {period}",
+    "hint1": "Nên bố trí máy dán miệng ly và thùng đá thế nào cho đúng công thái học?",
+    "hint2": "Phát hiện nguyên liệu đã báo hủy vẫn dùng ở quầy bar, quy trình xử lý chuẩn là gì?",
+    "hint3": "Trọng điểm kiểm tra phân khu khăn lau và dọn dẹp ngay (Clean as you go)?",
+    "hint4": "Làm sao ngăn thu tiền riêng qua điện thoại công vụ và nhóm Zalo cá nhân?",
+    "followUp": "Với đề xuất \"{item}\", cửa hàng nên thực hiện cụ thể thế nào?",
+    "refSuggestion": " (tham khảo đề xuất: {item})",
+    "analyzeErgo": "Hãy phân tích điều chỉnh công thái học cho \"{item}\""
+  },
+  "CompanyPlan": {
+    "loadFailed": "Tải thất bại",
+    "networkError": "Lỗi mạng, vui lòng thử lại sau",
+    "orderFailed": "Tạo đơn hàng thất bại",
+    "loading": "Đang tải…",
+    "company": "Công ty",
+    "enterpriseFull": "Gói Doanh nghiệp tùy chỉnh",
+    "companyPlan": "Gói Công ty",
+    "enterprise": "Gói Doanh nghiệp",
+    "enterpriseDesc": "Không giới hạn thành viên; mọi mô-đun đã mở ở cấp MAX; tính năng tính điểm không giới hạn; CHAT mở mọi mô hình và tạo ảnh / video; thêm / chỉnh tính năng không giới hạn.",
+    "companyDesc": "Không giới hạn thành viên; các mô-đun CSKH, đặt phòng, marketing đã mở ở cấp MAX. Gồm CHAT miễn phí và 1 lần chỉnh tính năng miễn phí mỗi tháng.",
+    "inUse": "Đang dùng {plan}",
+    "expires": ", hết hạn {date}",
+    "notActive": "Chưa kích hoạt gói Công ty",
+    "yearly": "Theo năm (giá {n} tháng)",
+    "monthly": "Theo tháng",
+    "payNeedsAdmin": "Thanh toán phải do <b>chủ công ty hoặc quản trị viên</b> thực hiện.",
+    "priceBreakdown": "Chi tiết giá (USD / tháng)",
+    "yearlyTotal": "Tổng theo năm (${m}/tháng × {n})",
+    "monthlyTotal": "Tổng mỗi tháng",
+    "contractNote": "Mô-đun, số người dùng ERP và số cửa hàng do nền tảng thiết lập theo hợp đồng; liên hệ chúng tôi nếu cần điều chỉnh.",
+    "credits": "Điểm",
+    "enterpriseCredits": "Gói Doanh nghiệp không giới hạn điểm, thành viên dùng tính năng tính điểm không bị trừ.",
+    "wallet": "Ví công ty",
+    "monthlyGift": "Điểm tặng tháng này (${n}/tháng, không cộng dồn)",
+    "paidBalance": "Số dư nạp",
+    "deductOrder": "Khi thành viên dùng tính năng tính điểm (tạo nội dung marketing, bàn tròn thông minh, AI Agent…), sẽ trừ điểm tặng tháng này trước rồi mới trừ tiền nạp.",
+    "topUp": "Nạp {label}",
+    "getsCredits": "Nhận ${n} điểm",
+    "topUpWho": "Nạp tiền phải do chủ, quản trị viên, quản lý hoặc nhân viên tài chính thực hiện.",
+    "topUpAfterActive": "Kích hoạt gói Công ty để nạp tiền vào ví công ty.",
+    "renew": "Gia hạn",
+    "activate": "Thanh toán kích hoạt",
+    "payBtn": "{action} (${total} USD)",
+    "payNote": "Có hiệu lực ngay sau khi thanh toán; gia hạn sẽ cộng tiếp từ ngày hết hạn hiện tại. Không tự động gia hạn.",
+    "line": {
+      "base": "Phí cơ bản công ty",
+      "module_cs": "Chăm sóc khách hàng (CS)",
+      "module_booking": "Đặt phòng (BOOKING)",
+      "module_marketing": "Marketing",
+      "erp": "Gói ERP cơ bản ({seats} người, đã gồm {included} người)",
+      "retail": "Gói bán lẻ ERP ({stores} cửa hàng)",
+      "domain": "Tên miền riêng",
+      "enterprise": "Gói Doanh nghiệp tùy chỉnh"
+    }
+  },
+  "PosMenu": {
+    "subtitle": "Tải ảnh, tên và mô tả đa ngôn ngữ; kiosk hiển thị theo ngôn ngữ",
+    "importBtn": "Nhập thực đơn hàng loạt (Excel/CSV)",
+    "uploadImage": "Tải ảnh (không bắt buộc)",
+    "itemNamePh": "Tên món (ngôn ngữ chính)",
+    "mainDescPh": "Mô tả chính",
+    "descPh": "Mô tả (không bắt buộc)",
+    "pricePh": "Giá",
+    "multilangContent": "Nội dung đa ngôn ngữ",
+    "aiTranslate": "Dịch bằng AI",
+    "title": "Chỉnh sửa thực đơn",
+    "addCategory": "Thêm danh mục",
+    "categoryName": "Tên danh mục",
+    "addItem": "Thêm món",
+    "chooseCategory": "Chọn danh mục",
+    "changeImage": "Đổi ảnh",
+    "multilang": "Đa ngôn ngữ",
+    "all": "Tất cả",
+    "global": "Toàn hệ thống",
+    "add": "Thêm",
+    "preview": "Xem trước",
+    "remove": "Xóa",
+    "image": "Ảnh",
+    "disable": "Ngừng bán",
+    "enable": "Mở bán",
+    "save": "Lưu",
+    "cancel": "Hủy",
+    "store": "Cửa hàng",
+    "revision": "Phiên bản {n}",
+    "namePhLang": "Tên {lang}",
+    "descPhLang": "Mô tả {lang}",
+    "storeOnly": "Riêng {name}"
+  },
+  "PosMenuImport": {
+    "_meta": {
+      "title": "Nhập / cập nhật thực đơn POS hàng loạt",
+      "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Danh mục chưa có sẽ tự tạo; món trùng tên sẽ tự cập nhật, ngược lại thêm mới.",
+      "template": "Mau thuc don POS",
+      "sheet": "Mon"
+    },
+    "name": {
+      "label": "Tên món",
+      "example": "Trà sữa trân châu"
+    },
+    "category": {
+      "label": "Danh mục",
+      "example": "Trà truyền thống"
+    },
+    "price": {
+      "label": "Giá bán"
+    },
+    "description": {
+      "label": "Mô tả",
+      "example": "Vị sữa đậm đà cùng trân châu nấu mới"
+    },
+    "barcode": {
+      "label": "Mã vạch"
+    }
+  },
+  "PosStores": {
+    "loading": "Đang tải…",
+    "title": "Cửa hàng & thiết bị",
+    "subtitle": "Mỗi cửa hàng một máy Debian. Nhập device_key vào kiosk hoặc pos-bridge.",
+    "importBtn": "Nhập cửa hàng hàng loạt (Excel/CSV)",
+    "storeName": "Tên cửa hàng",
+    "addStore": "Thêm cửa hàng",
+    "terminal": "Thiết bị: {name}",
+    "hideKey": "Ẩn khóa",
+    "showKey": "Hiện khóa",
+    "copyKey": "Sao chép khóa",
+    "lastSync": "Đồng bộ lần cuối: ",
+    "never": "chưa có",
+    "noTerminal": "Chưa có thiết bị",
+    "noStores": "Chưa có cửa hàng"
+  },
+  "PosStoresImport": {
+    "_meta": {
+      "title": "Nhập cửa hàng hàng loạt",
+      "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Điền tên cửa hàng và mã (không bắt buộc).",
+      "template": "Mau cua hang POS",
+      "sheet": "Cua hang"
+    },
+    "name": {
+      "label": "Tên cửa hàng",
+      "example": "Cửa hàng Xinyi"
+    },
+    "slug": {
+      "label": "Mã (slug)"
+    }
+  },
+  "PosOrders": {
+    "title": "Quản lý đơn hàng",
+    "all": "Tất cả",
+    "status": {
+      "pending": "Chờ xử lý",
+      "preparing": "Đang làm",
+      "ready": "Sẵn sàng",
+      "done": "Hoàn tất",
+      "cancelled": "Đã hủy"
+    },
+    "type": {
+      "dine_in": "Tại chỗ",
+      "takeout": "Mang đi",
+      "delivery": "Giao hàng"
+    },
+    "table": "Bàn {n}",
+    "note": "Ghi chú: {note}",
+    "empty": "Chưa có đơn hàng"
+  },
+  "AffairsX": {
+    "tabSites": "Phát triển mặt bằng",
+    "tabContacts": "Quan hệ đối tác",
+    "tabRents": "So sánh giá thuê",
+    "tabAssistant": "Trợ lý AI đối ngoại",
+    "all": "Tất cả",
+    "allStatuses": "Mọi trạng thái",
+    "cat": {
+      "street": "Cửa hàng mặt phố",
+      "mall": "Trung tâm thương mại",
+      "public": "Khu vực nhà nước",
+      "private": "Khu vực tư nhân"
+    },
+    "sub": {
+      "ground_large": "Cửa hàng lớn tầng trệt",
+      "ground_small": "Cửa hàng nhỏ tầng trệt",
+      "shop_in_shop": "Cửa hàng trong cửa hàng",
+      "counter": "Quầy trước cửa hàng",
+      "delivery": "Cửa hàng chỉ giao hàng",
+      "community": "TTTM khu dân cư",
+      "non_community": "TTTM không thuộc khu dân cư",
+      "airport": "Sân bay",
+      "gov_zone": "Khu phát triển của nhà nước",
+      "public_other": "Cơ quan nhà nước khác",
+      "factory": "Trong nhà máy",
+      "market": "Chợ / khu tập trung tư nhân",
+      "private_other": "Đơn vị tư nhân khác"
+    },
+    "status": {
+      "prospect": "Tiềm năng",
+      "visiting": "Đang khảo sát",
+      "negotiating": "Đang đàm phán",
+      "applying": "Đang nộp hồ sơ",
+      "reviewing": "Đang xét duyệt",
+      "approved": "Đã duyệt",
+      "signed": "Đã ký",
+      "rejected": "Không đạt",
+      "dropped": "Đã bỏ"
+    },
+    "newSite": "Thêm mặt bằng",
+    "editSite": "Sửa mặt bằng",
+    "sitesHint": "Khu vực nhà nước và tư nhân cần nộp hồ sơ và qua xét duyệt; theo dõi các bước và hạn chót trong từng mặt bằng. Cửa hàng chỉ giao hàng có thể chọn tầng 2 hoặc vị trí kém hơn để giảm giá thuê.",
+    "noSites": "Chưa có mặt bằng nào. Bấm \"Thêm mặt bằng\" để bắt đầu.",
+    "rentShort": "Thuê/tháng",
+    "householdsShort": "{n} hộ",
+    "applicationProgress": "Hồ sơ {done}/{total}",
+    "marketAnalysis": "Phân tích thị trường",
+    "confirmDelete": "Xóa mục này?",
+    "f": {
+      "name": "Tên mặt bằng",
+      "status": "Trạng thái",
+      "category": "Phân loại",
+      "subtype": "Loại hình",
+      "address": "Địa chỉ",
+      "region": "Khu vực",
+      "floor": "Tầng",
+      "area": "Diện tích (m²)",
+      "frontage": "Mặt tiền (m)",
+      "rent": "Tiền thuê/tháng",
+      "deposit": "Tiền cọc",
+      "households": "Số hộ dân",
+      "contact": "Đầu mối (chủ nhà / quản lý)",
+      "deadline": "Hạn nộp hồ sơ",
+      "notes": "Ghi chú",
+      "orgType": "Loại cơ quan",
+      "importance": "Mức độ quan trọng",
+      "contactName": "Họ tên",
+      "title": "Chức vụ",
+      "organization": "Đơn vị / công ty",
+      "phone": "Điện thoại",
+      "email": "Email",
+      "im": "Ứng dụng nhắn tin",
+      "nextFollowup": "Ngày theo dõi tiếp",
+      "storeCode": "Mã cửa hàng liên quan",
+      "traits": "Đặc điểm cá nhân"
+    },
+    "regionPh": "VD: Quận 1, Thủ Đức",
+    "applicationTitle": "Hồ sơ & xét duyệt",
+    "applicationHint": "Liệt kê các bước nộp hồ sơ và đánh dấu khi hoàn thành.",
+    "addStep": "Thêm bước",
+    "useTemplate": "Dùng mẫu",
+    "stepTpl": {
+      "pub1": "Lấy thông báo mời thầu/tuyển chọn và điều kiện",
+      "pub2": "Chuẩn bị hồ sơ năng lực (giấy phép, báo cáo tài chính, thành tích)",
+      "pub3": "Nộp hồ sơ / dự thầu",
+      "pub4": "Xét duyệt năng lực",
+      "pub5": "Thuyết trình / chấm chọn",
+      "pub6": "Ký hợp đồng và vào mặt bằng",
+      "pri1": "Liên hệ đơn vị quản lý và tìm hiểu điều kiện",
+      "pri2": "Nộp kế hoạch và hồ sơ năng lực",
+      "pri3": "Xét duyệt và đàm phán",
+      "pri4": "Chạy thử / ký hợp đồng"
+    },
+    "cancel": "Hủy",
+    "save": "Lưu",
+    "close": "Đóng",
+    "saved": "Đã lưu",
+    "radius": "Bán kính",
+    "runAnalysis": "Bắt đầu phân tích",
+    "rerunAnalysis": "Phân tích lại",
+    "analysisRunning": "AI đang tìm dữ liệu công khai và phân tích, khoảng 1–3 phút…",
+    "analysisAt": "Phân tích lần cuối: {at}",
+    "analysisHint": "AI tự tìm dân số, cơ cấu dân cư, thu nhập bình quân, trường học, khu dân cư lớn, lưu lượng người và xe, và điều kiện mặt tiền theo địa chỉ.",
+    "reco": {
+      "go": "Nên mở",
+      "consider": "Cân nhắc",
+      "avoid": "Không nên"
+    },
+    "level": {
+      "high": "Cao",
+      "medium": "Trung bình",
+      "low": "Thấp"
+    },
+    "levelLabel": "Mức",
+    "sec": {
+      "population": "Dân số",
+      "income": "Thu nhập bình quân",
+      "demographics": "Cơ cấu dân cư",
+      "traffic": "Lưu lượng người & xe",
+      "storefront": "Mặt tiền",
+      "rent": "So sánh giá thuê",
+      "schools": "Trường học",
+      "residential": "Khu dân cư lớn",
+      "competitors": "Đối thủ",
+      "opportunities": "Cơ hội",
+      "risks": "Rủi ro"
+    },
+    "residents": "Dân số trong bán kính",
+    "density": "Mật độ (/km²)",
+    "perCapita": "Thu nhập bình quân/tháng",
+    "footTraffic": "Lưu lượng người",
+    "peakHours": "Giờ cao điểm",
+    "vehicleTraffic": "Lưu lượng xe",
+    "visibility": "Độ nhận diện",
+    "rentEstimate": "Ước tính giá thuê khu vực",
+    "col": {
+      "name": "Tên",
+      "type": "Loại",
+      "students": "Số học sinh",
+      "distance": "Khoảng cách (m)",
+      "households": "Số hộ",
+      "note": "Ghi chú",
+      "date": "Ngày",
+      "source": "Nguồn"
+    },
+    "sources": "Nguồn",
+    "aiDisclaimer": "AI tổng hợp từ dữ liệu công khai; số liệu có thể thiếu hoặc cũ. Hãy khảo sát thực tế và kiểm chứng trước khi quyết định.",
+    "ccat": {
+      "landlord": "Chủ nhà",
+      "mall": "Quản lý TTTM",
+      "public": "Cơ quan nhà nước",
+      "private": "Khu vực tư nhân",
+      "other": "Khác"
+    },
+    "org": {
+      "investment": "Sở Kế hoạch và Đầu tư",
+      "health": "Cơ quan y tế / an toàn thực phẩm",
+      "market_security": "Quản lý thị trường",
+      "economic_security": "Cảnh sát kinh tế",
+      "tax": "Cơ quan thuế",
+      "fire": "Phòng cháy chữa cháy",
+      "environment": "Môi trường",
+      "labor": "Lao động",
+      "customs": "Hải quan",
+      "airport": "Sân bay",
+      "gov_zone": "Khu phát triển của nhà nước",
+      "public_other": "Cơ quan nhà nước khác",
+      "factory": "Phụ trách nhà máy",
+      "market": "Quản lý chợ / khu tập trung",
+      "private_other": "Đơn vị tư nhân khác"
+    },
+    "searchPh": "Tìm tên, đơn vị, đặc điểm…",
+    "newContact": "Thêm liên hệ",
+    "editContact": "Sửa liên hệ",
+    "followupDue": "{n} liên hệ đã đến hạn theo dõi",
+    "noContacts": "Chưa có liên hệ nào.",
+    "lastContact": "Liên hệ gần nhất",
+    "nextFollowup": "Theo dõi tiếp",
+    "traitsPh": "Tính cách, sở thích, cách giao tiếp, điều kiêng kỵ, thói quen ra quyết định, ngày quan trọng…",
+    "logsTitle": "Lịch sử liên hệ",
+    "log": {
+      "visit": "Thăm",
+      "call": "Gọi điện",
+      "meal": "Ăn uống",
+      "gift": "Tặng quà",
+      "meeting": "Họp",
+      "message": "Tin nhắn",
+      "other": "Khác"
+    },
+    "logSummaryPh": "Đã trao đổi gì, phản hồi ra sao",
+    "logNextPh": "Bước tiếp theo (không bắt buộc)",
+    "addLog": "Thêm ghi chép",
+    "region": "Khu vực",
+    "rentsHint": "Ghi giá thuê mặt bằng theo khu vực (nhập tay hoặc AI tìm); hệ thống tính giá thuê/m² và biến động theo tháng.",
+    "records": "{n} bản ghi",
+    "avgPerSqm": "Giá thuê TB/m²",
+    "changeSince": "{pct}% (từ {from})",
+    "perSqm": "Giá thuê/m²",
+    "needTwoPoints": "Cần ít nhất hai tháng có dữ liệu kèm diện tích để vẽ biểu đồ biến động.",
+    "manual": "Nhập tay",
+    "addRent": "Thêm giá thuê",
+    "newRegion": "Khu vực (điền nếu là khu mới)",
+    "currency": "Tiền tệ",
+    "landlord": "Chủ nhà",
+    "add": "Thêm",
+    "regionRequired": "Vui lòng nhập khu vực",
+    "aiRentTitle": "AI tìm giá thuê",
+    "aiRentHint": "AI tìm tin cho thuê và báo cáo giá thuê của khu vực, phân tích biến động gần đây và gợi ý đàm phán; tick kết quả để lưu vào bảng so sánh.",
+    "searchRent": "Tìm giá thuê",
+    "searching": "Đang tìm, khoảng 1–2 phút…",
+    "typicalPerSqm": "Giá thuê phổ biến/m²",
+    "trend": "Xu hướng",
+    "trendV": {
+      "up": "Tăng",
+      "flat": "Đi ngang",
+      "down": "Giảm",
+      "unknown": "Chưa rõ"
+    },
+    "negotiationTips": "Gợi ý đàm phán",
+    "saveSelected": "Lưu {n} mục vào \"{region}\"",
+    "noListings": "Không tìm thấy tin đăng có thể trích dẫn.",
+    "assistantTitle": "Trợ lý AI đối ngoại",
+    "assistantDesc": "Tìm mặt bằng giá hợp lý, vị trí tốt; hướng dẫn quy trình và kênh nộp hồ sơ khu vực nhà nước/tư nhân; tư vấn duy trì quan hệ. Tra cứu trực tuyến và dẫn nguồn khi cần.",
+    "clearChat": "Xóa hội thoại",
+    "thinking": "AI đang tra cứu…",
+    "askPh": "Nhập câu hỏi. Enter để gửi, Shift+Enter xuống dòng",
+    "send": "Gửi",
+    "prompt": {
+      "p1": "Làm sao tìm mặt bằng giá rẻ mà vị trí tốt? Có những kênh nào?",
+      "p2": "Quy trình, điều kiện và cơ quan phụ trách khi đăng ký mặt bằng tại sân bay là gì?",
+      "p3": "Muốn đặt điểm bán trong nhà máy thì tiếp cận và đăng ký thế nào?",
+      "p4": "Khi gia hạn với chủ nhà, có kỹ thuật đàm phán nào để giảm giá thuê?",
+      "p5": "Mở quán trà sữa cần làm việc với những cơ quan nhà nước nào, mỗi nơi cần chuẩn bị gì?",
+      "p6": "Điều kiện vào TTTM khu dân cư và không thuộc khu dân cư khác nhau thế nào?"
+    }
   }
 }

@@ -21,6 +21,8 @@ import { generateText } from 'ai'
 import { outputLangInstruction } from '@/lib/ai/output-lang'
 import { enrichJsonLd, type Material } from '@/lib/geo/schema'
 import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
+import { setUsageUser, trackLlm, withUsage } from '@/lib/marketing/usage'
+import { precheckUsage } from '@/lib/marketing/billing'
 
 export const maxDuration = 120
 
@@ -40,10 +42,14 @@ const SYSTEM = `你是 GEO（Generative Engine Optimization）內容寫手，目
 - JSON-LD 必須是合法 JSON，內含 @graph 陣列，包含三個物件：Article、FAQPage（mainEntity 為勾選問句的 Q&A）、Organization
 - JSON-LD 的 key 維持英文（schema.org 標準），值的人類可讀文字用指定輸出語言`
 
-export async function POST(req: NextRequest) {
+export const POST = withUsage('[marketing] GEO 產文', async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  setUsageUser(user.id)
+  // 依實際用量 × 方案倍率扣點；執行前以預估成本檢查餘額
+  const usagePrecheck = await precheckUsage(user.id, 0.08)
+  if (usagePrecheck) return NextResponse.json(usagePrecheck, { status: 402 })
 
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({ error: 'ANTHROPIC_API_KEY 未設定' }, { status: 500 })
@@ -154,11 +160,12 @@ ${author.trim() || 'im-tourist 峴港在地團隊'}
   let json_ld: unknown = null
   let title = topic
   try {
-    const { text } = await generateText({
+    const { text, usage } = await generateText({
       model: anthropic('claude-sonnet-4-6'),
       messages: [{ role: 'user', content: promptText }],
       maxOutputTokens: 4000,
     })
+    trackLlm('claude-sonnet-4-6', usage)
 
     const bodyMatch = text.match(/===ARTICLE_START===([\s\S]*?)===ARTICLE_END===/)
     const jsonldMatch = text.match(/===JSONLD_START===([\s\S]*?)===JSONLD_END===/)
@@ -207,4 +214,4 @@ ${author.trim() || 'im-tourist 峴港在地團隊'}
   await supabase.from('geo_questions').update({ status: 'written' }).in('id', qRows.map(r => r.id))
 
   return NextResponse.json({ articleId: article.id, title, body_md, json_ld })
-}
+})

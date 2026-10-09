@@ -15,7 +15,7 @@ export interface MktSnapshot {
 export async function buildMktSnapshot(admin: Admin, ownerId: string): Promise<MktSnapshot> {
   const [{ data: deliv }, { data: offline }, { count: contentTotal }, { count: contentReview }, { count: published }] = await Promise.all([
     admin.from('mkt_delivery').select('platform, status, monthly_orders, monthly_revenue').eq('owner_id', ownerId),
-    admin.from('mkt_offline').select('type, budget, status').eq('owner_id', ownerId),
+    admin.from('mkt_campaigns').select('type:category, budget, status').eq('owner_id', ownerId),
     admin.from('mkt_content').select('id', { count: 'exact', head: true }).eq('owner_id', ownerId),
     admin.from('mkt_content').select('id', { count: 'exact', head: true }).eq('owner_id', ownerId).eq('status', 'review'),
     admin.from('mkt_calendar').select('id', { count: 'exact', head: true }).eq('owner_id', ownerId).eq('status', 'published'),
@@ -34,14 +34,14 @@ export async function buildMktSnapshot(admin: Admin, ownerId: string): Promise<M
   const totalOrders = byPlatform.reduce((t, p) => t + p.orders, 0)
   const totalRevenue = byPlatform.reduce((t, p) => t + p.revenue, 0)
 
-  // 實體行銷支出
+  // 行銷活動支出（活動企劃中心，含實體／線上／混合）
   const tMap: Record<string, { count: number; spend: number }> = {}
   let offlineSpend = 0, offlineActive = 0
   for (const o of offline ?? []) {
     const t = (tMap[o.type as string] ??= { count: 0, spend: 0 })
     t.count += 1; t.spend += Number(o.budget) || 0
     offlineSpend += Number(o.budget) || 0
-    if (o.status !== 'cancelled' && o.status !== 'done') offlineActive += 1
+    if (o.status !== 'cancelled' && o.status !== 'ended') offlineActive += 1
   }
   const byType = Object.entries(tMap).map(([type, v]) => ({ type, ...v }))
 

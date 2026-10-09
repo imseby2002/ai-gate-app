@@ -31,6 +31,7 @@ export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const ctx = await getBnbContext(supabase)
   if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!ctx.canWrite) return NextResponse.json({ error: '檢視者無法修改' }, { status: 403 })
 
   const { property_id, dates } = await req.json()
   if (!property_id || !Array.isArray(dates) || dates.length === 0)
@@ -72,6 +73,7 @@ export async function DELETE(req: NextRequest) {
   const supabase = await createClient()
   const ctx = await getBnbContext(supabase)
   if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!ctx.canWrite) return NextResponse.json({ error: '檢視者無法修改' }, { status: 403 })
 
   const { property_id, dates } = await req.json()
   if (!property_id || !Array.isArray(dates) || dates.length === 0)

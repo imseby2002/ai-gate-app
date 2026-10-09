@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { Check, Loader2, Lock, Building2 } from 'lucide-react'
+import { useTranslations, useLocale } from 'next-intl'
 import { YEARLY_MONTHS, COMPANY_MONTHLY_GIFT_USD, type CompanyPriceLine } from '@/lib/company/pricing'
 import { CREDIT_PACKAGES } from '@/lib/ecpay/client'
 
@@ -20,6 +21,8 @@ interface PlanData {
 // 公司方案為模組化計價：開通內容（模組、ERP 人數、門市數、自訂網域）由平台設定，
 // 公司在這裡確認明細並付款。價格計算見 lib/company/pricing.ts。
 export function CompanyPlanPage({ isOwnerOrAdmin }: { isOwnerOrAdmin: boolean }) {
+  const t = useTranslations('CompanyPlan')
+  const locale = useLocale()
   const [data, setData] = useState<PlanData | null>(null)
   const [cycle, setCycle] = useState<Cycle>('yearly')
   const [checkingOut, setCheckingOut] = useState(false)
@@ -29,9 +32,9 @@ export function CompanyPlanPage({ isOwnerOrAdmin }: { isOwnerOrAdmin: boolean })
     try {
       const res = await fetch('/api/company/plan')
       const d = await res.json()
-      if (!res.ok) { setError(d.error ?? '載入失敗'); return }
+      if (!res.ok) { setError(d.error ?? t('loadFailed')); return }
       setData(d)
-    } catch { setError('網路錯誤，請稍後再試') }
+    } catch { setError(t('networkError')) }
   }, [])
 
   useEffect(() => { load() }, [load])
@@ -53,7 +56,7 @@ export function CompanyPlanPage({ isOwnerOrAdmin }: { isOwnerOrAdmin: boolean })
         body: JSON.stringify({ ...body, returnUrl: window.location.href }),
       })
       const d = await res.json()
-      if (!res.ok) { setError(d.error ?? '建立訂單失敗'); return }
+      if (!res.ok) { setError(d.error ?? t('orderFailed')); return }
 
       const form = document.createElement('form')
       form.method = 'POST'
@@ -70,20 +73,20 @@ export function CompanyPlanPage({ isOwnerOrAdmin }: { isOwnerOrAdmin: boolean })
       form.submit()
       document.body.removeChild(form)
     } catch {
-      setError('網路錯誤，請稍後再試')
+      setError(t('networkError'))
     } finally {
       setBusy(false)
     }
   }
 
   if (!data) {
-    return <div className="p-6 text-muted-foreground text-sm">{error || '載入中…'}</div>
+    return <div className="p-6 text-muted-foreground text-sm">{error || t('loading')}</div>
   }
 
   const active = data.plan === 'company'
   const monthly = data.price.monthlyUsd
   const total = cycle === 'yearly' ? monthly * YEARLY_MONTHS : monthly
-  const endDate = data.currentPeriodEnd ? new Date(data.currentPeriodEnd).toLocaleDateString('zh-TW') : null
+  const endDate = data.currentPeriodEnd ? new Date(data.currentPeriodEnd).toLocaleDateString(locale) : null
 
   return (
     <div className="min-h-[100dvh] bg-gradient-to-b from-slate-50 to-white dark:from-background dark:to-background">
@@ -91,29 +94,29 @@ export function CompanyPlanPage({ isOwnerOrAdmin }: { isOwnerOrAdmin: boolean })
         <div className="rounded-2xl bg-gradient-to-r from-primary to-violet-600 px-5 py-4 text-white">
           <div className="flex items-center gap-2 text-lg sm:text-xl font-extrabold">
             <Building2 className="h-5 w-5 shrink-0" />
-            {data.companyName || '公司'} · {data.enterprise ? '專屬客製-企業版' : '公司版'}
+            {data.companyName || t('company')} · {data.enterprise ? t('enterpriseFull') : t('companyPlan')}
           </div>
           <p className="text-white/85 text-xs sm:text-sm mt-1">
             {data.enterprise
-              ? '成員不限人數；開通模組皆為 MAX 等級；點數功能不限用量；CHAT 開放全部模型與生圖／影片；功能新增／調整不限次數。'
-              : '成員不限人數；開通的客服、訂房、行銷模組皆為 MAX 等級。含 CHAT 免費對話與每月 1 次免費功能微調。'}
+              ? t('enterpriseDesc')
+              : t('companyDesc')}
           </p>
         </div>
 
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="text-sm">
             {active
-              ? <span className="flex items-center gap-1 text-green-600 font-medium"><Check className="h-4 w-4" />{data.enterprise ? '企業版' : '公司版'}使用中{endDate ? `，到期日 ${endDate}` : ''}</span>
-              : <span className="text-muted-foreground">尚未啟用公司版</span>}
+              ? <span className="flex items-center gap-1 text-green-600 font-medium"><Check className="h-4 w-4" />{t('inUse', { plan: data.enterprise ? t('enterprise') : t('companyPlan') })}{endDate ? t('expires', { date: endDate }) : ''}</span>
+              : <span className="text-muted-foreground">{t('notActive')}</span>}
           </div>
           <div className="flex gap-1 text-xs">
             <button onClick={() => setCycle('yearly')}
               className={`px-2.5 py-1 rounded-lg ${cycle === 'yearly' ? 'bg-foreground text-background' : 'bg-muted text-muted-foreground'}`}>
-              年繳（10 個月價格）
+              {t('yearly', { n: YEARLY_MONTHS })}
             </button>
             <button onClick={() => setCycle('monthly')}
               className={`px-2.5 py-1 rounded-lg ${cycle === 'monthly' ? 'bg-foreground text-background' : 'bg-muted text-muted-foreground'}`}>
-              月繳
+              {t('monthly')}
             </button>
           </div>
         </div>
@@ -121,7 +124,7 @@ export function CompanyPlanPage({ isOwnerOrAdmin }: { isOwnerOrAdmin: boolean })
         {!isOwnerOrAdmin && (
           <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/40 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
             <Lock className="h-4 w-4 mt-0.5 shrink-0" />
-            <span>付款需由<strong>公司負責人或管理員</strong>操作。</span>
+            <span>{t.rich('payNeedsAdmin', { b: chunks => <strong>{chunks}</strong> })}</span>
           </div>
         )}
 
@@ -132,43 +135,43 @@ export function CompanyPlanPage({ isOwnerOrAdmin }: { isOwnerOrAdmin: boolean })
         )}
 
         <div className="rounded-xl border bg-card p-4 space-y-2 text-sm">
-          <div className="font-semibold text-foreground">計價明細（美元／月）</div>
+          <div className="font-semibold text-foreground">{t('priceBreakdown')}</div>
           {data.price.lines.map(l => (
             <div key={l.label} className="flex justify-between text-muted-foreground tabular-nums">
-              <span>{l.label}</span><span>${l.usd}</span>
+              <span>{l.key && t.has(`line.${l.key}`) ? t(`line.${l.key}`, l.params ?? {}) : l.label}</span><span>${l.usd}</span>
             </div>
           ))}
           <div className="flex justify-between border-t pt-2 font-bold text-foreground tabular-nums">
-            <span>{cycle === 'yearly' ? `年繳合計（每月 $${monthly} × ${YEARLY_MONTHS}）` : '每月合計'}</span>
+            <span>{cycle === 'yearly' ? t('yearlyTotal', { m: monthly, n: YEARLY_MONTHS }) : t('monthlyTotal')}</span>
             <span>${total}</span>
           </div>
-          <p className="text-[11px] text-muted-foreground">開通模組、ERP 人數與門市數由平台依合約設定，如需調整請聯繫我們。</p>
+          <p className="text-[11px] text-muted-foreground">{t('contractNote')}</p>
         </div>
 
         {data.enterprise ? (
           <div className="rounded-xl border bg-card p-4 text-sm">
-            <div className="font-semibold text-foreground">點數</div>
-            <p className="text-muted-foreground mt-1">企業版不限點數，成員使用點數功能不會扣點。</p>
+            <div className="font-semibold text-foreground">{t('credits')}</div>
+            <p className="text-muted-foreground mt-1">{t('enterpriseCredits')}</p>
           </div>
         ) : (
         <div className="rounded-xl border bg-card p-4 space-y-1 text-sm">
-          <div className="font-semibold text-foreground">公司錢包</div>
-          <div className="flex justify-between text-muted-foreground tabular-nums"><span>本月贈點（每月 ${COMPANY_MONTHLY_GIFT_USD}，不累積）</span><span>${data.wallet.gift.toFixed(2)}</span></div>
-          <div className="flex justify-between text-muted-foreground tabular-nums"><span>儲值餘額</span><span>${data.wallet.paid.toFixed(2)}</span></div>
-          <p className="text-[11px] text-muted-foreground">成員使用行銷生成、智慧圓桌、AI Agent 等扣點功能時，先扣本月贈點，再扣儲值。</p>
+          <div className="font-semibold text-foreground">{t('wallet')}</div>
+          <div className="flex justify-between text-muted-foreground tabular-nums"><span>{t('monthlyGift', { n: COMPANY_MONTHLY_GIFT_USD })}</span><span>${data.wallet.gift.toFixed(2)}</span></div>
+          <div className="flex justify-between text-muted-foreground tabular-nums"><span>{t('paidBalance')}</span><span>${data.wallet.paid.toFixed(2)}</span></div>
+          <p className="text-[11px] text-muted-foreground">{t('deductOrder')}</p>
           {data.canTopUp && active ? (
             <div className="grid grid-cols-3 gap-2 pt-2">
               {CREDIT_PACKAGES.map(pkg => (
                 <button key={pkg.id} onClick={() => topUp(pkg.id)} disabled={toppingUp !== null}
                   className="rounded-lg border px-2 py-2 text-xs hover:bg-muted disabled:opacity-40 flex flex-col items-center gap-0.5">
-                  {toppingUp === pkg.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <span className="font-semibold text-foreground">儲值 {pkg.label}</span>}
-                  <span className="text-muted-foreground">得 ${pkg.usdCredit} 點</span>
+                  {toppingUp === pkg.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <span className="font-semibold text-foreground">{t('topUp', { label: pkg.label })}</span>}
+                  <span className="text-muted-foreground">{t('getsCredits', { n: pkg.usdCredit })}</span>
                 </button>
               ))}
             </div>
           ) : (
             <p className="text-[11px] text-muted-foreground pt-1">
-              {active ? '儲值需由負責人、管理員、經理或財務人員操作。' : '啟用公司版後即可儲值公司錢包。'}
+              {active ? t('topUpWho') : t('topUpAfterActive')}
             </p>
           )}
         </div>
@@ -180,10 +183,10 @@ export function CompanyPlanPage({ isOwnerOrAdmin }: { isOwnerOrAdmin: boolean })
           className="w-full py-2.5 rounded-lg text-sm font-semibold text-primary-foreground bg-primary hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
         >
           {checkingOut && <Loader2 className="h-4 w-4 animate-spin" />}
-          {active ? '續約' : '付款啟用'}（${total} 美元）
+          {t('payBtn', { action: active ? t('renew') : t('activate'), total })}
         </button>
 
-        <p className="text-[11px] text-muted-foreground">付款後立即生效；續約會從原到期日往後延長。到期前不會自動續訂。</p>
+        <p className="text-[11px] text-muted-foreground">{t('payNote')}</p>
       </div>
     </div>
   )

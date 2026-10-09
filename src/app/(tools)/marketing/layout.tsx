@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { Megaphone, Palette, LayoutDashboard, Phone, Menu, Search, Wand2, Crown, Brain, NotebookPen, MapPin, Fingerprint, GitBranch, Share2, Sparkles, Building2, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { Megaphone, Palette, LayoutDashboard, Phone, Menu, Search, Wand2, Crown, Brain, NotebookPen, CalendarCheck, Fingerprint, GitBranch, Share2, Sparkles, Building2, PanelLeftClose, PanelLeftOpen, FileText, Download } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 interface NavItem {
@@ -37,7 +37,7 @@ const SECTIONS: { titleKey: string; items: NavItem[] }[] = [
         ],
       },
       { href: '/prospect-call',    labelKey: 'nav.prospect', icon: Phone },
-      { href: '/marketing/offline', labelKey: 'nav.offline', icon: MapPin },
+      { href: '/marketing/campaigns', labelKey: 'nav.campaigns', icon: CalendarCheck, match: ['/marketing/offline'] },
     ],
   },
   {
@@ -103,7 +103,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
         {!collapse && <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">{t('center')}</span>}
         {/* 收合切換（桌面才顯示） */}
         <button type="button" onClick={toggleCollapsed}
-          title={collapse ? '展開選單' : '收合選單'}
+          title={collapse ? t('nav.expand') : t('nav.collapse')}
           className={`hidden sm:grid place-items-center h-7 w-7 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700 ${collapse ? '' : 'ml-auto'}`}>
           {collapse ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
         </button>
@@ -127,15 +127,30 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
       <div className="mt-3 pt-3 border-t border-gray-100 flex flex-col gap-0.5">
         {!collapse && sectionLabel(t('section.settings'), 'mb-1')}
         {SETTINGS.map(item => renderItem(item, false, collapse))}
+        {/* 使用說明書（PDF，登入後可看／下載） */}
+        <div className={`flex items-center ${collapse ? 'flex-col gap-0.5' : 'gap-1'}`}>
+          <a href="/api/docs/marketing-manual" target="_blank" rel="noreferrer" title={collapse ? t('nav.manual') : undefined}
+            className={`flex flex-1 items-center rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors
+              ${collapse ? 'justify-center py-2.5 w-full' : 'gap-2.5 px-3 py-2'}`}>
+            <FileText className="h-4 w-4 shrink-0" />
+            {!collapse && t('nav.manual')}
+          </a>
+          {!collapse && (
+            <a href="/api/docs/marketing-manual?download=1" title={t('nav.manualDownload')}
+              className="grid place-items-center h-8 w-8 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700">
+              <Download className="h-4 w-4" />
+            </a>
+          )}
+        </div>
       </div>
 
       <div className="mt-auto pt-3 border-t border-gray-100 flex flex-col gap-1">
         {!collapse && sectionLabel(t('section.collab'))}
-        <Link href="/mkt" title={collapse ? 'ERP 行銷系統' : undefined}
+        <Link href="/mkt" title={collapse ? t('nav.erpMkt') : undefined}
           className={`flex items-center rounded-lg text-xs font-semibold text-pink-700 bg-pink-50 hover:bg-pink-100 transition-colors
             ${collapse ? 'justify-center py-2.5' : 'gap-2 px-3 py-2'}`}>
           <Megaphone className="h-3.5 w-3.5 shrink-0" />
-          {!collapse && <span>ERP 行銷系統 ↗</span>}
+          {!collapse && <span>{t('nav.erpMkt')} ↗</span>}
         </Link>
         <Link href="/office" title={collapse ? 'IMT ERP' : undefined}
           className={`flex items-center rounded-lg text-xs font-medium text-gray-500 hover:bg-gray-100 transition-colors

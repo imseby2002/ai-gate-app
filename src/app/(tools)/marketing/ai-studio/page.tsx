@@ -176,10 +176,10 @@ function AiStudioContent() {
     setPublishMedia({
       type: isVideo ? 'video' : 'image',
       url: node.outputUrl,
-      title: `AI 視覺工坊 - ${typeLabel}`,
+      title: t('studioX.pubTitle', { type: typeLabel }),
       initialCopy: node.prompt
-        ? `✨【AI 視覺工坊創作成果】\n\n以「${typeLabel}」專業流程打造：${node.prompt}\n\n立即體驗或私訊諮詢！\n\n#AI視覺 #品牌行銷 #創新內容 #質感美學`
-        : `✨【AI 視覺工坊創作成果】\n\n透過 AI 視覺工坊「${typeLabel}」精心生成，展現極致美感與細節魅力 🔥\n\n立即了解更多或私訊我們！\n\n#AI視覺 #品牌行銷 #創意無界 #質感設計`,
+        ? t('studioX.copyWithPrompt', { type: typeLabel, prompt: node.prompt })
+        : t('studioX.copyNoPrompt', { type: typeLabel }),
     })
   }, [t])
 
@@ -356,13 +356,13 @@ function AiStudioContent() {
           return
         }
         if (data.status === 'failed') {
-          updateNode(nodeId, { status: 'error', error: data.error ?? '影片生成失敗' })
+          updateNode(nodeId, { status: 'error', error: data.error ?? t('studioX.videoFailed') })
           return
         }
       } catch { /* keep polling */ }
     }
-    updateNode(nodeId, { status: 'error', error: '影片生成逾時' })
-  }, [updateNode])
+    updateNode(nodeId, { status: 'error', error: t('studioX.videoTimeout') })
+  }, [updateNode, t])
 
   // Run all non-input nodes in sequence
   const runAll = useCallback(async () => {
@@ -808,10 +808,10 @@ function NodeCard({ node, index, canRemove, onUpdate, onRun, onRemove, onUpload,
             <button
               onClick={() => onPublish?.(node)}
               className="h-6 px-2 rounded-md bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 flex items-center justify-center text-white text-[11px] font-semibold gap-1 transition-all shadow-md"
-              title="一鍵串接上傳至社群平台"
+              title={t('studioX.publishAll')}
             >
               <Share2 className="h-3 w-3" />
-              <span>發布</span>
+              <span>{t('studioX.publish')}</span>
             </button>
             <button
               onClick={() => downloadImage(node.outputUrl!, node.type)}
@@ -1090,7 +1090,7 @@ function NodeCard({ node, index, canRemove, onUpdate, onRun, onRemove, onUpload,
             onClick={() => onPublish?.(node)}
           >
             <Share2 className="h-3 w-3" />
-            一鍵串接上傳至社群平台
+            {t('studioX.publishAll')}
           </Button>
         )}
       </div>

@@ -40,7 +40,7 @@ export async function GET() {
     config,
     // 專屬客製-企業版以議價月費計，不顯示模組明細
     price: sub?.enterprise
-      ? { lines: [{ label: '專屬客製-企業版', usd: Number(sub.enterprise_monthly_usd ?? 0) }], monthlyUsd: Number(sub.enterprise_monthly_usd ?? 0) }
+      ? { lines: [{ label: '專屬客製-企業版', usd: Number(sub.enterprise_monthly_usd ?? 0), key: 'enterprise' }], monthlyUsd: Number(sub.enterprise_monthly_usd ?? 0) }
       : calcCompanyMonthlyPrice(config),
     enterprise: !!sub?.enterprise,
     wallet: { gift: Number(walletRow?.gift ?? 0), paid: Number(walletRow?.paid ?? 0) },

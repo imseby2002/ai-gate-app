@@ -2,13 +2,14 @@
 
 import { useState, useEffect, useCallback, useMemo, ReactNode } from 'react'
 import Link from 'next/link'
+import { useTranslations, useLocale } from 'next-intl'
 import {
   Plus, Pencil, Trash2, Check, X, Loader2, AlertCircle, Building2,
   CreditCard, Zap, Wallet, TrendingUp, TrendingDown, ArrowUpCircle,
   ArrowDownCircle, ArrowLeftRight, Landmark, Banknote, PiggyBank,
   BarChart3, Upload, Store, FileText, Truck, FileSpreadsheet,
   Package, Search, AlertTriangle, Layers, Calendar, Filter,
-  Settings, ChevronRight, Sparkles, Database
+  Settings, ChevronRight, ChevronDown, Sparkles, Database
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -72,15 +73,14 @@ const CASHFLOW_IMPORT_COLUMNS: ImportColumn[] = [
 
 const fmt = (n: number) => Math.round(n || 0).toLocaleString('zh-TW')
 
-function fmtDateWithDay(dateStr: string): string {
+function fmtDateWithDay(dateStr: string, locale: string): string {
   if (!dateStr) return '—'
   const d = new Date(dateStr)
   if (isNaN(d.getTime())) return dateStr
-  const days = ['日', '一', '二', '三', '四', '五', '六']
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const date = String(d.getDate()).padStart(2, '0')
-  const day = days[d.getDay()]
+  const day = d.toLocaleDateString(locale, { weekday: 'short' })
   return `${y}/${m}/${date} (${day})`
 }
 
@@ -114,10 +114,11 @@ function CashflowFormModal({
   initial: Partial<Cashflow>
   accounts: Account[]
   subjects: SubjectItem[]
-  onSave: (d: any) => void
+  onSave: (d: any, keepOpen?: boolean) => Promise<boolean>
   onCancel: () => void
   saving: boolean
 }) {
+  const t = useTranslations('FinancePage')
   const [type, setType] = useState<FlowType>(initial.type ?? 'expense')
   const [category, setCategory] = useState(initial.category ?? '')
   const [categoryParent, setCategoryParent] = useState(initial.category_parent ?? '')
@@ -130,6 +131,8 @@ function CashflowFormModal({
   const [accountId, setAccountId] = useState(initial.account_id ?? accounts[0]?.id ?? '')
   const [toAccountId, setToAccountId] = useState(initial.to_account_id ?? accounts[1]?.id ?? '')
   const [err, setErr] = useState('')
+  const [addedCount, setAddedCount] = useState(0)
+  const isNew = !initial.id
 
   // 根據收支類別篩選可選科目
   const relevantSubjects = useMemo(() => {
@@ -144,28 +147,41 @@ function CashflowFormModal({
     if (found) setCategoryParent(found.parent_name)
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!amount || amount <= 0) {
-      setErr('請輸入有效金額')
+      setErr(t('cf.errAmount'))
       return
     }
     if (!date) {
-      setErr('請選擇記帳日期')
+      setErr(t('cf.errDate'))
       return
     }
     if (type === 'transfer' && (!accountId || !toAccountId || accountId === toAccountId)) {
-      setErr('轉帳需指定不同的轉出與轉入帳戶')
+      setErr(t('cf.errTransfer'))
       return
     }
-    onSave({
+    setErr('')
+    const ok = await onSave({
       type, category, category_parent: categoryParent,
       amount, date, description, notes,
       pay_coll_name: payCollName, invoice_no: invoiceNo,
       account_id: accountId || null,
       to_account_id: type === 'transfer' ? (toAccountId || null) : null,
       receipt_url: initial.receipt_url ?? ''
-    })
+    }, isNew)
+    // 新增模式：保留日期、類型、科目與帳戶，清空金額與內容，方便連續輸入
+    if (ok && isNew) {
+      setAmount(0)
+      setDescription('')
+      setNotes('')
+      setInvoiceNo('')
+      setPayCollName('')
+      setAddedCount(c => c + 1)
+      document.getElementById('cashflow-amount-input')?.focus()
+    } else if (!ok) {
+      setErr(t('cf.errSave'))
+    }
   }
 
   return (
@@ -173,7 +189,7 @@ function CashflowFormModal({
       <Card className="w-full max-w-lg p-6 space-y-4 shadow-2xl" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b pb-3">
           <h3 className="font-bold text-base">
-            {initial.id ? '編輯帳務記錄' : '新增帳務記錄'}
+            {initial.id ? t('cf.editTitle') : t('cf.newTitle')}
           </h3>
           <button onClick={onCancel} className="text-muted-foreground hover:text-foreground">
             <X className="h-5 w-5" />
@@ -190,24 +206,24 @@ function CashflowFormModal({
         <form onSubmit={handleSubmit} className="space-y-3 text-xs">
           {/* 類型切換 */}
           <div>
-            <label className="block text-2xs font-medium text-muted-foreground mb-1">交易類型</label>
+            <label className="block text-2xs font-medium text-muted-foreground mb-1">{t('cf.txType')}</label>
             <div className="flex gap-1 bg-muted p-1 rounded-lg">
-              {(['expense', 'income', 'transfer'] as const).map(t => (
+              {(['expense', 'income', 'transfer'] as const).map(ft => (
                 <button
-                  key={t}
+                  key={ft}
                   type="button"
-                  onClick={() => setType(t)}
+                  onClick={() => setType(ft)}
                   className={`flex-1 py-1.5 rounded-md font-semibold transition-colors ${
-                    type === t
-                      ? t === 'income'
+                    type === ft
+                      ? ft === 'income'
                         ? 'bg-emerald-600 text-white shadow-xs'
-                        : t === 'expense'
+                        : ft === 'expense'
                         ? 'bg-red-600 text-white shadow-xs'
                         : 'bg-blue-600 text-white shadow-xs'
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  {t === 'income' ? '收入 (+)' : t === 'expense' ? '支出 (-)' : '轉帳 (⇄)'}
+                  {ft === 'income' ? t('cf.typeIncome') : ft === 'expense' ? t('cf.typeExpense') : t('cf.typeTransfer')}
                 </button>
               ))}
             </div>
@@ -215,7 +231,7 @@ function CashflowFormModal({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-2xs font-medium text-muted-foreground mb-1">記帳日期 *</label>
+              <label className="block text-2xs font-medium text-muted-foreground mb-1">{t('cf.dateReq')}</label>
               <Input
                 type="date"
                 value={date}
@@ -225,8 +241,10 @@ function CashflowFormModal({
               />
             </div>
             <div>
-              <label className="block text-2xs font-medium text-muted-foreground mb-1">金額 (NT$) *</label>
+              <label className="block text-2xs font-medium text-muted-foreground mb-1">{t('cf.amountReq')}</label>
               <Input
+                id="cashflow-amount-input"
+                autoFocus
                 type="number"
                 value={amount || ''}
                 onChange={e => setAmount(Number(e.target.value) || 0)}
@@ -241,7 +259,7 @@ function CashflowFormModal({
           {type === 'transfer' ? (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-2xs font-medium text-muted-foreground mb-1">轉出帳戶 (從項目) *</label>
+                <label className="block text-2xs font-medium text-muted-foreground mb-1">{t('cf.fromAccountReq')}</label>
                 <select
                   value={accountId}
                   onChange={e => setAccountId(e.target.value)}
@@ -251,7 +269,7 @@ function CashflowFormModal({
                 </select>
               </div>
               <div>
-                <label className="block text-2xs font-medium text-muted-foreground mb-1">轉入帳戶 (至項目) *</label>
+                <label className="block text-2xs font-medium text-muted-foreground mb-1">{t('cf.toAccountReq')}</label>
                 <select
                   value={toAccountId}
                   onChange={e => setToAccountId(e.target.value)}
@@ -265,7 +283,7 @@ function CashflowFormModal({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-2xs font-medium text-muted-foreground mb-1">
-                  {type === 'income' ? '收款帳戶 (至項目)' : '付款帳戶 (從項目)'}
+                  {type === 'income' ? t('cf.receiveAccount') : t('cf.payAccount')}
                 </label>
                 <select
                   value={accountId}
@@ -277,14 +295,14 @@ function CashflowFormModal({
               </div>
               <div>
                 <label className="block text-2xs font-medium text-muted-foreground mb-1">
-                  {type === 'income' ? '收入科目 (從項目)' : '支出科目 (至項目)'}
+                  {type === 'income' ? t('cf.incomeSubject') : t('cf.expenseSubject')}
                 </label>
                 <select
                   value={category}
                   onChange={handleCategorySelect}
                   className="w-full h-8 px-2 border rounded-md bg-background text-xs"
                 >
-                  <option value="">-- 選擇科目 --</option>
+                  <option value="">{t('cf.chooseSubject')}</option>
                   {relevantSubjects.map(s => (
                     <option key={s.id} value={s.name}>
                       {s.parent_name ? `${s.parent_name} > ` : ''}{s.name}
@@ -297,20 +315,20 @@ function CashflowFormModal({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-2xs font-medium text-muted-foreground mb-1">摘要說明</label>
+              <label className="block text-2xs font-medium text-muted-foreground mb-1">{t('cf.summary')}</label>
               <Input
                 value={description}
                 onChange={e => setDescription(e.target.value)}
-                placeholder="例：買茶葉、門市營業額"
+                placeholder={t('cf.summaryPh')}
                 className="h-8 text-xs"
               />
             </div>
             <div>
-              <label className="block text-2xs font-medium text-muted-foreground mb-1">收付人 / 廠商 / 客戶</label>
+              <label className="block text-2xs font-medium text-muted-foreground mb-1">{t('cf.payee')}</label>
               <Input
                 value={payCollName}
                 onChange={e => setPayCollName(e.target.value)}
-                placeholder="例：ha、廠商名稱"
+                placeholder={t('cf.payeePh')}
                 className="h-8 text-xs"
               />
             </div>
@@ -318,32 +336,37 @@ function CashflowFormModal({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-2xs font-medium text-muted-foreground mb-1">發票號碼</label>
+              <label className="block text-2xs font-medium text-muted-foreground mb-1">{t('cf.invoice')}</label>
               <Input
                 value={invoiceNo}
                 onChange={e => setInvoiceNo(e.target.value)}
-                placeholder="例：AB12345678"
+                placeholder={t('cf.invoicePh')}
                 className="h-8 text-xs font-mono"
               />
             </div>
             <div>
-              <label className="block text-2xs font-medium text-muted-foreground mb-1">詳細備註</label>
+              <label className="block text-2xs font-medium text-muted-foreground mb-1">{t('cf.notes')}</label>
               <Input
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
-                placeholder="其他補充說明"
+                placeholder={t('cf.notesPh')}
                 className="h-8 text-xs"
               />
             </div>
           </div>
 
           <div className="flex items-center justify-end gap-2 pt-2 border-t">
+            {isNew && addedCount > 0 && (
+              <span className="mr-auto text-emerald-600 font-medium flex items-center gap-1">
+                <Check className="h-3.5 w-3.5" />{t('cf.addedCount', { n: addedCount })}
+              </span>
+            )}
             <Button type="button" variant="outline" size="sm" onClick={onCancel} className="h-8 text-xs">
-              取消
+              {isNew ? t('cf.closeExit') : t('cf.cancel')}
             </Button>
             <Button type="submit" size="sm" disabled={saving} className="h-8 text-xs gap-1">
               {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-              {saving ? '儲存中…' : '確認儲存'}
+              {saving ? t('cf.saving') : isNew ? t('cf.addEntry') : t('cf.confirmSave')}
             </Button>
           </div>
         </form>
@@ -354,6 +377,8 @@ function CashflowFormModal({
 
 // ─── Main Finance Page ────────────────────────────────────────────
 export default function FinancePage() {
+  const t = useTranslations('FinancePage')
+  const locale = useLocale()
   const [mainTab, setMainTab] = useState<MainTab>('cashflow')
   const [subTab, setSubTab] = useState<SubTab>('journal')
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
@@ -366,6 +391,7 @@ export default function FinancePage() {
   const [subjects, setSubjects] = useState<SubjectItem[]>([])
   const [selectedSubject, setSelectedSubject] = useState<SubjectFilter | null>(null)
   const [records, setRecords] = useState<Cashflow[]>([])
+  const [openingBalances, setOpeningBalances] = useState<Record<string, number>>({})
   const [accounts, setAccounts] = useState<Account[]>([])
   const [accountsLoaded, setAccountsLoaded] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -376,6 +402,7 @@ export default function FinancePage() {
   const [showZeroImport, setShowZeroImport] = useState(false)
   const [showMdbBatchModal, setShowMdbBatchModal] = useState(false)
   const [showExcelImport, setShowExcelImport] = useState(false)
+  const [showMoreMenu, setShowMoreMenu] = useState(false)
   const [showSubjectSettings, setShowSubjectSettings] = useState(false)
   const [showFormModal, setShowFormModal] = useState(false)
   const [editingRecord, setEditingRecord] = useState<Cashflow | null>(null)
@@ -439,6 +466,7 @@ export default function FinancePage() {
       if (res.ok) {
         const d = await res.json()
         setRecords(d.cashflow ?? [])
+        setOpeningBalances(d.openingBalances ?? {})
       }
     } catch { /* ignore */ } finally {
       setLoading(false)
@@ -487,6 +515,30 @@ export default function FinancePage() {
 
     return map
   }, [accounts, records, subjects])
+
+  // 每筆交易後的帳戶餘額：區間起日前結餘依日期、建立時間逐筆累加
+  const runningBalances = useMemo(() => {
+    const bal: Record<string, number> = { ...openingBalances }
+    const out = new Map<string, { from?: number; to?: number }>()
+    const sorted = [...records].sort((a, b) =>
+      a.date !== b.date ? (a.date < b.date ? -1 : 1)
+        : a.created_at !== b.created_at ? (a.created_at < b.created_at ? -1 : 1)
+        : a.id < b.id ? -1 : 1)
+    for (const r of sorted) {
+      const amt = Number(r.amount) || 0
+      const entry: { from?: number; to?: number } = {}
+      if (r.account_id) {
+        bal[r.account_id] = (bal[r.account_id] ?? 0) + (r.type === 'income' ? amt : -amt)
+        entry.from = bal[r.account_id]
+      }
+      if (r.type === 'transfer' && r.to_account_id) {
+        bal[r.to_account_id] = (bal[r.to_account_id] ?? 0) + amt
+        entry.to = bal[r.to_account_id]
+      }
+      out.set(r.id, entry)
+    }
+    return out
+  }, [records, openingBalances])
 
   // 篩選後交易清單
   const filteredRecords = useMemo(() => {
@@ -565,28 +617,31 @@ export default function FinancePage() {
   const totalErrors = allErrors.length
 
   // 儲存記錄
-  const handleSaveRecord = async (data: any) => {
+  // keepOpen：新增模式儲存後不關閉視窗，可連續新增
+  const handleSaveRecord = async (data: any, keepOpen?: boolean): Promise<boolean> => {
     setSavingRecord(true)
     try {
-      if (editingRecord) {
-        await fetch('/api/hr/cashflow', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: editingRecord.id, ...data })
-        })
-      } else {
-        await fetch('/api/hr/cashflow', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        })
+      const res = editingRecord
+        ? await fetch('/api/hr/cashflow', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: editingRecord.id, ...data })
+          })
+        : await fetch('/api/hr/cashflow', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          })
+      if (!res.ok) return false
+      if (!keepOpen) {
+        setShowFormModal(false)
+        setEditingRecord(null)
       }
-      setShowFormModal(false)
-      setEditingRecord(null)
       loadCashflow()
       loadAccounts()
+      return true
     } catch {
-      alert('儲存失敗')
+      return false
     } finally {
       setSavingRecord(false)
     }
@@ -594,7 +649,7 @@ export default function FinancePage() {
 
   // 刪除記錄
   const handleDeleteRecord = async (id: string) => {
-    if (!confirm('確定刪除此筆記錄？')) return
+    if (!confirm(t('cf.confirmDelete'))) return
     await fetch('/api/hr/cashflow', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
@@ -609,8 +664,8 @@ export default function FinancePage() {
       <div className="flex h-full items-center justify-center p-8">
         <div className="text-center space-y-2">
           <AlertCircle className="h-12 w-12 mx-auto text-amber-400" />
-          <p className="font-semibold">僅出納總務單位可使用出納總務功能</p>
-          <p className="text-sm text-gray-400">請以管理者帳號登入後再試</p>
+          <p className="font-semibold">{t('cf.noAccess')}</p>
+          <p className="text-sm text-gray-400">{t('cf.noAccessHint')}</p>
         </div>
       </div>
     )
@@ -626,7 +681,7 @@ export default function FinancePage() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold">IMT ERP 出納系統</h1>
+              <h1 className="text-xl font-bold">{t('cf.title')}</h1>
             </div>
           </div>
         </div>
@@ -639,7 +694,7 @@ export default function FinancePage() {
               mainTab === 'cashflow' ? 'bg-card text-foreground font-bold shadow-xs' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            出納帳務
+            {t('cf.tabCashflow')}
           </button>
           <button
             onClick={() => setMainTab('pricing')}
@@ -647,7 +702,7 @@ export default function FinancePage() {
               mainTab === 'pricing' ? 'bg-card text-foreground font-bold shadow-xs' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            物料定價
+            {t('cf.tabPricing')}
           </button>
           <button
             onClick={() => setMainTab('pnl')}
@@ -655,19 +710,19 @@ export default function FinancePage() {
               mainTab === 'pnl' ? 'bg-card text-foreground font-bold shadow-xs' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            業績損益報表
+            {t('cf.tabPnl')}
           </button>
         </div>
 
         <div className="flex items-center gap-2">
           <Link href="/store-expenses">
             <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5">
-              <Store className="h-3.5 w-3.5" />門市費用
+              <Store className="h-3.5 w-3.5" />{t('cf.tabStoreExpenses')}
             </Button>
           </Link>
           <Link href="/vendors">
             <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5">
-              <Truck className="h-3.5 w-3.5" />廠商資料
+              <Truck className="h-3.5 w-3.5" />{t('cf.tabVendors')}
             </Button>
           </Link>
         </div>
@@ -705,7 +760,7 @@ export default function FinancePage() {
           {/* 右側：帳務小管家核心面板 - 獨立上下捲動 */}
           <div className="h-full min-h-0 min-w-0 flex flex-col space-y-2.5 overflow-hidden">
             {/* 上方子標籤（Zero.Net 子功能分頁） */}
-            <div className="flex items-center justify-between gap-2 flex-wrap border-b pb-2 shrink-0">
+            <div className="flex items-center gap-2 flex-wrap border-b pb-2 shrink-0">
               <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-lg text-xs overflow-x-auto">
                 <button
                   onClick={() => setSubTab('journal')}
@@ -713,7 +768,7 @@ export default function FinancePage() {
                     subTab === 'journal' ? 'bg-card text-foreground font-bold shadow-xs' : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  帳務記錄
+                  {t('cf.subJournal')}
                 </button>
                 <button
                   onClick={() => setSubTab('today')}
@@ -721,7 +776,7 @@ export default function FinancePage() {
                     subTab === 'today' ? 'bg-card text-foreground font-bold shadow-xs' : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  本日收支
+                  {t('cf.subToday')}
                 </button>
                 <button
                   onClick={() => setSubTab('month')}
@@ -729,7 +784,7 @@ export default function FinancePage() {
                     subTab === 'month' ? 'bg-card text-foreground font-bold shadow-xs' : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  本月收支
+                  {t('cf.subMonth')}
                 </button>
                 <button
                   onClick={() => { setSubTab('regular'); setSelectedSubject({ parent_name: '定期存款' }) }}
@@ -737,7 +792,7 @@ export default function FinancePage() {
                     subTab === 'regular' ? 'bg-card text-foreground font-bold shadow-xs' : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  定期存款
+                  {t('cf.subRegular')}
                 </button>
                 <button
                   onClick={() => setSubTab('project')}
@@ -745,84 +800,81 @@ export default function FinancePage() {
                     subTab === 'project' ? 'bg-card text-foreground font-bold shadow-xs' : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  專案記錄
+                  {t('cf.subProject')}
                 </button>
               </div>
 
-              {/* 頂部操作按鈕組 */}
-              <div className="flex items-center gap-2 flex-wrap">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 text-xs gap-1"
-                  onClick={() => setShowSubjectSettings(true)}
-                >
-                  <Settings className="h-3.5 w-3.5 text-muted-foreground" />
-                  項目設定
-                </Button>
-
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 text-xs gap-1"
-                  onClick={() => setShowZeroImport(true)}
-                >
-                  <Upload className="h-3.5 w-3.5 text-primary" />
-                  匯入記帳檔 (.mdb)
-                </Button>
-
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 text-xs gap-1 border-blue-200 text-blue-700 bg-blue-50/60 hover:bg-blue-100 dark:border-blue-900/40 dark:bg-blue-950/20 dark:text-blue-300 font-medium"
-                  onClick={() => setShowMdbBatchModal(true)}
-                  title="檢視 MDB 匯入歷史批次、撤回單次或清空 MDB 資料"
-                >
-                  <Database className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
-                  MDB 批次管理 / 撤回
-                </Button>
-
-                {totalErrors > 0 && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-7 text-xs gap-1 border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100"
-                    onClick={() => setShowErrorDrawer(true)}
-                  >
-                    <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
-                    匯入錯誤紀錄 ({totalErrors})
-                  </Button>
-                )}
-
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 text-xs gap-1"
-                  onClick={() => setShowExcelImport(true)}
-                >
-                  <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
-                  批次匯入
-                </Button>
-
+              {/* 新增記錄＋其他功能（下拉） */}
+              <div className="flex items-center gap-2">
                 <Button
                   size="sm"
                   className="h-7 text-xs gap-1 font-semibold"
                   onClick={() => { setEditingRecord(null); setShowFormModal(true) }}
                 >
                   <Plus className="h-3.5 w-3.5" />
-                  新增記錄
+                  {t('cf.addRecord')}
                 </Button>
+
+                <div className="relative">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className={`h-7 text-xs gap-1 ${totalErrors > 0 ? 'border-amber-300 text-amber-700' : ''}`}
+                    onClick={() => setShowMoreMenu(v => !v)}
+                  >
+                    {totalErrors > 0 && <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />}
+                    {t('cf.more')}
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  </Button>
+                  {showMoreMenu && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setShowMoreMenu(false)} />
+                      <div className="absolute right-0 top-full mt-1 z-50 min-w-[200px] rounded-lg border bg-card shadow-lg p-1 text-xs">
+                        <button
+                          className="w-full flex items-center gap-2 px-2.5 py-2 rounded-md hover:bg-muted text-left"
+                          onClick={() => { setShowMoreMenu(false); setShowZeroImport(true) }}
+                        >
+                          <Upload className="h-3.5 w-3.5 text-primary" />
+                          {t('cf.importMdb')}
+                        </button>
+                        <button
+                          className="w-full flex items-center gap-2 px-2.5 py-2 rounded-md hover:bg-muted text-left"
+                          onClick={() => { setShowMoreMenu(false); setShowMdbBatchModal(true) }}
+                        >
+                          <Database className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                          {t('cf.mdbBatches')}
+                        </button>
+                        <button
+                          className="w-full flex items-center gap-2 px-2.5 py-2 rounded-md hover:bg-muted text-left"
+                          onClick={() => { setShowMoreMenu(false); setShowExcelImport(true) }}
+                        >
+                          <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
+                          {t('cf.batchImport')}
+                        </button>
+                        {totalErrors > 0 && (
+                          <button
+                            className="w-full flex items-center gap-2 px-2.5 py-2 rounded-md hover:bg-muted text-left text-amber-700"
+                            onClick={() => { setShowMoreMenu(false); setShowErrorDrawer(true) }}
+                          >
+                            <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+                            {t('cf.importErrors', { n: totalErrors })}
+                          </button>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* 搜尋列（Zero.Net 風格：輸入框 + 多維度按鈕） */}
             <div className="flex items-center gap-2 bg-muted/30 p-2 rounded-xl border shrink-0">
-              <span className="text-xs font-medium text-muted-foreground shrink-0">資料搜尋：</span>
+              <span className="text-xs font-medium text-muted-foreground shrink-0">{t('cf.searchLabel')}</span>
               <div className="relative flex-1 min-w-[150px]">
                 <Input
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="輸入搜尋關鍵字..."
+                  placeholder={t('cf.searchPh')}
                   className="h-8 text-xs bg-background"
                 />
                 {searchQuery && (
@@ -837,7 +889,7 @@ export default function FinancePage() {
 
               <div className="flex items-center gap-1 shrink-0 overflow-x-auto">
                 {(['all', 'desc', 'category', 'payee', 'notes'] as const).map(m => {
-                  const label = m === 'all' ? '全部' : m === 'desc' ? '摘要' : m === 'category' ? '項目' : m === 'payee' ? '收付人' : '備註發票'
+                  const label = t(`cf.searchMode.${m}`)
                   return (
                     <Button
                       key={m}
@@ -846,7 +898,7 @@ export default function FinancePage() {
                       className="h-7 text-2xs px-2"
                       onClick={() => setSearchMode(m)}
                     >
-                      {label}搜尋
+                      {label}
                     </Button>
                   )
                 })}
@@ -859,7 +911,7 @@ export default function FinancePage() {
                 <div className="flex items-center gap-2">
                   <Filter className="h-3.5 w-3.5 text-blue-600" />
                   <span>
-                    目前篩選科目：
+                    {t('cf.filteringBy')}
                     <b>
                       {selectedSubject.parent_name ? `${selectedSubject.parent_name} > ` : ''}
                       {selectedSubject.name || selectedSubject.parent_name || selectedSubject.class}
@@ -870,7 +922,7 @@ export default function FinancePage() {
                   onClick={() => setSelectedSubject(null)}
                   className="text-2xs underline hover:text-blue-700"
                 >
-                  清除篩選（顯示全部）
+                  {t('cf.clearFilter')}
                 </button>
               </div>
             )}
@@ -882,31 +934,32 @@ export default function FinancePage() {
                   <thead className="bg-muted/70 text-muted-foreground font-semibold border-b sticky top-0 z-10 backdrop-blur-xs">
                     <tr>
                       <th className="w-8 px-2 py-2 text-center"></th>
-                      <th className="px-3 py-2 whitespace-nowrap">日期 / 星期</th>
-                      <th className="px-3 py-2 whitespace-nowrap">從項目</th>
-                      <th className="px-2 py-2 text-center whitespace-nowrap">狀態</th>
-                      <th className="px-3 py-2 whitespace-nowrap">至項目</th>
-                      <th className="px-3 py-2 text-right whitespace-nowrap">金額 (NT$)</th>
-                      <th className="px-3 py-2 whitespace-nowrap">摘要</th>
-                      <th className="px-3 py-2 whitespace-nowrap">收付人</th>
-                      <th className="px-3 py-2 whitespace-nowrap">備註 / 發票</th>
-                      <th className="w-16 px-2 py-2 text-center">操作</th>
+                      <th className="px-3 py-2 whitespace-nowrap">{t('cf.colDate')}</th>
+                      <th className="px-3 py-2 whitespace-nowrap">{t('cf.colFrom')}</th>
+                      <th className="px-2 py-2 text-center whitespace-nowrap">{t('cf.colStatus')}</th>
+                      <th className="px-3 py-2 whitespace-nowrap">{t('cf.colTo')}</th>
+                      <th className="px-3 py-2 text-right whitespace-nowrap">{t('cf.colAmount')}</th>
+                      <th className="px-3 py-2 text-right whitespace-nowrap">{t('cf.colBalance')}</th>
+                      <th className="px-3 py-2 whitespace-nowrap">{t('cf.colSummary')}</th>
+                      <th className="px-3 py-2 whitespace-nowrap">{t('cf.colPayee')}</th>
+                      <th className="px-3 py-2 whitespace-nowrap">{t('cf.colNotes')}</th>
+                      <th className="w-16 px-2 py-2 text-center">{t('cf.colActions')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/60 font-sans">
                     {loading ? (
                       <tr>
-                        <td colSpan={10} className="py-16 text-center text-muted-foreground">
+                        <td colSpan={11} className="py-16 text-center text-muted-foreground">
                           <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-primary" />
-                          <span>正在讀取帳務記錄…</span>
+                          <span>{t('cf.loading')}</span>
                         </td>
                       </tr>
                     ) : filteredRecords.length === 0 ? (
                       <tr>
-                        <td colSpan={10} className="py-16 text-center text-muted-foreground">
+                        <td colSpan={11} className="py-16 text-center text-muted-foreground">
                           <Wallet className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                          <p className="font-medium text-sm">無符合條件的帳務分錄</p>
-                          <p className="text-2xs text-muted-foreground mt-1">請切換年份月份、科目樹篩選或點擊「新增記錄」</p>
+                          <p className="font-medium text-sm">{t('cf.empty')}</p>
+                          <p className="text-2xs text-muted-foreground mt-1">{t('cf.emptyHint')}</p>
                         </td>
                       </tr>
                     ) : (
@@ -915,10 +968,10 @@ export default function FinancePage() {
                         const isExpense = r.type === 'expense'
                         const isTransfer = r.type === 'transfer'
 
-                        const fromItem = isIncome ? (r.category || '收入') : (acctName(r.account_id) || '現金/銀行')
-                        const toItem = isExpense ? (r.category || '支出') : isTransfer ? (acctName(r.to_account_id) || '轉入帳戶') : (acctName(r.account_id) || '存入帳戶')
+                        const fromItem = isIncome ? (r.category || t('cf.income')) : (acctName(r.account_id) || t('cf.cashBank'))
+                        const toItem = isExpense ? (r.category || t('cf.expense')) : isTransfer ? (acctName(r.to_account_id) || t('cf.toAccount')) : (acctName(r.account_id) || t('cf.depositAccount'))
 
-                        const typeLabel = isIncome ? '收入' : isExpense ? '支出' : '轉帳'
+                        const typeLabel = isIncome ? t('cf.income') : isExpense ? t('cf.expense') : t('cf.transfer')
                         const typeColor = isIncome
                           ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400'
                           : isExpense
@@ -938,13 +991,13 @@ export default function FinancePage() {
                               <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-2xs font-bold ${
                                 isIncome ? 'bg-emerald-500 text-white' : isExpense ? 'bg-red-500 text-white' : 'bg-blue-500 text-white'
                               }`}>
-                                {isIncome ? '入' : isExpense ? '支' : '轉'}
+                                {isIncome ? t('cf.badgeIn') : isExpense ? t('cf.badgeOut') : t('cf.badgeTransfer')}
                               </span>
                             </td>
 
                             {/* 日期 / 星期 */}
                             <td className="px-3 py-2 font-mono whitespace-nowrap text-foreground">
-                              {fmtDateWithDay(r.date)}
+                              {fmtDateWithDay(r.date, locale)}
                             </td>
 
                             {/* 從項目 */}
@@ -967,6 +1020,16 @@ export default function FinancePage() {
                             {/* 金額 */}
                             <td className={`px-3 py-2 text-right font-mono tabular-nums text-sm ${amtColor}`}>
                               {fmt(r.amount)}
+                            </td>
+
+                            {/* 餘額：選取的帳戶為轉入方時顯示轉入帳戶餘額，否則顯示本筆帳戶餘額 */}
+                            <td className="px-3 py-2 text-right font-mono tabular-nums text-sm text-foreground/80 whitespace-nowrap">
+                              {(() => {
+                                const rb = runningBalances.get(r.id)
+                                const showTo = isTransfer && !!selectedSubject?.name && acctName(r.to_account_id) === selectedSubject.name
+                                const v = showTo ? rb?.to : rb?.from
+                                return v === undefined ? '—' : fmt(v)
+                              })()}
                             </td>
 
                             {/* 摘要 */}
@@ -993,7 +1056,7 @@ export default function FinancePage() {
                                   variant="ghost"
                                   className="h-6 w-6 p-0 hover:bg-muted"
                                   onClick={e => { e.stopPropagation(); setEditingRecord(r); setShowFormModal(true) }}
-                                  title="修改記錄"
+                                  title={t('cf.editRecord')}
                                 >
                                   <Pencil className="h-3 w-3" />
                                 </Button>
@@ -1002,7 +1065,7 @@ export default function FinancePage() {
                                   variant="ghost"
                                   className="h-6 w-6 p-0 hover:bg-red-100 hover:text-destructive"
                                   onClick={e => { e.stopPropagation(); handleDeleteRecord(r.id) }}
-                                  title="刪除記錄"
+                                  title={t('cf.deleteRecord')}
                                 >
                                   <Trash2 className="h-3 w-3" />
                                 </Button>
@@ -1020,18 +1083,18 @@ export default function FinancePage() {
             {/* 底部狀態列（Zero.Net 風格） */}
             <div className="border rounded-xl bg-card p-2.5 shadow-xs flex items-center justify-between text-xs flex-wrap gap-3 font-sans shrink-0">
               <div className="flex items-center gap-4 text-muted-foreground">
-                <span>帳本名稱: <b className="text-foreground">FT</b></span>
-                <span>本日日期: <b className="text-foreground font-mono">{todayStr}</b></span>
-                <span>顯示筆數: <b className="text-foreground font-mono">{filteredRecords.length}</b> 筆</span>
+                <span>{t('cf.ledgerName')} <b className="text-foreground">FT</b></span>
+                <span>{t('cf.todayDate')} <b className="text-foreground font-mono">{todayStr}</b></span>
+                <span>{t('cf.shown')} <b className="text-foreground font-mono">{filteredRecords.length}</b> {t('cf.rowsUnit')}</span>
               </div>
 
               <div className="flex items-center gap-4 font-mono tabular-nums">
-                <span>本月收入: <b className="text-emerald-600 font-bold">{fmt(monthIncome)}</b></span>
-                <span>本月支出: <b className="text-red-600 font-bold">{fmt(monthExpense)}</b></span>
-                <span>收支餘額: <b className={`${monthBalance >= 0 ? 'text-blue-600' : 'text-orange-500'} font-bold`}>{fmt(monthBalance)}</b></span>
+                <span>{t('cf.monthIncome')} <b className="text-emerald-600 font-bold">{fmt(monthIncome)}</b></span>
+                <span>{t('cf.monthExpense')} <b className="text-red-600 font-bold">{fmt(monthExpense)}</b></span>
+                <span>{t('cf.monthNet')} <b className={`${monthBalance >= 0 ? 'text-blue-600' : 'text-orange-500'} font-bold`}>{fmt(monthBalance)}</b></span>
                 <span className="text-muted-foreground">|</span>
-                <span>本日收入: <b className="text-emerald-600">{fmt(todayIncome)}</b></span>
-                <span>本日支出: <b className="text-red-600">{fmt(todayExpense)}</b></span>
+                <span>{t('cf.todayIncome')} <b className="text-emerald-600">{fmt(todayIncome)}</b></span>
+                <span>{t('cf.todayExpense')} <b className="text-red-600">{fmt(todayExpense)}</b></span>
               </div>
             </div>
           </div>
@@ -1094,16 +1157,17 @@ export default function FinancePage() {
 
       {showExcelImport && (
         <ExcelImportModal
-          title="批次匯入出納帳務"
-          description="支援 .xlsx, .xls 與 .csv 檔案。請包含日期、類型（收入/支出）、金額等。"
+          title={t('cf.importTitle')}
+          description={t('cf.importDesc')}
           columns={CASHFLOW_IMPORT_COLUMNS}
-          templateFilename="出納帳務範本"
-          sheetName="收支紀錄"
+          columnsNs="FinancePageImport"
+          templateFilename={t('cf.importTemplate')}
+          sheetName={t('cf.importSheet')}
           onClose={() => setShowExcelImport(false)}
           onSuccess={() => { loadCashflow(); loadAccounts() }}
           onSubmit={async rows => {
             const recordsToImport = rows.map(r => {
-              const type = ['收入', 'income', '+'].includes(String(r.type ?? '').trim().toLowerCase()) ? 'income' : 'expense'
+              const type = ['收入', 'income', '+', 'thu'].includes(String(r.type ?? '').trim().toLowerCase()) ? 'income' : 'expense'
               const acct = accounts.find(a => a.name.trim().toLowerCase() === String(r.account_name ?? '').trim().toLowerCase())
               return {
                 type,

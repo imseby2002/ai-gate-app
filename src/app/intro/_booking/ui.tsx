@@ -1,5 +1,8 @@
 import Link from 'next/link'
 import { BedDouble, ArrowRight } from 'lucide-react'
+import { getLocale } from 'next-intl/server'
+import { introTr } from '@/lib/i18n-data/server'
+import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
 
 export const BK_GRAD = 'linear-gradient(100deg,#f59e0b,#ef4444 50%,#6366f1)'
 export const BALANCE = { textWrap: 'balance' } as React.CSSProperties
@@ -8,29 +11,32 @@ export function BkGradText({ children }: { children: React.ReactNode }) {
   return <span style={{ background: BK_GRAD, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>{children}</span>
 }
 
-export function BkNav() {
+export async function BkNav() {
+  const tr = await introTr()
   return (
     <nav className="flex items-center gap-3 pt-6 pb-10 flex-wrap">
       <Link href="/intro" className="flex items-center gap-3">
         <span className="grid place-items-center w-8 h-8 rounded-lg text-white shrink-0" style={{ background: BK_GRAD }}>
           <BedDouble className="h-4 w-4" />
         </span>
-        <b className="font-black tracking-wide">IMT 智能訂房系統</b>
+        <b className="font-black tracking-wide">{tr("IMT 智能訂房系統")}</b>
       </Link>
       <div className="ml-auto flex items-center gap-4 text-[13px] text-[#b9ab9c]">
-        <Link href="/intro/features" className="hover:text-white">完整功能</Link>
-        <Link href="/intro/pricing" className="hover:text-white">方案比較</Link>
-        <Link href="/login" className="hover:text-white">登入</Link>
+        <Link href="/intro/features" className="hover:text-white">{tr("完整功能")}</Link>
+        <Link href="/intro/pricing" className="hover:text-white">{tr("方案比較")}</Link>
+        <Link href="/login" className="hover:text-white">{tr("登入")}</Link>
+        <span className="text-white [&_.bg-popover]:text-foreground"><LanguageSwitcher currentLocale={await getLocale()} /></span>
       </div>
     </nav>
   )
 }
 
-export function BkPrimaryCta({ children = '免費開始' }: { children?: React.ReactNode }) {
+export async function BkPrimaryCta({ children }: { children?: React.ReactNode }) {
+  const tr = await introTr()
   return (
     <Link href="/register" className="inline-flex items-center gap-2 font-bold text-[15px] px-6 py-3 rounded-xl text-white transition-transform hover:-translate-y-0.5"
       style={{ background: BK_GRAD, boxShadow: '0 10px 26px rgba(239,68,68,.30)' }}>
-      {children} <ArrowRight className="h-4 w-4" />
+      {children ?? tr('免費開始')} <ArrowRight className="h-4 w-4" />
     </Link>
   )
 }
@@ -66,7 +72,8 @@ export function BkDarkHeader({ eyebrow, title, sub }: { eyebrow: string; title: 
   )
 }
 
-export function BkFinalCta({ title, sub }: { title: React.ReactNode; sub?: React.ReactNode }) {
+export async function BkFinalCta({ title, sub }: { title: React.ReactNode; sub?: React.ReactNode }) {
+  const tr = await introTr()
   return (
     <section className="relative overflow-hidden bg-[#17120f] text-[#f7f1ea]">
       <BkGlow className="-top-1/3" />
@@ -75,20 +82,21 @@ export function BkFinalCta({ title, sub }: { title: React.ReactNode; sub?: React
         {sub && <p className="mb-7 text-[#b9ab9c] text-[15px]">{sub}</p>}
         <div className="flex flex-wrap gap-3 justify-center">
           <BkPrimaryCta />
-          <BkGhostCta href="/login">我已有帳號</BkGhostCta>
+          <BkGhostCta href="/login">{tr("我已有帳號")}</BkGhostCta>
         </div>
       </div>
     </section>
   )
 }
 
-export function BkFooter() {
+export async function BkFooter() {
+  const tr = await introTr()
   return (
     <footer className="text-center text-[#8a7d70] text-[12px] py-7 flex items-center justify-center gap-3 flex-wrap border-t border-[#e7e1d9]">
-      <span className="flex items-center gap-2"><BedDouble className="h-3.5 w-3.5" /> IMT 智能訂房系統 · booking.im-tourist.com</span>
-      <Link href="/intro/features" className="hover:text-[#4a4038]">完整功能</Link>
-      <Link href="/intro/pricing" className="hover:text-[#4a4038]">方案比較</Link>
-      <Link href="/privacy" className="hover:text-[#4a4038]">隱私權政策</Link>
+      <span className="flex items-center gap-2"><BedDouble className="h-3.5 w-3.5" />{" "}{tr("IMT 智能訂房系統 · booking.im-tourist.com")}</span>
+      <Link href="/intro/features" className="hover:text-[#4a4038]">{tr("完整功能")}</Link>
+      <Link href="/intro/pricing" className="hover:text-[#4a4038]">{tr("方案比較")}</Link>
+      <Link href="/privacy" className="hover:text-[#4a4038]">{tr("隱私權政策")}</Link>
     </footer>
   )
 }

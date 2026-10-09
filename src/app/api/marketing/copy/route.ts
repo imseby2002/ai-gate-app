@@ -22,6 +22,8 @@ import { getCronOrUserAuth } from '@/lib/cron-auth'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 import { langInstruction } from '@/lib/marketing/lang'
+import { setUsageUser, trackLlm, withUsage } from '@/lib/marketing/usage'
+import { precheckUsage } from '@/lib/marketing/billing'
 
 export const maxDuration = 120
 
@@ -54,9 +56,13 @@ const COPY_TYPE_SPECS: Record<CopyType, { name: string; len: string; style: stri
   anchor_script:      { name: '主播口播腳本',      len: '300-800字',    style: '口語化、自然流暢，適合真人或AI虛擬主播朗讀。結構：開場白（打招呼+引入主題）→核心訊息（3-5個重點，每點自然過渡）→行動呼籲→結語。全程使用口語，避免書面語，多用短句，易於斷句停頓。' },
 }
 
-export async function POST(req: NextRequest) {
+export const POST = withUsage('[marketing] 文案產出', async function POST(req: NextRequest) {
   const authUser = await getCronOrUserAuth(req)
   if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  setUsageUser(authUser.id)
+  // 依實際用量 × 方案倍率扣點；執行前以預估成本檢查餘額
+  const usagePrecheck = await precheckUsage(authUser.id, 0.06)
+  if (usagePrecheck) return NextResponse.json(usagePrecheck, { status: 402 })
   const supabase = await createClient()
 
   const body = await req.json()
@@ -117,7 +123,7 @@ export async function POST(req: NextRequest) {
   try {
     const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-    const { text } = await generateText({
+    const { text, usage } = await generateText({
       model: anthropic('claude-sonnet-4-6'),
       system: `你是一位頂尖的多平台行銷文案撰寫人，擅長根據品牌特性與受眾習慣，撰寫各平台最佳化的行銷文案。
 文案要：具感染力、清晰傳遞價值主張、符合各平台格式規範、促進轉換行動。
@@ -146,6 +152,7 @@ ${typeSpecs}
       ],
       maxOutputTokens: 2000,
     })
+    trackLlm('claude-sonnet-4-6', usage)
 
     // Parse sections by type
     const results: Record<string, string> = {}
@@ -163,4 +170,4 @@ ${typeSpecs}
     console.error('[copy]', err)
     return NextResponse.json({ error: `文案生成失敗：${String(err)}` }, { status: 500 })
   }
-}
+})

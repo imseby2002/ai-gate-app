@@ -10,12 +10,14 @@ import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { EmployeeWhitelistManager } from '@/components/admin/EmployeeWhitelistManager'
+import { useTranslations } from 'next-intl'
 
-const ROLE_INFO: Record<string, { label: string; color: string }> = {
-  owner:   { label: '公司擁有者', color: 'bg-purple-100 text-purple-800 border-purple-200' },
-  admin:   { label: '公司管理員', color: 'bg-blue-100 text-blue-800 border-blue-200' },
-  manager: { label: '部門主管',   color: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
-  viewer:  { label: '一般成員',   color: 'bg-slate-100 text-slate-700 border-slate-200' },
+// 角色名稱見 Settings.company.role.*
+const ROLE_INFO: Record<string, { color: string }> = {
+  owner:   { color: 'bg-purple-100 text-purple-800 border-purple-200' },
+  admin:   { color: 'bg-blue-100 text-blue-800 border-blue-200' },
+  manager: { color: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+  viewer:  { color: 'bg-slate-100 text-slate-700 border-slate-200' },
 }
 
 interface MemberItem {
@@ -34,6 +36,8 @@ interface CompanyData {
 }
 
 export function CompanyMembershipSection() {
+  const t = useTranslations('Settings.company')
+  const roleLabel = (r: string) => (ROLE_INFO[r] ? t(`role.${r}`) : r)
   const [loading, setLoading] = useState(true)
   const [company, setCompany] = useState<CompanyData | null>(null)
   const [members, setMembers] = useState<MemberItem[]>([])
@@ -75,7 +79,7 @@ export function CompanyMembershipSection() {
   // 建立新公司
   const handleCreateCompany = async () => {
     if (!newCompanyName.trim()) {
-      showMsg('請輸入公司名稱', 'error')
+      showMsg(t('needName'), 'error')
       return
     }
     setIsCreating(true)
@@ -86,8 +90,8 @@ export function CompanyMembershipSection() {
         body: JSON.stringify({ name: newCompanyName.trim() }),
       })
       const d = await res.json()
-      if (!res.ok) throw new Error(d.error ?? '建立失敗')
-      showMsg(`成功建立「${newCompanyName.trim()}」！您已成為公司擁有者。`)
+      if (!res.ok) throw new Error(d.error ?? t('createFailed'))
+      showMsg(t('created', { name: newCompanyName.trim() }))
       setNewCompanyName('')
       await loadData()
     } catch (err: any) {
@@ -99,7 +103,7 @@ export function CompanyMembershipSection() {
   // 邀請新成員
   const handleInviteMember = async () => {
     if (!inviteEmail.trim()) {
-      showMsg('請輸入要邀請的 Email', 'error')
+      showMsg(t('needEmail'), 'error')
       return
     }
     setIsInviting(true)
@@ -113,8 +117,8 @@ export function CompanyMembershipSection() {
         }),
       })
       const d = await res.json()
-      if (!res.ok) throw new Error(d.error ?? '邀請失敗')
-      showMsg(`已發送邀請予 ${inviteEmail.trim()}`)
+      if (!res.ok) throw new Error(d.error ?? t('inviteFailed'))
+      showMsg(t('invited', { email: inviteEmail.trim() }))
       setInviteEmail('')
       await loadData()
     } catch (err: any) {
@@ -132,8 +136,8 @@ export function CompanyMembershipSection() {
         body: JSON.stringify({ id, role }),
       })
       const d = await res.json()
-      if (!res.ok) throw new Error(d.error ?? '更新角色失敗')
-      showMsg('已成功更新成員角色')
+      if (!res.ok) throw new Error(d.error ?? t('roleFailed'))
+      showMsg(t('roleUpdated'))
       await loadData()
     } catch (err: any) {
       showMsg(err.message, 'error')
@@ -142,7 +146,7 @@ export function CompanyMembershipSection() {
 
   // 移除成員
   const handleRemoveMember = async (id: string, email: string) => {
-    if (!confirm(`確定要將「${email}」移出公司嗎？`)) return
+    if (!confirm(t('confirmRemove', { email }))) return
     try {
       const res = await fetch('/api/company/members', {
         method: 'DELETE',
@@ -150,8 +154,8 @@ export function CompanyMembershipSection() {
         body: JSON.stringify({ id }),
       })
       const d = await res.json()
-      if (!res.ok) throw new Error(d.error ?? '移除成員失敗')
-      showMsg('已成功移除成員')
+      if (!res.ok) throw new Error(d.error ?? t('removeFailed'))
+      showMsg(t('removed'))
       await loadData()
     } catch (err: any) {
       showMsg(err.message, 'error')
@@ -162,7 +166,7 @@ export function CompanyMembershipSection() {
     return (
       <Card className="p-6 border bg-card flex items-center justify-center gap-2 text-muted-foreground text-sm">
         <Loader2 className="h-4 w-4 animate-spin text-indigo-600" />
-        載入公司成員資訊中...
+        {t('loading')}
       </Card>
     )
   }
@@ -189,9 +193,9 @@ export function CompanyMembershipSection() {
               <Building2 className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="font-bold text-base text-slate-900 dark:text-slate-100">建立獨立公司空間</h3>
+              <h3 className="font-bold text-base text-slate-900 dark:text-slate-100">{t('createTitle')}</h3>
               <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                您尚未加入任何公司。您可以建立自己的獨立公司實體，成為公司擁有者 (Owner)，並邀請團隊成員共享品牌素材、行銷知識庫與協同作業。
+                {t('createDesc')}
               </p>
             </div>
           </div>
@@ -200,7 +204,7 @@ export function CompanyMembershipSection() {
             <Input
               value={newCompanyName}
               onChange={e => setNewCompanyName(e.target.value)}
-              placeholder="輸入您的公司或團隊名稱 (例如: 宏達科技)"
+              placeholder={t('namePh')}
               className="text-sm h-10 flex-1"
             />
             <Button
@@ -209,7 +213,7 @@ export function CompanyMembershipSection() {
               className="bg-indigo-600 hover:bg-indigo-700 text-white h-10 px-5 gap-1.5 shrink-0"
             >
               {isCreating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-              建立公司
+              {t('create')}
             </Button>
           </div>
         </Card>
@@ -226,11 +230,11 @@ export function CompanyMembershipSection() {
                 <div className="flex items-center gap-2">
                   <h3 className="font-bold text-lg text-slate-900 dark:text-slate-100">{company.name}</h3>
                   <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${ROLE_INFO[company.role]?.color}`}>
-                    {ROLE_INFO[company.role]?.label ?? company.role}
+                    {roleLabel(company.role)}
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  共 {members.length} 位成員（含進行中邀請）
+                  {t('memberCount', { n: members.length })}
                 </p>
               </div>
             </div>
@@ -241,14 +245,14 @@ export function CompanyMembershipSection() {
             <div className="p-4 rounded-xl border bg-slate-50/70 dark:bg-muted/20 space-y-3">
               <div className="flex items-center gap-2 text-xs font-bold text-slate-900 dark:text-slate-100">
                 <UserPlus className="h-3.5 w-3.5 text-indigo-600" />
-                邀請新同仁加入此公司
+                {t('inviteTitle')}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
                 <div className="sm:col-span-6">
                   <Input
                     type="email"
-                    placeholder="輸入同仁 Email (例如 colleague@company.com)"
+                    placeholder={t('emailPh')}
                     value={inviteEmail}
                     onChange={e => setInviteEmail(e.target.value)}
                     className="h-9 text-xs"
@@ -261,9 +265,9 @@ export function CompanyMembershipSection() {
                     onChange={e => setInviteRole(e.target.value as any)}
                     className="w-full h-9 px-3 rounded-lg border bg-white dark:bg-card text-xs outline-none focus:ring-2 focus:ring-indigo-500"
                   >
-                    <option value="admin">管理員 (Admin)</option>
-                    <option value="manager">部門主管 (Manager)</option>
-                    <option value="viewer">一般成員 (Viewer)</option>
+                    <option value="admin">{t('role.admin')}</option>
+                    <option value="manager">{t('role.manager')}</option>
+                    <option value="viewer">{t('role.viewer')}</option>
                   </select>
                 </div>
 
@@ -274,7 +278,7 @@ export function CompanyMembershipSection() {
                     size="sm"
                     className="w-full h-9 bg-indigo-600 hover:bg-indigo-700 text-white text-xs"
                   >
-                    {isInviting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : '送出邀請'}
+                    {isInviting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t('sendInvite')}
                   </Button>
                 </div>
               </div>
@@ -284,12 +288,12 @@ export function CompanyMembershipSection() {
           {/* 成員列表 */}
           <div className="space-y-3">
             <h4 className="font-semibold text-sm text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-              <Users className="h-4 w-4 text-slate-500" /> 成員名冊
+              <Users className="h-4 w-4 text-slate-500" /> {t('roster')}
             </h4>
 
             <div className="border rounded-xl overflow-hidden divide-y text-xs bg-white dark:bg-card">
               {members.map(m => {
-                const roleObj = ROLE_INFO[m.role] ?? { label: m.role, color: 'bg-slate-100 text-slate-700' }
+                const roleObj = { label: roleLabel(m.role), color: ROLE_INFO[m.role]?.color ?? 'bg-slate-100 text-slate-700' }
                 const isMemberOwner = m.role === 'owner'
 
                 return (
@@ -300,14 +304,14 @@ export function CompanyMembershipSection() {
                       </div>
                       <div>
                         <div className="font-medium text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                          <span>{m.member?.full_name || '外部受邀者'}</span>
+                          <span>{m.member?.full_name || t('externalInvitee')}</span>
                           {m.status === 'active' ? (
                             <span className="inline-flex items-center text-[10px] text-emerald-600 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
-                              <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" /> 已加入
+                              <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" /> {t('joined')}
                             </span>
                           ) : (
                             <span className="inline-flex items-center text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
-                              <Clock className="h-2.5 w-2.5 mr-0.5" /> 待確認
+                              <Clock className="h-2.5 w-2.5 mr-0.5" /> {t('pending')}
                             </span>
                           )}
                         </div>
@@ -322,9 +326,9 @@ export function CompanyMembershipSection() {
                           onChange={e => handleChangeRole(m.id, e.target.value)}
                           className={`h-7 px-2 text-[11px] font-medium rounded border ${roleObj.color} outline-none cursor-pointer`}
                         >
-                          <option value="admin">管理員</option>
-                          <option value="manager">部門主管</option>
-                          <option value="viewer">一般成員</option>
+                          <option value="admin">{t('role.admin')}</option>
+                          <option value="manager">{t('role.manager')}</option>
+                          <option value="viewer">{t('role.viewer')}</option>
                         </select>
                       ) : (
                         <span className={`text-[11px] font-medium px-2 py-0.5 rounded border ${roleObj.color}`}>
@@ -338,7 +342,7 @@ export function CompanyMembershipSection() {
                           variant="ghost"
                           size="sm"
                           className="h-7 w-7 p-0 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
-                          title="移出公司"
+                          title={t('removeTitle')}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>

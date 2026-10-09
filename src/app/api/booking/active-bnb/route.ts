@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies, headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-import { activeBnbCookieName, type BnbScope } from '@/lib/bnb/context'
+import { activeBnbCookieName, getBnbContext, type BnbScope } from '@/lib/bnb/context'
+
+// 目前操作中民宿的角色與權限（前端用來把檢視者不能用的按鈕變灰）
+export async function GET() {
+  const supabase = await createClient()
+  const ctx = await getBnbContext(supabase)
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  return NextResponse.json({ ownerId: ctx.ownerId, role: ctx.role, canWrite: ctx.canWrite, canSettings: ctx.canSettings })
+}
 
 async function cookieDomain(): Promise<string | undefined> {
   try {

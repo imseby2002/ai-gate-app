@@ -194,7 +194,147 @@
     "inactive": "Suspended",
     "typeEmployee": "Employee",
     "typeAdmin": "Admin",
-    "typeExternal": "External User"
+    "typeExternal": "External User",
+    "pw": {
+      "tooShort": "Password must be at least 6 characters",
+      "mismatch": "The two passwords do not match",
+      "title": "Login password",
+      "descHasBoth": "Your account can sign in with email/password, and Google sign-in still works.",
+      "descHasPw": "Your account can sign in with email/password.",
+      "descGoogle": "You currently sign in with Google. After setting a password, the same account can also sign in with email/password.",
+      "descNone": "Set a login password.",
+      "newPw": "New password",
+      "setPw": "Set password",
+      "minPh": "At least 6 characters",
+      "confirm": "Confirm password",
+      "againPh": "Enter again",
+      "saving": "Saving…",
+      "update": "Update password",
+      "done": "Saved. You can now sign in with email/password"
+    },
+    "tg": {
+      "testText": "✅ IMT marketing pipeline Telegram setup succeeded!\n\nYou will receive marketing workflow approval notifications here.",
+      "testOk": "Test message sent! Please check that Telegram received it.",
+      "testFail": "Send failed. Please check the Bot Token and Chat ID.",
+      "netErr": "Network error, please try again later.",
+      "topUp": "Top up",
+      "title": "Telegram integration",
+      "getToken": "Get a Bot Token",
+      "desc": "Once set, the marketing automation will send approval notifications through your Telegram Bot and receive your approve/revise replies.",
+      "fromBotFather": "(from @BotFather)",
+      "chatId": "Chat ID / username",
+      "chatIdHint": "(default notification recipient)",
+      "chatIdPh": "@username or -100xxxxxxxxxx (group)",
+      "chatIdHelp": "Message <bot>@userinfobot</bot> to find your personal Chat ID; for a group, add the Bot to the group to get its ID.",
+      "saving": "Saving…",
+      "save": "Save settings",
+      "sending": "Sending…",
+      "sendTest": "Send test message",
+      "saved": "Saved",
+      "socialTitle": "Social platform connections",
+      "socialDesc": "Once set, the marketing pipeline will automatically upload images and videos to each platform. Get each platform's token from its official developer console."
+    },
+    "social": {
+      "hints": {
+        "fbToken": "Get it from Meta Business Suite → Settings → Page Access Token (requires pages_manage_posts permission)",
+        "fbPageId": "Your Page's numeric ID, found on the Page's About section",
+        "igToken": "Same as the Facebook Page Access Token (Instagram is managed via the Meta Graph API)",
+        "igUserId": "Call /me/accounts in Meta Graph API Explorer and use instagram_business_account.id",
+        "threadsToken": "Obtained after applying for Threads API access on Meta for Developers",
+        "threadsUserId": "Call https://graph.threads.net/me?access_token=TOKEN to get the id",
+        "liToken": "Get an OAuth 2.0 token from the LinkedIn Developer Portal (requires w_member_social scope)",
+        "liUrn": "Use urn:li:person:'{id}' for a person, urn:li:organization:'{id}' for a company page",
+        "xKey": "Found in the App Keys section of the Twitter Developer Portal",
+        "lineToken": "Get it from LINE Developers Console → Messaging API channel → Channel access token",
+        "zaloToken": "Apply for the OA API in Zalo Developer Console to get the OAuth Access Token",
+        "zaloOaId": "Numeric ID of the Zalo Official Account",
+        "fbReels": "FB Reels uses the same Page Access Token and Page ID as the Facebook Page; set them in the Facebook section above.",
+        "igReels": "IG Reels uses the same Access Token and IG User ID as Instagram; set them in the Instagram section above.",
+        "ytClientId": "Create an OAuth 2.0 Client ID in Google Cloud Console → APIs & Services → Credentials",
+        "ytRefresh": "Authorize in OAuth Playground (https://developers.google.com/oauthplayground) to get the refresh_token",
+        "tiktokToken": "Get an Access Token after applying for Content Posting API access on TikTok for Developers"
+      },
+      "connected": "Connected",
+      "docs": "Docs",
+      "saving": "Saving…",
+      "save": "Save",
+      "clear": "Clear",
+      "saved": "Saved",
+      "loading": "Loading…",
+      "imageGroup": "Image & text platforms",
+      "videoGroup": "Video platforms"
+    },
+    "company": {
+      "needName": "Please enter a company name",
+      "createFailed": "Creation failed",
+      "created": "Created “{name}”! You are now the company owner.",
+      "needEmail": "Please enter the email to invite",
+      "inviteFailed": "Invitation failed",
+      "invited": "Invitation sent to {email}",
+      "roleFailed": "Failed to update role",
+      "roleUpdated": "Member role updated",
+      "confirmRemove": "Remove “{email}” from the company?",
+      "removeFailed": "Failed to remove member",
+      "removed": "Member removed",
+      "loading": "Loading company members…",
+      "createTitle": "Create your company workspace",
+      "createDesc": "You haven't joined any company yet. Create your own company to become its Owner and invite your team to share brand assets, the marketing knowledge base and collaboration.",
+      "namePh": "Company or team name (e.g. Acme Tech)",
+      "create": "Create company",
+      "memberCount": "{n} members (including pending invitations)",
+      "inviteTitle": "Invite a colleague to this company",
+      "emailPh": "Colleague's email (e.g. colleague@company.com)",
+      "sendInvite": "Send invite",
+      "roster": "Members",
+      "externalInvitee": "External invitee",
+      "joined": "Joined",
+      "pending": "Pending",
+      "removeTitle": "Remove from company",
+      "role": {
+        "owner": "Owner",
+        "admin": "Admin",
+        "manager": "Manager",
+        "viewer": "Member"
+      }
+    },
+    "page": {
+      "companyTitle": "Company & team members",
+      "companyDesc": "Manage your company, member list and invitation permissions.",
+      "dataTitle": "Company profile",
+      "dataDesc": "Basic info, brand, products, stores and assets are shared company-wide and used live by marketing, customer service and AI agents."
+    },
+    "whitelist": {
+      "exists": "This email is already on the list",
+      "confirmRemove": "Remove this employee email from the whitelist?",
+      "noteFailed": "Failed to update note",
+      "companyFailed": "Failed to update company",
+      "ourCompany": "our company",
+      "titleCompany": "{name} · Employee email whitelist",
+      "title": "Employee email whitelist",
+      "descCompany": "Only emails on this list are added to “{name}” as employees when they sign up.",
+      "descAdmin": "Only listed emails can register as employees; others can only join as external users.",
+      "fixedCompany": "Company: {name} (fixed)",
+      "email": "Employee email",
+      "companyAdmin": "Company (set by super admin)",
+      "allPlatform": "All platforms / no company",
+      "company": "Company",
+      "noteOptional": "Note (optional)",
+      "notePh": "e.g. Sales - John",
+      "add": "Add",
+      "loading": "Loading…",
+      "empty": "No whitelist entries yet. Add allowed employee emails.",
+      "note": "Note",
+      "editable": "(editable)",
+      "addedAt": "Added",
+      "actions": "Actions",
+      "global": "Global / unassigned",
+      "editCompany": "Click to change company",
+      "notePh2": "Enter a note…",
+      "save": "Save",
+      "cancel": "Cancel",
+      "editNote": "Click to edit note",
+      "remove": "Remove"
+    }
   },
   "Chat": {
     "placeholder": "Type a message...",
@@ -1234,6 +1374,9 @@
       "csModeAi": "AI books directly",
       "csModeManualHint": "After the guest confirms in chat, a pending request is created to hold the room; the bot tells the guest a staff member will confirm",
       "csModeAiHint": "After the guest confirms in chat, the AI creates a confirmed booking (awaiting payment)",
+      "earlyGateLabel": "Chat: share gate code early",
+      "earlyGateOnHint": "When a guest checking in today arrives early, the bot verifies them and shares the gate code so they can drop luggage or rest in common areas; the room code is still given at check-in time",
+      "earlyGateOffHint": "No codes are shared before check-in time",
       "all": "All",
       "loadError": "Failed to load. Please refresh the page or try again later.",
       "empty": "No booking requests yet",
@@ -1555,10 +1698,15 @@
       "plan": "Subscription",
       "experts": "Custom Experts",
       "logbook": "Marketing Log",
-      "offline": "Field Marketing",
       "socialMatrix": "Social Matrix & Warm-up",
       "brand": "Company Profile",
-      "aiExpert": "AI Experts"
+      "aiExpert": "AI Experts",
+      "collapse": "Collapse menu",
+      "expand": "Expand menu",
+      "erpMkt": "ERP Marketing",
+      "campaigns": "Campaigns",
+      "manual": "User manual",
+      "manualDownload": "Download user manual (PDF)"
     },
     "section": {
       "create": "Create",
@@ -1995,6 +2143,27 @@
       "brandTags": "Brand Tags",
       "industryTags": "Industry Tags",
       "trendingTags": "Trending Tags"
+    },
+    "studioX": {
+      "pubTitle": "AI Visual Studio - {type}",
+      "copyWithPrompt": "✨ [Created with AI Visual Studio]\n\nCrafted with the \"{type}\" workflow: {prompt}\n\nTry it now or message us!\n\n#AIVisual #BrandMarketing #CreativeContent #Aesthetics",
+      "copyNoPrompt": "✨ [Created with AI Visual Studio]\n\nCarefully generated with the AI Visual Studio \"{type}\" workflow — stunning beauty and detail 🔥\n\nLearn more or message us!\n\n#AIVisual #BrandMarketing #Creativity #QualityDesign",
+      "videoFailed": "Video generation failed",
+      "videoTimeout": "Video generation timed out",
+      "publishAll": "Publish to social platforms in one click",
+      "publish": "Publish"
+    },
+    "brandPage": {
+      "title": "Company profile",
+      "desc": "One shared copy for the whole company: basics, brand, products, stores, assets. Read live by AI marketing, customer service and Agents."
+    },
+    "planPage": {
+      "title": "Subscription plans",
+      "desc": "Choose the plan that fits your needs and upgrade anytime; generation costs are billed separately from prepaid credits"
+    },
+    "expertsPage": {
+      "builtin": "Built-in experts",
+      "mine": "My experts"
     }
   },
   "Resume": {
@@ -2639,6 +2808,14 @@
       "anchorVideoFailed": "Anchor video generation failed",
       "heygenTimeout": "HeyGen timed out",
       "unitNotSupported": "Unit {unitId} does not support auto-execution"
+    },
+    "x": {
+      "setup": "Set up",
+      "smsOk": "SMS: {success}/{total} sent",
+      "smsFail": "SMS failed: {error}",
+      "mustRead": "Required",
+      "loaded": "Loaded ({name})",
+      "view": "View"
     }
   },
   "Prospect": {
@@ -2907,6 +3084,35 @@
       "colPhone": "Phone",
       "colRule": "Rule",
       "unassigned": "Unassigned"
+    },
+    "extra": {
+      "testName": "Test",
+      "colName": "Name",
+      "colCategory": "Category",
+      "colPhone": "Phone",
+      "colAddress": "Address",
+      "colStatus": "Status",
+      "colSearchCount": "Search count",
+      "colSelected": "Selected",
+      "called": "Called",
+      "joined": "Joined",
+      "dedup": "({added} new, {dup} duplicates)",
+      "callerIdPh": "+886xxxxxxxxx (Twilio verified number) / +84xxxxxxxxx (Stringee caller ID)",
+      "keyJoinTitle": "Press a key after the call to join",
+      "keyJoinDesc": "After hearing the message, the customer presses a digit and the system sends the join link (LINE/WhatsApp/ZALO) by SMS/ZNS. Mention the keys in the voice script, e.g. “Press 1 to add us on LINE”. If not set, the call is voice-only.",
+      "keyPh": "Key",
+      "official": "Official account",
+      "group": "Group",
+      "personal": "Personal",
+      "joinUrlPh": "Join link https://...",
+      "addKey": "Add key",
+      "chars": "{n} chars",
+      "saved": "Saved",
+      "saveProgress": "Save progress (continue later)",
+      "listHeader": "Customer list ({n}) · {sel} selected",
+      "exportCsv": "Export CSV",
+      "confirmClear": "Clear the whole customer list? This cannot be undone.",
+      "clear": "Clear"
     }
   },
   "MA": {
@@ -4064,9 +4270,72 @@
       "automation": "Marketing Pipeline",
       "linked": "Linked",
       "companySettings": "Company Data Settings"
+    },
+    "x": {
+      "free": "Free",
+      "mktMessage": "Marketing message",
+      "we": "us",
+      "smsEmpty": "SMS content cannot be empty",
+      "needPhone": "Please provide at least one valid phone number",
+      "smsTab": "SMS",
+      "verifiedCallerId": "Shows your real number (Verified Caller ID)",
+      "voiceRouting": "Global smart voice routing",
+      "twNumber": "Taiwan numbers (09xx / +886)",
+      "via": "via",
+      "twVoiceNote": "Verified caller ID · no number rental",
+      "vnNumber": "Vietnam numbers (+84)",
+      "vnVoiceNote": "Local Vietnam calls · about $0.8–$1.2/min · domestic route",
+      "otherCountries": "Other countries",
+      "intlVoiceNote": "Top-tier international CPaaS · high connect rate",
+      "callerDisplay": "shown on the recipient’s screen",
+      "callerIdPh": "+886912345678 or 84xxxxxxxxx",
+      "callerIdHelp": "Enter a real phone number verified for free in Twilio (Verified Caller ID); recipients will see your own number.",
+      "phonesPh": "+886912345678 (Taiwan)\n+84901234567 (Vietnam)\n+12025550123 (international)",
+      "totalNumbers": "Total: <b>{n}</b> numbers",
+      "tw": "Taiwan: ",
+      "vn": "Vietnam: ",
+      "intl": "International: ",
+      "smsRouting": "Global smart SMS routing",
+      "pointsLeft": "{n} points left",
+      "linked": "(account linked)",
+      "twSmsNote": "Direct local route · about $0.72–$0.86/message",
+      "vnSmsNote": "Brandname SMS/Zalo · about $0.3–$0.8/message",
+      "otherIntl": "Other international numbers",
+      "twilioBird": "Twilio (Bird as backup)",
+      "intlSmsNote": "Direct to 180+ countries",
+      "smsContent": "SMS content",
+      "useUnit4": "Use Unit 4 copy",
+      "aiSms": "AI: write a 70-character SMS",
+      "smsPh": "Enter the SMS text… supports the variable '{name}' (customer name).\ne.g. Dear '{name}', thank you! This week's exclusive offer is ready: https://example.com/promo Reply STOP to opt out",
+      "charCount": "Characters: ",
+      "segments": "Estimated: {n} message(s) / number",
+      "longSms": "Over 70 characters will be sent as a concatenated long SMS",
+      "smsLimit": "Standard limit: 70 characters per message (Unicode)",
+      "recipients": "Recipient phone numbers",
+      "usePhoneList": "Use call list ({n})",
+      "smsPhonesPh": "Enter phone numbers separated by new lines, commas or semicolons, e.g.\n0912345678 (Taiwan)\n+84912345678 (Vietnam)\n+12025550123 (international)",
+      "sending": "Sending {n} SMS…",
+      "startSend": "Send SMS to {n} numbers",
+      "smsResult": "SMS results",
+      "okOfTotal": "{ok} of {total} sent",
+      "delivered": "Delivered",
+      "lastSent": "Last sent: ",
+      "keysNote": "Channel keys (set in .env.local or server environment variables):",
+      "planNeed": "This unit requires the {need} plan. Current plan: {cur}",
+      "viewPlans": "View plans & upgrade",
+      "corePlus": "CORE or above",
+      "proPlus": "PRO or above",
+      "openPipeline": "Open the fully automated marketing pipeline"
     }
   },
   "Meeting": {
+    "translateTo": "Translate to",
+    "noTranslation": "No translation",
+    "download": "Download record",
+    "downloading": "Preparing…",
+    "history": "My meetings",
+    "historyEmpty": "No meetings yet.",
+    "date": "Date",
     "title": "Meeting Notes",
     "subtitle": "Live transcription and translation for in-person or online meetings",
     "myLang": "I speak",
@@ -4093,7 +4362,34 @@
     "videoStart": "Start video",
     "videoStop": "Stop video",
     "videoLoading": "Connecting…",
-    "videoFailed": "Couldn’t connect video. Please try again."
+    "videoFailed": "Couldn’t connect video. Please try again.",
+    "delete": "Delete meeting",
+    "removeFromList": "Remove from my list",
+    "confirmDelete": "Delete meeting “{title}”? The transcript will be deleted for all participants. This cannot be undone.",
+    "confirmRemove": "Remove meeting “{title}” from your list? Other participants are not affected.",
+    "deleteFailed": "Delete failed, please try again later.",
+    "modeOnline": "Online Video Meeting",
+    "modeInPerson": "In-Person Meeting",
+    "deptLabel": "Department",
+    "storesLabel": "Stores / Branches",
+    "keywordsLabel": "Terminology & Keywords",
+    "keywordsPh": "e.g. Royal, Hồ Tùng Mậu, Freezer, Semi-finished",
+    "inputLangLabel": "Recognize",
+    "targetLangLabel": "Translate to",
+    "viewBilingual": "Bilingual",
+    "viewTranslationOnly": "Translation Only",
+    "viewOriginalOnly": "Original Only",
+    "inPersonNotice": "In-Person Mode: This device is defaulted to subtitle display to prevent room feedback noise.",
+    "voiceProfileBadge": "Voice Profile",
+    "voiceProfileEnrolled": "Voice Profile Active",
+    "voiceProfilePending": "Voice profile not enrolled (Click to enroll)",
+    "voiceEnrollTitle": "Employee Voice Profile Enrollment",
+    "voiceEnrollDesc": "Please read aloud the standard sentence below clearly (approx. 15s). This enables automatic speaker identification during in-person meetings.",
+    "voiceStartRec": "Start Recording",
+    "voiceStopRec": "Finish Recording",
+    "voiceUpload": "Save Voice Profile",
+    "voiceUploading": "Saving…",
+    "voiceUploadSuccess": "Voice profile enrolled successfully!"
   },
   "Work": {
     "title": "Work Items",
@@ -4167,7 +4463,13 @@
     "save": "Save",
     "cancel": "Cancel",
     "ownerOnlyDone": "Only the owner can mark done",
-    "deadlineFieldLabel": "Due date"
+    "deadlineFieldLabel": "Due date",
+    "importBtn": "Batch import (Excel/CSV)",
+    "importTitle": "Batch import tasks",
+    "importDesc": "Supports .xlsx, .xls and .csv files. Fill in task title, status note, deadline, etc.",
+    "importTemplate": "Task list template",
+    "importSheet": "Tasks",
+    "expand": "Expand"
   },
   "Pos": {
     "title": "Order",
@@ -4216,6 +4518,80 @@
       "pudding": "Pudding",
       "grass": "Grass jelly",
       "coconut": "Coconut jelly"
+    }
+  },
+  "FtKiosk": {
+    "welcome": "Welcome",
+    "chooseDine": "Where will you be eating today?",
+    "dineIn": "Eat in",
+    "takeaway": "Take away",
+    "demo": "Demo mode (sample data, orders are not sent)",
+    "startOver": "Start over",
+    "back": "Back",
+    "menuTitle": "Menu",
+    "from": "from",
+    "emptyMenu": "No items in this category",
+    "itemCount": "{n} items",
+    "viewCart": "View order",
+    "cartTitle": "Your order",
+    "emptyCart": "Your order is empty",
+    "total": "Total",
+    "continueOrdering": "Add more",
+    "checkout": "Checkout",
+    "size": "Size",
+    "required": "Required",
+    "pickExactly": "Choose {n}",
+    "pickUpTo": "Up to {n}",
+    "addToCart": "Add to order",
+    "cancel": "Cancel",
+    "memberTitle": "Collect points",
+    "memberDesc": "Enter your member phone number to collect points, or skip",
+    "memberSkip": "Skip",
+    "memberConfirm": "Confirm",
+    "memberChecking": "Checking…",
+    "clear": "Clear",
+    "memberYes": "Member confirmed",
+    "memberChange": "Use another number",
+    "next": "Next",
+    "memberNo": "This number is not a member",
+    "memberNoDesc": "This order will not collect points",
+    "memberContinueNoPoints": "Continue without points",
+    "memberRetry": "Re-enter",
+    "payTitle": "Payment",
+    "payCounter": "Pay at counter",
+    "payCounterDesc": "Pay at the counter after ordering (cash / VNPAY)",
+    "payMember": "Points go to {phone}",
+    "payGuest": "Guest order",
+    "placeOrder": "Place order",
+    "placing": "Sending…",
+    "doneTitle": "Order placed",
+    "doneOrderNo": "Your order number",
+    "donePayAtCounter": "Please bring this number to the counter to pay and collect your order",
+    "doneBack": "Back to start ({s})",
+    "setupTitle": "Kiosk setup",
+    "setupDesc": "Enter this kiosk's device_key",
+    "setupStart": "Start",
+    "loading": "Loading…",
+    "loadFailed": "Could not load the menu",
+    "retry": "Retry",
+    "errors": {
+      "UNKNOWN": "Something went wrong. Please ask our staff",
+      "PHONE_INVALID": "Enter a valid mobile number (10 digits starting with 0)",
+      "STORE_NOT_OPEN": "The store is currently closed",
+      "ITEM_OUT_STOCK": "Some items are sold out. Please choose again",
+      "ORDER_TOO_FAST": "Too fast — please wait a moment and try again",
+      "SEND_ORDER_POS_FAIL": "Could not send the order to the store. Please ask our staff",
+      "FT_UNREACHABLE": "Connection failed. Please ask our staff",
+      "PERMISSION_ERROR": "Kiosk login expired. Please ask our staff",
+      "INVALID_DEVICE": "Kiosk not authorised. Please ask our staff",
+      "CART_INVALID": "Order data is invalid. Please start again",
+      "SIZE_REQUIRED": "Please choose a size",
+      "OPTION_INVALID": "Invalid options. Please choose again",
+      "ITEM_NOT_FOUND": "An item is no longer available. Please start again",
+      "KIOSK_LOGIN_FAILED": "Kiosk login failed. Please ask our staff",
+      "KIOSK_LOGIN_NOT_CONFIGURED": "Kiosk account is not set up. Please ask our staff",
+      "STORE_NOT_FOUND": "Store not found. Please ask our staff",
+      "CASH_METHOD_NOT_FOUND": "Pay at counter is not available. Please ask our staff"
     }
   },
   "Apply": {
@@ -4433,6 +4809,10 @@
     "useOtherAccount": "Sign in with another account",
     "switchSystemAdmin": "Switch system (Admin)",
     "registeredCheckEmail": "Account created! Please check your email to verify your account, then log in with this email and password (check spam folder if needed). You can also sign in with Google above for instant access.",
+    "resendVerification": "Resend verification email",
+    "resendVerificationCooldown": "Resend in {seconds}s",
+    "resendVerificationSent": "Verification email resent. Please check your inbox (and spam folder).",
+    "emailNotConfirmed": "This email has not been verified yet. Please click the link in the verification email, or resend it below.",
     "passwordWrong": "Incorrect password, please try again",
     "loginErrorFallback": "Login failed, please check your credentials",
     "systemErrorFallback": "Authentication error, please try again or sign in with Google",
@@ -4937,7 +5317,13 @@
     "qty": "Qty",
     "amount": "Amount",
     "noPurchaseRecords": "No purchase records yet",
-    "date": "Date"
+    "date": "Date",
+    "linkSlugLabel": "Form URL code (lowercase letters / numbers, e.g. ice-abc)",
+    "pinReset": "Reset vendor password (already set; leave blank to keep)",
+    "pinSet": "Set vendor's initial password (at least 6 characters)",
+    "vendorUrl": "Vendor URL: {url} (after saving, give the URL and password to the vendor; they can change the password after signing in)",
+    "slugPlaceholder": "code",
+    "noSubdomain": "Your company has no subdomain yet, so only the old private link can be used for now"
   },
   "AgentPage": {
     "statusQueued": "Queued",
@@ -6217,6 +6603,28 @@
     "catEquipment": "Equipment",
     "catTool": "Bar Tools & Utensils",
     "catConsumable": "Packaging Consumables",
+    "catSemi": "Semi-finished",
+    "tabProductPrices": "Product Prices",
+    "kindAll": "All",
+    "kindDrink": "Drinks",
+    "kindCoffee": "Coffee",
+    "kindFood": "Food",
+    "kindBase": "Semi-finished",
+    "excelCost": "Excel cost",
+    "costRatio": "Cost ratio",
+    "showMore": "Show more ({n}/{total})",
+    "ppTitle": "Product prices & cost ratios",
+    "ppDesc": "Source: Excel sheets \"GIÁ THÀNH ĐỒ UỐNG\" and \"Bảng giá sản phẩm\"",
+    "ppSheetWhitePearl": "White pearl topping",
+    "ppSheetCombos": "All topping combos",
+    "ppGroup": "Group",
+    "ppProduct": "Product",
+    "ppTopping": "Topping",
+    "ppToppingPrice": "Topping price",
+    "ppPrice": "Price",
+    "ppRatio": "Cost ratio (Giá vốn)",
+    "ppRatio2": "Cost ratio (成本 column)",
+    "ppEmpty": "No product price data yet",
     "searchItemPlaceholder": "Search item code, name...",
     "financeApprovedCount": "{n} Finance-approved category prices",
     "noPriceData": "No standard price data in the Finance pricing library yet",
@@ -6263,7 +6671,12 @@
     "moneyLossValue": "{n}",
     "notifiedHr": "HR notified ({n} items over threshold)",
     "noOverItems": "No items currently over threshold",
-    "notifyFailed": "Notification failed"
+    "notifyFailed": "Notification failed",
+    "pushConfirm": "Send R&D recipe \"{name}\" to the marketing department to prepare its launch?",
+    "pushDone": "✅ \"{name}\" has been sent to marketing!\nMarketing can continue in \"Marketing → Product assets → New product launch pipeline\" to plan the VIP early-access period and launch schedule.",
+    "pushFailed": "Failed to send",
+    "pushTitle": "Send to marketing to start a product launch",
+    "pushBtn": "Send to launch"
   },
   "AuditPlatform": {
     "knowledgeCoreStatus": "COMPANY KNOWLEDGE CORE — shared enterprise knowledge layer connected",
@@ -6281,6 +6694,16 @@
     "rawLossLabel": "Raw Apparent Loss",
     "adjustedLossLabel": "Composition-Adjusted Loss",
     "tabMaterial": "📊 Material Consumption Engine",
+    "newRuleTitle": "New rule (starts as hypothesis)",
+    "newRuleTitlePh": "Rule title",
+    "newRuleProductPh": "Product (blank = all)",
+    "newRuleConditionPh": "Condition, e.g. 2 toppings",
+    "newRuleDeltaPh": "Adjustment, e.g. 18 or -10",
+    "newRuleReasonPh": "Reason / field observation",
+    "newRuleSubmit": "Create rule",
+    "noRulesYet": "No rules yet. Create the first one above.",
+    "saveFailed": "Save failed",
+    "openAuditAi": "Discuss in Audit AI",
     "tabCopilot": "🤖 Audit Copilot",
     "fourModes": "4 Modes",
     "tabRules": "⚖️ Human-AI Rule Engine",
@@ -6437,7 +6860,6 @@
     "tabStores": "Store Assets",
     "tabProducts": "Product Assets",
     "tabGenerate": "One-Click Generate",
-    "tabOffline": "Offline Marketing",
     "tabDelivery": "Delivery Platforms",
     "tabAnalytics": "Analytics",
     "tabCalendar": "Content Calendar",
@@ -6586,19 +7008,14 @@
     "approve": "Approve",
     "reject": "Reject",
     "addToCalendar": "Add to Calendar",
-    "offlineTabDesc": "Store material distribution & installation reports, launch events, outdoor ad campaigns, cross-industry partnerships — all can be documented with photos.",
     "allTypes": "All Types",
     "allStatuses": "All Statuses",
     "add": "Add",
-    "noOfflineItems": "No offline marketing items yet",
     "storeColonLabel": "Store: ",
     "budgetLabel": "Budget",
-    "editOfflineTitle": "Edit Offline Marketing",
-    "addOfflineTitle": "Add Offline Marketing",
     "typeLabel": "Type",
     "statusLabel": "Status",
     "offlineTitleLabel": "Title *",
-    "offlineTitlePlaceholder": "e.g., New product poster install / Hanoi University opening tasting",
     "storeLabel": "Store",
     "storeEmptyMeansAll": "Empty = company-wide",
     "counterpartyLabel": "Vendor / Partner",
@@ -6611,15 +7028,6 @@
     "save": "Save",
     "titleRequired": "Title is required",
     "confirmDelete": "Confirm delete?",
-    "offlineType_material": "Store Materials",
-    "offlineType_event": "Street Events",
-    "offlineType_outdoor": "Outdoor Ads",
-    "offlineType_partner": "Cross-Industry Partnerships",
-    "offlineStatus_planned": "Planned",
-    "offlineStatus_active": "Active",
-    "offlineStatus_installed": "Installed",
-    "offlineStatus_done": "Done",
-    "offlineStatus_cancelled": "Cancelled",
     "storeRequired": "Store is required",
     "onlineLabel": "Online",
     "monthlyOrdersLabel": "Monthly Orders",
@@ -6653,7 +7061,7 @@
     "generateReportFailed": "Generation failed",
     "deliveryMonthlyRevenueLabel": "Delivery Monthly Revenue",
     "totalMarketingSpendLabel": "Total Marketing Spend",
-    "offlineSpendLabel": "Offline",
+    "offlineSpendLabel": "Campaigns",
     "advertisingLabel": "Ads",
     "deliveryShareLabel": "Delivery Share of Revenue",
     "pnlPeriodLabel": "P&L {period}",
@@ -6663,7 +7071,7 @@
     "publishedLabel": "Published {n}",
     "deliveryPlatformPerformance": "Delivery Platform Performance",
     "listedLabel": "Listed",
-    "offlineSpendTitle": "Offline Marketing Spend",
+    "offlineSpendTitle": "Campaign Spend",
     "itemCountLabel": "{n} items",
     "aiMarketingReportTitle": "AI Marketing Report",
     "weeklyReport": "Weekly Report",
@@ -6678,7 +7086,13 @@
     "unscheduled": "Unscheduled",
     "editContentTitle": "Edit Content",
     "addContentTitle": "Add Content",
-    "scheduledDateLabel": "Scheduled Date"
+    "scheduledDateLabel": "Scheduled Date",
+    "tabCompany": "Company profile",
+    "tabCampaigns": "Campaign Center (AI / results)",
+    "tabCrm": "Member CRM & VIP",
+    "templatesLink": "Visual Styles & Ads",
+    "manual": "User manual",
+    "manualDownload": "Download user manual (PDF)"
   },
   "HrPage": {
     "staffFulltime": "Full-time",
@@ -6909,6 +7323,7 @@
     "subjectLabel": "Subject",
     "contentLabel": "Content",
     "send": "Send",
+    "empDocsNoApplication": "No linked application for this employee, so no uploaded documents.",
     "candidateDocsTitle": "{name}'s documents and submission",
     "allDocsSubmitted": "All paper documents submitted to the office (complete)",
     "uploadMeansScan": "Upload = scanned file",
@@ -7101,6 +7516,7 @@
     "cash": "Cash",
     "catAll": "All items",
     "catConsumable": "Cup/bag consumables",
+    "catSemi": "Semi-finished",
     "catEquipment": "Machines & equipment",
     "catRaw": "Raw materials",
     "catTool": "Bar tools",
@@ -7238,6 +7654,7 @@
     "openingBalanceYuanLabel": "Opening balance",
     "openingPrefix": "Opening",
     "optConsumable": "Cup/bag packaging (consumables)",
+    "optSemi": "Semi-finished",
     "optEquipment": "Machines & equipment (equipment)",
     "optRaw": "Raw materials (raw)",
     "optTool": "Bar tools (tools)",
@@ -7299,7 +7716,110 @@
     "viNameLabel": "Vietnamese name",
     "yearSuffix": "{y}",
     "zhNameLabel": "Chinese name *",
-    "zhNamePlaceholder": "e.g. Electricity"
+    "zhNamePlaceholder": "e.g. Electricity",
+    "cf": {
+      "errTransfer": "A transfer needs different source and destination accounts",
+      "payee": "Payee / vendor / customer",
+      "fromAccountReq": "From account *",
+      "toAccountReq": "To account *",
+      "invoicePh": "e.g. AB12345678",
+      "summaryPh": "e.g. bought tea leaves, store sales",
+      "amountReq": "Amount *",
+      "receiveAccount": "Receiving account (to)",
+      "payAccount": "Paying account (from)",
+      "incomeSubject": "Income account (from)",
+      "expenseSubject": "Expense account (to)",
+      "chooseSubject": "-- Choose account --",
+      "payeePh": "e.g. Ha, vendor name",
+      "errSave": "Save failed, please try again",
+      "errAmount": "Please enter a valid amount",
+      "errDate": "Please choose an entry date",
+      "editTitle": "Edit entry",
+      "newTitle": "New entry",
+      "typeIncome": "Income (+)",
+      "typeExpense": "Expense (-)",
+      "typeTransfer": "Transfer (⇄)",
+      "dateReq": "Entry date *",
+      "notesPh": "Other details",
+      "txType": "Transaction type",
+      "summary": "Summary",
+      "invoice": "Invoice no.",
+      "notes": "Notes",
+      "closeExit": "Close",
+      "saving": "Saving…",
+      "addEntry": "Add",
+      "confirmSave": "Save",
+      "cancel": "Cancel",
+      "importDesc": "Supports .xlsx, .xls and .csv files. Include date, type (income/expense), amount, etc.",
+      "emptyHint": "Change the year/month or account filter, or click \"New entry\"",
+      "noAccess": "Only the cashier / general affairs unit can use cashier features",
+      "mdbBatches": "MDB batches / undo",
+      "noAccessHint": "Please sign in with an admin account and try again",
+      "title": "IMT ERP Cashier",
+      "importMdb": "Import ledger file (.mdb)",
+      "searchPh": "Enter keywords...",
+      "clearFilter": "Clear filter (show all)",
+      "empty": "No matching entries",
+      "confirmDelete": "Delete this entry?",
+      "loading": "Loading entries…",
+      "colAmount": "Amount",
+      "importTitle": "Batch import cash book",
+      "filteringBy": "Filtering by account:",
+      "colDate": "Date / day",
+      "colNotes": "Notes / invoice",
+      "tabPnl": "Sales & P&L report",
+      "importTemplate": "Cash book template",
+      "searchLabel": "Search:",
+      "cashBank": "Cash / bank",
+      "ledgerName": "Ledger:",
+      "todayDate": "Today:",
+      "shown": "Showing:",
+      "monthIncome": "Month income:",
+      "monthExpense": "Month expense:",
+      "monthNet": "Net:",
+      "todayIncome": "Today income:",
+      "todayExpense": "Today expense:",
+      "tabCashflow": "Cash book",
+      "tabPricing": "Material pricing",
+      "tabStoreExpenses": "Store expenses",
+      "tabVendors": "Vendors",
+      "subJournal": "Journal",
+      "subToday": "Today",
+      "subMonth": "This month",
+      "subRegular": "Fixed deposits",
+      "subProject": "Projects",
+      "addRecord": "New entry",
+      "more": "More",
+      "batchImport": "Batch import",
+      "toAccount": "Destination account",
+      "depositAccount": "Deposit account",
+      "editRecord": "Edit entry",
+      "deleteRecord": "Delete entry",
+      "importSheet": "Entries",
+      "colFrom": "From",
+      "colTo": "To",
+      "colPayee": "Payee",
+      "colStatus": "Type",
+      "colBalance": "Balance",
+      "colSummary": "Summary",
+      "colActions": "Actions",
+      "income": "Income",
+      "expense": "Expense",
+      "transfer": "Transfer",
+      "badgeIn": "In",
+      "badgeOut": "Out",
+      "badgeTransfer": "Trf",
+      "addedCount": "{n} added",
+      "importErrors": "Import errors ({n})",
+      "rowsUnit": "rows",
+      "searchMode": {
+        "all": "Search all",
+        "desc": "Summary",
+        "category": "Account",
+        "payee": "Payee",
+        "notes": "Notes / invoice"
+      }
+    }
   },
   "StoreCoachPage": {
     "fillRegTitleAndClause": "Please fill in the regulation title and specific clause content",
@@ -7594,7 +8114,36 @@
     "searchLearnedKeywordPlaceholder": "Search learned knowledge keywords...",
     "evidenceLevelShort": "Evidence Level {level}",
     "keyPointsColonLabel": "Key points: ",
-    "operationsAdvisorFallback": "Operations Advisor"
+    "operationsAdvisorFallback": "Operations Advisor",
+    "sample": {
+      "sweetTitle": "Several customers say the jade lemon green tea is too sweet and leaves a sticky feeling in the throat",
+      "sweetDesc": "Between 15:30 and 17:00, two takeaway groups said \"less sugar\" was still too sweet, and drinks came out a little slowly.",
+      "sweetProduct": "Jade lemon green tea",
+      "bottleTitle": "During the afternoon delivery rush, a bottleneck between printing and sealing backed up 15 cups",
+      "bottleDesc": "The drink maker keeps walking between the tea urns and the sealer, and the cashier blocks the path to the ice bin, so customers keep chasing their orders.",
+      "bottleProduct": "All popular drinks",
+      "coldTitle": "A new part-timer looks tense and doesn't smile when taking orders; a regular complained they were cold",
+      "coldDesc": "The new evening-shift staffer joined two weeks ago, hasn't learned the POS promotion keys, panics and looks down when customers rush them, and skips the greeting.",
+      "coldProduct": "Customer contact",
+      "storeTnn": "TNN-01 (Tainan flagship)",
+      "storeTpe": "TPE-02 (Taipei Xinyi)",
+      "storeKhh": "KHH-03 (Kaohsiung Arena)",
+      "storeSgn": "SGN-01 (Ho Chi Minh City District 1 showcase)",
+      "regCash": "A cashier took cash without ringing it up on the POS — what is the company penalty?",
+      "regExpired": "Ingredients are past their best-before date or labels were altered — what does the company red line say?",
+      "regRecipe": "An employee photographed the company recipe sheet and posted it online — what is the legal liability?",
+      "t1Title": "[HQ SOP] Closing-time deep descaling of tea urns and seal-ring sanitizing",
+      "t2Title": "[Supervisor field test] Dual-track pickup calls to stop order chasing and missed items at peak delivery",
+      "t3Title": "[Complaint case] Remaking and offering a tasting when melted ice waters down a drink",
+      "t4Title": "[Equipment calibration] Weekly guide for steam wand tips and infrared thermometers",
+      "coachUrn": "How do we deep-descale the tea urns at closing? Can the silicone seal rings be scrubbed with a scouring pad?",
+      "coachDelivery": "At peak times delivery riders crowd the bar chasing orders — how should we split the flow and label orders so nothing is missed?",
+      "coachDiluted": "A customer says the ice melted and the tea is weak — how should the manager coach new staff to respond kindly and remake it?",
+      "c4": "How well hot-drink milk foam is textured and whether drink temperature is accurate (target 65°C) directly affects the milk's sweetness and aroma.\nWeekly calibration standard:\n1. Clear the steam wand's four holes with the cleaning pin, soak in milk-scale remover for 15 minutes, then purge steam 3 times.\n2. Measure 65°C water with the infrared thermometer and a mercury reference thermometer together; if they differ by more than ±1.5°C, replace the battery or recalibrate emissivity.\n3. Test-froth 200 ml of whole milk; the fine microfoam layer must be 1.5 cm thick.",
+      "c3": "A customer took away a four-seasons tea with light ice, sat in the store for 30 minutes, then complained at the counter: \"The tea tastes weak, like plain water.\"\nStandard response for the store manager:\n1. Take the drink with a smile and empathize right away: \"Sorry about that — when four-seasons tea sits a while, the melting ice really does wash out the aroma!\"\n2. Never argue \"that's because you left it too long\"; start the 30-second remake right away: \"I'll make you a fresh light-ice cup with tea we just brewed!\"\n3. Hand the new drink over with both hands and add a tasting card: \"This is today's freshly brewed high-mountain four-seasons tea — it tastes best while it's nicely chilled!\"",
+      "c2": "During delivery-platform promotions at the Tainan flagship, riders crowded the pickup counter chasing orders, making walk-in customers uncomfortable, and drink makers skipped tickets or missed items when many delivery cups overlapped.\nProven fixes:\n1. Set up a separate \"delivery pickup zone\" 1.5 m to the right of the pickup counter with a blue waiting line, physically separated from walk-in pickup.\n2. Use \"double labels\": one on the cup and one on the bag opening; a floater checks both labels match before bagging and tying, so no straws are missed and no orders get mixed up.\n3. Raise the platform's prep buffer from 8 to 12 minutes.",
+      "c1": "Hot tea urn taps build up tannin stains and fine scale inside the spout over time; if they aren't taken apart and soaked daily, the tea picks up a stale sour taste.\nStandard closing procedure:\n1. Before closing, dissolve food-grade citric acid in 70°C water (1:50), fill the urn and soak for 20 minutes.\n2. Remove the tap's silicone seal ring and soak it in a bowl of 75% food-grade alcohol; never scrub with a rough scouring pad, which scratches it and causes leaks.\n3. At opening the next day, flush twice with boiled 85°C pure water before adding fresh base tea."
+    }
   },
   "CsHelp": {
     "pageTitle": "Customer Service Setup Guide",
@@ -8700,5 +9249,3213 @@
     "save": "Save",
     "resetDefault": "Reset to 2026 defaults",
     "sources": "Legal sources"
+  },
+  "MktTemplates": {
+    "badFormat": "Please upload a JPG, PNG or WebP image",
+    "fullPos": "[Style / positive prompt]:",
+    "fullNeg": "[Exclusions / negative prompt]:",
+    "fullAspect": "[Suggested aspect ratio]:",
+    "tooLarge": "The reference image is too large; please use a smaller one",
+    "genFailedRetry": "Generation failed, please try again later",
+    "genFailed": "Generation failed",
+    "thisProduct": "this product",
+    "keyPointParen": "(highlight: {k})",
+    "scriptTitle": "[{title} {cmd} full storyboard script]",
+    "applicability": "Use case: ",
+    "specLine": "Recommended: ratio {aspect} | specs: {params}",
+    "topicLine": "Topic: ",
+    "timelineHead": "─── Storyboard timeline ───",
+    "featuredProduct": "featured product",
+    "defaultKeyPoint": "top quality, limited-time offer",
+    "productVideo": "product marketing video",
+    "fallbackScript": "[{title} voice-over script]\n\n“Hi everyone! {name} launches today! {kp}It brings you incredible value! Comment now or tap the link in our profile to order first. Limited quantity!”",
+    "popularItem": "this popular item",
+    "fallbackKp": "Not only {k}, ",
+    "fallbackShort": "[{title} voice-over script]\n\n“Hi everyone! {name} launches today! Tap to learn more!”",
+    "pollSubmitting": "Submitting the job to the AI video engine…",
+    "needPro": "Video generation is not included in your plan. Please upgrade to PRO or above.",
+    "submitFailed": "Failed to submit the video job",
+    "noTaskId": "No video job ID returned",
+    "pollSubmitted": "Job submitted. The AI is rendering frames and lighting (about 30–60 s)…",
+    "pollProgress": "Rendering video ({p}%)…",
+    "renderFailed": "Video rendering failed",
+    "timeout": "Video generation timed out. Check the AI Studio later.",
+    "hubTag": "Marketing visual style & ad studio",
+    "title": "Visual styles & ads",
+    "subtitle": "No commands to memorize! 85 visual styles and 185 short-video storyboard templates. Pick a mood or script structure and AI instantly creates eye-catching images and short videos.",
+    "openStudio": "Open AI Studio (advanced)",
+    "tabImage": "Image style templates",
+    "count85": "85 styles",
+    "tabVideo": "Short video & ad scripts",
+    "count185": "185 storyboards",
+    "searchImgPh": "Search by mood or keyword (e.g. clay, Black Friday, free shipping, discount, miniature, festival…)",
+    "imgCount": "Showing <b>{n}</b> visual styles",
+    "zoomTitle": "Enlarge preview and settings",
+    "fitFor": "For: ",
+    "defaultAspect": "Default ratio {a}",
+    "chooseStyle": "Use this style →",
+    "genSettings": "Generation settings",
+    "currentStyle": "Selected: ",
+    "visualStyle": "Visual style",
+    "samplePreview": "Sample preview",
+    "zoomIn": "Zoom in",
+    "clickZoom": "Click to zoom",
+    "suggestedParams": "Suggested settings: ",
+    "imgAspect": "Image aspect ratio",
+    "imgTopic": "Product / promotion details",
+    "imgTopicPh": "e.g. handmade matcha crepe cake, minimalist wireless earbuds, limited 50% off with free shipping…",
+    "refPhotos": "Reference product photos (optional, image-to-image",
+    "refMax": ", up to {n}",
+    "refClose": ")",
+    "removeImage": "Remove image",
+    "loadedN": "{n} reference photos loaded",
+    "multiRefNote": "The AI will only use the products shown in these photos",
+    "singleRefNote": "The AI will blend the style using this shape and composition",
+    "addMorePhotos": "Add more product photos",
+    "uploadPhotos": "Click to upload product photos (JPG / PNG)",
+    "promptSkeleton": "AI prompt skeleton",
+    "copied": "Copied",
+    "copyPrompt": "Copy prompt",
+    "engine": "Engine",
+    "engineFixed": "With reference photos, Nano Banana Pro is always used (redesigns from the original)",
+    "perImage": "{p} / image",
+    "perImageTested": "{p} / image · measured",
+    "rendering": "AI is rendering your marketing image ({e})…",
+    "generateNow": "Generate marketing image ({e})",
+    "imgDone": "Your AI marketing image is ready!",
+    "styleLine": "Style: {title} ({feeling})",
+    "linkCopied": "Link copied",
+    "copyImgLink": "Copy image link",
+    "downloadHd": "Download HD image",
+    "publishSocial": "Publish to social platforms in one click",
+    "fullSkeleton": "Full prompt skeleton used",
+    "publishHub": "Social publishing hub",
+    "multiPlatform": "Multi-platform",
+    "publishDesc": "No manual download needed! Publish this image to Facebook, Instagram, Threads, LINE and more right away.",
+    "openPublish": "Open the publishing hub and choose platforms",
+    "regenerate": "Generate another with the same settings (variation)",
+    "toStudio": "Open in AI Studio to remove background, edit or turn into a short video →",
+    "searchVideoPh": "Search commands or topics (e.g. /hook3sec, pain point, 360, unboxing, ASMR, Black Friday, comparison…)",
+    "videoCount": "Showing <b>{n}</b> storyboard templates",
+    "shots": "{n} shots",
+    "useScript": "Use script →",
+    "officialStructure": "Storyboard structure",
+    "suggestedLength": "Suggested length: about {s} s",
+    "specSuggest": "Suggested specs: ",
+    "videoName": "Product / topic name",
+    "videoNamePh": "e.g. signature brown sugar milk, minimalist ANC earbuds, anniversary gift box…",
+    "videoKey": "Key highlights / promotion (optional)",
+    "videoKeyPh": "e.g. 3 rich layers, 90% repeat customers, limited buy-one-get-one…",
+    "videoRef": "Reference photo (optional, the video is generated from it)",
+    "refLoaded": "Reference photo loaded",
+    "refFirstFrame": "The video will use this photo as the subject and first frame",
+    "uploadScene": "Click to upload a product/scene photo (JPG / PNG)",
+    "videoAspect": "Video aspect ratio",
+    "scriptCopied": "Script copied",
+    "copyScript": "Copy full storyboard",
+    "promptCopied": "Prompt copied",
+    "copyEnPrompt": "Copy English prompt",
+    "expandScript": "AI-expand into a full voice-over script with shot directions",
+    "voScript": "AI voice-over script",
+    "voCopied": "Voice-over script copied",
+    "copyVo": "Copy script",
+    "videoDone": "Your AI short video is ready!",
+    "downloadVideo": "Download video",
+    "publishVideo": "Publish to Reels / Shorts / TikTok in one click",
+    "videoBusy": "AI video engine working…",
+    "videoGen": "Generate with the AI video engine (Kling/Haiper)",
+    "haveVideo": "Already have a video? Open the publishing hub →",
+    "styleSample": "Style sample",
+    "styleMood": "Style mood",
+    "bestSettings": "Best settings",
+    "positivePrompt": "Prompt skeleton (positive prompt)",
+    "close": "Close",
+    "applyStyle": "Use this style and set up generation",
+    "imgCopy": "✨ [{title}] New visual just dropped!\n\nCrafted in a “{feeling}” style with stunning quality and detail 🔥{extra}\n\nLearn more or message us now!\n\n#BrandVisual #NewArrival #MarketingDesign #SocialHighlight #Lifestyle",
+    "imgCopyExtra": "\n\nHighlights: {k}",
+    "videoCopy": "🔥 [{title}] Short video is here!\n\n{product}{key}A professional storyboard built for high retention and conversion. Watch the highlights now!\n\n#ShortVideo #Reels #Shorts #TikTok #BrandMarketing",
+    "videoCopyProduct": "Product: {p}\n",
+    "videoCopyKey": "Highlights: {k}\n\n",
+    "videoStoryboard": "Video storyboard",
+    "ar": {
+      "ar11": "IG post / store cover",
+      "ar45": "IG / FB full-bleed",
+      "ar34": "Event / promo poster",
+      "ar169": "Homepage banner",
+      "ar916": "Stories / Reels / TikTok"
+    },
+    "vcat": {
+      "all": "All video templates",
+      "ad_conversion": "Ads & conversion",
+      "product_display": "Product showcase",
+      "social_viral": "Viral social videos",
+      "trust_authority": "Brand trust",
+      "tutorial_sop": "Tutorials & SOP",
+      "tech_structure": "Structure & tests",
+      "events_campaigns": "Events & campaigns"
+    },
+    "cat": {
+      "all": "All styles",
+      "style": "Visual styles",
+      "promo": "Promotions",
+      "vip": "Members & VIP",
+      "campaign": "Big campaigns",
+      "holiday": "Holidays",
+      "social": "Social engagement",
+      "trust": "Trust & reviews",
+      "business": "Business notices"
+    }
+  },
+  "MktPlatforms": {
+    "ga4Hosts": " | sessions by site: {hosts}",
+    "p": {
+      "Facebook": {
+        "name": "Facebook Page",
+        "note": "Also used for FB Reels. Create an app on Meta for Developers, request pages_manage_posts + pages_read_engagement + pages_show_list, then generate a token. For the AI Agent to run Meta ads, use a System User token with ads_management and enter the ad account ID.",
+        "f_ad_account_id": "Ad account ID (optional, for Agent ads)"
+      },
+      "Instagram": {
+        "note": "Also used for IG Reels. Requires an IG business account linked to your Facebook Page."
+      },
+      "Threads": {
+        "note": "Requires Threads API access."
+      },
+      "LinkedIn": {
+        "note": "Author URN: urn:li:person:xxxx for a person, urn:li:organization:xxxx for a company page.",
+        "f_client_id": "Client ID (optional, for automatic token refresh)",
+        "f_client_secret": "Client Secret (optional, for automatic token refresh)",
+        "f_refresh_token": "Refresh Token (optional, only if LinkedIn grants it)"
+      },
+      "Twitter_X": {
+        "note": "Get these four values from the “Keys and Tokens” page in the developer portal."
+      },
+      "LINE_VOOM": {
+        "name": "LINE Official Account broadcast",
+        "note": "Uses the LINE Official Account Channel Access Token to broadcast to all friends (counts toward your monthly message quota by number of friends). Stored separately from the customer-service LINE credentials."
+      },
+      "Zalo": {
+        "name": "Zalo OA (posts)",
+        "note": "For publishing articles; stored separately from the customer-service Zalo credentials.",
+        "f_app_id": "App ID (for automatic token refresh)",
+        "f_secret_key": "Secret Key (for automatic token refresh)",
+        "f_refresh_token": "Refresh Token (for automatic token refresh)"
+      },
+      "YouTube_Shorts": {
+        "note": "The Refresh Token comes from completing a Google OAuth authorization once (e.g. via OAuth Playground); it cannot be generated by signing in with a password."
+      },
+      "TikTok": {
+        "note": "Requires an Access Token with Content Posting API permission.",
+        "f_client_key": "Client Key (for automatic token refresh)",
+        "f_client_secret": "Client Secret (for automatic token refresh)",
+        "f_refresh_token": "Refresh Token (for automatic token refresh)"
+      },
+      "GA4": {
+        "name": "Google Analytics 4 (website traffic, read-only)",
+        "note": "Lets the AI Agent read website sessions/users. Steps: ① enable the “Google Analytics Data API” in Google Cloud Console ② create a service account and download its JSON key ③ in GA4 “Admin → Property access management”, add the service account email as a “Viewer” ④ the property ID is under “Admin → Property details”. With a Measurement ID, this platform’s guesthouse site and member sign-up page get the tracking code automatically; for your own external site paste the same Measurement ID and add both domains under the GA4 data stream’s “Configure domains” for cross-domain tracking. Does not count toward your plan’s platform limit.",
+        "f_property_id": "GA4 property ID",
+        "f_measurement_id": "Measurement ID (auto-installs tracking on this platform’s guesthouse site)",
+        "f_service_account_json": "Service account JSON key (paste the whole file)"
+      }
+    },
+    "adsOk": "{acc} | {name} | {cur} | status: {status} | last 30 days: reach {reach}, impressions {imp}, spend {spend}",
+    "testFailed": "Test failed",
+    "netErr": "Network error",
+    "unknown": "(unknown)",
+    "ga4Ok": "Property {pid} | last 7 days: sessions {s}, users {u}, new users {nu}, page views {pv}",
+    "saveFailed": "Save failed",
+    "saved": "{pid} saved",
+    "title": "Publishing platform connections",
+    "needAdmin": "Platform connections must be set up by the <b>owner or an admin (IT)</b>. Ask the owner to grant you admin rights.",
+    "connected": "Connected",
+    "notLinked": "Not linked",
+    "docs": "Official docs",
+    "maskedPh": "Set: {masked} (leave blank to keep)",
+    "save": "Save",
+    "testGa4": "Test GA4 connection (read-only)",
+    "testAds": "Test Meta Ads connection (read-only, no spend)",
+    "guide": {
+      "title": "Step-by-step setup guide",
+      "docs": "Official docs: "
+    },
+    "token": {
+      "refreshing": "Token auto-refresh on | current token expires: {at}",
+      "failed": "Last auto-refresh failed: {error} (get and paste a new Refresh Token)"
+    }
+  },
+  "SocialPublish": {
+    "imagePost": "Image post",
+    "failed": "Failed",
+    "p": {
+      "Facebook": {
+        "name": "Facebook Page",
+        "desc": "Post to your Facebook Page"
+      },
+      "Instagram": {
+        "name": "Instagram post",
+        "desc": "Post to your Instagram business account"
+      },
+      "Threads": {
+        "desc": "Post to Threads"
+      },
+      "FB_Reels": {
+        "name": "Facebook Reels",
+        "desc": "Post a vertical short video to Facebook"
+      },
+      "IG_Reels": {
+        "name": "Instagram Reels",
+        "desc": "Post a vertical short video to Instagram"
+      },
+      "YouTube_Shorts": {
+        "name": "YouTube Shorts",
+        "desc": "Post Shorts to your YouTube channel"
+      },
+      "TikTok": {
+        "name": "TikTok",
+        "desc": "Post a short video to your TikTok creator/brand account"
+      },
+      "LINE_VOOM": {
+        "name": "LINE Official Account broadcast",
+        "desc": "Broadcast to all friends via your LINE Official Account (counts toward monthly messages)"
+      },
+      "Twitter_X": {
+        "desc": "Post to your X account"
+      },
+      "LinkedIn": {
+        "desc": "Share to your profile or company page"
+      },
+      "Zalo": {
+        "desc": "Post an article to your Zalo Official Account"
+      }
+    },
+    "tags": {
+      "t0": "#NewArrival",
+      "t1": "#BrandEvent",
+      "t2": "#LimitedOffer",
+      "t3": "#AIVisual",
+      "t4": "#MustHave",
+      "t5": "#Lifestyle",
+      "t6": "#BestSeller"
+    },
+    "featured": "Featured visual",
+    "fallbackCopy": "✨ {title} is here!\n\nCrafted with stunning visual design for an unforgettable brand experience 🔥\n\nLearn more or message us to be the first to try it!\n\n#BrandVisual #NewArrival #MarketingIdeas #Design #AIVisual",
+    "fallbackShort": "✨ {title} is here!\n\nBeautiful design down to every detail. Follow us for the latest news!\n\n#BrandMarketing #Lifestyle #NewArrival",
+    "noMedia": "No media to publish",
+    "needPlatform": "Select at least one connected platform",
+    "needCopy": "Please enter the post text",
+    "uploadFailed": "Failed to upload the media, please retry",
+    "noPublicUrl": "Could not get a public link for the media",
+    "needPro": "Auto-publishing is not included in your plan. Please upgrade to PRO or above.",
+    "publishFailedRetry": "Publishing failed, please try again later",
+    "title": "One-click publishing hub",
+    "videoPost": "Short video",
+    "subtitle": "Publish your AI creations straight to Facebook, Instagram, Threads, TikTok, YouTube and more",
+    "credCenter": "Credentials",
+    "preview": "Media preview",
+    "source": "Source: {s}",
+    "status": "Connection status",
+    "linkedCount": "{n} / {total} linked",
+    "noCredsA": "No publishing credentials linked yet. Go to",
+    "noCredsLink": "Platform connections",
+    "noCredsB": "to set up a Page token or API key.",
+    "choose": "Choose platforms",
+    "selectAll": "Select all connected",
+    "clear": "Clear",
+    "refresh": "Refresh connection status",
+    "connected": "Connected",
+    "link": "Link ↗",
+    "copyLabel": "Post text / caption",
+    "aiPolish": "AI polish",
+    "copyPh": "Write the post, highlights, call to action and hashtags…",
+    "quickTags": "Quick tags: ",
+    "charCount": "{n} characters",
+    "limits": "Limits: Twitter 280 | Threads 500 | IG 2,200 characters",
+    "done": "Publishing finished",
+    "summary": "{n} platforms | succeeded: <g>{ok}</g> | failed: <r>{fail}</r>",
+    "ok": "Published",
+    "postId": "Post ID: {id}",
+    "selected": "<b>{n}</b> platforms selected",
+    "cancel": "Cancel",
+    "publishing": "Publishing…",
+    "publishNow": "Publish now",
+    "backEdit": "← Back to edit",
+    "manage": "Manage connections",
+    "close": "Done"
+  },
+  "Crm": {
+    "newTitle": "New member",
+    "copy": "Copy",
+    "tier": {
+      "general": "Regular",
+      "silver": "Silver",
+      "gold": "Gold",
+      "vip": "👑 VIP",
+      "vvip": "💎 VVIP"
+    },
+    "col": {
+      "phone": {
+        "label": "Phone",
+        "desc": "Member phone number (unique identifier)"
+      },
+      "name": {
+        "label": "Customer name",
+        "desc": "Name or nickname",
+        "ex": "Jane Doe"
+      },
+      "tier": {
+        "label": "Tier",
+        "desc": "general, silver, gold, vip, vvip"
+      },
+      "total_spend": {
+        "label": "Total spend"
+      },
+      "order_count": {
+        "label": "Order count"
+      },
+      "tags": {
+        "label": "Tags",
+        "desc": "Multiple tags, comma-separated",
+        "ex": "early adopter, milk tea lover"
+      },
+      "email": {
+        "label": "Email"
+      },
+      "notes": {
+        "label": "Notes & preferences",
+        "ex": "Less ice, less sugar; regular"
+      }
+    },
+    "needPhone": "Please enter a phone number",
+    "saveFailed": "Save failed",
+    "confirmDelete": "Delete this member?",
+    "importFailed": "Import failed",
+    "serverErr": "Error connecting to the server",
+    "needBatch": "Please enter the list to import",
+    "imported": "Imported {n} members!",
+    "needProduct": "Please enter the new product name",
+    "pushFailed": "Failed to generate the message",
+    "totalMembers": "Total members",
+    "vipGroup": "VIP customers",
+    "vipPerk": "Early access to new products",
+    "gold": "Gold members",
+    "totalSpend": "Total member spend",
+    "modeTitle": "Current CRM integration: Excel / CSV batch upload (phase 1)",
+    "modeDesc": "Drag in spreadsheets exported from your existing CRM with automatic column mapping. Scheduled sync (phase 2) and direct API integration (phase 3) are planned.",
+    "phase1": "Phase 1: Excel batch active",
+    "phase23": "Phase 2/3: auto sync planned",
+    "searchPh": "Search by name or phone…",
+    "allTiers": "All tiers",
+    "vipFilter": "👑 VIP / VVIP",
+    "vipPush": "VIP new-product push",
+    "importExcel": "Import CRM Excel",
+    "pasteText": "Paste text",
+    "addMember": "Add member",
+    "empty": "No matching members",
+    "emptyHint": "Use “Import” or “Add member” above to build your customer list.",
+    "thName": "Name / phone",
+    "thTier": "Tier",
+    "thTags": "Tags",
+    "thSpend": "Total spend",
+    "thOrders": "Orders",
+    "thLast": "Last visit",
+    "thActions": "Actions",
+    "unnamed": "(unnamed)",
+    "times": "{n}",
+    "noRecord": "No record",
+    "editTitle": "Edit member",
+    "phoneReq": "Phone *",
+    "phonePh": "e.g. 0912345678",
+    "namePh": "e.g. Jane Doe",
+    "tagsLabel": "Tags (comma-separated)",
+    "tagsPh": "e.g. early adopter, milk tea lover, regular",
+    "notesLabel": "Notes",
+    "cancel": "Cancel",
+    "saveMember": "Save member",
+    "batchTitle": "Quick batch import",
+    "batchHint": "One per line: phone, name, tier",
+    "batchPh": "0912345678, John Chen, VIP\n0923456789, Mary Lin, VIP\n0934567890, David Chang, Gold",
+    "startBatch": "Start import",
+    "pushTitle": "VIP early-access message generator",
+    "pushDesc": "Generates exclusive early-access invitations and messages for your VIP / VVIP customers",
+    "productReq": "Upcoming product name *",
+    "productPh": "e.g. Premium roasted oolong milk tea",
+    "deadline": "VIP exclusive until",
+    "extraNote": "Extra perk note",
+    "extraPh": "e.g. free handmade cookie when you show your phone number",
+    "generate": "Generate VIP messages",
+    "audience": "Target VIP audience: {n} guests",
+    "clickCopy": "Click to copy",
+    "lineTpl": "LINE Official Account message",
+    "copied": "Copied",
+    "smsTpl": "Short SMS message",
+    "importTitle": "Import CRM customer & VIP spreadsheet",
+    "importDesc": "Supports .xlsx, .xls and .csv. Members are matched by phone number and updated automatically (upsert).",
+    "tplFile": "CRM_customer_template.xlsx",
+    "sheet": "Customers",
+    "help1": "Different column names from your CRM export (e.g. “Phone”, “客戶電話”, “SĐT”) are mapped automatically.",
+    "help2": "“Tier” accepts VIP, VVIP, gold, silver or general and is categorized automatically.",
+    "help3": "“Tags” can be comma-separated (e.g. new-product fan, regular, milk tea lover)."
+  },
+  "ExcelImport": {
+    "no": "No",
+    "cancel": "Cancel",
+    "sheetDefault": "Data",
+    "parseFailed": "Could not read the file; please check its format",
+    "submitErr": "Error while submitting the import",
+    "defaultDesc": "Supports .xlsx, .xls and .csv; creates or updates records in bulk (upsert)",
+    "step1": "1. Prepare an Excel sheet (or download the template)",
+    "dlXlsx": "Download Excel template (.xlsx)",
+    "dlCsv": ".csv template",
+    "required": "Required columns: ",
+    "noRequired": "None in particular (fill in as needed)",
+    "upsert": "<b>Updates:</b> existing records (matched by key ID/name) are updated automatically; new ones are created.",
+    "step2": "2. Upload the completed Excel / CSV file",
+    "reselect": "Choose again",
+    "previewN": "Preview ({n} rows)",
+    "parsing": "Reading spreadsheet…",
+    "fileSize": "Size: {kb} KB · click or drop to replace",
+    "pick": "Click to choose a file, or drop it here",
+    "formats": "Supports Microsoft Excel (.xlsx, .xls) and CSV",
+    "previewHead": "First {n} rows ({total} valid rows found)",
+    "reselectFile": "Choose another file",
+    "yes": "Yes",
+    "checks": "Data check notes ({n})",
+    "moreChecks": "…and {n} more",
+    "importErr": "Import error",
+    "done": "Import finished!",
+    "inserted": "{n} added",
+    "updated": ", {n} updated",
+    "importedN": "{n} saved",
+    "skipped": ", {n} skipped",
+    "notImported": "Rows not imported ({n}):",
+    "rowN": "Row {n}: ",
+    "badFormat": "Invalid format",
+    "ready": "<b>{n}</b> rows ready to import",
+    "close": "Close",
+    "writing": "Saving…",
+    "confirm": "Import / update ({n})",
+    "another": "Import another file"
+  },
+  "Campaigns": {
+    "dueToday": "(ends today)",
+    "allStores": "All stores / channels",
+    "tbd": "TBD",
+    "aiStart": "Start AI planning",
+    "newTitle": "New campaign",
+    "ordersN": "{n} orders",
+    "cupsN": "{n} cups",
+    "channel": {
+      "offline": "Offline",
+      "online": "Online",
+      "hybrid": "Hybrid"
+    },
+    "category": {
+      "event": "Street / pop-up event",
+      "material": "In-store displays",
+      "outdoor": "Outdoor ads",
+      "partner": "Brand partnership",
+      "social_promo": "Social promotion",
+      "delivery_promo": "Delivery app offer",
+      "member_exclusive": "VIP member exclusive"
+    },
+    "status": {
+      "draft": "Draft",
+      "planned": "Scheduled",
+      "active": "Active",
+      "ended": "Ended",
+      "cancelled": "Cancelled"
+    },
+    "col": {
+      "sales_date": {
+        "label": "Sales date",
+        "desc": "Date (e.g. 2026-09-20 or 2026/09/20)"
+      },
+      "store": {
+        "label": "Store",
+        "desc": "Blank = all stores",
+        "ex": "Flagship store"
+      },
+      "revenue": {
+        "label": "Revenue"
+      },
+      "order_count": {
+        "label": "Orders"
+      },
+      "cups_sold": {
+        "label": "Cups sold (qty)"
+      },
+      "product_name": {
+        "label": "Product name (optional)",
+        "desc": "Leave blank for whole-store daily revenue; fill in for per-product sales",
+        "ex": "Premium roasted oolong milk tea"
+      },
+      "product_code": {
+        "label": "Product code (optional)"
+      },
+      "category": {
+        "label": "Category (optional)",
+        "ex": "Milk tea series"
+      }
+    },
+    "importFailed": "Import failed",
+    "serverErr": "Error connecting to the server",
+    "needName": "Please enter a campaign name",
+    "saveFailed": "Save failed",
+    "confirmDelete": "Delete this campaign?",
+    "needTopic": "Please enter a campaign theme or idea",
+    "aiFailed": "AI planning failed",
+    "activeCount": "Active campaigns",
+    "totalBudget": "Total budget",
+    "totalCount": "Total campaigns",
+    "iposDb": "iPOS sales database",
+    "iposStats": "{n} sales records imported · revenue ${rev}",
+    "noIpos": "No iPOS data yet",
+    "iposRange": "Data covers {from} – {to} ({n} stores). Campaign analysis compares against the prior period and the same period last year automatically.",
+    "iposHint": "Drag in iPOS daily store reports and product sales details for automatic performance comparison (PoP, YoY, post-campaign tail).",
+    "importIpos": "Import iPOS report",
+    "allChannels": "All channels",
+    "chOfflineLong": "Offline (store / pop-up)",
+    "chOnlineLong": "Online (social / delivery)",
+    "chHybridLong": "Hybrid (OMO)",
+    "allStatus": "All statuses",
+    "aiAssistant": "AI planner",
+    "add": "New campaign",
+    "empty": "No campaigns yet",
+    "emptyHint": "Click “AI planner” above to have AI design a high-converting campaign for you.",
+    "daysLeft": "({n} days left)",
+    "storeIs": "Store: {s}",
+    "budgetIs": "Budget: ${v}",
+    "now": "Now",
+    "analysis": "Performance",
+    "aiTitle": "AI campaign planner",
+    "aiDesc": "Analyzes your brand and generates theme, offer mechanics, store scripts and a checklist in one click",
+    "topicReq": "Theme / idea *",
+    "topicPh": "e.g. autumn tea festival pop-up tasting, rainy-day delivery 2nd cup 20 off…",
+    "channelLabel": "Channel",
+    "typeLabel": "Type",
+    "targetStore": "Target store",
+    "allStoresPh": "Blank = all stores",
+    "budgetPlan": "Planned budget ($)",
+    "budgetPh": "e.g. 5000",
+    "extraReq": "Extra requirements / offer ideas (optional)",
+    "extraPh": "e.g. boost fresh milk tea and new bakery sales, attract young students…",
+    "aiWorking": "AI is planning your campaign…",
+    "aiDraft": "AI campaign draft",
+    "readyToUse": "Ready to use",
+    "mechanic": "Offer mechanics: ",
+    "script": "Store script: ",
+    "social": "Social copy: ",
+    "checklist": "Checklist: ",
+    "kpi": "Target: ",
+    "replan": "Re-plan",
+    "adopt": "Use this plan and save",
+    "editTitle": "Edit campaign",
+    "nameReq": "Campaign name *",
+    "namePh": "e.g. buy-one-get-one tasting pop-up",
+    "statusLabel": "Status",
+    "storeLabel": "Store",
+    "startDate": "Start date",
+    "endDate": "End date",
+    "budget": "Budget ($)",
+    "spent": "Actual spend ($)",
+    "imageUrl": "Key visual / photo URL",
+    "notes": "Notes & key points",
+    "cancel": "Cancel",
+    "save": "Save campaign",
+    "reportTitle": "Performance comparison report",
+    "reportDesc": "Uses live POS transactions to compare the campaign period with the prior period (PoP), the same period last year (YoY) and the post-campaign effect",
+    "computing": "Calculating metrics from POS data…",
+    "noData": "Not enough order data to compare",
+    "periodRevenue": "Campaign revenue",
+    "ordersCups": "{o} orders · {c} cups",
+    "pop": "Growth vs prior (PoP)",
+    "priorIs": "Prior: ${v}",
+    "yoy": "Growth vs last year (YoY)",
+    "yoyIs": "Last year: ${v}",
+    "roi": "Return on investment (ROI)",
+    "grossIs": "Added gross profit: ${v}",
+    "periodsTitle": "Three-period comparison",
+    "thPeriod": "Period",
+    "thRange": "Date range",
+    "thRevenue": "Revenue",
+    "thOrders": "Orders",
+    "thCups": "Cups",
+    "thAov": "Average order value (AOV)",
+    "rowCurrent": "Campaign period",
+    "rowPrior": "Prior period (same length)",
+    "rowYoy": "Same period last year (YoY)",
+    "postTitle": "Post-campaign tracking ({n} days after end)",
+    "postDaily": "Daily revenue after: ",
+    "postChange": "Change vs before: ",
+    "postPending": "The campaign is still running; after it ends the system tracks repeat purchases for 7–14 days.",
+    "dailyCurve": "Daily sales during the campaign",
+    "cupsOrders": "{c} cups ({o} orders)",
+    "importTitle": "Import iPOS store sales report",
+    "importDesc": "Upload iPOS daily store revenue or product sales exports (.xlsx / .xls / .csv). Sales data feeds campaign performance and PoP/YoY comparisons automatically.",
+    "tplFile": "iPOS_store_sales_template.xlsx",
+    "sheet": "Daily store sales",
+    "help1": "Column headers in Chinese, English (Revenue, Orders, Cups) and Vietnamese (Doanh thu, Số đơn, Số ly) are recognized automatically.",
+    "help2": "Supports whole-store daily reports (no product name) and per-item sales lists (add product names to measure a specific product’s lift).",
+    "help3": "Re-importing the same store and date updates the record (upsert) instead of double counting."
+  },
+  "MktLogbook": {
+    "save": "Save entry",
+    "copyReport": "Copy full report",
+    "copy": "Copy",
+    "cat": {
+      "ai_chat": "AI chat",
+      "skill": "Skill building",
+      "campaign": "Campaign",
+      "calendar": "Social schedule",
+      "content": "Copy draft",
+      "offline": "Offline promotion",
+      "delivery": "Delivery platform",
+      "brand": "Brand settings",
+      "manual": "Work note",
+      "general": "General"
+    },
+    "genFailed": "Generation failed",
+    "addFailed": "Failed to add",
+    "confirmDelete": "Delete this log entry?",
+    "noAccess": "You need marketing unit access to view the marketing log",
+    "title": "Marketing log",
+    "subtitle": "Every AI conversation and event across your team",
+    "desc": "Automatically logs key points of staff AI chats, campaigns, social schedules, copy drafts and offline/delivery progress",
+    "lastDays": "Last {n} days",
+    "add": "New entry",
+    "aiReport": "AI summary report",
+    "newTitle": "New marketing log entry",
+    "cancel": "Cancel",
+    "titlePh": "Topic / key decision (e.g. confirm 2026 summer ice drinks promo)…",
+    "brandRules": "Brand guidelines",
+    "bodyPh": "Details, discussion notes, next steps…",
+    "saving": "Saving…",
+    "reportTitle": "AI marketing director: operations & collaboration report",
+    "reportCopied": "Report copied",
+    "statTotal": "Entries & events",
+    "statChats": "Staff AI chats",
+    "statEvents": "Marketing events",
+    "statPeople": "Team members",
+    "statCredits": "Credits used",
+    "filterPeople": "Filter by team member",
+    "clearFilter": "Clear filter (show all)",
+    "tabAll": "All ({n})",
+    "tabChats": "AI chats ({n})",
+    "tabEvents": "Events ({n})",
+    "tabManual": "Manual & summaries ({n})",
+    "searchPh": "Search by name, title or content…",
+    "empty": "No matching entries in the last {n} days",
+    "delete": "Delete entry",
+    "credits": "{n} credits",
+    "channel": "Channel: ",
+    "model": "Model: ",
+    "copied": "Copied"
+  },
+  "MktPlan": {
+    "free": "Free",
+    "resend": "Resend verification email",
+    "upgrade": "Upgrade",
+    "orderFailed": "Failed to create the order",
+    "netErr": "Network error, please try again later",
+    "title": "Marketing plan",
+    "current": "Current: {plan}",
+    "topUp": "Top up credits →",
+    "yearly": "Yearly (about 20% off)",
+    "monthly": "Monthly",
+    "giftLeft": "Monthly bonus left: <b>{r}</b> / {a} credits",
+    "giftNote": "(expires at month end, does not roll over; used first)",
+    "verifyForGift": "Verify your email to receive {n} bonus credits every month",
+    "sent": "Sent — check your inbox and click the link",
+    "sendFailed": "Sending failed, please try again later",
+    "inUse": "Current",
+    "perMonth": "USD/month",
+    "save": "Save {n}%",
+    "yearlyTotal": "${n} USD per year",
+    "currentPlan": "Current plan",
+    "footnote": "The plan takes effect right after payment and does not auto-renew; buy again to extend. Generation costs for images, videos, avatar videos, calls and email are charged from credits and are not included in the subscription.",
+    "compare": "Feature comparison",
+    "feature": "Feature"
+  },
+  "PlanCompare": {
+    "feat": {
+      "pro": {
+        "f0": "10 marketing projects",
+        "f1": "1 collaborator",
+        "f2": "Usage charged at ×1.8 (FREE: ×2)",
+        "f3": "All generation charged by usage"
+      },
+      "team": {
+        "f0": "Everything in CORE",
+        "f1": "Unlimited projects and collaborators",
+        "f2": "Usage charged at ×1.6",
+        "f3": "Marketing pipeline (fully automated)",
+        "f4": "Social matrix + 1 free official posting IP"
+      },
+      "enterprise": {
+        "f0": "Everything in PRO",
+        "f1": "Usage charged at ×1.4",
+        "f2": "Custom enterprise features"
+      }
+    },
+    "rows": {
+      "r0": "Marketing projects",
+      "r1": "Collaborators",
+      "r2": "Usage multiplier (actual cost ×)",
+      "r3": "Data collection / analysis / copy (by usage)",
+      "r4": "Image generation (by usage)",
+      "r5": "One-click posting (11 platforms, 0.01 credit per post)",
+      "r6": "Video generation (by usage)",
+      "r7": "AI calls + email (by usage)",
+      "r8": "Avatar marketing with HeyGen (by usage)",
+      "r9": "AI product marketing designer (by usage)",
+      "r10": "AI Studio (by usage)",
+      "r11": "GEO content writer (by usage)",
+      "r12": "Prospect marketing (by usage)",
+      "r13": "Expert skills (credits)",
+      "r14": "Custom experts (by usage)",
+      "r15": "Marketing pipeline (fully automated)",
+      "r16": "Social matrix auto-posting + account warm-up",
+      "r17": "Official posting IP (or bring your own)"
+    },
+    "val": {
+      "1 個": "1",
+      "10 個": "10",
+      "無限": "Unlimited",
+      "不可邀請": "Cannot invite",
+      "1 位": "1",
+      "附贈 1 個＋點數加購": "1 included + buy more with credits"
+    }
+  },
+  "Simulation": {
+    "expand": "Show details",
+    "behavior": {
+      "share": "Share",
+      "like": "Like",
+      "comment_positive": "Positive comment",
+      "ignore": "Ignore",
+      "comment_negative": "Negative comment",
+      "report": "Report"
+    },
+    "risk": {
+      "high": "High risk",
+      "medium": "Medium risk",
+      "low": "Low risk"
+    },
+    "impact": {
+      "high": "Strong",
+      "medium": "Medium",
+      "low": "Weak"
+    },
+    "sentiment": "Sentiment",
+    "influence": "Influence {n}",
+    "collapse": "Collapse",
+    "resonates": "Resonates",
+    "concerns": "Main concerns",
+    "overall": "Overall sentiment",
+    "positive": "Positive spread",
+    "negative": "Negative word of mouth",
+    "neutral": "No notable effect",
+    "camps": "Consumer camps",
+    "segments": "({n} segments)",
+    "crisis": "PR crisis risk",
+    "messages": "High-resonance messages",
+    "personas": "Persona details ({n})",
+    "aiTips": "AI suggestions",
+    "scenario": "Scenario injection (god view)",
+    "optional": "Optional",
+    "scenarioDesc": "Add a new assumption and see how consumer positions change",
+    "scenarioPh": "e.g. “a competitor cuts prices by 30%”, “a product quality issue goes public”, “a celebrity endorsement”…",
+    "rerunning": "Re-running…",
+    "rerun": "Re-run simulation"
+  },
+  "CustomExperts": {
+    "emptyCanBuild": "No experts yet — create your first one above.",
+    "tabText": "Paste text",
+    "tabFile": "Upload file",
+    "title": "Custom experts",
+    "subtitle": "Feed in URLs, documents or text to train your own domain advisor. Q&A is available on any plan (charged in credits); creating and training requires PRO or above.",
+    "needPro": "Creating custom experts requires PRO or above; you can still ask existing experts.",
+    "upgrade": "Upgrade plan",
+    "empty": "No experts yet.",
+    "noDesc": "(no description)",
+    "sourceCount": "{n} knowledge sources",
+    "needName": "Please enter an expert name",
+    "createFailed": "Creation failed",
+    "newExpert": "New expert",
+    "namePh": "Expert name, e.g. guesthouse regulations advisor",
+    "descPh": "One-line description of the expertise (optional)",
+    "personaPh": "Persona / answer style (optional, e.g. you are an advisor on guesthouse regulations; always cite the rules and note practical tips)",
+    "create": "Create",
+    "back": "Back to experts",
+    "expert": "Expert",
+    "sources": "Knowledge sources ({n})",
+    "noSources": "No knowledge sources yet.",
+    "ask": "Ask the expert",
+    "chars": "{n} chars",
+    "addFailed": "Failed to add",
+    "uploadFailed": "Upload failed",
+    "noText": "No text could be extracted from this file",
+    "tabUrl": "URL",
+    "fetch": "Fetch",
+    "textPh": "Paste the text to use as knowledge…",
+    "add": "Add",
+    "fileHint": "Supports PDF / Word / Excel / CSV / TXT; text is extracted automatically",
+    "costHint": "Adding sources is charged by length (0.02 per URL + 0.01 per 1,000 characters).",
+    "answerFailed": "Failed to answer",
+    "needSource": "Add at least one knowledge source so the expert has something to answer from.",
+    "questionPh": "Type your question…",
+    "askBtn": "Ask (0.05 credits)"
+  },
+  "PlanGate": {
+    "needPlan": "This feature requires the {required} plan. Current plan: {current}",
+    "free": "Free",
+    "upgrade": "View plans & upgrade",
+    "feature": {
+      "aiStudio": "AI Visual Studio",
+      "productDesigner": "AI Product Marketing Designer",
+      "pipeline": "Marketing Pipeline",
+      "socialMatrix": "Social Matrix & Account Warm-up"
+    },
+    "plan": {
+      "proPlus": "PRO or higher",
+      "corePlus": "CORE or higher"
+    }
+  },
+  "DrivePicker": {
+    "pickFolder": "Choose folder",
+    "randomPick": "Random image",
+    "checking": "Checking Google Drive connection…",
+    "notConnected": "Google Drive not connected",
+    "goConnect": "Go to settings to connect",
+    "refImage": "Reference image",
+    "folderPicked": "Selected folder",
+    "fetching": "Fetching image…",
+    "another": "Another one"
+  },
+  "ProductLaunches": {
+    "status": {
+      "rd_submitted": {
+        "label": "Submitted by R&D",
+        "desc": "Waiting for marketing to pick up"
+      },
+      "mkt_prep": {
+        "label": "Marketing prep",
+        "desc": "Finalizing visuals, copy and schedule"
+      },
+      "vip_exclusive": {
+        "label": "👑 VIP early tasting",
+        "desc": "VIP members only"
+      },
+      "public_released": {
+        "label": "🚀 Publicly released",
+        "desc": "On sale across all channels"
+      },
+      "archived": {
+        "label": "Archived",
+        "desc": "Seasonal run ended"
+      }
+    },
+    "needName": "Please enter the product name",
+    "saveFailed": "Save failed",
+    "confirmUnlock": "Unlock [{name}] for all customers now?",
+    "title": "R&D ↔ Marketing launch pipeline (VIP exclusive to public release)",
+    "subtitle": "R&D pushes finished recipes for launch; marketing sets a VIP early-tasting window, then opens to all customers automatically or with one click",
+    "schedule": "Schedule a launch",
+    "empty": "No launches in progress. New products submitted by R&D from the recipe sheet will appear here.",
+    "vipExpired": "VIP period ended — ready for public release",
+    "recipeCost": "Recipe cost: ",
+    "vipWindow": "VIP early tasting: ",
+    "fromToday": "Starting now",
+    "tbd": "TBD",
+    "publicDate": "Public release: ",
+    "unlock": "Unlock public release",
+    "compare": "Compare results",
+    "confirmRemove": "Remove this launch schedule?",
+    "editTitle": "Edit launch schedule",
+    "name": "Product name",
+    "stage": "Current stage",
+    "vipStart": "VIP start date",
+    "vipEnd": "VIP end date",
+    "publicDateLabel": "Public release date",
+    "promo": "Exclusive-period offer",
+    "promoPh": "e.g. VIP-exclusive early tasting, free cup sleeve for check-ins",
+    "cancel": "Cancel",
+    "save": "Save schedule",
+    "analyticsTitle": "Launch sales: VIP period vs public period",
+    "item": "Item: [{name}]",
+    "noData": "Not enough sales data yet",
+    "phase1": "Phase 1: VIP early access",
+    "days": "{n} days",
+    "cups": "cups",
+    "revenue": "Revenue: ",
+    "dailyAvg": "Daily avg: ",
+    "cupsPerDay": "{n} cups/day",
+    "phase2": "Phase 2: Public release",
+    "lift": "Daily sales lift: "
+  },
+  "SocialMatrix": {
+    "copied": "Copied to clipboard!",
+    "speedFail": "Speed test failed: {error}",
+    "proxyAdded": "Proxy IP added to the pool!",
+    "addFailed": "Add failed",
+    "confirmRemoveProxy": "Remove this proxy IP from the pool?",
+    "proxyRemoved": "Proxy IP removed",
+    "deleteFail": "Delete failed: {error}",
+    "proxyUpdated": "Proxy info and name updated!",
+    "updateFailed": "Update failed",
+    "updateFail": "Update failed: {error}",
+    "confirmBuy": "Your included quota is used up. {credits} credits will be charged to rent this IP for 30 days, auto-renewing at expiry (released if credits run out). Buy?",
+    "leaseOk": "🎉 Official dedicated IP rented!",
+    "leaseFailed": "Rental failed",
+    "leaseFail": "Rental failed: {error}",
+    "confirmRelease": "Cancel this official IP rental? The node will be removed from your pool and bound accounts must pick a new proxy.",
+    "released": "Rental cancelled",
+    "releaseFailed": "Failed to cancel rental",
+    "releaseErr": "Cancel rental error: {error}",
+    "offListed": "👑 Official rentable IP listed!",
+    "listFailed": "Listing failed",
+    "addFail": "Add failed: {error}",
+    "offUpdated": "Official IP inventory and pricing updated!",
+    "confirmUnlist": "Delete/unlist this rentable IP from official inventory?",
+    "unlisted": "IP unlisted from official inventory",
+    "deleteFailed": "Delete failed",
+    "unlistFail": "Unlist failed: {error}",
+    "accAdded": "New social account added to the matrix!",
+    "confirmRemoveAcc": "Remove this account?",
+    "accRemoved": "Social account deleted",
+    "warmupDone": "Human-like warm-up done! Safe nurturing tasks ran on {n} accounts",
+    "warmupFailed": "Warm-up failed",
+    "warmupErr": "Warm-up error: {error}",
+    "radarDone": "AI radar locked {groups} quality communities and produced {copies} anti-ban copy variants!",
+    "genFailed": "Generation failed",
+    "genErr": "Generation error: {error}",
+    "planAOk": "Plan A started! Unique copy copied and the {name} posting page opened",
+    "opFail": "Operation failed: {error}",
+    "needCopies": "Generate the anti-ban copy matrix above first",
+    "noMature": "No mature accounts yet that finished the 14-day warm-up (Day 12+)! Warm up accounts first to keep them safe",
+    "publishFailed": "Publish failed",
+    "scheduleErr": "Scheduling error: {error}",
+    "heroTag": "IMT Social Matrix & Auto Warm-up Marketing System",
+    "heroTitle": "Social matrix posting & human-like warm-up center",
+    "heroDesc": "Supports native static residential IPs, 14-day progressive human-like warm-up, Plan A (human Copilot) and Plan B (matrix auto-scheduled posting), AI community radar and an anti-risk, anti-duplicate copy library.",
+    "statOnline": "Proxies online",
+    "statMature": "Mature accounts",
+    "statWarming": "Warming up (Day 1-11)",
+    "statHealth": "Avg. health",
+    "tabProxies": "Proxy pool",
+    "tabAccounts": "Account matrix & warm-up",
+    "tabCampaign": "Social publishing (Plan A + B)",
+    "myProxies": "My proxy pool",
+    "market": "Official native IP rental market",
+    "noOwn": "No setup",
+    "adminZone": "Admin: rentable IP inventory",
+    "refresh": "Refresh",
+    "rentOfficial": "Rent official native IP",
+    "addOwnProxy": "Add your own proxy IP",
+    "adminAdd": "Admin: add rentable IP",
+    "promoQ": "Want to skip configuring your Wi-Fi router and proxy service?",
+    "official": "IMT official",
+    "promoDesc": "IMT directly supplies native residential broadband (Yilan, Taiwan) and Chunghwa Telecom 4G mobile proxies — clean, dedicated, never datacenter IPs, most resistant to algorithmic bans. Rent with one click!",
+    "browseMarket": "Browse official IP market",
+    "ownGuideTitle": "Guide: connect your own static home IP (Chunghwa Telecom / cable broadband) to the system",
+    "ownGuideIntro": "If you have home broadband with a fixed IP, set it up as follows and add it to your pool:",
+    "step1": "Step 1: Router port forwarding",
+    "step1d": "Open your Wi-Fi router admin, set up Port Forwarding to point an external port (e.g. 28899) to your LAN host.",
+    "step2": "Step 2: Start a local proxy",
+    "step2d": "Install <code>gost -L=http://user:pass@:28899</code> on the host for authenticated connections from this system.",
+    "step3": "Step 3: Enter it and bind",
+    "step3d": "Click \"Add your own proxy IP\", enter the static IP and port; once the speed test passes you can bind accounts.",
+    "editNameSettings": "Edit name & settings",
+    "kindOfficial": "🏢 Official rental",
+    "kindHome": "🏠 Home static",
+    "kindMobile": "📱 4G mobile",
+    "kindBiz": "🏢 Commercial residential",
+    "addrPort": "Host & port:",
+    "protocol": "Protocol:",
+    "isp": "ISP:",
+    "nativeBb": "Native broadband",
+    "location": "Location:",
+    "localNode": "Local node",
+    "leaseUntil": "Lease valid until:",
+    "latency": "Latency:",
+    "boundN": "{n} accounts bound",
+    "editProxy": "Edit proxy name & settings",
+    "speedTest": "Test connection speed",
+    "releaseTitle": "Cancel rental",
+    "processing": "Processing...",
+    "release": "Cancel rental",
+    "deleteOwn": "Delete own proxy",
+    "quota": "Official IPs included in plan: {quota} ({used} used)",
+    "quotaExtra": "; extra IPs are paid with credits, charged every 30 days with auto-renewal",
+    "mktTag": "IMT official · clean native IP inventory",
+    "mktTitle": "Dedicated native residential & 4G mobile IPs built for social risk control",
+    "mktDesc1": "Facebook, Instagram, Threads, TikTok and Dcard are extremely strict on datacenter IPs.",
+    "mktDesc2": "IMT supplies 100% clean native home broadband and real mobile base stations — 1:1 dedicated, no technical setup, rent and use in one click!",
+    "feat1": "100% native residential broadband",
+    "feat2": "1:1 dedicated",
+    "feat3": "Real 4G/5G mobile base stations",
+    "feat4": "No Termux/router setup",
+    "kindHomeBb": "🏠 Home static broadband",
+    "kindMobile5g": "📱 4G/5G mobile",
+    "leasedByMe": "Rented by you",
+    "available": "Available now",
+    "leasedOut": "Rented out",
+    "carrier": "Carrier (ISP)",
+    "twBb": "Taiwan native broadband",
+    "nodeLoc": "Node location",
+    "twLocal": "Taiwan local",
+    "latencyGrade": "Latency",
+    "lowLatency": "(ultra-low latency)",
+    "tenantQuota": "Dedicated quota",
+    "oneTenant": "1 dedicated customer ({cur}/{max})",
+    "offNoteDefault": "Clean native residential IP tested by IMT, with very high algorithmic trust — the top choice for warming up main accounts.",
+    "leasePlan": "Rental plan (30 days dedicated)",
+    "perMonth": "/ month",
+    "creditsPer30": "≈ {n} credits / 30 days",
+    "inPool": "In your pool (view)",
+    "activating": "Activating dedicated IP...",
+    "claimFree": "🎁 Claim plan-included IP",
+    "rentWithCredits": "⚡ Rent for {n} credits",
+    "full": "🔒 Fully booked",
+    "adminPortal": "👑 Platform admin portal",
+    "adminTitle": "IMT official rentable IP inventory",
+    "adminDesc": "Admins can enter, price and maintain official proxy servers here. Listed nodes appear immediately in the \"🏢 Official native IP rental market\" for all customers to rent in one click.",
+    "invList": "Official rentable IP inventory",
+    "invCount": "{n} official nodes",
+    "thName": "Node name / type",
+    "thHost": "Host (Host:Port)",
+    "thProto": "Protocol / latency",
+    "thIsp": "Carrier (ISP) / city",
+    "thPrice": "Monthly fee (TWD)",
+    "thQuota": "Tenants",
+    "thStatus": "Status",
+    "thActions": "Actions",
+    "kHome": "🏠 Home native",
+    "kMobile": "📱 4G mobile",
+    "kBiz": "🏢 Commercial residential",
+    "userLabel": "User: {name}",
+    "local": "Local",
+    "stAvail": "Available",
+    "stRented": "Rented out",
+    "stMaint": "Maintenance",
+    "editPricing": "Edit pricing & info",
+    "unlistDelete": "Unlist & delete",
+    "warmTitle": "AI human-like 14-day progressive warm-up",
+    "warmDesc": "Social algorithms closely watch new accounts in their first two weeks. With a dedicated residential IP plus simulated human scrolling and social interactions each day, the ban-prevention rate reaches 99.4%.",
+    "warming": "AI warm-up running...",
+    "warmAll": "⚡ Run today's warm-up for all",
+    "addAcc": "Add matrix account",
+    "ph1": "Stage 1: Silent lurking",
+    "ph1d": "Log in and browse randomly for 15-30 minutes to build a device fingerprint — no posts, no DMs — to avoid new-account radar.",
+    "ph2": "Stage 2: Light interaction",
+    "ph2d": "Browse industry topics, like 3-5 posts, follow quality official pages and watch videos to build real-person interest signals.",
+    "ph3": "Stage 3: Social integration",
+    "ph3d": "Join target groups/boards; AI writes one positive comment to blend into discussions naturally and boost account weight.",
+    "ph4": "Stage 4: Mature publishing",
+    "ph4d": "At 85%+ health, Plan A (Copilot) and Plan B (auto publishing) matrix marketing are unlocked!",
+    "accMonitor": "Matrix account monitor",
+    "mature": "Mature",
+    "warmDay": "Warm-up Day {n}",
+    "accHealth": "Account health:",
+    "boundProxy": "Bound proxy:",
+    "defaultProxyName": "Native residential IP",
+    "todayTasks": "Today's tasks:",
+    "times": "{a} / {b} times",
+    "runToday": "Run today's warm-up",
+    "liveLog": "Live warm-up & anti-ban activity log",
+    "keepN": "Latest {n} entries",
+    "account": "Account",
+    "campTitle": "Ad target & industry input",
+    "quickSample": "Quick samples:",
+    "sample1": "🌴 Da Nang private car tour",
+    "sample2": "♨️ Yilan hot-spring villa",
+    "fIndustry": "Industry / ad target *",
+    "fIndustryPh": "e.g. Da Nang car tours, villa homestays, Korean-style womenswear...",
+    "fProduct": "Core product & unique selling points *",
+    "fProductPh": "e.g. brand-new 7-seater, bilingual driver, no hidden fees...",
+    "fAudience": "Target audience",
+    "fAudiencePh": "e.g. families aged 25-45, backpackers, business trips...",
+    "fOffer": "Promo hook / early-bird offer",
+    "fOfferPh": "e.g. 10% early-bird discount, free SIM card, free trip consultation...",
+    "fCta": "Call to action (CTA) / link / LINE ID",
+    "fCtaPh": "e.g. LINE official account @danang_tour, phone or booking URL...",
+    "targetPlatforms": "Target platforms:",
+    "generating": "AI radar scanning and generating anti-ban copy...",
+    "startRadar": "🎯 Start AI group radar & generate anti-ban copy",
+    "radar": "AI target group radar",
+    "radarSub": "Precise traffic pool discovery",
+    "strictHigh": "Strict review",
+    "strictMed": "Moderate review",
+    "strictLow": "Open",
+    "strategy": "Suggested strategy: ",
+    "previewGroup": "Preview group",
+    "planAPost": "Plan A: Post manually ↗",
+    "copyLib": "Anti-ban copy matrix ({n} variants)",
+    "copyLibDesc": "Each variant uses a different audience angle and a unique hash fingerprint to avoid platform text-matching risk control.",
+    "planB": "Plan B: Matrix auto-scheduled posting",
+    "hash": "Anti-dup hash:",
+    "copiedShort": "Copied",
+    "copyAll": "Copy full text",
+    "planAMode": "Plan A: Human Copilot mode",
+    "planAModeDesc": "A person clicks \"Plan A: Post manually ↗\" in the group list; the system copies unique copy to the clipboard and opens the group post box — zero ban risk.",
+    "planBDesc": "For mature (Day 12+) accounts only: click the button above to distribute copy variants across accounts and dedicated proxy IPs, posting in staggered batches unattended.",
+    "addNode": "Add proxy IP node",
+    "single": "Single proxy",
+    "bulk": "Bulk import (ip:port:user:pass)",
+    "pasteList": "Paste proxy list (one per line):",
+    "nodeName": "Node name",
+    "proxyType": "Proxy type",
+    "optHome": "🏠 Home static (cable/telecom)",
+    "optResi": "🏢 Commercial static residential (IPRoyal/Smartproxy)",
+    "optMobile": "📱 4G/5G mobile proxy",
+    "fHost": "IP / Host *",
+    "hostPh": "e.g. 211.75.142.88",
+    "fPort": "Port *",
+    "fUser": "Username (optional)",
+    "fPass": "Password (optional)",
+    "fCountry": "Country code",
+    "fCity": "City / region",
+    "cityPh": "Yilan / Taipei / Da Nang",
+    "fIsp": "Carrier (ISP)",
+    "ispPh": "e.g. your cable provider",
+    "cancel": "Cancel",
+    "confirmAdd": "Add",
+    "editNode": "Edit proxy node",
+    "aliasPh": "e.g. My IPRoyal residential proxy",
+    "fAlias": "Proxy name / custom label *",
+    "fAliasHint": "(free to change, e.g. My IPRoyal proxy, phone 4G node)",
+    "fProtocol": "Protocol",
+    "hostPh2": "211.75.142.88 or geo.iproyal.com",
+    "ispPh2": "e.g. cable / telecom provider",
+    "fNotes": "Notes (optional)",
+    "notesPh": "e.g. dedicated to the main FB group account",
+    "saveChanges": "Save changes",
+    "addAccTitle": "Add social matrix account",
+    "fPlatform": "Platform *",
+    "optFb": "Facebook (group/page/profile)",
+    "optThreads": "Threads",
+    "optDcard": "Dcard boards",
+    "optTiktok": "TikTok short video",
+    "fAccName": "Account name / nickname *",
+    "accNamePh": "e.g. Da Nang travel expert - Hao",
+    "fHandle": "Account handle",
+    "fBindProxy": "Bound proxy IP (required for risk control) *",
+    "pickNode": "Choose a proxy node...",
+    "srcOfficial": "🏢 [Official] ",
+    "srcOwn": "👤 [Own] ",
+    "fWarmDay": "Current warm-up day (1-14)",
+    "warmDayHint": "Start new accounts at Day 1; long-used existing accounts can be set to Day 14 (mature).",
+    "addToMatrix": "Add to matrix",
+    "adminAddTitle": "Admin: add official rentable IP",
+    "adminAddDesc": "Nodes entered here are listed directly in the \"Official native IP rental market\" for customers to rent in one click",
+    "fNodeLabel": "Node name / label *",
+    "nodeLabelPh": "e.g. 🇹🇼 Taiwan native residential IP #2 (A+ anti-ban)",
+    "proxyTypeReq": "Proxy type *",
+    "optMobileSim": "📱 4G/5G mobile (real SIM)",
+    "optResiBw": "🏢 Commercial static residential (high bandwidth)",
+    "fProtocolReq": "Protocol *",
+    "fConnUser": "Connection username (optional)",
+    "fConnPass": "Connection password (optional)",
+    "fCountryCity": "Country / city",
+    "cityPh3": "Yilan / Taipei",
+    "fLatency": "Latency (ms)",
+    "fPrice": "Monthly price for customers (NTD) *",
+    "fMaxTenants": "Max tenants (1 = dedicated) *",
+    "fHighlights": "Highlights / notes",
+    "highlightsPh": "e.g. native fixed home broadband IP, very high trust, most resistant to Meta / Threads risk control",
+    "confirmList": "List for rent",
+    "adminEditTitle": "Admin: edit official IP inventory & pricing",
+    "fNodeNameReq": "Node name *",
+    "fHostShort": "Host *",
+    "fMonthly": "Monthly price (NTD) *",
+    "fLeaseStatus": "Rental status *",
+    "optAvail": "🟢 Available",
+    "optRented": "🔴 Rented out",
+    "optMaint": "🟡 Maintenance",
+    "fFeatureNotes": "Notes",
+    "s1": {
+      "industry": "Central Vietnam (Da Nang / Hoi An / Ba Na Hills) luxury private car hire with local Chinese-speaking assistants",
+      "product": "Brand-new 7–16 seat vans, bilingual drivers, fast-track airport transfers, custom itineraries with full insurance",
+      "audience": "Taiwanese family trips, independent backpackers, company outings and business delegations",
+      "offer": "Book 14 days ahead for 10% early-bird off, plus unlimited 5G SIMs for the group and a seafood restaurant discount",
+      "cta": "LINE official: @danang_tour or book on our website"
+    },
+    "s2": {
+      "industry": "Family-friendly whole-house hot spring homestay in Jiaoxi, Yilan",
+      "product": "Detached house with Japanese garden, private hot & cold springs, mahjong table, kids' ball pit, BBQ courtyard",
+      "audience": "Multi-generation families, friends booking the whole house, weekend getaways",
+      "offer": "Weekday stays include a fresh organic breakfast basket and a local hot-spring gift box",
+      "cta": "Ask us on LINE: @yilan_hotspring"
+    }
+  },
+  "MktCampaignsPage": {
+    "title": "Campaign Center",
+    "subtitle": "Plan, create and track offline, online and hybrid campaigns in one place"
+  },
+  "Feedback": {
+    "title": "Feedback",
+    "thanks": "Sent — thanks for your feedback!",
+    "type": {
+      "bug": "🐛 Bug report",
+      "ai_error": "🤖 Wrong AI answer",
+      "feature": "✨ Feature request",
+      "text_change": "🎨 UI / wording change"
+    },
+    "titlePh": "Title (short summary)",
+    "descPh": "Describe what happened and what you expected",
+    "submit": "Submit"
+  },
+  "Skills": {
+    "viral-video-copywriting": {
+      "label": "Viral short-video script",
+      "description": "Hooks, storyboard script and voice-over for short videos (Reels / Douyin / Shorts).",
+      "fields": {
+        "topic": {
+          "label": "Video topic",
+          "placeholder": "e.g. 3 quick tips to organize a small kitchen"
+        },
+        "product": {
+          "label": "Featured product / service"
+        },
+        "duration": {
+          "label": "Video length (seconds)"
+        },
+        "style": {
+          "label": "Style",
+          "options": {
+            "energetic": "Fast-paced, energetic",
+            "storytelling": "Storytelling",
+            "educational": "Educational tips"
+          }
+        }
+      }
+    },
+    "ecommerce-copywriter": {
+      "label": "E-commerce product copy",
+      "description": "Turns product info into ready-to-list descriptions (selling points, specs, use cases).",
+      "fields": {
+        "productName": {
+          "label": "Product name",
+          "placeholder": "e.g. Stainless insulated tumbler 500ml"
+        },
+        "features": {
+          "label": "Selling points / specs",
+          "placeholder": "Material, capacity, insulation hours, use cases…"
+        },
+        "audience": {
+          "label": "Target audience",
+          "placeholder": "e.g. commuters, gym-goers"
+        },
+        "tone": {
+          "label": "Tone",
+          "options": {
+            "professional": "Professional & trustworthy",
+            "warm": "Friendly & warm",
+            "playful": "Playful & fun"
+          }
+        }
+      }
+    },
+    "product-marketing-copywriter": {
+      "label": "Promotional copy",
+      "description": "Multiple versions of marketing copy and ad headlines for ads / promotions.",
+      "fields": {
+        "product": {
+          "label": "Product / service"
+        },
+        "campaign": {
+          "label": "Campaign / theme",
+          "placeholder": "e.g. Mother's Day 20% off, limited time"
+        },
+        "platform": {
+          "label": "Ad platform",
+          "options": {
+            "google": "Google Search Ads"
+          }
+        },
+        "usp": {
+          "label": "Key advantage",
+          "placeholder": "How you differ from competitors, limited-time offers…"
+        }
+      }
+    },
+    "article-illustrator": {
+      "label": "Auto article illustrations",
+      "description": "Analyzes an article, writes an image prompt per section and generates the images.",
+      "fields": {
+        "article": {
+          "label": "Article content",
+          "placeholder": "Paste the full article…"
+        },
+        "numImages": {
+          "label": "Number of images"
+        },
+        "aspectRatio": {
+          "label": "Aspect ratio",
+          "options": {
+            "16:9": "16:9 landscape",
+            "1:1": "1:1 square",
+            "9:16": "9:16 portrait"
+          }
+        }
+      }
+    },
+    "market-research-reports": {
+      "label": "Market research report",
+      "description": "Structured market / competitor analysis report.",
+      "fields": {
+        "topic": {
+          "label": "Research topic / industry",
+          "placeholder": "e.g. Taiwan pour-over coffee equipment market"
+        },
+        "competitors": {
+          "label": "Main competitors",
+          "placeholder": "Known competing brands (optional)"
+        },
+        "focus": {
+          "label": "Focus",
+          "options": {
+            "overview": "Market overview",
+            "competitor": "Competitor analysis",
+            "entry": "Entry strategy"
+          }
+        }
+      }
+    },
+    "product-video-creator": {
+      "label": "Product video planner",
+      "description": "Product video storyboard, video-generation prompts and voice-over script, plus 1 key visual reference image.",
+      "fields": {
+        "product": {
+          "label": "Product name"
+        },
+        "features": {
+          "label": "Selling points / specs"
+        },
+        "duration": {
+          "label": "Video length (seconds)"
+        },
+        "aspectRatio": {
+          "label": "Aspect ratio",
+          "options": {
+            "9:16": "9:16 portrait (short video)",
+            "16:9": "16:9 landscape",
+            "1:1": "1:1 square"
+          }
+        }
+      }
+    },
+    "ecommerce-video-marketing": {
+      "label": "Shoppable short-video script",
+      "description": "Sales short-video script: voice-over, pacing, CTA and platform recommendations.",
+      "fields": {
+        "product": {
+          "label": "Product / service"
+        },
+        "sellingPoints": {
+          "label": "Key selling points / offer"
+        },
+        "platform": {
+          "label": "Platform",
+          "options": {
+            "tiktok": "Douyin / TikTok",
+            "shopee": "Shopee Live / video"
+          }
+        }
+      }
+    },
+    "tts-voice-synthesis": {
+      "label": "AI voice-over",
+      "description": "Converts a script into a voice-over and returns a downloadable audio file.",
+      "fields": {
+        "text": {
+          "label": "Voice-over script",
+          "placeholder": "Paste the text to voice…"
+        },
+        "voice": {
+          "label": "Voice",
+          "options": {
+            "default": "Default",
+            "female": "Female",
+            "male": "Male"
+          }
+        }
+      }
+    },
+    "ppt-generator": {
+      "label": "Presentation generator (PPTX)",
+      "description": "Plans slides from a topic and produces a downloadable .pptx file.",
+      "fields": {
+        "topic": {
+          "label": "Presentation topic",
+          "placeholder": "e.g. 2026 brand marketing strategy"
+        },
+        "context": {
+          "label": "Key points / supporting material",
+          "placeholder": "Points, data and sections to cover…"
+        },
+        "numSlides": {
+          "label": "Number of slides"
+        },
+        "audience": {
+          "label": "Audience",
+          "placeholder": "e.g. managers, clients, investors"
+        }
+      }
+    },
+    "social-account-coach": {
+      "label": "Social account growth coach",
+      "description": "Analyzes your positioning and audience, then gives post ideas, a growth diagnosis and actionable to-dos.",
+      "fields": {
+        "platform": {
+          "label": "Platform",
+          "options": {
+            "xiaohongshu": "Xiaohongshu"
+          }
+        },
+        "niche": {
+          "label": "Account niche / topic",
+          "placeholder": "e.g. home organizing tips, personal finance"
+        },
+        "recent": {
+          "label": "Recent content or stats (optional)",
+          "placeholder": "Paste a few recent posts, follower count, engagement rate… for a sharper analysis"
+        },
+        "goal": {
+          "label": "Current goal",
+          "options": {
+            "growth": "Followers / reach",
+            "engagement": "Engagement / comments",
+            "conversion": "Sales / monetization"
+          }
+        }
+      }
+    },
+    "viral-content-planner": {
+      "label": "Viral content planner",
+      "description": "Plans highly shareable topics with a growth-hacking mindset: hooks, retention structure and share triggers.",
+      "fields": {
+        "topic": {
+          "label": "Content area / topic",
+          "placeholder": "e.g. budget food reviews, career growth"
+        },
+        "format": {
+          "label": "Content format",
+          "options": {
+            "short_video": "Short video",
+            "long_video": "Long video",
+            "thread": "Image post / thread"
+          }
+        },
+        "audience": {
+          "label": "Target audience",
+          "placeholder": "e.g. office workers aged 25-35"
+        },
+        "goal": {
+          "label": "Distribution goal",
+          "placeholder": "e.g. followers, brand awareness, traffic"
+        }
+      }
+    },
+    "kol-persona-writer": {
+      "label": "Social persona copy",
+      "description": "Writes on-brand social posts that match your voice samples and persona.",
+      "fields": {
+        "persona": {
+          "label": "Persona / voice",
+          "placeholder": "e.g. a calm, warm finance blogger who talks like a friend, never preachy — or paste a few past posts as style samples"
+        },
+        "topic": {
+          "label": "What this post is about",
+          "placeholder": "e.g. sharing a budgeting app, promoting a new course"
+        },
+        "platform": {
+          "label": "Platform",
+          "options": {
+            "xiaohongshu": "Xiaohongshu"
+          }
+        }
+      }
+    },
+    "live-stream-copywriter": {
+      "label": "Livestream copy",
+      "description": "Stream announcements, live voice-over lines and fan interaction scripts with a showy, sales-ready feel.",
+      "fields": {
+        "persona": {
+          "label": "Host / nickname & style",
+          "placeholder": "e.g. nickname Fan, lively and dramatic, playful with fans"
+        },
+        "occasion": {
+          "label": "Use",
+          "options": {
+            "preview": "Stream announcement",
+            "voiceover": "Short-video voice-over",
+            "interaction": "Live interaction / comment replies",
+            "post": "Status post"
+          }
+        },
+        "points": {
+          "label": "Key points this time",
+          "placeholder": "e.g. live at 8pm tonight playing a new game, merch giveaway, thanks to fans"
+        }
+      }
+    }
+  },
+  "SkillRunner": {
+    "loadFailed": "Failed to load the expert list",
+    "trainNeedPro": "Training an expert requires PRO or above",
+    "addFailed": "Failed to add",
+    "networkError": "Connection failed",
+    "uploadFailed": "File upload failed",
+    "noText": "Couldn't extract text from this file (docx / xlsx / csv / txt / pdf only)",
+    "fileFailed": "File processing failed",
+    "fillRequired": "Please fill in: {field}",
+    "insufficient": "Not enough credits — this run needs about {n}",
+    "runFailed": "Run failed",
+    "balance": "Balance {n} credits",
+    "category": {
+      "copywriting": "Copywriting",
+      "video": "Short video",
+      "illustration": "Illustration",
+      "research": "Research",
+      "audio": "Audio",
+      "presentation": "Presentation",
+      "social": "Social"
+    },
+    "fromCredits": "From {n} credits",
+    "ownKnowledge": "Built-in knowledge base",
+    "loading": "Loading…",
+    "back": "Back",
+    "generating": "Generating…",
+    "run": "Run",
+    "result": "Result",
+    "charged": "{n} credits used",
+    "copied": "Copied",
+    "copy": "Copy",
+    "trainTitle": "Train this expert",
+    "trainHint": "Add links / text / files — used automatically when it runs",
+    "trainLocked": "Training a dedicated knowledge base is a PRO-and-above feature. Upgrade to let this expert learn from the viral examples, styles and material you upload.",
+    "srcType": {
+      "url": "Link",
+      "file": "File",
+      "text": "Text"
+    },
+    "chars": "{n} chars",
+    "tab": {
+      "url": "URL",
+      "text": "Paste text",
+      "file": "Upload file"
+    },
+    "urlPh": "https://… (article / post / web page)",
+    "namePh": "Name for this knowledge (optional)",
+    "textPh": "Paste viral examples, methods, style samples…",
+    "adding": "Adding…",
+    "addKnowledge": "Add knowledge",
+    "processing": "Processing…",
+    "chooseFile": "Choose file",
+    "fileHint": "Supports docx / xlsx / csv / txt / pdf; text is extracted automatically"
+  },
+  "CompanyProfile": {
+    "noPermission": "Company admin or marketing permission is required to edit the company profile",
+    "tab": {
+      "basic": "Basic info",
+      "brand": "Brand",
+      "products": "Products",
+      "stores": "Stores",
+      "files": "Assets"
+    },
+    "legalName": "Legal company name",
+    "legalNameHint": "Registered name — set the brand name in the Brand tab",
+    "legalNamePh": "e.g. XX Co., Ltd.",
+    "pleaseSelect": "Please select",
+    "industry": {
+      "label": "Industry",
+      "tech": "Tech / software",
+      "manufacturing": "Manufacturing",
+      "retail": "Retail / e-commerce",
+      "finance": "Financial services",
+      "health": "Healthcare",
+      "food": "Food & beverage / consumer",
+      "education": "Education & training",
+      "realEstate": "Real estate",
+      "logistics": "Logistics / transport",
+      "advertising": "Advertising / marketing",
+      "hospitality": "Hotels / guesthouses",
+      "other": "Other"
+    },
+    "employees": {
+      "label": "Employees",
+      "e1": "1-10",
+      "e2": "11-50",
+      "e3": "51-200",
+      "e4": "201-500",
+      "e5": "501-1000",
+      "e6": "1000+"
+    },
+    "capital": "Registered capital",
+    "capitalPh": "e.g. NT$10 million",
+    "founded": "Year founded",
+    "foundedPh": "e.g. 2010",
+    "address": "Company address",
+    "addressPh": "City + district + street",
+    "basicHint": "Website, target audience, selling points and brand story go in the Brand tab; products and stores have their own tabs.",
+    "saveBasic": "Save basic info",
+    "saved": "Saved",
+    "saveFailed": "Save failed",
+    "fileCat": {
+      "logo": "Logo / brand mark",
+      "image": "Product / lifestyle images",
+      "document": "Company profile / catalog",
+      "faq": "FAQ / Q&A data"
+    },
+    "extracted": "Extracted",
+    "uploadFile": "Upload file",
+    "filesHint": "Text is extracted automatically from Excel / Word / PDF for AI marketing and customer-service replies. Uploads and deletions save automatically.",
+    "tone": {
+      "formal": "Professional / formal",
+      "young": "Lively / youthful",
+      "warm": "Warm / friendly",
+      "innovative": "Innovative / cutting-edge",
+      "luxury": "Luxury / premium",
+      "friendly": "Approachable / down-to-earth"
+    },
+    "storeFeature": {
+      "wifi": "Free Wi-Fi",
+      "outlets": "Power outlets",
+      "privateRoom": "Private rooms",
+      "photoWall": "Photo wall",
+      "petFriendly": "Pet-friendly",
+      "nearMrt": "Near metro station",
+      "outdoor": "Outdoor seating",
+      "accessible": "Wheelchair accessible"
+    },
+    "productTag": {
+      "new": "New arrival",
+      "bestseller": "Best seller",
+      "signature": "Signature drink",
+      "seasonal": "Seasonal",
+      "photogenic": "Photogenic",
+      "light": "Low-calorie",
+      "chefPick": "Chef's pick"
+    },
+    "defaultCategory": "Drinks"
+  },
+  "WorkImport": {
+    "title": {
+      "label": "Task title",
+      "example": "Finish Q3 menu R&D testing"
+    },
+    "status": {
+      "label": "Status note",
+      "example": "In progress"
+    },
+    "done": {
+      "label": "Done?",
+      "example": "No"
+    },
+    "deadline": {
+      "label": "Deadline"
+    }
+  },
+  "FinancePageImport": {
+    "date": {
+      "label": "Date"
+    },
+    "type": {
+      "label": "Type",
+      "example": "expense"
+    },
+    "category": {
+      "label": "Category",
+      "example": "Purchasing"
+    },
+    "amount": {
+      "label": "Amount"
+    },
+    "description": {
+      "label": "Summary",
+      "example": "Office supplies purchase"
+    },
+    "account_name": {
+      "label": "Account name",
+      "example": "Petty cash"
+    },
+    "pay_coll_name": {
+      "label": "Payee",
+      "example": "John Chen"
+    }
+  },
+  "FinanceSubjects": {
+    "hint": "Click an account to filter the entries on the right",
+    "allSubjects": "📁 All accounts",
+    "prevMonth": "‹ Prev month",
+    "nextMonth": "Next month ›",
+    "jumpThisMonth": "Jump to this month",
+    "thisMonth": "This month",
+    "settings": "Account settings",
+    "selected": "Selected",
+    "cls": {
+      "asset": "Assets",
+      "liability": "Liabilities",
+      "income": "Income",
+      "expense": "Expenses"
+    },
+    "other": "Other",
+    "year": "Year",
+    "mgmtDesc": "Maintain each class's groups (folders), account names, opening balances and recurrence type.",
+    "subjectNamePh": "e.g. Safe, Creamer, DT VNPAY",
+    "parentPh": "e.g. Cash, Drink ingredients, Other income",
+    "mgmtTitle": "Account settings (master data)",
+    "parentName": "Group name (folder / parent)",
+    "openingBalance": "Opening balance",
+    "subjectNameReq": "Account name *",
+    "errName": "Please enter an account name",
+    "noMatch": "No matching accounts",
+    "saveFailed": "Save failed",
+    "deleteFailed": "Delete failed",
+    "addSubject": "New account",
+    "styleLabel": "Type",
+    "saveChanges": "Save changes",
+    "create": "Create",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "close": "Close",
+    "monthN": "Month {n}",
+    "searchPh": "Search {cls} groups or account names...",
+    "editSubject": "Edit account: {name}",
+    "newSubjectOf": "New {cls} account",
+    "confirmDelete": "Delete account \"{name}\"? If it has linked transactions, reports may be affected.",
+    "styleRegular": "Recurring",
+    "styleIrregular": "Non-recurring",
+    "openingBalanceLabel": "Opening balance:",
+    "sortLabel": "Order:",
+    "total": "{n} accounts"
+  },
+  "FinanceMdb": {
+    "reLogin": "Please sign in again",
+    "uploadFailed": "Upload failed: {msg}",
+    "parseFailed": "Failed to parse",
+    "importFailed": "Import failed",
+    "zTitle": "Import ledger & accounts (.mdb)",
+    "zDesc": "Upload the bookkeeping database; the system builds the account tree and imports transactions without duplicates.",
+    "parsing": "Parsing database…",
+    "chooseMdb": "Click to choose a .mdb file",
+    "supportsMdb": "Supports MymoneyData.mdb bookkeeping databases",
+    "bookName": "Ledger: ",
+    "dateRange": "Date range: ",
+    "importableRows": "Importable entries",
+    "rowsN": "{n}",
+    "autoSubjects": "Accounts to build",
+    "itemsN": "{n}",
+    "totalIncome": "Total income",
+    "totalExpense": "Total expense",
+    "writeMode": "Write mode (safeguards & overwrite)",
+    "modeAppend": "Append new only (recommended)",
+    "modeAppendDesc": "De-duplicates by voucher number: existing transactions are skipped and only new ones are added.",
+    "modeClean": "Clear and re-import (clean overwrite)",
+    "modeCleanDesc": "Clears previous MDB data before writing everything again, so deleted vouchers don't linger. Manual entries are not affected.",
+    "alignTree": "Build & align account tree ({n} accounts)",
+    "alignTreeDesc": "Using <code>ITEM_DATA</code> in the MDB, the system builds the asset, liability, income and expense account tree with opening balances, and maps all payment accounts.",
+    "detected": "Found {e} format errors and {w} possible year typos",
+    "viewErrors": "View error details",
+    "viewErrorsHint": "Click \"View error details\" to see the voucher number, date, item and reason for each problem so you can check and fix it.",
+    "allOk": "All entries passed the format check.",
+    "rechoose": "Choose again",
+    "writing": "Writing to database…",
+    "confirmClean": "Clear old data and re-import",
+    "confirmAppend": "Import and build accounts",
+    "done": "Import complete!",
+    "importedN": "Imported <b>{n}</b> transactions",
+    "clearedN": " (cleared {n} previous MDB rows for a clean re-import)",
+    "skippedN": ", skipped {n}",
+    "createdSummary": "; built/updated <b>{s}</b> accounts in the tree and created <b>{a}</b> cash accounts.",
+    "issuesN": "This import has {n} errors or warnings",
+    "viewErrorsN": "View errors ({n})",
+    "finish": "Done — go to Cashier",
+    "loadLogsFailed": "Failed to load import history",
+    "networkError": "Connection error",
+    "revertFailed": "Undo failed",
+    "revertedN": "Batch undone ({n} vouchers removed)",
+    "typeDelete": "Type DELETE to confirm",
+    "clearFailed": "Clear failed",
+    "clearedAllN": "All MDB history cleared ({n} vouchers removed)",
+    "bTitle": "MDB import history & batch undo",
+    "bDesc": "If imported data is wrong or you want to reload it, safely undo a whole batch in one click (manual entries are kept 100%).",
+    "bookCode": "Ledger code: <b>{book}</b> ({n} imports)",
+    "clearAllBtn": "Clear all MDB-imported entries",
+    "loadingLogs": "Loading import batches…",
+    "noLogs": "No MDB imports yet",
+    "noLogsHint": "Use \"Import ledger file (.mdb)\" on the Cashier page to import a bookkeeping database.",
+    "statusReverted": "Reverted",
+    "statusActive": "Active",
+    "revertBtn": "Undo this batch",
+    "importedRows": "Imported: ",
+    "builtSubjects": "Accounts built: ",
+    "notRecorded": "Not recorded",
+    "revertedAt": "This batch was undone on {at}; all its entries were removed.",
+    "closeWindow": "Close",
+    "revertConfirmTitle": "Undo this MDB batch?",
+    "revertConfirmBody": "You are about to undo <b>{file}</b>, imported on <b>{at}</b>.",
+    "revertWillDelete": "All <b>{n}</b> vouchers in this batch will be deleted.",
+    "manualKept": "All cashier entries you created manually <b>are kept and not affected</b>.",
+    "confirmRevert": "Undo and remove",
+    "cancel": "Cancel",
+    "clearAllTitle": "Warning: clear all MDB-imported transactions",
+    "clearAllBody": "This removes <b>every transaction imported from MDB</b> (all batches) from the cash book.",
+    "irreversible": "This cannot be undone — make sure you want a completely clean ledger.",
+    "manualAndTreeKept": "Manual entries and the existing account tree are kept.",
+    "typeDeleteHint": "To avoid accidents, type <b>DELETE</b> below to confirm:",
+    "typeDeletePh": "Type DELETE",
+    "confirmClearAll": "Clear all MDB vouchers",
+    "rpTitle": "=== MDB import diagnostic report ===",
+    "rpBook": "Ledger: {book} | File: {file}",
+    "rpCounts": "Errors: {e} | Warnings: {w}",
+    "rpGenerated": "Generated: {at}",
+    "rpItem": "[#{i}] Voucher MAKE_NO: {no} | Date: {date} | Severity: {sev} ({type})",
+    "sevError": "Error",
+    "sevWarning": "Warning",
+    "rpProblem": "Problem:",
+    "rpDesc": "Details:",
+    "rpFix": "Suggested fix:",
+    "rpRaw": "Raw entries:",
+    "rpRow": "Class:{cls} | Item:{item} | In:{inn} | Out:{out} | Note:{note}",
+    "eTitle": "MDB import issues & error details",
+    "eBook": "Ledger: {book}",
+    "eDesc": "Lists the voucher number, items involved and reason for each problem entry so you can check and fix it.",
+    "fAll": "All ({n})",
+    "fError": "Errors ({n})",
+    "fWarning": "Warnings / likely typos ({n})",
+    "reportCopied": "Report copied",
+    "copyReport": "Copy diagnostic report",
+    "eSearchPh": "Search voucher no. (MAKE_NO), date, item, note...",
+    "eNone": "No matching issues",
+    "eNoneHint": "All entries in this file can be imported normally",
+    "voucherNo": "Voucher #{no}",
+    "dateN": "Date: {date}",
+    "skipped": "Skipped",
+    "importedCheck": "Imported (please check)",
+    "collapseRaw": "Hide raw entries",
+    "viewRaw": "Show raw entries",
+    "suggestion": "Suggested action:",
+    "rawInfo": "Raw MDB paired entries ({n} rows):",
+    "colClass": "Class",
+    "colItem": "Item",
+    "colIn": "In",
+    "colOut": "Out",
+    "colNote": "Note",
+    "eFooter": "{n} items (errors: {e}, warnings: {w})",
+    "err": {
+      "invalidCount": {
+        "title": "Incomplete entry ({n} rows, expected a pair of 2)",
+        "desc": "Every double-entry transaction needs a debit and a credit row. It has {n} rows — one side may have been deleted in the original software, or the data is corrupted.",
+        "fix": "Check that voucher #{no} is complete."
+      },
+      "badDate": {
+        "title": "Unreadable date (\"{date}\")",
+        "desc": "The entry date isn't in YYYY/MM/DD format, so the posting date can't be determined.",
+        "fix": "Open voucher #{no} and re-enter the date."
+      },
+      "yearRange": {
+        "title": "Year looks like a typo ({year})",
+        "desc": "Items \"{a}\" and \"{b}\", note \"{note}\", date \"{date}\". It was still imported, but please check it.",
+        "fix": "Correct the year in the original file or in the system."
+      },
+      "noAsset": {
+        "title": "Entry has no asset row (classes \"{ca}\" and \"{cb}\")",
+        "desc": "One row is \"{ca} - {a}\" and the other \"{cb} - {b}\"; with no asset (cash) account, the money flow can't be determined.",
+        "fix": "Check voucher #{no} and set one row to the correct payment account."
+      },
+      "zeroTransfer": {
+        "title": "Transfer amount is 0",
+        "desc": "The transfer from \"{from}\" to \"{to}\" is 0 and was skipped.",
+        "fix": "If this is a real transfer, add the amount."
+      },
+      "unknownClass": {
+        "title": "Not an income/expense class (\"{cls}\")",
+        "desc": "Item \"{item}\" has class \"{cls}\", which isn't standard income or expense, so it can't be posted automatically.",
+        "fix": "Check that this account is set up correctly."
+      },
+      "zeroAmount": {
+        "title": "Amount is 0",
+        "desc": "Item \"{item}\" has an amount of 0 and was skipped.",
+        "fix": "If this is a real income/expense, add the amount."
+      }
+    }
+  },
+  "HrImport": {
+    "employee": {
+      "name": {
+        "label": "Name",
+        "example": "John Wang"
+      },
+      "phone": {
+        "label": "Phone"
+      },
+      "department": {
+        "label": "Department"
+      },
+      "position": {
+        "label": "Job title",
+        "example": "Store staff"
+      },
+      "staff_category": {
+        "label": "Full/part-time"
+      },
+      "employment_type": {
+        "label": "Employment type"
+      },
+      "hire_date": {
+        "label": "Start date"
+      },
+      "base_salary": {
+        "label": "Base salary"
+      },
+      "hourly_rate": {
+        "label": "Hourly rate"
+      },
+      "store": {
+        "label": "Store"
+      },
+      "attendance_no": {
+        "label": "Attendance ID"
+      },
+      "bank_account": {
+        "label": "Bank account"
+      },
+      "bank_name": {
+        "label": "Bank"
+      },
+      "id_number": {
+        "label": "ID number"
+      },
+      "status": {
+        "label": "Status"
+      },
+      "notes": {
+        "label": "Notes"
+      },
+      "_meta": {
+        "title": "Batch import / update employees",
+        "description": "Supports .xlsx, .xls and .csv files. Existing employees (same name and ID number) are updated; others are added.",
+        "template": "Employee template",
+        "sheet": "Employees"
+      }
+    },
+    "payroll": {
+      "name": {
+        "label": "Employee name",
+        "example": "John Wang"
+      },
+      "year": {
+        "label": "Year"
+      },
+      "month": {
+        "label": "Month"
+      },
+      "base_salary": {
+        "label": "Base salary"
+      },
+      "allowances": {
+        "label": "Allowances"
+      },
+      "deductions": {
+        "label": "Deductions"
+      },
+      "bonus": {
+        "label": "Bonus"
+      },
+      "notes": {
+        "label": "Notes"
+      },
+      "_meta": {
+        "title": "Batch import / update monthly payroll",
+        "description": "Supports .xlsx, .xls and .csv files. An employee's existing payroll for that month is overwritten; missing employees are created automatically.",
+        "template": "Payroll template",
+        "sheet": "Payroll"
+      }
+    },
+    "candidate": {
+      "name": {
+        "label": "Name",
+        "example": "David Lee"
+      },
+      "phone": {
+        "label": "Phone"
+      },
+      "position": {
+        "label": "Position applied",
+        "example": "Drink maker"
+      },
+      "store": {
+        "label": "Store applied"
+      },
+      "staff_category": {
+        "label": "Full/part-time"
+      },
+      "stage": {
+        "label": "Stage"
+      },
+      "birthday": {
+        "label": "Birthday"
+      },
+      "id_number": {
+        "label": "ID number"
+      },
+      "_meta": {
+        "title": "Batch import / update candidates",
+        "description": "Supports .xlsx, .xls and .csv files. Matching phone, email or ID number updates the candidate; otherwise a new one is added.",
+        "template": "Candidate template",
+        "sheet": "Candidates"
+      }
+    },
+    "evaluation": {
+      "name": {
+        "label": "Employee name",
+        "example": "John Wang"
+      },
+      "attendance_no": {
+        "label": "Attendance ID"
+      },
+      "year": {
+        "label": "Year"
+      },
+      "month": {
+        "label": "Month"
+      },
+      "bonus": {
+        "label": "Bonus"
+      },
+      "reward": {
+        "label": "Reward amount"
+      },
+      "penalty": {
+        "label": "Penalty deduction"
+      },
+      "score": {
+        "label": "Score"
+      },
+      "notes": {
+        "label": "Comments",
+        "example": "Good attendance, excellent performance"
+      },
+      "_meta": {
+        "title": "Batch import / update reviews, rewards & penalties",
+        "description": "Supports .xlsx, .xls and .csv files. Fill in the employee name or attendance ID.",
+        "template": "Review template",
+        "sheet": "Reviews"
+      }
+    },
+    "insurance": {
+      "name": {
+        "label": "Employee name",
+        "example": "John Wang"
+      },
+      "id_number": {
+        "label": "ID number"
+      },
+      "attendance_no": {
+        "label": "Attendance ID"
+      },
+      "insurance_required": {
+        "label": "Insurance required?"
+      },
+      "insurance_status": {
+        "label": "Insurance status"
+      },
+      "insurance_number": {
+        "label": "Insurance no."
+      },
+      "insurance_salary": {
+        "label": "Insured salary"
+      },
+      "_meta": {
+        "title": "Batch import / update insurance",
+        "description": "Supports .xlsx, .xls and .csv files. Matches by employee name, ID number or attendance ID to update insurance status, number and insured salary.",
+        "template": "Insurance template",
+        "sheet": "Insurance"
+      }
+    },
+    "leave": {
+      "name": {
+        "label": "Employee name",
+        "example": "John Wang"
+      },
+      "attendance_no": {
+        "label": "Attendance ID"
+      },
+      "leave_type": {
+        "label": "Leave type"
+      },
+      "start_date": {
+        "label": "Start date"
+      },
+      "end_date": {
+        "label": "End date"
+      },
+      "days": {
+        "label": "Days"
+      },
+      "reason": {
+        "label": "Reason",
+        "example": "Family matters"
+      },
+      "status": {
+        "label": "Approval status"
+      },
+      "notes": {
+        "label": "Notes"
+      },
+      "_meta": {
+        "title": "Batch import leave records",
+        "description": "Supports .xlsx, .xls and .csv files. Fill in the employee name or attendance ID.",
+        "template": "Leave template",
+        "sheet": "Leave"
+      }
+    }
+  },
+  "UnitsImport": {
+    "code": {
+      "label": "Unit code"
+    },
+    "name": {
+      "label": "Unit name"
+    },
+    "unit_type": {
+      "label": "Type"
+    },
+    "short_name": {
+      "label": "Short name"
+    },
+    "region": {
+      "label": "Region",
+      "example": "Ho Chi Minh City"
+    },
+    "base_hourly_rate": {
+      "label": "Base hourly rate"
+    },
+    "electricity_no": {
+      "label": "Electricity meter no."
+    },
+    "water_no": {
+      "label": "Water meter no."
+    },
+    "address": {
+      "label": "Address",
+      "example": "District 1, Ho Chi Minh City..."
+    },
+    "active": {
+      "label": "Active"
+    },
+    "_meta": {
+      "title": "Batch import / update units",
+      "description": "Supports .xlsx, .xls and .csv files. Units with a matching code are updated; others are added.",
+      "template": "Units template",
+      "sheet": "Units"
+    }
+  },
+  "AffairsImport": {
+    "title": {
+      "label": "Document title",
+      "example": "Store lease agreement — Zhongxiao branch"
+    },
+    "doc_type": {
+      "label": "Document type"
+    },
+    "store_code": {
+      "label": "Store code"
+    },
+    "counterparty": {
+      "label": "Counterparty / landlord",
+      "example": "Landlord David Wang"
+    },
+    "effective_date": {
+      "label": "Effective from"
+    },
+    "expiry_date": {
+      "label": "Expiry date"
+    },
+    "deposit": {
+      "label": "Deposit"
+    },
+    "monthly_rent": {
+      "label": "Monthly rent / fee"
+    },
+    "payment_day": {
+      "label": "Monthly payment day"
+    },
+    "notes": {
+      "label": "Notes",
+      "example": "Two months deposit; tenant pays utilities"
+    },
+    "_meta": {
+      "title": "Batch import licenses & leases",
+      "description": "Supports .xlsx, .xls and .csv files. Documents with a matching title are updated.",
+      "template": "Licenses and leases template",
+      "sheet": "Documents"
+    }
+  },
+  "RdLogsImport": {
+    "title": {
+      "label": "Log title",
+      "example": "Recipe flavor test notes"
+    },
+    "summary": {
+      "label": "Log content",
+      "example": "Sweetness down 5%, tea aroma clearly stronger..."
+    },
+    "date": {
+      "label": "Date"
+    },
+    "_meta": {
+      "title": "Batch import R&D logs",
+      "description": "Supports .xlsx, .xls and .csv files. Include a log title and content.",
+      "template": "R&D log template",
+      "sheet": "R&D logs"
+    }
+  },
+  "StoreExpensesImport": {
+    "store": {
+      "code": {
+        "label": "Store code"
+      },
+      "name": {
+        "label": "Store name"
+      },
+      "region": {
+        "label": "Region",
+        "example": "Ho Chi Minh City"
+      },
+      "active": {
+        "label": "Active"
+      },
+      "_meta": {
+        "title": "Batch import stores / regions",
+        "description": "Supports .xlsx, .xls and .csv files. Stores with a matching code are updated.",
+        "template": "Store template",
+        "sheet": "Stores"
+      }
+    },
+    "category": {
+      "code": {
+        "label": "Account code"
+      },
+      "name": {
+        "label": "Account name",
+        "example": "Water bill"
+      },
+      "entry_method": {
+        "label": "Entry method"
+      },
+      "vendor_service": {
+        "label": "Vendor type"
+      },
+      "sort": {
+        "label": "Order"
+      },
+      "_meta": {
+        "title": "Batch import expense accounts",
+        "description": "Supports .xlsx, .xls and .csv files. Accounts with a matching code are updated.",
+        "template": "Expense account template",
+        "sheet": "Accounts"
+      }
+    },
+    "vendor": {
+      "name": {
+        "label": "Vendor name",
+        "example": "Taiwan Gas"
+      },
+      "service": {
+        "label": "Service"
+      },
+      "regions": {
+        "label": "Regions covered"
+      },
+      "active": {
+        "label": "Active"
+      },
+      "_meta": {
+        "title": "Batch import vendors",
+        "description": "Supports .xlsx, .xls and .csv files. Vendors with a matching tax ID or name are updated.",
+        "template": "Vendor template",
+        "sheet": "Vendors"
+      }
+    }
+  },
+  "VendorsImport": {
+    "vendor": {
+      "name": {
+        "label": "Vendor name",
+        "example": "Taiwan Tea Supplier"
+      },
+      "tax_id": {
+        "label": "Tax ID"
+      },
+      "service": {
+        "label": "Category"
+      },
+      "contact": {
+        "label": "Contact",
+        "example": "Mr. Chen"
+      },
+      "phone": {
+        "label": "Phone"
+      },
+      "address": {
+        "label": "Address",
+        "example": "Da'an District, Taipei..."
+      },
+      "products": {
+        "label": "Products",
+        "example": "Tea leaves, raw materials"
+      },
+      "pay_terms": {
+        "label": "Payment terms"
+      },
+      "billing_cycle": {
+        "label": "Billing cycle"
+      },
+      "billing_day": {
+        "label": "Billing day"
+      },
+      "active": {
+        "label": "Active"
+      },
+      "_meta": {
+        "title": "Batch import / update vendors",
+        "description": "Supports .xlsx, .xls and .csv files. Vendors with a matching tax ID or name are updated; others are added.",
+        "template": "Vendor template",
+        "sheet": "Vendors"
+      }
+    },
+    "purchase": {
+      "purchased_on": {
+        "label": "Purchase date"
+      },
+      "product": {
+        "label": "Item",
+        "example": "Premium Ceylon black tea"
+      },
+      "qty": {
+        "label": "Qty"
+      },
+      "amount": {
+        "label": "Amount"
+      },
+      "note": {
+        "label": "Notes",
+        "example": "First delivery"
+      },
+      "_meta": {
+        "title": "Batch import purchases",
+        "description": "Supports .xlsx, .xls and .csv files. Fill in purchase date, item and amount.",
+        "template": "Purchase template",
+        "sheet": "Purchases"
+      }
+    }
+  },
+  "PersonnelImport": {
+    "name": {
+      "label": "Name",
+      "example": "Nguyen Thi Phuong"
+    },
+    "gender": {
+      "label": "Gender"
+    },
+    "native_place": {
+      "label": "Hometown",
+      "example": "Ho Chi Minh City"
+    },
+    "birthday": {
+      "label": "Birthday"
+    },
+    "id_number": {
+      "label": "ID number"
+    },
+    "education": {
+      "label": "Education"
+    },
+    "phone": {
+      "label": "Phone"
+    },
+    "email": {
+      "label": "Personal email"
+    },
+    "company_email": {
+      "label": "Company email"
+    },
+    "position": {
+      "label": "Position",
+      "example": "Store manager"
+    },
+    "store": {
+      "label": "Store"
+    },
+    "staff_category": {
+      "label": "Full/part-time"
+    },
+    "payroll_no": {
+      "label": "Payroll no."
+    },
+    "address": {
+      "label": "Address",
+      "example": "District 1, Ho Chi Minh City"
+    },
+    "_meta": {
+      "title": "Batch import / update personnel",
+      "description": "Supports Excel (.xlsx) and CSV files. Matching ID number, email or name + phone updates the record; otherwise a new one is added.",
+      "template": "Personnel template",
+      "sheet": "Personnel"
+    }
+  },
+  "ShiftImport": {
+    "employee_name": {
+      "label": "Employee name",
+      "example": "John Wang"
+    },
+    "work_date": {
+      "label": "Work date"
+    },
+    "slot_code": {
+      "label": "Shift"
+    },
+    "_meta": {
+      "title": "Batch import shift schedule",
+      "description": "Supports .xlsx, .xls and .csv files. Fill in employee name, work date (YYYY-MM-DD) and shift (早 / 午 / 晚 = morning / noon / evening).",
+      "template": "Shift template",
+      "sheet": "Shifts"
+    }
+  },
+  "HrUnion": {
+    "subtitle": "Member management, welfare, collective agreements and financial reports compliant with the Vietnam General Confederation of Labour (Tổng Liên đoàn Lao động)",
+    "noDocs": "No agreements or dialogue minutes filed yet. Upload officially stamped PDFs for permanent archiving.",
+    "noBenefits": "No benefit requests yet. Birthday, marriage, maternity, hospital and hardship requests can be submitted and approved online.",
+    "totalIncome": "Total income (1% dues & 2% funding)",
+    "exportReport": "Export union financial report (Mẫu B14-CĐ & B15-CĐ)",
+    "tabDocs": "Collective agreements & dialogue",
+    "docsTitle": "Collective labour agreement (TƯLĐTT) and quarterly statutory dialogue minutes",
+    "totalExpense": "Total expenses (welfare, activities)",
+    "requestTitle": "Request union benefit",
+    "tabFinances": "Union finances",
+    "noMembers": "No union members yet. Click \"Add member\" at the top right to record a membership.",
+    "docTitlePh": "e.g. Collective labour agreement 2026-2028 (stamped)",
+    "entryTitle": "Union finance entry",
+    "code2": "2% company union funding",
+    "tabBenefits": "Benefits & welfare",
+    "noEntries": "No union transactions yet. Click \"Add entry\" at the top right to record income or welfare spending.",
+    "code3": "Welfare & hardship aid",
+    "cardNumber": "Union card no.",
+    "balance": "Union balance",
+    "title": "Trade Union (Công đoàn cơ sở)",
+    "uploadDocTitle": "Upload collective agreement / minutes",
+    "receiptNo": "Receipt / voucher no.",
+    "addMemberTitle": "Add union member",
+    "code1": "1% member dues",
+    "tabMembers": "Members",
+    "bhxhNumber": "Social insurance no. (BHXH)",
+    "code4": "Activities",
+    "statusApproved": "Approved",
+    "statusPending": "Pending",
+    "active": "Active member",
+    "statusPaid": "✓ Paid",
+    "reasonPh": "e.g. discharge certificate on file, wedding gift",
+    "code5": "Administration",
+    "amountVndReq": "Amount (VND) *",
+    "benefitsTitle": "Statutory benefits & welfare approvals",
+    "idNumber": "ID number (CCCD)",
+    "summaryPh": "e.g. July union dues allocation",
+    "reasonVoucher": "Reason / voucher no.",
+    "choosePdf": "Choose scanned PDF",
+    "amountReq": "Amount (VND) *",
+    "bhxh": "Social insurance (BHXH):",
+    "uploadDoc": "Upload agreement / minutes",
+    "addEntry": "Add entry (income / expense)",
+    "storeDept": "Store / department",
+    "requestBenefit": "Request benefit",
+    "income": "Income",
+    "expense": "Expense",
+    "ledger": "Transactions",
+    "pleaseChoose": "— Select —",
+    "addMember": "Add member",
+    "employeeNameReq": "Employee name *",
+    "chooseMemberReq": "Member *",
+    "benefitTypeReq": "Benefit type *",
+    "docCategoryReq": "Category *",
+    "docTitleReq": "Title *",
+    "confirmUpload": "Upload & file",
+    "joinDate": "Joined:",
+    "requestDate": "Requested:",
+    "effective": "Effective:",
+    "expiry": "Expires:",
+    "saveFailed": "Save failed",
+    "confirmSave": "Save",
+    "requestFailed": "Request failed",
+    "submitRequest": "Submit",
+    "uploadFailed": "Upload failed",
+    "entryFailed": "Failed to save entry",
+    "typeReq": "Type *",
+    "itemCode": "Item code",
+    "summary": "Summary",
+    "confirmEntry": "Save entry",
+    "cardNo": "Card no.:",
+    "note": "Note:",
+    "remark": "Notes:",
+    "voucher": "Voucher:",
+    "hq": "HQ",
+    "member": "Member",
+    "cancel": "Cancel",
+    "other": "Other",
+    "memberCount": "{n} union members",
+    "benefit": {
+      "birthday": "Birthday gift",
+      "marriage": "Wedding gift",
+      "maternity": "Maternity allowance",
+      "hospital": "Hospitalisation visit",
+      "relief": "Hardship relief",
+      "other": "Other benefit"
+    },
+    "docCat": {
+      "tuldtt": "Collective labour agreement (TƯLĐTT)",
+      "noiquy": "Internal work rules",
+      "doitheo": "Statutory dialogue minutes",
+      "committee": "Committee meetings & election decisions"
+    }
+  },
+  "RepairKnowledge": {
+    "csDesc": "For a new brand/model without a PDF manual yet, enter the brand and model and AI derives the standard state machine, limit switches and 10 most common fault trees from drink-bar electromechanical principles.",
+    "subtitle": "Structured chunks of manuals, wiring diagrams and error codes · cold-start state-machine derivation · closed-loop learning from technician repairs",
+    "measuredPh": "e.g. heater 530Ω OK, SSR input 12V OK but no output",
+    "casesTitle": "Technician repair case library (case-based learning)",
+    "rootCausePh": "e.g. mainboard SSR output burnt open, no power to the heater",
+    "catPosLong": "💻 POS & IT (touch terminal / receipt printer / label printer / switch)",
+    "modelPh": "e.g. ET-99S, FT-16, TM-T82, KM-150A",
+    "catBarLong": "🧋 Store bar (sealer / syrup dispenser / tea brewer / ice maker)",
+    "brandPh": "e.g. Yi Fang, Hong Mao, Hoshizaki, Epson, Delta",
+    "partsPh": "e.g. replaced 25A solid-state relay (SSR-25DA)",
+    "casesSubtitle": "Filled in from real on-site repairs to keep improving AI accuracy",
+    "rootCauseReq": "Actual root cause (after disassembly) *",
+    "techNotePh": "e.g. keep it away from damp areas; tighten terminal screws every six months",
+    "chunkContentPh": "Describe troubleshooting steps, normal values and how to handle faults...",
+    "searchPh": "Search model, error code (E01), part no....",
+    "catFactoryLong": "🏭 Central factory (sugar cooker / tea kettle / circulation pump)",
+    "chunkContent": "Content (SOP, resistance values, steps)",
+    "typeErrorCode": "Error codes",
+    "chunkTitlePh": "e.g. Sealer cutter wear check & replacement steps",
+    "caseTitle": "Log a completed repair (feedback loop)",
+    "symptomPh": "e.g. E01 temperature won't rise, film roll stuck",
+    "allCategories": "All categories (bar / factory / IT)",
+    "typeCircuit": "Wiring diagram",
+    "storeSafeLong": "Store staff can do it (safe, no disassembly)",
+    "orderNoPh": "e.g. RO-202609-008",
+    "errCauseParts": "Root cause and replaced parts are required",
+    "tagsPh": "e.g. cutter, wear, blade replacement",
+    "title": "Equipment manuals & RAG knowledge base",
+    "runDerive": "Derive state machine & fault tree",
+    "addChunkTitle": "Add equipment manual knowledge chunk",
+    "catPos": "💻 POS & IT hardware/software",
+    "csTitle": "Equipment cold-start state machine engine",
+    "techOnlyLong": "Technician only (needs disassembly & measurement)",
+    "noChunks": "No matching knowledge chunks",
+    "targetModelPh": "e.g. YiFang-ET-99S",
+    "partsReq": "Parts replaced & part numbers *",
+    "errBrandModel": "Please enter the equipment brand and model",
+    "measured": "Measured resistance or voltage",
+    "addChunkBtn": "Upload / add manual chunk",
+    "derivedParts": "Derived standard spare parts:",
+    "tags": "Tags (comma-separated)",
+    "orderNo": "Work order no. (optional)",
+    "techNote": "Technician notes & prevention tips",
+    "errTitleContent": "Title and content are required",
+    "type": {
+      "maintenance_sop": "Cleaning & maintenance SOP",
+      "real_case": "Technician field cases",
+      "error_code": "Error codes",
+      "circuit_diagram": "Wiring diagram",
+      "troubleshooting_tree": "Troubleshooting tree",
+      "exploded_view": "Exploded parts view"
+    },
+    "coldStartBtn": "Cold-start state machine",
+    "logCaseBtn": "Log a repair case",
+    "catBar": "🧋 Store bar equipment",
+    "catFactory": "🏭 Central factory equipment",
+    "typeSop": "Cleaning & maintenance SOP",
+    "typeCases": "Technician field cases",
+    "derivedStates": "Derived state machine:",
+    "measurements": "⚡ Measurements: ",
+    "savedToKb": "Added to knowledge base",
+    "allTypes": "All types",
+    "officialSpec": "Official technical spec",
+    "targetModel": "Equipment model",
+    "symptom": "Reported symptom",
+    "reported": "Reported: ",
+    "rootCause": "Root cause: ",
+    "partsReplaced": "Parts replaced: ",
+    "fileCase": "Save to library",
+    "errDerive": "Derivation failed",
+    "errNetwork": "Connection failed",
+    "errSave": "Save failed",
+    "errConnection": "Connection error",
+    "storeSafe": "Store-safe",
+    "techOnly": "Technician only",
+    "equipmentCategory": "Equipment category",
+    "brand": "Brand",
+    "model": "Model",
+    "chunkType": "Chunk type",
+    "chunkTitle": "Chunk title",
+    "saveChunk": "Save chunk",
+    "equipmentModel": "Equipment model",
+    "source": "Source: ",
+    "cancel": "Cancel",
+    "derivedOk": "Derived: {name}",
+    "caseDesc": "Record the real cause and measurements from an on-site repair; AI learns from it and recommends the same fix first next time a similar fault occurs."
+  },
+  "RepairAssistant": {
+    "inputPhTech": "Enter symptoms or test points (e.g. heater resistance, no 24V pulse, E02 cam micro-switch)...",
+    "techModeDesc": "[Technician mode] Circuit measurements (Ω/V), OEM part numbers, cam/micro-switch checks and repair feedback",
+    "inputPhStore": "Describe the fault or code (e.g. sealer E01, syrup dispenser inaccurate, printer out of paper)...",
+    "storeModeDesc": "[Store mode] Safety first: 3-step checks without disassembly, then an automatic repair order if unresolved",
+    "qp": {
+      "fac1": {
+        "text": "The SC-150L sugar cooker stops mid-stir and the panel shows VFD-OC",
+        "label": "Sugar cooker VFD overload trip"
+      },
+      "pos2": {
+        "text": "The Epson receipt printer's red light keeps blinking, the feed button does nothing and the cutter is stuck",
+        "label": "Receipt printer jam, red light blinking"
+      },
+      "fac2": {
+        "text": "The tea kettle PT100 sensor shows 98°C but the water isn't boiling",
+        "label": "Tea kettle temperature sensor drift"
+      },
+      "pos3": {
+        "text": "Tapping the top right of the POS touchscreen jumps to the left; there seems to be moisture on the bezel",
+        "label": "POS touchscreen erratic"
+      },
+      "bar3": {
+        "text": "The syrup dispenser gives clearly less syrup on full sugar, and the outlet drips crystallised syrup",
+        "label": "Syrup dispenser inaccurate"
+      },
+      "pos1": {
+        "text": "After checkout on the POS the cash drawer doesn't open; the receipt printer works",
+        "label": "Cash drawer won't open"
+      },
+      "fac3": {
+        "text": "The automatic sugar cooker's gearbox makes a clicking metal knocking noise while running",
+        "label": "Gearbox noise"
+      },
+      "pos4": {
+        "text": "The bar printer won't print any drink tickets; the network cable is plugged in",
+        "label": "Receipt printer offline"
+      },
+      "bar1": {
+        "text": "The Yi Fang sealer shows E01 and has no heat at all",
+        "label": "E01 heater plate not heating"
+      },
+      "bar4": {
+        "text": "The sealer presses down and gets stuck, beeping",
+        "label": "Sealer stuck pressing cup"
+      },
+      "bar2": {
+        "text": "Sealer E04, the film keeps spinning and won't stop",
+        "label": "E04 film won't stop / sensor fault"
+      }
+    },
+    "searching": "Searching OEM error codes, wiring diagrams and state machines...",
+    "ticketOk": "✓ Repair order created! Opening the order list...",
+    "subtitle": "SOP fault trees · RAG manual search · closed-loop learning",
+    "submitTicket": "🚀 Submit repair order (send a technician)",
+    "errSubmit": "Submit failed — please log it manually in the Repair orders tab",
+    "draftTitle": "AI drafted a repair order",
+    "ragSources": "RAG sources:",
+    "title": "Repair AI hub",
+    "catPos": "POS & IT",
+    "roleUser": "Store staff / technician",
+    "roleStoreAi": "Store quick-fix AI",
+    "roleTechAi": "Technician AI",
+    "storeMode": "Store quick-fix mode",
+    "techMode": "Technician mode",
+    "errCreate": "Failed to create repair order",
+    "storeSafetyLabel": "Store safety rule:",
+    "tickTested": "Tick when tested",
+    "chk": {
+      "consumable": "📦 Consumables / wiring",
+      "ohms": "⚡ Resistance",
+      "voltage": "🔌 Voltage",
+      "cleaning": "🧽 Cleaning",
+      "restart": "🔄 Restart"
+    },
+    "expected": "✓ Expected: ",
+    "ifFailed": "✗ If not fixed: ",
+    "catFactory": "Central factory",
+    "draftTried": "Already checked: ",
+    "categoryLabel": "Equipment:",
+    "targetLabel": "Equipment:",
+    "quickAsk": "Quick questions:",
+    "draftEquipment": "Equipment: ",
+    "draftCode": "Error code: ",
+    "draftSummary": "Summary: ",
+    "techCase": "Field case:",
+    "catBar": "Bar equipment",
+    "priority": "Priority: ",
+    "onSiteIssue": "On-site issue",
+    "urgent": "Urgent",
+    "diagnose": "Diagnose",
+    "high": "High",
+    "welcomeStore": "Hi! I'm the **Store Equipment Quick-Fix AI** 🤖\n\nBuilt for stores: **no disassembly, safe, 3-step checks**. Pick a device below or describe the problem (e.g. \"sealer E01\", \"syrup dispenser gives less syrup\", \"receipt printer jammed\") and I'll guide you through a quick fix!",
+    "welcomeTech": "Hi, technician! I'm the **Electromechanical Repair AI** ⚡\n\nI have **OEM wiring diagrams, resistance (Ω) / voltage (V) reference values, cam and micro-switch limit checks** and a **parts number database**. Choose a model or enter an error code to start an in-depth diagnosis.",
+    "switchedStore": "🔄 Switched to **[Store quick-fix mode]**: safety first (no disassembly, no high voltage). If 3 steps don't fix it, a one-click repair order is offered.",
+    "switchedTech": "🔄 Switched to **[Technician mode]**: multimeter values (Ω/V), wiring pinouts, OEM part numbers and real repair cases.",
+    "diagError": "Sorry, something went wrong during diagnosis: {msg}",
+    "tryLater": "please try again later",
+    "networkError": "Connection problem — please check your network.",
+    "stepN": "Step {n}: {title}",
+    "stepsTitle": "Step-by-step checklist ({n} steps):",
+    "storeSafety": "Store safety rule: <s>never open any casing or touch the heating die (above 160°C)</s>. Follow the AI's power, cleaning and film checks.",
+    "techSafety": "Electrical work rule: <s>always cut main power completely</s> before measuring resistance; wear insulated gear for live 24VDC/220VAC measurements."
+  },
+  "AuditAi": {
+    "readyHint": "Ask about procedures, workflow layout, ergonomics (wrist strain / excessive turning), bar presentation, ingredient write-off fraud — or upload a site photo to discuss.",
+    "kbContentPh": "Paste rules, ergonomic heights, penalty details or SOP steps...",
+    "inputPh": "Ask a question or discuss workflow, layout, safety compliance...",
+    "kbTitlePh": "Title (e.g. sealer spacing requirements, fake write-off penalty rules)",
+    "suggestEmpty": "After you send a message, the expert's suggestions appear here.",
+    "kbTitle": "Audit expert knowledge base · add training material anytime",
+    "noAccess": "Only the audit unit can use Audit AI",
+    "photoOnly": "(Uploaded a site photo for diagnosis)",
+    "logSaved": "Summarized and saved to the audit log!",
+    "suggestPanel": "Suggestions & answers (1/3)",
+    "kbEmpty": "No training material yet",
+    "thinking": "Audit expert is analysing…",
+    "ready": "Audit expert is ready",
+    "uploadPhoto": "Take or upload an inspection photo",
+    "clickToAsk": "Click a card to follow up",
+    "removePeriod": "Stop attaching usage data",
+    "storePh": "Choose or type a store",
+    "title": "Audit AI",
+    "noChats": "No chats yet",
+    "kbAdd": "Add to knowledge base",
+    "untitled": "Untitled chat",
+    "toInput": "Insert into input",
+    "expert": "Expert advisor",
+    "auditLog": "Audit log",
+    "inspection": "Site inspection",
+    "genLog": "Create log",
+    "sitePhoto": "Site photo",
+    "quoteAsk": "Follow up",
+    "knowledge": "Knowledge base",
+    "newChat": "New chat",
+    "modeDiscuss": "Discuss",
+    "modeGuide": "Guide",
+    "preview": "Preview",
+    "sendFailed": "Send failed",
+    "kind": {
+      "sop": "SOP procedures",
+      "ergonomics": "Ergonomics & layout",
+      "hygiene": "Hygiene standards",
+      "rules": "Penalty rules",
+      "other": "Other material"
+    },
+    "suggestArea": "Suggestions panel",
+    "suggestOn": "on (1/3)",
+    "suggestOff": "off",
+    "store": "store",
+    "periodLoaded": "Attached {store} {period} ingredient usage data",
+    "hint1": "How should the sealer and ice bin be arranged to be ergonomic?",
+    "hint2": "Written-off ingredients were found still in use at the bar — what's the standard procedure?",
+    "hint3": "Audit points for cloth zoning and clean-as-you-go?",
+    "hint4": "How do we prevent private payments via store phones and personal Zalo groups?",
+    "followUp": "How exactly should stores carry out this suggestion: \"{item}\"?",
+    "refSuggestion": " (see suggestion: {item})",
+    "analyzeErgo": "Please analyse ergonomic adjustments for \"{item}\""
+  },
+  "CompanyPlan": {
+    "loadFailed": "Failed to load",
+    "networkError": "Network error, please try again later",
+    "orderFailed": "Failed to create order",
+    "loading": "Loading…",
+    "company": "Company",
+    "enterpriseFull": "Custom Enterprise plan",
+    "companyPlan": "Company plan",
+    "enterprise": "Enterprise plan",
+    "enterpriseDesc": "Unlimited members; all enabled modules at MAX level; unlimited credit-based features; CHAT with all models plus image / video generation; unlimited feature additions / changes.",
+    "companyDesc": "Unlimited members; enabled customer service, booking and marketing modules at MAX level. Includes free CHAT and 1 free feature tweak per month.",
+    "inUse": "{plan} active",
+    "expires": ", expires {date}",
+    "notActive": "Company plan not active yet",
+    "yearly": "Yearly (price of {n} months)",
+    "monthly": "Monthly",
+    "payNeedsAdmin": "Payment must be made by <b>the company owner or an admin</b>.",
+    "priceBreakdown": "Price breakdown (USD / month)",
+    "yearlyTotal": "Yearly total (${m}/month × {n})",
+    "monthlyTotal": "Monthly total",
+    "contractNote": "Enabled modules, ERP seats and store count are set by the platform per your contract — contact us to change them.",
+    "credits": "Credits",
+    "enterpriseCredits": "Enterprise has unlimited credits; members are never charged credits.",
+    "wallet": "Company wallet",
+    "monthlyGift": "This month's free credits (${n}/month, no rollover)",
+    "paidBalance": "Top-up balance",
+    "deductOrder": "When members use credit-based features (marketing generation, roundtable, AI Agent…), free monthly credits are used first, then top-ups.",
+    "topUp": "Top up {label}",
+    "getsCredits": "Get ${n} credits",
+    "topUpWho": "Top-ups must be made by the owner, an admin, a manager or finance staff.",
+    "topUpAfterActive": "Activate the company plan to top up the company wallet.",
+    "renew": "Renew",
+    "activate": "Pay & activate",
+    "payBtn": "{action} (${total} USD)",
+    "payNote": "Takes effect immediately after payment; renewals extend from the current expiry date. Nothing renews automatically.",
+    "line": {
+      "base": "Company base fee",
+      "module_cs": "Customer service (CS)",
+      "module_booking": "Booking",
+      "module_marketing": "Marketing",
+      "erp": "ERP base package ({seats} users, {included} included)",
+      "retail": "ERP retail store package ({stores} stores)",
+      "domain": "Custom domain",
+      "enterprise": "Custom Enterprise plan"
+    }
+  },
+  "PosMenu": {
+    "subtitle": "Upload images and multilingual names / descriptions; the kiosk shows them by language",
+    "importBtn": "Batch import menu (Excel/CSV)",
+    "uploadImage": "Upload image (optional)",
+    "itemNamePh": "Item name (main language)",
+    "mainDescPh": "Main description",
+    "descPh": "Description (optional)",
+    "pricePh": "Price",
+    "multilangContent": "Translations",
+    "aiTranslate": "AI translate",
+    "title": "Menu editor",
+    "addCategory": "New category",
+    "categoryName": "Category name",
+    "addItem": "New item",
+    "chooseCategory": "Choose category",
+    "changeImage": "Change image",
+    "multilang": "Languages",
+    "all": "All",
+    "global": "All stores",
+    "add": "Add",
+    "preview": "Preview",
+    "remove": "Remove",
+    "image": "Image",
+    "disable": "Disable",
+    "enable": "Enable",
+    "save": "Save",
+    "cancel": "Cancel",
+    "store": "Store",
+    "revision": "Version {n}",
+    "namePhLang": "{lang} name",
+    "descPhLang": "{lang} description",
+    "storeOnly": "{name} only"
+  },
+  "PosMenuImport": {
+    "_meta": {
+      "title": "Batch import / update POS menu",
+      "description": "Supports .xlsx, .xls and .csv files. Missing categories are created; items with a matching name are updated, others are added.",
+      "template": "POS menu template",
+      "sheet": "Menu items"
+    },
+    "name": {
+      "label": "Item name",
+      "example": "Bubble milk tea"
+    },
+    "category": {
+      "label": "Category",
+      "example": "Classic tea"
+    },
+    "price": {
+      "label": "Price"
+    },
+    "description": {
+      "label": "Description",
+      "example": "Rich milk tea with freshly cooked boba pearls"
+    },
+    "barcode": {
+      "label": "Barcode"
+    }
+  },
+  "PosStores": {
+    "loading": "Loading…",
+    "title": "Stores & terminals",
+    "subtitle": "One Debian terminal per store. Enter the device_key in the kiosk or pos-bridge.",
+    "importBtn": "Batch import stores (Excel/CSV)",
+    "storeName": "Store name",
+    "addStore": "Add store",
+    "terminal": "Terminal: {name}",
+    "hideKey": "Hide key",
+    "showKey": "Show key",
+    "copyKey": "Copy key",
+    "lastSync": "Last sync: ",
+    "never": "never",
+    "noTerminal": "No terminal yet",
+    "noStores": "No stores yet"
+  },
+  "PosStoresImport": {
+    "_meta": {
+      "title": "Batch import stores",
+      "description": "Supports .xlsx, .xls and .csv files. Fill in store name and code (optional).",
+      "template": "POS store template",
+      "sheet": "Stores"
+    },
+    "name": {
+      "label": "Store name",
+      "example": "Xinyi flagship"
+    },
+    "slug": {
+      "label": "Code (slug)"
+    }
+  },
+  "PosOrders": {
+    "title": "Orders",
+    "all": "All",
+    "status": {
+      "pending": "Pending",
+      "preparing": "Preparing",
+      "ready": "Ready",
+      "done": "Done",
+      "cancelled": "Cancelled"
+    },
+    "type": {
+      "dine_in": "Dine-in",
+      "takeout": "Takeout",
+      "delivery": "Delivery"
+    },
+    "table": "Table {n}",
+    "note": "Note: {note}",
+    "empty": "No orders yet"
+  },
+  "AffairsX": {
+    "tabSites": "Site development",
+    "tabContacts": "Relationships",
+    "tabRents": "Rent benchmarks",
+    "tabAssistant": "Affairs AI assistant",
+    "all": "All",
+    "allStatuses": "All statuses",
+    "cat": {
+      "street": "Street store",
+      "mall": "Mall",
+      "public": "Public sector",
+      "private": "Private sector"
+    },
+    "sub": {
+      "ground_large": "Large ground-floor store",
+      "ground_small": "Small ground-floor store",
+      "shop_in_shop": "Shop-in-shop",
+      "counter": "Storefront counter",
+      "delivery": "Delivery-only store",
+      "community": "Community mall",
+      "non_community": "Non-community mall",
+      "airport": "Airport",
+      "gov_zone": "Government development zone",
+      "public_other": "Other public body",
+      "factory": "Inside a factory",
+      "market": "Private market",
+      "private_other": "Other private body"
+    },
+    "status": {
+      "prospect": "Prospect",
+      "visiting": "Site visit",
+      "negotiating": "Negotiating",
+      "applying": "Applying",
+      "reviewing": "Under review",
+      "approved": "Approved",
+      "signed": "Signed",
+      "rejected": "Rejected",
+      "dropped": "Dropped"
+    },
+    "newSite": "New site",
+    "editSite": "Edit site",
+    "sitesHint": "Public and private sites require an application and qualification review; track the steps and deadline inside each site. Delivery-only stores can use second floors or weaker locations to keep rent low.",
+    "noSites": "No sites yet. Click \"New site\" to start.",
+    "rentShort": "Rent",
+    "householdsShort": "{n} households",
+    "applicationProgress": "Application {done}/{total}",
+    "marketAnalysis": "Market analysis",
+    "confirmDelete": "Delete this?",
+    "f": {
+      "name": "Site name",
+      "status": "Status",
+      "category": "Category",
+      "subtype": "Type",
+      "address": "Address",
+      "region": "Area",
+      "floor": "Floor",
+      "area": "Area (m²)",
+      "frontage": "Frontage (m)",
+      "rent": "Monthly rent",
+      "deposit": "Deposit",
+      "households": "Households",
+      "contact": "Contact (landlord / manager)",
+      "deadline": "Application deadline",
+      "notes": "Notes",
+      "orgType": "Department type",
+      "importance": "Importance",
+      "contactName": "Name",
+      "title": "Title",
+      "organization": "Organisation",
+      "phone": "Phone",
+      "email": "Email",
+      "im": "Messaging app",
+      "nextFollowup": "Next follow-up date",
+      "storeCode": "Related store code",
+      "traits": "Personal traits"
+    },
+    "regionPh": "e.g. Da'an District, District 1",
+    "applicationTitle": "Application & qualification review",
+    "applicationHint": "List the application steps and tick them off.",
+    "addStep": "Add step",
+    "useTemplate": "Use template",
+    "stepTpl": {
+      "pub1": "Get the tender or selection notice and eligibility rules",
+      "pub2": "Prepare qualification documents (licences, financials, track record)",
+      "pub3": "Submit application / bid",
+      "pub4": "Qualification review",
+      "pub5": "Presentation / selection",
+      "pub6": "Sign and move in",
+      "pri1": "Contact the operator and get entry terms",
+      "pri2": "Submit proposal and qualification documents",
+      "pri3": "Review and negotiate",
+      "pri4": "Trial run / sign"
+    },
+    "cancel": "Cancel",
+    "save": "Save",
+    "close": "Close",
+    "saved": "Saved",
+    "radius": "Radius",
+    "runAnalysis": "Run analysis",
+    "rerunAnalysis": "Run again",
+    "analysisRunning": "AI is searching public data and analysing, about 1–3 minutes…",
+    "analysisAt": "Last analysed: {at}",
+    "analysisHint": "AI searches population, residents, income per capita, schools, large housing estates, foot and vehicle traffic, and storefront conditions for the address.",
+    "reco": {
+      "go": "Recommended",
+      "consider": "Consider",
+      "avoid": "Not recommended"
+    },
+    "level": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "levelLabel": "Level",
+    "sec": {
+      "population": "Population",
+      "income": "Income per capita",
+      "demographics": "Residents",
+      "traffic": "Foot & vehicle traffic",
+      "storefront": "Storefront",
+      "rent": "Rent comparison",
+      "schools": "Schools",
+      "residential": "Large housing estates",
+      "competitors": "Competitors",
+      "opportunities": "Opportunities",
+      "risks": "Risks"
+    },
+    "residents": "Residents in radius",
+    "density": "Density (/km²)",
+    "perCapita": "Monthly income per capita",
+    "footTraffic": "Foot traffic",
+    "peakHours": "Peak hours",
+    "vehicleTraffic": "Vehicle traffic",
+    "visibility": "Visibility",
+    "rentEstimate": "Area rent estimate",
+    "col": {
+      "name": "Name",
+      "type": "Type",
+      "students": "Students",
+      "distance": "Distance (m)",
+      "households": "Households",
+      "note": "Note",
+      "date": "Date",
+      "source": "Source"
+    },
+    "sources": "Sources",
+    "aiDisclaimer": "AI compiles this from public data; figures may be incomplete or out of date. Visit the site and verify before deciding.",
+    "ccat": {
+      "landlord": "Landlord",
+      "mall": "Mall management",
+      "public": "Public sector",
+      "private": "Private sector",
+      "other": "Other"
+    },
+    "org": {
+      "investment": "Investment department",
+      "health": "Health / food safety",
+      "market_security": "Market police",
+      "economic_security": "Economic police",
+      "tax": "Tax office",
+      "fire": "Fire department",
+      "environment": "Environment",
+      "labor": "Labour office",
+      "customs": "Customs",
+      "airport": "Airport",
+      "gov_zone": "Government development zone",
+      "public_other": "Other public body",
+      "factory": "Factory contact",
+      "market": "Market management",
+      "private_other": "Other private body"
+    },
+    "searchPh": "Search name, organisation, traits…",
+    "newContact": "New contact",
+    "editContact": "Edit contact",
+    "followupDue": "{n} contacts are due for follow-up",
+    "noContacts": "No contacts yet.",
+    "lastContact": "Last contact",
+    "nextFollowup": "Next follow-up",
+    "traitsPh": "Personality, preferences, communication style, taboos, decision habits, important dates…",
+    "logsTitle": "Interaction log",
+    "log": {
+      "visit": "Visit",
+      "call": "Call",
+      "meal": "Meal",
+      "gift": "Gift",
+      "meeting": "Meeting",
+      "message": "Message",
+      "other": "Other"
+    },
+    "logSummaryPh": "What was discussed and how they responded",
+    "logNextPh": "Next step (optional)",
+    "addLog": "Add entry",
+    "region": "Area",
+    "rentsHint": "Record shop rents per area, entered by hand or found by AI; rent per m² and its change are calculated by month.",
+    "records": "{n} records",
+    "avgPerSqm": "Average rent per m²",
+    "changeSince": "{pct}% since {from}",
+    "perSqm": "Rent per m²",
+    "needTwoPoints": "At least two months of records with area filled in are needed for the trend chart.",
+    "manual": "Manual",
+    "addRent": "Add rent record",
+    "newRegion": "Area (fill in for a new one)",
+    "currency": "Currency",
+    "landlord": "Landlord",
+    "add": "Add",
+    "regionRequired": "Please enter an area",
+    "aiRentTitle": "AI rent search",
+    "aiRentHint": "AI searches shop listings and rent reports for the area, analyses recent changes and suggests negotiation points; tick results to save them as benchmarks.",
+    "searchRent": "Search rents",
+    "searching": "Searching, about 1–2 minutes…",
+    "typicalPerSqm": "Typical rent per m²",
+    "trend": "Trend",
+    "trendV": {
+      "up": "Rising",
+      "flat": "Flat",
+      "down": "Falling",
+      "unknown": "Unclear"
+    },
+    "negotiationTips": "Negotiation tips",
+    "saveSelected": "Save {n} to \"{region}\"",
+    "noListings": "No citable listings found.",
+    "assistantTitle": "Affairs AI assistant",
+    "assistantDesc": "Finds well-priced, well-located shops, explains public and private application processes and channels, and advises on relationships. Looks things up online and cites sources when needed.",
+    "clearChat": "Clear chat",
+    "thinking": "AI is researching…",
+    "askPh": "Type a question. Enter to send, Shift+Enter for a new line",
+    "send": "Send",
+    "prompt": {
+      "p1": "How do I find shops with low rent but good locations? Which channels should I use?",
+      "p2": "What is the application process, eligibility and responsible authority for airport retail spaces?",
+      "p3": "How do I approach a factory and apply to open a kiosk inside it?",
+      "p4": "What negotiation tactics help lower the rent when renewing with a landlord?",
+      "p5": "Which government departments does a bubble-tea shop deal with, and what does each need?",
+      "p6": "How do entry terms differ between community and non-community malls?"
+    }
   }
 }

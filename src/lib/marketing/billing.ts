@@ -7,6 +7,7 @@
 // credits for external users」、lib/skills/billing.ts 的 skills/run route、
 // lib/resume/billing.ts）。這條規則晚於行銷模組原始設計，這裡補齊。
 import { getBalance, deductCredits as deductCreditsRaw } from '@/lib/skills/billing'
+import { getCompanyBillingContext } from '@/lib/company/entitlements'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getMarketingEntitlements, type MarketingPlan } from './entitlements'
 
@@ -78,15 +79,15 @@ export const IMAGE_COSTS: Record<string, number> = Object.fromEntries(
 // 舊常數名稱相容（Nano Banana Pro 每張，FREE 倍率）
 export const NANO_BANANA_PRO_COST = IMAGE_COSTS.flux
 
-// 影片（每秒）：Kling v1.6（fal）standard $0.056／pro $0.094；Veo 3.1 720p/1080p $0.40；Sora 2 Pro 1080p $0.70
+// 影片（每秒）：Kling v1.6（fal）standard $0.056／pro $0.094；Veo 3.1 720p/1080p $0.40；Sora 2（720p）$0.10
 const VIDEO_COST_PER_SECOND: Record<string, number> = {
   'kling-standard': 0.056,
   'kling-img2video': 0.056,
   'kling-pro': 0.094,
   veo3: 0.4,
   'veo3-img2video': 0.4,
-  sora: 0.7,
-  'sora-img2video': 0.7,
+  sora: 0.1,
+  'sora-img2video': 0.1,
 }
 export function videoProviderCost(model: string, durationSeconds: number): number {
   const perSec = VIDEO_COST_PER_SECOND[model] ?? VIDEO_COST_PER_SECOND['kling-standard']
@@ -102,7 +103,20 @@ const LLM_PRICES: Record<string, { input: number; output: number }> = {
   'claude-sonnet-4-6': { input: 3, output: 15 },
   'claude-haiku-4-5': { input: 1, output: 5 },
   'gemini-2.5-flash': { input: 0.3, output: 2.5 },
+  // DeepSeek 各來源報價不一，取較高者 $0.27／$1.10
+  'deepseek-chat': { input: 0.27, output: 1.1 },
+  // Perplexity Sonar：token $1／$1，另有每次請求搜尋費（見 PERPLEXITY_SONAR_REQUEST_COST）
+  sonar: { input: 1, output: 1 },
 }
+// Perplexity Sonar 每次請求搜尋費（search_context_size 預設 low：$5／1,000 次）
+export const PERPLEXITY_SONAR_REQUEST_COST = 0.005
+
+// 外部資料來源（每次／每筆，USD）
+// Tavily advanced search：2 credits × $0.008；Outscraper：$3／1,000 筆（超過每月免費額度後，保守一律計入）
+export const TAVILY_ADVANCED_SEARCH_COST = 0.016
+export const OUTSCRAPER_RECORD_COST = 0.003
+// 一鍵發布：每個平台每則（固定扣點，不乘倍率）
+export const PUBLISH_PER_POST_CREDITS = 0.01
 /** 依實際 token 用量計算成本（usage 取自 AI SDK 回傳） */
 export function llmCost(model: string, usage?: { inputTokens?: number; outputTokens?: number } | null): number {
   const p = LLM_PRICES[model]
@@ -110,20 +124,96 @@ export function llmCost(model: string, usage?: { inputTokens?: number; outputTok
   return ((usage.inputTokens ?? 0) * p.input + (usage.outputTokens ?? 0) * p.output) / 1_000_000
 }
 
-// HeyGen 虛擬主播影片（每支）
-export const HEYGEN_VIDEO_COST = 1.0
-// ElevenLabs TTS（每次合成）
-export const TTS_COST = 0.03
-// 電話撥打（每通，內含通話費加成；TTS 另計）
-export const CALL_COST = 0.15
-// 行銷 Email（每封）
-export const EMAIL_COST = 0.002
-// 行銷 SMS 簡訊（每則，依通道成本加成，約合 NT$ 1）
-export const SMS_COST = 0.035
-// AI 視覺工坊「AI 建議」（Claude 看圖，每次）
-export const AI_STUDIO_SUGGEST_COST = 0.01
-// AI 視覺工坊節點執行的預估上限（實際依節點回報的 cost 扣）
-export const AI_STUDIO_MAX_ESTIMATE = 0.2
+// ElevenLabs TTS（每 1,000 字元）：Multilingual v2 $0.10；Flash／Turbo $0.05
+export function ttsCost(text: string, modelId = 'eleven_multilingual_v2'): number {
+  const rate = /flash|turbo/i.test(modelId) ? 0.05 : 0.1
+  return ([...text].length / 1000) * rate
+}
+
+// HeyGen API 虛擬主播（Avatar III，720p／1080p）：$1／分鐘，依影片秒數計
+export const HEYGEN_AVATAR_COST_PER_SEC = 1 / 60
+
+/** 依腳本估算朗讀秒數：中日韓字約每秒 4 字、其他語言約每秒 2.5 個字詞 */
+export function estimateSpeechSeconds(text: string): number {
+  const cjk = (text.match(/[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]/g) ?? []).length
+  const words = text.replace(/[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]/g, ' ').split(/\s+/).filter(Boolean).length
+  return Math.max(1, Math.ceil(cjk / 4 + words / 2.5))
+}
+
+export function heygenVideoCost(script: string): number {
+  return estimateSpeechSeconds(script) * HEYGEN_AVATAR_COST_PER_SEC
+}
+
+// ── 電話／簡訊／Email 供應商成本（USD），扣點＝成本 × 方案倍率 ────────────────
+export type TelcoCountry = 'TW' | 'VN' | 'US' | 'INTL'
+
+/** 依門號判斷國別（+1 北美走 US） */
+export function detectTelcoCountry(rawPhone: string): TelcoCountry {
+  const cleaned = rawPhone.replace(/[^\d+]/g, '')
+  if (cleaned.startsWith('+886') || cleaned.startsWith('886')) return 'TW'
+  if (cleaned.startsWith('09') && cleaned.length === 10) return 'TW'
+  if (cleaned.startsWith('+84') || cleaned.startsWith('84')) return 'VN'
+  if (/^0[35789]\d{8}$/.test(cleaned)) return 'VN'
+  if (cleaned.startsWith('+1') || (cleaned.startsWith('1') && cleaned.length === 11)) return 'US'
+  return 'INTL'
+}
+
+function isTwMobile(rawPhone: string): boolean {
+  const d = rawPhone.replace(/\D/g, '')
+  return d.startsWith('8869') || d.startsWith('09')
+}
+
+// 語音（每分鐘，未滿 1 分鐘以 1 分鐘計，與 Twilio 計費方式一致）
+// Twilio 台灣：手機 $0.1985、市話 $0.1196；美國 $0.013（Bird $0.0049）；越南手機 $0.1777
+// Stringee 越南境內：約 NT$0.8~1.2／分，取 $0.04；其他國家未逐一建表，保守取 $0.20
+export function voiceCostPerMinute(phone: string, provider: string): number {
+  const country = detectTelcoCountry(phone)
+  if (country === 'TW') return isTwMobile(phone) ? 0.1985 : 0.1196
+  if (country === 'US') return provider === 'bird' ? 0.0049 : 0.013
+  if (country === 'VN') return provider === 'stringee' ? 0.04 : 0.1777
+  return 0.2
+}
+
+export function callCost(phone: string, provider: string, durationSec: number): number {
+  if (!(durationSec > 0)) return 0
+  return Math.ceil(durationSec / 60) * voiceCostPerMinute(phone, provider)
+}
+
+// 簡訊（每段）：台灣 sms-get NT$0.86 ≈ $0.027；美國 Bird $0.0035；
+// 越南 Stringee 約 NT$0.55~0.8 ≈ $0.025；其他國家（Twilio）未逐一建表，保守取 $0.10
+const SMS_SEGMENT_COSTS: Record<TelcoCountry, number> = { TW: 0.027, US: 0.0035, VN: 0.025, INTL: 0.1 }
+
+// GSM-7 基本字元集（含常用符號）；出現其他字元（中文、emoji 等）即改 UCS-2
+const GSM7 = /^[@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !"#¤%&'()*+,\-./0-9:;<=>?¡A-ZÄÖÑÜ§¿a-zäöñüà^{}\\[~\]|€]*$/
+
+/** 簡訊分段數：GSM-7 單則 160／長簡訊每段 153；UCS-2 單則 70／每段 67 */
+export function smsSegments(text: string): number {
+  const len = [...text].length
+  if (len === 0) return 1
+  const [single, multi] = GSM7.test(text) ? [160, 153] : [70, 67]
+  return len <= single ? 1 : Math.ceil(len / multi)
+}
+
+export function smsCost(phone: string, text: string): number {
+  return smsSegments(text) * SMS_SEGMENT_COSTS[detectTelcoCountry(phone)]
+}
+
+// Email（每封）：Resend 超量 $0.90／1,000 封
+export const EMAIL_SEND_COST = 0.0009
+// AI 視覺工坊 fal 節點成本（USD／次），扣點＝成本 × 方案倍率，Claude 依 token 另計
+// fal：FLUX Pro Fill $0.05、Kontext Pro $0.04、Nano Banana edit $0.04、FLUX dev img2img $0.035／MP（以 2MP 計）；
+// Aura SR、BiRefNet 未取得公開報價，沿用原保守值
+export const AI_STUDIO_FAL_COSTS = {
+  fill: 0.05,
+  kontext: 0.04,
+  nanoBananaEdit: 0.04,
+  fluxDevImg2Img: 0.07,
+  auraSr: 0.04,
+  birefnet: 0.02,
+} as const
+// 執行前餘額檢查用的預估成本（USD）
+export const AI_STUDIO_SUGGEST_ESTIMATE = 0.01
+export const AI_STUDIO_NODE_ESTIMATE = 0.1
 
 // 自製專家：建立來源（訓練）與問答的計價
 // 建立來源：網址每則 0.02；檔案／文字每 1000 字 0.01（萃取＋儲存成本）
@@ -136,8 +226,45 @@ export function expertSourceCost(type: 'url' | 'file' | 'text', charCount: numbe
 // 問答：知識庫塞進 context，input token 偏高，每次固定 0.05
 export const EXPERT_QUERY_COST = 0.05
 
+// ── 每月贈點（當月用完即止、不累積；見 supabase/migrations/20261003_marketing_monthly_gift.sql）──
+// FREE 需完成 Email 驗證才發放；公司方案成員改用公司錢包，不另給個人贈點
+export const MONTHLY_GIFT_CREDITS: Record<MarketingPlan, number> = {
+  free: 1,
+  pro: 10,
+  team: 20,
+  enterprise: 35,
+}
+
+async function isEmailVerified(userId: string): Promise<boolean> {
+  try {
+    const { data } = await createAdminClient().auth.admin.getUserById(userId)
+    return !!data?.user?.email_confirmed_at
+  } catch {
+    return false
+  }
+}
+
+/** 本月可領的贈點額度（依方案；FREE 未驗證 Email 為 0） */
+export async function getMonthlyGiftAllowance(userId: string): Promise<number> {
+  if (await getCompanyBillingContext(userId)) return 0
+  const { plan } = await getMarketingEntitlements(null, userId)
+  if (plan === 'free' && !(await isEmailVerified(userId))) return 0
+  return MONTHLY_GIFT_CREDITS[plan] ?? 0
+}
+
+/** 本月剩餘贈點 */
+export async function getMonthlyGiftRemaining(userId: string): Promise<number> {
+  const allowance = await getMonthlyGiftAllowance(userId)
+  const { data, error } = await createAdminClient().rpc('get_marketing_gift', { p_user_id: userId, p_allowance: allowance })
+  if (error) {
+    console.error('[marketing billing] 讀取每月贈點失敗', { userId, error })
+    return 0
+  }
+  return Number(data ?? 0)
+}
+
 /**
- * 執行前餘額檢查。不足時回傳 402 的 payload（餘額、需要多少），
+ * 執行前餘額檢查（本月贈點 + 個人餘額）。不足時回傳 402 的 payload（餘額、需要多少），
  * route 直接 `return NextResponse.json(check.payload, { status: 402 })`。
  * billable=false（admin/employee/cron）一律放行，不查餘額。
  */
@@ -147,15 +274,16 @@ export async function checkCredits(
   billable: boolean,
 ): Promise<{ ok: true; balance: number } | { ok: false; payload: { error: string; balance: number; required: number } }> {
   if (!billable) return { ok: true, balance: Infinity }
-  const balance = await getBalance(userId)
-  if (balance < estimate) {
-    return { ok: false, payload: { error: '點數不足', balance, required: estimate } }
+  const [balance, gift] = await Promise.all([getBalance(userId), getMonthlyGiftRemaining(userId)])
+  const total = balance + gift
+  if (total < estimate) {
+    return { ok: false, payload: { error: '點數不足', balance: total, required: estimate } }
   }
-  return { ok: true, balance }
+  return { ok: true, balance: total }
 }
 
 /**
- * 成功後扣點。billable=false（admin/employee/cron）一律略過，不寫入 credit_transactions。
+ * 成功後扣點：先扣本月贈點，不足再扣個人餘額。billable=false（admin/employee/cron）一律略過。
  */
 export async function deductCredits(
   userId: string,
@@ -164,5 +292,51 @@ export async function deductCredits(
   billable: boolean,
 ): Promise<{ ok: true; balance: number } | { ok: false; reason: 'insufficient' | 'error' }> {
   if (!billable) return { ok: true, balance: Infinity }
-  return deductCreditsRaw(userId, amount, description)
+  let fromGift = 0
+  if (amount > 0) {
+    const allowance = await getMonthlyGiftAllowance(userId)
+    if (allowance > 0) {
+      const { data, error } = await createAdminClient().rpc('consume_marketing_gift', {
+        p_user_id: userId,
+        p_allowance: allowance,
+        p_amount: amount,
+        p_description: description,
+      })
+      if (error) console.error('[marketing billing] 扣每月贈點失敗，改扣個人餘額', { userId, error })
+      else fromGift = Number(data ?? 0)
+    }
+  }
+  const rest = Math.round((amount - fromGift) * 10000) / 10000
+  if (rest <= 0) {
+    return { ok: true, balance: (await getBalance(userId)) + (await getMonthlyGiftRemaining(userId)) }
+  }
+  return deductCreditsRaw(userId, rest, description)
+}
+
+/**
+ * 依用量計價功能的執行前檢查：預估成本 × 方案倍率，餘額不足時回傳 402 payload，足夠回傳 null。
+ * 非付費帳號（admin／employee／cron）一律放行。
+ */
+export async function precheckUsage(
+  userId: string,
+  estimateUsd: number,
+): Promise<{ error: string; balance: number; required: number } | null> {
+  const billable = await isBillableUser(userId)
+  if (!billable) return null
+  const required = priceFromCost(estimateUsd, await getCostMultiplier(userId))
+  const check = await checkCredits(userId, required, billable)
+  return check.ok ? null : check.payload
+}
+
+/**
+ * 依用量計價功能的執行後扣點：實際成本 × 方案倍率。扣點失敗只記錄、不影響已完成的結果。
+ * 回傳實際扣除的點數（非付費帳號為 0）。
+ */
+export async function chargeUsage(userId: string, costUsd: number, description: string): Promise<number> {
+  const billable = await isBillableUser(userId)
+  if (!billable || !(costUsd > 0)) return 0
+  const amount = priceFromCost(costUsd, await getCostMultiplier(userId))
+  const res = await deductCredits(userId, amount, description, billable)
+  if (!res.ok) console.error('[marketing billing] 扣點失敗', { userId, amount, description, reason: res.reason })
+  return amount
 }

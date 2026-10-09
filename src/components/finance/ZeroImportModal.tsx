@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useRef, useState, type ChangeEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -43,6 +44,7 @@ const fmt = (n: number) => Math.round(n).toLocaleString('zh-TW')
 const BUCKET = 'fin-zero-import'
 
 export function ZeroImportModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+  const t = useTranslations('FinanceMdb')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const [path, setPath] = useState('')
@@ -62,10 +64,10 @@ export function ZeroImportModal({ onClose, onDone }: { onClose: () => void; onDo
     setErr(''); setPreview(null); setResult(null); setBusy(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('請重新登入')
+      if (!user) throw new Error(t('reLogin'))
       const objectPath = `${user.id}/${Date.now()}-${file.name}`
       const { error: upErr } = await supabase.storage.from(BUCKET).upload(objectPath, file)
-      if (upErr) throw new Error(`上傳失敗：${upErr.message}`)
+      if (upErr) throw new Error(t('uploadFailed', { msg: upErr.message }))
       setPath(objectPath)
 
       const res = await fetch('/api/hr/cashflow/zero-import', {
@@ -73,7 +75,7 @@ export function ZeroImportModal({ onClose, onDone }: { onClose: () => void; onDo
         body: JSON.stringify({ path: objectPath, mode: 'preview' }),
       })
       const d = await res.json()
-      if (!res.ok) throw new Error(d.error ?? '解析失敗')
+      if (!res.ok) throw new Error(d.error ?? t('parseFailed'))
       setPreview(d.preview)
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e))
@@ -91,7 +93,7 @@ export function ZeroImportModal({ onClose, onDone }: { onClose: () => void; onDo
         body: JSON.stringify({ path, mode: 'commit', overwrite_mode: overwriteMode }),
       })
       const d = await res.json()
-      if (!res.ok) throw new Error(d.error ?? '匯入失敗')
+      if (!res.ok) throw new Error(d.error ?? t('importFailed'))
       setResult(d)
       onDone()
     } catch (e) {
@@ -110,9 +112,9 @@ export function ZeroImportModal({ onClose, onDone }: { onClose: () => void; onDo
         <Card className="w-full max-w-lg p-5 space-y-4 max-h-[85vh] overflow-y-auto shadow-xl" onClick={e => e.stopPropagation()}>
           <div className="flex items-center justify-between border-b pb-3">
             <div>
-              <h3 className="font-semibold text-base">匯入流水帳與科目（.mdb）</h3>
+              <h3 className="font-semibold text-base">{t('zTitle')}</h3>
               <p className="text-xs text-muted-foreground mt-0.5">
-                上傳記帳資料庫，系統將自動建置樹狀科目主檔並去重匯入交易。
+                {t('zDesc')}
               </p>
             </div>
             <button onClick={onClose} className="p-1 rounded-md text-muted-foreground hover:text-foreground">
@@ -123,8 +125,8 @@ export function ZeroImportModal({ onClose, onDone }: { onClose: () => void; onDo
           {!result && !preview && (
             <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-xl p-8 cursor-pointer hover:bg-muted/50 text-sm text-muted-foreground transition-colors">
               <Upload className="h-8 w-8 text-primary" />
-              <span className="font-medium text-foreground">{busy ? '正在解析資料庫中…' : '點擊選擇 .mdb 檔案'}</span>
-              <span className="text-xs text-muted-foreground">支援 MymoneyData.mdb 記帳資料庫</span>
+              <span className="font-medium text-foreground">{busy ? t('parsing') : t('chooseMdb')}</span>
+              <span className="text-xs text-muted-foreground">{t('supportsMdb')}</span>
               <input ref={fileRef} type="file" accept=".mdb" className="hidden" disabled={busy} onChange={onFile} />
             </label>
           )}
@@ -139,25 +141,25 @@ export function ZeroImportModal({ onClose, onDone }: { onClose: () => void; onDo
           {preview && !result && (
             <div className="space-y-4">
               <div className="flex items-center justify-between text-xs bg-muted/40 p-2.5 rounded-lg">
-                <span className="text-muted-foreground">帳本名稱：<b className="text-foreground">{preview.bookName || 'FT'}</b></span>
-                <span className="text-muted-foreground">日期區間：<b className="text-foreground">{preview.dateRange ? `${preview.dateRange[0]} ~ ${preview.dateRange[1]}` : '—'}</b></span>
+                <span className="text-muted-foreground">{t('bookName')}<b className="text-foreground">{preview.bookName || 'FT'}</b></span>
+                <span className="text-muted-foreground">{t('dateRange')}<b className="text-foreground">{preview.dateRange ? `${preview.dateRange[0]} ~ ${preview.dateRange[1]}` : '—'}</b></span>
               </div>
 
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div className="rounded-lg bg-muted p-3">
-                  <div className="text-xs text-muted-foreground">可匯入交易分錄</div>
-                  <div className="text-lg font-bold tabular-nums">{fmt(preview.total)} 筆</div>
+                  <div className="text-xs text-muted-foreground">{t('importableRows')}</div>
+                  <div className="text-lg font-bold tabular-nums">{t('rowsN', { n: fmt(preview.total) })}</div>
                 </div>
                 <div className="rounded-lg bg-muted p-3">
-                  <div className="text-xs text-muted-foreground">自動建置科目</div>
-                  <div className="text-lg font-bold text-primary tabular-nums">{fmt(preview.subjectsCount)} 個</div>
+                  <div className="text-xs text-muted-foreground">{t('autoSubjects')}</div>
+                  <div className="text-lg font-bold text-primary tabular-nums">{t('itemsN', { n: fmt(preview.subjectsCount) })}</div>
                 </div>
                 <div className="rounded-lg bg-muted p-3">
-                  <div className="text-xs text-muted-foreground">總收入</div>
+                  <div className="text-xs text-muted-foreground">{t('totalIncome')}</div>
                   <div className="text-sm font-semibold text-emerald-600 tabular-nums">NT$ {fmt(preview.totalIncome)}</div>
                 </div>
                 <div className="rounded-lg bg-muted p-3">
-                  <div className="text-xs text-muted-foreground">總支出</div>
+                  <div className="text-xs text-muted-foreground">{t('totalExpense')}</div>
                   <div className="text-sm font-semibold text-red-500 tabular-nums">NT$ {fmt(preview.totalExpense)}</div>
                 </div>
               </div>
@@ -166,7 +168,7 @@ export function ZeroImportModal({ onClose, onDone }: { onClose: () => void; onDo
               <div className="rounded-xl border p-3 bg-muted/20 space-y-2">
                 <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                   <ShieldCheck className="h-4 w-4 text-primary" />
-                  寫入模式選擇（防呆與覆蓋機制）
+                  {t('writeMode')}
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                   <label className={`flex items-start gap-2.5 p-2.5 rounded-lg border cursor-pointer transition-colors ${
@@ -180,9 +182,9 @@ export function ZeroImportModal({ onClose, onDone }: { onClose: () => void; onDo
                       className="mt-0.5"
                     />
                     <div>
-                      <div className="font-bold text-foreground">增量補充（預設推薦）</div>
+                      <div className="font-bold text-foreground">{t('modeAppend')}</div>
                       <div className="text-[11px] text-muted-foreground mt-0.5">
-                        依流水單號自動去重，已存在的交易略過，僅補入新單據。
+                        {t('modeAppendDesc')}
                       </div>
                     </div>
                   </label>
@@ -198,9 +200,9 @@ export function ZeroImportModal({ onClose, onDone }: { onClose: () => void; onDo
                       className="mt-0.5"
                     />
                     <div>
-                      <div className="font-bold text-foreground">清空並重新匯入（乾淨覆蓋）</div>
+                      <div className="font-bold text-foreground">{t('modeClean')}</div>
                       <div className="text-[11px] text-muted-foreground mt-0.5">
-                        先清除歷史 MDB 舊資料再完整寫入，避免舊刪除單據殘留。手動帳目完全不受影響。
+                        {t('modeCleanDesc')}
                       </div>
                     </div>
                   </label>
@@ -211,10 +213,10 @@ export function ZeroImportModal({ onClose, onDone }: { onClose: () => void; onDo
               <div className="p-3 rounded-lg bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40 text-xs space-y-1">
                 <div className="flex items-center gap-1.5 font-semibold text-blue-700 dark:text-blue-300">
                   <Layers className="h-4 w-4" />
-                  自動建置與對齊科目樹（{preview.subjectsCount} 個科目）
+                  {t('alignTree', { n: preview.subjectsCount })}
                 </div>
                 <p className="text-muted-foreground leading-relaxed">
-                  系統將依 MDB 中的 <code>ITEM_DATA</code> 自動建立資產、負債、收入、支出樹狀科目與期初金額，並同步對應所有收付帳戶。
+                  {t.rich('alignTreeDesc', { code: chunks => <code>{chunks}</code> })}
                 </p>
               </div>
 
@@ -224,7 +226,7 @@ export function ZeroImportModal({ onClose, onDone }: { onClose: () => void; onDo
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5 font-semibold text-amber-800 dark:text-amber-300">
                       <AlertTriangle className="h-4 w-4" />
-                      偵測到 {preview.errorCount} 筆格式錯誤，{preview.warningCount} 筆疑似年份筆誤
+                      {t('detected', { e: preview.errorCount, w: preview.warningCount })}
                     </div>
                     <Button
                       size="sm"
@@ -233,27 +235,27 @@ export function ZeroImportModal({ onClose, onDone }: { onClose: () => void; onDo
                       onClick={() => setShowErrorDrawer(true)}
                     >
                       <FileText className="h-3.5 w-3.5" />
-                      檢視詳細錯誤明細
+                      {t('viewErrors')}
                     </Button>
                   </div>
                   <p className="text-muted-foreground">
-                    點擊「檢視詳細錯誤明細」可查看具體在哪一筆流水號、日期、項目及出錯原因，方便您後續核對與修改。
+                    {t('viewErrorsHint')}
                   </p>
                 </div>
               ) : (
                 <div className="p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 text-xs text-emerald-700 flex items-center gap-1.5">
                   <CheckCircle2 className="h-4 w-4" />
-                  所有分錄格式檢查完全正確，無任何格式異常。
+                  {t('allOk')}
                 </div>
               )}
 
               <div className="flex items-center justify-end gap-2 pt-2">
                 <Button variant="outline" size="sm" onClick={() => { setPreview(null); setPath('') }}>
-                  重新選擇
+                  {t('rechoose')}
                 </Button>
                 <Button size="sm" onClick={confirmImport} disabled={busy} className="gap-1.5 font-semibold">
                   {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {busy ? '正在寫入資料庫…' : overwriteMode === 'clean_overwrite' ? '確認清空舊檔並全新重匯' : '確認匯入並建置科目'}
+                  {busy ? t('writing') : overwriteMode === 'clean_overwrite' ? t('confirmClean') : t('confirmAppend')}
                 </Button>
               </div>
             </div>
@@ -264,21 +266,21 @@ export function ZeroImportModal({ onClose, onDone }: { onClose: () => void; onDo
               <div className="p-4 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200 text-emerald-800 dark:text-emerald-300 space-y-2">
                 <div className="flex items-center gap-2 font-bold text-base">
                   <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                  匯入完成！
+                  {t('done')}
                 </div>
                 <p className="text-xs leading-relaxed text-foreground">
-                  已成功匯入 <b>{fmt(result.imported)}</b> 筆交易
+                  {t.rich('importedN', { n: fmt(result.imported), b: chunks => <b>{chunks}</b> })}
                   {result.clearedPrevious !== undefined && result.clearedPrevious > 0 && (
-                    <span className="text-amber-700 dark:text-amber-400 font-medium">（已自動清空先前 {fmt(result.clearedPrevious)} 筆舊 MDB 資料，達成乾淨重匯）</span>
+                    <span className="text-amber-700 dark:text-amber-400 font-medium">{t('clearedN', { n: fmt(result.clearedPrevious) })}</span>
                   )}
-                  {result.skipped > 0 && `，略過 ${fmt(result.skipped)} 筆`}
-                  ，自動建置/更新 <b>{result.subjectsCreated}</b> 個樹狀科目，新建 <b>{result.accountsCreated}</b> 個資金帳戶。
+                  {result.skipped > 0 && t('skippedN', { n: fmt(result.skipped) })}
+                  {t.rich('createdSummary', { s: result.subjectsCreated, a: result.accountsCreated, b: chunks => <b>{chunks}</b> })}
                 </p>
               </div>
 
               {totalErrCount > 0 && (
                 <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30 text-xs">
-                  <span className="text-muted-foreground">本次匯入共有 {totalErrCount} 筆異常或警告記錄</span>
+                  <span className="text-muted-foreground">{t('issuesN', { n: totalErrCount })}</span>
                   <Button
                     size="sm"
                     variant="outline"
@@ -286,13 +288,13 @@ export function ZeroImportModal({ onClose, onDone }: { onClose: () => void; onDo
                     onClick={() => setShowErrorDrawer(true)}
                   >
                     <FileText className="h-3.5 w-3.5" />
-                    查看錯誤明細 ({totalErrCount})
+                    {t('viewErrorsN', { n: totalErrCount })}
                   </Button>
                 </div>
               )}
 
               <div className="flex justify-end pt-2">
-                <Button size="sm" onClick={onClose}>完成並進入出納系統</Button>
+                <Button size="sm" onClick={onClose}>{t('finish')}</Button>
               </div>
             </div>
           )}

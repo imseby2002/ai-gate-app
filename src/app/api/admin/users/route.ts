@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { isSuperAdminUser } from '@/lib/auth/admin-check'
+import { resolveActiveCompanyId } from '@/lib/company/activeCompany'
 
 interface ManagementAuth {
   user: { id: string; email?: string }
@@ -49,7 +50,9 @@ async function getManagementAuth(): Promise<ManagementAuth | null> {
   }
 }
 
-export async function GET() {
+// ?scope=company：只列「目前所在公司」的成員（辦公系統的單位指派用）。
+// 總管理員也依切換中的公司篩選，否則會看到其他公司與未加入公司的帳號。
+export async function GET(req: NextRequest) {
   const auth = await getManagementAuth()
   if (!auth) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
@@ -59,9 +62,19 @@ export async function GET() {
     .select('*, subscriptions(plan_id, status)')
     .order('created_at', { ascending: false })
 
-  // 公司負責人或 IT：僅讀取本公司成員名單
-  if (!auth.isSuperAdmin && auth.companyId) {
-    query = query.eq('company_id', auth.companyId)
+  const companyScope = req.nextUrl.searchParams.get('scope') === 'company'
+  const scopeCompanyId = companyScope
+    ? await resolveActiveCompanyId(supabase, auth.user.id, auth.isSuperAdmin, auth.companyId)
+    : (!auth.isSuperAdmin ? auth.companyId : null)
+
+  // 公司負責人或 IT：僅讀取本公司成員名單；scope=company 時總管理員亦同
+  if (scopeCompanyId) {
+    const { data: members } = await supabase.from('company_members')
+      .select('member_id').eq('company_id', scopeCompanyId).eq('status', 'active')
+    const ids = (members ?? []).map(m => m.member_id).filter(Boolean)
+    query = ids.length
+      ? query.or(`company_id.eq.${scopeCompanyId},id.in.(${ids.join(',')})`)
+      : query.eq('company_id', scopeCompanyId)
   }
 
   const { data, error } = await query

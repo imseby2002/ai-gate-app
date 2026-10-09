@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { introTr, trDeep } from '@/lib/i18n-data/server'
 import { introSystem } from '../_host'
 import { MarketingFeatures, marketingFeaturesMetadata } from './MarketingFeatures'
 import { CsFeatures, csFeaturesMetadata } from '../_cs/CsFeatures'
@@ -9,7 +10,7 @@ export const dynamic = 'force-dynamic'
 // cs／booking 子網域 → 各自的功能頁；其餘（marketing）→ 行銷中心版本（其他子網域由 middleware 導走）
 export async function generateMetadata(): Promise<Metadata> {
   const sys = await introSystem()
-  return sys === 'cs' ? csFeaturesMetadata : sys === 'booking' ? bookingFeaturesMetadata : marketingFeaturesMetadata
+  return trDeep(sys === 'cs' ? csFeaturesMetadata : sys === 'booking' ? bookingFeaturesMetadata : marketingFeaturesMetadata, await introTr())
 }
 
 export default async function IntroFeaturesPage() {

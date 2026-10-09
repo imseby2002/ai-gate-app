@@ -15,12 +15,13 @@ type ItemIn = {
   purchase_price?: number // 工廠進貨價
   export_price?: number   // 賣給直營門市價格（門市配方成本）
   dealer_price?: number   // 賣給經銷商或非直營門市價格
-  category?: string       // 原料 | 設備 | 道具 | 耗材
+  category?: string       // 原料 | 半成品 | 設備 | 道具 | 耗材
 }
 
 const cleanItems = (raw: unknown, ownerId: string, recipeId: string) =>
-  (Array.isArray(raw) ? raw : []).map((r: ItemIn) => ({
+  (Array.isArray(raw) ? raw : []).map((r: ItemIn, idx: number) => ({
     recipe_id: recipeId,
+    sort: idx + 1,
     owner_id: ownerId,
     material_code: String(r.material_code ?? '').trim(),
     material_name: String(r.material_name ?? '').trim(),
@@ -31,11 +32,21 @@ export async function GET() {
   const { user, supabase , status } = await getAdminUser()
   if (!user) return NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
 
-  const [{ data: recipes }, { data: items }, { data: mats }, { data: prices }] = await Promise.all([
-    supabase.from('inv_recipes').select('id, name, note, created_at').eq('owner_id', user.id).order('name'),
-    supabase.from('inv_recipe_items').select('id, recipe_id, material_code, material_name, qty_per_cup').eq('owner_id', user.id),
+  // PostgREST 單次上限 1000 筆：大量配方（如 Excel 匯入上千筆）需分頁讀完
+  const fetchAll = async <T,>(table: string, cols: string, order: string): Promise<T[]> => {
+    const out: T[] = []
+    for (let from = 0; ; from += 1000) {
+      const { data } = await supabase.from(table).select(cols).eq('owner_id', user.id).order(order).range(from, from + 999)
+      out.push(...((data ?? []) as T[]))
+      if (!data || data.length < 1000) return out
+    }
+  }
+
+  const [recipes, items, { data: mats }, prices] = await Promise.all([
+    fetchAll<{ id: string; name: string; note: string; created_at: string }>('inv_recipes', 'id, name, note, created_at, kind, cup_size, unit_label, sell_ratio_export, sell_ratio_purchase, excel_total_export, excel_total_purchase, source', 'name'),
+    fetchAll<{ id: string; recipe_id: string; material_code: string; material_name: string; qty_per_cup: number; qty_display: number | null; unit_display: string | null; sort: number | null }>('inv_recipe_items', 'id, recipe_id, material_code, material_name, qty_per_cup, qty_display, unit_display, sort', 'id'),
     supabase.from('inv_movements').select('material_code, material_name, unit').eq('owner_id', user.id),
-    supabase.from('inv_material_prices').select('material_code, material_name, unit, export_price, purchase_price, dealer_price, category, updated_at').eq('owner_id', user.id),
+    fetchAll<{ material_code: string; material_name: string; unit: string; export_price: number; purchase_price: number; dealer_price: number; category: string; updated_at: string }>('inv_material_prices', 'material_code, material_name, unit, export_price, purchase_price, dealer_price, category, updated_at', 'material_code'),
   ])
 
   // 原料/設備/道具/耗材 定價庫（三層定價：工廠進貨價、直營門市出貨價、經銷商出貨價）
@@ -112,7 +123,7 @@ export async function GET() {
   }
 
   const withItems = (recipes ?? []).map(r => {
-    const rItems = byRecipe[r.id] ?? []
+    const rItems = (byRecipe[r.id] ?? []).sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
     const store_cost = rItems.reduce((sum, i) => sum + (i.store_cost || 0), 0)
     const factory_cost = rItems.reduce((sum, i) => sum + (i.factory_cost || 0), 0)
     const dealer_cost = rItems.reduce((sum, i) => sum + (i.dealer_cost || 0), 0)

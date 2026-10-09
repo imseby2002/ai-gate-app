@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getUnitContextAny } from '@/lib/auth/unit-access'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { vendorTokenAllowed } from '@/lib/fin/vendor-portal'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,8 +19,8 @@ export async function POST(req: NextRequest) {
     const token = sp.get('token') || req.headers.get('x-vendor-token')
     if (token) {
       const admin = createAdminClient()
-      const { data: v } = await admin.from('fin_vendors').select('owner_id, active').eq('fill_token', token).single()
-      if (v && v.active) {
+      const { data: v } = await admin.from('fin_vendors').select('id, owner_id, active, link_slug, pin_hash').eq('fill_token', token).single()
+      if (v && v.active && vendorTokenAllowed(req, v)) {
         ownerId = v.owner_id
         adminClient = admin
       }

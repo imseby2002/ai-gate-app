@@ -3,9 +3,10 @@ import type { Metadata } from 'next'
 import {
   Sparkles, Users, BarChart3, ArrowRight, Check, X, ImageIcon, FileText, Film, Target, Send, ChevronDown,
 } from 'lucide-react'
-import { PLAN_CARDS } from '@/lib/marketing/plan-compare'
+import { PLAN_CARDS as PLAN_CARDS__ZH } from '@/lib/marketing/plan-compare'
 import { GRAD, BALANCE, GradText, IntroNav, PrimaryCta, GhostCta, FinalCta, IntroFooter } from './_ui'
 import { VisualStyleShowcase } from './VisualStyleShowcase'
+import { introTr, trDeep } from '@/lib/i18n-data/server'
 
 export const marketingMetadata: Metadata = {
   title: 'AI GATE 行銷中心｜一個人就是一整個行銷部',
@@ -15,7 +16,7 @@ export const marketingMetadata: Metadata = {
 // 深色區塊用字：主文 #f4f0fb、次要 #ddd5ee（避免過淡看不清）
 // 淺色區塊用字：主文 #17131f、次要 #3f3a4d
 
-const HERO_OUTPUTS = [
+const HERO_OUTPUTS__ZH = [
   { Icon: Target, label: '行銷策略與切角' },
   { Icon: FileText, label: '社群貼文＋廣告文案' },
   { Icon: ImageIcon, label: '85 種風格廣告圖' },
@@ -23,21 +24,21 @@ const HERO_OUTPUTS = [
   { Icon: Send, label: '一鍵推文到 11 個社群' },
 ]
 
-const STATS = [
+const STATS__ZH = [
   { n: '11', unit: '大', label: '行銷功能一站整合' },
   { n: '13', unit: '項', label: 'AI 專家技能' },
   { n: '85', unit: '種', label: '視覺風格' },
   { n: '185', unit: '款', label: '短影音分鏡模板' },
 ]
 
-const COMPARE = [
+const COMPARE__ZH = [
   { before: '找設計、找寫手、找剪輯，一等好幾天', after: '上傳產品圖，AI 當場產出文案與素材' },
   { before: '每天手動發文、切帳號、怕被封', after: '社群矩陣排程發文，內建防重複文案' },
   { before: '陌生開發靠人力一通一通打', after: 'AI 蒐集名單、篩選，自動電訪與寄信' },
   { before: '十幾個工具、十幾組帳密', after: '一個後台、一套點數，全部串起來' },
 ]
 
-const PILLARS = [
+const PILLARS__ZH = [
   {
     id: 'content', n: '01', Icon: Sparkles, title: '內容，AI 幫你做', tint: 'from-[#7b5cf0] to-[#a34be0]',
     one: '上傳一張產品圖，行銷策略、文案、配圖、短影音分鏡一次產出。85 種視覺風格直接套用，不用會寫提示詞。',
@@ -55,16 +56,16 @@ const PILLARS = [
   },
 ]
 
-const FLOW = ['蒐集資訊', '競品＋客群分析', '文案', '圖片', '爆款短影音 🔥', '自動上架', '開發客戶']
+const FLOW__ZH = ['蒐集資訊', '競品＋客群分析', '文案', '圖片', '爆款短影音 🔥', '自動上架', '開發客戶']
 
-const FREE_ITEMS = [
+const FREE_ITEMS__ZH = [
   '1 個完整行銷案（資料蒐集／分析／文案）',
   'GEO 內容寫手每月 1 篇',
   '潛在客戶自動蒐集＋AI 篩選',
   '13 項 AI 專家技能（依點數使用）',
 ]
 
-const FAQ = [
+const FAQ__ZH = [
   { q: '免費方案真的能用嗎？', a: '可以。免費帳號就能建立 1 個行銷案、每月寫 1 篇 GEO 文章、蒐集與篩選潛在客戶，覺得好用再升級。' },
   { q: '訂閱費之外還要付什麼？', a: '圖片、影片、主播影片、電訪、Email 等生成成本以儲值點數另計，用多少扣多少。' },
   { q: '會自動續訂嗎？', a: '不會。付款後方案立即生效，到期不自動扣款，需要延續再自行購買。' },
@@ -79,7 +80,16 @@ function Eyebrow({ children, dark }: { children: React.ReactNode; dark?: boolean
   )
 }
 
-export function MarketingIntro() {
+export async function MarketingIntro() {
+  const tr = await introTr()
+  const HERO_OUTPUTS = trDeep(HERO_OUTPUTS__ZH, tr)
+  const STATS = trDeep(STATS__ZH, tr)
+  const COMPARE = trDeep(COMPARE__ZH, tr)
+  const PILLARS = trDeep(PILLARS__ZH, tr)
+  const FLOW = trDeep(FLOW__ZH, tr)
+  const FREE_ITEMS = trDeep(FREE_ITEMS__ZH, tr)
+  const PLAN_CARDS = trDeep(PLAN_CARDS__ZH, tr)
+  const FAQ = trDeep(FAQ__ZH, tr)
   return (
     <div className="min-h-screen bg-[#f5f3f8] text-[#17131f]">
       {/* HERO */}
@@ -93,18 +103,14 @@ export function MarketingIntro() {
           <div className="grid gap-12 lg:grid-cols-[1.15fr_1fr] items-center pb-16 sm:pb-20">
             <div>
               <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-[13px] font-bold text-white">
-                <span className="h-2 w-2 rounded-full bg-[#3ee6a8]" /> AI 行銷自動化平台 · 免費開始
-              </span>
-              <h1 className="mt-5 font-black leading-[1.04] tracking-tight text-[clamp(40px,8vw,76px)]" style={BALANCE}>
-                一個人，<br />就是一整個<GradText>行銷部</GradText>。
+                <span className="h-2 w-2 rounded-full bg-[#3ee6a8]" />{" "}{tr("AI 行銷自動化平台 · 免費開始")}</span>
+              <h1 className="mt-5 font-black leading-[1.04] tracking-tight text-[clamp(40px,8vw,76px)]" style={BALANCE}>{tr("一個人，")}<br />{tr("就是一整個")}<GradText>{tr("行銷部")}</GradText>。
               </h1>
-              <p className="mt-6 text-[#ece6f8] text-[clamp(17px,2.4vw,21px)] leading-relaxed max-w-[44ch]">
-                上傳一張產品圖，AI 寫文案、做圖、排短影音、找名單、自動發送。
-                <b className="text-white">你只負責按「確認」。</b>
+              <p className="mt-6 text-[#ece6f8] text-[clamp(17px,2.4vw,21px)] leading-relaxed max-w-[44ch]">{tr("上傳一張產品圖，AI 寫文案、做圖、排短影音、找名單、自動發送。")}<b className="text-white">{tr("你只負責按「確認」。")}</b>
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
-                <PrimaryCta>免費開始，不用先付費</PrimaryCta>
-                <GhostCta href="/intro/features">看完整功能</GhostCta>
+                <PrimaryCta>{tr("免費開始，不用先付費")}</PrimaryCta>
+                <GhostCta href="/intro/features">{tr("看完整功能")}</GhostCta>
               </div>
             </div>
 
@@ -115,8 +121,8 @@ export function MarketingIntro() {
                 <div className="flex items-center gap-3 rounded-2xl border border-dashed border-white/25 bg-white/5 p-3.5">
                   <span className="grid h-12 w-12 place-items-center rounded-xl bg-white/10 text-2xl">📦</span>
                   <div>
-                    <div className="text-[15px] font-bold text-white">上傳：產品照片.jpg</div>
-                    <div className="text-[13px] text-[#ddd5ee]">AI 開始分析產品與市場…</div>
+                    <div className="text-[15px] font-bold text-white">{tr("上傳：產品照片.jpg")}</div>
+                    <div className="text-[13px] text-[#ddd5ee]">{tr("AI 開始分析產品與市場…")}</div>
                   </div>
                 </div>
                 <div className="my-3 flex justify-center text-[#e4d9ff]"><ChevronDown className="h-5 w-5" /></div>
@@ -129,7 +135,7 @@ export function MarketingIntro() {
                     </li>
                   ))}
                 </ul>
-                <div className="mt-3 text-right text-[12px] text-[#c9bfe0]">示意畫面</div>
+                <div className="mt-3 text-right text-[12px] text-[#c9bfe0]">{tr("示意畫面")}</div>
               </div>
             </div>
           </div>
@@ -152,11 +158,11 @@ export function MarketingIntro() {
 
       {/* BEFORE / AFTER */}
       <section className="max-w-6xl mx-auto px-6 pt-20 pb-16">
-        <Eyebrow>差別在哪</Eyebrow>
-        <h2 className="text-[clamp(28px,4.6vw,42px)] font-black tracking-tight mb-8" style={BALANCE}>你不缺工具，你缺的是時間。</h2>
+        <Eyebrow>{tr("差別在哪")}</Eyebrow>
+        <h2 className="text-[clamp(28px,4.6vw,42px)] font-black tracking-tight mb-8" style={BALANCE}>{tr("你不缺工具，你缺的是時間。")}</h2>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="rounded-3xl bg-[#ebe7f1] p-6">
-            <div className="text-[15px] font-black text-[#3f3a4d] mb-4">以前的做法</div>
+            <div className="text-[15px] font-black text-[#3f3a4d] mb-4">{tr("以前的做法")}</div>
             <ul className="space-y-3">
               {COMPARE.map(c => (
                 <li key={c.before} className="flex gap-3 text-[16px] text-[#3f3a4d]">
@@ -167,7 +173,7 @@ export function MarketingIntro() {
             </ul>
           </div>
           <div className="relative rounded-3xl bg-white p-6 border-2 border-[#7b5cf0] shadow-[0_18px_44px_rgba(123,92,240,0.20)]">
-            <div className="text-[15px] font-black mb-4"><GradText>用 AI GATE 之後</GradText></div>
+            <div className="text-[15px] font-black mb-4"><GradText>{tr("用 AI GATE 之後")}</GradText></div>
             <ul className="space-y-3">
               {COMPARE.map(c => (
                 <li key={c.after} className="flex gap-3 text-[16px] font-bold text-[#17131f]">
@@ -182,9 +188,9 @@ export function MarketingIntro() {
 
       {/* PILLARS */}
       <section id="pillars" className="max-w-6xl mx-auto px-6 pb-20">
-        <Eyebrow>它幫你做三件事</Eyebrow>
-        <h2 className="text-[clamp(28px,4.6vw,42px)] font-black tracking-tight mb-2">做內容、找客人、看市場</h2>
-        <p className="text-[#3f3a4d] text-[17px] max-w-[56ch] mb-8">每一件都對應你真正在意的結果，工具只是手段。</p>
+        <Eyebrow>{tr("它幫你做三件事")}</Eyebrow>
+        <h2 className="text-[clamp(28px,4.6vw,42px)] font-black tracking-tight mb-2">{tr("做內容、找客人、看市場")}</h2>
+        <p className="text-[#3f3a4d] text-[17px] max-w-[56ch] mb-8">{tr("每一件都對應你真正在意的結果，工具只是手段。")}</p>
         <div className="grid gap-4 md:grid-cols-3">
           {PILLARS.map(p => (
             <Link key={p.n} href={`/intro/features#${p.id}`}
@@ -200,8 +206,7 @@ export function MarketingIntro() {
               <div className="flex flex-wrap gap-1.5">
                 {p.chips.map(c => <span key={c} className="text-[13px] font-semibold text-[#4a3a8c] bg-[#efeafd] rounded-lg px-2.5 py-1">{c}</span>)}
               </div>
-              <span className="mt-auto pt-1 inline-flex items-center gap-1 text-[15px] font-black text-[#5b3fd6] group-hover:gap-2 transition-all">
-                詳細說明 <ArrowRight className="h-4 w-4" />
+              <span className="mt-auto pt-1 inline-flex items-center gap-1 text-[15px] font-black text-[#5b3fd6] group-hover:gap-2 transition-all">{tr("詳細說明")}{" "}<ArrowRight className="h-4 w-4" />
               </span>
             </Link>
           ))}
@@ -216,16 +221,13 @@ export function MarketingIntro() {
         <div className="pointer-events-none absolute inset-0"
           style={{ background: 'radial-gradient(50% 80% at 80% 100%,rgba(224,71,155,.40),transparent 70%),radial-gradient(50% 80% at 10% 100%,rgba(123,92,240,.45),transparent 70%)' }} />
         <div className="relative max-w-6xl mx-auto px-6 py-20">
-          <Eyebrow dark>最強差異</Eyebrow>
-          <h2 className="mb-4 text-[clamp(30px,5vw,48px)] font-black tracking-tight" style={BALANCE}>
-            三件事串起來，<GradText>一鍵跑完</GradText>
+          <Eyebrow dark>{tr("最強差異")}</Eyebrow>
+          <h2 className="mb-4 text-[clamp(30px,5vw,48px)] font-black tracking-tight" style={BALANCE}>{tr("三件事串起來，")}<GradText>{tr("一鍵跑完")}</GradText>
           </h2>
-          <p className="text-[#ece6f8] text-[17px] leading-relaxed max-w-[54ch] mb-9">
-            行銷流水線：從蒐集資料到發佈上架，整條流程自動接力，可定時排程，每一步都能用 Telegram 審核後再放行。
-          </p>
+          <p className="text-[#ece6f8] text-[17px] leading-relaxed max-w-[54ch] mb-9">{tr("行銷流水線：從蒐集資料到發佈上架，整條流程自動接力，可定時排程，每一步都能用 Telegram 審核後再放行。")}</p>
           <ol className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-7">
             {FLOW.map((s, i) => {
-              const hot = s.includes('爆款')
+              const hot = s.includes(tr("爆款"))
               return (
                 <li key={s} className={`relative rounded-2xl p-4 border ${hot ? 'border-transparent' : 'border-white/15 bg-white/[0.07]'}`}
                   style={hot ? { background: GRAD } : undefined}>
@@ -235,8 +237,7 @@ export function MarketingIntro() {
               )
             })}
           </ol>
-          <Link href="/intro/features#pipeline" className="mt-9 inline-flex items-center gap-1.5 text-[16px] font-black text-white underline decoration-[#e0479b] decoration-2 underline-offset-4 hover:gap-2.5 transition-all">
-            流水線怎麼運作 <ArrowRight className="h-4 w-4" />
+          <Link href="/intro/features#pipeline" className="mt-9 inline-flex items-center gap-1.5 text-[16px] font-black text-white underline decoration-[#e0479b] decoration-2 underline-offset-4 hover:gap-2.5 transition-all">{tr("流水線怎麼運作")}{" "}<ArrowRight className="h-4 w-4" />
           </Link>
         </div>
       </section>
@@ -246,11 +247,10 @@ export function MarketingIntro() {
         <div className="grid gap-8 md:grid-cols-[1fr_1.1fr] items-center rounded-3xl bg-gradient-to-br from-[#eafaf3] to-white border border-[#bfead8] p-7 sm:p-10">
           <div>
             <div className="inline-flex items-center gap-2 font-bold text-[13px] tracking-[0.14em] uppercase mb-3 text-[#0b7a55]">
-              <span className="h-[3px] w-6 rounded-full bg-[#0f9d6e]" />先免費用，再決定
-            </div>
-            <h2 className="text-[clamp(28px,4.4vw,40px)] font-black tracking-tight mb-3" style={BALANCE}>註冊就能開始，<br />不用先付錢</h2>
-            <p className="text-[#2b3a33] text-[17px] max-w-[40ch] mb-6">先跑完一個行銷案，親眼看 AI 產出什麼，覺得值得再升級。</p>
-            <PrimaryCta>立即免費註冊</PrimaryCta>
+              <span className="h-[3px] w-6 rounded-full bg-[#0f9d6e]" />{tr("先免費用，再決定")}</div>
+            <h2 className="text-[clamp(28px,4.4vw,40px)] font-black tracking-tight mb-3" style={BALANCE}>{tr("註冊就能開始，")}<br />{tr("不用先付錢")}</h2>
+            <p className="text-[#2b3a33] text-[17px] max-w-[40ch] mb-6">{tr("先跑完一個行銷案，親眼看 AI 產出什麼，覺得值得再升級。")}</p>
+            <PrimaryCta>{tr("立即免費註冊")}</PrimaryCta>
           </div>
           <ul className="space-y-3">
             {FREE_ITEMS.map(f => (
@@ -265,48 +265,47 @@ export function MarketingIntro() {
 
       {/* PRICING */}
       <section className="max-w-6xl mx-auto px-6 pb-20">
-        <Eyebrow>方案</Eyebrow>
+        <Eyebrow>{tr("方案")}</Eyebrow>
         <div className="flex items-end justify-between flex-wrap gap-3 mb-8">
-          <h2 className="text-[clamp(28px,4.6vw,42px)] font-black tracking-tight">從免費，到一條龍全自動</h2>
-          <Link href="/intro/pricing" className="inline-flex items-center gap-1.5 rounded-xl border-2 border-[#5b3fd6] px-4 py-2 text-[15px] font-black text-[#5b3fd6] hover:bg-[#5b3fd6] hover:text-white transition-colors">
-            完整功能比較 <ArrowRight className="h-4 w-4" />
+          <h2 className="text-[clamp(28px,4.6vw,42px)] font-black tracking-tight">{tr("從免費，到一條龍全自動")}</h2>
+          <Link href="/intro/pricing" className="inline-flex items-center gap-1.5 rounded-xl border-2 border-[#5b3fd6] px-4 py-2 text-[15px] font-black text-[#5b3fd6] hover:bg-[#5b3fd6] hover:text-white transition-colors">{tr("完整功能比較")}{" "}<ArrowRight className="h-4 w-4" />
           </Link>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-3xl bg-white p-6 border border-[#e6e2ee] flex flex-col">
             <div className="font-black tracking-widest text-[15px]">FREE</div>
             <div className="mt-3 text-[36px] font-black leading-none">$0</div>
-            <div className="mt-1 text-[14px] text-[#3f3a4d]">永久免費</div>
-            <div className="text-[#2b2635] text-[15px] mt-4">先體驗一個完整行銷案。</div>
-            <span className="mt-auto pt-4 text-[13px] font-black text-[#5b3fd6]">個人試用</span>
+            <div className="mt-1 text-[14px] text-[#3f3a4d]">{tr("永久免費")}</div>
+            <div className="text-[#2b2635] text-[15px] mt-4">{tr("先體驗一個完整行銷案。")}</div>
+            <span className="mt-auto pt-4 text-[13px] font-black text-[#5b3fd6]">{tr("個人試用")}</span>
           </div>
           {PLAN_CARDS.map(c => {
             const hi = c.plan === 'team'
             return (
               <div key={c.plan} className={`relative rounded-3xl p-6 flex flex-col ${hi ? 'text-white shadow-[0_20px_48px_rgba(123,92,240,0.35)]' : 'bg-white border border-[#e6e2ee]'}`}
                 style={hi ? { background: 'linear-gradient(160deg,#2a1a4a,#4b2378 60%,#7a2a6b)' } : undefined}>
-                {hi && <span className="absolute -top-3 left-6 text-[12px] font-black text-white rounded-full px-3 py-1" style={{ background: GRAD }}>推薦</span>}
+                {hi && <span className="absolute -top-3 left-6 text-[12px] font-black text-white rounded-full px-3 py-1" style={{ background: GRAD }}>{tr("推薦")}</span>}
                 <div className="font-black tracking-widest text-[15px]">{c.name}</div>
-                <div className="mt-3 text-[36px] font-black leading-none">${c.monthlyUsd}<span className={`text-[14px] font-semibold ${hi ? 'text-[#ece6f8]' : 'text-[#3f3a4d]'}`}> 美元/月</span></div>
-                <div className={`mt-1 text-[13px] font-bold ${hi ? 'text-[#7ff0c4]' : 'text-[#0b7a55]'}`}>年繳 ${c.yearlyUsd}（約 8 折）</div>
+                <div className="mt-3 text-[36px] font-black leading-none">${c.monthlyUsd}<span className={`text-[14px] font-semibold ${hi ? 'text-[#ece6f8]' : 'text-[#3f3a4d]'}`}>{" "}{tr("美元/月")}</span></div>
+                <div className={`mt-1 text-[13px] font-bold ${hi ? 'text-[#7ff0c4]' : 'text-[#0b7a55]'}`}>{tr("年繳 $")}{c.yearlyUsd}{tr("（約 8 折）")}</div>
                 <ul className={`mt-4 space-y-1.5 text-[15px] ${hi ? 'text-[#f4f0fb]' : 'text-[#2b2635]'}`}>
                   {c.features.slice(0, 4).map(f => (
                     <li key={f} className="flex gap-2"><Check className={`h-4 w-4 shrink-0 mt-0.5 ${hi ? 'text-[#7ff0c4]' : 'text-[#0f9d6e]'}`} />{f}</li>
                   ))}
                 </ul>
                 <span className={`mt-auto pt-4 text-[13px] font-black ${hi ? 'text-[#f0c6ff]' : 'text-[#5b3fd6]'}`}>
-                  {c.plan === 'pro' ? '小店 / 個人品牌' : c.plan === 'team' ? '團隊 / 全自動' : '企業 / 客製'}
+                  {c.plan === 'pro' ? tr("小店 / 個人品牌") : c.plan === 'team' ? tr("團隊 / 全自動") : tr("企業 / 客製")}
                 </span>
               </div>
             )
           })}
         </div>
-        <p className="mt-4 text-[14px] text-[#3f3a4d]">圖片、影片、電訪、Email 等生成成本以儲值點數另計。</p>
+        <p className="mt-4 text-[14px] text-[#3f3a4d]">{tr("圖片、影片、電訪、Email 等生成成本以儲值點數另計。")}</p>
       </section>
 
       {/* FAQ */}
       <section className="max-w-3xl mx-auto px-6 pb-20">
-        <h2 className="text-[clamp(26px,4vw,36px)] font-black tracking-tight mb-6 text-center">常見問題</h2>
+        <h2 className="text-[clamp(26px,4vw,36px)] font-black tracking-tight mb-6 text-center">{tr("常見問題")}</h2>
         <div className="space-y-3">
           {FAQ.map(f => (
             <details key={f.q} className="group rounded-2xl border border-[#e6e2ee] bg-white px-5 py-4 open:border-[#7b5cf0]">
@@ -320,7 +319,7 @@ export function MarketingIntro() {
         </div>
       </section>
 
-      <FinalCta title={<>今天就讓 AI<br />當你的行銷部。</>} />
+      <FinalCta title={<>{tr("今天就讓 AI")}<br />{tr("當你的行銷部。")}</>} />
       <IntroFooter />
     </div>
   )

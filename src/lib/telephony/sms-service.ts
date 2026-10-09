@@ -4,13 +4,14 @@
  * 依電話門號國碼自動分流：
  * 1. 🇹🇼 台灣門號 (+886 / 09xx) ─── 走 sms-get.com (簡訊特惠網，成本約 NT$ 0.72 ~ 0.86 / 則)
  * 2. 🇻🇳 越南門號 (+84 / 03,05,07,08,09xx) ─ 優先走 Zalo ZNS，若無則走 Stringee (SMS Brandname，成本約 NT$ 0.55 ~ 0.8 / 則)
- * 3. 🌐 其他國際門號 (+1, +81, +82, +65 等) ─ 走 Twilio (全區通用，支援 Bird 作為備援)
+ * 3. 🇺🇸 北美門號 (+1) ─────────────── 優先走 Bird（約 $0.0035 / 則），未設定或失敗改走 Twilio
+ * 4. 🌐 其他國際門號 (+81, +82, +65 等) ─ 走 Twilio (全區通用，支援 Bird 作為備援)
  */
 import * as crypto from 'crypto'
-import { birdProvider } from './bird'
+import { birdProvider, isBirdSmsConfigured, sendBirdSms } from './bird'
 import { getTwilioAuth } from './twilio'
 
-export type SmsCountry = 'TW' | 'VN' | 'INTL'
+export type SmsCountry = 'TW' | 'VN' | 'US' | 'INTL'
 
 export interface SmsSendOptions {
   phone: string
@@ -40,6 +41,7 @@ export function detectSmsCountry(rawPhone: string): SmsCountry {
   if (cleaned.startsWith('+84') || cleaned.startsWith('84')) return 'VN'
   // 越南境內 10 碼：03, 05, 07, 08, 09 開頭
   if (/^0[35789]\d{8}$/.test(cleaned)) return 'VN'
+  if (cleaned.startsWith('+1') || (cleaned.startsWith('1') && cleaned.length === 11)) return 'US'
   return 'INTL'
 }
 
@@ -261,7 +263,7 @@ async function sendViaTwilio(phone: string, text: string): Promise<{ ok: boolean
 
   if (!creds || !fromNumber) {
     // 備援：若未設定 Twilio，嘗試以系統內建的 Bird 發送
-    if (birdProvider.isConfigured()) {
+    if (isBirdSmsConfigured()) {
       const ok = await birdProvider.sendSms({ phone, text })
       return ok ? { ok: true, messageId: 'bird-sent' } : { ok: false, error: 'Bird 國際 SMS 發送失敗' }
     }
@@ -341,6 +343,15 @@ export async function sendSmsMessage(options: SmsSendOptions): Promise<SmsSendRe
       messageId: stringeeRes.messageId,
       error: stringeeRes.error,
     }
+  }
+
+  // 🇺🇸 北美號碼 ── 優先 Bird，失敗改走 Twilio
+  if (country === 'US' && isBirdSmsConfigured()) {
+    const birdRes = await sendBirdSms(normalizedPhone, text)
+    if (birdRes.ok) {
+      return { phone: rawPhone, normalizedPhone, country, provider: 'bird', ok: true, messageId: birdRes.messageId }
+    }
+    console.warn('[sms] Bird 發送失敗，改走 Twilio:', birdRes.error)
   }
 
   // 🌐 其他國際號碼 ── 走 Twilio (備援 Bird)

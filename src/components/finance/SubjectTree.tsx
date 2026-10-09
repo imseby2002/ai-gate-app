@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { useTranslations } from 'next-intl'
 import {
   ChevronRight,
   ChevronDown,
@@ -60,6 +61,7 @@ export function SubjectTree({
   balances = {},
   accountsLoaded = true,
 }: SubjectTreeProps) {
+  const t = useTranslations('FinanceSubjects')
   // 記錄展開的節點，預設全展開
   const [expanded, setExpanded] = useState<Record<string, boolean>>({
     'asset': true,
@@ -79,16 +81,16 @@ export function SubjectTree({
   // 整理四大類與其子目錄
   const treeData = useMemo(() => {
     const classes: Record<string, { label: string; parents: Record<string, SubjectItem[]> }> = {
-      asset:     { label: '資產', parents: {} },
-      liability: { label: '負債', parents: {} },
-      income:    { label: '收入', parents: {} },
-      expense:   { label: '支出', parents: {} },
+      asset:     { label: t('cls.asset'), parents: {} },
+      liability: { label: t('cls.liability'), parents: {} },
+      income:    { label: t('cls.income'), parents: {} },
+      expense:   { label: t('cls.expense'), parents: {} },
     }
 
     for (const sub of subjects) {
       if (sub.zero_view === false) continue
       const targetClass = classes[sub.class] || classes.asset
-      const pName = sub.parent_name || sub.name || '其他'
+      const pName = sub.parent_name || sub.name || t('other')
       if (!targetClass.parents[pName]) {
         targetClass.parents[pName] = []
       }
@@ -96,7 +98,7 @@ export function SubjectTree({
     }
 
     return classes
-  }, [subjects])
+  }, [subjects, t])
 
   // 計算每個父層與大類的金額加總
   const nodeTotals = useMemo(() => {
@@ -160,23 +162,23 @@ export function SubjectTree({
       <div className="p-3 border-b bg-muted/40 space-y-2 shrink-0">
         <div className="flex items-center justify-between gap-1">
           <div className="flex items-center gap-1">
-            <span className="text-xs text-muted-foreground">年份</span>
+            <span className="text-xs text-muted-foreground">{t('year')}</span>
             <input
               type="number"
               value={year}
               onChange={e => setYear(Number(e.target.value) || year)}
               className="w-16 h-7 text-xs font-mono font-semibold border rounded px-1.5 bg-background text-center"
             />
-            <span className="text-xs font-bold font-mono px-1">{String(month).padStart(2, '0')}月</span>
+            <span className="text-xs font-bold font-mono px-1">{t('monthN', { n: String(month).padStart(2, '0') })}</span>
           </div>
           <Button
             size="sm"
             variant="ghost"
             className="h-6 px-1.5 text-2xs text-primary"
             onClick={handleCurrentMonth}
-            title="跳至本月"
+            title={t('jumpThisMonth')}
           >
-            設為本月
+            {t('thisMonth')}
           </Button>
         </div>
 
@@ -187,7 +189,7 @@ export function SubjectTree({
             className="flex-1 h-7 text-xs"
             onClick={handlePrevMonth}
           >
-            ‹ 上個月
+            {t('prevMonth')}
           </Button>
           <Button
             size="sm"
@@ -195,7 +197,7 @@ export function SubjectTree({
             className="flex-1 h-7 text-xs"
             onClick={handleNextMonth}
           >
-            下個月 ›
+            {t('nextMonth')}
           </Button>
         </div>
       </div>
@@ -208,8 +210,8 @@ export function SubjectTree({
             !selected ? 'text-primary font-bold' : 'text-muted-foreground'
           }`}
         >
-          <span>📁 全部科目</span>
-          {!selected && <span className="text-2xs bg-primary/10 text-primary px-1.5 rounded">選取中</span>}
+          <span>{t('allSubjects')}</span>
+          {!selected && <span className="text-2xs bg-primary/10 text-primary px-1.5 rounded">{t('selected')}</span>}
         </button>
 
         {onOpenSubjectSettings && (
@@ -220,7 +222,7 @@ export function SubjectTree({
             onClick={onOpenSubjectSettings}
           >
             <Settings className="h-3 w-3" />
-            項目設定
+            {t('settings')}
           </Button>
         )}
       </div>
@@ -340,7 +342,7 @@ export function SubjectTree({
 
       {/* 底部小提示 */}
       <div className="p-2 border-t bg-muted/20 text-2xs text-muted-foreground text-center shrink-0">
-        點擊科目即可快速篩選右側帳務
+        {t('hint')}
       </div>
     </div>
   )

@@ -5,7 +5,7 @@
  * Model → Provider mapping:
  *   kling-*       → fal.ai (5s / 10s)
  *   veo3*         → Google VEO3 (25s)
- *   sora*         → OpenAI SORA (60s)
+ *   sora*         → OpenAI Sora 2（4／8／12 秒，720p）
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
@@ -20,7 +20,14 @@ const FAL_ENDPOINTS: Record<string, string> = {
 }
 
 const VEO3_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/veo-3.0-generate-001:predictLongRunning'
-const OPENAI_VIDEO_ENDPOINT = 'https://api.openai.com/v1/videos/generations'
+// OpenAI Video API（Sora 2）：POST /v1/videos（multipart）、GET /v1/videos/{id}、GET /v1/videos/{id}/content
+const OPENAI_VIDEO_ENDPOINT = 'https://api.openai.com/v1/videos'
+const SORA_SECONDS = [4, 8, 12] as const
+
+/** Sora 2 只接受 4／8／12 秒：取不超過 12 的最接近值 */
+function soraSeconds(duration: number): (typeof SORA_SECONDS)[number] {
+  return SORA_SECONDS.reduce((best, s) => (Math.abs(s - duration) < Math.abs(best - duration) ? s : best), 12)
+}
 
 function getProvider(model: string): 'fal' | 'google' | 'openai' {
   if (model.startsWith('kling')) return 'fal'
@@ -56,11 +63,12 @@ export async function POST(req: NextRequest) {
 
   // 影片生成成本高：提交前檢查點數，提交成功即扣點（供應商在提交後就會計費）
   // 實際成本（依秒數）× 方案倍率
-  const cost = videoCost(model, parseInt(duration) || 5, await getCostMultiplier(user.id))
+  const seconds = provider === 'openai' ? soraSeconds(parseInt(duration) || 12) : parseInt(duration) || 5
+  const cost = videoCost(model, seconds, await getCostMultiplier(user.id))
   const billable = await isBillableUser(user.id)
   const check = await checkCredits(user.id, cost, billable)
   if (!check.ok) return NextResponse.json(check.payload, { status: 402 })
-  const charge = () => deductCredits(user.id, cost, `[marketing] 影片生成 ${model} ${duration}s`, billable)
+  const charge = () => deductCredits(user.id, cost, `[marketing] 影片生成 ${model} ${seconds}s`, billable)
 
   try {
     // ── fal.ai (KLING) ────────────────────────────────────────────────────────
@@ -110,18 +118,22 @@ export async function POST(req: NextRequest) {
     if (provider === 'openai') {
       const apiKey = process.env.OPENAI_API_KEY
       if (!apiKey) return NextResponse.json({ error: 'OPENAI_API_KEY 未設定' }, { status: 500 })
-      const body: Record<string, unknown> = {
-        model: 'sora-1.0',
-        prompt: prompt.trim(),
-        duration: parseInt(duration),
-        resolution: '1920x1080',
-        n: 1,
+      const form = new FormData()
+      form.append('model', 'sora-2')
+      form.append('prompt', prompt.trim())
+      form.append('seconds', String(seconds))
+      form.append('size', aspectRatio === '9:16' ? '720x1280' : '1280x720')
+      // 參考圖成為第一格畫面（解析度需與 size 相符）
+      if (imageUrl && model === 'sora-img2video') {
+        const imgRes = await fetch(imageUrl)
+        if (!imgRes.ok) return NextResponse.json({ error: '無法讀取參考圖' }, { status: 400 })
+        const type = (imgRes.headers.get('content-type') ?? 'image/jpeg').split(';')[0]
+        form.append('input_reference', new Blob([await imgRes.arrayBuffer()], { type }), `reference.${type.split('/')[1] || 'jpg'}`)
       }
-      if (imageUrl && model === 'sora-img2video') body.image = imageUrl
       const res = await fetch(OPENAI_VIDEO_ENDPOINT, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        headers: { 'Authorization': `Bearer ${apiKey}` },
+        body: form,
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error?.message ?? 'SORA 生成失敗')
@@ -198,10 +210,24 @@ export async function GET(req: NextRequest) {
         headers: { 'Authorization': `Bearer ${apiKey}` },
       })
       const data = await res.json()
-      if (data.status === 'running' || data.status === 'pending') return NextResponse.json({ status: 'processing' })
+      if (!res.ok) return NextResponse.json({ status: 'error', error: data.error?.message ?? `SORA 查詢失敗 (${res.status})` }, { status: 500 })
+      if (data.status === 'queued' || data.status === 'in_progress') return NextResponse.json({ status: 'processing', progress: data.progress })
       if (data.status === 'failed') return NextResponse.json({ status: 'failed', error: data.error?.message ?? 'SORA 生成失敗' })
-      const url: string = data.result?.url ?? data.data?.[0]?.url ?? ''
-      if (!url) return NextResponse.json({ status: 'error', error: '未收到影片 URL' }, { status: 500 })
+
+      // 完成：影片內容需帶金鑰下載，轉存 Storage 後回傳公開網址
+      const fileName = `${user.id}/sora-${requestId}.mp4`
+      const { data: existing } = await supabase.storage.from('marketing-assets').list(user.id, { search: `sora-${requestId}` })
+      if (!existing?.length) {
+        const contentRes = await fetch(`${OPENAI_VIDEO_ENDPOINT}/${requestId}/content`, {
+          headers: { 'Authorization': `Bearer ${apiKey}` },
+        })
+        if (!contentRes.ok) return NextResponse.json({ status: 'error', error: `SORA 影片下載失敗 (${contentRes.status})` }, { status: 500 })
+        const { error: uploadErr } = await supabase.storage
+          .from('marketing-assets')
+          .upload(fileName, await contentRes.arrayBuffer(), { contentType: 'video/mp4', upsert: true })
+        if (uploadErr) return NextResponse.json({ status: 'error', error: `影片儲存失敗：${uploadErr.message}` }, { status: 500 })
+      }
+      const url = supabase.storage.from('marketing-assets').getPublicUrl(fileName).data.publicUrl
       return NextResponse.json({ status: 'completed', url, requestId, model, scriptId, generatedAt: new Date().toISOString() })
     }
 

@@ -145,7 +145,7 @@ const GUEST_NAME_LINE_RE = /・旅客姓名：([^\n]+)/
 export function wrapImageDerivedResultForConfirm(resultText: string): string {
   // 只攔截「真的會洩漏密碼」的查詢結果——查無資料、尚未到入住時間、比對到多筆讓客人自己
   // 指認的清單，這些本來就不含密碼，原樣放行即可，不需要也不該被這裡的邏輯覆蓋掉。
-  if (!resultText.includes('房門密碼：')) return resultText
+  if (!resultText.includes('房門密碼：') && !resultText.includes('大門密碼：')) return resultText
   const m = resultText.match(GUEST_NAME_LINE_RE)
   if (!m?.[1]?.trim()) {
     // 圖片辨識到的訂單沒有登記旅客姓名，沒有東西可以拿來跟客人核對身份，
@@ -255,9 +255,26 @@ export function formatSameDayEarlyPrompt(
   checkOut: string,
   roomDesc: string | null | undefined,
   checkinTime: string,
-  nowHHMM: string
+  nowHHMM: string,
+  earlyGatePassword?: string | null,
 ): string {
   const realName = guestName && guestName !== '(Not available)' ? guestName : null
+  if (earlyGatePassword) {
+    return [
+      `【入住資訊查詢結果】`,
+      `找到${orderLabel}的今日入住資訊：`,
+      realName ? `・旅客姓名：${realName}` : null,
+      `・入住日期：今日 ${checkIn}`,
+      `・退房日期：${checkOut}`,
+      roomDesc ? `・預訂房型：${roomDesc}` : null,
+      ``,
+      `【提前抵達・可先進大門】`,
+      `・目前台灣時間 ${nowHHMM}，房間尚在整理，入住時間為今日下午 ${checkinTime}。`,
+      `・大門密碼：${earlyGatePassword}`,
+      `・可先進大門寄放行李或在公共區域休息。`,
+      `（【系統指令】：客人為今日入住且身份已核對，民宿主允許提前提供大門密碼。請主動提供上方大門密碼，告知可先放行李或在公共區域休息；房門密碼與房號仍嚴禁提供，告知今日 ${checkinTime} 後再詢問即可取得房門密碼）`,
+    ].filter(line => line !== null).join('\n')
+  }
   const lines = [
     `【入住資訊查詢結果】`,
     `找到${orderLabel}的今日入住資訊：`,
@@ -357,6 +374,16 @@ async function resolveRoomAndGatePassword(
   }
 }
 
+// 入住當天、未到入住時間：民宿主開啟「提前提供大門密碼」時，回傳大門密碼讓客人先放行李/休息；
+// 未開啟或大門密碼未設定則回傳 null（維持原本不給任何密碼）。房門密碼一律不在此提供。
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function resolveEarlyGatePassword(supabase: any, userId: string, roomName: string, todayDate: string): Promise<string | null> {
+  const { data: profile } = await supabase.from('bnb_profiles').select('early_gate_access').eq('user_id', userId).maybeSingle()
+  if (!profile?.early_gate_access) return null
+  const { gate_password } = await resolveRoomAndGatePassword(supabase, userId, roomName, null, null, todayDate)
+  return gate_password.startsWith('（尚未設定') ? null : gate_password
+}
+
 // 依訂單號碼從「訂單系統」(bookings → bnb_daily_records) 查入住資訊與門鎖密碼。
 // 嚴格執行入住日期與時間控管：未到入住日或未到下午 15:00 絕不提供任何密碼。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -396,7 +423,7 @@ export async function queryBnbCheckin(supabase: any, userId: string, orderNum: s
         return formatFutureBookingPrompt(`訂單「${orderNum}」`, guestName, checkIn, checkOut, roomDesc, checkinTime)
       }
       if (timing.reason === 'SAME_DAY_EARLY') {
-        return formatSameDayEarlyPrompt(`訂單「${orderNum}」`, guestName, checkIn, checkOut, roomDesc, checkinTime, nowHHMM)
+        return formatSameDayEarlyPrompt(`訂單「${orderNum}」`, guestName, checkIn, checkOut, roomDesc, checkinTime, nowHHMM, await resolveEarlyGatePassword(supabase, userId, String(roomNames[0] ?? ''), todayDate))
       }
       if (timing.reason === 'EXPIRED') {
         return formatExpiredBookingPrompt(`訂單「${orderNum}」`, guestName, checkIn, checkOut, roomDesc)
@@ -434,7 +461,7 @@ export async function queryBnbCheckin(supabase: any, userId: string, orderNum: s
         return formatFutureBookingPrompt(`訂單「${orderNum}」`, guestName, checkIn, checkOut, roomDesc, checkinTime)
       }
       if (timing.reason === 'SAME_DAY_EARLY') {
-        return formatSameDayEarlyPrompt(`訂單「${orderNum}」`, guestName, checkIn, checkOut, roomDesc, checkinTime, nowHHMM)
+        return formatSameDayEarlyPrompt(`訂單「${orderNum}」`, guestName, checkIn, checkOut, roomDesc, checkinTime, nowHHMM, await resolveEarlyGatePassword(supabase, userId, String(roomNames[0] ?? ''), todayDate))
       }
       if (timing.reason === 'EXPIRED') {
         return formatExpiredBookingPrompt(`訂單「${orderNum}」`, guestName, checkIn, checkOut, roomDesc)
@@ -596,7 +623,7 @@ export async function queryBookingByPhone(supabase: any, userId: string, rawPhon
       return formatFutureBookingPrompt(`電話「${rawPhone}」`, b.guest_name, b.check_in, b.check_out, roomName, checkinTime)
     }
     if (timing.reason === 'SAME_DAY_EARLY') {
-      return formatSameDayEarlyPrompt(`電話「${rawPhone}」`, b.guest_name, b.check_in, b.check_out, roomName, checkinTime, nowHHMM)
+      return formatSameDayEarlyPrompt(`電話「${rawPhone}」`, b.guest_name, b.check_in, b.check_out, roomName, checkinTime, nowHHMM, await resolveEarlyGatePassword(supabase, userId, roomName, todayDate))
     }
     if (timing.reason === 'EXPIRED') {
       return formatExpiredBookingPrompt(`電話「${rawPhone}」`, b.guest_name, b.check_in, b.check_out, roomName)
@@ -839,7 +866,7 @@ export async function queryBookingByGuestName(supabase: any, userId: string, can
             return formatFutureBookingPrompt(`旅客「${lookupName}」`, dailyMatched[0].guest_name, checkIn, checkOut, roomDesc, checkinTime)
           }
           if (timing.reason === 'SAME_DAY_EARLY') {
-            return formatSameDayEarlyPrompt(`旅客「${lookupName}」`, dailyMatched[0].guest_name, checkIn, checkOut, roomDesc, checkinTime, nowHHMM)
+            return formatSameDayEarlyPrompt(`旅客「${lookupName}」`, dailyMatched[0].guest_name, checkIn, checkOut, roomDesc, checkinTime, nowHHMM, await resolveEarlyGatePassword(supabase, userId, String(group[0]?.room_name ?? ''), todayDate))
           }
           if (timing.reason === 'EXPIRED') {
             return formatExpiredBookingPrompt(`旅客「${lookupName}」`, dailyMatched[0].guest_name, checkIn, checkOut, roomDesc)
@@ -925,7 +952,7 @@ export async function queryBookingByGuestName(supabase: any, userId: string, can
         return formatFutureBookingPrompt(`旅客「${lookupName}」`, b.guest_name, b.check_in, b.check_out, roomName, checkinTime)
       }
       if (timing.reason === 'SAME_DAY_EARLY') {
-        return formatSameDayEarlyPrompt(`旅客「${lookupName}」`, b.guest_name, b.check_in, b.check_out, roomName, checkinTime, nowHHMM)
+        return formatSameDayEarlyPrompt(`旅客「${lookupName}」`, b.guest_name, b.check_in, b.check_out, roomName, checkinTime, nowHHMM, await resolveEarlyGatePassword(supabase, userId, roomName, todayDate))
       }
       if (timing.reason === 'EXPIRED') {
         return formatExpiredBookingPrompt(`旅客「${lookupName}」`, b.guest_name, b.check_in, b.check_out, roomName)

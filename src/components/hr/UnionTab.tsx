@@ -5,29 +5,19 @@ import {
   Users, Gift, FileText, DollarSign, Plus, Download, CheckCircle2,
   AlertCircle, Loader2, Upload, ExternalLink, ShieldCheck, HeartHandshake
 } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 
 type SubTab = 'members' | 'benefits' | 'documents' | 'finances'
 
-const BENEFIT_LABELS: Record<string, string> = {
-  birthday: '生日禮金 (Sinh nhật)',
-  marriage: '結婚禮金 (Kết hôn)',
-  maternity: '生育津貼 (Sinh con)',
-  hospital: '住院慰問 (Nằm viện)',
-  relief: '急難救助 (Trợ cấp khó khăn)',
-  other: '其他福利 (Khác)',
-}
-
-const DOC_CAT_LABELS: Record<string, string> = {
-  tuldtt: '集體勞動協議書 (TƯLĐTT)',
-  noiquy: '內部工作規章 (Nội quy lao động)',
-  doitheo: '法定勞資對話紀錄 (Biên bản đối thoại)',
-  committee: '執委會會議與選舉批文 (Đại hội / Quyết định)',
-}
+// 顯示文字在 HrUnion.benefit.* / HrUnion.docCat.*
+const BENEFIT_KEYS = ['birthday', 'marriage', 'maternity', 'hospital', 'relief', 'other']
+const DOC_CAT_KEYS = ['tuldtt', 'noiquy', 'doitheo', 'committee']
 
 export function UnionTab() {
+  const t = useTranslations('HrUnion')
   const [subTab, setSubTab] = useState<SubTab>('members')
   const [members, setMembers] = useState<any[]>([])
   const [benefits, setBenefits] = useState<any[]>([])
@@ -78,22 +68,22 @@ export function UnionTab() {
             <HeartHandshake className="h-5 w-5 text-red-600" />
           </div>
           <div>
-            <h3 className="font-bold text-lg text-slate-900">工會系統 (Công đoàn cơ sở)</h3>
-            <p className="text-xs text-muted-foreground">符合越南總工會 (Tổng Liên đoàn Lao động) 規範之會員管理、福利慰問、集體協議與財務報表</p>
+            <h3 className="font-bold text-lg text-slate-900">{t('title')}</h3>
+            <p className="text-xs text-muted-foreground">{t('subtitle')}</p>
           </div>
         </div>
         <Button size="sm" variant="outline" className="gap-1.5 text-xs text-emerald-700 border-emerald-300 bg-emerald-50/50 hover:bg-emerald-100" onClick={exportB14}>
-          <Download className="h-4 w-4" />匯出總工會財務報表 (Mẫu B14-CĐ & B15-CĐ)
+          <Download className="h-4 w-4" />{t('exportReport')}
         </Button>
       </div>
 
       {/* Navigation Sub-Tabs */}
       <div className="flex gap-1 p-1 bg-slate-100 rounded-xl w-fit text-xs">
         {([
-          ['members', '會員檔案庫 (Đoàn viên)', <Users key="m" className="h-3.5 w-3.5" />],
-          ['benefits', '福利與慰問申請 (Chế độ & Thăm hỏi)', <Gift key="b" className="h-3.5 w-3.5" />],
-          ['documents', '集體協議與勞資對話 (TƯLĐTT & Đối thoại)', <FileText key="d" className="h-3.5 w-3.5" />],
-          ['finances', '工會財務收支 (Tài chính Công đoàn)', <DollarSign key="f" className="h-3.5 w-3.5" />],
+          ['members', t('tabMembers'), <Users key="m" className="h-3.5 w-3.5" />],
+          ['benefits', t('tabBenefits'), <Gift key="b" className="h-3.5 w-3.5" />],
+          ['documents', t('tabDocs'), <FileText key="d" className="h-3.5 w-3.5" />],
+          ['finances', t('tabFinances'), <DollarSign key="f" className="h-3.5 w-3.5" />],
         ] as [SubTab, string, ReactNode][]).map(([id, label, icon]) => (
           <button
             key={id}
@@ -110,16 +100,16 @@ export function UnionTab() {
       {subTab === 'members' && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-500">共 {members.length} 名工會會員</span>
+            <span className="text-xs text-slate-500">{t('memberCount', { n: members.length })}</span>
             <Button size="sm" className="gap-1.5 bg-red-600 hover:bg-red-700 text-white text-xs h-8" onClick={() => setShowMemberModal(true)}>
-              <Plus className="h-3.5 w-3.5" />新增工會會員
+              <Plus className="h-3.5 w-3.5" />{t('addMember')}
             </Button>
           </div>
           {loading ? (
             <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
           ) : members.length === 0 ? (
             <div className="py-12 text-center text-gray-400 text-sm border-2 border-dashed rounded-xl">
-              尚無工會會員資料。點擊右上「新增工會會員」記錄加入申請。
+              {t('noMembers')}
             </div>
           ) : (
             <div className="grid gap-2">
@@ -128,16 +118,16 @@ export function UnionTab() {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-sm text-slate-900">{m.full_name}</span>
-                      <span className="px-2 py-0.5 rounded bg-red-50 text-red-700 font-medium">卡號: {m.union_card_no || '---'}</span>
-                      <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-600">{m.store || '總部'}</span>
+                      <span className="px-2 py-0.5 rounded bg-red-50 text-red-700 font-medium">{t('cardNo')} {m.union_card_no || '---'}</span>
+                      <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-600">{m.store || t('hq')}</span>
                     </div>
                     <div className="text-slate-500 flex gap-4">
                       <span>CCCD: {m.id_number || '---'}</span>
-                      <span>社保號 BHXH: {m.bhxh_number || '---'}</span>
-                      <span>入會日期: {m.join_date || '---'}</span>
+                      <span>{t('bhxh')} {m.bhxh_number || '---'}</span>
+                      <span>{t('joinDate')} {m.join_date || '---'}</span>
                     </div>
                   </div>
-                  <span className="px-2 py-1 rounded bg-emerald-50 text-emerald-700 font-semibold">在會 (Đoàn viên)</span>
+                  <span className="px-2 py-1 rounded bg-emerald-50 text-emerald-700 font-semibold">{t('active')}</span>
                 </Card>
               ))}
             </div>
@@ -149,16 +139,16 @@ export function UnionTab() {
       {subTab === 'benefits' && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-500">法定福利發放與慰問簽核</span>
+            <span className="text-xs text-slate-500">{t('benefitsTitle')}</span>
             <Button size="sm" className="gap-1.5 bg-red-600 hover:bg-red-700 text-white text-xs h-8" onClick={() => setShowBenefitModal(true)}>
-              <Plus className="h-3.5 w-3.5" />申請福利／慰問金
+              <Plus className="h-3.5 w-3.5" />{t('requestBenefit')}
             </Button>
           </div>
           {loading ? (
             <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
           ) : benefits.length === 0 ? (
             <div className="py-12 text-center text-gray-400 text-sm border-2 border-dashed rounded-xl">
-              目前尚無慰問金申請記錄。支援生日、結婚、生育、住院、急難救助線上申請與簽核。
+              {t('noBenefits')}
             </div>
           ) : (
             <div className="grid gap-2">
@@ -166,18 +156,18 @@ export function UnionTab() {
                 <Card key={b.id} className="p-3.5 flex items-center justify-between text-xs">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-sm text-slate-900">{b.hr_union_members?.full_name || '會員'}</span>
-                      <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-semibold">{BENEFIT_LABELS[b.benefit_type] || b.benefit_type}</span>
+                      <span className="font-bold text-sm text-slate-900">{b.hr_union_members?.full_name || t('member')}</span>
+                      <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-semibold">{BENEFIT_KEYS.includes(b.benefit_type) ? t(`benefit.${b.benefit_type}`) : b.benefit_type}</span>
                       <span className="font-bold text-red-600">NT$ {Number(b.amount).toLocaleString()} VND</span>
                     </div>
                     <div className="text-slate-500 flex gap-3">
-                      <span>申請日: {b.request_date}</span>
-                      {b.notes && <span>說明: {b.notes}</span>}
+                      <span>{t('requestDate')} {b.request_date}</span>
+                      {b.notes && <span>{t('note')} {b.notes}</span>}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className={`px-2.5 py-1 rounded font-bold ${b.status === 'disbursed' ? 'bg-emerald-100 text-emerald-800' : b.status === 'approved' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'}`}>
-                      {b.status === 'disbursed' ? '✓ 已撥款 (Đã chi)' : b.status === 'approved' ? '已核准待發 (Đã duyệt)' : '待審核 (Chờ duyệt)'}
+                      {b.status === 'disbursed' ? t('statusPaid') : b.status === 'approved' ? t('statusApproved') : t('statusPending')}
                     </span>
                   </div>
                 </Card>
@@ -191,16 +181,16 @@ export function UnionTab() {
       {subTab === 'documents' && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-500">集體勞動協議書 (TƯLĐTT) 及每季法定勞資對話會議紀錄</span>
+            <span className="text-xs text-slate-500">{t('docsTitle')}</span>
             <Button size="sm" className="gap-1.5 bg-red-600 hover:bg-red-700 text-white text-xs h-8" onClick={() => setShowDocModal(true)}>
-              <Plus className="h-3.5 w-3.5" />上傳協議／會議紀錄
+              <Plus className="h-3.5 w-3.5" />{t('uploadDoc')}
             </Button>
           </div>
           {loading ? (
             <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
           ) : documents.length === 0 ? (
             <div className="py-12 text-center text-gray-400 text-sm border-2 border-dashed rounded-xl">
-              目前尚未歸檔集體協議與勞資對話文件。支援上傳經官方核准戳印之 PDF 永久存檔。
+              {t('noDocs')}
             </div>
           ) : (
             <div className="grid gap-2">
@@ -209,12 +199,12 @@ export function UnionTab() {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-sm text-slate-900">{d.title}</span>
-                      <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-medium">{DOC_CAT_LABELS[d.doc_category] || d.doc_category}</span>
+                      <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-medium">{DOC_CAT_KEYS.includes(d.doc_category) ? t(`docCat.${d.doc_category}`) : d.doc_category}</span>
                     </div>
                     <div className="text-slate-500 flex gap-4">
-                      {d.effective_date && <span>生效日: {d.effective_date}</span>}
-                      {d.expiry_date && <span>到期日: {d.expiry_date}</span>}
-                      {d.notes && <span>備註: {d.notes}</span>}
+                      {d.effective_date && <span>{t('effective')} {d.effective_date}</span>}
+                      {d.expiry_date && <span>{t('expiry')} {d.expiry_date}</span>}
+                      {d.notes && <span>{t('remark')} {d.notes}</span>}
                     </div>
                   </div>
                   {d.url && (
@@ -234,23 +224,23 @@ export function UnionTab() {
         <div className="space-y-4">
           <div className="grid grid-cols-3 gap-3">
             <Card className="p-3.5 bg-emerald-50/70 border-emerald-200">
-              <span className="text-xs text-emerald-800 font-medium block">總收入 (Thu đoàn phí 1% & kinh phí 2%)</span>
+              <span className="text-xs text-emerald-800 font-medium block">{t('totalIncome')}</span>
               <span className="text-xl font-bold text-emerald-700 mt-1 block">{financeSummary.income.toLocaleString()} VND</span>
             </Card>
             <Card className="p-3.5 bg-red-50/70 border-red-200">
-              <span className="text-xs text-red-800 font-medium block">總支出 (Chi thăm hỏi, phong trào)</span>
+              <span className="text-xs text-red-800 font-medium block">{t('totalExpense')}</span>
               <span className="text-xl font-bold text-red-700 mt-1 block">{financeSummary.expense.toLocaleString()} VND</span>
             </Card>
             <Card className="p-3.5 bg-indigo-50/70 border-indigo-200">
-              <span className="text-xs text-indigo-800 font-medium block">工會結餘 (Kết dư tài chính)</span>
+              <span className="text-xs text-indigo-800 font-medium block">{t('balance')}</span>
               <span className="text-xl font-bold text-indigo-700 mt-1 block">{financeSummary.balance.toLocaleString()} VND</span>
             </Card>
           </div>
 
           <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-500">財務流水帳明細</span>
+            <span className="text-xs text-slate-500">{t('ledger')}</span>
             <Button size="sm" className="gap-1.5 bg-red-600 hover:bg-red-700 text-white text-xs h-8" onClick={() => setShowFinModal(true)}>
-              <Plus className="h-3.5 w-3.5" />記帳（收入／支出）
+              <Plus className="h-3.5 w-3.5" />{t('addEntry')}
             </Button>
           </div>
 
@@ -258,7 +248,7 @@ export function UnionTab() {
             <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
           ) : finances.length === 0 ? (
             <div className="py-12 text-center text-gray-400 text-sm border-2 border-dashed rounded-xl">
-              尚無工會收支流水。點擊右上「記帳」新增收入或慰問支出。
+              {t('noEntries')}
             </div>
           ) : (
             <div className="grid gap-2">
@@ -270,12 +260,12 @@ export function UnionTab() {
                         {f.type === 'income' ? '+' : '-'}{Number(f.amount).toLocaleString()} VND
                       </span>
                       <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-medium">{f.description || f.category}</span>
-                      {f.voucher_no && <span className="text-slate-400">憑證: {f.voucher_no}</span>}
+                      {f.voucher_no && <span className="text-slate-400">{t('voucher')} {f.voucher_no}</span>}
                     </div>
                     <span className="text-slate-400 mt-0.5 block">{f.trans_date}</span>
                   </div>
                   <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${f.type === 'income' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
-                    {f.type === 'income' ? '收入 (Thu)' : '支出 (Chi)'}
+                    {f.type === 'income' ? t('income') : t('expense')}
                   </span>
                 </Card>
               ))}
@@ -308,6 +298,7 @@ export function UnionTab() {
 }
 
 function MemberModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+  const t = useTranslations('HrUnion')
   const [name, setName] = useState('')
   const [idNumber, setIdNumber] = useState('')
   const [bhxh, setBhxh] = useState('')
@@ -325,39 +316,39 @@ function MemberModal({ onClose, onSaved }: { onClose: () => void; onSaved: () =>
     })
     setBusy(false)
     if (res.ok) onSaved()
-    else alert('儲存失敗')
+    else alert(t('saveFailed'))
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="bg-white rounded-2xl w-full max-w-md p-5 space-y-3 shadow-xl border">
-        <h3 className="font-bold text-base">新增工會會員 (Đoàn viên)</h3>
+        <h3 className="font-bold text-base">{t('addMemberTitle')}</h3>
         <div className="space-y-2 text-xs">
           <label className="block space-y-1">
-            <span>員工姓名 *</span>
+            <span>{t('employeeNameReq')}</span>
             <Input value={name} onChange={e => setName(e.target.value)} placeholder="Nguyễn Văn A" />
           </label>
           <label className="block space-y-1">
-            <span>身分證號 (CCCD)</span>
+            <span>{t('idNumber')}</span>
             <Input value={idNumber} onChange={e => setIdNumber(e.target.value)} placeholder="001099000000" />
           </label>
           <label className="block space-y-1">
-            <span>社保號碼 (Mã số BHXH)</span>
+            <span>{t('bhxhNumber')}</span>
             <Input value={bhxh} onChange={e => setBhxh(e.target.value)} placeholder="7912345678" />
           </label>
           <label className="block space-y-1">
-            <span>任職門市 / 部門</span>
+            <span>{t('storeDept')}</span>
             <Input value={store} onChange={e => setStore(e.target.value)} placeholder="YL" />
           </label>
           <label className="block space-y-1">
-            <span>工會會員卡號 (Số thẻ đoàn viên)</span>
+            <span>{t('cardNumber')}</span>
             <Input value={cardNo} onChange={e => setCardNo(e.target.value)} placeholder="CD-2026-001" />
           </label>
         </div>
         <div className="flex justify-end gap-2 pt-2 border-t">
-          <Button variant="outline" size="sm" onClick={onClose}>取消</Button>
+          <Button variant="outline" size="sm" onClick={onClose}>{t('cancel')}</Button>
           <Button size="sm" onClick={handleSave} disabled={busy || !name.trim()} className="bg-red-600 hover:bg-red-700 text-white">
-            確認儲存
+            {t('confirmSave')}
           </Button>
         </div>
       </div>
@@ -366,6 +357,7 @@ function MemberModal({ onClose, onSaved }: { onClose: () => void; onSaved: () =>
 }
 
 function BenefitModal({ members, onClose, onSaved }: { members: any[]; onClose: () => void; onSaved: () => void }) {
+  const t = useTranslations('HrUnion')
   const [memberId, setMemberId] = useState('')
   const [type, setType] = useState('birthday')
   const [amount, setAmount] = useState('500000')
@@ -382,40 +374,40 @@ function BenefitModal({ members, onClose, onSaved }: { members: any[]; onClose: 
     })
     setBusy(false)
     if (res.ok) onSaved()
-    else alert('申請失敗')
+    else alert(t('requestFailed'))
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="bg-white rounded-2xl w-full max-w-md p-5 space-y-3 shadow-xl border">
-        <h3 className="font-bold text-base">申請工會福利／慰問金 (Chế độ & Thăm hỏi)</h3>
+        <h3 className="font-bold text-base">{t('requestTitle')}</h3>
         <div className="space-y-2 text-xs">
           <label className="block space-y-1">
-            <span>選擇會員 *</span>
+            <span>{t('chooseMemberReq')}</span>
             <select value={memberId} onChange={e => setMemberId(e.target.value)} className="w-full h-8 rounded border px-2">
-              <option value="">— 請選擇 —</option>
-              {members.map(m => <option key={m.id} value={m.id}>{m.full_name} ({m.store || '總部'})</option>)}
+              <option value="">{t('pleaseChoose')}</option>
+              {members.map(m => <option key={m.id} value={m.id}>{m.full_name} ({m.store || t('hq')})</option>)}
             </select>
           </label>
           <label className="block space-y-1">
-            <span>福利種類 *</span>
+            <span>{t('benefitTypeReq')}</span>
             <select value={type} onChange={e => setType(e.target.value)} className="w-full h-8 rounded border px-2">
-              {Object.entries(BENEFIT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              {BENEFIT_KEYS.map(k => <option key={k} value={k}>{t(`benefit.${k}`)}</option>)}
             </select>
           </label>
           <label className="block space-y-1">
-            <span>慰問金額 (VND) *</span>
+            <span>{t('amountVndReq')}</span>
             <Input type="number" value={amount} onChange={e => setAmount(e.target.value)} />
           </label>
           <label className="block space-y-1">
-            <span>事由說明 / 憑證號</span>
-            <Input value={notes} onChange={e => setNotes(e.target.value)} placeholder="如：出院證明書備查、結婚賀禮" />
+            <span>{t('reasonVoucher')}</span>
+            <Input value={notes} onChange={e => setNotes(e.target.value)} placeholder={t('reasonPh')} />
           </label>
         </div>
         <div className="flex justify-end gap-2 pt-2 border-t">
-          <Button variant="outline" size="sm" onClick={onClose}>取消</Button>
+          <Button variant="outline" size="sm" onClick={onClose}>{t('cancel')}</Button>
           <Button size="sm" onClick={handleSave} disabled={busy || !memberId} className="bg-red-600 hover:bg-red-700 text-white">
-            送出申請
+            {t('submitRequest')}
           </Button>
         </div>
       </div>
@@ -424,6 +416,7 @@ function BenefitModal({ members, onClose, onSaved }: { members: any[]; onClose: 
 }
 
 function DocModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+  const t = useTranslations('HrUnion')
   const [title, setTitle] = useState('')
   const [category, setCategory] = useState('tuldtt')
   const [file, setFile] = useState<File | null>(null)
@@ -439,33 +432,33 @@ function DocModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => vo
     const res = await fetch('/api/hr/union/documents', { method: 'POST', body: fd })
     setBusy(false)
     if (res.ok) onSaved()
-    else alert('上傳失敗')
+    else alert(t('uploadFailed'))
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="bg-white rounded-2xl w-full max-w-md p-5 space-y-3 shadow-xl border">
-        <h3 className="font-bold text-base">上傳集體協議與會議紀錄 (TƯLĐTT)</h3>
+        <h3 className="font-bold text-base">{t('uploadDocTitle')}</h3>
         <div className="space-y-2 text-xs">
           <label className="block space-y-1">
-            <span>文件分類 *</span>
+            <span>{t('docCategoryReq')}</span>
             <select value={category} onChange={e => setCategory(e.target.value)} className="w-full h-8 rounded border px-2">
-              {Object.entries(DOC_CAT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              {DOC_CAT_KEYS.map(k => <option key={k} value={k}>{t(`docCat.${k}`)}</option>)}
             </select>
           </label>
           <label className="block space-y-1">
-            <span>文件標題 *</span>
-            <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="如：集體勞動協議書 2026-2028 (已蓋聯團戳印)" />
+            <span>{t('docTitleReq')}</span>
+            <Input value={title} onChange={e => setTitle(e.target.value)} placeholder={t('docTitlePh')} />
           </label>
           <label className="block space-y-1">
-            <span>選擇 PDF 掃描檔</span>
+            <span>{t('choosePdf')}</span>
             <Input type="file" accept=".pdf" onChange={e => setFile(e.target.files?.[0] || null)} />
           </label>
         </div>
         <div className="flex justify-end gap-2 pt-2 border-t">
-          <Button variant="outline" size="sm" onClick={onClose}>取消</Button>
+          <Button variant="outline" size="sm" onClick={onClose}>{t('cancel')}</Button>
           <Button size="sm" onClick={handleSave} disabled={busy || !title.trim()} className="bg-red-600 hover:bg-red-700 text-white">
-            確認上傳歸檔
+            {t('confirmUpload')}
           </Button>
         </div>
       </div>
@@ -474,6 +467,7 @@ function DocModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => vo
 }
 
 function FinanceModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+  const t = useTranslations('HrUnion')
   const [type, setType] = useState('income')
   const [category, setCategory] = useState('union_dues')
   const [amount, setAmount] = useState('1000000')
@@ -490,51 +484,51 @@ function FinanceModal({ onClose, onSaved }: { onClose: () => void; onSaved: () =
     })
     setBusy(false)
     if (res.ok) onSaved()
-    else alert('記帳失敗')
+    else alert(t('entryFailed'))
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="bg-white rounded-2xl w-full max-w-md p-5 space-y-3 shadow-xl border">
-        <h3 className="font-bold text-base">工會財務記帳 (Thu - Chi tài chính)</h3>
+        <h3 className="font-bold text-base">{t('entryTitle')}</h3>
         <div className="space-y-2 text-xs">
           <div className="grid grid-cols-2 gap-2">
             <label className="space-y-1">
-              <span>類型 *</span>
+              <span>{t('typeReq')}</span>
               <select value={type} onChange={e => setType(e.target.value)} className="w-full h-8 rounded border px-2">
-                <option value="income">收入 (Thu)</option>
-                <option value="expense">支出 (Chi)</option>
+                <option value="income">{t('income')}</option>
+                <option value="expense">{t('expense')}</option>
               </select>
             </label>
             <label className="space-y-1">
-              <span>金額 (VND) *</span>
+              <span>{t('amountReq')}</span>
               <Input type="number" value={amount} onChange={e => setAmount(e.target.value)} />
             </label>
           </div>
           <label className="block space-y-1">
-            <span>項目代碼</span>
+            <span>{t('itemCode')}</span>
             <select value={category} onChange={e => setCategory(e.target.value)} className="w-full h-8 rounded border px-2">
-              <option value="union_dues">1% 會員會費 (Đoàn phí)</option>
-              <option value="employer_contrib">2% 企業經費 (Kinh phí công đoàn)</option>
-              <option value="welfare">慰問與急難補助 (Thăm hỏi trợ cấp)</option>
-              <option value="activity">活動推廣 (Phong trào)</option>
-              <option value="admin">行政管理 (Quản lý)</option>
-              <option value="other">其他</option>
+              <option value="union_dues">{t('code1')}</option>
+              <option value="employer_contrib">{t('code2')}</option>
+              <option value="welfare">{t('code3')}</option>
+              <option value="activity">{t('code4')}</option>
+              <option value="admin">{t('code5')}</option>
+              <option value="other">{t('other')}</option>
             </select>
           </label>
           <label className="block space-y-1">
-            <span>收據 / 憑證號 (Chứng từ)</span>
+            <span>{t('receiptNo')}</span>
             <Input value={voucherNo} onChange={e => setVoucherNo(e.target.value)} placeholder="PT-2026-07 / PC-2026-03" />
           </label>
           <label className="block space-y-1">
-            <span>說明摘要</span>
-            <Input value={desc} onChange={e => setDesc(e.target.value)} placeholder="如：提撥7月份工會會費" />
+            <span>{t('summary')}</span>
+            <Input value={desc} onChange={e => setDesc(e.target.value)} placeholder={t('summaryPh')} />
           </label>
         </div>
         <div className="flex justify-end gap-2 pt-2 border-t">
-          <Button variant="outline" size="sm" onClick={onClose}>取消</Button>
+          <Button variant="outline" size="sm" onClick={onClose}>{t('cancel')}</Button>
           <Button size="sm" onClick={handleSave} disabled={busy || !amount} className="bg-red-600 hover:bg-red-700 text-white">
-            確認記帳
+            {t('confirmEntry')}
           </Button>
         </div>
       </div>

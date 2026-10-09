@@ -6,13 +6,18 @@ import { useTranslations } from 'next-intl'
 import {
   FileText, Upload, Loader2, AlertCircle, Plus, Trash2, X, Bell,
   Building2, CalendarClock, ExternalLink, FileSpreadsheet, Sparkles,
-  CheckCircle2, AlertTriangle, ShieldCheck, DollarSign, ChevronDown, ChevronUp
+  CheckCircle2, AlertTriangle, ShieldCheck, DollarSign, ChevronDown, ChevronUp,
+  MapPin, Users, TrendingUp, Bot
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { ExcelImportModal } from '@/components/common/ExcelImportModal'
 import type { ImportColumn } from '@/lib/excel/universal-import'
+import { SitesTab } from '@/components/affairs/SitesTab'
+import { ContactsTab } from '@/components/affairs/ContactsTab'
+import { RentsTab } from '@/components/affairs/RentsTab'
+import { AssistantTab } from '@/components/affairs/AssistantTab'
 
 const AFFAIRS_DOC_IMPORT_COLUMNS: ImportColumn[] = [
   { key: 'title', label: '文件標題', required: true, example: '台北忠孝門市房屋租賃契約書', aliases: ['title', '文件標題', '標題', '合約名稱'] },
@@ -27,7 +32,7 @@ const AFFAIRS_DOC_IMPORT_COLUMNS: ImportColumn[] = [
   { key: 'notes', label: '備註', example: '押金兩個月，水電自付', aliases: ['notes', '備註', '說明'] },
 ]
 
-type Tab = 'docs' | 'settings'
+type Tab = 'docs' | 'sites' | 'contacts' | 'rents' | 'assistant' | 'settings'
 interface StoreOpt { code: string; name: string; region: string }
 
 interface Doc {
@@ -107,6 +112,7 @@ function paymentCycleLabel(t: ReturnType<typeof useTranslations>, months?: numbe
 
 export default function AffairsPage() {
   const t = useTranslations('Affairs')
+  const tx = useTranslations('AffairsX')
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
   const [tab, setTab] = useState<Tab>('docs')
 
@@ -141,8 +147,15 @@ export default function AffairsPage() {
         </div>
       </div>
 
-      <div className="flex gap-1 p-1 bg-muted rounded-xl w-fit">
-        {([['docs', t('tabDocs'), <FileText key="a" className="h-4 w-4" />], ['settings', t('tabSettings'), <Bell key="b" className="h-4 w-4" />]] as [Tab, string, ReactNode][]).map(([id, label, icon]) => (
+      <div className="flex flex-wrap gap-1 p-1 bg-muted rounded-xl w-fit max-w-full">
+        {([
+          ['docs', t('tabDocs'), <FileText key="a" className="h-4 w-4" />],
+          ['sites', tx('tabSites'), <MapPin key="s" className="h-4 w-4" />],
+          ['contacts', tx('tabContacts'), <Users key="c" className="h-4 w-4" />],
+          ['rents', tx('tabRents'), <TrendingUp key="r" className="h-4 w-4" />],
+          ['assistant', tx('tabAssistant'), <Bot key="ai" className="h-4 w-4" />],
+          ['settings', t('tabSettings'), <Bell key="b" className="h-4 w-4" />],
+        ] as [Tab, string, ReactNode][]).map(([id, label, icon]) => (
           <button
             key={id}
             onClick={() => setTab(id)}
@@ -154,6 +167,10 @@ export default function AffairsPage() {
       </div>
 
       {tab === 'docs' && <DocsTab />}
+      {tab === 'sites' && <SitesTab />}
+      {tab === 'contacts' && <ContactsTab />}
+      {tab === 'rents' && <RentsTab />}
+      {tab === 'assistant' && <AssistantTab />}
       {tab === 'settings' && <SettingsTab />}
     </div>
   )
@@ -223,6 +240,7 @@ function DocsTab() {
           title="批次匯入外務證照與租約"
           description="支援 .xlsx, .xls 與 .csv 檔案。若文件標題相符將自動更新。"
           columns={AFFAIRS_DOC_IMPORT_COLUMNS}
+          columnsNs="AffairsImport"
           templateFilename="外務證照與門市租約範本"
           sheetName="合約證照清單"
           onClose={() => setShowImport(false)}

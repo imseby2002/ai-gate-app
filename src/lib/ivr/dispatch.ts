@@ -6,6 +6,7 @@ import { randomBytes } from 'crypto'
 import { getTelephonyProvider } from '@/lib/telephony'
 import { sendSmsMessage, normalizePhoneForCountry, detectSmsCountry } from '@/lib/telephony/sms-service'
 import { getZaloZnsConfig, type ZaloZnsConfig } from '@/lib/telephony/zalo-zns'
+import { smsCost } from '@/lib/marketing/billing'
 
 export function generateShortToken(): string {
   // 16 字元 base64url，足夠唯一且短
@@ -21,7 +22,7 @@ export type DispatchChannel = 'line' | 'whatsapp' | 'zalo'
 
 /**
  * 依通路把短連結派送給客戶。
- * 回傳實際使用的 delivery_method，供寫入 ivr_join_events。
+ * 回傳實際使用的 delivery_method，供寫入 ivr_join_events；costUsd 為送達時的通道成本，供依用量扣點。
  *
  * 註：Bird / Zalo ZNS 的實際 API 端點與簽章待後台確認後補上，
  * 目前以 env 驅動並在缺設定時回傳 method 但不中斷（後續可重送）。
@@ -33,7 +34,7 @@ export async function dispatchJoinLink(params: {
   label?: string | null
   /** 活動擁有者：ZNS 用他自己在平台設定填的 OA 權杖與範本 ID */
   ownerId?: string | null
-}): Promise<{ deliveryMethod: string; delivered: boolean }> {
+}): Promise<{ deliveryMethod: string; delivered: boolean; costUsd: number }> {
   const { channel, phone, shortUrl, label, ownerId } = params
   const text = `${label ? label + '：' : ''}${shortUrl}`
 
@@ -44,13 +45,14 @@ export async function dispatchJoinLink(params: {
     const zns = await getZaloZnsConfig(ownerId).catch((): ZaloZnsConfig => ({}))
     if (zns.accessToken && zns.templateId) {
       const ok = await sendZaloZns(zns, phone, shortUrl, label).catch(() => false)
-      return { deliveryMethod: 'zns', delivered: ok }
+      // ZNS 未取得公開報價，比照越南簡訊每段成本計
+      return { deliveryMethod: 'zns', delivered: ok, costUsd: ok ? smsCost(phone, text) : 0 }
     }
   }
 
   // line / whatsapp / zalo(未設 ZNS) → 經智慧多國簡訊發送短連結
   const smsRes = await sendSmsMessage({ phone, text }).catch(() => ({ ok: false, provider: 'sms' as const }))
-  return { deliveryMethod: smsRes.provider || 'sms', delivered: smsRes.ok }
+  return { deliveryMethod: smsRes.provider || 'sms', delivered: smsRes.ok, costUsd: smsRes.ok ? smsCost(phone, text) : 0 }
 }
 
 // ── Zalo ZNS ─────────────────────────────────────────────────────────────────

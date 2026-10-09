@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { ChevronDown, ChevronUp, CheckCircle2, Loader2, Trash2, ExternalLink } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
 // ─── Platform definitions ─────────────────────────────────────────────────────
 
@@ -10,7 +11,7 @@ interface FieldDef {
   label: string
   placeholder: string
   secret?: boolean
-  hint?: string
+  hint?: string   // Settings.social.hints 的 key
 }
 
 interface PlatformDef {
@@ -29,9 +30,9 @@ const PLATFORMS: PlatformDef[] = [
     color: '#1877F2', docUrl: 'https://developers.facebook.com/docs/pages-api',
     fields: [
       { key: 'page_access_token', label: 'Page Access Token', placeholder: 'EAABsbCS...', secret: true,
-        hint: '從 Meta Business Suite → 設定 → Page Access Token 取得（需 pages_manage_posts 權限）' },
+        hint: 'fbToken' },
       { key: 'page_id', label: 'Page ID', placeholder: '123456789012345',
-        hint: '你的粉絲頁數字 ID，在粉絲頁「關於」頁面可找到' },
+        hint: 'fbPageId' },
     ],
   },
   {
@@ -39,9 +40,9 @@ const PLATFORMS: PlatformDef[] = [
     color: '#E1306C', docUrl: 'https://developers.facebook.com/docs/instagram-api',
     fields: [
       { key: 'access_token', label: 'Access Token', placeholder: 'EAABsbCS...', secret: true,
-        hint: '同 Facebook Page Access Token（Instagram 透過 Meta Graph API 管理）' },
+        hint: 'igToken' },
       { key: 'ig_user_id', label: 'Instagram Business Account ID', placeholder: '17841400000000000',
-        hint: '在 Meta Graph API Explorer 呼叫 /me/accounts 後取得 instagram_business_account.id' },
+        hint: 'igUserId' },
     ],
   },
   {
@@ -49,9 +50,9 @@ const PLATFORMS: PlatformDef[] = [
     color: '#000000', docUrl: 'https://developers.facebook.com/docs/threads',
     fields: [
       { key: 'access_token', label: 'Access Token', placeholder: 'THRAASx...', secret: true,
-        hint: '在 Meta for Developers 申請 Threads API 存取後取得' },
+        hint: 'threadsToken' },
       { key: 'threads_user_id', label: 'Threads User ID', placeholder: '17841400000000000',
-        hint: '呼叫 https://graph.threads.net/me?access_token=TOKEN 取得 id' },
+        hint: 'threadsUserId' },
     ],
   },
   {
@@ -59,9 +60,9 @@ const PLATFORMS: PlatformDef[] = [
     color: '#0A66C2', docUrl: 'https://learn.microsoft.com/en-us/linkedin/marketing/integrations/community-management/shares/ugc-post-api',
     fields: [
       { key: 'access_token', label: 'Access Token', placeholder: 'AQVx...', secret: true,
-        hint: '在 LinkedIn Developer Portal 取得 OAuth 2.0 token（需 w_member_social 範圍）' },
-      { key: 'author_urn', label: 'Author URN', placeholder: 'urn:li:person:xxxxxxxx 或 urn:li:organization:xxxxxxxx',
-        hint: '個人使用 urn:li:person:{id}，公司頁面使用 urn:li:organization:{id}' },
+        hint: 'liToken' },
+      { key: 'author_urn', label: 'Author URN', placeholder: 'urn:li:person:xxxxxxxx / urn:li:organization:xxxxxxxx',
+        hint: 'liUrn' },
     ],
   },
   {
@@ -69,7 +70,7 @@ const PLATFORMS: PlatformDef[] = [
     color: '#000000', docUrl: 'https://developer.twitter.com/en/docs/twitter-api/tweets/manage-tweets/api-reference/post-tweets',
     fields: [
       { key: 'api_key', label: 'API Key', placeholder: 'xxxxxxxxxxxxxxxx', secret: true,
-        hint: '在 Twitter Developer Portal 的 App Keys 區塊取得' },
+        hint: 'xKey' },
       { key: 'api_secret', label: 'API Key Secret', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxx', secret: true },
       { key: 'access_token', label: 'Access Token', placeholder: '00000000-xxxxxxx', secret: true },
       { key: 'access_token_secret', label: 'Access Token Secret', placeholder: 'xxxxxxxxxxxxx', secret: true },
@@ -80,7 +81,7 @@ const PLATFORMS: PlatformDef[] = [
     color: '#06C755', docUrl: 'https://developers.line.biz/en/docs/messaging-api/',
     fields: [
       { key: 'channel_access_token', label: 'Channel Access Token', placeholder: 'xxxxx...', secret: true,
-        hint: '在 LINE Developers Console → Messaging API 頻道 → Channel access token 取得' },
+        hint: 'lineToken' },
     ],
   },
   {
@@ -88,9 +89,9 @@ const PLATFORMS: PlatformDef[] = [
     color: '#0068FF', docUrl: 'https://developers.zalo.me/docs/api/social-api',
     fields: [
       { key: 'access_token', label: 'Access Token', placeholder: 'xxxxxxxx', secret: true,
-        hint: '在 Zalo Developer Console 申請 OA API 後取得 OAuth Access Token' },
+        hint: 'zaloToken' },
       { key: 'oa_id', label: 'OA ID', placeholder: '0000000000000000000',
-        hint: 'Zalo Official Account 的數字 ID' },
+        hint: 'zaloOaId' },
     ],
   },
   // ── Video ─────────────────────────────────────────────────────────────────
@@ -98,16 +99,16 @@ const PLATFORMS: PlatformDef[] = [
     id: 'FB Reels', name: 'FB Reels', category: 'video',
     color: '#1877F2', docUrl: 'https://developers.facebook.com/docs/video-api/reels-api',
     fields: [
-      { key: 'note', label: '說明', placeholder: '',
-        hint: 'FB Reels 使用與 Facebook Page 相同的 Page Access Token 與 Page ID，請在上方 Facebook 區塊設定即可。' },
+      { key: 'note', label: 'Note', placeholder: '',
+        hint: 'fbReels' },
     ],
   },
   {
     id: 'IG Reels', name: 'IG Reels', category: 'video',
     color: '#E1306C', docUrl: 'https://developers.facebook.com/docs/instagram-api/reference/ig-user/media',
     fields: [
-      { key: 'note', label: '說明', placeholder: '',
-        hint: 'IG Reels 使用與 Instagram 相同的 Access Token 與 IG User ID，請在上方 Instagram 區塊設定即可。' },
+      { key: 'note', label: 'Note', placeholder: '',
+        hint: 'igReels' },
     ],
   },
   {
@@ -115,10 +116,10 @@ const PLATFORMS: PlatformDef[] = [
     color: '#FF0000', docUrl: 'https://developers.google.com/youtube/v3/guides/uploading_a_video',
     fields: [
       { key: 'client_id', label: 'OAuth Client ID', placeholder: 'xxxxxx.apps.googleusercontent.com', secret: false,
-        hint: '在 Google Cloud Console → API & Services → Credentials 建立 OAuth 2.0 Client ID' },
+        hint: 'ytClientId' },
       { key: 'client_secret', label: 'OAuth Client Secret', placeholder: 'GOCSPX-xxxxx', secret: true },
       { key: 'refresh_token', label: 'Refresh Token', placeholder: '1//xxxxxxxx', secret: true,
-        hint: '使用 OAuth Playground (https://developers.google.com/oauthplayground) 授權後取得 refresh_token' },
+        hint: 'ytRefresh' },
     ],
   },
   {
@@ -126,7 +127,7 @@ const PLATFORMS: PlatformDef[] = [
     color: '#000000', docUrl: 'https://developers.tiktok.com/doc/content-posting-api-get-started',
     fields: [
       { key: 'access_token', label: 'Access Token', placeholder: 'act.xxxxxxxxx', secret: true,
-        hint: '在 TikTok for Developers 申請 Content Posting API 授權後取得 Access Token' },
+        hint: 'tiktokToken' },
     ],
   },
 ]
@@ -139,6 +140,7 @@ interface PlatformStatus {
 }
 
 export function SocialPlatformSettings() {
+  const t = useTranslations('Settings.social')
   const [statuses, setStatuses] = useState<Record<string, PlatformStatus>>({})
   const [expanded, setExpanded] = useState<string | null>(null)
   const [formData, setFormData] = useState<Record<string, Record<string, string>>>({})
@@ -211,7 +213,7 @@ export function SocialPlatformSettings() {
             <span className="text-sm font-medium">{platform.name}</span>
             {status?.is_connected && (
               <span className="flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
-                <CheckCircle2 className="h-3 w-3" /> 已連結
+                <CheckCircle2 className="h-3 w-3" /> {t('connected')}
               </span>
             )}
           </div>
@@ -222,7 +224,7 @@ export function SocialPlatformSettings() {
         {isOpen && (
           <div className="px-4 pb-4 pt-1 border-t bg-gray-50 space-y-3">
             {isNoteOnly ? (
-              <p className="text-xs text-gray-500 pt-2">{platform.fields[0].hint}</p>
+              <p className="text-xs text-gray-500 pt-2">{platform.fields[0].hint && t(`hints.${platform.fields[0].hint}`)}</p>
             ) : (
               <>
                 {platform.fields.map(field => (
@@ -231,7 +233,7 @@ export function SocialPlatformSettings() {
                       {field.label}
                       <a href={platform.docUrl} target="_blank" rel="noopener noreferrer"
                         className="ml-2 text-blue-400 hover:underline font-normal inline-flex items-center gap-0.5">
-                        文件 <ExternalLink className="h-2.5 w-2.5" />
+                        {t('docs')} <ExternalLink className="h-2.5 w-2.5" />
                       </a>
                     </label>
                     <input
@@ -242,7 +244,7 @@ export function SocialPlatformSettings() {
                       className="w-full h-9 px-3 rounded-lg border text-xs outline-none focus:ring-2 bg-white font-mono"
                     />
                     {field.hint && (
-                      <p className="text-xs text-gray-400 mt-1">{field.hint}</p>
+                      <p className="text-xs text-gray-400 mt-1">{t(`hints.${field.hint}`)}</p>
                     )}
                   </div>
                 ))}
@@ -256,7 +258,7 @@ export function SocialPlatformSettings() {
                     style={{ background: 'var(--primary)' }}
                   >
                     {isSaving && <Loader2 className="h-3 w-3 animate-spin" />}
-                    {isSaving ? '儲存中…' : '儲存'}
+                    {isSaving ? t('saving') : t('save')}
                   </button>
                   {status?.is_connected && (
                     <button
@@ -264,10 +266,10 @@ export function SocialPlatformSettings() {
                       onClick={() => handleDisconnect(platform.id)}
                       className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs text-red-500 border border-red-200 hover:bg-red-50 transition-colors"
                     >
-                      <Trash2 className="h-3 w-3" /> 清除
+                      <Trash2 className="h-3 w-3" /> {t('clear')}
                     </button>
                   )}
-                  {saved && <span className="text-xs text-green-600">✓ 已儲存</span>}
+                  {saved && <span className="text-xs text-green-600">✓ {t('saved')}</span>}
                 </div>
               </>
             )}
@@ -281,14 +283,14 @@ export function SocialPlatformSettings() {
     <div className="space-y-5">
       {loading ? (
         <div className="flex items-center gap-2 text-sm text-gray-400">
-          <Loader2 className="h-4 w-4 animate-spin" /> 載入中…
+          <Loader2 className="h-4 w-4 animate-spin" /> {t('loading')}
         </div>
       ) : (
         <>
           {/* Image / Text platforms */}
           <div>
             <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-              圖文平台 · Image &amp; Text
+              {t('imageGroup')}
             </div>
             <div className="space-y-2">
               {imageGroup.map(renderPlatform)}
@@ -298,7 +300,7 @@ export function SocialPlatformSettings() {
           {/* Video platforms */}
           <div>
             <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-              影片平台 · Video
+              {t('videoGroup')}
             </div>
             <div className="space-y-2">
               {videoGroup.map(renderPlatform)}

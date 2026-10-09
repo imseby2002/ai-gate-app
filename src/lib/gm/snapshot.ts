@@ -107,11 +107,11 @@ export async function buildGmSnapshot(admin: Admin, ownerId: string): Promise<Gm
   const [{ data: deliv }, { count: contentReview }, { data: offline }] = await Promise.all([
     admin.from('mkt_delivery').select('monthly_orders, monthly_revenue').eq('owner_id', ownerId),
     admin.from('mkt_content').select('id', { count: 'exact', head: true }).eq('owner_id', ownerId).eq('status', 'review'),
-    admin.from('mkt_offline').select('status').eq('owner_id', ownerId),
+    admin.from('mkt_campaigns').select('status').eq('owner_id', ownerId),
   ])
   const deliveryRevenue = (deliv ?? []).reduce((t, d) => t + (Number(d.monthly_revenue) || 0), 0)
   const deliveryOrders = (deliv ?? []).reduce((t, d) => t + (Number(d.monthly_orders) || 0), 0)
-  const offlineActive = (offline ?? []).filter(o => o.status !== 'done' && o.status !== 'cancelled').length
+  const offlineActive = (offline ?? []).filter(o => o.status !== 'ended' && o.status !== 'cancelled').length
   const marketing = { delivery_revenue: deliveryRevenue, delivery_orders: deliveryOrders, content_review: contentReview ?? 0, offline_active: offlineActive }
   if ((contentReview ?? 0) > 0) flags.push({ dept: '行銷', level: 'info', text: `${contentReview} 則行銷內容待審核` })
 

@@ -13,13 +13,19 @@ import { createClient } from '@/lib/supabase/server'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 import { outputLangInstruction } from '@/lib/ai/output-lang'
+import { setUsageUser, trackLlm, withUsage } from '@/lib/marketing/usage'
+import { precheckUsage } from '@/lib/marketing/billing'
 
 export const maxDuration = 120
 
-export async function POST(req: NextRequest) {
+export const POST = withUsage('[marketing] GEO 翻譯', async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  setUsageUser(user.id)
+  // 依實際用量 × 方案倍率扣點；執行前以預估成本檢查餘額
+  const usagePrecheck = await precheckUsage(user.id, 0.08)
+  if (usagePrecheck) return NextResponse.json(usagePrecheck, { status: 402 })
 
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({ error: 'ANTHROPIC_API_KEY 未設定' }, { status: 500 })
@@ -59,11 +65,12 @@ ${src.json_ld ? (typeof src.json_ld === 'string' ? src.json_ld : JSON.stringify(
   let json_ld: unknown = null
   let title = ''
   try {
-    const { text } = await generateText({
+    const { text, usage } = await generateText({
       model: anthropic('claude-sonnet-4-6'),
       messages: [{ role: 'user', content: promptText }],
       maxOutputTokens: 4000,
     })
+    trackLlm('claude-sonnet-4-6', usage)
     const bodyMatch = text.match(/===ARTICLE_START===([\s\S]*?)===ARTICLE_END===/)
     const jsonldMatch = text.match(/===JSONLD_START===([\s\S]*?)===JSONLD_END===/)
     body_md = bodyMatch ? bodyMatch[1].trim() : text.trim()
@@ -101,4 +108,4 @@ ${src.json_ld ? (typeof src.json_ld === 'string' ? src.json_ld : JSON.stringify(
   }
 
   return NextResponse.json({ articleId: article.id, title, body_md, json_ld })
-}
+})

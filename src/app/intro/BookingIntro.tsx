@@ -5,7 +5,8 @@ import {
   Download, Headphones, ArrowRight, Shield, Check,
 } from 'lucide-react'
 import { BkNav, BkFooter, BkPrimaryCta, BkGradText as GradText, BK_GRAD as GRAD, BALANCE } from './_booking/ui'
-import { BK_PLANS, PLAN_NAME, PLAN_HIGHLIGHTS, planPrice } from './_booking/data'
+import { BK_PLANS, PLAN_NAME, PLAN_HIGHLIGHTS as PLAN_HIGHLIGHTS__ZH, planPrice } from './_booking/data'
+import { introTr, trDeep } from '@/lib/i18n-data/server'
 
 export const bookingMetadata: Metadata = {
   title: 'IMT 智能訂房系統｜民宿官網、訂單、定價與通路同步一站搞定',
@@ -13,9 +14,9 @@ export const bookingMetadata: Metadata = {
 }
 
 // 內容對齊 /booking 各功能頁與 /booking/plan 方案內容，只列「已上線」功能
-const CHANNELS = ['Booking.com', 'Agoda', 'Airbnb', 'Expedia', 'Trip.com', '60+ 平台']
+const CHANNELS__ZH = ['Booking.com', 'Agoda', 'Airbnb', 'Expedia', 'Trip.com', '60+ 平台']
 
-const FEATURES = [
+const FEATURES__ZH = [
   { Icon: Globe, title: 'AI 設計官網', desc: '對 AI 說想要的風格，自動生成民宿官網，電腦、手機版即時預覽，旅客直接線上訂房。' },
   { Icon: Zap, title: '即時同步 60+ 平台', desc: '房況秒級同步各大訂房平台，一邊訂出、其他通路立即關房，避免超賣。' },
   { Icon: Mail, title: 'Email / iCal 同步', desc: '連接信箱自動解析平台訂房確認信轉成訂單；iCal 每小時匯入，作為備援。' },
@@ -29,7 +30,11 @@ const FEATURES = [
   { Icon: Headphones, title: '串接 AI 客服', desc: '與 IMT 智能客服連動，旅客問訂單、入住資訊由 AI 直接查詢回覆。' },
 ]
 
-export function BookingIntro() {
+export async function BookingIntro() {
+  const tr = await introTr()
+  const CHANNELS = trDeep(CHANNELS__ZH, tr)
+  const FEATURES = trDeep(FEATURES__ZH, tr)
+  const PLAN_HIGHLIGHTS = trDeep(PLAN_HIGHLIGHTS__ZH, tr)
   return (
     <div className="min-h-screen bg-[#f7f5f2] text-[#1a1612]">
       {/* HERO */}
@@ -42,19 +47,13 @@ export function BookingIntro() {
           <BkNav />
 
           <div className="pb-16 sm:pb-20">
-            <div className="font-mono text-[12px] tracking-[0.22em] uppercase text-[#fcc97a]">民宿 · 旅宿 PMS</div>
-            <h1 className="mt-4 font-black leading-[1.05] tracking-tight text-[clamp(36px,8vw,68px)]" style={BALANCE}>
-              官網、訂單、房價，<br />
-              <GradText>一個後台</GradText>全搞定。
-            </h1>
-            <p className="mt-5 text-[#b9ab9c] text-[clamp(16px,2.4vw,20px)] max-w-[50ch]">
-              AI 幫你做好民宿官網，旅客直接線上訂房；各平台訂單自動匯入同一張空房表，房況即時同步不超賣。
-            </p>
+            <div className="font-mono text-[12px] tracking-[0.22em] uppercase text-[#fcc97a]">{tr("民宿 · 旅宿 PMS")}</div>
+            <h1 className="mt-4 font-black leading-[1.05] tracking-tight text-[clamp(36px,8vw,68px)]" style={BALANCE}>{tr("官網、訂單、房價，")}<br />
+              <GradText>{tr("一個後台")}</GradText>{tr("全搞定。")}</h1>
+            <p className="mt-5 text-[#b9ab9c] text-[clamp(16px,2.4vw,20px)] max-w-[50ch]">{tr("AI 幫你做好民宿官網，旅客直接線上訂房；各平台訂單自動匯入同一張空房表，房況即時同步不超賣。")}</p>
             <div className="mt-8 flex flex-wrap gap-3">
               <BkPrimaryCta />
-              <a href="#features" className="inline-flex items-center gap-2 font-bold text-[15px] px-6 py-3 rounded-xl text-[#f7f1ea] border border-[#3a2f27] bg-white/5 transition-transform hover:-translate-y-0.5">
-                看它能做什麼
-              </a>
+              <a href="#features" className="inline-flex items-center gap-2 font-bold text-[15px] px-6 py-3 rounded-xl text-[#f7f1ea] border border-[#3a2f27] bg-white/5 transition-transform hover:-translate-y-0.5">{tr("看它能做什麼")}</a>
             </div>
             <div className="mt-9 flex flex-wrap gap-2">
               {CHANNELS.map(c => (
@@ -70,18 +69,16 @@ export function BookingIntro() {
       {/* HOOK */}
       <div className="border-b border-[#e7e1d9]">
         <div className="max-w-5xl mx-auto px-6 py-7">
-          <p className="text-[clamp(17px,2.6vw,22px)] font-medium leading-snug" style={BALANCE}>
-            別再手動對帳、開好幾個後台關房。
-            <span className="text-[#8a7d70]"> 訂單集中、房況同步、價格自動調整，把時間留給旅客。</span>
+          <p className="text-[clamp(17px,2.6vw,22px)] font-medium leading-snug" style={BALANCE}>{tr("別再手動對帳、開好幾個後台關房。")}<span className="text-[#8a7d70]">{" "}{tr("訂單集中、房況同步、價格自動調整，把時間留給旅客。")}</span>
           </p>
         </div>
       </div>
 
       {/* FEATURES */}
       <section id="features" className="max-w-5xl mx-auto px-6 py-14">
-        <div className="font-mono text-[12px] tracking-[0.16em] uppercase text-[#c2410c] mb-2">已上線功能</div>
-        <h2 className="text-[clamp(24px,4vw,34px)] font-black tracking-tight mb-1">從接單到入住，一條龍</h2>
-        <p className="text-[#5f554c] text-[15px] max-w-[56ch] mb-7">民宿設定、訂單管理、旅客互動、數據與同步，都在同一個工作台。</p>
+        <div className="font-mono text-[12px] tracking-[0.16em] uppercase text-[#c2410c] mb-2">{tr("已上線功能")}</div>
+        <h2 className="text-[clamp(24px,4vw,34px)] font-black tracking-tight mb-1">{tr("從接單到入住，一條龍")}</h2>
+        <p className="text-[#5f554c] text-[15px] max-w-[56ch] mb-7">{tr("民宿設定、訂單管理、旅客互動、數據與同步，都在同一個工作台。")}</p>
         <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map(f => (
             <div key={f.title} className="flex flex-col gap-2.5 rounded-2xl border border-[#e7e1d9] bg-white p-5 transition-transform hover:-translate-y-1 hover:shadow-[0_16px_40px_rgba(80,50,20,0.10)]">
@@ -91,8 +88,7 @@ export function BookingIntro() {
             </div>
           ))}
         </div>
-        <Link href="/intro/features" className="mt-6 inline-flex items-center gap-1.5 font-bold text-[14px] text-[#c2410c] hover:underline">
-          看每個功能的詳細說明 <ArrowRight className="h-4 w-4" />
+        <Link href="/intro/features" className="mt-6 inline-flex items-center gap-1.5 font-bold text-[14px] text-[#c2410c] hover:underline">{tr("看每個功能的詳細說明")}{" "}<ArrowRight className="h-4 w-4" />
         </Link>
       </section>
 
@@ -101,21 +97,20 @@ export function BookingIntro() {
         <div className="pointer-events-none absolute inset-x-0 h-[80%]"
           style={{ bottom: '-40%', background: 'radial-gradient(50% 100% at 70% 100%,rgba(99,102,241,.26),transparent 70%),radial-gradient(50% 100% at 20% 100%,rgba(245,158,11,.24),transparent 70%)' }} />
         <div className="relative max-w-5xl mx-auto px-6 py-14">
-          <div className="font-mono text-[12px] tracking-[0.22em] uppercase text-[#fcc97a]">方案價格</div>
-          <h2 className="mt-2 mb-2 text-[clamp(24px,4.4vw,38px)] font-black tracking-tight" style={BALANCE}>
-            依房源數選方案，<GradText>免費就能開始</GradText>
+          <div className="font-mono text-[12px] tracking-[0.22em] uppercase text-[#fcc97a]">{tr("方案價格")}</div>
+          <h2 className="mt-2 mb-2 text-[clamp(24px,4.4vw,38px)] font-black tracking-tight" style={BALANCE}>{tr("依房源數選方案，")}<GradText>{tr("免費就能開始")}</GradText>
           </h2>
-          <p className="text-[#b9ab9c] max-w-[54ch] mb-7">美元計價，年繳限時 7 折；付款後立即生效，不自動續訂。</p>
+          <p className="text-[#b9ab9c] max-w-[54ch] mb-7">{tr("美元計價，年繳限時 7 折；付款後立即生效，不自動續訂。")}</p>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {BK_PLANS.map(p => {
               const hi = p === 'pro'
               return (
                 <div key={p} className={`relative rounded-2xl border p-5 ${hi ? 'border-[#f59e0b] bg-[#241a12]' : 'border-[#3a2f27] bg-[#1f1813]'}`}>
-                  {hi && <span className="absolute -top-2.5 right-4 text-[11px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: GRAD }}>推薦</span>}
+                  {hi && <span className="absolute -top-2.5 right-4 text-[11px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: GRAD }}>{tr("推薦")}</span>}
                   <div className="font-mono text-[13px] tracking-widest text-[#e5d9cc]">{PLAN_NAME[p]}</div>
                   <div className="mt-2 mb-4">
                     <span className="text-[34px] font-black">${planPrice(p, 'monthly')}</span>
-                    <span className="text-[13px] text-[#b9ab9c]"> 美元/月</span>
+                    <span className="text-[13px] text-[#b9ab9c]">{" "}{tr("美元/月")}</span>
                   </div>
                   <ul className="space-y-1.5">
                     {PLAN_HIGHLIGHTS[p].map(i => (
@@ -128,27 +123,21 @@ export function BookingIntro() {
               )
             })}
           </div>
-          <Link href="/intro/pricing" className="mt-6 inline-flex items-center gap-1.5 font-bold text-[14px] text-[#fcc97a] hover:underline">
-            看各方案功能逐項比較 <ArrowRight className="h-4 w-4" />
+          <Link href="/intro/pricing" className="mt-6 inline-flex items-center gap-1.5 font-bold text-[14px] text-[#fcc97a] hover:underline">{tr("看各方案功能逐項比較")}{" "}<ArrowRight className="h-4 w-4" />
           </Link>
         </div>
       </section>
 
       {/* FINAL CTA */}
       <section className="max-w-5xl mx-auto px-6 py-16 text-center">
-        <div className="font-mono text-[12px] tracking-[0.22em] uppercase text-[#c2410c]">準備好了嗎</div>
-        <h2 className="mt-3 mb-6 text-[clamp(26px,5vw,42px)] font-black tracking-tight" style={BALANCE}>
-          今天就開好你的<br />民宿官網與訂房系統。
-        </h2>
+        <div className="font-mono text-[12px] tracking-[0.22em] uppercase text-[#c2410c]">{tr("準備好了嗎")}</div>
+        <h2 className="mt-3 mb-6 text-[clamp(26px,5vw,42px)] font-black tracking-tight" style={BALANCE}>{tr("今天就開好你的")}<br />{tr("民宿官網與訂房系統。")}</h2>
         <div className="flex flex-wrap gap-3 justify-center">
           <BkPrimaryCta />
-          <Link href="/login" className="inline-flex items-center gap-2 font-bold text-[15px] px-6 py-3 rounded-xl text-[#1a1612] border border-[#d9d0c5] bg-white transition-transform hover:-translate-y-0.5">
-            我已有帳號
-          </Link>
+          <Link href="/login" className="inline-flex items-center gap-2 font-bold text-[15px] px-6 py-3 rounded-xl text-[#1a1612] border border-[#d9d0c5] bg-white transition-transform hover:-translate-y-0.5">{tr("我已有帳號")}</Link>
         </div>
         <p className="mt-4 text-[12px] text-[#8a7d70] inline-flex items-center gap-1">
-          <Shield className="h-3.5 w-3.5" /> FREE 方案永久免費・資料加密保護
-        </p>
+          <Shield className="h-3.5 w-3.5" />{" "}{tr("FREE 方案永久免費・資料加密保護")}</p>
       </section>
 
       <BkFooter />

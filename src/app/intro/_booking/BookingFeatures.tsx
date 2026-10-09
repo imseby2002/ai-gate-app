@@ -5,6 +5,7 @@ import {
   Tag, TrendingUp, Search, Percent, Zap, Mail, RefreshCw, Headphones, Bell, Star, BarChart2, LifeBuoy, ArrowRight,
 } from 'lucide-react'
 import { BkDarkHeader, BkFinalCta, BkFooter, BK_GRAD } from './ui'
+import { introTr, trDeep } from '@/lib/i18n-data/server'
 
 export const bookingFeaturesMetadata: Metadata = {
   title: '完整功能｜IMT 智能訂房系統',
@@ -14,7 +15,7 @@ export const bookingFeaturesMetadata: Metadata = {
 type Feature = { Icon: React.ComponentType<{ className?: string }>; title: string; desc: string; points?: string[]; plan?: string }
 
 // 內容對齊 /booking 各功能頁；方案標示對齊 lib/booking/entitlements.ts
-const GROUPS: Array<{ id: string; n: string; title: string; sub: string; items: Feature[] }> = [
+const GROUPS__ZH: Array<{ id: string; n: string; title: string; sub: string; items: Feature[] }> = [
   {
     id: 'setup', n: '01', title: '開站：民宿資料與官網', sub: '資料建一次，官網、訂房、同步都用同一份。',
     items: [
@@ -94,13 +95,15 @@ const GROUPS: Array<{ id: string; n: string; title: string; sub: string; items: 
   },
 ]
 
-export function BookingFeatures() {
+export async function BookingFeatures() {
+  const tr = await introTr()
+  const GROUPS = trDeep(GROUPS__ZH, tr)
   return (
     <div className="min-h-screen bg-[#f7f5f2] text-[#1a1612]">
       <BkDarkHeader
-        eyebrow="完整功能"
-        title="從開站、接單到入住，一個後台"
-        sub="下面列出 IMT 智能訂房系統的所有功能；有標示方案的功能需對應方案才能使用，沒標示的所有方案都能用。"
+        eyebrow={tr("完整功能")}
+        title={tr("從開站、接單到入住，一個後台")}
+        sub={tr("下面列出 IMT 智能訂房系統的所有功能；有標示方案的功能需對應方案才能使用，沒標示的所有方案都能用。")}
       />
 
       <div className="sticky top-0 z-10 border-b border-[#e7e1d9] bg-[#f7f5f2]/90 backdrop-blur">
@@ -110,7 +113,7 @@ export function BookingFeatures() {
               {g.n} {g.title.split('：')[0]}
             </a>
           ))}
-          <Link href="/intro/pricing" className="shrink-0 rounded-full px-3 py-1 text-white" style={{ background: BK_GRAD }}>方案比較</Link>
+          <Link href="/intro/pricing" className="shrink-0 rounded-full px-3 py-1 text-white" style={{ background: BK_GRAD }}>{tr("方案比較")}</Link>
         </div>
       </div>
 
@@ -146,14 +149,14 @@ export function BookingFeatures() {
       <section className="max-w-5xl mx-auto px-6 pb-14">
         <Link href="/intro/pricing" className="flex items-center justify-between gap-4 rounded-2xl p-6 text-white" style={{ background: BK_GRAD }}>
           <div>
-            <div className="font-black text-[20px]">每個方案有哪些功能？</div>
-            <div className="text-white/85 text-[14px]">FREE／CORE／PRO／MAX 逐項比較</div>
+            <div className="font-black text-[20px]">{tr("每個方案有哪些功能？")}</div>
+            <div className="text-white/85 text-[14px]">{tr("FREE／CORE／PRO／MAX 逐項比較")}</div>
           </div>
           <ArrowRight className="h-6 w-6 shrink-0" />
         </Link>
       </section>
 
-      <BkFinalCta title="先用免費方案做好你的官網" sub="FREE 方案含 1 房源、官網 AI 設計與 iCal 同步，隨時可升級。" />
+      <BkFinalCta title={tr("先用免費方案做好你的官網")} sub={tr("FREE 方案含 1 房源、官網 AI 設計與 iCal 同步，隨時可升級。")} />
       <BkFooter />
     </div>
   )

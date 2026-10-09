@@ -1,148 +1,106 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getUnitContextAny } from '@/lib/auth/unit-access'
-import { INITIAL_AUDIT_RULES, INITIAL_RULE_VERSIONS } from '@/lib/audit/platform-core'
-import type { AuditRule, AuditRuleVersion } from '@/lib/types/audit-platform'
+import type { AuditRuleStatus } from '@/lib/types/audit-platform'
 
-export async function GET(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url)
-    const status = searchParams.get('status')
-    const category = searchParams.get('category')
+// 稽核平台規則庫：依公司（ownerId）存於 audit_rules_v2，每次建立／升級都寫一筆 audit_rule_versions 軌跡
+const STATUSES: AuditRuleStatus[] = ['hypothesis', 'suggested', 'approved', 'hard_rule']
+const s = (v: unknown) => String(v ?? '').trim()
 
-    const ctx = await getUnitContextAny(['audit', 'store', 'rd']).catch(() => ({ ok: true, admin: null }))
-    const supabase = ctx.admin
-
-    let rules: AuditRule[] = INITIAL_AUDIT_RULES
-    let versions: AuditRuleVersion[] = INITIAL_RULE_VERSIONS
-
-    if (supabase) {
-      try {
-        let query = supabase.from('audit_rules_v2').select('*')
-        if (status && status !== 'all') {
-          query = query.eq('status', status)
-        }
-        if (category && category !== 'all') {
-          query = query.eq('category', category)
-        }
-        const { data: dbRules, error } = await query.order('created_at', { ascending: false })
-        if (!error && dbRules && dbRules.length > 0) {
-          rules = dbRules
-        }
-
-        const { data: dbVersions } = await supabase.from('audit_rule_versions').select('*').order('created_at', { ascending: false })
-        if (dbVersions && dbVersions.length > 0) {
-          versions = dbVersions
-        }
-      } catch (err) {
-        console.warn('Fallback to seeded rules & versions:', err)
-      }
-    }
-
-    if (status && status !== 'all') {
-      rules = rules.filter(r => r.status === status)
-    }
-    if (category && category !== 'all') {
-      rules = rules.filter(r => r.category === category)
-    }
-
-    return NextResponse.json({
-      success: true,
-      count: rules.length,
-      rules,
-      versions,
-    })
-  } catch (error: any) {
-    return NextResponse.json({ error: error?.message || 'Failed to fetch rules' }, { status: 500 })
-  }
+async function access() {
+  const ctx = await getUnitContextAny(['audit', 'store', 'rd'])
+  if (ctx.ok) return { ctx, deny: null }
+  return { ctx, deny: NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status }) }
 }
 
+export async function GET(req: NextRequest) {
+  const { ctx, deny } = await access()
+  if (deny) return deny
+  const { searchParams } = new URL(req.url)
+  const status = searchParams.get('status')
+  const category = searchParams.get('category')
+
+  let q = ctx.admin.from('audit_rules_v2').select('*').eq('owner_id', ctx.ownerId)
+  if (status && status !== 'all') q = q.eq('status', status)
+  if (category && category !== 'all') q = q.eq('category', category)
+  const { data: rules, error } = await q.order('created_at', { ascending: false })
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  const { data: versions, error: vErr } = await ctx.admin.from('audit_rule_versions')
+    .select('*').eq('owner_id', ctx.ownerId).order('created_at', { ascending: false })
+  if (vErr) return NextResponse.json({ error: vErr.message }, { status: 500 })
+
+  return NextResponse.json({ success: true, count: rules?.length ?? 0, rules: rules ?? [], versions: versions ?? [] })
+}
+
+// body：
+//   升級：{ rule_code, promote_to, change_note? }
+//   新增：{ title, target_product?, condition_desc?, category?, adjustment_type?, numerical_delta?, unit?, hypothesis_reason?, store? }
 export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json().catch(() => ({}))
-    const {
-      id,
-      rule_code,
-      title,
-      status = 'hypothesis',
-      category = 'material',
-      target_product,
-      condition_desc,
-      adjustment_type = 'tea_adjustment',
-      adjustment_value,
-      numerical_delta = 0,
-      unit = 'ml',
-      version = 'V1',
-      effective_from = new Date().toISOString().slice(0, 10),
-      effective_to = null,
-      approved_by = null,
-      hypothesis_reason = '',
-      confidence = 85,
-      change_note = '規則建立或更新',
-      promote_to,
-    } = body
+  const { ctx, deny } = await access()
+  if (deny) return deny
+  const body = await req.json().catch(() => ({}))
+  const { data: profile } = await ctx.admin.from('profiles').select('full_name, email').eq('id', ctx.userId).maybeSingle()
+  const actor = s(profile?.full_name) || s(profile?.email) || '稽核人員'
+  const today = new Date().toISOString().slice(0, 10)
 
-    if (!title && !promote_to) {
-      return NextResponse.json({ error: '請提供規則標題或欲升級之規則狀態' }, { status: 400 })
-    }
+  // ── 升級既有規則 ──
+  const promoteTo = s(body.promote_to) as AuditRuleStatus
+  if (promoteTo) {
+    if (!STATUSES.includes(promoteTo)) return NextResponse.json({ error: '無效的規則狀態' }, { status: 400 })
+    const { data: rule, error } = await ctx.admin.from('audit_rules_v2').select('*')
+      .eq('owner_id', ctx.ownerId).eq('rule_code', s(body.rule_code)).maybeSingle()
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (!rule) return NextResponse.json({ error: '找不到該規則' }, { status: 404 })
 
-    const ctx = await getUnitContextAny(['audit', 'store', 'rd']).catch(() => ({ ok: true, admin: null }))
-    const supabase = ctx.admin
+    const nextVersion = `V${(parseInt(String(rule.version).replace(/\D/g, '')) || 1) + 1}`
+    const approvedBy = promoteTo === 'approved' || promoteTo === 'hard_rule' ? actor : rule.approved_by
+    const { data: updated, error: uErr } = await ctx.admin.from('audit_rules_v2').update({
+      status: promoteTo, version: nextVersion, approved_by: approvedBy, updated_at: new Date().toISOString(),
+    }).eq('id', rule.id).eq('owner_id', ctx.ownerId).select('*').single()
+    if (uErr) return NextResponse.json({ error: uErr.message }, { status: 500 })
 
-    const newCode = rule_code || `RULE-${String(Math.floor(10000 + Math.random() * 90000)).slice(1)}`
-    const finalStatus = promote_to || status
-
-    const ruleObj: AuditRule = {
-      id: id || `rule-${Date.now()}`,
-      rule_code: newCode,
-      title: title || `${target_product || '產品'} ${adjustment_value || '耗用調整'} 規則`,
-      status: finalStatus,
-      category,
-      target_product: target_product || '全品項',
-      condition_desc: condition_desc || '一般條件',
-      adjustment_type,
-      adjustment_value: adjustment_value || `${numerical_delta > 0 ? '+' : ''}${numerical_delta}${unit}`,
-      numerical_delta: Number(numerical_delta) || 0,
-      unit,
-      version,
-      effective_from,
-      effective_to,
-      approved_by: finalStatus === 'hard_rule' || finalStatus === 'approved' ? (approved_by || '稽核審核委員會') : null,
-      hypothesis_reason,
-      confidence: Number(confidence) || 85,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }
-
-    const versionObj: AuditRuleVersion = {
-      id: `ver-${Date.now()}`,
-      rule_id: ruleObj.id,
-      rule_code: newCode,
-      version: ruleObj.version,
-      adjustment_value: ruleObj.adjustment_value,
-      numerical_delta: ruleObj.numerical_delta,
-      effective_from: ruleObj.effective_from,
-      effective_to: ruleObj.effective_to,
-      approved_by: ruleObj.approved_by || '系統記錄',
-      change_note: change_note || `升級為 ${finalStatus}`,
-      created_at: new Date().toISOString(),
-    }
-
-    if (supabase) {
-      try {
-        await supabase.from('audit_rules_v2').upsert(ruleObj)
-        await supabase.from('audit_rule_versions').insert(versionObj)
-      } catch (err) {
-        console.warn('Persist rule to DB fallback to session:', err)
-      }
-    }
-
-    return NextResponse.json({
-      success: true,
-      rule: ruleObj,
-      version: versionObj,
-      message: `規則 ${newCode} 已成功設定為【${finalStatus.toUpperCase()}】！`,
+    const { error: vErr } = await ctx.admin.from('audit_rule_versions').insert({
+      owner_id: ctx.ownerId, rule_id: rule.id, rule_code: rule.rule_code, version: nextVersion, status: promoteTo,
+      adjustment_value: rule.adjustment_value, numerical_delta: rule.numerical_delta,
+      effective_from: today, approved_by: actor, change_note: s(body.change_note) || `升級為 ${promoteTo}`,
     })
-  } catch (error: any) {
-    return NextResponse.json({ error: error?.message || 'Rule creation failed' }, { status: 500 })
+    if (vErr) return NextResponse.json({ error: vErr.message }, { status: 500 })
+    return NextResponse.json({ success: true, rule: updated, message: `規則 ${rule.rule_code} 已設定為【${promoteTo.toUpperCase()}】` })
   }
+
+  // ── 新增規則（假說起步） ──
+  const title = s(body.title)
+  if (!title) return NextResponse.json({ error: '請輸入規則標題' }, { status: 400 })
+  const delta = Number(body.numerical_delta) || 0
+  const unit = s(body.unit) || 'ml'
+
+  const { count, error: cErr } = await ctx.admin.from('audit_rules_v2')
+    .select('id', { count: 'exact', head: true }).eq('owner_id', ctx.ownerId)
+  if (cErr) return NextResponse.json({ error: cErr.message }, { status: 500 })
+  const ruleCode = `RULE-${String((count ?? 0) + 1).padStart(4, '0')}`
+
+  const { data: rule, error } = await ctx.admin.from('audit_rules_v2').insert({
+    owner_id: ctx.ownerId,
+    rule_code: ruleCode,
+    title,
+    status: 'hypothesis',
+    category: s(body.category) || 'material',
+    target_product: s(body.target_product) || '全品項',
+    condition_desc: s(body.condition_desc),
+    adjustment_type: s(body.adjustment_type) || 'tea_adjustment',
+    adjustment_value: `${delta > 0 ? '+' : ''}${delta}${unit}`,
+    numerical_delta: delta,
+    unit,
+    hypothesis_reason: s(body.hypothesis_reason),
+    store: s(body.store) || null,
+  }).select('*').single()
+  if (error) return NextResponse.json({ error: error.code === '23505' ? '規則編號重複，請再試一次' : error.message }, { status: 500 })
+
+  const { error: vErr } = await ctx.admin.from('audit_rule_versions').insert({
+    owner_id: ctx.ownerId, rule_id: rule.id, rule_code: ruleCode, version: 'V1', status: 'hypothesis',
+    adjustment_value: rule.adjustment_value, numerical_delta: delta, effective_from: today,
+    approved_by: actor, change_note: '建立規則',
+  })
+  if (vErr) return NextResponse.json({ error: vErr.message }, { status: 500 })
+  return NextResponse.json({ success: true, rule, message: `規則 ${ruleCode} 已建立（假說）` })
 }

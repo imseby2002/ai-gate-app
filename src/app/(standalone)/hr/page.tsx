@@ -550,6 +550,17 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
   const [showImport, setShowImport] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [exportingIns, setExportingIns] = useState(false)
+  // 員工上傳文件（沿用其錄取前的應徵者資料）
+  const [docsEmp, setDocsEmp] = useState<Employee | null>(null)
+  const [empDocs, setEmpDocs] = useState<{ loading: boolean; linked: boolean; docs: CandDoc[]; checklist: CheckItem[] }>({ loading: false, linked: false, docs: [], checklist: [] })
+  const DOC_CATALOG = getDocCatalog(t)
+
+  async function openEmpDocs(emp: Employee) {
+    setDocsEmp(emp); setEmpDocs({ loading: true, linked: false, docs: [], checklist: [] })
+    const res = await fetch(`/api/hr/candidates/checklist?employee_id=${emp.id}`)
+    const d = res.ok ? await res.json() : {}
+    setEmpDocs({ loading: false, linked: !!d.candidate_id, docs: d.documents ?? [], checklist: d.checklist ?? [] })
+  }
 
   async function exportInsurance() {
     setErr(''); setExportingIns(true)
@@ -617,6 +628,7 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
           title="批次匯入 / 更新員工資料"
           description="支援 .xlsx, .xls 與 .csv 檔案。若姓名與身分證號已存在將自動更新，否則新增。"
           columns={EMPLOYEE_IMPORT_COLUMNS}
+          columnsNs="HrImport.employee"
           templateFilename="員工名單範本"
           sheetName="員工資料"
           onClose={() => setShowImport(false)}
@@ -670,6 +682,9 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
+                  <Button size="sm" variant="ghost" className="h-7 px-2 gap-1 text-xs text-gray-500" onClick={() => openEmpDocs(emp)}>
+                    <FileText className="h-3.5 w-3.5" />{t('documents')}
+                  </Button>
                   <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { setEditing(emp); setShowForm(false) }}>
                     <Pencil className="h-3.5 w-3.5" />
                   </Button>
@@ -700,6 +715,48 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
               )}
             </Card>
           ))}
+        </div>
+      )}
+
+      {docsEmp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setDocsEmp(null)}>
+          <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-5 space-y-3" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold">{t('candidateDocsTitle', { name: docsEmp.name })}</h3>
+              <button onClick={() => setDocsEmp(null)}><X className="h-5 w-5 text-gray-400" /></button>
+            </div>
+            {empDocs.loading ? (
+              <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-gray-400" /></div>
+            ) : !empDocs.linked ? (
+              <p className="text-sm text-gray-500 py-6 text-center">{t('empDocsNoApplication')}</p>
+            ) : (
+              <div className="space-y-2">
+                {DOC_CATALOG.map(spec => {
+                  const uploaded = empDocs.docs.filter(d => d.doc_type === spec.type)
+                  const chk = empDocs.checklist.find(x => x.doc_key === spec.type)
+                  return (
+                    <div key={spec.type} className="border rounded-lg px-3 py-2 text-sm space-y-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium">{spec.label}</span>
+                        {uploaded.length > 0
+                          ? <span className="text-[11px] text-emerald-600 whitespace-nowrap flex items-center gap-0.5"><Check className="h-3 w-3" />{t('uploadedCount', { n: uploaded.length })}</span>
+                          : <span className="text-[11px] text-gray-300 whitespace-nowrap">{t('notUploaded')}</span>}
+                      </div>
+                      {uploaded.map(d => (
+                        <a key={d.id} href={d.url} target="_blank" rel="noreferrer" className="block text-xs text-primary hover:underline truncate">📎 {d.file_name}</a>
+                      ))}
+                      {(chk?.original_received || chk?.copy_received) && (
+                        <div className="flex gap-3 text-[11px] text-gray-500">
+                          {chk.original_received && <span>✓ {t('originalSubmitted')}</span>}
+                          {chk.copy_received && <span>✓ {t('photocopySubmitted')}</span>}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -856,6 +913,7 @@ function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: 
           title="批次匯入 / 更新月度薪資"
           description="支援 .xlsx, .xls 與 .csv 檔案。若名單中已有該員工當月薪資將自動覆蓋更新，未建立之員工將自動建立。"
           columns={PAYROLL_IMPORT_COLUMNS}
+          columnsNs="HrImport.payroll"
           templateFilename="薪資資料範本"
           sheetName="月薪資表"
           onClose={() => setShowImport(false)}
@@ -1069,6 +1127,7 @@ function LeaveTab({ employees, loading: empLoading }: { employees: Employee[]; l
           title="批次匯入請假紀錄"
           description="支援 .xlsx, .xls 與 .csv 檔案。請填寫員工姓名或考勤工號。"
           columns={LEAVE_IMPORT_COLUMNS}
+          columnsNs="HrImport.leave"
           templateFilename="請假紀錄範本"
           sheetName="請假清單"
           onClose={() => setShowImport(false)}
@@ -1371,6 +1430,7 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
   const [showImport, setShowImport] = useState(false)
   const [busy, setBusy] = useState(false)
   const [applyCode, setApplyCode] = useState('')
+  const [applySlug, setApplySlug] = useState<string | null>(null)
   const [docsFor, setDocsFor] = useState<Candidate | null>(null)
   const [docs, setDocs] = useState<CandDoc[]>([])
   const [checklist, setChecklist] = useState<CheckItem[]>([])
@@ -1411,7 +1471,7 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
   }
 
   useEffect(() => {
-    fetch('/api/hr/apply-config').then(r => r.ok ? r.json() : null).then(d => { if (d?.code) setApplyCode(d.code) })
+    fetch('/api/hr/apply-config').then(r => r.ok ? r.json() : null).then(d => { if (d?.code) setApplyCode(d.code); setApplySlug(d?.slug ?? null) })
   }, [])
 
   const unreadCount = notifs.filter(n => !n.is_read).length
@@ -1440,7 +1500,8 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
   }
 
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
-  const applyUrl = applyCode ? `${origin}/apply/${applyCode}` : ''
+  // 有公司子網域用好記的 <slug>.im-tourist.com/apply，否則沿用代碼連結
+  const applyUrl = applySlug ? `https://${applySlug}.im-tourist.com/apply` : applyCode ? `${origin}/apply/${applyCode}` : ''
   const copy = (text: string, msg: string) => { navigator.clipboard?.writeText(text); alert(msg) }
 
   const toggleLock = async (c: Candidate) => {
@@ -1558,6 +1619,7 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
           title="批次匯入 / 更新應徵者名單"
           description="支援 .xlsx, .xls 與 .csv 檔案。若電話、Email 或身分證號相符將自動更新，否則新增。"
           columns={CANDIDATE_IMPORT_COLUMNS}
+          columnsNs="HrImport.candidate"
           templateFilename="應徵者名單範本"
           sheetName="應徵者清單"
           onClose={() => setShowImport(false)}
@@ -1936,6 +1998,7 @@ function EvaluationTab({ employees, loading }: { employees: Employee[]; loading:
           title="批次匯入 / 更新考核獎懲資料"
           description="支援 .xlsx, .xls 與 .csv 檔案。請填寫員工姓名或考勤工號。"
           columns={EVALUATION_IMPORT_COLUMNS}
+          columnsNs="HrImport.evaluation"
           templateFilename="員工考核獎懲範本"
           sheetName="考核獎懲"
           onClose={() => setShowImport(false)}
@@ -2164,6 +2227,7 @@ function InsuranceTab({ onRefresh }: { onRefresh: () => void }) {
           title="批次匯入 / 更新勞健保資料"
           description="支援 .xlsx, .xls 與 .csv 檔案。可比對員工姓名、身分證號或考勤工號更新投保狀態、證號與投保薪資。"
           columns={INSURANCE_IMPORT_COLUMNS}
+          columnsNs="HrImport.insurance"
           templateFilename="員工投保資料範本"
           sheetName="投保名單"
           onClose={() => setShowImport(false)}
