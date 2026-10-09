@@ -101,6 +101,7 @@ export async function middleware(request: NextRequest) {
       pathname === '/' ||
       pathname.startsWith('/intro') ||
       pathname.startsWith('/privacy') ||
+      pathname.startsWith('/quiz/') ||
       pathname.startsWith('/esim') ||
       pathname.startsWith('/api/esim') ||
       pathname.startsWith('/book/') ||
