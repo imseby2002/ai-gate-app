@@ -1,5 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
-import { QUIZZES, type QuizLang } from '@/lib/quiz'
+import { QUIZZES, QUIZ_LANG_LABEL, attemptNumbers, type QuizLang } from '@/lib/quiz'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,12 +12,6 @@ interface Submission {
   score: number
   total: number
   created_at: string
-}
-
-const LANG_LABEL: Record<QuizLang, string> = { zh: '中文', en: 'English', vi: 'Tiếng Việt' }
-
-function normName(name: string) {
-  return name.trim().replace(/\s+/g, ' ').toLowerCase()
 }
 
 export default async function AdminQuizPage() {
@@ -41,15 +35,8 @@ export default async function AdminQuizPage() {
       {Object.entries(QUIZZES).map(([quizId, quiz]) => {
         const list = rows.filter(r => r.quiz_id === quizId)
         const keys = quiz.questions.map(q => q.id)
-        // 交卷後會公布答案，重考分數不具參考性：依姓名照時間排序標出第幾次作答，平均只算首次
-        const attempt = new Map<string, number>()
-        const seen = new Map<string, number>()
-        for (const r of [...list].reverse()) {
-          const n = normName(r.name)
-          const c = (seen.get(n) ?? 0) + 1
-          seen.set(n, c)
-          attempt.set(r.id, c)
-        }
+        // 平均只算首次作答
+        const attempt = attemptNumbers(list)
         const firsts = list.filter(r => attempt.get(r.id) === 1)
         const avg = firsts.length ? (firsts.reduce((s, r) => s + r.score, 0) / firsts.length).toFixed(1) : '-'
         return (
@@ -57,6 +44,7 @@ export default async function AdminQuizPage() {
             <div className="px-4 py-3 border-b flex flex-wrap items-center gap-x-4 gap-y-1">
               <h2 className="font-semibold">{quiz.title.zh}</h2>
               <a href={`/quiz/${quizId}.html`} target="_blank" className="text-xs text-blue-600 hover:underline">/quiz/{quizId}.html</a>
+              <a href={`/api/admin/quiz/export?quiz=${quizId}`} className="text-xs px-2.5 py-1 rounded-md border bg-background hover:bg-accent">匯出 Excel</a>
               <span className="text-xs text-muted-foreground">共 {firsts.length} 人 · {list.length} 份 · 首次平均 {avg} / {keys.length}</span>
             </div>
             <div className="overflow-x-auto">
@@ -87,7 +75,7 @@ export default async function AdminQuizPage() {
                           ? <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">首次</span>
                           : <span className="text-xs text-muted-foreground">第 {attempt.get(r.id)} 次（重考）</span>}
                       </td>
-                      <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">{r.lang ? LANG_LABEL[r.lang] : '-'}</td>
+                      <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">{r.lang ? QUIZ_LANG_LABEL[r.lang] : '-'}</td>
                       {quiz.questions.map(({ id: k, answer }) => {
                         const ok = r.answers?.[k] === answer
                         return (

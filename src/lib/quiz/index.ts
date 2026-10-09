@@ -223,3 +223,19 @@ export const QUIZZES: Record<string, Quiz> = {
 export function isQuizLang(v: unknown): v is QuizLang {
   return typeof v === 'string' && (QUIZ_LANGS as readonly string[]).includes(v)
 }
+
+export const QUIZ_LANG_LABEL: Record<QuizLang, string> = { zh: '中文', en: 'English', vi: 'Tiếng Việt' }
+
+// 交卷後會公布答案，重考分數不具參考性：依姓名（忽略大小寫與多餘空白）照交卷時間標出第幾次作答。
+// rows 須為同一份測驗、依 created_at 由新到舊排序。
+export function attemptNumbers<T extends { id: string; name: string }>(rows: T[]): Map<string, number> {
+  const attempt = new Map<string, number>()
+  const seen = new Map<string, number>()
+  for (const r of [...rows].reverse()) {
+    const n = r.name.trim().replace(/\s+/g, ' ').toLowerCase()
+    const c = (seen.get(n) ?? 0) + 1
+    seen.set(n, c)
+    attempt.set(r.id, c)
+  }
+  return attempt
+}
