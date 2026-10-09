@@ -31,6 +31,15 @@ export default function SystemAuth({ system }: { system: SystemKey }) {
   const [allowed, setAllowed] = useState(true)
   const [checking, setChecking] = useState(true)
   const [showPassword, setShowPassword] = useState(false)
+  const [canResend, setCanResend] = useState(false)
+  const [resendLoading, setResendLoading] = useState(false)
+  const [resendCooldown, setResendCooldown] = useState(0)
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return
+    const id = setTimeout(() => setResendCooldown(c => c - 1), 1000)
+    return () => clearTimeout(id)
+  }, [resendCooldown])
 
   // 檢查並依使用者瀏覽器/系統語言 (navigator.language) 自動持久化 cookie
   useEffect(() => {
@@ -84,7 +93,7 @@ export default function SystemAuth({ system }: { system: SystemKey }) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setLoading(true); setError(''); setInfo('')
+    setLoading(true); setError(''); setInfo(''); setCanResend(false)
     const supabase = createClient()
 
     const signIn = await supabase.auth.signInWithPassword({ email, password })
@@ -116,6 +125,15 @@ export default function SystemAuth({ system }: { system: SystemKey }) {
         return
       }
       setInfo(t('registeredCheckEmail'))
+      setCanResend(true)
+      setResendCooldown(60)
+      setLoading(false)
+      return
+    }
+
+    if (signIn.error.code === 'email_not_confirmed') {
+      setError(t('emailNotConfirmed'))
+      setCanResend(true)
       setLoading(false)
       return
     }
@@ -123,6 +141,25 @@ export default function SystemAuth({ system }: { system: SystemKey }) {
     const rawMsg = (signIn.error.message || '').trim()
     setError(rawMsg === '{}' || !rawMsg ? t('loginErrorFallback') : rawMsg)
     setLoading(false)
+  }
+
+  async function handleResend() {
+    if (!email || resendCooldown > 0) return
+    setResendLoading(true); setError('')
+    const { error } = await createClient().auth.resend({
+      type: 'signup',
+      email,
+      options: { emailRedirectTo: `${window.location.origin}/callback?system=${system}` },
+    })
+    setResendLoading(false)
+    if (error) {
+      const m = /(\d+)\s*seconds?/.exec(error.message || '')
+      if (m) setResendCooldown(Number(m[1]))
+      setError(error.message || t('systemErrorFallback'))
+      return
+    }
+    setInfo(t('resendVerificationSent'))
+    setResendCooldown(60)
   }
 
   async function handleGoogle() {
@@ -315,6 +352,13 @@ export default function SystemAuth({ system }: { system: SystemKey }) {
                 </div>
                 {error && <div className="p-3 rounded-lg text-sm text-red-700 bg-red-50 border border-red-200">{error}</div>}
                 {info && <div className="p-3 rounded-lg text-sm text-emerald-700 bg-emerald-50 border border-emerald-200">{info}</div>}
+                {canResend && (
+                  <button type="button" onClick={handleResend} disabled={resendLoading || resendCooldown > 0 || !email}
+                    className="w-full h-10 rounded-lg border border-gray-200 text-sm font-medium flex items-center justify-center gap-2 hover:bg-gray-50 disabled:opacity-60 cursor-pointer transition-colors">
+                    {resendLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                    {resendCooldown > 0 ? t('resendVerificationCooldown', { seconds: resendCooldown }) : t('resendVerification')}
+                  </button>
+                )}
                 <button type="submit" disabled={loading || googleLoading}
                   className="w-full h-10 rounded-lg text-sm font-semibold text-white flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
                   style={{ background: 'var(--primary)' }}>
