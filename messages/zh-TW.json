@@ -301,7 +301,9 @@
       "companyTitle": "公司與團隊成員",
       "companyDesc": "管理所屬公司實體、成員名冊與協同邀請權限。",
       "dataTitle": "公司資料",
-      "dataDesc": "基本資料、品牌、產品、門市、素材全公司共用一份，行銷、客服、AI Agent 即時讀取。"
+      "dataDesc": "基本資料、品牌、產品、門市、素材全公司共用一份，行銷、客服、AI Agent 即時讀取。",
+      "channelsTitle": "官方帳號",
+      "channelsDesc": "Zalo OA、LINE 官方帳號、WhatsApp Business 等，全公司統一管理，指定給各模組使用。"
     },
     "whitelist": {
       "exists": "此 Email 已在名單中",
@@ -12459,5 +12461,42 @@
       "p5": "開手搖飲店需要跟哪些政府部門打交道？各自要準備什麼？",
       "p6": "社區型 MALL 和非社區型 MALL 進駐條件有什麼差別？"
     }
+  },
+  "ChannelAccounts": {
+    "title": "官方帳號",
+    "subtitle": "Zalo OA、LINE 官方帳號、WhatsApp Business 等由公司統一管理。每個平台可設多組，再指定給客服、行銷、人事、外務使用。",
+    "add": "新增官方帳號",
+    "platform": "平台",
+    "name": "帳號名稱",
+    "namePh": "例如：員工通知 OA、門市客服 OA",
+    "modules": "使用模組",
+    "mod_cs": "客服",
+    "mod_marketing": "行銷",
+    "mod_hr": "人事",
+    "mod_affairs": "外務",
+    "noModules": "尚未指定模組",
+    "connected": "已連線",
+    "notConnected": "未完成設定",
+    "credentials": "憑證",
+    "optional": "選填",
+    "keepHint": "留空則保留原值",
+    "doc": "申請說明",
+    "save": "儲存",
+    "saving": "儲存中...",
+    "cancel": "取消",
+    "edit": "編輯",
+    "delete": "刪除",
+    "confirmDelete": "確定刪除「{name}」？使用此帳號的模組將無法再透過它發送訊息。",
+    "empty": "尚未新增任何官方帳號。",
+    "loading": "載入中...",
+    "readonly": "僅可檢視",
+    "noPermission": "只有公司負責人、IT 與模組負責人可以新增或修改官方帳號。",
+    "managerHint": "你是 {modules} 的負責人，只能指定與修改這些模組。",
+    "moduleRequired": "請至少勾選一個你負責的模組。",
+    "saveFailed": "儲存失敗：{error}",
+    "noCompany": "你尚未加入任何公司。",
+    "migrationNote": "各模組原本的設定仍照常運作；之後的更新會把它們搬到這裡，並讓各模組改從這裡選用帳號。",
+    "zaloRefreshHint": "填寫 App ID、Secret Key、Refresh Token 後，之後可自動更新 Access Token。",
+    "updated": "更新於 {time}"
   }
 }

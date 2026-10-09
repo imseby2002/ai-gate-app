@@ -301,7 +301,9 @@
       "companyTitle": "Company & team members",
       "companyDesc": "Manage your company, member list and invitation permissions.",
       "dataTitle": "Company profile",
-      "dataDesc": "Basic info, brand, products, stores and assets are shared company-wide and used live by marketing, customer service and AI agents."
+      "dataDesc": "Basic info, brand, products, stores and assets are shared company-wide and used live by marketing, customer service and AI agents.",
+      "channelsTitle": "Official Accounts",
+      "channelsDesc": "Zalo OA, LINE Official Account, WhatsApp Business and more, managed once for the whole company and assigned to modules."
     },
     "whitelist": {
       "exists": "This email is already on the list",
@@ -12459,5 +12461,42 @@
       "p5": "Which government departments does a bubble-tea shop deal with, and what does each need?",
       "p6": "How do entry terms differ between community and non-community malls?"
     }
+  },
+  "ChannelAccounts": {
+    "title": "Official Accounts",
+    "subtitle": "Manage Zalo OA, LINE Official Account, WhatsApp Business and more at the company level. Add multiple accounts per platform and assign them to Customer Service, Marketing, HR or Field Affairs.",
+    "add": "Add official account",
+    "platform": "Platform",
+    "name": "Account name",
+    "namePh": "e.g. Staff notification OA, Store CS OA",
+    "modules": "Used by",
+    "mod_cs": "Customer Service",
+    "mod_marketing": "Marketing",
+    "mod_hr": "HR",
+    "mod_affairs": "Field Affairs",
+    "noModules": "No module assigned",
+    "connected": "Connected",
+    "notConnected": "Setup incomplete",
+    "credentials": "Credentials",
+    "optional": "Optional",
+    "keepHint": "Leave blank to keep the current value",
+    "doc": "Setup guide",
+    "save": "Save",
+    "saving": "Saving...",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "confirmDelete": "Delete \"{name}\"? Modules using this account will no longer be able to send messages through it.",
+    "empty": "No official accounts yet.",
+    "loading": "Loading...",
+    "readonly": "View only",
+    "noPermission": "Only the company owner, IT and module managers can add or edit official accounts.",
+    "managerHint": "You manage {modules}; you can only assign and edit these modules.",
+    "moduleRequired": "Please select at least one module you manage.",
+    "saveFailed": "Save failed: {error}",
+    "noCompany": "You have not joined a company yet.",
+    "migrationNote": "Each module's existing settings keep working for now; an upcoming update will move them here and let modules pick accounts from this page.",
+    "zaloRefreshHint": "With App ID, Secret Key and Refresh Token filled in, the Access Token can be refreshed automatically later.",
+    "updated": "Updated {time}"
   }
 }

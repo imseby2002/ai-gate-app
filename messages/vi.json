@@ -301,7 +301,9 @@
       "companyTitle": "Công ty & thành viên",
       "companyDesc": "Quản lý công ty, danh sách thành viên và quyền mời cộng tác.",
       "dataTitle": "Hồ sơ công ty",
-      "dataDesc": "Thông tin cơ bản, thương hiệu, sản phẩm, cửa hàng và tài nguyên dùng chung toàn công ty, được marketing, CSKH và AI Agent sử dụng trực tiếp."
+      "dataDesc": "Thông tin cơ bản, thương hiệu, sản phẩm, cửa hàng và tài nguyên dùng chung toàn công ty, được marketing, CSKH và AI Agent sử dụng trực tiếp.",
+      "channelsTitle": "Tài khoản chính thức",
+      "channelsDesc": "Zalo OA, LINE Official Account, WhatsApp Business… quản lý tập trung cho cả công ty và chỉ định cho từng phân hệ."
     },
     "whitelist": {
       "exists": "Email này đã có trong danh sách",
@@ -12366,5 +12368,42 @@
       "p5": "Mở quán trà sữa cần làm việc với những cơ quan nhà nước nào, mỗi nơi cần chuẩn bị gì?",
       "p6": "Điều kiện vào TTTM khu dân cư và không thuộc khu dân cư khác nhau thế nào?"
     }
+  },
+  "ChannelAccounts": {
+    "title": "Tài khoản chính thức",
+    "subtitle": "Quản lý Zalo OA, LINE Official Account, WhatsApp Business… ở cấp công ty. Mỗi nền tảng có thể thêm nhiều tài khoản và chỉ định cho CSKH, Marketing, Nhân sự, Đối ngoại sử dụng.",
+    "add": "Thêm tài khoản chính thức",
+    "platform": "Nền tảng",
+    "name": "Tên tài khoản",
+    "namePh": "VD: OA thông báo nhân viên, OA CSKH cửa hàng",
+    "modules": "Phân hệ sử dụng",
+    "mod_cs": "CSKH",
+    "mod_marketing": "Marketing",
+    "mod_hr": "Nhân sự",
+    "mod_affairs": "Đối ngoại",
+    "noModules": "Chưa chỉ định phân hệ",
+    "connected": "Đã kết nối",
+    "notConnected": "Chưa thiết lập xong",
+    "credentials": "Thông tin xác thực",
+    "optional": "Không bắt buộc",
+    "keepHint": "Để trống để giữ giá trị hiện tại",
+    "doc": "Hướng dẫn đăng ký",
+    "save": "Lưu",
+    "saving": "Đang lưu...",
+    "cancel": "Hủy",
+    "edit": "Sửa",
+    "delete": "Xóa",
+    "confirmDelete": "Xóa \"{name}\"? Các phân hệ đang dùng tài khoản này sẽ không thể gửi tin qua nó nữa.",
+    "empty": "Chưa có tài khoản chính thức nào.",
+    "loading": "Đang tải...",
+    "readonly": "Chỉ xem",
+    "noPermission": "Chỉ chủ công ty, IT và người phụ trách phân hệ mới có thể thêm hoặc sửa tài khoản chính thức.",
+    "managerHint": "Bạn phụ trách {modules}; chỉ có thể chỉ định và sửa các phân hệ này.",
+    "moduleRequired": "Vui lòng chọn ít nhất một phân hệ bạn phụ trách.",
+    "saveFailed": "Lưu thất bại: {error}",
+    "noCompany": "Bạn chưa tham gia công ty nào.",
+    "migrationNote": "Cài đặt hiện có của từng phân hệ vẫn hoạt động; bản cập nhật sau sẽ chuyển chúng về đây và cho các phân hệ chọn tài khoản từ trang này.",
+    "zaloRefreshHint": "Khi điền App ID, Secret Key và Refresh Token, Access Token có thể được tự động làm mới sau này.",
+    "updated": "Cập nhật {time}"
   }
 }
