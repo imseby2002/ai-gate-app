@@ -20,6 +20,13 @@ export async function POST(req: NextRequest) {
       context_keywords = '',
     } = body
 
+    // 會議語言：主要語言 + 其他會出現的語言（僅限中/越/英，且不含主要語言）
+    const LANGS = ['zh-TW', 'vi', 'en']
+    const primaryLang = LANGS.includes(source_lang) ? source_lang : 'zh-TW'
+    const otherLangs = Array.isArray(body.other_langs)
+      ? LANGS.filter(l => l !== primaryLang && (body.other_langs as unknown[]).includes(l))
+      : []
+
     // 取得使用者姓名
     let userName = user.email || 'Host'
     try {
@@ -53,7 +60,8 @@ export async function POST(req: NextRequest) {
       host_id: user.id,
       title: title || '會議',
       room_code: roomCode,
-      source_lang,
+      source_lang: primaryLang,
+      other_langs: otherLangs,
       department,
       departments,
       meeting_mode,
@@ -72,7 +80,7 @@ export async function POST(req: NextRequest) {
         host_id: user.id,
         title: title || '會議',
         room_code: roomCode,
-        source_lang,
+        source_lang: primaryLang,
         is_active: true,
       }
       const fb = await db.from('meetings').insert(basicPayload).select('*').single()

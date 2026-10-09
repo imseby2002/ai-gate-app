@@ -4236,6 +4236,8 @@
     }
   },
   "Meeting": {
+    "primaryLangLabel": "Ngôn ngữ chính (đa số người tham dự nói)",
+    "otherLangsLabel": "Ngôn ngữ khác có thể xuất hiện (chọn nhiều, không chọn = chỉ nhận dạng ngôn ngữ chính)",
     "translateTo": "Dịch sang",
     "noTranslation": "Không dịch",
     "download": "Tải biên bản",

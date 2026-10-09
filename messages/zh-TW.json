@@ -4329,6 +4329,8 @@
     }
   },
   "Meeting": {
+    "primaryLangLabel": "主要語言（大多數人說的語言）",
+    "otherLangsLabel": "其他會出現的語言（可複選，不選則只辨識主要語言）",
     "translateTo": "翻譯成",
     "noTranslation": "不翻譯",
     "download": "下載會議紀錄",

@@ -30,6 +30,8 @@ interface Meeting {
   stores?: string[]
   context_keywords?: string
   created_at?: string
+  /** 其他會出現的語言；null = 舊會議（沿用中/越/英自動偵測） */
+  other_langs?: string[] | null
 }
 
 interface DeptOption {
@@ -56,7 +58,7 @@ interface Line {
 
 // 支援的語音輸入語言（包括 Azure 自動偵測）
 const INPUT_LANGS: { code: string; label: string; sr: string }[] = [
-  { code: 'auto', label: '自動偵測 (中/越/英)', sr: 'zh-TW' },
+  { code: 'auto', label: '會議語言（自動偵測）', sr: 'zh-TW' },
   { code: 'zh-TW', label: '繁體中文', sr: 'zh-TW' },
   { code: 'vi', label: 'Tiếng Việt', sr: 'vi-VN' },
   { code: 'en', label: 'English', sr: 'en-US' },
@@ -70,6 +72,13 @@ const TARGET_LANGS: { code: string; label: string }[] = [
 ]
 
 const TRANSLATABLE = new Set(['zh-TW', 'vi', 'en'])
+
+// 會議語言：主要語言在前，其後為其他會出現的語言
+function meetingLangs(m: Pick<Meeting, 'source_lang' | 'other_langs'>): string[] {
+  const primary = TRANSLATABLE.has(m.source_lang) ? m.source_lang : 'zh-TW'
+  const others = m.other_langs ?? TARGET_LANGS.map(l => l.code)
+  return [primary, ...others.filter(l => l !== primary && TRANSLATABLE.has(l))]
+}
 
 // ── Web Speech API（瀏覽器內建，無需套件）最小型別 ────────────────
 interface SRAlternative { transcript: string }
@@ -179,6 +188,9 @@ export default function MeetingPage() {
 
   // 辨識輸入語言（預設 auto，支援中/越/英自動偵測）與翻譯目標語言（可自由切換）
   const [inputLang, setInputLang] = useState<string>('auto')
+  // 建立會議：主要語言（單選）與其他會出現的語言（多選）
+  const [primaryLang, setPrimaryLang] = useState<string>(TRANSLATABLE.has(locale) ? locale : 'zh-TW')
+  const [otherLangs, setOtherLangs] = useState<string[]>([])
   const [targetLang, setTargetLang] = useState<string>(
     TRANSLATABLE.has(locale) ? locale : 'zh-TW'
   )
@@ -409,7 +421,7 @@ export default function MeetingPage() {
   useEffect(() => {
     if (meeting || !me) return
     supabase.from('meetings')
-      .select('id, title, room_code, host_id, source_lang, department, departments, meeting_mode, stores, context_keywords, created_at')
+      .select('id, title, room_code, host_id, source_lang, other_langs, department, departments, meeting_mode, stores, context_keywords, created_at')
       .order('created_at', { ascending: false })
       .limit(50)
       .then(({ data }) => setHistory((data ?? []) as Meeting[]))
@@ -426,10 +438,17 @@ export default function MeetingPage() {
     setHistory(h => h.filter(x => x.id !== m.id))
   }
 
-  function openMeeting(m: Meeting) {
-    setErr('')
+  // 進入會議；翻譯目標若不是會議語言之一，預設改為主要語言
+  function enterMeeting(m: Meeting) {
+    const langs = meetingLangs(m)
+    setTargetLang(prev => (langs.includes(prev) ? prev : langs[0]))
     setMeeting(m)
     loadMeetingData(m)
+  }
+
+  function openMeeting(m: Meeting) {
+    setErr('')
+    enterMeeting(m)
   }
 
   // ── 下載會議紀錄（原文＋譯文） ──
@@ -509,7 +528,8 @@ export default function MeetingPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: autoTitle,
-          source_lang: inputLang === 'auto' ? 'zh-TW' : inputLang,
+          source_lang: primaryLang,
+          other_langs: otherLangs.filter(l => l !== primaryLang),
           department: selectedDepts.join(','),
           departments: selectedDepts,
           meeting_mode: selectedMode,
@@ -525,8 +545,7 @@ export default function MeetingPage() {
       }
 
       const createdRow = json.meeting as Meeting
-      setMeeting(createdRow)
-      loadMeetingData(createdRow)
+      enterMeeting(createdRow)
     } catch (e: unknown) {
       console.error('[Meeting] createMeeting failed:', e)
       setErr(e instanceof Error ? e.message : t('createFailed'))
@@ -568,9 +587,9 @@ export default function MeetingPage() {
         stores: json.meeting.stores as string[] | undefined,
         context_keywords: json.meeting.context_keywords as string | undefined,
         created_at: json.meeting.created_at as string | undefined,
+        other_langs: (json.meeting.other_langs ?? null) as string[] | null,
       }
-      setMeeting(m)
-      loadMeetingData(m)
+      enterMeeting(m)
     } catch (e: unknown) {
       console.error('[Meeting] joinMeeting failed:', e)
       setErr(e instanceof Error ? e.message : t('notFound'))
@@ -585,7 +604,7 @@ export default function MeetingPage() {
     if (!clean || !meeting) return
 
     const finalSpeaker = speakerName || me?.name || ''
-    const finalLang = lang || (inputLang === 'auto' ? 'zh-TW' : inputLang)
+    const finalLang = lang || (inputLang === 'auto' ? meetingLangs(meeting)[0] : inputLang)
 
     try {
       let { data, error } = await supabase
@@ -650,7 +669,9 @@ export default function MeetingPage() {
 
     try {
       const rec = new Ctor()
-      rec.lang = INPUT_LANGS.find(l => l.code === inputLang)?.sr ?? 'zh-TW'
+      // 瀏覽器辨識一次只能聽一種語言：自動模式用會議主要語言
+      const lang = inputLang === 'auto' && meeting ? meetingLangs(meeting)[0] : inputLang
+      rec.lang = INPUT_LANGS.find(l => l.code === lang)?.sr ?? 'zh-TW'
       rec.continuous = true
       rec.interimResults = true
 
@@ -704,7 +725,7 @@ export default function MeetingPage() {
         }, 1000)
       }
     }
-  }, [cleanupRec, inputLang, addLine])
+  }, [cleanupRec, inputLang, addLine, meeting])
 
   const startWebSpeech = useCallback(() => {
     speechEngineRef.current = 'web_speech'
@@ -727,7 +748,7 @@ export default function MeetingPage() {
         token: tokenData.token,
         region: tokenData.region,
         mode: meeting?.meeting_mode || 'online',
-        defaultLang: inputLang,
+        languages: inputLang === 'auto' && meeting ? meetingLangs(meeting) : [inputLang],
         onInterim: (text, speaker) => {
           lastActiveRef.current = Date.now()
           setInterim({ text, speaker })
@@ -950,16 +971,8 @@ export default function MeetingPage() {
           </p>
         )}
 
-        {/* 語言偏好設定（語音輸入辨識語言 與 翻譯目標語言） */}
+        {/* 翻譯目標語言 */}
         <div className="flex items-center gap-3 flex-wrap p-3 rounded-lg border bg-muted/20">
-          <LangPicker
-            value={inputLang}
-            onChange={setInputLang}
-            label={t('inputLangLabel')}
-            options={INPUT_LANGS}
-            compact
-          />
-          <span className="text-muted-foreground/40 text-xs">|</span>
           <LangPicker
             value={targetLang}
             onChange={setTargetLang}
@@ -1012,6 +1025,56 @@ export default function MeetingPage() {
                 onChange={e => setNewTitle(e.target.value)}
                 placeholder="會議主題（例：河內門市設備報修與夏季物料備貨盤點）"
               />
+            </div>
+
+            {/* 會議語言：主要語言（單選）＋其他會出現的語言（多選） */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                <Languages className="h-3.5 w-3.5" />
+                {t('primaryLangLabel')}
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {TARGET_LANGS.map(l => (
+                  <button
+                    key={l.code}
+                    type="button"
+                    onClick={() => {
+                      setPrimaryLang(l.code)
+                      setOtherLangs(prev => prev.filter(x => x !== l.code))
+                    }}
+                    className={`px-3 py-1 rounded-md text-xs border transition-all ${
+                      primaryLang === l.code
+                        ? 'border-primary bg-primary text-primary-foreground font-medium'
+                        : 'bg-background text-muted-foreground hover:bg-muted'
+                    }`}
+                  >
+                    {l.label}
+                  </button>
+                ))}
+              </div>
+              <label className="text-xs font-medium text-muted-foreground block pt-1">
+                {t('otherLangsLabel')}
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {TARGET_LANGS.filter(l => l.code !== primaryLang).map(l => {
+                  const active = otherLangs.includes(l.code)
+                  return (
+                    <button
+                      key={l.code}
+                      type="button"
+                      onClick={() => setOtherLangs(prev => (active ? prev.filter(x => x !== l.code) : [...prev, l.code]))}
+                      className={`flex items-center gap-1 px-3 py-1 rounded-md text-xs border transition-all ${
+                        active
+                          ? 'border-primary bg-primary/10 font-medium text-primary'
+                          : 'bg-background text-muted-foreground hover:bg-muted'
+                      }`}
+                    >
+                      {active && <CheckCircle2 className="h-3 w-3" />}
+                      {l.label}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
 
             {/* 主責與跨部門選單（支援多選） */}
@@ -1190,6 +1253,15 @@ export default function MeetingPage() {
             }`}>
               {meeting.meeting_mode === 'in_person' ? <Building2 className="h-3 w-3" /> : <Video className="h-3 w-3" />}
               {meeting.meeting_mode === 'in_person' ? t('modeInPerson') : t('modeOnline')}
+            </span>
+
+            {/* 會議語言徽章：主要語言在前 */}
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] bg-muted border text-muted-foreground font-medium">
+              <Languages className="h-3 w-3" />
+              {meetingLangs(meeting).map((c, i) => {
+                const label = TARGET_LANGS.find(l => l.code === c)?.label ?? c
+                return i === 0 ? <b key={c} className="text-foreground">{label}</b> : <span key={c}>· {label}</span>
+              })}
             </span>
 
             {/* 部門徽章（支援跨部門多個徽章） */}
