@@ -8,7 +8,7 @@ export interface AzureSpeechToken {
 
 export async function fetchAzureSpeechToken(): Promise<AzureSpeechToken> {
   try {
-    const res = await fetch('/api/meeting/azure-token')
+    const res = await fetch('/api/meeting/azure-token', { cache: 'no-store' })
     if (!res.ok) return { configured: false }
     const data = await res.json()
     return data
@@ -18,9 +18,24 @@ export async function fetchAzureSpeechToken(): Promise<AzureSpeechToken> {
   }
 }
 
+// SDK 體積大，進入會議時先預載，按「開始錄音」才不會卡數十秒
+let sdkPromise: Promise<typeof SpeechSDKType> | null = null
+export function preloadAzureSpeechSdk(): Promise<typeof SpeechSDKType> {
+  if (!sdkPromise) {
+    sdkPromise = import('microsoft-cognitiveservices-speech-sdk').catch(e => {
+      sdkPromise = null
+      throw e
+    })
+  }
+  return sdkPromise
+}
+
 export interface AzureRecognitionController {
   stop: () => Promise<void>
 }
+
+// Azure 授權 token 有效 10 分鐘，提前更新避免重連時以過期 token 失敗
+const TOKEN_REFRESH_MS = 8 * 60 * 1000
 
 export async function startAzureRecognition(options: {
   token: string
@@ -28,19 +43,22 @@ export async function startAzureRecognition(options: {
   mode: 'online' | 'in_person'
   defaultLang: string
   onRecognized: (text: string, speakerLabel?: string, detectedLang?: string) => void
+  onInterim?: (text: string, speakerLabel?: string) => void
   onError?: (err: unknown) => void
 }): Promise<AzureRecognitionController> {
-  const SpeechSDK = await import('microsoft-cognitiveservices-speech-sdk')
+  const SpeechSDK = await preloadAzureSpeechSdk()
 
   const speechConfig = SpeechSDK.SpeechConfig.fromAuthorizationToken(options.token, options.region)
-  speechConfig.enableDictation()
-
-  // 支援越南文、繁體中文、英文即時自動語言偵測
-  const autoDetectConfig = SpeechSDK.AutoDetectSourceLanguageConfig.fromLanguages([
-    'vi-VN',
-    'zh-TW',
-    'en-US',
-  ])
+  // 指定單一語言時不做自動偵測，避免誤判
+  const fixedLang = ({ 'zh-TW': 'zh-TW', vi: 'vi-VN', en: 'en-US' } as Record<string, string>)[options.defaultLang]
+  let autoDetectConfig: SpeechSDKType.AutoDetectSourceLanguageConfig | null = null
+  if (fixedLang) {
+    speechConfig.speechRecognitionLanguage = fixedLang
+  } else {
+    autoDetectConfig = SpeechSDK.AutoDetectSourceLanguageConfig.fromLanguages(['vi-VN', 'zh-TW', 'en-US'])
+    // 持續語言偵測：每句重新判斷中/越/英（預設 AtStart 只在開頭判斷一次，之後整段鎖定同一語言）
+    autoDetectConfig.mode = SpeechSDK.LanguageIdMode.Continuous
+  }
 
   const audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput()
 
@@ -57,9 +75,33 @@ export async function startAzureRecognition(options: {
     return defaultFallback
   }
 
+  let stopped = false
+  let refreshTimer: ReturnType<typeof setInterval> | null = null
+  const fail = (err: unknown) => {
+    if (stopped) return
+    stopped = true
+    if (refreshTimer) clearInterval(refreshTimer)
+    options.onError?.(err)
+  }
+
+  const startRefresh = (target: { authorizationToken: string }) => {
+    refreshTimer = setInterval(async () => {
+      const t = await fetchAzureSpeechToken()
+      if (!stopped && t.configured && t.token) target.authorizationToken = t.token
+    }, TOKEN_REFRESH_MS)
+  }
+
   // 實體會議：啟用多人語音分離 (ConversationTranscriber Diarization)
   if (options.mode === 'in_person') {
-    const transcriber = SpeechSDK.ConversationTranscriber.FromConfig(speechConfig, autoDetectConfig, audioConfig)
+    const transcriber = autoDetectConfig
+      ? SpeechSDK.ConversationTranscriber.FromConfig(speechConfig, autoDetectConfig, audioConfig)
+      : new SpeechSDK.ConversationTranscriber(speechConfig, audioConfig)
+
+    transcriber.transcribing = (_s, e) => {
+      if (e.result.text?.trim()) {
+        options.onInterim?.(e.result.text.trim(), e.result.speakerId ? formatSpeakerLabel(e.result.speakerId) : undefined)
+      }
+    }
 
     transcriber.transcribed = (_s, e) => {
       if (e.result.reason === SpeechSDK.ResultReason.RecognizedSpeech && e.result.text?.trim()) {
@@ -72,11 +114,10 @@ export async function startAzureRecognition(options: {
     }
 
     transcriber.canceled = (_s, e) => {
-      if (e.reason === SpeechSDK.CancellationReason.Error) {
-        console.warn('[AzureSpeech] Transcriber error:', e.errorDetails)
-        options.onError?.(e.errorDetails)
-      }
+      console.warn('[AzureSpeech] Transcriber canceled:', e.reason, e.errorDetails)
+      fail(e.errorDetails || 'canceled')
     }
+    transcriber.sessionStopped = () => fail('session stopped')
 
     await new Promise<void>((resolve, reject) => {
       transcriber.startTranscribingAsync(
@@ -84,9 +125,12 @@ export async function startAzureRecognition(options: {
         (err) => reject(err),
       )
     })
+    startRefresh(transcriber)
 
     return {
       stop: async () => {
+        stopped = true
+        if (refreshTimer) clearInterval(refreshTimer)
         try {
           await new Promise<void>((resolve) => {
             transcriber.stopTranscribingAsync(() => resolve(), () => resolve())
@@ -100,7 +144,13 @@ export async function startAzureRecognition(options: {
   }
 
   // 線上會議：單人獨立收音辨識 (SpeechRecognizer)
-  const recognizer = SpeechSDK.SpeechRecognizer.FromConfig(speechConfig, autoDetectConfig, audioConfig)
+  const recognizer = autoDetectConfig
+    ? SpeechSDK.SpeechRecognizer.FromConfig(speechConfig, autoDetectConfig, audioConfig)
+    : new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig)
+
+  recognizer.recognizing = (_s, e) => {
+    if (e.result.text?.trim()) options.onInterim?.(e.result.text.trim())
+  }
 
   recognizer.recognized = (_s, e) => {
     if (e.result.reason === SpeechSDK.ResultReason.RecognizedSpeech && e.result.text?.trim()) {
@@ -111,11 +161,10 @@ export async function startAzureRecognition(options: {
   }
 
   recognizer.canceled = (_s, e) => {
-    if (e.reason === SpeechSDK.CancellationReason.Error) {
-      console.warn('[AzureSpeech] Recognizer error:', e.errorDetails)
-      options.onError?.(e.errorDetails)
-    }
+    console.warn('[AzureSpeech] Recognizer canceled:', e.reason, e.errorDetails)
+    fail(e.errorDetails || 'canceled')
   }
+  recognizer.sessionStopped = () => fail('session stopped')
 
   await new Promise<void>((resolve, reject) => {
     recognizer.startContinuousRecognitionAsync(
@@ -123,9 +172,12 @@ export async function startAzureRecognition(options: {
       (err) => reject(err),
     )
   })
+  startRefresh(recognizer)
 
   return {
     stop: async () => {
+      stopped = true
+      if (refreshTimer) clearInterval(refreshTimer)
       try {
         await new Promise<void>((resolve) => {
           recognizer.stopContinuousRecognitionAsync(() => resolve(), () => resolve())
