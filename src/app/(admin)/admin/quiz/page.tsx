@@ -13,6 +13,10 @@ interface Submission {
   created_at: string
 }
 
+function normName(name: string) {
+  return name.trim().replace(/\s+/g, ' ').toLowerCase()
+}
+
 export default async function AdminQuizPage() {
   // 權限由 (admin)/layout.tsx 把關（僅 admin）
   const { data, error } = await createAdminClient()
@@ -33,14 +37,24 @@ export default async function AdminQuizPage() {
 
       {Object.entries(QUIZZES).map(([quizId, quiz]) => {
         const list = rows.filter(r => r.quiz_id === quizId)
-        const keys = Object.keys(quiz.answers)
-        const avg = list.length ? (list.reduce((s, r) => s + r.score, 0) / list.length).toFixed(1) : '-'
+        const keys = Object.keys(quiz.key)
+        // 交卷後會公布答案，重考分數不具參考性：依姓名照時間排序標出第幾次作答，平均只算首次
+        const attempt = new Map<string, number>()
+        const seen = new Map<string, number>()
+        for (const r of [...list].reverse()) {
+          const n = normName(r.name)
+          const c = (seen.get(n) ?? 0) + 1
+          seen.set(n, c)
+          attempt.set(r.id, c)
+        }
+        const firsts = list.filter(r => attempt.get(r.id) === 1)
+        const avg = firsts.length ? (firsts.reduce((s, r) => s + r.score, 0) / firsts.length).toFixed(1) : '-'
         return (
           <section key={quizId} className="bg-card border rounded-xl overflow-hidden">
             <div className="px-4 py-3 border-b flex flex-wrap items-center gap-x-4 gap-y-1">
               <h2 className="font-semibold">{quiz.title}</h2>
               <a href={`/quiz/${quizId}.html`} target="_blank" className="text-xs text-blue-600 hover:underline">/quiz/{quizId}.html</a>
-              <span className="text-xs text-muted-foreground">共 {list.length} 份 · 平均 {avg} / {keys.length}</span>
+              <span className="text-xs text-muted-foreground">共 {firsts.length} 人 · {list.length} 份 · 首次平均 {avg} / {keys.length}</span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -49,12 +63,13 @@ export default async function AdminQuizPage() {
                     <th className="text-left px-3 py-2 whitespace-nowrap">交卷時間</th>
                     <th className="text-left px-3 py-2">姓名</th>
                     <th className="text-left px-3 py-2">分數</th>
+                    <th className="text-left px-3 py-2 whitespace-nowrap">作答次數</th>
                     {keys.map((k, i) => <th key={k} className="px-2 py-2">{i + 1}</th>)}
                   </tr>
                 </thead>
                 <tbody>
                   {list.length === 0 && (
-                    <tr><td colSpan={keys.length + 3} className="px-3 py-6 text-center text-muted-foreground">尚無紀錄</td></tr>
+                    <tr><td colSpan={keys.length + 4} className="px-3 py-6 text-center text-muted-foreground">尚無紀錄</td></tr>
                   )}
                   {list.map(r => (
                     <tr key={r.id} className="border-t">
@@ -63,8 +78,13 @@ export default async function AdminQuizPage() {
                       </td>
                       <td className="px-3 py-2 font-medium">{r.name}</td>
                       <td className="px-3 py-2 font-semibold whitespace-nowrap">{r.score} / {r.total}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        {attempt.get(r.id) === 1
+                          ? <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">首次</span>
+                          : <span className="text-xs text-muted-foreground">第 {attempt.get(r.id)} 次（重考）</span>}
+                      </td>
                       {keys.map(k => {
-                        const ok = r.answers?.[k] === quiz.answers[k]
+                        const ok = r.answers?.[k] === quiz.key[k].answer
                         return (
                           <td key={k} className={`px-2 py-2 text-center ${ok ? 'text-emerald-600' : 'text-red-600 font-semibold bg-red-50'}`}>
                             {r.answers?.[k] ?? '-'}

@@ -235,6 +235,12 @@
             <h2 id="resultTitle" class="text-lg font-bold text-slate-900"></h2>
             <p id="resultDesc" class="text-sm text-slate-600 mt-2"></p>
         </div>
+
+        <!-- Review (Hidden initially) -->
+        <div id="reviewBox" class="hidden p-6 border-t border-slate-200 space-y-4">
+            <h2 class="text-base font-bold text-slate-900">Đáp án & Giải thích chi tiết</h2>
+            <div id="reviewList" class="space-y-4"></div>
+        </div>
     </div>
 
     <script>
@@ -261,7 +267,7 @@
             btn.disabled = true;
             btn.innerText = 'Đang nộp bài...';
 
-            let score;
+            let score, key;
             try {
                 const res = await fetch('/api/quiz/submit', {
                     method: 'POST',
@@ -269,7 +275,9 @@
                     body: JSON.stringify({ quiz_id: 'sop-video', name, answers })
                 });
                 if (!res.ok) throw new Error(String(res.status));
-                score = (await res.json()).score;
+                const data = await res.json();
+                score = data.score;
+                key = data.key;
             } catch (e) {
                 alert('Nộp bài thất bại, vui lòng thử lại!');
                 btn.disabled = false;
@@ -301,7 +309,44 @@
                 resultTitle.className = "text-lg font-bold text-rose-800";
             }
 
-            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+            renderReview(answers, key);
+            resultBox.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function renderReview(answers, key) {
+            const list = document.getElementById('reviewList');
+            list.innerHTML = '';
+            Object.keys(key).forEach((q, i) => {
+                const k = key[q];
+                const mine = answers[q];
+                const ok = mine === k.answer;
+
+                // Tô màu đáp án trong bài làm
+                document.querySelectorAll(`input[name="${q}"]`).forEach(input => {
+                    const label = input.closest('label');
+                    if (input.value === k.answer) label.classList.add('border-emerald-400', 'bg-emerald-50');
+                    else if (input.value === mine) label.classList.add('border-rose-400', 'bg-rose-50');
+                });
+
+                const item = document.createElement('div');
+                item.className = `p-4 rounded-xl border text-sm space-y-2 ${ok ? 'border-emerald-200 bg-emerald-50/50' : 'border-rose-200 bg-rose-50/50'}`;
+
+                const head = document.createElement('div');
+                head.className = `font-semibold ${ok ? 'text-emerald-700' : 'text-rose-700'}`;
+                head.textContent = `Câu ${i + 1}: ${ok ? '✓ Đúng' : '✗ Sai'} — Bạn chọn ${mine}`;
+
+                const correct = document.createElement('div');
+                correct.className = 'text-slate-900';
+                correct.textContent = `Đáp án đúng: ${k.answer}. ${k.text}`;
+
+                const exp = document.createElement('div');
+                exp.className = 'text-slate-600 leading-relaxed';
+                exp.textContent = k.explanation;
+
+                item.append(head, correct, exp);
+                list.appendChild(item);
+            });
+            document.getElementById('reviewBox').classList.remove('hidden');
         }
     </script>
 </body>

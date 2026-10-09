@@ -13,7 +13,7 @@ export async function POST(req: Request) {
   }
 
   const answers: Record<string, string> = {}
-  const keys = Object.keys(quiz.answers)
+  const keys = Object.keys(quiz.key)
   for (const k of keys) {
     const v = raw[k]
     if (typeof v !== 'string' || !['A', 'B', 'C'].includes(v)) {
@@ -21,7 +21,7 @@ export async function POST(req: Request) {
     }
     answers[k] = v
   }
-  const score = keys.filter(k => answers[k] === quiz.answers[k]).length
+  const score = keys.filter(k => answers[k] === quiz.key[k].answer).length
 
   const { error } = await createAdminClient().from('quiz_submissions').insert({
     quiz_id: body!.quiz_id,
@@ -36,5 +36,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'save_failed' }, { status: 500 })
   }
 
-  return NextResponse.json({ score, total: keys.length })
+  // 交卷後回傳正確答案與解說，讓作答者對照
+  return NextResponse.json({ score, total: keys.length, key: quiz.key })
 }
