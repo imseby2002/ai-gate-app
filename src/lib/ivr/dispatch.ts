@@ -4,7 +4,8 @@
  */
 import { randomBytes } from 'crypto'
 import { getTelephonyProvider } from '@/lib/telephony'
-import { sendSmsMessage } from '@/lib/telephony/sms-service'
+import { sendSmsMessage, normalizePhoneForCountry, detectSmsCountry } from '@/lib/telephony/sms-service'
+import { getZaloZnsConfig, type ZaloZnsConfig } from '@/lib/telephony/zalo-zns'
 import { smsCost } from '@/lib/marketing/billing'
 
 export function generateShortToken(): string {
@@ -31,16 +32,22 @@ export async function dispatchJoinLink(params: {
   phone: string
   shortUrl: string
   label?: string | null
+  /** 活動擁有者：ZNS 用他自己在平台設定填的 OA 權杖與範本 ID */
+  ownerId?: string | null
 }): Promise<{ deliveryMethod: string; delivered: boolean; costUsd: number }> {
-  const { channel, phone, shortUrl, label } = params
+  const { channel, phone, shortUrl, label, ownerId } = params
   const text = `${label ? label + '：' : ''}${shortUrl}`
 
   // ZALO：ZNS 已設定 → 走官方 ZNS 範本（CTA 導 OA）；
   // 尚未過審/未設定 → 自動退回 SMS 夾帶 zalo.me 短連結（一樣可加入）。
-  if (channel === 'zalo' && zaloZnsConfigured()) {
-    const ok = await sendZaloZns(phone, shortUrl, label).catch(() => false)
-    // ZNS 未取得公開報價，比照越南簡訊每段成本計
-    return { deliveryMethod: 'zns', delivered: ok, costUsd: ok ? smsCost(phone, text) : 0 }
+  // ZNS 只能發給越南門號
+  if (channel === 'zalo' && detectSmsCountry(phone) === 'VN') {
+    const zns = await getZaloZnsConfig(ownerId).catch((): ZaloZnsConfig => ({}))
+    if (zns.accessToken && zns.templateId) {
+      const ok = await sendZaloZns(zns, phone, shortUrl, label).catch(() => false)
+      // ZNS 未取得公開報價，比照越南簡訊每段成本計
+      return { deliveryMethod: 'zns', delivered: ok, costUsd: ok ? smsCost(phone, text) : 0 }
+    }
   }
 
   // line / whatsapp / zalo(未設 ZNS) → 經智慧多國簡訊發送短連結
@@ -49,14 +56,13 @@ export async function dispatchJoinLink(params: {
 }
 
 // ── Zalo ZNS ─────────────────────────────────────────────────────────────────
-function zaloZnsConfigured(): boolean {
-  return !!(process.env.ZALO_OA_ACCESS_TOKEN && process.env.ZALO_ZNS_TEMPLATE_ID)
-}
-
-async function sendZaloZns(phone: string, shortUrl: string, label?: string | null): Promise<boolean> {
-  const accessToken = process.env.ZALO_OA_ACCESS_TOKEN
-  const templateId = process.env.ZALO_ZNS_TEMPLATE_ID
-  if (!accessToken || !templateId) return false // 尚未設定，待補
+async function sendZaloZns(
+  { accessToken, templateId }: ZaloZnsConfig,
+  phone: string,
+  shortUrl: string,
+  label?: string | null,
+): Promise<boolean> {
+  if (!accessToken || !templateId) return false
 
   const res = await fetch('https://business.openapi.zalo.me/message/template', {
     method: 'POST',
@@ -65,11 +71,14 @@ async function sendZaloZns(phone: string, shortUrl: string, label?: string | nul
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      phone,
+      // ZNS 只收 84xxxxxxxxx 格式
+      phone: normalizePhoneForCountry(phone, 'VN'),
       template_id: templateId,
       // 範本參數依送審範本而定；url/label 由 CTA 按鈕承載
       template_data: { url: shortUrl, label: label || '' },
     }),
   })
-  return res.ok
+  // Zalo 以 HTTP 200 + body.error 回報錯誤，error === 0 才算成功
+  const data = await res.json().catch(() => ({})) as { error?: number }
+  return res.ok && data.error === 0
 }
