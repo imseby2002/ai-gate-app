@@ -8358,7 +8358,9 @@
     "fieldVerifyTokenLabel": "Verify Token (any string you choose, must match Meta dashboard)",
     "fieldAppSecretLabel": "App Secret (Meta App secret key)",
     "fieldIgAccessTokenLabel": "Access Token (same as the linked Page's Page Access Token)",
-    "fieldAdminChatIdLabel": "Admin Chat ID (optional)"
+    "fieldAdminChatIdLabel": "Admin Chat ID (optional)",
+    "managedByChannels": "This platform is now configured in the company's Official Accounts ({name}); Customer Service uses that account.",
+    "manageChannels": "Open Official Accounts"
   },
   "CsCorrectionsPanel": {
     "title": "AI Response Corrections",

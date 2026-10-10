@@ -5,6 +5,7 @@
  * 使用 service role key 繞過 RLS，因為 webhook 來自外部平台（無用戶 session）
  * AI 直接在此呼叫，不轉發至 cs-chat（cs-chat 需要 session auth）
  */
+import { loadChannelCredentials } from '@/lib/channels/resolve'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
@@ -84,15 +85,9 @@ async function persistLineReplyToken(userId: string, platform: string, fromId: s
 const PRICE_RE = /價格|價錢|價位|多少錢|費用|報價|怎麼算|多少|預算|划算|便宜|折扣|優惠|price|cost|how much|rate|quote|budget|discount/i
 
 // ── Load credentials from DB ──────────────────────────────────────────────────
+// 公司「官方帳號」中指定給客服的帳號優先，未設定時沿用 social_platform_credentials
 async function loadCredentials(userId: string, platform: string): Promise<Record<string, string>> {
-  const supabase = getServiceClient()
-  const { data } = await supabase
-    .from('social_platform_credentials')
-    .select('credentials')
-    .eq('user_id', userId)
-    .eq('platform', platform)
-    .single()
-  return (data?.credentials as Record<string, string>) ?? {}
+  return loadChannelCredentials(userId, platform, 'cs')
 }
 
 // ── Conversation history ───────────────────────────────────────────────────────

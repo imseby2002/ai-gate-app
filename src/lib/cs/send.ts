@@ -4,26 +4,10 @@
  * 與 webhook 內的「被動回覆」不同：agent 回覆是延遲的，
  * LINE reply token 早已失效，因此一律使用各平台的「主動推播 / push」API。
  *
- * 使用 service role client 讀取平台憑證（憑證存在 social_platform_credentials）。
+ * 平台憑證由 loadChannelCredentials 取得：優先用公司「官方帳號」中指定給此模組的帳號，否則退回舊設定。
  */
-import { createClient as createSupabaseClient } from '@supabase/supabase-js'
-
-function getServiceClient() {
-  return createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
-
-async function loadCredentials(userId: string, platform: string): Promise<Record<string, string>> {
-  const { data } = await getServiceClient()
-    .from('social_platform_credentials')
-    .select('credentials')
-    .eq('user_id', userId)
-    .eq('platform', platform)
-    .single()
-  return (data?.credentials as Record<string, string>) ?? {}
-}
+import { loadChannelCredentials } from '@/lib/channels/resolve'
+import type { ChannelModuleId } from '@/lib/channels/platforms'
 
 export interface SendResult {
   ok: boolean
@@ -45,6 +29,8 @@ export interface SendOptions {
     name?: string
     iconUrl?: string
   }
+  /** 發送的模組（決定用公司哪一組官方帳號）；未指定時預設客服 */
+  module?: ChannelModuleId
 }
 
 export async function sendToCustomer(
@@ -56,6 +42,7 @@ export async function sendToCustomer(
 ): Promise<SendResult & { channel?: 'reply' | 'push' }> {
   if (!text.trim()) return { ok: false, error: '訊息不可為空' }
   if (!to) return { ok: false, error: '缺少收件人 id' }
+  const loadCredentials = (u: string, p: string) => loadChannelCredentials(u, p, opts.module ?? 'cs')
 
   try {
     // ── LINE：1 分鐘內優先用免費 Reply API（reply token），逾時 / 失敗 fallback Push ──

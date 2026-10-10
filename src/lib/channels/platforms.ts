@@ -78,6 +78,7 @@ export const CHANNEL_PLATFORMS: ChannelPlatform[] = [
     required: ['telegram_bot_token'],
     fields: [
       { key: 'telegram_bot_token', label: 'Bot Token', secret: true },
+      { key: 'telegram_admin_chat_id', label: 'Admin Chat ID', secret: false, optional: true },
     ],
   },
 ]

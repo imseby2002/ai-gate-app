@@ -21,6 +21,12 @@ type Platform = {
   fields: Field[]
 }
 
+// 官方帳號平台 id → 本頁平台 id
+const CHANNEL_TO_CS: Record<string, string> = {
+  line_oa: 'line', whatsapp_business: 'whatsapp', messenger: 'messenger',
+  instagram: 'instagram', telegram: 'telegram', zalo_oa: 'zalo',
+}
+
 // 平台定義與憑證欄位 — 與 marketing-auto?module=cs 的綁定一致，
 // 共用同一支 API（/api/social/credentials）與同一張表（social_platform_credentials）。
 const getPlatforms = (t: (key: string) => string): Platform[] => [
@@ -136,6 +142,23 @@ export function CsChannels({ ownerId, canSettings }: { ownerId: string; canSetti
     } catch { setFollowupOn(!next) }
     finally { setFollowupSaving(false) }
   }
+
+  // 公司「官方帳號」中已指定給客服的平台：以那邊為準，這裡不再顯示舊欄位
+  const [managed, setManaged] = useState<Record<string, string>>({})
+  useEffect(() => {
+    fetch('/api/company/channels')
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => {
+        if (!d?.accounts) return
+        const next: Record<string, string> = {}
+        for (const a of d.accounts as { platform: string; name: string; modules: string[]; is_connected: boolean }[]) {
+          const legacy = CHANNEL_TO_CS[a.platform]
+          if (legacy && a.is_connected && a.modules.includes('cs') && !next[legacy]) next[legacy] = a.name
+        }
+        setManaged(next)
+      })
+      .catch(() => {})
+  }, [])
 
   const load = useCallback(async () => {
     try {
@@ -358,6 +381,14 @@ export function CsChannels({ ownerId, canSettings }: { ownerId: string; canSetti
                     </div>
                   )}
 
+                  {managed[p.id] ? (
+                    <div className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2.5 text-xs text-indigo-800">
+                      {t('managedByChannels', { name: managed[p.id] })}
+                      <Link href="/company/channels" className="ml-1 inline-flex items-center gap-0.5 font-medium underline">
+                        {t('manageChannels')} <ExternalLink className="h-3 w-3" />
+                      </Link>
+                    </div>
+                  ) : (<>
                   {/* 憑證欄位 */}
                   <div className="space-y-3">
                     {p.fields.map(f => {
@@ -390,6 +421,7 @@ export function CsChannels({ ownerId, canSettings }: { ownerId: string; canSetti
                       </button>
                     </div>
                   )}
+                  </>)}
                 </div>
               )
             })}
