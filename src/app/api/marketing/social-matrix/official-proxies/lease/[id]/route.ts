@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { releaseLease } from '@/lib/social-matrix/lease-billing'
 import { requireSocialMatrix } from '@/lib/social-matrix/access'
-import { StorageService } from '@/lib/social-matrix/storage'
 
 export async function DELETE(
   req: NextRequest,
@@ -30,8 +29,7 @@ export async function DELETE(
       return NextResponse.json({ success: true, message: '已成功解除該官方 IP 租用，並自代理池移除！' })
     }
 
-    StorageService.releaseOfficialProxy(authUser.id, id)
-    return NextResponse.json({ success: true, message: '已成功解除該官方 IP 租用，並自代理池移除！' })
+    return NextResponse.json({ error: '找不到此租用紀錄' }, { status: 404 })
   } catch (err) {
     return NextResponse.json({ error: `退租失敗: ${String(err)}` }, { status: 500 })
   }

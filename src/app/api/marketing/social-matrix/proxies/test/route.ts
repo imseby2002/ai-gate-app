@@ -1,44 +1,61 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
 import { requireSocialMatrix } from '@/lib/social-matrix/access'
-import { StorageService } from '@/lib/social-matrix/storage'
+import { testProxy, type ProxyTestInput } from '@/lib/social-matrix/proxy-test'
 
+export const runtime = 'nodejs'
+export const maxDuration = 30
+
+// 實測代理：經代理連到 ipinfo.io 取得出口 IP／國家／ISP 與延遲，結果寫回代理池
 export async function POST(req: NextRequest) {
   const guard = await requireSocialMatrix(req)
   if (guard.res) return guard.res
-  const authUser = guard.user
 
-  try {
-    const { id, host, port } = await req.json()
+  const body = await req.json().catch(() => ({}))
+  const supabase = await createClient()
 
-    const startTime = Date.now()
-    
-    // Simulate real network test with realistic jitter
-    // If it's home static (e.g. 211.75.x.x), typical local latency is 15-28ms
-    // If it's overseas (e.g. Vietnam/US), typical is 50-120ms
-    await new Promise(res => setTimeout(res, Math.floor(Math.random() * 200) + 150))
-    const latency = Date.now() - startTime < 100 ? 22 : Math.min(180, Math.floor(Math.random() * 45) + 18)
-
-    if (id) {
-      StorageService.updateProxy(id, {
-        status: 'active',
-        latency_ms: latency,
-        last_checked_at: new Date().toISOString(),
-      })
-    }
-
-    return NextResponse.json({
-      success: true,
-      status: 'active',
-      latency_ms: latency,
-      tested_at: new Date().toISOString(),
-      message: `連線成功！連線目標 ${host || 'proxy'}:${port || ''}，平均延遲 ${latency}ms`,
-    })
-  } catch (err) {
-    return NextResponse.json({
-      success: false,
-      status: 'error',
-      latency_ms: 0,
-      message: `連線失敗: ${String(err)}`,
-    }, { status: 500 })
+  let input: ProxyTestInput
+  if (body.id) {
+    const { data: p } = await supabase
+      .from('marketing_proxies')
+      .select('protocol, host, port, username, password')
+      .eq('id', body.id)
+      .maybeSingle()
+    if (!p) return NextResponse.json({ success: false, message: '找不到此代理' }, { status: 404 })
+    input = p as ProxyTestInput
+  } else {
+    input = { protocol: body.protocol ?? 'http', host: body.host, port: Number(body.port), username: body.username, password: body.password }
   }
+
+  const r = await testProxy(input)
+  const testedAt = new Date().toISOString()
+  if (body.id) {
+    await supabase.from('marketing_proxies').update({
+      status: r.ok ? 'active' : 'error',
+      latency_ms: r.ok ? r.latency_ms : null,
+      last_checked_at: testedAt,
+      ...(r.ok && r.country ? { country: r.country } : {}),
+      ...(r.ok && r.city ? { city: r.city } : {}),
+      ...(r.ok && r.org ? { isp: r.org } : {}),
+      updated_at: testedAt,
+    }).eq('id', body.id)
+  }
+
+  if (!r.ok) {
+    return NextResponse.json({ success: false, status: 'error', latency_ms: 0, tested_at: testedAt, message: `連線失敗：${r.error}` })
+  }
+  const where = [r.country, r.city].filter(Boolean).join(' ')
+  return NextResponse.json({
+    success: true,
+    status: 'active',
+    latency_ms: r.latency_ms,
+    tested_at: testedAt,
+    exit_ip: r.ip,
+    country: r.country,
+    city: r.city,
+    isp: r.org,
+    message: r.ip
+      ? `連線成功！出口 IP ${r.ip}${where ? `（${where}${r.org ? `，${r.org}` : ''}）` : ''}，建立通道 ${r.latency_ms}ms`
+      : `連線成功，建立通道 ${r.latency_ms}ms（${r.error}）`,
+  })
 }

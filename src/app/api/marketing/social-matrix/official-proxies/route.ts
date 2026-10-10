@@ -1,20 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { requireSocialMatrix, requirePlatformAdmin, getOfficialProxyQuota } from '@/lib/social-matrix/access'
-import { StorageService } from '@/lib/social-matrix/storage'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getUsdToTwdRate } from '@/lib/fx'
 import { isBillableUser } from '@/lib/marketing/billing'
 import { deductCredits } from '@/lib/skills/billing'
 import { officialProxyCredits, nextExpiry } from '@/lib/social-matrix/lease-billing'
-import { ProxyType, ProxyProtocol } from '@/lib/social-matrix/types'
 
 export async function GET(req: NextRequest) {
   const guard = await requireSocialMatrix(req)
   if (guard.res) return guard.res
   const authUser = guard.user
-  const activeInMemory = () => StorageService.getLeases(authUser.id).filter(l => l.status === 'active').length
-  const { isAdmin, quota, used } = await getOfficialProxyQuota(authUser, activeInMemory())
+  const { isAdmin, quota, used } = await getOfficialProxyQuota(authUser, 0)
   // usd_twd_rate：前端用來把 monthly_price_twd 換算成點數顯示（點數＝美金）
   const meta = { is_admin: isAdmin, lease_quota: quota, lease_used: used, usd_twd_rate: await getUsdToTwdRate() }
 
@@ -36,27 +32,10 @@ export async function GET(req: NextRequest) {
       .eq('user_id', authUser.id)
       .eq('status', 'active')
 
-    if (offErr || !dbOfficial || dbOfficial.length === 0) {
-      // Use fallback
-      return NextResponse.json({
-        ...meta,
-        official_proxies: StorageService.getOfficialProxies(),
-        leases: StorageService.getLeases(authUser.id),
-      })
-    }
-
-    return NextResponse.json({
-        ...meta,
-      official_proxies: dbOfficial,
-      leases: dbLeases || StorageService.getLeases(authUser.id),
-    })
+    if (offErr) return NextResponse.json({ ...meta, error: `讀取官方 IP 失敗：${offErr.message}`, official_proxies: [], leases: [] }, { status: 500 })
+    return NextResponse.json({ ...meta, official_proxies: dbOfficial ?? [], leases: dbLeases ?? [] })
   } catch (err) {
-    console.warn('[official-proxies GET] Fallback to StorageService:', err)
-    return NextResponse.json({
-        ...meta,
-      official_proxies: StorageService.getOfficialProxies(),
-      leases: StorageService.getLeases(authUser.id),
-    })
+    return NextResponse.json({ ...meta, error: `讀取官方 IP 失敗：${String(err)}`, official_proxies: [], leases: [] }, { status: 500 })
   }
 }
 
@@ -96,64 +75,34 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: '請完整提供名稱、主機位址 (Host) 與通訊埠 (Port)' }, { status: 400 })
       }
 
-      let createdProxy: any = null
-
-      try {
-        const supabase = await createClient()
-        const { data, error } = await supabase
-          .from('marketing_official_proxies')
-          .insert({
-            name,
-            proxy_type,
-            protocol,
-            host,
-            port: Number(port),
-            username,
-            password,
-            country,
-            city,
-            isp,
-            latency_ms: Number(latency_ms) || 20,
-            monthly_price_twd: Number(monthly_price_twd) || 299,
-            max_tenants: Number(max_tenants) || 1,
-            current_tenants_count: 0,
-            status: 'available',
-            is_active: true,
-            notes,
-          })
-          .select()
-          .single()
-
-        if (!error && data) {
-          createdProxy = data
-        }
-      } catch (err) {
-        console.warn('[official-proxies POST admin_create] DB error:', err)
-      }
-
-      // In-memory fallback / sync
-      const fallbackProxy = StorageService.addOfficialProxy({
-        name,
-        proxy_type: proxy_type as ProxyType,
-        protocol: protocol as ProxyProtocol,
-        host,
-        port: Number(port),
-        username,
-        password,
-        country,
-        city,
-        isp,
-        latency_ms: Number(latency_ms) || 20,
-        monthly_price_twd: Number(monthly_price_twd) || 299,
-        max_tenants: Number(max_tenants) || 1,
-        status: 'available',
-        is_active: true,
-        notes,
-      })
+      const { data: createdProxy, error: createErr } = await createAdminClient()
+        .from('marketing_official_proxies')
+        .insert({
+          name,
+          proxy_type,
+          protocol,
+          host,
+          port: Number(port),
+          username,
+          password,
+          country,
+          city,
+          isp,
+          latency_ms: Number(latency_ms) || null,
+          monthly_price_twd: Number(monthly_price_twd) || 299,
+          max_tenants: Number(max_tenants) || 1,
+          current_tenants_count: 0,
+          status: 'available',
+          is_active: true,
+          notes,
+        })
+        .select()
+        .single()
+      if (createErr) return NextResponse.json({ error: `上架失敗：${createErr.message}` }, { status: 500 })
 
       return NextResponse.json({
         success: true,
-        official_proxy: createdProxy || fallbackProxy,
+        official_proxy: createdProxy,
         message: '官方供租用 IP 已成功上架！',
       })
     }
@@ -167,8 +116,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: '請指定要租用的官方 IP' }, { status: 400 })
       }
 
-      const activeInMemory = StorageService.getLeases(authUser.id).filter(l => l.status === 'active').length
-      const { isAdmin, quota, used } = await getOfficialProxyQuota(authUser, activeInMemory)
+      const { isAdmin, quota, used } = await getOfficialProxyQuota(authUser, 0)
       if (!isAdmin && quota <= 0) {
         return NextResponse.json({ error: '目前方案未開放官方 IP，請升級至 PRO 以上或自備 IP' }, { status: 403 })
       }
@@ -194,7 +142,8 @@ export async function POST(req: NextRequest) {
         .eq('id', official_proxy_id)
         .maybeSingle()
 
-      if (off) {
+      if (!off) return NextResponse.json({ error: '找不到此官方 IP' }, { status: 404 })
+      {
         if (!off.is_active || off.status === 'maintenance') {
           return NextResponse.json({ error: '該官方 IP 目前維護保養中，暫停租用' }, { status: 409 })
         }
@@ -253,30 +202,6 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: true, lease, proxy, charged_credits: price, message: successMessage(price) })
       }
 
-      // 資料庫查無此 IP → 記憶體示範資料
-      let leasedResult: ReturnType<typeof StorageService.leaseOfficialProxy>
-      try {
-        leasedResult = StorageService.leaseOfficialProxy(authUser.id, official_proxy_id)
-      } catch (err) {
-        return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 400 })
-      }
-      let price = 0
-      if (isPaid) {
-        const offMem = StorageService.getOfficialProxies().find(p => p.id === official_proxy_id)
-        const c = await charge(offMem?.name ?? official_proxy_id, offMem?.monthly_price_twd ?? 0)
-        if (!c.ok) {
-          StorageService.releaseOfficialProxy(authUser.id, leasedResult.lease.id)
-          return NextResponse.json({ error: '點數不足', required: c.price }, { status: 402 })
-        }
-        price = c.price
-      }
-      return NextResponse.json({
-        success: true,
-        lease: leasedResult.lease,
-        proxy: leasedResult.proxy,
-        charged_credits: price,
-        message: successMessage(price),
-      })
     }
 
     return NextResponse.json({ error: '不支援的操作類型' }, { status: 400 })

@@ -118,16 +118,12 @@ function SocialMatrixContent() {
     setTimeout(() => setToastMsg(null), 4000)
   }
 
+  // 代理池以伺服器資料庫為準；清掉舊版瀏覽器快取（曾含示範資料與代理密碼）
   const PROXY_STORAGE_KEY = 'aigate_proxies_cache_v2'
-
-  const saveProxiesLocally = (list: SocialProxy[]) => {
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem(PROXY_STORAGE_KEY, JSON.stringify(list))
-      } catch (e) {
-        console.warn('Failed to save to localStorage:', e)
-      }
-    }
+  const saveProxiesLocally = (list?: SocialProxy[]) => {
+    void list
+    if (typeof window === 'undefined') return
+    try { localStorage.removeItem(PROXY_STORAGE_KEY) } catch { /* ignore */ }
   }
 
   // Initial Data Fetching
@@ -141,35 +137,12 @@ function SocialMatrixContent() {
         fetch('/api/marketing/social-matrix/official-proxies').then(r => r.json()).catch(() => ({ official_proxies: [], leases: [] })),
       ])
 
-      let serverProxies: SocialProxy[] = pRes.proxies || []
+      const serverProxies: SocialProxy[] = pRes.proxies || []
       if (offRes.official_proxies) setOfficialProxies(offRes.official_proxies)
       if (offRes.leases) setLeases(offRes.leases)
       setIsPlatformAdmin(offRes.is_admin === true)
       if (typeof offRes.lease_quota === 'number') setLeaseQuota({ quota: offRes.lease_quota, used: offRes.lease_used ?? 0 })
       if (typeof offRes.usd_twd_rate === 'number') setUsdTwdRate(offRes.usd_twd_rate)
-
-      // Merge with browser local storage backup so user configurations are never lost
-      if (typeof window !== 'undefined') {
-        const saved = localStorage.getItem(PROXY_STORAGE_KEY)
-        if (saved) {
-          try {
-            const localList: SocialProxy[] = JSON.parse(saved)
-            if (Array.isArray(localList) && localList.length > 0) {
-              const localMap = new Map(localList.map(p => [p.id, p]))
-              // Local updates/renames take precedence
-              serverProxies = serverProxies.map(p => localMap.get(p.id) || p)
-              // Any new proxies only in local storage
-              for (const lp of localList) {
-                if (!serverProxies.some(p => p.id === lp.id || (p.host === lp.host && p.port === lp.port))) {
-                  serverProxies.unshift(lp)
-                }
-              }
-            }
-          } catch (err) {
-            console.warn('Error reading local proxy backup:', err)
-          }
-        }
-      }
 
       setProxies(serverProxies)
       saveProxiesLocally(serverProxies)
