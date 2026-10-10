@@ -12452,6 +12452,12 @@
     "syncQueued": "Đã gửi tác vụ đồng bộ. Connector sẽ tạo/cập nhật hồ sơ AdsPower trong vài giây",
     "openOnPc": "Mở trên máy tính",
     "openQueued": "Đã gửi tác vụ mở. Trình duyệt sẽ mở trên máy tính của bạn",
-    "failed": "Thao tác thất bại"
+    "failed": "Thao tác thất bại",
+    "copilotAccount": "Tài khoản đăng bài qua Connector",
+    "copilotPick": "Chọn tài khoản (đã đồng bộ hồ sơ)",
+    "copilotNone": "Chưa có tài khoản đã đồng bộ. Bấm \"Đồng bộ hồ sơ\" ở tab Tài khoản",
+    "copilotOnPc": "Điền sẵn trên máy tính",
+    "copilotNeedAccount": "Hãy chọn tài khoản đăng bài qua Connector trước",
+    "copilotQueued": "Đã gửi: máy tính sẽ mở \"{name}\" và sao chép nội dung. Hãy dán và tự bấm Đăng"
   }
 }

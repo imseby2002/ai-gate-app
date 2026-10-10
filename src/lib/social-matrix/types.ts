@@ -86,6 +86,7 @@ export interface SocialAccount {
   target_niches: string[]
   last_action_at?: string
   proxy?: SocialProxy | null
+  adspower_profile_id?: string | null
   created_at?: string
   updated_at?: string
 }

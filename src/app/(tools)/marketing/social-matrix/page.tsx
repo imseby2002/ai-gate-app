@@ -120,6 +120,28 @@ function SocialMatrixContent() {
     setTimeout(() => setToastMsg(null), 4000)
   }
 
+  const [copilotAccountId, setCopilotAccountId] = useState('')
+
+  const handleCopilotOnPc = async (group: TargetGroup, copy: MatrixCopy) => {
+    if (!copilotAccountId) {
+      showToast(tc('copilotNeedAccount'), 'error')
+      return
+    }
+    try {
+      await queueConnectorTask({
+        type: 'copilot_post',
+        account_id: copilotAccountId,
+        group_url: group.url,
+        group_name: group.name,
+        copy_title: copy.title,
+        text: `${copy.title}\n\n${copy.content}\n\n${copy.hashtags.join(' ')}`,
+      })
+      showToast(tc('copilotQueued', { name: group.name }), 'success')
+    } catch (e) {
+      showToast(`${tc('failed')}：${(e as Error).message}`, 'error')
+    }
+  }
+
   const handleOpenOnPc = async (accountId: string) => {
     try {
       await queueConnectorTask({ type: 'open_profile', account_id: accountId })
@@ -1623,6 +1645,24 @@ function SocialMatrixContent() {
                       <span className="text-[10px] text-muted-foreground">{t('radarSub')}</span>
                     </div>
 
+                    <label className="block text-[11px] font-semibold mb-3">
+                      <span>{tc('copilotAccount')}</span>
+                      {accounts.some(a => a.adspower_profile_id) ? (
+                        <select
+                          value={copilotAccountId}
+                          onChange={e => setCopilotAccountId(e.target.value)}
+                          className="mt-1 w-full px-2 py-1.5 rounded-lg border border-border bg-background text-xs font-normal"
+                        >
+                          <option value="">{tc('copilotPick')}</option>
+                          {accounts.filter(a => a.adspower_profile_id).map(a => (
+                            <option key={a.id} value={a.id}>{a.platform} · {a.account_name}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className="block mt-1 font-normal text-muted-foreground">{tc('copilotNone')}</span>
+                      )}
+                    </label>
+
                     <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
                       {targetGroups.map((group, idx) => {
                         const selectedCopy = copies.find(c => c.id === selectedCopyId) || copies[0]
@@ -1662,6 +1702,15 @@ function SocialMatrixContent() {
                                 <ArrowUpRight className="h-3 w-3" />
                               </a>
 
+                              <div className="flex items-center gap-1.5">
+                              <button
+                                onClick={() => handleCopilotOnPc(group, selectedCopy)}
+                                disabled={!group.url}
+                                className="flex items-center gap-1 px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] shadow-sm transition-all disabled:opacity-50"
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                                <span>{tc('copilotOnPc')}</span>
+                              </button>
                               {/* Mode A Trigger Button */}
                               <button
                                 onClick={() => handleDispatchModeA(group, selectedCopy)}
@@ -1671,6 +1720,7 @@ function SocialMatrixContent() {
                                 <Send className="h-3 w-3" />
                                 <span>{t('planAPost')}</span>
                               </button>
+                              </div>
                             </div>
                           </div>
                         )
