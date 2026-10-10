@@ -7,6 +7,7 @@ import PlatformGuidePanel from '@/components/PlatformGuidePanel'
 import TokenRefreshStatus from '@/components/TokenRefreshStatus'
 import { MARKETING_GUIDES } from '@/lib/platform-guides'
 import { useTranslations } from 'next-intl'
+import { ChannelAccountPicker } from '@/components/channels/ChannelAccountPicker'
 
 type Field = { key: string; label: string; placeholder: string; secret: boolean }
 type Platform = {
@@ -137,6 +138,7 @@ interface PlatformState {
 
 export function MarketingPlatforms({ canSettings }: { canSettings: boolean }) {
   const tr = useTranslations('MktPlatforms')
+  const tp = useTranslations('ChannelPicker')
   // 平台名稱／說明／欄位名稱：有翻譯就用翻譯，否則用 PLATFORMS 內的原文
   const pt = (id: string, field: string, fallback: string) => {
     const k = `p.${id.replace(/[^A-Za-z0-9]/g, '_')}.${field}`
@@ -252,6 +254,11 @@ export function MarketingPlatforms({ canSettings }: { canSettings: boolean }) {
           <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
         ) : (
           <div className="space-y-4">
+            <ChannelAccountPicker
+              module="marketing"
+              platforms={['messenger', 'instagram', 'line_oa', 'zalo_oa']}
+              hint={tp('marketingPublishHint')}
+            />
             {PLATFORMS.map(p => {
               const st = status[p.id]
               const connected = !!st?.is_connected
