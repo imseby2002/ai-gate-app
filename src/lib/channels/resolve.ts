@@ -107,3 +107,20 @@ export async function loadChannelCredentials(
   if (legacy) return legacy
   return accounts[0]?.credentials ?? {}
 }
+
+// 行銷發文：公司官方帳號中選給行銷的帳號，轉成發文程式（publish.ts）使用的平台名稱與欄位。
+// 只回傳發文必要欄位齊全的平台；缺欄位的平台維持用行銷「平台設定」的舊憑證。
+export async function loadMarketingPublishOverrides(ownerId: string): Promise<Record<string, Creds>> {
+  const out: Record<string, Creds> = {}
+  const [fb, ig, line, zalo] = await Promise.all([
+    findModuleChannelCredentials(ownerId, 'messenger', 'marketing'),
+    findModuleChannelCredentials(ownerId, 'instagram', 'marketing'),
+    findModuleChannelCredentials(ownerId, 'line', 'marketing'),
+    findModuleChannelCredentials(ownerId, 'zalo', 'marketing'),
+  ])
+  if (fb?.fb_page_access_token && fb.fb_page_id) out.Facebook = { page_access_token: fb.fb_page_access_token, page_id: fb.fb_page_id }
+  if (ig?.ig_access_token && ig.ig_user_id) out.Instagram = { access_token: ig.ig_access_token, ig_user_id: ig.ig_user_id }
+  if (line?.line_channel_access_token) out['LINE VOOM'] = { line_channel_access_token: line.line_channel_access_token }
+  if (zalo?.zalo_oa_access_token && zalo.zalo_oa_id) out.Zalo = { access_token: zalo.zalo_oa_access_token, oa_id: zalo.zalo_oa_id }
+  return out
+}

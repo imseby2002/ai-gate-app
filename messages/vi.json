@@ -12427,6 +12427,7 @@
     "notConnected": "chưa thiết lập xong",
     "readonly": "Chỉ chủ công ty, IT hoặc người phụ trách phân hệ này mới có thể thay đổi.",
     "saveFailed": "Lưu thất bại, vui lòng thử lại.",
-    "zaloIdHint": "Zalo ID bên dưới phải là ID người dùng mà nhân viên nhận được sau khi quan tâm Zalo OA đã chọn ở trên; đổi OA thì cần nhập lại."
+    "zaloIdHint": "Zalo ID bên dưới phải là ID người dùng mà nhân viên nhận được sau khi quan tâm Zalo OA đã chọn ở trên; đổi OA thì cần nhập lại.",
+    "marketingPublishHint": "Với các nền tảng đã chọn tài khoản chính thức ở đây (Trang Facebook, Instagram, gửi hàng loạt LINE, bài viết Zalo OA), bài đăng sẽ dùng tài khoản chính thức đó; cần điền Page ID / IG User ID / OA ID. Các nền tảng khác và nền tảng chưa chọn vẫn dùng cài đặt bên dưới."
   }
 }

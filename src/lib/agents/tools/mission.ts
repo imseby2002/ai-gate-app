@@ -1,5 +1,6 @@
 // 目標任務（Mission）執行工具：操作 marketing.im-tourist.com 內部資源、回報 KPI、外部採購申請、排定下次檢查。
 // 行銷資料一律寫入 mission.owner_id（公司 owner）名下，與行銷中心頁面看到的是同一份資料。
+import { loadMarketingPublishOverrides } from '@/lib/channels/resolve'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { buildMarketingInventory, loadMission, type MissionRow } from '../missions'
 import { generateContentSet } from '@/lib/mkt/generate'
@@ -338,10 +339,11 @@ export const publishToSocialTool: AgentToolDef = {
     if (!features.uploadPlatforms) return { ok: false, error: '目前行銷方案未開放自動上傳平台（需 PRO 以上）' }
 
     const credRows = await loadCredentialRows(ctx)
-    const connected = credRows.filter(r => r.is_connected).map(r => r.platform)
+    const overrides = await loadMarketingPublishOverrides(await ownerForRun(ctx))
+    const connected = [...credRows.filter(r => r.is_connected).map(r => r.platform), ...Object.keys(overrides)]
     if (!connected.length) return { ok: false, error: '行銷自動化「平台設定」尚未連結任何社群帳號' }
 
-    const results = await publishToPlatforms(credRows, input.platforms, input.image_urls ?? [], input.video_url ?? '', input.copy_text)
+    const results = await publishToPlatforms(credRows, input.platforms, input.image_urls ?? [], input.video_url ?? '', input.copy_text, overrides)
     if (results.some(r => r.ok)) {
       const ownerId = await ownerForRun(ctx)
       const now = new Date().toISOString()

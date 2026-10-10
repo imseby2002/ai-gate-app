@@ -12520,6 +12520,7 @@
     "notConnected": "未完成設定",
     "readonly": "只有公司負責人、IT 或本模組負責人可以更改。",
     "saveFailed": "儲存失敗，請再試一次。",
-    "zaloIdHint": "下方填寫的 Zalo ID 必須是員工關注「上面選定的 Zalo OA」後取得的用戶 ID；換了 OA 要重新填寫。"
+    "zaloIdHint": "下方填寫的 Zalo ID 必須是員工關注「上面選定的 Zalo OA」後取得的用戶 ID；換了 OA 要重新填寫。",
+    "marketingPublishHint": "在這裡選了官方帳號的平台（Facebook 粉專、Instagram、LINE 群發、Zalo OA 文章），發文會改用官方帳號；官方帳號需填 Page ID／IG User ID／OA ID。其他平台與未選的平台照舊使用下方設定。"
   }
 }

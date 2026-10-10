@@ -491,13 +491,15 @@ export const SUPPORTED_PLATFORMS = [
 
 export interface CredentialRow { platform: string; credentials: Record<string, string> | null; is_connected: boolean | null }
 
-/** 依 social_platform_credentials 的已連結帳號，平行發佈到指定平台 */
+/** 依公司官方帳號（overrides）與 social_platform_credentials 的已連結帳號，平行發佈到指定平台 */
 export async function publishToPlatforms(
   credRows: CredentialRow[],
   platforms: string[],
   imageUrls: string[],
   videoUrl: string,
   copyText: string,
+  /** 公司官方帳號（行銷）轉成的憑證，優先於 credRows；見 loadMarketingPublishOverrides */
+  overrides: Record<string, Record<string, string>> = {},
 ): Promise<PlatformResult[]> {
   const credMap: Record<string, Record<string, string>> = {}
   for (const row of credRows ?? []) {
@@ -521,6 +523,12 @@ export async function publishToPlatforms(
         credMap['IG Reels'] = credMap['IG Reels'] || row.credentials
       }
     }
+  }
+
+  for (const [p, c] of Object.entries(overrides)) {
+    credMap[p] = c
+    if (p === 'Facebook') credMap['FB Reels'] = c
+    if (p === 'Instagram') credMap['IG Reels'] = c
   }
 
   // Dispatch uploads in parallel

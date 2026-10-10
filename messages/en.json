@@ -12520,6 +12520,7 @@
     "notConnected": "setup incomplete",
     "readonly": "Only the company owner, IT or this module's manager can change this.",
     "saveFailed": "Save failed, please try again.",
-    "zaloIdHint": "The Zalo IDs below must be the user IDs staff get after following the Zalo OA selected above; re-enter them if you switch OA."
+    "zaloIdHint": "The Zalo IDs below must be the user IDs staff get after following the Zalo OA selected above; re-enter them if you switch OA.",
+    "marketingPublishHint": "For platforms with an official account selected here (Facebook Page, Instagram, LINE broadcast, Zalo OA article), posts use that official account; it needs Page ID / IG User ID / OA ID filled in. Other platforms, and ones not selected, keep using the settings below."
   }
 }

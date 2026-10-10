@@ -30,6 +30,7 @@ export const CHANNEL_PLATFORMS: ChannelPlatform[] = [
       { key: 'zalo_secret_key', label: 'Secret Key', secret: true, optional: true },
       { key: 'zalo_refresh_token', label: 'Refresh Token', secret: true, optional: true },
       { key: 'zns_template_id', label: 'ZNS Template ID', secret: false, optional: true },
+      { key: 'zalo_oa_id', label: 'OA ID', secret: false, optional: true },
     ],
   },
   {
@@ -53,11 +54,12 @@ export const CHANNEL_PLATFORMS: ChannelPlatform[] = [
     ],
   },
   {
-    id: 'messenger', name: 'Facebook Messenger', color: '#0084FF',
+    id: 'messenger', name: 'Facebook Page / Messenger', color: '#0084FF',
     docUrl: 'https://developers.facebook.com/docs/messenger-platform/getting-started',
     required: ['fb_page_access_token'],
     fields: [
       { key: 'fb_page_access_token', label: 'Page Access Token', secret: true },
+      { key: 'fb_page_id', label: 'Page ID', secret: false, optional: true },
       { key: 'fb_verify_token', label: 'Verify Token', secret: false, optional: true },
       { key: 'fb_app_secret', label: 'App Secret', secret: true, optional: true },
     ],
@@ -68,6 +70,7 @@ export const CHANNEL_PLATFORMS: ChannelPlatform[] = [
     required: ['ig_access_token'],
     fields: [
       { key: 'ig_access_token', label: 'Access Token', secret: true },
+      { key: 'ig_user_id', label: 'IG User ID', secret: false, optional: true },
       { key: 'ig_verify_token', label: 'Verify Token', secret: false, optional: true },
       { key: 'ig_app_secret', label: 'App Secret', secret: true, optional: true },
     ],
