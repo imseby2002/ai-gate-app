@@ -6131,8 +6131,8 @@
     "docTitlePlaceholder": "VD: Hợp đồng thuê nhà cửa hàng Trung Hiếu Đài Bắc",
     "counterpartyFieldLabel": "Bên ký kết／Chủ nhà／Cơ quan cấp phép",
     "counterpartyPlaceholder": "VD: Chủ nhà Vương Đại Minh / Sở Y tế Đài Bắc",
-    "monthlyRentField": "Tiền thuê hàng tháng (NT$)",
-    "depositField": "Tiền đặt cọc (NT$)",
+    "monthlyRentField": "Tiền thuê hàng tháng",
+    "depositField": "Tiền đặt cọc",
     "paymentDayField": "Ngày thanh toán (1-31)",
     "paymentCycleField": "Chu kỳ thanh toán",
     "paymentCycleOption1": "Hàng tháng (1 tháng)",
@@ -6185,7 +6185,9 @@
     "saveNotificationSettings": "Lưu cài đặt thông báo",
     "remindersRunComplete": "Hoàn tất! Đã gửi: {expiry} nhắc nhở hết hạn, {payment} nhắc nhở thanh toán (không gửi lại các mục đã gửi).",
     "runFailed": "Chạy thất bại",
-    "checkAndSendNow": "Kiểm tra và gửi nhắc nhở ngay"
+    "checkAndSendNow": "Kiểm tra và gửi nhắc nhở ngay",
+    "currencyField": "Tiền tệ hợp đồng",
+    "currencyNotSet": "Chưa chọn tiền tệ"
   },
   "RdLab": {
     "forbidden": "Cần quyền đơn vị R&D để sử dụng Feeling Tea AI R&D Lab",
@@ -11403,6 +11405,9 @@
       "description": "Hỗ trợ tệp .xlsx, .xls và .csv. Nếu trùng tiêu đề tài liệu sẽ tự cập nhật.",
       "template": "Mau giay phep va hop dong thue",
       "sheet": "Tai lieu"
+    },
+    "currency": {
+      "label": "Tiền tệ"
     }
   },
   "RdLogsImport": {

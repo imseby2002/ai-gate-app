@@ -6224,8 +6224,8 @@
     "docTitlePlaceholder": "例如：台北忠孝門市房屋租賃契約書",
     "counterpartyFieldLabel": "簽約對方／房東／發證機關",
     "counterpartyPlaceholder": "例如：房東 王大明 / 台北市衛生局",
-    "monthlyRentField": "每月租金 (NT$)",
-    "depositField": "押金保證金 (NT$)",
+    "monthlyRentField": "每月租金",
+    "depositField": "押金保證金",
     "paymentDayField": "繳費日 (1-31)",
     "paymentCycleField": "付款週期",
     "paymentCycleOption1": "每月（1 個月）",
@@ -6278,7 +6278,9 @@
     "saveNotificationSettings": "儲存通知設定",
     "remindersRunComplete": "執行完成！已送出：到期提醒 {expiry} 則、繳款提醒 {payment} 則（已發過的不重覆發送）。",
     "runFailed": "執行失敗",
-    "checkAndSendNow": "立即檢查並發送提醒"
+    "checkAndSendNow": "立即檢查並發送提醒",
+    "currencyField": "合約幣別",
+    "currencyNotSet": "未設定幣別"
   },
   "RdLab": {
     "forbidden": "需具備研發單位權限才能使用 Feeling Tea AI R&D Lab",
@@ -11496,6 +11498,9 @@
       "description": "支援 .xlsx, .xls 與 .csv 檔案。若文件標題相符將自動更新。",
       "template": "外務證照與門市租約範本",
       "sheet": "合約證照清單"
+    },
+    "currency": {
+      "label": "幣別"
     }
   },
   "RdLogsImport": {
