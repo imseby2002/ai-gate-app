@@ -4,11 +4,18 @@
   "private": true,
   "description": "AI-GATE 桌面連接器：把 AI-GATE 的社群帳號與代理同步到 AdsPower，並接收網頁端任務（Windows）",
   "type": "module",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "start": "node src/index.mjs run",
     "pair": "node src/index.mjs pair",
     "sync": "node src/index.mjs sync",
-    "status": "node src/index.mjs status"
+    "status": "node src/index.mjs status",
+    "build:exe": "node scripts/build-exe.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "postject": "^1.0.0-alpha.6"
   }
 }

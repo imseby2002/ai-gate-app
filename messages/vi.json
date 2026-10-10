@@ -12432,5 +12432,26 @@
     "saveFailed": "Lưu thất bại, vui lòng thử lại.",
     "zaloIdHint": "Zalo ID bên dưới phải là ID người dùng mà nhân viên nhận được sau khi quan tâm Zalo OA đã chọn ở trên; đổi OA thì cần nhập lại.",
     "marketingPublishHint": "Với các nền tảng đã chọn tài khoản chính thức ở đây (Trang Facebook, Instagram, gửi hàng loạt LINE, bài viết Zalo OA), bài đăng sẽ dùng tài khoản chính thức đó; cần điền Page ID / IG User ID / OA ID. Các nền tảng khác và nền tảng chưa chọn vẫn dùng cài đặt bên dưới."
+  },
+  "DesktopConnector": {
+    "title": "Trình kết nối máy tính (AdsPower)",
+    "desc": "Cài AdsPower và AI-GATE Connector trên máy Windows để tự động tạo hồ sơ trình duyệt (kèm proxy) và mở chúng từ đây. Việc đăng bài luôn do bạn tự bấm.",
+    "download": "Tải Connector (Windows)",
+    "steps": "1. Cài đặt và đăng nhập AdsPower  2. Tải và chạy Connector  3. Bấm \"Tạo mã ghép nối\" và nhập vào Connector",
+    "smartscreen": "Nếu Windows hiện \"Windows đã bảo vệ máy tính của bạn\", bấm \"Thông tin thêm\" → \"Vẫn chạy\".",
+    "genCode": "Tạo mã ghép nối",
+    "codeHint": "Nhập mã này vào cửa sổ Connector. Có hiệu lực {min} phút, chỉ dùng một lần.",
+    "devices": "Máy tính đã ghép nối",
+    "noDevices": "Chưa ghép nối máy tính nào",
+    "lastSeen": "Kết nối lần cuối: {time}",
+    "neverSeen": "Chưa kết nối",
+    "revoke": "Hủy ghép nối",
+    "revokeConfirm": "Hủy ghép nối máy tính này?",
+    "revoked": "Đã hủy ghép nối",
+    "sync": "Đồng bộ hồ sơ",
+    "syncQueued": "Đã gửi tác vụ đồng bộ. Connector sẽ tạo/cập nhật hồ sơ AdsPower trong vài giây",
+    "openOnPc": "Mở trên máy tính",
+    "openQueued": "Đã gửi tác vụ mở. Trình duyệt sẽ mở trên máy tính của bạn",
+    "failed": "Thao tác thất bại"
   }
 }

@@ -15,6 +15,7 @@ import {
   OfficialRentableProxy, ProxyLease, OfficialProxyStatus
 } from '@/lib/social-matrix/types'
 import { PlanGate } from '@/components/marketing/PlanGate'
+import { ConnectorPanel, queueConnectorTask } from '@/components/marketing/ConnectorPanel'
 
 export default function SocialMatrixPage() {
   return (
@@ -26,6 +27,7 @@ export default function SocialMatrixPage() {
 
 function SocialMatrixContent() {
   const t = useTranslations('SocialMatrix')
+  const tc = useTranslations('DesktopConnector')
   const [activeTab, setActiveTab] = useState<'proxies' | 'accounts' | 'campaign'>('proxies')
   const [isLoading, setIsLoading] = useState(false)
   const [copiedId, setCopiedId] = useState<string | null>(null)
@@ -116,6 +118,15 @@ function SocialMatrixContent() {
   const showToast = (text: string, type: 'success' | 'error' | 'info' = 'success') => {
     setToastMsg({ text, type })
     setTimeout(() => setToastMsg(null), 4000)
+  }
+
+  const handleOpenOnPc = async (accountId: string) => {
+    try {
+      await queueConnectorTask({ type: 'open_profile', account_id: accountId })
+      showToast(tc('openQueued'), 'success')
+    } catch (e) {
+      showToast(`${tc('failed')}：${(e as Error).message}`, 'error')
+    }
   }
 
   // 代理池以伺服器資料庫為準；清掉舊版瀏覽器快取（曾含示範資料與代理密碼）
@@ -1273,6 +1284,8 @@ function SocialMatrixContent() {
         {/* TAB 2: ACCOUNTS MATRIX & AUTO WARM-UP */}
         {activeTab === 'accounts' && (
           <div className="space-y-6">
+            <ConnectorPanel showToast={showToast} />
+
             {/* 14-Day Warm-up Workflow Banner */}
             <div className="bg-white dark:bg-card border border-border rounded-2xl p-5 shadow-sm">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
@@ -1414,7 +1427,7 @@ function SocialMatrixContent() {
                         </div>
                       </div>
 
-                      <div className="pt-2 border-t border-border flex items-center justify-between text-xs">
+                      <div className="pt-2 border-t border-border flex items-center gap-2 text-xs">
                         <button
                           onClick={() => handleRunWarmup(acc.id)}
                           disabled={isWarmingUp}
@@ -1424,8 +1437,15 @@ function SocialMatrixContent() {
                           <span>{t('runToday')}</span>
                         </button>
                         <button
+                          onClick={() => handleOpenOnPc(acc.id)}
+                          className="flex items-center gap-1 px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 font-medium transition-colors"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          <span>{tc('openOnPc')}</span>
+                        </button>
+                        <button
                           onClick={() => handleDeleteAccount(acc.id)}
-                          className="p-1 text-muted-foreground hover:text-rose-600 transition-colors"
+                          className="ml-auto p-1 text-muted-foreground hover:text-rose-600 transition-colors"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>

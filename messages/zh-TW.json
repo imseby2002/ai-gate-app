@@ -12525,5 +12525,26 @@
     "saveFailed": "儲存失敗，請再試一次。",
     "zaloIdHint": "下方填寫的 Zalo ID 必須是員工關注「上面選定的 Zalo OA」後取得的用戶 ID；換了 OA 要重新填寫。",
     "marketingPublishHint": "在這裡選了官方帳號的平台（Facebook 粉專、Instagram、LINE 群發、Zalo OA 文章），發文會改用官方帳號；官方帳號需填 Page ID／IG User ID／OA ID。其他平台與未選的平台照舊使用下方設定。"
+  },
+  "DesktopConnector": {
+    "title": "桌面連接器（AdsPower）",
+    "desc": "在 Windows 電腦安裝 AdsPower 與 AI-GATE 連接器，即可自動建立瀏覽器設定檔（含代理）並從這裡一鍵開啟。發文一律由您親自按下。",
+    "download": "下載連接器（Windows）",
+    "steps": "1. 安裝並登入 AdsPower　2. 下載並執行連接器　3. 點「產生配對碼」並輸入到連接器",
+    "smartscreen": "若 Windows 顯示「Windows 已保護您的電腦」，請點「其他資訊」→「仍要執行」。",
+    "genCode": "產生配對碼",
+    "codeHint": "請在連接器視窗輸入此配對碼，{min} 分鐘內有效、僅能使用一次。",
+    "devices": "已配對的電腦",
+    "noDevices": "尚未配對任何電腦",
+    "lastSeen": "最後連線：{time}",
+    "neverSeen": "尚未連線",
+    "revoke": "取消配對",
+    "revokeConfirm": "確定要取消這台電腦的配對？",
+    "revoked": "已取消配對",
+    "sync": "同步設定檔",
+    "syncQueued": "已送出同步任務，連接器會在數秒內建立／更新 AdsPower 設定檔",
+    "openOnPc": "在電腦開啟",
+    "openQueued": "已送出開啟任務，瀏覽器將在電腦上開啟",
+    "failed": "操作失敗"
   }
 }
