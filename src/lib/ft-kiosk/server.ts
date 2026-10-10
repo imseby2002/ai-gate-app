@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto'
 import { resolveSelection, toOrderLines } from './cart'
 import { mockMenu } from './mock'
 import { applyTranslations } from './translate'
+import { createPrintOrder, toPrintLines } from './print'
 import type {
   FtCategory,
   FtChild,
@@ -24,6 +25,7 @@ import type {
 //     其餘欄位可省略：storeId / storeName 會用 storeNo 向會員 APP 查；
 //     loginPhone / loginPassword 可覆蓋全域門市帳號；userToken 可直接指定固定 token
 //     menuStoreNo：本門市菜單是空的時改用這間門市的菜單
+//     mode："print" = 列印模式（不送 iPOS、不需門市帳號，點單機與吧檯印單）
 //   FT_KIOSK_MENU_STORE_NO   全域的 menuStoreNo
 
 export interface FtDeviceConfig {
@@ -31,12 +33,14 @@ export interface FtDeviceConfig {
   storeId?: string
   storeName?: string
   menuStoreNo?: string
+  /** print = 不送 iPOS，點單機與吧檯印單，客人到櫃台結帳 */
+  mode?: 'order' | 'print'
   loginPhone?: string
   loginPassword?: string
   userToken?: string
 }
 
-export type FtDevice = { mock: true } | { mock: false; config: FtDeviceConfig }
+export type FtDevice = { mock: true; print: boolean } | { mock: false; config: FtDeviceConfig }
 
 export class FtError extends Error {
   constructor(public code: string, public status = 502) {
@@ -50,7 +54,8 @@ function baseUrl() {
 
 export function resolveDevice(key: string | null): FtDevice | null {
   if (!key) return null
-  if (!baseUrl()) return { mock: true }
+  // 展示模式：key 含 print 就用列印模式
+  if (!baseUrl()) return { mock: true, print: key.includes('print') }
   let devices: Record<string, FtDeviceConfig> = {}
   try {
     devices = JSON.parse(process.env.FT_KIOSK_DEVICES || '{}')
@@ -65,6 +70,7 @@ export function resolveDevice(key: string | null): FtDevice | null {
           ...config,
           storeNo: String(config.storeNo),
           menuStoreNo: config.menuStoreNo ? String(config.menuStoreNo) : undefined,
+          mode: config.mode === 'print' ? 'print' : 'order',
         },
       }
     : null
@@ -291,7 +297,7 @@ interface BookingResponse {
   data: Raw & { order_no: string; amount: number }
 }
 
-export async function placeOrder(device: FtDevice, req: FtOrderRequest): Promise<FtOrderResult> {
+export async function placeOrder(device: FtDevice, req: FtOrderRequest, deviceKey: string): Promise<FtOrderResult> {
   const menu = await fetchMenu(device)
   const now = Date.now()
   const resolved = req.selections.map(s => resolveSelection(menu.categories, s))
@@ -300,15 +306,48 @@ export async function placeOrder(device: FtDevice, req: FtOrderRequest): Promise
   const ok = resolved as Exclude<(typeof resolved)[number], { error: string }>[]
   if (ok.length === 0) throw new FtError('CART_EMPTY', 400)
 
+  const total = ok.reduce((s, r) => s + r.lineTotal, 0)
+
   if (device.mock) {
+    const orderNo = randomBytes(4).toString('hex').toUpperCase()
+    if (!device.print) return { orderNo, amount: total, mock: true }
     return {
-      orderNo: randomBytes(4).toString('hex').toUpperCase(),
-      amount: ok.reduce((s, r) => s + r.lineTotal, 0),
+      orderNo,
+      amount: total,
       mock: true,
+      print: {
+        orderNo,
+        storeName: menu.storeName,
+        createdAt: new Date(now).toISOString(),
+        dineOption: req.dineOption,
+        phone: req.phone || null,
+        lines: toPrintLines(ok),
+        total,
+      },
     }
   }
 
   const { config } = device
+
+  if (config.mode === 'print') {
+    const store = await storeInfo(config)
+    let ticket
+    try {
+      ticket = await createPrintOrder({
+        storeNo: config.storeNo,
+        storeName: store.name,
+        deviceKey,
+        dineOption: req.dineOption,
+        phone: req.phone || null,
+        lines: toPrintLines(ok),
+        total,
+      })
+    } catch {
+      throw new FtError('PRINT_ORDER_FAILED')
+    }
+    return { orderNo: ticket.orderNo, amount: total, mock: false, print: ticket }
+  }
+
   const items = ok.flatMap((r, i) => toOrderLines(r, now + i))
 
   const methods = await callFt<{ data: PaymentMethodRow[] }>('/api/v1.0/payment_methods')

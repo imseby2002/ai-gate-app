@@ -251,3 +251,13 @@ storeNo 查法：瀏覽器打開 `<FT_API_BASE_URL>/app/api/v1/store`，每間�
 1. 會員 APP 後端正式網址（打開 `/app/api/v1/store` 能看到門市 JSON 就是對的）
 2. 建一個門市帳號並設定密碼
 3. 實測：`contact_phone` 留空能否送單、帶會員電話時 iPOS 是否累積點數
+
+### 列印模式（客人拿單到櫃台結帳）
+- 在 `FT_KIOSK_DEVICES` 該台加 `"mode":"print"`，例如 `{"giangvo-p1-xxxx":{"storeNo":"166975","mode":"print"}}`
+- 菜單一樣讀會員 APP（含翻譯），但**不送 iPOS、不需門市帳號**
+- 下單後存一筆 `ft_print_orders`（每間門市每天從 001 開始編號），點單機透過本機 `pos-bridge` 的 `/print/ticket` 同時印：
+  - 客人聯：點單機旁的印表機（`KIOSK_PRINTER`），寫「請至櫃台結帳」
+  - 吧檯聯：吧檯印表機（`BAR_PRINTER`），寫「CHƯA THANH TOÁN」
+- 單據品名用 iPOS 越南文原文，店員才能在 FABI 找到同一品項結帳
+- 印表機設定見 `pos-bridge/DEPLOY.md`；bridge 沒開時畫面仍會顯示號碼並提示列印失敗
+- 展示模式下，key 含 `print` 就是列印模式（例如 `?key=demo-print`）

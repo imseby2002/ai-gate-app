@@ -106,6 +106,26 @@ export interface FtOrderResult {
   orderNo: string
   amount: number
   mock: boolean
+  /** 有值 = 列印模式，前端交給本機 pos-bridge 列印 */
+  print?: FtPrintTicket
 }
 
 export type FtMemberStatus = 'member' | 'not_member'
+
+/** 列印模式：點單機與吧檯各印一張，客人拿單到櫃台結帳（不送 iPOS） */
+export interface FtPrintLine {
+  name: string
+  detail: string
+  qty: number
+  lineTotal: number
+}
+
+export interface FtPrintTicket {
+  orderNo: string
+  storeName: string
+  createdAt: string
+  dineOption: FtDineOption
+  phone: string | null
+  lines: FtPrintLine[]
+  total: number
+}

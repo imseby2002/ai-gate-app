@@ -4595,8 +4595,11 @@
       "KIOSK_LOGIN_FAILED": "Kiosk login failed. Please ask our staff",
       "KIOSK_LOGIN_NOT_CONFIGURED": "Kiosk account is not set up. Please ask our staff",
       "STORE_NOT_FOUND": "Store not found. Please ask our staff",
-      "CASH_METHOD_NOT_FOUND": "Pay at counter is not available. Please ask our staff"
-    }
+      "CASH_METHOD_NOT_FOUND": "Pay at counter is not available. Please ask our staff",
+      "PRINT_ORDER_FAILED": "Could not create the order. Please ask our staff"
+    },
+    "donePrintedPayAtCounter": "Please take your receipt to the counter to pay and collect your order",
+    "printFailed": "Printing failed. Please note your order number and tell our staff"
   },
   "Apply": {
     "applyTitle": "Job Application",
