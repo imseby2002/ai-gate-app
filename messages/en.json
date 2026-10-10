@@ -6227,8 +6227,8 @@
     "docTitlePlaceholder": "e.g. Taipei Zhongxiao Store lease agreement",
     "counterpartyFieldLabel": "Counterparty/Landlord/Issuing Authority",
     "counterpartyPlaceholder": "e.g. Landlord Wang Da-Ming / Taipei Health Bureau",
-    "monthlyRentField": "Monthly Rent (NT$)",
-    "depositField": "Security Deposit (NT$)",
+    "monthlyRentField": "Monthly Rent",
+    "depositField": "Security Deposit",
     "paymentDayField": "Payment Day (1-31)",
     "paymentCycleField": "Payment Cycle",
     "paymentCycleOption1": "Monthly (1 month)",
@@ -6281,7 +6281,9 @@
     "saveNotificationSettings": "Save Notification Settings",
     "remindersRunComplete": "Run complete! Sent: {expiry} expiry reminders, {payment} payment reminders (already-sent ones are not resent).",
     "runFailed": "Run failed",
-    "checkAndSendNow": "Check & Send Reminders Now"
+    "checkAndSendNow": "Check & Send Reminders Now",
+    "currencyField": "Contract currency",
+    "currencyNotSet": "Currency not set"
   },
   "RdLab": {
     "forbidden": "R&D unit permission is required to use Feeling Tea AI R&D Lab",
@@ -11499,6 +11501,9 @@
       "description": "Supports .xlsx, .xls and .csv files. Documents with a matching title are updated.",
       "template": "Licenses and leases template",
       "sheet": "Documents"
+    },
+    "currency": {
+      "label": "Currency"
     }
   },
   "RdLogsImport": {

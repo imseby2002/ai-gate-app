@@ -28,6 +28,7 @@ const AFFAIRS_DOC_IMPORT_COLUMNS: ImportColumn[] = [
   { key: 'expiry_date', label: '到期日', example: '2027-12-31', aliases: ['expiry_date', '到期日', '迄日', '到期日期'] },
   { key: 'deposit', label: '押金', example: 100000, aliases: ['deposit', '押金', '保證金'] },
   { key: 'monthly_rent', label: '月租金/費用', example: 50000, aliases: ['monthly_rent', '月租金', '租金', '金額'] },
+  { key: 'currency', label: '幣別', example: 'VND', aliases: ['currency', '幣別', '貨幣', 'tiền tệ'] },
   { key: 'payment_day', label: '每月繳款日', example: 5, aliases: ['payment_day', '每月繳款日', '繳費日', '付款日'] },
   { key: 'notes', label: '備註', example: '押金兩個月，水電自付', aliases: ['notes', '備註', '說明'] },
 ]
@@ -47,6 +48,7 @@ interface Doc {
   payment_cycle_months: number
   deposit: number | null
   monthly_rent: number | null
+  currency: string
   contract_text: string
   is_renewed: boolean
   remind_days_before: number
@@ -92,6 +94,10 @@ const TYPE_COLOR: Record<string, { color: string; badge: string }> = {
 }
 
 const TYPE_ORDER = ['lease', 'sanitary_cert', 'company_license', 'patent_cert', 'contract', 'other']
+
+// 合約幣別（依合約實際幣別，由建檔者選擇或 AI 辨識）
+const CURRENCIES = ['VND', 'TWD', 'USD', 'CNY', 'HKD', 'JPY', 'THB', 'SGD', 'MYR', 'EUR'] as const
+const fmtMoney = (n: number | null, currency: string) => `${Number(n).toLocaleString()}${currency ? ` ${currency}` : ''}`
 
 const todayStr = () => new Date().toISOString().slice(0, 10)
 
@@ -215,6 +221,13 @@ function DocsTab() {
 
   const storeName = (code: string) => stores.find(s => s.code === code)?.name || code
 
+  // 新增時預設公司最常用的合約幣別，建檔者仍可改成該合約的實際幣別
+  const commonCurrency = (() => {
+    const n: Record<string, number> = {}
+    for (const d of docs) if (d.currency) n[d.currency] = (n[d.currency] ?? 0) + 1
+    return Object.entries(n).sort((a, b) => b[1] - a[1])[0]?.[0] ?? ''
+  })()
+
   // 即將到期看板（30天內）
   const upcoming = docs
     .filter(d => d.status === 'active')
@@ -237,7 +250,7 @@ function DocsTab() {
           <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowImport(true)}>
             <FileSpreadsheet className="h-4 w-4 text-emerald-600" />{t('bulkImport')}
           </Button>
-          <Button size="sm" className="gap-1.5" onClick={() => setEditing({ doc_type: 'lease', remind_days_before: 30, remind_days_stage2: 15, remind_days_urgent: 7, pay_remind_days_before: 3, pay_remind_days_2: 1 })}>
+          <Button size="sm" className="gap-1.5" onClick={() => setEditing({ doc_type: 'lease', currency: commonCurrency, remind_days_before: 30, remind_days_stage2: 15, remind_days_urgent: 7, pay_remind_days_before: 3, pay_remind_days_2: 1 })}>
             <Plus className="h-4 w-4" />{t('newDocument')}
           </Button>
         </div>
@@ -335,8 +348,8 @@ function DocsTab() {
                       )}
                       {d.doc_type === 'lease' && (
                         <>
-                          {d.monthly_rent && <span><b>{t('monthlyRentLabel')}</b>NT$ {Number(d.monthly_rent).toLocaleString()}</span>}
-                          {d.deposit && <span><b>{t('depositLabel')}</b>NT$ {Number(d.deposit).toLocaleString()}</span>}
+                          {d.monthly_rent && <span><b>{t('monthlyRentLabel')}</b>{fmtMoney(d.monthly_rent, d.currency)}{!d.currency && <span className="text-amber-600"> ({t('currencyNotSet')})</span>}</span>}
+                          {d.deposit && <span><b>{t('depositLabel')}</b>{fmtMoney(d.deposit, d.currency)}</span>}
                           {d.payment_day && <span><b>{t('paymentDayLabel')}</b>{t('paymentDayValue', { day: d.payment_day, cycle: paymentCycleLabel(t, d.payment_cycle_months) })}</span>}
                         </>
                       )}
@@ -413,6 +426,7 @@ function DocModal({ doc, stores, onClose, onSaved }: { doc: Partial<Doc>; stores
         counterparty: d.counterparty || f.counterparty,
         deposit: d.deposit ?? f.deposit,
         monthly_rent: d.monthly_rent ?? f.monthly_rent,
+        currency: typeof d.currency === 'string' && /^[A-Za-z]{3}$/.test(d.currency) ? d.currency.toUpperCase() : f.currency,
         payment_day: d.payment_day ?? f.payment_day,
         effective_date: d.effective_date ?? f.effective_date,
         expiry_date: d.expiry_date ?? f.expiry_date,
@@ -442,6 +456,7 @@ function DocModal({ doc, stores, onClose, onSaved }: { doc: Partial<Doc>; stores
         fd.append('payment_cycle_months', String(f.payment_cycle_months || 1))
         if (f.deposit) fd.append('deposit', String(f.deposit))
         if (f.monthly_rent) fd.append('monthly_rent', String(f.monthly_rent))
+        fd.append('currency', f.currency ?? '')
         fd.append('is_renewed', f.is_renewed ? 'true' : 'false')
         fd.append('remind_days_before', String(f.remind_days_before ?? 30))
         fd.append('remind_days_stage2', String(f.remind_days_stage2 ?? 15))
@@ -469,6 +484,7 @@ function DocModal({ doc, stores, onClose, onSaved }: { doc: Partial<Doc>; stores
             payment_cycle_months: f.payment_cycle_months || 1,
             deposit: f.deposit || null,
             monthly_rent: f.monthly_rent || null,
+            currency: f.currency ?? '',
             contract_text: f.contract_text || '',
             is_renewed: !!f.is_renewed,
             remind_days_before: f.remind_days_before,
@@ -564,6 +580,14 @@ function DocModal({ doc, stores, onClose, onSaved }: { doc: Partial<Doc>; stores
           {/* 租約專屬：租金、押金與付款日 */}
           {isLease && (
             <div className="grid grid-cols-2 gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200">
+              <label className="space-y-1 col-span-2">
+                <span className="text-xs font-semibold text-gray-700">{t('currencyField')}</span>
+                <select value={f.currency ?? ''} onChange={e => set({ currency: e.target.value })} className="h-9 w-full rounded-md border px-2 text-sm bg-card">
+                  <option value="">{t('currencyNotSet')}</option>
+                  {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  {f.currency && !(CURRENCIES as readonly string[]).includes(f.currency) && <option value={f.currency}>{f.currency}</option>}
+                </select>
+              </label>
               <label className="space-y-1">
                 <span className="text-xs font-semibold text-gray-700">{t('monthlyRentField')}</span>
                 <Input type="number" value={f.monthly_rent ? String(f.monthly_rent) : ''} onChange={e => set({ monthly_rent: Number(e.target.value) || undefined })} placeholder="50000" />

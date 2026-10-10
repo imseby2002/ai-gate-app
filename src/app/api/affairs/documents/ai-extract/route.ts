@@ -43,6 +43,7 @@ export async function POST(req: NextRequest) {
   "counterparty": "簽約對方／出租人／房東／發證機關名稱（例如：王大明）",
   "deposit": 100000 (押金或保證金金額，數字；若無或無法辨識請回傳 null),
   "monthly_rent": 35000 (每月租金或管理費用，數字；若無或無法辨識請回傳 null),
+  "currency": "合約金額幣別的 ISO 4217 三碼代碼（例如越南盾 VND、新台幣 TWD、美元 USD、人民幣 CNY）；依合約上的幣別符號、文字或簽約國家判斷，無法判斷請回傳 null",
   "payment_day": 5 (每月應繳租金之付款日 1-31 數字；若合約註明每月5日前付款請填 5；若無法辨識請回傳 null),
   "effective_date": "YYYY-MM-DD (合約起始日或發照日；無法辨識回傳 null)",
   "expiry_date": "YYYY-MM-DD (合約到期截止日或證照效期迄日；無法辨識回傳 null)",

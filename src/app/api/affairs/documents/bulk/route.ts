@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
 
   const { data: existing } = await supabase
     .from('affair_documents')
-    .select('id, title, store_code')
+    .select('id, title, store_code, ai_extracted')
     .eq('owner_id', user.id)
 
   const existingList = existing || []
@@ -68,6 +68,16 @@ export async function POST(req: NextRequest) {
     }
 
     const match = existingList.find(d => d.title.trim().toLowerCase() === title.toLowerCase() && (!storeCode || d.store_code === storeCode))
+
+    // 租金、押金、幣別存在 ai_extracted（與單筆建檔一致）；更新時保留既有內容
+    const num = (v: unknown) => { const t = String(v ?? '').replace(/[,\s]/g, ''); const n = Number(t); return t !== '' && Number.isFinite(n) ? n : undefined }
+    const ext: Record<string, unknown> = { ...((match?.ai_extracted as Record<string, unknown>) ?? {}) }
+    const rent = num(r.monthly_rent), dep = num(r.deposit)
+    if (rent !== undefined) ext.monthly_rent = rent
+    if (dep !== undefined) ext.deposit = dep
+    const cur = String(r.currency ?? '').trim().toUpperCase()
+    if (/^[A-Z]{3}$/.test(cur)) ext.currency = cur
+    payload.ai_extracted = ext
     if (match) {
       const { error } = await supabase
         .from('affair_documents')
