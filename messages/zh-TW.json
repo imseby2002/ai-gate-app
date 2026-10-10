@@ -9491,7 +9491,10 @@
     "token": {
       "refreshing": "權杖自動更新中｜目前權杖到期：{at}",
       "failed": "上次自動更新失敗：{error}（請重新取得並貼上 Refresh Token）"
-    }
+    },
+    "overridden": "此平台發文已改用公司官方帳號「{name}」，下方舊設定不再使用。",
+    "overriddenFacebook": "粉專發文已改用公司官方帳號「{name}」；廣告數據仍使用下方的廣告帳戶設定。",
+    "openChannels": "前往官方帳號"
   },
   "SocialPublish": {
     "imagePost": "圖文發布",

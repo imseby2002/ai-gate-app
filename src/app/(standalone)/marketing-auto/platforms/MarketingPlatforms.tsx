@@ -190,6 +190,15 @@ export function MarketingPlatforms({ canSettings }: { canSettings: boolean }) {
     finally { setGa4Testing(false) }
   }
 
+  // 已改由公司官方帳號發文的平台（平台 id → 官方帳號名稱）
+  const [overridden, setOverridden] = useState<Record<string, string>>({})
+  useEffect(() => {
+    fetch('/api/marketing/channel-overrides')
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => { if (d?.platforms) setOverridden(d.platforms) })
+      .catch(() => {})
+  }, [])
+
   const load = useCallback(async () => {
     try {
       const res = await fetch('/api/social/credentials')
@@ -282,6 +291,17 @@ export function MarketingPlatforms({ canSettings }: { canSettings: boolean }) {
                     </a>
                   </p>
 
+                  {overridden[p.id] && (
+                    <div className="mb-3 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2.5 text-xs text-indigo-800">
+                      {tr(p.id === 'Facebook' ? 'overriddenFacebook' : 'overridden', { name: overridden[p.id] })}
+                      <Link href="/company/channels" className="ml-1 inline-flex items-center gap-0.5 font-medium underline">
+                        {tr('openChannels')} <ExternalLink className="h-3 w-3" />
+                      </Link>
+                    </div>
+                  )}
+
+                  {/* 官方帳號接手後隱藏舊欄位；Facebook 的廣告帳戶仍用這裡的設定，所以保留 */}
+                  {(!overridden[p.id] || p.id === 'Facebook') && (<>
                   <PlatformGuidePanel guide={MARKETING_GUIDES[p.id]} />
                   <TokenRefreshStatus values={st?.values} />
 
@@ -315,6 +335,7 @@ export function MarketingPlatforms({ canSettings }: { canSettings: boolean }) {
                       </button>
                     </div>
                   )}
+                  </>)}
 
                   {p.id === 'GA4' && connected && (
                     <div className="mt-3 space-y-2">

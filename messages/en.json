@@ -9491,7 +9491,10 @@
     "token": {
       "refreshing": "Token auto-refresh on | current token expires: {at}",
       "failed": "Last auto-refresh failed: {error} (get and paste a new Refresh Token)"
-    }
+    },
+    "overridden": "Posts on this platform now use the company official account \"{name}\"; the old settings below are no longer used.",
+    "overriddenFacebook": "Page posts now use the company official account \"{name}\"; ads data still uses the ad account settings below.",
+    "openChannels": "Open Official Accounts"
   },
   "SocialPublish": {
     "imagePost": "Image post",
