@@ -12417,5 +12417,16 @@
     "migrationNote": "Cài đặt hiện có của từng phân hệ vẫn hoạt động; bản cập nhật sau sẽ chuyển chúng về đây và cho các phân hệ chọn tài khoản từ trang này.",
     "zaloRefreshHint": "Khi điền App ID, Secret Key và Refresh Token, Access Token có thể được tự động làm mới sau này.",
     "updated": "Cập nhật {time}"
+  },
+  "ChannelPicker": {
+    "title": "Dùng tài khoản chính thức nào",
+    "manage": "Quản lý tài khoản chính thức",
+    "auto": "Tự động (theo cài đặt tài khoản chính thức)",
+    "autoWith": "Tự động: {name}",
+    "none": "Chưa có tài khoản chính thức cho nền tảng này",
+    "notConnected": "chưa thiết lập xong",
+    "readonly": "Chỉ chủ công ty, IT hoặc người phụ trách phân hệ này mới có thể thay đổi.",
+    "saveFailed": "Lưu thất bại, vui lòng thử lại.",
+    "zaloIdHint": "Zalo ID bên dưới phải là ID người dùng mà nhân viên nhận được sau khi quan tâm Zalo OA đã chọn ở trên; đổi OA thì cần nhập lại."
   }
 }

@@ -12510,5 +12510,16 @@
     "migrationNote": "各模組原本的設定仍照常運作；之後的更新會把它們搬到這裡，並讓各模組改從這裡選用帳號。",
     "zaloRefreshHint": "填寫 App ID、Secret Key、Refresh Token 後，之後可自動更新 Access Token。",
     "updated": "更新於 {time}"
+  },
+  "ChannelPicker": {
+    "title": "使用哪個官方帳號",
+    "manage": "管理官方帳號",
+    "auto": "自動（依官方帳號設定）",
+    "autoWith": "自動：{name}",
+    "none": "尚未建立此平台的官方帳號",
+    "notConnected": "未完成設定",
+    "readonly": "只有公司負責人、IT 或本模組負責人可以更改。",
+    "saveFailed": "儲存失敗，請再試一次。",
+    "zaloIdHint": "下方填寫的 Zalo ID 必須是員工關注「上面選定的 Zalo OA」後取得的用戶 ID；換了 OA 要重新填寫。"
   }
 }

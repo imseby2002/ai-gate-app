@@ -1,5 +1,6 @@
 'use client'
 
+import { ChannelAccountPicker } from '@/components/channels/ChannelAccountPicker'
 import { useState, useEffect, useCallback, useRef, ReactNode, type ChangeEvent } from 'react'
 import Link from 'next/link'
 import { useTranslations, useLocale } from 'next-intl'
@@ -1649,8 +1650,8 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
             <label className="flex items-center gap-1 cursor-pointer">
               <input type="checkbox" checked={notifyPrefs.email} onChange={() => toggleNotifyPref('email')} />Email
             </label>
-            <span className="text-gray-300 ml-auto">{t('tokenSetInCsHint')}</span>
           </div>
+          <ChannelAccountPicker module="hr" platforms={['telegram', 'zalo_oa']} />
           {notifs.length === 0 ? (
             <p className="text-xs text-gray-400 py-2 text-center">{t('noNotifications')}</p>
           ) : (
