@@ -4502,8 +4502,11 @@
       "KIOSK_LOGIN_FAILED": "Kiosk đăng nhập thất bại, vui lòng liên hệ nhân viên",
       "KIOSK_LOGIN_NOT_CONFIGURED": "Kiosk chưa được cài tài khoản cửa hàng, vui lòng liên hệ nhân viên",
       "STORE_NOT_FOUND": "Không tìm thấy cửa hàng, vui lòng liên hệ nhân viên",
-      "CASH_METHOD_NOT_FOUND": "Chưa hỗ trợ thanh toán tại quầy, vui lòng liên hệ nhân viên"
-    }
+      "CASH_METHOD_NOT_FOUND": "Chưa hỗ trợ thanh toán tại quầy, vui lòng liên hệ nhân viên",
+      "PRINT_ORDER_FAILED": "Không tạo được đơn, vui lòng liên hệ nhân viên"
+    },
+    "donePrintedPayAtCounter": "Vui lòng mang phiếu đến quầy để thanh toán và nhận món",
+    "printFailed": "In phiếu thất bại, vui lòng ghi lại mã đơn và báo nhân viên"
   },
   "Apply": {
     "applyTitle": "Đơn ứng tuyển",

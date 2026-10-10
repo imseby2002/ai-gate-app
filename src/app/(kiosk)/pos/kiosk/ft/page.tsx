@@ -25,6 +25,8 @@ const KEY_STORAGE = 'ft_kiosk_key'
 const DEFAULT_LOCALE = 'vi'
 const IDLE_MS = 120_000
 const DONE_SECONDS = 30
+/** 點單機本機的 pos-bridge（列印模式用） */
+const BRIDGE_URL = 'http://localhost:3002'
 
 const LANGS = [
   { code: 'vi', label: 'Tiếng Việt', flag: '🇻🇳' },
@@ -61,6 +63,7 @@ function KioskInner() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState<FtOrderResult | null>(null)
+  const [printFailed, setPrintFailed] = useState(false)
   const [countdown, setCountdown] = useState(DONE_SECONDS)
   const lastActivity = useRef(Date.now())
 
@@ -116,6 +119,7 @@ function KioskInner() {
     setMemberPhone(null)
     setError('')
     setResult(null)
+    setPrintFailed(false)
     setActiveCat(menu?.categories[0]?.id ?? '')
     switchLocale(DEFAULT_LOCALE)
     if (deviceKey) loadMenu(deviceKey)
@@ -206,6 +210,22 @@ function KioskInner() {
     setStep('pay')
   }
 
+  // 點單機那台印給客人、吧檯那台印給店員；bridge 沒開或印表機故障時，畫面仍顯示號碼
+  async function printTicket(ticket: NonNullable<FtOrderResult['print']>) {
+    try {
+      const res = await fetch(`${BRIDGE_URL}/print/ticket`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticket }),
+        signal: AbortSignal.timeout(15000),
+      })
+      const data = await res.json().catch(() => null)
+      setPrintFailed(!res.ok || !data?.ok)
+    } catch {
+      setPrintFailed(true)
+    }
+  }
+
   async function placeOrder() {
     setBusy(true)
     setError('')
@@ -217,8 +237,10 @@ function KioskInner() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'UNKNOWN')
-      setResult(data as FtOrderResult)
+      const order = data as FtOrderResult
+      setResult(order)
       setStep('done')
+      if (order.print) printTicket(order.print)
     } catch (e) {
       setError(errorText(e instanceof Error ? e.message : 'UNKNOWN'))
     } finally {
@@ -328,7 +350,8 @@ function KioskInner() {
           <p className="font-mono text-6xl font-bold tracking-widest">{result.orderNo}</p>
         </div>
         <p className="text-3xl font-semibold">{formatVnd(result.amount)}</p>
-        <p className="max-w-xl text-2xl">{t('donePayAtCounter')}</p>
+        <p className="max-w-xl text-2xl">{result.print ? t('donePrintedPayAtCounter') : t('donePayAtCounter')}</p>
+        {printFailed && <p className="max-w-xl rounded-2xl bg-amber-100 px-6 py-3 text-xl text-amber-900">{t('printFailed')}</p>}
         <Button size="lg" variant="secondary" className="mt-4 h-14 px-10 text-lg" onClick={reset}>
           {t('doneBack', { s: Math.max(countdown, 0) })}
         </Button>

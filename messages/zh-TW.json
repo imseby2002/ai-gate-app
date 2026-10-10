@@ -4595,8 +4595,11 @@
       "KIOSK_LOGIN_FAILED": "點單機登入失敗，請洽櫃台人員",
       "KIOSK_LOGIN_NOT_CONFIGURED": "點單機尚未設定門市帳號，請洽櫃台人員",
       "STORE_NOT_FOUND": "找不到門市資料，請洽櫃台人員",
-      "CASH_METHOD_NOT_FOUND": "門市未開放櫃台付款，請洽櫃台人員"
-    }
+      "CASH_METHOD_NOT_FOUND": "門市未開放櫃台付款，請洽櫃台人員",
+      "PRINT_ORDER_FAILED": "無法建立訂單，請洽櫃台人員"
+    },
+    "donePrintedPayAtCounter": "請拿取單據到櫃台結帳並取餐",
+    "printFailed": "單據列印失敗，請記下取餐號碼並告知櫃台人員"
   },
   "Apply": {
     "applyTitle": "應徵申請",

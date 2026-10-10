@@ -19,10 +19,11 @@ function parseSelections(v: unknown): FtSelection[] | null {
   return out
 }
 
-/** 櫃台付款（CASH → iPOS COD）下單，經會員 APP 後端送 iPOS */
+/** 下單：一般模式經會員 APP 後端送 iPOS（CASH → COD）；列印模式只存本地訂單並回傳單據 */
 export async function POST(req: Request) {
-  const device = resolveDevice(deviceKeyFrom(req))
-  if (!device) return NextResponse.json({ error: 'INVALID_DEVICE' }, { status: 403 })
+  const deviceKey = deviceKeyFrom(req)
+  const device = resolveDevice(deviceKey)
+  if (!device || !deviceKey) return NextResponse.json({ error: 'INVALID_DEVICE' }, { status: 403 })
 
   const body = await req.json().catch(() => null)
   const selections = parseSelections(body?.selections)
@@ -40,7 +41,7 @@ export async function POST(req: Request) {
     dineOption: body?.dineOption === 'takeaway' ? 'takeaway' : 'dine_in',
   }
   try {
-    return NextResponse.json(await placeOrder(device, request))
+    return NextResponse.json(await placeOrder(device, request, deviceKey))
   } catch (err) {
     const e = err instanceof FtError ? err : new FtError('UNKNOWN')
     return NextResponse.json({ error: e.code }, { status: e.status })

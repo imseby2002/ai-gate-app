@@ -8,12 +8,30 @@
  *   PORT=3002
  *   DEVICE_KEY=終端 device_key
  *   AIGATE_URL=https://work.im-tourist.com
+ *   KIOSK_PRINTER=點單機印表機的 CUPS 名稱（印給客人）
+ *   BAR_PRINTER=吧檯印表機的 CUPS 名稱（印給店員）
+ *   CHROMIUM_BIN=chromium（單據轉 PDF 用，越南文字才不會亂碼）
+ *   PAPER_WIDTH_MM=80
  */
 import express from 'express'
 import fs from 'fs'
+import os from 'os'
 import path from 'path'
+import { execFile } from 'child_process'
+import { promisify } from 'util'
 
+const run = promisify(execFile)
 const app = express()
+
+// 點單頁在 https 網域，呼叫本機 http://localhost 需要 CORS 與 Private Network Access 標頭
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*')
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  res.setHeader('Access-Control-Allow-Private-Network', 'true')
+  if (req.method === 'OPTIONS') return res.sendStatus(204)
+  next()
+})
 app.use(express.json())
 
 const PORT = process.env.PORT || 3002
@@ -61,7 +79,89 @@ function formatReceipt({ order, store }) {
   ].filter(Boolean).join('\n')
 }
 
-app.get('/health', (_, res) => res.json({ ok: true, printer: 'stub' }))
+// ── 點單機列印模式：客人聯 + 吧檯聯 ─────────────────────────
+
+const KIOSK_PRINTER = process.env.KIOSK_PRINTER || ''
+const BAR_PRINTER = process.env.BAR_PRINTER || ''
+const CHROMIUM_BIN = process.env.CHROMIUM_BIN || 'chromium'
+const PAPER_WIDTH_MM = Number(process.env.PAPER_WIDTH_MM || 80)
+
+const vnd = new Intl.NumberFormat('vi-VN')
+const money = n => `${vnd.format(Math.round(n))}₫`
+const esc = s =>
+  String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
+
+function ticketHtml(t, copy) {
+  const dine = t.dineOption === 'takeaway' ? 'MANG ĐI' : 'TẠI CHỖ'
+  const time = new Date(t.createdAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
+  const rows = t.lines
+    .map(
+      l => `<tr><td class="q">${l.qty}×</td><td>${esc(l.name)}${l.detail ? `<div class="d">${esc(l.detail)}</div>` : ''}</td><td class="r">${money(l.lineTotal)}</td></tr>`
+    )
+    .join('')
+  // 長度依品項數估算（Chrome 的 PDF 不支援 auto 高度）
+  const heightMm = 95 + t.lines.length * 14
+  const footer =
+    copy === 'bar'
+      ? '<p class="big">CHƯA THANH TOÁN</p><p>Thu tiền tại quầy, nhập đơn vào FABI</p>'
+      : '<p class="big">Vui lòng thanh toán tại quầy</p><p>Please pay at the counter · 請至櫃台結帳</p>'
+  return `<!doctype html><html><head><meta charset="utf-8"><style>
+@page { size: ${PAPER_WIDTH_MM}mm ${heightMm}mm; margin: 3mm }
+body { font-family: "Noto Sans", "DejaVu Sans", sans-serif; font-size: 12pt; margin: 0 }
+h1 { font-size: 13pt; margin: 0 0 2mm; text-align: center }
+.no { font-size: 40pt; font-weight: 700; text-align: center; margin: 1mm 0 }
+.tag { text-align: center; font-weight: 700; border: 2px solid #000; padding: 1mm; margin: 1mm 0 }
+table { width: 100%; border-collapse: collapse; margin-top: 2mm }
+td { vertical-align: top; padding: 1mm 0; border-bottom: 1px dashed #000 }
+.q { width: 9mm; font-weight: 700 } .r { text-align: right; white-space: nowrap }
+.d { font-size: 9.5pt } .tot { font-size: 15pt; font-weight: 700; text-align: right; margin-top: 2mm }
+p { margin: 1mm 0; text-align: center; font-size: 10pt } .big { font-size: 13pt; font-weight: 700 }
+</style></head><body>
+<h1>${esc(t.storeName)}</h1>
+<div class="tag">${copy === 'bar' ? 'PHIẾU QUẦY · ' : ''}${dine}</div>
+<div class="no">#${esc(t.orderNo)}</div>
+<p>${esc(time)}${t.phone ? ` · TV ${esc(t.phone)}` : ''}</p>
+<table>${rows}</table>
+<div class="tot">${money(t.total)}</div>
+${footer}
+</body></html>`
+}
+
+async function printHtml(printer, html, label) {
+  if (!printer) {
+    console.log(`─── ${label}（未設定印表機，只印在畫面）───`)
+    console.log(html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim())
+    return { printer: null, mode: 'console-stub' }
+  }
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ticket-'))
+  const htmlFile = path.join(dir, 'ticket.html')
+  const pdfFile = path.join(dir, 'ticket.pdf')
+  try {
+    fs.writeFileSync(htmlFile, html)
+    await run(CHROMIUM_BIN, ['--headless', '--no-sandbox', '--no-pdf-header-footer', `--print-to-pdf=${pdfFile}`, `file://${htmlFile}`], { timeout: 20000 })
+    await run('lp', ['-d', printer, pdfFile], { timeout: 10000 })
+    return { printer, mode: 'cups' }
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true })
+  }
+}
+
+app.post('/print/ticket', async (req, res) => {
+  const t = req.body?.ticket
+  if (!t || !Array.isArray(t.lines)) return res.status(400).json({ ok: false, error: 'ticket required' })
+  const [kiosk, bar] = await Promise.allSettled([
+    printHtml(KIOSK_PRINTER, ticketHtml(t, 'customer'), 'CUSTOMER'),
+    printHtml(BAR_PRINTER, ticketHtml(t, 'bar'), 'BAR'),
+  ])
+  const result = r => (r.status === 'fulfilled' ? { ok: true, ...r.value } : { ok: false, error: String(r.reason?.message || r.reason) })
+  const out = { customer: result(kiosk), bar: result(bar) }
+  if (!out.customer.ok || !out.bar.ok) console.error('print/ticket failed', out)
+  res.status(out.customer.ok && out.bar.ok ? 200 : 502).json({ ok: out.customer.ok && out.bar.ok, ...out })
+})
+
+app.get('/health', (_, res) =>
+  res.json({ ok: true, kioskPrinter: KIOSK_PRINTER || null, barPrinter: BAR_PRINTER || null })
+)
 
 app.post('/print/receipt', async (req, res) => {
   try {
