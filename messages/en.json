@@ -12525,5 +12525,26 @@
     "saveFailed": "Save failed, please try again.",
     "zaloIdHint": "The Zalo IDs below must be the user IDs staff get after following the Zalo OA selected above; re-enter them if you switch OA.",
     "marketingPublishHint": "For platforms with an official account selected here (Facebook Page, Instagram, LINE broadcast, Zalo OA article), posts use that official account; it needs Page ID / IG User ID / OA ID filled in. Other platforms, and ones not selected, keep using the settings below."
+  },
+  "DesktopConnector": {
+    "title": "Desktop Connector (AdsPower)",
+    "desc": "Install AdsPower and the AI-GATE Connector on a Windows PC to auto-create browser profiles (with proxies) and open them from here. Posting is always clicked by you.",
+    "download": "Download Connector (Windows)",
+    "steps": "1. Install and sign in to AdsPower  2. Download and run the Connector  3. Click \"Generate pair code\" and enter it in the Connector",
+    "smartscreen": "If Windows shows \"Windows protected your PC\", click \"More info\" → \"Run anyway\".",
+    "genCode": "Generate pair code",
+    "codeHint": "Enter this code in the Connector window. Valid for {min} minutes, single use.",
+    "devices": "Paired computers",
+    "noDevices": "No computers paired yet",
+    "lastSeen": "Last seen: {time}",
+    "neverSeen": "Not connected yet",
+    "revoke": "Unpair",
+    "revokeConfirm": "Unpair this computer?",
+    "revoked": "Unpaired",
+    "sync": "Sync profiles",
+    "syncQueued": "Sync task sent. The Connector will create/update AdsPower profiles within seconds",
+    "openOnPc": "Open on PC",
+    "openQueued": "Open task sent. The browser will open on your PC",
+    "failed": "Action failed"
   }
 }

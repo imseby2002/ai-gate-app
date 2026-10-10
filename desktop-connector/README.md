@@ -4,21 +4,20 @@
 發布、互動一律由使用者自己操作；本程式不做無人值守的自動發文或養號。
 
 ## 需求
-- Windows 10/11
-- [Node.js 20 LTS 以上](https://nodejs.org/)
+- Windows 10/11（不需安裝 Node.js）
 - AdsPower（需可使用 Local API 的方案），並於「設定 → Local API」確認 API 狀態為成功
   - 若 AdsPower 開啟了 API 金鑰驗證，設定環境變數 `ADSPOWER_API_KEY`
   - 若 API 埠不是 50325，設定 `ADSPOWER_API=http://127.0.0.1:<埠>`
 
-## 安裝與配對
-1. 下載本資料夾（`desktop-connector/`）
-2. AI-GATE 網頁「社群矩陣 → 桌面連接器」按「產生配對碼」
-3. 在資料夾內開命令提示字元：
-   ```
-   npm run pair -- XXXX-XXXX
-   npm run status
-   ```
-4. 雙擊 `start.bat` 常駐執行（或 `npm start`）
+## 安裝與配對（客人）
+1. AI-GATE 網頁「社群矩陣 → 帳號」區塊按「下載連接器（Windows）」，取得 `AI-GATE-Connector.exe`
+2. 雙擊執行（未簽章，若出現 SmartScreen 請點「其他資訊 → 仍要執行」）
+3. 網頁按「產生配對碼」，在連接器視窗輸入 `XXXX-XXXX`，之後會自動常駐執行；下次雙擊即直接啟動
+
+## 打包（開發者）
+- `main` 上 `desktop-connector/**` 有變更時，GitHub Actions（`.github/workflows/desktop-connector.yml`）在 Windows 打包並上傳到 Release `connector-latest`
+- 本機：`npm install && npm run build:exe` → `dist/AI-GATE-Connector.exe`（Node 22 [Single Executable Applications](https://nodejs.org/api/single-executable-applications.html)）
+- 原始碼執行：`node src/index.mjs`（或 `pair <code>`／`run`／`status`），需 Node.js 22+
 
 ## 運作
 - 啟動時與每 10 分鐘：讀取 AI-GATE 的社群帳號＋綁定代理 → 在 AdsPower「AI-GATE」群組建立／更新設定檔（一帳號一設定檔、代理自動帶入）→ 回寫設定檔 ID
