@@ -39,12 +39,12 @@ async function loadLegacy(admin: ReturnType<typeof createAdminClient>, ownerId: 
   return c && Object.keys(c).length ? c : null
 }
 
-/** 只查公司官方帳號（不退回舊設定）：指定給 module 的已連線帳號，沒有則回 null */
-export async function findModuleChannelCredentials(
+/** 只查公司官方帳號（不退回舊設定）：指定給 module 的已連線帳號（名稱＋憑證），沒有則回 null */
+export async function findModuleChannelAccount(
   ownerId: string,
   legacyPlatform: string,
   module: ChannelModuleId,
-): Promise<Creds | null> {
+): Promise<{ name: string; credentials: Creds } | null> {
   const admin = createAdminClient()
   const platform = channelPlatformOf(legacyPlatform)
   if (!platform) return null
@@ -53,19 +53,29 @@ export async function findModuleChannelCredentials(
   const { data: binding } = await admin.from('channel_module_bindings').select('account_id')
     .eq('company_id', companyId).eq('module', module).eq('platform', platform).maybeSingle()
   if (binding?.account_id) {
-    const { data: bound } = await admin.from('channel_accounts').select('credentials')
+    const { data: bound } = await admin.from('channel_accounts').select('name, credentials')
       .eq('id', binding.account_id).eq('is_connected', true).maybeSingle()
-    if (bound) return (bound.credentials as Creds) ?? {}
+    if (bound) return { name: bound.name as string, credentials: (bound.credentials as Creds) ?? {} }
   }
   const { data } = await admin.from('channel_accounts')
-    .select('credentials')
+    .select('name, credentials')
     .eq('company_id', companyId)
     .eq('platform', platform)
     .eq('is_connected', true)
     .contains('modules', [module])
     .order('created_at')
     .limit(1)
-  return (data?.[0]?.credentials as Creds | undefined) ?? null
+  const row = data?.[0]
+  return row ? { name: row.name as string, credentials: (row.credentials as Creds) ?? {} } : null
+}
+
+/** 只查公司官方帳號（不退回舊設定）：指定給 module 的已連線帳號憑證，沒有則回 null */
+export async function findModuleChannelCredentials(
+  ownerId: string,
+  legacyPlatform: string,
+  module: ChannelModuleId,
+): Promise<Creds | null> {
+  return (await findModuleChannelAccount(ownerId, legacyPlatform, module))?.credentials ?? null
 }
 
 export async function loadChannelCredentials(
@@ -110,17 +120,23 @@ export async function loadChannelCredentials(
 
 // 行銷發文：公司官方帳號中選給行銷的帳號，轉成發文程式（publish.ts）使用的平台名稱與欄位。
 // 只回傳發文必要欄位齊全的平台；缺欄位的平台維持用行銷「平台設定」的舊憑證。
-export async function loadMarketingPublishOverrides(ownerId: string): Promise<Record<string, Creds>> {
-  const out: Record<string, Creds> = {}
+export async function loadMarketingPublishAccounts(ownerId: string): Promise<Record<string, { name: string; credentials: Creds }>> {
+  const out: Record<string, { name: string; credentials: Creds }> = {}
   const [fb, ig, line, zalo] = await Promise.all([
-    findModuleChannelCredentials(ownerId, 'messenger', 'marketing'),
-    findModuleChannelCredentials(ownerId, 'instagram', 'marketing'),
-    findModuleChannelCredentials(ownerId, 'line', 'marketing'),
-    findModuleChannelCredentials(ownerId, 'zalo', 'marketing'),
+    findModuleChannelAccount(ownerId, 'messenger', 'marketing'),
+    findModuleChannelAccount(ownerId, 'instagram', 'marketing'),
+    findModuleChannelAccount(ownerId, 'line', 'marketing'),
+    findModuleChannelAccount(ownerId, 'zalo', 'marketing'),
   ])
-  if (fb?.fb_page_access_token && fb.fb_page_id) out.Facebook = { page_access_token: fb.fb_page_access_token, page_id: fb.fb_page_id }
-  if (ig?.ig_access_token && ig.ig_user_id) out.Instagram = { access_token: ig.ig_access_token, ig_user_id: ig.ig_user_id }
-  if (line?.line_channel_access_token) out['LINE VOOM'] = { line_channel_access_token: line.line_channel_access_token }
-  if (zalo?.zalo_oa_access_token && zalo.zalo_oa_id) out.Zalo = { access_token: zalo.zalo_oa_access_token, oa_id: zalo.zalo_oa_id }
+  const f = fb?.credentials, i = ig?.credentials, l = line?.credentials, z = zalo?.credentials
+  if (f?.fb_page_access_token && f.fb_page_id) out.Facebook = { name: fb!.name, credentials: { page_access_token: f.fb_page_access_token, page_id: f.fb_page_id } }
+  if (i?.ig_access_token && i.ig_user_id) out.Instagram = { name: ig!.name, credentials: { access_token: i.ig_access_token, ig_user_id: i.ig_user_id } }
+  if (l?.line_channel_access_token) out['LINE VOOM'] = { name: line!.name, credentials: { line_channel_access_token: l.line_channel_access_token } }
+  if (z?.zalo_oa_access_token && z.zalo_oa_id) out.Zalo = { name: zalo!.name, credentials: { access_token: z.zalo_oa_access_token, oa_id: z.zalo_oa_id } }
   return out
+}
+
+export async function loadMarketingPublishOverrides(ownerId: string): Promise<Record<string, Creds>> {
+  const accounts = await loadMarketingPublishAccounts(ownerId)
+  return Object.fromEntries(Object.entries(accounts).map(([p, a]) => [p, a.credentials]))
 }

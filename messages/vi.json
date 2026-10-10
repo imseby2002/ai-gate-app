@@ -9398,7 +9398,10 @@
     "token": {
       "refreshing": "Đang tự làm mới token | token hiện tại hết hạn: {at}",
       "failed": "Lần tự làm mới gần nhất thất bại: {error} (hãy lấy và dán Refresh Token mới)"
-    }
+    },
+    "overridden": "Bài đăng trên nền tảng này đã dùng tài khoản chính thức \"{name}\" của công ty; cài đặt cũ bên dưới không còn được dùng.",
+    "overriddenFacebook": "Bài đăng Trang đã dùng tài khoản chính thức \"{name}\" của công ty; dữ liệu quảng cáo vẫn dùng cài đặt tài khoản quảng cáo bên dưới.",
+    "openChannels": "Mở Tài khoản chính thức"
   },
   "SocialPublish": {
     "imagePost": "Bài đăng hình ảnh",
