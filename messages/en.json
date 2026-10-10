@@ -12510,5 +12510,16 @@
     "migrationNote": "Each module's existing settings keep working for now; an upcoming update will move them here and let modules pick accounts from this page.",
     "zaloRefreshHint": "With App ID, Secret Key and Refresh Token filled in, the Access Token can be refreshed automatically later.",
     "updated": "Updated {time}"
+  },
+  "ChannelPicker": {
+    "title": "Which official account to use",
+    "manage": "Manage official accounts",
+    "auto": "Automatic (from official account settings)",
+    "autoWith": "Automatic: {name}",
+    "none": "No official account for this platform yet",
+    "notConnected": "setup incomplete",
+    "readonly": "Only the company owner, IT or this module's manager can change this.",
+    "saveFailed": "Save failed, please try again.",
+    "zaloIdHint": "The Zalo IDs below must be the user IDs staff get after following the Zalo OA selected above; re-enter them if you switch OA."
   }
 }

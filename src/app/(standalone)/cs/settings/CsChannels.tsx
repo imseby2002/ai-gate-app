@@ -9,6 +9,7 @@ import {
 import PlatformGuidePanel from '@/components/PlatformGuidePanel'
 import TokenRefreshStatus from '@/components/TokenRefreshStatus'
 import { CS_GUIDES } from '@/lib/platform-guides'
+import { ChannelAccountPicker } from '@/components/channels/ChannelAccountPicker'
 
 type Field = { key: string; label: string; placeholder: string; secret: boolean }
 type Platform = {
@@ -338,6 +339,7 @@ export function CsChannels({ ownerId, canSettings }: { ownerId: string; canSetti
           <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
         ) : (
           <div className="space-y-4">
+            <ChannelAccountPicker module="cs" platforms={['line_oa', 'zalo_oa', 'whatsapp_business', 'messenger', 'instagram', 'telegram']} />
             {PLATFORMS.map(p => {
               const st = status[p.id]
               const connected = !!st?.is_connected

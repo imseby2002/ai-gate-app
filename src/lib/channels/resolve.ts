@@ -1,7 +1,8 @@
 // 發送／收訊時取得官方帳號憑證（伺服器端）。
 // 舊程式以「帳號擁有者 ownerId + 平台代號」讀 social_platform_credentials；
 // 改為先找該公司在「官方帳號」設定、且指定給此模組的帳號，找不到再退回舊設定：
-//   1. 公司官方帳號中，平台相符、已連線、modules 含 module 的帳號（最早建立的那組）
+//   1. 模組在「使用哪個帳號」選定的帳號（channel_module_bindings）；
+//      沒選時用平台相符、已連線、modules 含 module 的帳號（最早建立的那組）
 //   2. 舊設定 social_platform_credentials（ownerId + 原平台代號）
 //   3. 公司官方帳號中，平台相符、已連線的任一帳號（未指定 module，或該模組尚未設定時）
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -49,6 +50,13 @@ export async function findModuleChannelCredentials(
   if (!platform) return null
   const companyId = await companyOfOwner(admin, ownerId)
   if (!companyId) return null
+  const { data: binding } = await admin.from('channel_module_bindings').select('account_id')
+    .eq('company_id', companyId).eq('module', module).eq('platform', platform).maybeSingle()
+  if (binding?.account_id) {
+    const { data: bound } = await admin.from('channel_accounts').select('credentials')
+      .eq('id', binding.account_id).eq('is_connected', true).maybeSingle()
+    if (bound) return (bound.credentials as Creds) ?? {}
+  }
   const { data } = await admin.from('channel_accounts')
     .select('credentials')
     .eq('company_id', companyId)
@@ -68,22 +76,31 @@ export async function loadChannelCredentials(
   const admin = createAdminClient()
   const platform = channelPlatformOf(legacyPlatform)
 
-  let accounts: { credentials: Creds; modules: string[] }[] = []
+  let accounts: { id: string; credentials: Creds; modules: string[] }[] = []
+  let boundId: string | null = null
   if (platform) {
     const companyId = await companyOfOwner(admin, ownerId)
     if (companyId) {
-      const { data } = await admin.from('channel_accounts')
-        .select('credentials, modules')
-        .eq('company_id', companyId)
-        .eq('platform', platform)
-        .eq('is_connected', true)
-        .order('created_at')
+      const [{ data }, { data: binding }] = await Promise.all([
+        admin.from('channel_accounts')
+          .select('id, credentials, modules')
+          .eq('company_id', companyId)
+          .eq('platform', platform)
+          .eq('is_connected', true)
+          .order('created_at'),
+        module
+          ? admin.from('channel_module_bindings').select('account_id')
+            .eq('company_id', companyId).eq('module', module).eq('platform', platform).maybeSingle()
+          : Promise.resolve({ data: null }),
+      ])
       accounts = (data ?? []) as typeof accounts
+      boundId = (binding?.account_id as string | undefined) ?? null
     }
   }
 
   if (module) {
-    const hit = accounts.find(a => a.modules?.includes(module))
+    // 模組明確選用的帳號優先，其次是有勾選此模組的帳號
+    const hit = accounts.find(a => a.id === boundId) ?? accounts.find(a => a.modules?.includes(module))
     if (hit) return hit.credentials ?? {}
   }
   const legacy = await loadLegacy(admin, ownerId, legacyPlatform)

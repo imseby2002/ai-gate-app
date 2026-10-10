@@ -1,5 +1,6 @@
 'use client'
 
+import { ChannelAccountPicker } from '@/components/channels/ChannelAccountPicker'
 import { useState, useEffect, useCallback, useRef, type ChangeEvent, type ReactNode } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
@@ -727,6 +728,7 @@ function DocModal({ doc, stores, onClose, onSaved }: { doc: Partial<Doc>; stores
 // ── 通知設定 Tab ──
 function SettingsTab() {
   const t = useTranslations('Affairs')
+  const tp = useTranslations('ChannelPicker')
   const [cfg, setCfg] = useState<AffairSettings | null>(null)
   const [saved, setSaved] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -769,13 +771,9 @@ function SettingsTab() {
         </p>
         <p>• <b>{t('zaloPersonalLabel')}</b>：{t('zaloPersonalDesc')}</p>
         <p>• <b>{t('customDefaultDaysLabel')}</b>：{t('customDefaultDaysDesc')}</p>
-        <p className="pt-1">
-          <Link href="/cs/settings" className="inline-flex items-center gap-1 text-indigo-700 underline hover:text-indigo-900">
-            {t('zaloOaTokenLinkLabel')}
-            <ExternalLink className="h-3 w-3" />
-          </Link>
-        </p>
       </div>
+
+      <ChannelAccountPicker module="affairs" platforms={['zalo_oa', 'telegram']} hint={tp('zaloIdHint')} />
 
       {/* 角色管道設定 */}
       <div className="grid gap-3">
