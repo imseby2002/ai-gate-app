@@ -1,4 +1,4 @@
-// POST /api/connector/tasks/[id] — 連接器回報任務結果；copilot_post 完成時寫入社群矩陣紀錄
+// POST /api/connector/tasks/[id] — 連接器回報任務結果；copilot_post 確認已發布時寫入社群矩陣紀錄
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireConnectorDevice } from '@/lib/connector/auth'
@@ -26,8 +26,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (error) return NextResponse.json({ error: `回報失敗：${error.message}` }, { status: 500 })
   if (!task) return NextResponse.json({ error: '找不到此任務或狀態不符' }, { status: 404 })
 
-  // 方案 A：客人已在瀏覽器按下發布 → 記錄發文
-  if (task.type === 'copilot_post' && status === 'done') {
+  // 方案 A：連接器只負責開啟社團並帶入文案；回報確認已發布（posted）才記錄發文
+  if (task.type === 'copilot_post' && status === 'done' && result.posted === true) {
     const p = (task.payload ?? {}) as { group_name?: string; group_url?: string; copy_title?: string }
     const postUrl = typeof result.post_url === 'string' ? result.post_url : ''
     await admin.from('marketing_social_logs').insert({

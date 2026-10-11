@@ -1,5 +1,6 @@
-// 任務處理：同步設定檔、開啟瀏覽器。copilot_post（帶入文案）於下一版加入。
+// 任務處理：同步設定檔、開啟瀏覽器、Copilot 帶入文案（發布由使用者自己按）。
 import { createFields, updateFields } from './adspower.mjs'
+import { openTab, copyToClipboard } from './copilot.mjs'
 
 async function ensureGroupId(ads, cfg) {
   if (cfg.adspowerGroupId) return cfg.adspowerGroupId
@@ -49,8 +50,20 @@ export async function handleTask(task, ctx) {
       ctx.log(`已開啟 ${task.account.account_name} 的瀏覽器`)
       return { opened: profileId }
     }
-    case 'copilot_post':
-      throw new Error('此版本連接器尚未支援 Copilot 帶入文案，請更新連接器')
+    case 'copilot_post': {
+      const profileId = task.account?.adspower_profile_id
+      if (!profileId) throw new Error('此帳號尚未建立 AdsPower 設定檔')
+      const { group_url: url, group_name: groupName, text } = task.payload ?? {}
+      if (!/^https:\/\//.test(url ?? '')) throw new Error('目標社團網址無效')
+      const started = await ctx.ads.startProfile(profileId)
+      const wsUrl = started?.ws?.puppeteer
+      if (!wsUrl) throw new Error('AdsPower 未回傳瀏覽器連線位址（ws.puppeteer）')
+      await openTab(wsUrl, url)
+      const copied = text ? await copyToClipboard(text) : false
+      ctx.log(`已在 ${task.account.account_name} 的瀏覽器開啟「${groupName || url}」` +
+        (copied ? '，文案已複製：請在發文框貼上（Ctrl+V）並自行按「發布」' : '，文案複製失敗，請從 AI-GATE 網頁複製'))
+      return { opened: true, copied, posted: false }
+    }
     default:
       throw new Error(`不支援的任務類型：${task.type}`)
   }

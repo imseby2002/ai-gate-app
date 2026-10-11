@@ -12545,6 +12545,12 @@
     "syncQueued": "Sync task sent. The Connector will create/update AdsPower profiles within seconds",
     "openOnPc": "Open on PC",
     "openQueued": "Open task sent. The browser will open on your PC",
-    "failed": "Action failed"
+    "failed": "Action failed",
+    "copilotAccount": "Desktop Connector posting account",
+    "copilotPick": "Choose an account (profile synced)",
+    "copilotNone": "No synced accounts yet. Click \"Sync profiles\" on the Accounts tab",
+    "copilotOnPc": "Prefill on PC",
+    "copilotNeedAccount": "Choose a Desktop Connector posting account first",
+    "copilotQueued": "Sent: your PC will open \"{name}\" and copy the text. Paste it and click Post yourself"
   }
 }

@@ -12545,6 +12545,12 @@
     "syncQueued": "已送出同步任務，連接器會在數秒內建立／更新 AdsPower 設定檔",
     "openOnPc": "在電腦開啟",
     "openQueued": "已送出開啟任務，瀏覽器將在電腦上開啟",
-    "failed": "操作失敗"
+    "failed": "操作失敗",
+    "copilotAccount": "桌面連接器發文帳號",
+    "copilotPick": "選擇帳號（需已同步設定檔）",
+    "copilotNone": "尚無已同步的帳號，請到「帳號」頁按「同步設定檔」",
+    "copilotOnPc": "在電腦帶入",
+    "copilotNeedAccount": "請先選擇桌面連接器發文帳號",
+    "copilotQueued": "已送出：電腦將開啟「{name}」並複製文案，請貼上後自行按發布"
   }
 }
