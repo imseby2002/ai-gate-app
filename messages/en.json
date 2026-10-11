@@ -12553,7 +12553,7 @@
     "copilotNeedAccount": "Choose a Desktop Connector posting account first",
     "copilotQueued": "Sent: your PC will open \"{name}\" and copy the text. Paste it and click Post yourself",
     "ownAdspower": "Option 1: Your own AdsPower",
-    "ownAdspowerDesc": "No AdsPower yet? Sign up and download with this link. Your plan must include the Local API.",
+    "ownAdspowerDesc": "No AdsPower yet? Sign up and download with this link. Requires the Professional plan or higher (the Free plan has no Local API).",
     "ownAdspowerLink": "Sign up / Download AdsPower"
   }
 }

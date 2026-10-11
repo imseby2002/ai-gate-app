@@ -12460,7 +12460,7 @@
     "copilotNeedAccount": "Hãy chọn tài khoản đăng bài qua Connector trước",
     "copilotQueued": "Đã gửi: máy tính sẽ mở \"{name}\" và sao chép nội dung. Hãy dán và tự bấm Đăng",
     "ownAdspower": "Phương án 1: AdsPower của bạn",
-    "ownAdspowerDesc": "Chưa có AdsPower? Hãy đăng ký và tải về qua liên kết này. Gói đăng ký cần hỗ trợ Local API.",
+    "ownAdspowerDesc": "Chưa có AdsPower? Hãy đăng ký và tải về qua liên kết này. Cần gói Professional trở lên (gói Miễn phí không có Local API).",
     "ownAdspowerLink": "Đăng ký / Tải AdsPower"
   }
 }

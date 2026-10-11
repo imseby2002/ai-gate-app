@@ -12553,7 +12553,7 @@
     "copilotNeedAccount": "請先選擇桌面連接器發文帳號",
     "copilotQueued": "已送出：電腦將開啟「{name}」並複製文案，請貼上後自行按發布",
     "ownAdspower": "方案一：自備 AdsPower",
-    "ownAdspowerDesc": "還沒有 AdsPower？請用此連結註冊並下載，訂閱需可使用 Local API 的方案。",
+    "ownAdspowerDesc": "還沒有 AdsPower？請用此連結註冊並下載。需訂閱專業版以上（免費版不含 Local API）。",
     "ownAdspowerLink": "註冊／下載 AdsPower"
   }
 }
