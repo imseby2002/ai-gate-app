@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { Monitor, Download, KeyRound, RefreshCw, Trash2, Copy, Check } from 'lucide-react'
+import { Monitor, Download, KeyRound, RefreshCw, Trash2, Copy, Check, Eye } from 'lucide-react'
 
 export const CONNECTOR_DOWNLOAD_URL =
   'https://github.com/imseby2002/ai-gate-app/releases/download/connector-latest/AI-GATE-Connector.exe'
@@ -127,6 +127,7 @@ export function ConnectorPanel({ showToast }: { showToast: Toast }) {
               {t('ownAdspowerLink')}
             </a>
           </div>
+          <ManagedAdspower showToast={showToast} />
           <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1">{t('smartscreen')}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 shrink-0">
@@ -195,6 +196,125 @@ export function ConnectorPanel({ showToast }: { showToast: Toast }) {
           </ul>
         )}
       </div>
+    </div>
+  )
+}
+
+type Managed = {
+  status: 'pending' | 'active' | 'rejected' | 'revoked'
+  login_account: string | null
+  group_name: string | null
+  has_password: boolean
+  password: string | null
+} | null
+
+// 方案二：AI-GATE 代管 AdsPower（申請 → 管理員開通後顯示成員登入資訊）
+function ManagedAdspower({ showToast }: { showToast: Toast }) {
+  const t = useTranslations('DesktopConnector')
+  const [managed, setManaged] = useState<Managed>(null)
+  const [loaded, setLoaded] = useState(false)
+  const [applying, setApplying] = useState(false)
+  const [contact, setContact] = useState('')
+  const [note, setNote] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  const load = async (reveal = false) => {
+    const res = await fetch(`/api/marketing/connector/managed${reveal ? '?reveal=1' : ''}`)
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      if (reveal) showToast(`${t('failed')}：${data.error || res.status}`, 'error')
+      return
+    }
+    setManaged(data.managed ?? null)
+    setLoaded(true)
+  }
+
+  useEffect(() => {
+    void load()
+  }, [])
+
+  const apply = async () => {
+    setBusy(true)
+    try {
+      const res = await fetch('/api/marketing/connector/managed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contact, note }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`)
+      showToast(t('managedApplied'), 'success')
+      setApplying(false)
+      await load()
+    } catch (e) {
+      showToast(`${t('failed')}：${(e as Error).message}`, 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (!loaded) return null
+  const status = managed?.status
+
+  return (
+    <div className="mt-2 text-xs">
+      <span className="font-semibold">{t('managedTitle')}</span>
+      {status === 'active' ? (
+        <div className="mt-1 p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900 space-y-1">
+          <div className="text-emerald-700 dark:text-emerald-300">{t('managedActive')}</div>
+          <div>{t('managedAccount')}：<span className="font-mono select-all">{managed?.login_account}</span></div>
+          <div className="flex items-center gap-1.5">
+            <span>{t('managedPassword')}：</span>
+            {managed?.password ? (
+              <span className="font-mono select-all">{managed.password}</span>
+            ) : managed?.has_password ? (
+              <button onClick={() => load(true)} className="inline-flex items-center gap-1 text-indigo-600 hover:underline">
+                <Eye className="h-3 w-3" />{t('managedReveal')}
+              </button>
+            ) : (
+              <span className="text-muted-foreground">{t('managedNoPassword')}</span>
+            )}
+          </div>
+          <div>{t('managedGroup')}：<span className="font-mono">{managed?.group_name}</span></div>
+          <div className="text-muted-foreground">
+            {t('managedSteps')}{' '}
+            <a href={ADSPOWER_SIGNUP_URL} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">
+              {t('managedDownload')}
+            </a>
+          </div>
+        </div>
+      ) : status === 'pending' ? (
+        <span className="text-muted-foreground">：{t('managedPending')}</span>
+      ) : applying ? (
+        <div className="mt-1 flex flex-col sm:flex-row gap-1.5">
+          <input
+            value={contact}
+            onChange={e => setContact(e.target.value)}
+            placeholder={t('managedContact')}
+            className="px-2 py-1 rounded-lg border border-border bg-background text-xs sm:w-56"
+          />
+          <input
+            value={note}
+            onChange={e => setNote(e.target.value)}
+            placeholder={t('managedNote')}
+            className="px-2 py-1 rounded-lg border border-border bg-background text-xs flex-1"
+          />
+          <button
+            onClick={apply}
+            disabled={busy || !contact.trim()}
+            className="px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold disabled:opacity-50"
+          >
+            {t('managedSubmit')}
+          </button>
+        </div>
+      ) : (
+        <>
+          <span className="text-muted-foreground">：{status === 'rejected' || status === 'revoked' ? t('managedClosed') : t('managedDesc')}</span>{' '}
+          <button onClick={() => setApplying(true)} className="text-indigo-600 hover:underline font-medium">
+            {t('managedApply')}
+          </button>
+        </>
+      )}
     </div>
   )
 }

@@ -12461,6 +12461,23 @@
     "copilotQueued": "Đã gửi: máy tính sẽ mở \"{name}\" và sao chép nội dung. Hãy dán và tự bấm Đăng",
     "ownAdspower": "Phương án 1: AdsPower của bạn",
     "ownAdspowerDesc": "Chưa có AdsPower? Hãy đăng ký và tải về qua liên kết này. Cần gói Professional trở lên (gói Miễn phí không có Local API).",
-    "ownAdspowerLink": "Đăng ký / Tải AdsPower"
+    "ownAdspowerLink": "Đăng ký / Tải AdsPower",
+    "managedTitle": "Phương án 2: AdsPower do AI-GATE quản lý",
+    "managedDesc": "Không muốn tự đăng ký? AI-GATE cung cấp tài khoản thành viên AdsPower riêng, chỉ thấy hồ sơ trình duyệt của bạn.",
+    "managedApply": "Đăng ký",
+    "managedContact": "Liên hệ (LINE / điện thoại / Email)",
+    "managedNote": "Mô tả nhu cầu (tùy chọn, ví dụ số lượng tài khoản)",
+    "managedSubmit": "Gửi đăng ký",
+    "managedApplied": "Đã gửi đăng ký. Thông tin đăng nhập sẽ hiện ở đây sau khi quản trị viên kích hoạt",
+    "managedPending": "Đã gửi đăng ký, đang chờ quản trị viên kích hoạt",
+    "managedClosed": "Tài khoản quản lý trước đó đã kết thúc, bạn có thể đăng ký lại.",
+    "managedActive": "Tài khoản quản lý đã kích hoạt",
+    "managedAccount": "Tài khoản đăng nhập AdsPower",
+    "managedPassword": "Mật khẩu",
+    "managedReveal": "Hiện mật khẩu",
+    "managedNoPassword": "Quản trị viên sẽ cung cấp riêng",
+    "managedGroup": "Nhóm riêng",
+    "managedSteps": "Hãy tải và cài ứng dụng AdsPower, đăng nhập bằng tài khoản trên (không cần đăng ký gói), rồi chạy và ghép nối Connector.",
+    "managedDownload": "Tải AdsPower"
   }
 }

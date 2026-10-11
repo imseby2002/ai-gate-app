@@ -12554,6 +12554,23 @@
     "copilotQueued": "Sent: your PC will open \"{name}\" and copy the text. Paste it and click Post yourself",
     "ownAdspower": "Option 1: Your own AdsPower",
     "ownAdspowerDesc": "No AdsPower yet? Sign up and download with this link. Requires the Professional plan or higher (the Free plan has no Local API).",
-    "ownAdspowerLink": "Sign up / Download AdsPower"
+    "ownAdspowerLink": "Sign up / Download AdsPower",
+    "managedTitle": "Option 2: AdsPower managed by AI-GATE",
+    "managedDesc": "Don't want your own subscription? AI-GATE provides a dedicated AdsPower member account that only sees your own browser profiles.",
+    "managedApply": "Apply",
+    "managedContact": "Contact (LINE / phone / email)",
+    "managedNote": "Details (optional, e.g. number of accounts)",
+    "managedSubmit": "Submit",
+    "managedApplied": "Application sent. Login details will appear here once an admin activates it",
+    "managedPending": "Application sent, waiting for admin activation",
+    "managedClosed": "Your previous managed account has ended. You can apply again.",
+    "managedActive": "Managed account active",
+    "managedAccount": "AdsPower login",
+    "managedPassword": "Password",
+    "managedReveal": "Show password",
+    "managedNoPassword": "Provided separately by the admin",
+    "managedGroup": "Dedicated group",
+    "managedSteps": "Download and install the AdsPower client, sign in with the account above (no subscription needed), then run and pair the Connector.",
+    "managedDownload": "Download AdsPower"
   }
 }

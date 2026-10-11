@@ -12554,6 +12554,23 @@
     "copilotQueued": "已送出：電腦將開啟「{name}」並複製文案，請貼上後自行按發布",
     "ownAdspower": "方案一：自備 AdsPower",
     "ownAdspowerDesc": "還沒有 AdsPower？請用此連結註冊並下載。需訂閱專業版以上（免費版不含 Local API）。",
-    "ownAdspowerLink": "註冊／下載 AdsPower"
+    "ownAdspowerLink": "註冊／下載 AdsPower",
+    "managedTitle": "方案二：AI-GATE 代管 AdsPower",
+    "managedDesc": "不想自己訂閱？由 AI-GATE 提供專屬的 AdsPower 成員帳號，只看得到您自己的瀏覽器環境。",
+    "managedApply": "申請代管",
+    "managedContact": "聯絡方式（LINE／電話／Email）",
+    "managedNote": "需求說明（選填，例如帳號數量）",
+    "managedSubmit": "送出申請",
+    "managedApplied": "已送出申請，管理員開通後會顯示登入資訊",
+    "managedPending": "已送出申請，等待管理員開通",
+    "managedClosed": "先前的代管已結束，可重新申請。",
+    "managedActive": "代管帳號已開通",
+    "managedAccount": "AdsPower 登入帳號",
+    "managedPassword": "密碼",
+    "managedReveal": "顯示密碼",
+    "managedNoPassword": "由管理員另行提供",
+    "managedGroup": "專屬分組",
+    "managedSteps": "請下載並安裝 AdsPower 用戶端，以上述帳號登入（不需另外訂閱），再執行連接器並配對。",
+    "managedDownload": "下載 AdsPower"
   }
 }
