@@ -12492,6 +12492,10 @@
     "managedSuspended": "Tài khoản quản lý đã tạm dừng (chưa gia hạn). Nạp điểm và chọn gói để kích hoạt lại.",
     "managedReactivate": "Kích hoạt lại (trừ {total} điểm)",
     "managedReactivated": "Đã kích hoạt lại",
-    "managedBillingNote": "1 điểm = 1 USD. Khi kích hoạt sẽ trừ trước một kỳ; trả tháng gia hạn mỗi 30 ngày, trả năm mỗi 365 ngày."
+    "managedBillingNote": "1 điểm = 1 USD. Khi kích hoạt sẽ trừ trước một kỳ; trả tháng gia hạn mỗi 30 ngày, trả năm mỗi 365 ngày.",
+    "companyManagedTitle": "AdsPower dùng chung của công ty (quản lý)",
+    "companyManagedPlan": "Công ty bạn dùng chung {n} hồ sơ · {seats} chỗ thành viên, hiệu lực đến {date}",
+    "companyManagedSuspended": "AdsPower dùng chung của công ty đã tạm dừng. Hãy liên hệ quản trị viên công ty hoặc bộ phận hỗ trợ AI-GATE.",
+    "companyManagedNoSeat": "Bạn chưa được chỉ định chỗ thành viên AdsPower. Hãy liên hệ quản trị viên công ty."
   }
 }

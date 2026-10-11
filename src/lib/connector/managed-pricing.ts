@@ -23,16 +23,33 @@ export function isCycle(c: unknown): c is BillingCycle {
 
 const round2 = (n: number) => Math.round(n * 100) / 100
 
-/** 換算每月費用（累進計價） */
-export function monthlyPrice(envs: number, cycle: BillingCycle): number {
-  let total = MEMBER_FEE
+/** 環境費（累進計價，每月）；超過最後一級（200）的部分沿用最後一級單價 */
+export function envMonthlyFee(envs: number, cycle: BillingCycle): number {
+  const tiers = TIERS[cycle]
+  let total = 0
   let prev = 0
-  for (const [cap, rate] of TIERS[cycle]) {
+  for (const [cap, rate] of tiers) {
     if (envs <= prev) break
     total += (Math.min(envs, cap) - prev) * rate
     prev = cap
   }
-  return round2(total)
+  if (envs > prev) total += (envs - prev) * tiers[tiers.length - 1][1]
+  return total
+}
+
+/** 換算每月費用（1 席成員＋環境費） */
+export function monthlyPrice(envs: number, cycle: BillingCycle): number {
+  return round2(MEMBER_FEE + envMonthlyFee(envs, cycle))
+}
+
+/** 公司版每月費用：成員席次 × 3＋環境費 */
+export function companyMonthlyPrice(envs: number, seats: number, cycle: BillingCycle): number {
+  return round2(MEMBER_FEE * seats + envMonthlyFee(envs, cycle))
+}
+
+/** 公司版每期扣款金額 */
+export function companyPeriodPrice(envs: number, seats: number, cycle: BillingCycle): number {
+  return round2(companyMonthlyPrice(envs, seats, cycle) * (cycle === 'annual' ? 12 : 1))
 }
 
 /** 每期扣款金額：月付 1 個月、年付 12 個月 */

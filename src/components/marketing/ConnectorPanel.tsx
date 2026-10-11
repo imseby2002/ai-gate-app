@@ -216,6 +216,15 @@ type Managed = {
   next_billing_cycle: BillingCycle | null
 } | null
 
+type CompanyManaged = {
+  status: 'active' | 'suspended'
+  env_quota: number
+  member_seats: number
+  paid_until: string | null
+  group_name: string | null
+  seat: { login_account: string; has_password: boolean; password: string | null } | null
+} | null
+
 // 客人自購 AdsPower 的每月價格（月付；年付為 6 折），用於顯示代管省多少
 const SELF_MONTHLY: Record<number, number> = { 10: 9, 20: 12, 50: 21, 100: 36, 200: 61 }
 const selfPrice = (envs: number, cycle: BillingCycle) =>
@@ -249,6 +258,7 @@ function PlanPicker({ envs, cycle, onChange }: {
 function ManagedAdspower({ showToast }: { showToast: Toast }) {
   const t = useTranslations('DesktopConnector')
   const [managed, setManaged] = useState<Managed>(null)
+  const [company, setCompany] = useState<CompanyManaged>(null)
   const [loaded, setLoaded] = useState(false)
   const [applying, setApplying] = useState(false)
   const [contact, setContact] = useState('')
@@ -266,6 +276,7 @@ function ManagedAdspower({ showToast }: { showToast: Toast }) {
     }
     const m: Managed = data.managed ?? null
     setManaged(m)
+    setCompany(data.company ?? null)
     if (m) {
       setEnvs(m.next_env_quota ?? m.env_quota)
       setCycle(m.next_billing_cycle ?? m.billing_cycle)
@@ -298,6 +309,56 @@ function ManagedAdspower({ showToast }: { showToast: Toast }) {
   }
 
   if (!loaded) return null
+  if (company) {
+    return (
+      <div className="mt-2 text-xs">
+        <span className="font-semibold">{t('companyManagedTitle')}</span>
+        <div className={`mt-1 p-2.5 rounded-lg border space-y-1 ${company.status === 'active'
+          ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-900'
+          : 'bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-900'}`}>
+          {company.status === 'suspended' ? (
+            <div className="text-orange-700 dark:text-orange-300">{t('companyManagedSuspended')}</div>
+          ) : (
+            <>
+              <div className="text-emerald-700 dark:text-emerald-300">
+                {t('companyManagedPlan', {
+                  n: company.env_quota,
+                  seats: company.member_seats,
+                  date: company.paid_until ? new Date(company.paid_until).toLocaleDateString() : '—',
+                })}
+              </div>
+              <div>{t('managedGroup')}：<span className="font-mono">{company.group_name}</span></div>
+              {company.seat ? (
+                <>
+                  <div>{t('managedAccount')}：<span className="font-mono select-all">{company.seat.login_account}</span></div>
+                  <div className="flex items-center gap-1.5">
+                    <span>{t('managedPassword')}：</span>
+                    {company.seat.password ? (
+                      <span className="font-mono select-all">{company.seat.password}</span>
+                    ) : company.seat.has_password ? (
+                      <button onClick={() => load(true)} className="inline-flex items-center gap-1 text-indigo-600 hover:underline">
+                        <Eye className="h-3 w-3" />{t('managedReveal')}
+                      </button>
+                    ) : (
+                      <span className="text-muted-foreground">{t('managedNoPassword')}</span>
+                    )}
+                  </div>
+                  <div className="text-muted-foreground">
+                    {t('managedSteps')}{' '}
+                    <a href={ADSPOWER_SIGNUP_URL} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">
+                      {t('managedDownload')}
+                    </a>
+                  </div>
+                </>
+              ) : (
+                <div className="text-muted-foreground">{t('companyManagedNoSeat')}</div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    )
+  }
   const status = managed?.status
   const btn = 'px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold disabled:opacity-50'
 

@@ -7,6 +7,33 @@ import { requireSocialMatrix } from '@/lib/social-matrix/access'
 import { decryptSecret } from '@/lib/crypto/secret'
 import { isCycle, isPackage, type BillingCycle } from '@/lib/connector/managed-pricing'
 import { activateManaged } from '@/lib/connector/managed-billing'
+import { getUserCompanyResources, defaultCompanyGroupName } from '@/lib/connector/company-resources'
+
+/** 公司共享代管（後台開通）：回傳公司方案與指派給此成員的 AdsPower 席次 */
+async function companyManaged(userId: string, reveal: boolean) {
+  const company = await getUserCompanyResources(userId)
+  const cr = company?.resources
+  if (!company || !cr || cr.adspower_mode !== 'managed' || cr.status === 'inactive') return null
+  const active = cr.status === 'active'
+  const { data: seat } = active
+    ? await createAdminClient()
+        .from('marketing_company_adspower_seats')
+        .select('login_account, login_password_enc')
+        .eq('company_id', company.companyId)
+        .eq('member_id', userId)
+        .maybeSingle()
+    : { data: null }
+  let password: string | null = null
+  if (seat && reveal) password = decryptSecret(seat.login_password_enc)
+  return {
+    status: cr.status,
+    env_quota: cr.env_quota,
+    member_seats: cr.member_seats,
+    paid_until: cr.paid_until,
+    group_name: active ? cr.group_name || defaultCompanyGroupName(company.companyId) : null,
+    seat: seat ? { login_account: seat.login_account, has_password: !!seat.login_password_enc, password } : null,
+  }
+}
 
 const SELECT = 'status, login_account, login_password_enc, group_name, env_quota, billing_cycle, price_credits, paid_until, auto_renew, next_env_quota, next_billing_cycle, requested_at, activated_at'
 
@@ -14,6 +41,14 @@ export async function GET(req: NextRequest) {
   const guard = await requireSocialMatrix(req)
   if (guard.res) return guard.res
   if (guard.user.isCron) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const wantReveal = req.nextUrl.searchParams.get('reveal') === '1'
+  try {
+    const company = await companyManaged(guard.user.id, wantReveal)
+    if (company) return NextResponse.json({ managed: null, company })
+  } catch {
+    return NextResponse.json({ error: '密碼解密失敗，請聯絡管理員' }, { status: 500 })
+  }
 
   const { data, error } = await createAdminClient()
     .from('marketing_adspower_managed')
@@ -24,7 +59,7 @@ export async function GET(req: NextRequest) {
   if (!data) return NextResponse.json({ managed: null })
 
   const active = data.status === 'active'
-  const reveal = active && req.nextUrl.searchParams.get('reveal') === '1'
+  const reveal = active && wantReveal
   let password: string | null = null
   if (reveal) {
     try {
@@ -57,6 +92,9 @@ export async function POST(req: NextRequest) {
   const cycle = body.billing_cycle
   if (!contact) return NextResponse.json({ error: '請填寫聯絡方式' }, { status: 400 })
   if (!isPackage(envQuota) || !isCycle(cycle)) return NextResponse.json({ error: '請選擇環境數與付款週期' }, { status: 400 })
+  if (await companyManaged(guard.user.id, false)) {
+    return NextResponse.json({ error: '貴公司已使用共享代管，請聯絡公司管理者指派席次' }, { status: 409 })
+  }
 
   const admin = createAdminClient()
   const { data: existing } = await admin

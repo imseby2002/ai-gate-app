@@ -12585,6 +12585,10 @@
     "managedSuspended": "代管已暫停（到期未續費）。儲值後選擇方案即可重新啟用。",
     "managedReactivate": "重新啟用（扣 {total} 點）",
     "managedReactivated": "已重新啟用",
-    "managedBillingNote": "1 點＝1 美元。管理員開通時預扣一期；月付每 30 天、年付每 365 天自動續扣。"
+    "managedBillingNote": "1 點＝1 美元。管理員開通時預扣一期；月付每 30 天、年付每 365 天自動續扣。",
+    "companyManagedTitle": "公司共享代管 AdsPower",
+    "companyManagedPlan": "貴公司共享 {n} 個環境・{seats} 個成員席次，效期至 {date}",
+    "companyManagedSuspended": "貴公司的共享代管已暫停，請聯絡公司管理者或 AI-GATE 客服。",
+    "companyManagedNoSeat": "您尚未被指派 AdsPower 成員席次，請聯絡公司管理者。"
   }
 }
