@@ -116,13 +116,20 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: '請指定要租用的官方 IP' }, { status: 400 })
       }
 
-      const { isAdmin, quota, used } = await getOfficialProxyQuota(authUser, 0)
-      if (!isAdmin && quota <= 0) {
+      const admin = createAdminClient()
+      const { data: offType } = await admin
+        .from('marketing_official_proxies')
+        .select('proxy_type')
+        .eq('id', official_proxy_id)
+        .maybeSingle()
+      // 公司帳號的附贈額度依 IP 類型（ISP／住宅）分開計算
+      const { isAdmin, quota, used } = await getOfficialProxyQuota(authUser, 0, offType?.proxy_type)
+      const { quota: anyQuota } = quota > 0 ? { quota } : await getOfficialProxyQuota(authUser, 0)
+      if (!isAdmin && anyQuota <= 0) {
         return NextResponse.json({ error: '目前方案未開放官方 IP，請升級至 PRO 以上或自備 IP' }, { status: 403 })
       }
 
       // 附贈額度內免費；超出以點數購買（每 30 天扣一次，到期自動續扣）
-      const admin = createAdminClient()
       const isPaid = !isAdmin && used >= quota
       const billable = await isBillableUser(authUser.id)
       const charge = async (name: string, priceTwd: number) => {

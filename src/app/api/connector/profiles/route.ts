@@ -24,7 +24,8 @@ export async function GET(req: NextRequest) {
   let profiles = mine
   if (settings.env_quota !== null) {
     const existing = mine.filter(a => a.adspower_profile_id)
-    const room = Math.max(0, settings.env_quota - existing.length)
+    // 公司共享代管以全公司已建立數計算剩餘額度
+    const room = Math.max(0, settings.env_quota - (settings.used_profiles ?? existing.length))
     profiles = settings.mode === 'suspended' ? [] : [...existing, ...mine.filter(a => !a.adspower_profile_id).slice(0, room)]
   }
   return NextResponse.json({ device_id: guard.device.deviceId, profiles, settings })

@@ -12585,6 +12585,10 @@
     "managedSuspended": "Managed account suspended (not renewed). Top up and choose a plan to reactivate.",
     "managedReactivate": "Reactivate ({total} credits)",
     "managedReactivated": "Reactivated",
-    "managedBillingNote": "1 credit = 1 USD. One period is charged when the admin activates it; monthly renews every 30 days, annual every 365 days."
+    "managedBillingNote": "1 credit = 1 USD. One period is charged when the admin activates it; monthly renews every 30 days, annual every 365 days.",
+    "companyManagedTitle": "Company shared AdsPower (managed)",
+    "companyManagedPlan": "Your company shares {n} profiles · {seats} member seats, valid until {date}",
+    "companyManagedSuspended": "Your company's shared AdsPower is suspended. Please contact your company admin or AI-GATE support.",
+    "companyManagedNoSeat": "You haven't been assigned an AdsPower member seat yet. Please contact your company admin."
   }
 }
