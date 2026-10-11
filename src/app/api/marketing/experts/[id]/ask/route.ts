@@ -1,5 +1,5 @@
 /**
- * POST /api/marketing/experts/[id]/ask — 向自製專家提問（所有方案皆可用，點數扣款）
+ * POST /api/marketing/experts/[id]/ask — 向自製專家提問（所有方案皆可用，依實際 token 用量 × 方案倍率扣點）
  *   Body: { question: string }
  * 把專家的 system_prompt + 知識來源萃取文字塞進 context，讓 LLM 依此作答。
  * admin/employee 不計費（比照全站慣例）。
@@ -9,11 +9,13 @@ import { createClient } from '@/lib/supabase/server'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
-import { EXPERT_QUERY_COST, checkCredits, deductCredits, isBillableUser } from '@/lib/marketing/billing'
+import { llmCost, precheckUsage, chargeUsage } from '@/lib/marketing/billing'
 
 export const maxDuration = 60
 
 const MAX_CONTEXT_CHARS = 180_000 // 知識庫塞進 system prompt 的上限
+const MODEL = 'claude-sonnet-4-6'
+const MAX_OUTPUT_TOKENS = 2000
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -47,10 +49,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     .eq('expert_id', id)
     .order('created_at', { ascending: true })
 
-  const billable = await isBillableUser(user.id)
-  const check = await checkCredits(user.id, EXPERT_QUERY_COST, billable)
-  if (!check.ok) return NextResponse.json(check.payload, { status: 402 })
-
   // 組 system prompt：人設 + 知識庫（截斷至上限）
   const parts: string[] = []
   parts.push(expert.system_prompt?.trim()
@@ -67,23 +65,28 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
   const system = parts.join('')
 
+  // 預估：中文約 1 字 1 token（保守），輸出以上限計
+  const insufficient = await precheckUsage(user.id, llmCost(MODEL, {
+    inputTokens: system.length + question.length,
+    outputTokens: MAX_OUTPUT_TOKENS,
+  }))
+  if (insufficient) return NextResponse.json(insufficient, { status: 402 })
+
   let answer = ''
+  let usage: { inputTokens?: number; outputTokens?: number } | undefined
   try {
     const res = await generateText({
-      model: createAnthropic({ apiKey })('claude-sonnet-4-6'),
+      model: createAnthropic({ apiKey })(MODEL),
       system,
       messages: [{ role: 'user', content: question }],
-      maxOutputTokens: 2000,
+      maxOutputTokens: MAX_OUTPUT_TOKENS,
     })
     answer = res.text
+    usage = res.usage
   } catch (err) {
     return NextResponse.json({ error: `作答失敗：${String(err)}` }, { status: 500 })
   }
 
-  const deduct = await deductCredits(user.id, EXPERT_QUERY_COST, `[marketing] 自製專家問答（${expert.name}）`, billable)
-  return NextResponse.json({
-    answer,
-    cost: EXPERT_QUERY_COST,
-    balance: deduct.ok ? deduct.balance : undefined,
-  })
+  const cost = await chargeUsage(user.id, llmCost(MODEL, usage), `[marketing] 自製專家問答（${expert.name}）`)
+  return NextResponse.json({ answer, cost })
 }

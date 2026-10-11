@@ -10024,7 +10024,7 @@
     "answerFailed": "Trả lời thất bại",
     "needSource": "Hãy thêm ít nhất một nguồn kiến thức để chuyên gia có căn cứ trả lời.",
     "questionPh": "Nhập câu hỏi của bạn…",
-    "askBtn": "Hỏi (0,05 điểm)"
+    "askBtn": "Hỏi (trừ điểm theo mức sử dụng)"
   },
   "PlanGate": {
     "needPlan": "Tính năng này cần gói {required}. Gói hiện tại: {current}",

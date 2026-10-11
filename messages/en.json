@@ -10117,7 +10117,7 @@
     "answerFailed": "Failed to answer",
     "needSource": "Add at least one knowledge source so the expert has something to answer from.",
     "questionPh": "Type your question…",
-    "askBtn": "Ask (0.05 credits)"
+    "askBtn": "Ask (charged by usage)"
   },
   "PlanGate": {
     "needPlan": "This feature requires the {required} plan. Current plan: {current}",
