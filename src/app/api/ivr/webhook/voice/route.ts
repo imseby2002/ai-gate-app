@@ -33,7 +33,16 @@ export async function POST(req: NextRequest) {
     req.headers.get('x-bird-signature') ||
     req.headers.get('bird-signature') ||
     req.headers.get('messagebird-signature')
-  if (!verifyBirdSignature(rawBody, signature)) {
+  const verified = verifyBirdSignature(rawBody, signature)
+
+  // 留存原始內容，用來確認 Bird 實際的欄位名與簽章標頭（不存 cookie／authorization 值）
+  const headers: Record<string, string> = {}
+  req.headers.forEach((v, k) => {
+    headers[k] = ['cookie', 'authorization'].includes(k) ? '[redacted]' : v.slice(0, 500)
+  })
+  await sb.from('ivr_webhook_logs').insert({ provider: 'bird', headers, body: rawBody.slice(0, 20000), verified })
+
+  if (!verified) {
     return NextResponse.json({ error: 'invalid_signature' }, { status: 401 })
   }
 

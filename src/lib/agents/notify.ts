@@ -5,6 +5,7 @@ import { Resend } from 'resend'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendToCustomer } from '@/lib/cs/send'
 import { getTelephonyProvider } from '@/lib/telephony'
+import { chargeUsage, smsCost } from '@/lib/marketing/billing'
 import type { NotifyChannel, NotifyHumanParams, NotifyHumanResult, RequestApprovalParams } from './types'
 
 interface ResolvedTarget {
@@ -80,8 +81,12 @@ async function deliver(target: ResolvedTarget, userId: string, title: string, bo
     if (target.channel === 'sms' && target.smsPhone) {
       const provider = getTelephonyProvider()
       if (!provider.isConfigured()) return { ok: false, error: '電話/簡訊服務未設定' }
-      const ok = await provider.sendSms({ phone: target.smsPhone, text: text.slice(0, 480) })
-      return ok ? { ok: true, channel: 'sms' } : { ok: false, error: 'SMS 發送失敗' }
+      const smsText = text.slice(0, 480)
+      const ok = await provider.sendSms({ phone: target.smsPhone, text: smsText })
+      if (!ok) return { ok: false, error: 'SMS 發送失敗' }
+      // 簡訊有實際成本：成功發送後依國別與分段數 × 方案倍率扣點（含排程觸發的通知）
+      await chargeUsage(userId, smsCost(target.smsPhone, smsText), '[agent] 簡訊通知')
+      return { ok: true, channel: 'sms' }
     }
     if (['line', 'whatsapp', 'whatsapp-personal', 'zalo'].includes(target.channel) && target.platformSelfId) {
       const result = await sendToCustomer(userId, target.channel, target.platformSelfId, text)
