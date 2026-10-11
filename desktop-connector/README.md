@@ -9,6 +9,10 @@
   - 若 AdsPower 開啟了 API 金鑰驗證，設定環境變數 `ADSPOWER_API_KEY`
   - 若 API 埠不是 50325，設定 `ADSPOWER_API=http://127.0.0.1:<埠>`
 
+## 兩種方案
+- **方案一：自備 AdsPower**：客人自行註冊訂閱（專業版以上），設定檔建在本機「AI-GATE」分組（不存在時自動建立）
+- **方案二：AI-GATE 代管 AdsPower**：客人在網頁申請 → 管理員在 AdsPower 團隊後台建立成員帳號與專屬分組（預設 `AIGATE-<客人編號前 8 碼>`），只授權該分組並開啟 API 權限 → 到 AI-GATE 後台「AdsPower 代管帳號」填入帳號密碼並開通。客人用成員帳號登入 AdsPower 後，連接器只會使用該分組，不自行建立分組
+
 ## 安裝與配對（客人）
 1. AI-GATE 網頁「社群矩陣 → 帳號」區塊按「下載連接器（Windows）」，取得 `AI-GATE-Connector.exe`
 2. 雙擊執行（未簽章，若出現 SmartScreen 請點「其他資訊 → 仍要執行」）

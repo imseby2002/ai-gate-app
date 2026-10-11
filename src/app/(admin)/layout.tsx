@@ -40,6 +40,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: '/admin/module-plans/agent', label: 'AI Agent 方案管理', icon: UserCog },
     { href: '/admin/module-plans/resume', label: '職場助手方案管理', icon: Briefcase },
     { href: '/admin/cs-setup-requests', label: 'CS 協助請求', icon: LifeBuoy },
+    { href: '/admin/adspower-managed', label: 'AdsPower 代管帳號', icon: Users },
     { href: '/admin/quiz', label: '測驗成績', icon: ClipboardCheck },
     { href: '/admin/notify-settings', label: '通知設定', icon: Bell },
     { href: '/admin/db-backup', label: '資料庫備份', icon: Database },

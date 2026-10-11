@@ -2,19 +2,30 @@
 import { createFields, updateFields } from './adspower.mjs'
 import { openTab, copyToClipboard } from './copilot.mjs'
 
-async function ensureGroupId(ads, cfg) {
-  if (cfg.adspowerGroupId) return cfg.adspowerGroupId
+/**
+ * 取得要放設定檔的 AdsPower 分組。
+ * 代管方案（settings.mode === 'managed'）固定使用管理員指定、已授權給成員的分組，不自行建立；
+ * 自備方案使用本機設定的分組名稱（預設 AI-GATE），不存在時自動建立。
+ */
+async function ensureGroupId(ads, cfg, settings) {
+  const managed = settings?.mode === 'managed' && settings.group_name
+  const name = managed ? settings.group_name : cfg.adspowerGroupName
+  if (cfg.adspowerGroupId && cfg.adspowerGroupResolvedName === name) return cfg.adspowerGroupId
   const groups = await ads.listGroups()
-  const found = (groups?.list ?? []).find(g => g.group_name === cfg.adspowerGroupName)
-  const id = found ? String(found.group_id) : String((await ads.createGroup(cfg.adspowerGroupName)).group_id)
+  const found = (groups?.list ?? []).find(g => g.group_name === name)
+  let id
+  if (found) id = String(found.group_id)
+  else if (managed) throw new Error(`AdsPower 找不到代管分組「${name}」，請確認已用代管帳號登入 AdsPower，或聯絡管理員`)
+  else id = String((await ads.createGroup(name)).group_id)
   cfg.adspowerGroupId = id
+  cfg.adspowerGroupResolvedName = name
   return id
 }
 
 /** 依 AI-GATE 帳號＋代理建立或更新 AdsPower 設定檔，回寫設定檔 ID */
 export async function syncProfiles({ ads, aigate, cfg, log }) {
-  const { profiles } = await aigate.profiles()
-  const groupId = await ensureGroupId(ads, cfg)
+  const { profiles, settings } = await aigate.profiles()
+  const groupId = await ensureGroupId(ads, cfg, settings)
   const summary = { created: 0, updated: 0, failed: 0, errors: [] }
 
   for (const acc of profiles) {

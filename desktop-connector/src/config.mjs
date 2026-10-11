@@ -18,7 +18,7 @@ export const DEFAULTS = {
 }
 
 // 只持久化配對與群組資訊；網址、金鑰以環境變數為準（優先於設定檔）
-const PERSISTED = ['token', 'deviceId', 'adspowerGroupId', 'appUrl', 'adspowerUrl']
+const PERSISTED = ['token', 'deviceId', 'adspowerGroupId', 'adspowerGroupResolvedName', 'appUrl', 'adspowerUrl']
 
 function envOverrides() {
   return Object.fromEntries(Object.entries({
