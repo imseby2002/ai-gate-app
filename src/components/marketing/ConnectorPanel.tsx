@@ -7,6 +7,9 @@ import { Monitor, Download, KeyRound, RefreshCw, Trash2, Copy, Check } from 'luc
 export const CONNECTOR_DOWNLOAD_URL =
   'https://github.com/imseby2002/ai-gate-app/releases/download/connector-latest/AI-GATE-Connector.exe'
 
+// AdsPower 推薦註冊連結（自備 AdsPower 方案）
+export const ADSPOWER_SIGNUP_URL = 'https://www.adspower.net/share/TnY8c0'
+
 const PAIR_CODE_TTL_MINUTES = 10
 
 type Device = { id: string; name: string; last_seen_at: string | null; created_at: string }
@@ -112,6 +115,18 @@ export function ConnectorPanel({ showToast }: { showToast: Toast }) {
           </h3>
           <p className="text-xs text-muted-foreground mt-0.5">{t('desc')}</p>
           <p className="text-xs text-muted-foreground mt-2">{t('steps')}</p>
+          <div className="mt-2 text-xs">
+            <span className="font-semibold">{t('ownAdspower')}</span>
+            <span className="text-muted-foreground">：{t('ownAdspowerDesc')}</span>{' '}
+            <a
+              href={ADSPOWER_SIGNUP_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-indigo-600 hover:underline font-medium"
+            >
+              {t('ownAdspowerLink')}
+            </a>
+          </div>
           <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1">{t('smartscreen')}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 shrink-0">

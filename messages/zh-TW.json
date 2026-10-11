@@ -12551,6 +12551,9 @@
     "copilotNone": "尚無已同步的帳號，請到「帳號」頁按「同步設定檔」",
     "copilotOnPc": "在電腦帶入",
     "copilotNeedAccount": "請先選擇桌面連接器發文帳號",
-    "copilotQueued": "已送出：電腦將開啟「{name}」並複製文案，請貼上後自行按發布"
+    "copilotQueued": "已送出：電腦將開啟「{name}」並複製文案，請貼上後自行按發布",
+    "ownAdspower": "方案一：自備 AdsPower",
+    "ownAdspowerDesc": "還沒有 AdsPower？請用此連結註冊並下載，訂閱需可使用 Local API 的方案。",
+    "ownAdspowerLink": "註冊／下載 AdsPower"
   }
 }
