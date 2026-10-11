@@ -12561,8 +12561,8 @@
     "managedContact": "Contact (LINE / phone / email)",
     "managedNote": "Details (optional, e.g. number of accounts)",
     "managedSubmit": "Submit",
-    "managedApplied": "Application sent. Login details will appear here once an admin activates it",
-    "managedPending": "Application sent, waiting for admin activation",
+    "managedApplied": "Application sent. One period of credits will be charged on activation",
+    "managedPending": "Application sent, waiting for admin activation. {total} credits will be charged on activation, please keep enough balance",
     "managedClosed": "Your previous managed account has ended. You can apply again.",
     "managedActive": "Managed account active",
     "managedAccount": "AdsPower login",
@@ -12571,6 +12571,20 @@
     "managedNoPassword": "Provided separately by the admin",
     "managedGroup": "Dedicated group",
     "managedSteps": "Download and install the AdsPower client, sign in with the account above (no subscription needed), then run and pair the Connector.",
-    "managedDownload": "Download AdsPower"
+    "managedDownload": "Download AdsPower",
+    "managedEnvs": "{n} profiles",
+    "managedMonthly": "Monthly",
+    "managedAnnual": "Annual (12 months upfront)",
+    "managedPrice": "{price} credits/month ({total} credits per period)",
+    "managedSelfPrice": "; buying AdsPower yourself costs about ${price}/month",
+    "managedActivePlan": "Managed: {n} profiles · {cycle}, valid until {date}",
+    "managedAutoRenew": "Auto-renew at expiry (charged from credits; suspended if insufficient)",
+    "managedChangeHint": "Plan changes take effect at the next renewal:",
+    "managedChange": "Change plan",
+    "managedSaved": "Updated",
+    "managedSuspended": "Managed account suspended (not renewed). Top up and choose a plan to reactivate.",
+    "managedReactivate": "Reactivate ({total} credits)",
+    "managedReactivated": "Reactivated",
+    "managedBillingNote": "1 credit = 1 USD. One period is charged when the admin activates it; monthly renews every 30 days, annual every 365 days."
   }
 }

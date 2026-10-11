@@ -17,7 +17,15 @@ export async function GET(req: NextRequest) {
   if (error) return NextResponse.json({ error: `讀取帳號失敗：${error.message}` }, { status: 500 })
 
   // 已綁定到其他裝置的帳號不交給這台
-  const profiles = (data ?? []).filter(a => !a.connector_device_id || a.connector_device_id === guard.device.deviceId)
+  const mine = (data ?? []).filter(a => !a.connector_device_id || a.connector_device_id === guard.device.deviceId)
   const settings = await getConnectorSettings(guard.device.userId)
+
+  // 代管額度：已建立的設定檔照常同步，新建數量不超過剩餘額度；暫停中不交付
+  let profiles = mine
+  if (settings.env_quota !== null) {
+    const existing = mine.filter(a => a.adspower_profile_id)
+    const room = Math.max(0, settings.env_quota - existing.length)
+    profiles = settings.mode === 'suspended' ? [] : [...existing, ...mine.filter(a => !a.adspower_profile_id).slice(0, room)]
+  }
   return NextResponse.json({ device_id: guard.device.deviceId, profiles, settings })
 }

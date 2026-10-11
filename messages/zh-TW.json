@@ -12561,8 +12561,8 @@
     "managedContact": "聯絡方式（LINE／電話／Email）",
     "managedNote": "需求說明（選填，例如帳號數量）",
     "managedSubmit": "送出申請",
-    "managedApplied": "已送出申請，管理員開通後會顯示登入資訊",
-    "managedPending": "已送出申請，等待管理員開通",
+    "managedApplied": "已送出申請，管理員開通時會預扣一期點數",
+    "managedPending": "已送出申請，等待管理員開通；開通時會從點數預扣 {total} 點，請確認餘額足夠",
     "managedClosed": "先前的代管已結束，可重新申請。",
     "managedActive": "代管帳號已開通",
     "managedAccount": "AdsPower 登入帳號",
@@ -12571,6 +12571,20 @@
     "managedNoPassword": "由管理員另行提供",
     "managedGroup": "專屬分組",
     "managedSteps": "請下載並安裝 AdsPower 用戶端，以上述帳號登入（不需另外訂閱），再執行連接器並配對。",
-    "managedDownload": "下載 AdsPower"
+    "managedDownload": "下載 AdsPower",
+    "managedEnvs": "{n} 個環境",
+    "managedMonthly": "月付",
+    "managedAnnual": "年付（一次付 12 個月）",
+    "managedPrice": "每月 {price} 點（每期扣 {total} 點）",
+    "managedSelfPrice": "；自購 AdsPower 同方案每月約 {price} 美元",
+    "managedActivePlan": "代管中：{n} 個環境・{cycle}，效期至 {date}",
+    "managedAutoRenew": "到期自動續費（從點數扣款，不足則暫停）",
+    "managedChangeHint": "變更方案於下次續費時生效：",
+    "managedChange": "變更方案",
+    "managedSaved": "已更新",
+    "managedSuspended": "代管已暫停（到期未續費）。儲值後選擇方案即可重新啟用。",
+    "managedReactivate": "重新啟用（扣 {total} 點）",
+    "managedReactivated": "已重新啟用",
+    "managedBillingNote": "1 點＝1 美元。管理員開通時預扣一期；月付每 30 天、年付每 365 天自動續扣。"
   }
 }
