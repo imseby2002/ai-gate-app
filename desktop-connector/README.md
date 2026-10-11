@@ -5,7 +5,7 @@
 
 ## 需求
 - Windows 10/11（不需安裝 Node.js）
-- AdsPower（需可使用 Local API 的方案），並於「設定 → Local API」確認 API 狀態為成功
+- AdsPower 專業版以上（免費版不含 Local API；[推薦註冊連結](https://www.adspower.net/share/TnY8c0)），並於「設定 → Local API」確認 API 狀態為成功
   - 若 AdsPower 開啟了 API 金鑰驗證，設定環境變數 `ADSPOWER_API_KEY`
   - 若 API 埠不是 50325，設定 `ADSPOWER_API=http://127.0.0.1:<埠>`
 
