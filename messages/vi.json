@@ -12468,8 +12468,8 @@
     "managedContact": "Liên hệ (LINE / điện thoại / Email)",
     "managedNote": "Mô tả nhu cầu (tùy chọn, ví dụ số lượng tài khoản)",
     "managedSubmit": "Gửi đăng ký",
-    "managedApplied": "Đã gửi đăng ký. Thông tin đăng nhập sẽ hiện ở đây sau khi quản trị viên kích hoạt",
-    "managedPending": "Đã gửi đăng ký, đang chờ quản trị viên kích hoạt",
+    "managedApplied": "Đã gửi đăng ký. Khi kích hoạt sẽ trừ trước một kỳ điểm",
+    "managedPending": "Đã gửi đăng ký, đang chờ kích hoạt. Khi kích hoạt sẽ trừ trước {total} điểm, hãy đảm bảo đủ số dư",
     "managedClosed": "Tài khoản quản lý trước đó đã kết thúc, bạn có thể đăng ký lại.",
     "managedActive": "Tài khoản quản lý đã kích hoạt",
     "managedAccount": "Tài khoản đăng nhập AdsPower",
@@ -12478,6 +12478,20 @@
     "managedNoPassword": "Quản trị viên sẽ cung cấp riêng",
     "managedGroup": "Nhóm riêng",
     "managedSteps": "Hãy tải và cài ứng dụng AdsPower, đăng nhập bằng tài khoản trên (không cần đăng ký gói), rồi chạy và ghép nối Connector.",
-    "managedDownload": "Tải AdsPower"
+    "managedDownload": "Tải AdsPower",
+    "managedEnvs": "{n} hồ sơ",
+    "managedMonthly": "Trả theo tháng",
+    "managedAnnual": "Trả theo năm (trả trước 12 tháng)",
+    "managedPrice": "{price} điểm/tháng (mỗi kỳ trừ {total} điểm)",
+    "managedSelfPrice": "; tự mua AdsPower gói tương đương khoảng {price} USD/tháng",
+    "managedActivePlan": "Đang quản lý: {n} hồ sơ · {cycle}, hiệu lực đến {date}",
+    "managedAutoRenew": "Tự động gia hạn khi hết hạn (trừ điểm; không đủ sẽ tạm dừng)",
+    "managedChangeHint": "Thay đổi gói sẽ áp dụng từ kỳ gia hạn tiếp theo:",
+    "managedChange": "Đổi gói",
+    "managedSaved": "Đã cập nhật",
+    "managedSuspended": "Tài khoản quản lý đã tạm dừng (chưa gia hạn). Nạp điểm và chọn gói để kích hoạt lại.",
+    "managedReactivate": "Kích hoạt lại (trừ {total} điểm)",
+    "managedReactivated": "Đã kích hoạt lại",
+    "managedBillingNote": "1 điểm = 1 USD. Khi kích hoạt sẽ trừ trước một kỳ; trả tháng gia hạn mỗi 30 ngày, trả năm mỗi 365 ngày."
   }
 }

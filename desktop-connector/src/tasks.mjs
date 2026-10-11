@@ -25,6 +25,7 @@ async function ensureGroupId(ads, cfg, settings) {
 /** 依 AI-GATE 帳號＋代理建立或更新 AdsPower 設定檔，回寫設定檔 ID */
 export async function syncProfiles({ ads, aigate, cfg, log }) {
   const { profiles, settings } = await aigate.profiles()
+  if (settings?.mode === 'suspended') throw new Error('AdsPower 代管已暫停（到期未續費），請到 AI-GATE 網頁儲值並重新啟用')
   const groupId = await ensureGroupId(ads, cfg, settings)
   const summary = { created: 0, updated: 0, failed: 0, errors: [] }
 

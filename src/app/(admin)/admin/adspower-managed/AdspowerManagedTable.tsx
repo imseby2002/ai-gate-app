@@ -2,8 +2,9 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import { Loader2, RefreshCw } from 'lucide-react'
+import { MANAGED_PACKAGES, periodPrice, type BillingCycle } from '@/lib/connector/managed-pricing'
 
-type Status = 'pending' | 'active' | 'rejected' | 'revoked'
+type Status = 'pending' | 'active' | 'suspended' | 'rejected' | 'revoked'
 
 interface ManagedRequest {
   user_id: string
@@ -17,18 +18,28 @@ interface ManagedRequest {
   default_group_name: string
   requested_at: string
   activated_at: string | null
+  env_quota: number
+  billing_cycle: BillingCycle
+  price_credits: number | null
+  paid_until: string | null
+  auto_renew: boolean
+  next_env_quota: number | null
+  next_billing_cycle: BillingCycle | null
+  balance: number | null
   profile: { email: string | null; full_name: string | null } | null
 }
 
-const STATUS_LABEL: Record<Status, string> = { pending: '待開通', active: '已開通', rejected: '已拒絕', revoked: '已停用' }
+const STATUS_LABEL: Record<Status, string> = { pending: '待開通', active: '已開通', suspended: '已暫停', rejected: '已拒絕', revoked: '已停用' }
+const CYCLE_LABEL: Record<BillingCycle, string> = { monthly: '月付', annual: '年付' }
 const STATUS_COLOR: Record<Status, string> = {
   pending: 'bg-amber-100 text-amber-700',
   active: 'bg-emerald-100 text-emerald-700',
+  suspended: 'bg-orange-100 text-orange-700',
   rejected: 'bg-gray-100 text-gray-600',
   revoked: 'bg-rose-100 text-rose-700',
 }
 
-type Draft = { login_account: string; login_password: string; group_name: string; admin_note: string }
+type Draft = { login_account: string; login_password: string; group_name: string; admin_note: string; env_quota: number; billing_cycle: BillingCycle }
 
 export function AdspowerManagedTable() {
   const [rows, setRows] = useState<ManagedRequest[]>([])
@@ -49,6 +60,8 @@ export function AdspowerManagedTable() {
         login_password: '',
         group_name: r.group_name ?? r.default_group_name,
         admin_note: r.admin_note ?? '',
+        env_quota: r.env_quota,
+        billing_cycle: r.billing_cycle,
       }])))
     } finally {
       setLoading(false)
@@ -70,6 +83,7 @@ export function AdspowerManagedTable() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) { alert(data.error ?? '儲存失敗'); return }
+      if (data.charged) alert(`已開通並扣款 ${data.charged} 點`)
       await load()
     } finally {
       setBusyId(null)
@@ -88,11 +102,12 @@ export function AdspowerManagedTable() {
       </div>
 
       <div className="rounded-xl border overflow-x-auto">
-        <table className="w-full text-sm min-w-[980px]">
+        <table className="w-full text-sm min-w-[1180px]">
           <thead className="bg-gray-50 text-gray-500">
             <tr>
               <th className="text-left font-medium py-2.5 px-3">申請帳號</th>
               <th className="text-left font-medium py-2.5 px-3">聯絡方式／留言</th>
+              <th className="text-left font-medium py-2.5 px-3">方案／計費</th>
               <th className="text-left font-medium py-2.5 px-3">AdsPower 成員帳號</th>
               <th className="text-left font-medium py-2.5 px-3">密碼</th>
               <th className="text-left font-medium py-2.5 px-3">分組</th>
@@ -114,6 +129,33 @@ export function AdspowerManagedTable() {
                   </td>
                   <td className="py-2.5 px-3 text-gray-600 text-xs max-w-[200px] whitespace-pre-wrap">
                     {r.contact || '—'}{r.note ? `\n${r.note}` : ''}
+                  </td>
+                  <td className="py-2.5 px-3 w-48 text-xs space-y-1">
+                    {r.status === 'active' ? (
+                      <>
+                        <div>{r.env_quota} 環境・{CYCLE_LABEL[r.billing_cycle]}・{r.price_credits ?? 0} 點／期</div>
+                        <div className="text-gray-500">到期 {r.paid_until ? new Date(r.paid_until).toLocaleDateString('zh-TW') : '—'}{r.auto_renew ? '（自動續費）' : '（不續費）'}</div>
+                        {(r.next_env_quota || r.next_billing_cycle) && (
+                          <div className="text-indigo-600">下期：{r.next_env_quota ?? r.env_quota} 環境・{CYCLE_LABEL[r.next_billing_cycle ?? r.billing_cycle]}</div>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex gap-1">
+                          <select className={input} value={d?.env_quota} onChange={e => setDraft(r.user_id, { env_quota: Number(e.target.value) })}>
+                            {MANAGED_PACKAGES.map(n => <option key={n} value={n}>{n} 環境</option>)}
+                          </select>
+                          <select className={input} value={d?.billing_cycle} onChange={e => setDraft(r.user_id, { billing_cycle: e.target.value as BillingCycle })}>
+                            <option value="monthly">月付</option>
+                            <option value="annual">年付</option>
+                          </select>
+                        </div>
+                        {d && <div>開通扣 {periodPrice(d.env_quota, d.billing_cycle)} 點</div>}
+                        <div className={r.balance !== null && d && r.balance < periodPrice(d.env_quota, d.billing_cycle) ? 'text-rose-600' : 'text-gray-500'}>
+                          客人餘額 {r.balance === null ? '—' : Number.isFinite(r.balance) ? r.balance.toFixed(2) : '不限'} 點
+                        </div>
+                      </>
+                    )}
                   </td>
                   <td className="py-2.5 px-3 w-48">
                     <input className={input} value={d?.login_account ?? ''} onChange={e => setDraft(r.user_id, { login_account: e.target.value })} placeholder="成員登入帳號" />
@@ -145,7 +187,7 @@ export function AdspowerManagedTable() {
                         className="inline-flex items-center justify-center gap-1 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg px-2.5 py-1.5 disabled:opacity-50"
                       >
                         {busy && <Loader2 className="h-3 w-3 animate-spin" />}
-                        {r.status === 'active' ? '儲存' : '開通'}
+                        {r.status === 'active' ? '儲存' : r.status === 'suspended' ? '重新開通' : '開通'}
                       </button>
                       {r.status === 'pending' && (
                         <button onClick={() => save(r.user_id, 'rejected')} disabled={busy} className="text-xs text-gray-500 hover:text-gray-800">拒絕</button>
@@ -159,14 +201,15 @@ export function AdspowerManagedTable() {
               )
             })}
             {!loading && rows.length === 0 && (
-              <tr><td colSpan={8} className="py-8 text-center text-gray-400">目前沒有代管申請</td></tr>
+              <tr><td colSpan={9} className="py-8 text-center text-gray-400">目前沒有代管申請</td></tr>
             )}
           </tbody>
         </table>
       </div>
 
       <p className="text-xs text-gray-400">
-        停用後客人網頁上不再顯示登入資訊，連接器改回自備模式；請同時到 AdsPower 團隊後台移除或停用該成員，才會真正失去存取權。
+        開通時依所選方案從客人點數預扣一期（月付 30 天／年付 365 天），到期每日排程自動續扣，點數不足或關閉自動續費會改為「已暫停」並寄通知。
+        暫停或停用後客人網頁上不再顯示登入資訊，連接器改回自備模式；請同時到 AdsPower 團隊後台移除或停用該成員，才會真正失去存取權。
       </p>
     </div>
   )

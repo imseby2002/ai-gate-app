@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Monitor, Download, KeyRound, RefreshCw, Trash2, Copy, Check, Eye } from 'lucide-react'
+import { MANAGED_PACKAGES, monthlyPrice, periodPrice, type BillingCycle } from '@/lib/connector/managed-pricing'
 
 export const CONNECTOR_DOWNLOAD_URL =
   'https://github.com/imseby2002/ai-gate-app/releases/download/connector-latest/AI-GATE-Connector.exe'
@@ -201,14 +202,50 @@ export function ConnectorPanel({ showToast }: { showToast: Toast }) {
 }
 
 type Managed = {
-  status: 'pending' | 'active' | 'rejected' | 'revoked'
+  status: 'pending' | 'active' | 'suspended' | 'rejected' | 'revoked'
   login_account: string | null
   group_name: string | null
   has_password: boolean
   password: string | null
+  env_quota: number
+  billing_cycle: BillingCycle
+  price_credits: number | null
+  paid_until: string | null
+  auto_renew: boolean
+  next_env_quota: number | null
+  next_billing_cycle: BillingCycle | null
 } | null
 
-// 方案二：AI-GATE 代管 AdsPower（申請 → 管理員開通後顯示成員登入資訊）
+// 客人自購 AdsPower 的每月價格（月付；年付為 6 折），用於顯示代管省多少
+const SELF_MONTHLY: Record<number, number> = { 10: 9, 20: 12, 50: 21, 100: 36, 200: 61 }
+const selfPrice = (envs: number, cycle: BillingCycle) =>
+  Math.round(SELF_MONTHLY[envs] * (cycle === 'annual' ? 0.6 : 1) * 100) / 100
+
+function PlanPicker({ envs, cycle, onChange }: {
+  envs: number
+  cycle: BillingCycle
+  onChange: (envs: number, cycle: BillingCycle) => void
+}) {
+  const t = useTranslations('DesktopConnector')
+  const sel = 'px-2 py-1 rounded-lg border border-border bg-background text-xs'
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <select className={sel} value={envs} onChange={e => onChange(Number(e.target.value), cycle)}>
+        {MANAGED_PACKAGES.map(n => <option key={n} value={n}>{t('managedEnvs', { n })}</option>)}
+      </select>
+      <select className={sel} value={cycle} onChange={e => onChange(envs, e.target.value as BillingCycle)}>
+        <option value="monthly">{t('managedMonthly')}</option>
+        <option value="annual">{t('managedAnnual')}</option>
+      </select>
+      <span>
+        {t('managedPrice', { price: monthlyPrice(envs, cycle), total: periodPrice(envs, cycle) })}
+        <span className="text-muted-foreground">{t('managedSelfPrice', { price: selfPrice(envs, cycle) })}</span>
+      </span>
+    </div>
+  )
+}
+
+// 方案二：AI-GATE 代管 AdsPower（選方案申請 → 管理員開通並預扣一期 → 顯示成員登入資訊；到期自動續扣）
 function ManagedAdspower({ showToast }: { showToast: Toast }) {
   const t = useTranslations('DesktopConnector')
   const [managed, setManaged] = useState<Managed>(null)
@@ -216,6 +253,8 @@ function ManagedAdspower({ showToast }: { showToast: Toast }) {
   const [applying, setApplying] = useState(false)
   const [contact, setContact] = useState('')
   const [note, setNote] = useState('')
+  const [envs, setEnvs] = useState(50)
+  const [cycle, setCycle] = useState<BillingCycle>('annual')
   const [busy, setBusy] = useState(false)
 
   const load = async (reveal = false) => {
@@ -225,7 +264,12 @@ function ManagedAdspower({ showToast }: { showToast: Toast }) {
       if (reveal) showToast(`${t('failed')}：${data.error || res.status}`, 'error')
       return
     }
-    setManaged(data.managed ?? null)
+    const m: Managed = data.managed ?? null
+    setManaged(m)
+    if (m) {
+      setEnvs(m.next_env_quota ?? m.env_quota)
+      setCycle(m.next_billing_cycle ?? m.billing_cycle)
+    }
     setLoaded(true)
   }
 
@@ -233,17 +277,17 @@ function ManagedAdspower({ showToast }: { showToast: Toast }) {
     void load()
   }, [])
 
-  const apply = async () => {
+  const send = async (method: 'POST' | 'PATCH', body: Record<string, unknown>, okMsg: string) => {
     setBusy(true)
     try {
       const res = await fetch('/api/marketing/connector/managed', {
-        method: 'POST',
+        method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contact, note }),
+        body: JSON.stringify(body),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`)
-      showToast(t('managedApplied'), 'success')
+      showToast(okMsg, 'success')
       setApplying(false)
       await load()
     } catch (e) {
@@ -255,19 +299,26 @@ function ManagedAdspower({ showToast }: { showToast: Toast }) {
 
   if (!loaded) return null
   const status = managed?.status
+  const btn = 'px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold disabled:opacity-50'
 
   return (
     <div className="mt-2 text-xs">
       <span className="font-semibold">{t('managedTitle')}</span>
-      {status === 'active' ? (
+      {status === 'active' && managed ? (
         <div className="mt-1 p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900 space-y-1">
-          <div className="text-emerald-700 dark:text-emerald-300">{t('managedActive')}</div>
-          <div>{t('managedAccount')}：<span className="font-mono select-all">{managed?.login_account}</span></div>
+          <div className="text-emerald-700 dark:text-emerald-300">
+            {t('managedActivePlan', {
+              n: managed.env_quota,
+              cycle: managed.billing_cycle === 'annual' ? t('managedAnnual') : t('managedMonthly'),
+              date: managed.paid_until ? new Date(managed.paid_until).toLocaleDateString() : '—',
+            })}
+          </div>
+          <div>{t('managedAccount')}：<span className="font-mono select-all">{managed.login_account}</span></div>
           <div className="flex items-center gap-1.5">
             <span>{t('managedPassword')}：</span>
-            {managed?.password ? (
+            {managed.password ? (
               <span className="font-mono select-all">{managed.password}</span>
-            ) : managed?.has_password ? (
+            ) : managed.has_password ? (
               <button onClick={() => load(true)} className="inline-flex items-center gap-1 text-indigo-600 hover:underline">
                 <Eye className="h-3 w-3" />{t('managedReveal')}
               </button>
@@ -275,37 +326,77 @@ function ManagedAdspower({ showToast }: { showToast: Toast }) {
               <span className="text-muted-foreground">{t('managedNoPassword')}</span>
             )}
           </div>
-          <div>{t('managedGroup')}：<span className="font-mono">{managed?.group_name}</span></div>
+          <div>{t('managedGroup')}：<span className="font-mono">{managed.group_name}</span></div>
           <div className="text-muted-foreground">
             {t('managedSteps')}{' '}
             <a href={ADSPOWER_SIGNUP_URL} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">
               {t('managedDownload')}
             </a>
           </div>
+          <label className="flex items-center gap-1.5 pt-1">
+            <input
+              type="checkbox"
+              checked={managed.auto_renew}
+              disabled={busy}
+              onChange={e => send('PATCH', { auto_renew: e.target.checked }, t('managedSaved'))}
+            />
+            <span>{t('managedAutoRenew')}</span>
+          </label>
+          <div className="pt-1 space-y-1">
+            <div className="text-muted-foreground">{t('managedChangeHint')}</div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <PlanPicker envs={envs} cycle={cycle} onChange={(n, c) => { setEnvs(n); setCycle(c) }} />
+              <button
+                onClick={() => send('PATCH', { env_quota: envs, billing_cycle: cycle }, t('managedSaved'))}
+                disabled={busy}
+                className={btn}
+              >
+                {t('managedChange')}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : status === 'suspended' ? (
+        <div className="mt-1 p-2.5 rounded-lg bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-900 space-y-1.5">
+          <div className="text-orange-700 dark:text-orange-300">{t('managedSuspended')}</div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <PlanPicker envs={envs} cycle={cycle} onChange={(n, c) => { setEnvs(n); setCycle(c) }} />
+            <button
+              onClick={() => send('PATCH', { action: 'reactivate', env_quota: envs, billing_cycle: cycle }, t('managedReactivated'))}
+              disabled={busy}
+              className={btn}
+            >
+              {t('managedReactivate', { total: periodPrice(envs, cycle) })}
+            </button>
+          </div>
         </div>
       ) : status === 'pending' ? (
-        <span className="text-muted-foreground">：{t('managedPending')}</span>
+        <span className="text-muted-foreground">：{t('managedPending', { total: periodPrice(managed?.env_quota ?? envs, managed?.billing_cycle ?? cycle) })}</span>
       ) : applying ? (
-        <div className="mt-1 flex flex-col sm:flex-row gap-1.5">
-          <input
-            value={contact}
-            onChange={e => setContact(e.target.value)}
-            placeholder={t('managedContact')}
-            className="px-2 py-1 rounded-lg border border-border bg-background text-xs sm:w-56"
-          />
-          <input
-            value={note}
-            onChange={e => setNote(e.target.value)}
-            placeholder={t('managedNote')}
-            className="px-2 py-1 rounded-lg border border-border bg-background text-xs flex-1"
-          />
-          <button
-            onClick={apply}
-            disabled={busy || !contact.trim()}
-            className="px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold disabled:opacity-50"
-          >
-            {t('managedSubmit')}
-          </button>
+        <div className="mt-1 space-y-1.5">
+          <PlanPicker envs={envs} cycle={cycle} onChange={(n, c) => { setEnvs(n); setCycle(c) }} />
+          <div className="flex flex-col sm:flex-row gap-1.5">
+            <input
+              value={contact}
+              onChange={e => setContact(e.target.value)}
+              placeholder={t('managedContact')}
+              className="px-2 py-1 rounded-lg border border-border bg-background text-xs sm:w-56"
+            />
+            <input
+              value={note}
+              onChange={e => setNote(e.target.value)}
+              placeholder={t('managedNote')}
+              className="px-2 py-1 rounded-lg border border-border bg-background text-xs flex-1"
+            />
+            <button
+              onClick={() => send('POST', { contact, note, env_quota: envs, billing_cycle: cycle }, t('managedApplied'))}
+              disabled={busy || !contact.trim()}
+              className={btn}
+            >
+              {t('managedSubmit')}
+            </button>
+          </div>
+          <div className="text-muted-foreground">{t('managedBillingNote')}</div>
         </div>
       ) : (
         <>
