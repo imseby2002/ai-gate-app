@@ -7,6 +7,30 @@ import { sendToCustomer } from '@/lib/cs/send'
 import { isSafeWebhookUrl } from '@/lib/ssrf'
 import type { CsFormField, CsFormNotifyTarget } from '@/app/api/marketing/cs-forms/route'
 
+// 通知只留必要內容，給員工快速看：
+// - 標題的括號說明拿掉（「…（投保用，每人一行）」→「…」）
+// - 答案裡的價格括號拿掉（「三合一（1300元/人）」→「三合一」）
+// - 否／無 這類否定答案整行省略
+// - 多行答案（例如每人一行的旅客資料）直接逐行列出，不重複長標題
+const NEGATIVE_ANSWER_RE = /^(否|無|沒有|不需要|不用|none|no)$/i
+const PAREN_RE = /\s*[（(][^（）()]*[）)]/g
+const PRICE_PAREN_RE = /\s*[（(][^（）()]*\d[\d,]*\s*元[^（）()]*[）)]/g
+
+function compactLines(fields: CsFormField[], answers: Record<string, string>): string[] {
+  const out: string[] = []
+  for (const f of fields) {
+    const raw = (answers[f.id] ?? '').trim()
+    if (!raw || NEGATIVE_ANSWER_RE.test(raw)) continue
+    const value = raw.replace(PRICE_PAREN_RE, '').trim()
+    if (value.includes('\n')) {
+      out.push(...value.split('\n').map(l => l.trim()).filter(Boolean))
+    } else {
+      out.push(`${f.label.replace(PAREN_RE, '').trim() || f.label}：${value}`)
+    }
+  }
+  return out
+}
+
 export function formatFormSubmission(
   formName: string,
   fields: CsFormField[],
@@ -14,9 +38,7 @@ export function formatFormSubmission(
   roomRef: string | null,
   isUpdate = false,
 ): string {
-  const lines = fields
-    .map(f => (answers[f.id] ? `${f.label}：${answers[f.id]}` : null))
-    .filter((l): l is string => !!l)
+  const lines = compactLines(fields, answers)
   const header = isUpdate ? '✏️ ' + formName + ' 已更新（客人改了原本的內容，以此為準）' : `📋 ${formName} 新提交`
   return `${header}\n${roomRef ? `房號/訂單：${roomRef}\n` : ''}${lines.join('\n')}`
 }
@@ -28,9 +50,7 @@ export function formatFormSubmissionBatch(
 ): string {
   const items = submissions.map((s, i) => {
     const time = new Date(s.created_at).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false })
-    const lines = fields
-      .map(f => (s.answers[f.id] ? `${f.label}：${s.answers[f.id]}` : null))
-      .filter((l): l is string => !!l)
+    const lines = compactLines(fields, s.answers)
     return `${i + 1}. ${time}${s.room_ref ? `（房號/訂單：${s.room_ref}）` : ''}\n${lines.join('\n')}`
   })
   return `📋 ${formName} 今日彙整（共 ${submissions.length} 筆）\n\n${items.join('\n\n')}`.slice(0, 4500)
