@@ -10117,7 +10117,7 @@
     "answerFailed": "作答失敗",
     "needSource": "請先加入至少一個知識來源，專家才有依據可作答。",
     "questionPh": "輸入你的問題…",
-    "askBtn": "提問（0.05 點）"
+    "askBtn": "提問（依用量扣點）"
   },
   "PlanGate": {
     "needPlan": "此功能需 {required} 方案，目前方案：{current}",
