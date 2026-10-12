@@ -3,7 +3,7 @@
  *
  * 語音：POST {BIRD_API_URL}/v1/voice/calls
  *   body { from, to, sequence: { id, entry_node_id, trigger_data } }（取自 Bird 後台 Sequence「Create a call」範例，使用已發佈版本）
- * 通話流程在 Bird 後台的 Sequence（vsq_…）建立並發佈；Play audio 綁固定 Bird 音檔（ast_…）。
+ * 通話流程在 Bird 後台的 Sequence（vsq_…）建立並發佈；進入點要求 trigger_data.audio_url。
  * 環境變數：BIRD_API_KEY、BIRD_VOICE_SEQUENCE_ID（vsq_…）、BIRD_VOICE_ENTRY_NODE_ID（預設 start）、
  *          BIRD_VOICE_FROM（未設定時沿用 BIRD_SMS_FROM）、BIRD_API_URL（預設 https://us1.platform.bird.com）
  */
@@ -24,7 +24,7 @@ export const birdProvider: TelephonyProvider = {
     )
   },
 
-  async call({ phone }: VoiceCallParams) {
+  async call({ phone, audioUrl }: VoiceCallParams) {
     const apiKey = process.env.BIRD_API_KEY
     const sequenceId = process.env.BIRD_VOICE_SEQUENCE_ID
     const entryNodeId = process.env.BIRD_VOICE_ENTRY_NODE_ID || 'start'
@@ -44,8 +44,8 @@ export const birdProvider: TelephonyProvider = {
       body: JSON.stringify({
         from,
         to: formatToE164(phone),
-        // 進入點未定義欄位，trigger_data 送空物件
-        sequence: { id: sequenceId, entry_node_id: entryNodeId, trigger_data: {} },
+        // 已發佈 Sequence 的進入點要求 trigger_data.audio_url（ElevenLabs 語音檔網址）
+        sequence: { id: sequenceId, entry_node_id: entryNodeId, trigger_data: { audio_url: audioUrl } },
       }),
     })
     const data = await res.json().catch(() => ({}))
