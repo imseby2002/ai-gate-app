@@ -1077,6 +1077,7 @@ export default function ProspectCallPage() {
           callerId: config.birdCallerId,
           birdCallerId: config.birdCallerId,
           keyMappings: config.keyMappings,
+          provider: 'bird',
         }),
       })
       const data = await res.json()

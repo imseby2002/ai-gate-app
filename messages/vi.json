@@ -3023,7 +3023,7 @@
       "confirmClear": "Xóa toàn bộ danh sách khách hàng? Không thể hoàn tác.",
       "clear": "Xóa hết",
       "testCallLabel": "Gọi thử",
-      "testCallHint": "Gọi đến số của bạn bằng kịch bản thoại đầu tiên và cài đặt phím (trừ điểm theo mức sử dụng)",
+      "testCallHint": "Gọi đến số của bạn qua Bird bằng kịch bản thoại đầu tiên (không nhận phím, trừ điểm theo mức sử dụng)",
       "testCallBtn": "Gọi thử",
       "testNeedScript": "Vui lòng nhập kịch bản thoại ở Step 4 trước",
       "testOk": "Đang gọi (kênh: {provider}), vui lòng nghe máy",
