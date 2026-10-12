@@ -26,7 +26,7 @@ export const birdProvider: TelephonyProvider = {
     )
   },
 
-  async call({ phone, audioUrl }: VoiceCallParams) {
+  async call({ phone }: VoiceCallParams) {
     const apiKey = process.env.BIRD_API_KEY
     const sequenceId = process.env.BIRD_VOICE_SEQUENCE_ID
     const entryNodeId = process.env.BIRD_VOICE_ENTRY_NODE_ID || 'start'
@@ -49,7 +49,8 @@ export const birdProvider: TelephonyProvider = {
         version: process.env.BIRD_VOICE_VERSION || 'draft',
         mode: process.env.BIRD_VOICE_MODE || 'test',
         entry_node_id: entryNodeId,
-        trigger_data: { audio_url: audioUrl },
+        // Sequence 的 Play audio 目前綁固定 Bird 音檔（ast_…），進入點未定義欄位，多送欄位會 422
+        trigger_data: {},
       }),
     })
     const data = await res.json().catch(() => ({}))
