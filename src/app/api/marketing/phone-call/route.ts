@@ -26,6 +26,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { getTelephonyProvider, getTelephonyProviderForPhone } from '@/lib/telephony'
+import { birdProvider } from '@/lib/telephony/bird'
 import { chargeUsage, checkCredits, getCostMultiplier, isBillableUser, priceFromCost, ttsCost, voiceCostPerMinute } from '@/lib/marketing/billing'
 import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
 
@@ -135,6 +136,7 @@ export async function POST(req: NextRequest) {
     birdCallerId = '',
     callerId = '',
     keyMappings = [],
+    provider: forceProvider = '',
   } = body
 
   const finalCallerId = callerId || birdCallerId || ''
@@ -148,13 +150,16 @@ export async function POST(req: NextRequest) {
   }
 
   const mappings: KeyMapping[] = Array.isArray(keyMappings) ? keyMappings : []
-  const collectDtmf = mappings.some((m) => m?.digit && m?.join_url)
+  // 指定 provider=bird（撥出測試）時一律走 Bird，不收按鍵
+  const forceBird = forceProvider === 'bird'
+  const collectDtmf = !forceBird && mappings.some((m) => m?.digit && m?.join_url)
+  const pickProvider = (p: string) => forceBird ? birdProvider : getTelephonyProviderForPhone(p, { collectDtmf })
 
   // 執行前餘額檢查：TTS 一次 + 每通以 1 分鐘估算；通話費實際依分鐘數扣點
   const billable = await isBillableUser(user.id)
   const dialList: string[] = action === 'batch' ? (phones as string[]).filter((p) => p?.trim())
     : action === 'call' && phone ? [phone] : []
-  const callEstimateUsd = dialList.reduce((sum, p) => sum + voiceCostPerMinute(p, getTelephonyProviderForPhone(p, { collectDtmf }).name), 0)
+  const callEstimateUsd = dialList.reduce((sum, p) => sum + voiceCostPerMinute(p, pickProvider(p).name), 0)
   const ttsCostUsd = ttsCost(script, modelId)
   const estimate = billable ? priceFromCost(ttsCostUsd + callEstimateUsd, await getCostMultiplier(user.id)) : 0
   const check = await checkCredits(user.id, estimate, billable)
@@ -191,7 +196,7 @@ export async function POST(req: NextRequest) {
     if (action === 'call') {
       if (!phone) return NextResponse.json({ error: '請提供電話號碼' }, { status: 400 })
       const audioUrl = await elevenLabsTTS(script, voiceId, modelId, supabase, user.id)
-      const pProvider = getTelephonyProviderForPhone(phone, { collectDtmf })
+      const pProvider = pickProvider(phone)
       const result = await pProvider.call({ phone, audioUrl, callerId: finalCallerId, collectDtmf })
       await recordCall(phone, result.callId, pProvider.name)
       await chargeUsage(user.id, ttsCostUsd, '[marketing] 電話行銷 TTS')
@@ -209,7 +214,7 @@ export async function POST(req: NextRequest) {
 
       const results: { phone: string; ok: boolean; id?: string; provider?: string; error?: string }[] = []
       for (const p of list) {
-        const pProvider = getTelephonyProviderForPhone(p, { collectDtmf })
+        const pProvider = pickProvider(p)
         try {
           const r = await pProvider.call({ phone: p, audioUrl, callerId: finalCallerId, collectDtmf })
           await recordCall(p, r.callId, pProvider.name)

@@ -3116,7 +3116,7 @@
       "confirmClear": "確定清空整份客戶名單？此動作無法復原。",
       "clear": "清空",
       "testCallLabel": "測試撥號",
-      "testCallHint": "撥給自己的號碼，用第 1 個語音腳本與上方按鍵設定（會依實際用量扣點）",
+      "testCallHint": "透過 Bird 撥給自己的號碼，播放第 1 個語音腳本（不收按鍵，會依實際用量扣點）",
       "testCallBtn": "撥出測試",
       "testNeedScript": "請先在 Step 4 填寫語音腳本",
       "testOk": "已撥出（通道：{provider}），請接聽",

@@ -3116,7 +3116,7 @@
       "confirmClear": "Clear the whole customer list? This cannot be undone.",
       "clear": "Clear",
       "testCallLabel": "Test call",
-      "testCallHint": "Call your own number using the first voice script and the key settings (charged by usage)",
+      "testCallHint": "Call your own number via Bird with the first voice script (no key input, charged by usage)",
       "testCallBtn": "Call test",
       "testNeedScript": "Please fill in a voice script in Step 4 first",
       "testOk": "Calling (provider: {provider}), please answer",
