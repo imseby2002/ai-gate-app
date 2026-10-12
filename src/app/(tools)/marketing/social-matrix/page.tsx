@@ -93,7 +93,7 @@ function SocialMatrixContent() {
   const OFFICIAL_PRESETS = {
     isp_dedicated: { proxy_type: 'home_static' as ProxyType, is_shared: false, monthly_price_usd: 3, max_tenants: 1 },
     isp_shared: { proxy_type: 'home_static' as ProxyType, is_shared: true, monthly_price_usd: 2.8, max_tenants: 1 },
-    residential: { proxy_type: 'residential' as ProxyType, is_shared: false, price_per_gb_usd: 5.25, max_tenants: 10 },
+    residential: { proxy_type: 'residential' as ProxyType, is_shared: false, price_per_gb_usd: 5.25, max_tenants: 1 },
   }
   const [resiGb, setResiGb] = useState<Record<string, number>>({})
   const [isToppingUpId, setIsToppingUpId] = useState<string | null>(null)
@@ -1117,7 +1117,9 @@ function SocialMatrixContent() {
                     const isLeasedByMe = proxies.some(
                       p => p.official_proxy_id === offProxy.id || (p.host === offProxy.host && p.port === offProxy.port)
                     )
-                    const isAvailable = offProxy.status === 'available' && offProxy.current_tenants_count < offProxy.max_tenants
+                    const isResiOffer = offProxy.proxy_type === 'residential'
+                    // 住宅代理不限購買人數，同一使用者也可再買一組（每組 10 條固定 IP）
+                    const isAvailable = offProxy.status === 'available' && (isResiOffer || offProxy.current_tenants_count < offProxy.max_tenants)
                     const isLeasing = isLeasingId === offProxy.id
 
                     return (
@@ -1208,7 +1210,7 @@ function SocialMatrixContent() {
                           </div>
 
                           <div>
-                            {isLeasedByMe ? (
+                            {isLeasedByMe && !isResiOffer ? (
                               <button
                                 onClick={() => setProxySubTab('my_proxies')}
                                 className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 hover:bg-emerald-100 transition-colors"
@@ -2615,6 +2617,7 @@ function SocialMatrixContent() {
                   </div>
                 </div>
                 )}
+                {newOfficialForm.proxy_type !== 'residential' && (
                 <div>
                   <label className="font-bold text-amber-900 dark:text-amber-300 block mb-1">
                     🔒 {t('fMaxTenants')}
@@ -2622,12 +2625,13 @@ function SocialMatrixContent() {
                   <input
                     type="number"
                     min={1}
-                    max={10}
+                    max={5}
                     value={newOfficialForm.max_tenants}
                     onChange={e => setNewOfficialForm(p => ({ ...p, max_tenants: Number(e.target.value) }))}
                     className="w-full px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-800 bg-background font-bold"
                   />
                 </div>
+                )}
               </div>
 
               <div>
