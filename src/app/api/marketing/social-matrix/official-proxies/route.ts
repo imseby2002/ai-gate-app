@@ -4,14 +4,14 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getUsdToTwdRate } from '@/lib/fx'
 import { isBillableUser } from '@/lib/marketing/billing'
 import { deductCredits } from '@/lib/skills/billing'
-import { officialProxyCredits, nextExpiry } from '@/lib/social-matrix/lease-billing'
+import { officialProxyCredits, nextExpiry, OFFICIAL_PRICE_COLS } from '@/lib/social-matrix/lease-billing'
 
 export async function GET(req: NextRequest) {
   const guard = await requireSocialMatrix(req)
   if (guard.res) return guard.res
   const authUser = guard.user
   const { isAdmin, quota, used } = await getOfficialProxyQuota(authUser, 0)
-  // usd_twd_rate：前端用來把 monthly_price_twd 換算成點數顯示（點數＝美金）
+  // usd_twd_rate：前端用來把舊資料的 monthly_price_twd 換算成 USD 顯示（點數＝美金）
   const meta = { is_admin: isAdmin, lease_quota: quota, lease_used: used, usd_twd_rate: await getUsdToTwdRate() }
 
   try {
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     const admin = createAdminClient()
     const offCols = isAdmin
       ? '*'
-      : 'id, name, proxy_type, protocol, host, port, country, city, isp, latency_ms, monthly_price_twd, max_tenants, current_tenants_count, status, is_active, notes, created_at, updated_at'
+      : 'id, name, proxy_type, protocol, host, port, country, city, isp, latency_ms, monthly_price_twd, monthly_price_usd, price_per_gb_usd, traffic_gb, is_shared, max_tenants, current_tenants_count, status, is_active, notes, created_at, updated_at'
     let offQuery = admin.from('marketing_official_proxies').select(offCols).order('created_at', { ascending: false })
     if (!isAdmin) offQuery = offQuery.eq('is_active', true)
     const { data: dbOfficial, error: offErr } = await offQuery
@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
     // 2. Fetch user's active leases
     const { data: dbLeases } = await admin
       .from('marketing_proxy_leases')
-      .select('*, official_proxy:marketing_official_proxies(id, name, proxy_type, country, city, isp, monthly_price_twd)')
+      .select(`*, official_proxy:marketing_official_proxies(id, name, country, city, isp, is_shared, ${OFFICIAL_PRICE_COLS})`)
       .eq('user_id', authUser.id)
       .eq('status', 'active')
 
@@ -66,13 +66,20 @@ export async function POST(req: NextRequest) {
         city,
         isp,
         latency_ms = 20,
-        monthly_price_twd = 299,
+        monthly_price_usd,
+        price_per_gb_usd,
+        traffic_gb,
+        is_shared = false,
         max_tenants = 1,
         notes,
       } = body
 
       if (!host || !port || !name) {
         return NextResponse.json({ error: '請完整提供名稱、主機位址 (Host) 與通訊埠 (Port)' }, { status: 400 })
+      }
+      const isResidential = proxy_type === 'residential'
+      if (isResidential ? !(Number(price_per_gb_usd) > 0 && Number(traffic_gb) > 0) : !(Number(monthly_price_usd) > 0)) {
+        return NextResponse.json({ error: isResidential ? '請填寫每 GB 售價與流量包 GB 數' : '請填寫月租售價 (USD)' }, { status: 400 })
       }
 
       const { data: createdProxy, error: createErr } = await createAdminClient()
@@ -89,7 +96,11 @@ export async function POST(req: NextRequest) {
           city,
           isp,
           latency_ms: Number(latency_ms) || null,
-          monthly_price_twd: Number(monthly_price_twd) || 299,
+          monthly_price_twd: null,
+          monthly_price_usd: isResidential ? null : Number(monthly_price_usd),
+          price_per_gb_usd: isResidential ? Number(price_per_gb_usd) : null,
+          traffic_gb: isResidential ? Number(traffic_gb) : null,
+          is_shared: !isResidential && Boolean(is_shared),
           max_tenants: Number(max_tenants) || 1,
           current_tenants_count: 0,
           status: 'available',
@@ -132,8 +143,9 @@ export async function POST(req: NextRequest) {
       // 附贈額度內免費；超出以點數購買（每 30 天扣一次，到期自動續扣）
       const isPaid = !isAdmin && used >= quota
       const billable = await isBillableUser(authUser.id)
-      const charge = async (name: string, priceTwd: number) => {
-        const price = await officialProxyCredits(priceTwd)
+      const charge = async (name: string, priceFields: Parameters<typeof officialProxyCredits>[0]) => {
+        const price = await officialProxyCredits(priceFields)
+        if (price == null) return { ok: false as const, price: 0, unpriced: true as const }
         if (!billable) return { ok: true as const, price }
         const r = await deductCredits(authUser.id, price, `官方發文 IP 租用 30 天：${name}`)
         return r.ok ? { ok: true as const, price } : { ok: false as const, price }
@@ -160,7 +172,8 @@ export async function POST(req: NextRequest) {
 
         let price = 0
         if (isPaid) {
-          const c = await charge(off.name, off.monthly_price_twd)
+          const c = await charge(off.name, off)
+          if (!c.ok && 'unpriced' in c) return NextResponse.json({ error: '此官方 IP 尚未設定售價' }, { status: 409 })
           if (!c.ok) return NextResponse.json({ error: '點數不足', required: c.price }, { status: 402 })
           price = c.price
         }

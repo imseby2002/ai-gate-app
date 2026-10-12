@@ -44,7 +44,11 @@ export interface OfficialRentableProxy {
   city?: string
   isp?: string
   latency_ms: number
-  monthly_price_twd: number
+  monthly_price_twd?: number | null
+  monthly_price_usd?: number | null // ISP 按 IP 月租（USD）
+  price_per_gb_usd?: number | null // 住宅代理每 GB 售價（USD）
+  traffic_gb?: number | null // 住宅代理流量包 GB 數（每 30 天）
+  is_shared?: boolean // 上游為共享 IP
   max_tenants: number // 1 = 專屬獨享
   current_tenants_count: number
   status: OfficialProxyStatus

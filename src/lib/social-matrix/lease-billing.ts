@@ -1,18 +1,18 @@
 // 官方發文 IP 點數計費：方案附贈以外的額外 IP，每 30 天以點數扣款一次。
-// 點數＝美金（與全站 credit_transactions 同一本帳），價格由 monthly_price_twd 依即時匯率換算。
+// 點數＝美金（與全站 credit_transactions 同一本帳），售價以 USD 設定（舊資料 monthly_price_twd 依即時匯率換算）。
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { getUsdToTwdRate } from '@/lib/fx'
 import { deductCredits } from '@/lib/skills/billing'
 import { isBillableUser } from '@/lib/marketing/billing'
+import { officialPriceUsd, type OfficialPriceFields } from './pricing'
 
 export const LEASE_PERIOD_DAYS = 30
 
-export function twdToCredits(twd: number, usdTwdRate: number): number {
-  return Math.ceil((twd / usdTwdRate) * 100) / 100
-}
+export const OFFICIAL_PRICE_COLS = 'proxy_type, monthly_price_usd, price_per_gb_usd, traffic_gb, monthly_price_twd'
 
-export async function officialProxyCredits(monthlyPriceTwd: number): Promise<number> {
-  return twdToCredits(monthlyPriceTwd, await getUsdToTwdRate())
+export async function officialProxyCredits(off: OfficialPriceFields): Promise<number | null> {
+  const needsRate = !officialPriceUsd(off, null)
+  return officialPriceUsd(off, needsRate ? await getUsdToTwdRate() : null)
 }
 
 export function nextExpiry(from: Date = new Date()): string {
@@ -45,7 +45,7 @@ export async function releaseLease(
 export async function renewExpiredPaidLeases(admin: SupabaseClient) {
   const { data: leases, error } = await admin
     .from('marketing_proxy_leases')
-    .select('id, user_id, official_proxy_id, price_credits, auto_renew, expires_at, official_proxy:marketing_official_proxies(name, monthly_price_twd)')
+    .select(`id, user_id, official_proxy_id, price_credits, auto_renew, expires_at, official_proxy:marketing_official_proxies(name, ${OFFICIAL_PRICE_COLS})`)
     .eq('status', 'active')
     .eq('is_paid', true)
     .lte('expires_at', new Date().toISOString())
@@ -55,8 +55,8 @@ export async function renewExpiredPaidLeases(admin: SupabaseClient) {
   let expired = 0
   for (const lease of leases ?? []) {
     const off = (Array.isArray(lease.official_proxy) ? lease.official_proxy[0] : lease.official_proxy) as
-      { name?: string; monthly_price_twd?: number } | null
-    const price = off?.monthly_price_twd != null ? await officialProxyCredits(off.monthly_price_twd) : Number(lease.price_credits ?? 0)
+      ({ name?: string } & OfficialPriceFields) | null
+    const price = (off ? await officialProxyCredits(off) : null) ?? Number(lease.price_credits ?? 0)
     const billable = await isBillableUser(lease.user_id)
 
     let ok = false
