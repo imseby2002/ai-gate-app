@@ -48,7 +48,7 @@ export const birdProvider: TelephonyProvider = {
       }),
     })
     const data = await res.json().catch(() => ({}))
-    if (!res.ok) throw new Error(data?.message ?? data?.error ?? `Bird 撥打失敗 (${res.status})`)
+    if (!res.ok) throw new Error(`Bird 撥打失敗 (HTTP ${res.status})：${birdErrorText(data)}`)
     return { callId: data?.id ?? data?.call_id ?? null }
   },
 
@@ -57,6 +57,15 @@ export const birdProvider: TelephonyProvider = {
   async sendSms({ phone, text }: SmsParams) {
     return (await sendBirdSms(phone, text)).ok
   },
+}
+
+/** Bird 錯誤回應（{ error: { type, code, message, doc_url } } 或扁平 { message }）轉成可讀文字，保留 code 方便查文件 */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function birdErrorText(data: any): string {
+  const e = data?.error && typeof data.error === 'object' ? data.error : data
+  const parts = [e?.code, e?.type, e?.message ?? (typeof data?.error === 'string' ? data.error : null)].filter(Boolean)
+  const text = parts.join(' / ') || '未知錯誤'
+  return e?.doc_url ? `${text}（${e.doc_url}）` : text
 }
 
 export function isBirdSmsConfigured(): boolean {
