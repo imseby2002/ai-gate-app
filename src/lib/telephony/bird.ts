@@ -26,7 +26,7 @@ export const birdProvider: TelephonyProvider = {
     )
   },
 
-  async call({ phone, audioUrl }: VoiceCallParams) {
+  async call({ phone }: VoiceCallParams) {
     const apiKey = process.env.BIRD_API_KEY
     const sequenceId = process.env.BIRD_VOICE_SEQUENCE_ID
     const entryNodeId = process.env.BIRD_VOICE_ENTRY_NODE_ID || 'start'
@@ -49,7 +49,8 @@ export const birdProvider: TelephonyProvider = {
         version: process.env.BIRD_VOICE_VERSION || 'draft',
         mode: process.env.BIRD_VOICE_MODE || 'test',
         entry_node_id: entryNodeId,
-        trigger_data: { audio_url: audioUrl },
+        // Sequence 的 Play audio 目前綁固定 Bird 音檔（ast_…），進入點未定義欄位，多送欄位會 422
+        trigger_data: {},
       }),
     })
     const data = await res.json().catch(() => ({}))
@@ -70,7 +71,10 @@ function birdErrorText(data: any): string {
   const e = data?.error && typeof data.error === 'object' ? data.error : data
   const parts = [e?.code, e?.type, e?.message ?? (typeof data?.error === 'string' ? data.error : null)].filter(Boolean)
   const text = parts.join(' / ') || '未知錯誤'
-  return e?.doc_url ? `${text}（${e.doc_url}）` : text
+  // 驗證錯誤時附上欄位明細（結構未定，原樣輸出前 500 字）
+  const extra = e?.details ?? e?.errors ?? e?.fields ?? e?.issues ?? data?.errors ?? data?.details
+  const detail = extra ? ` ${JSON.stringify(extra).slice(0, 500)}` : ''
+  return (e?.doc_url ? `${text}（${e.doc_url}）` : text) + detail
 }
 
 export function isBirdSmsConfigured(): boolean {
