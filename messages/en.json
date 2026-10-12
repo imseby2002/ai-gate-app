@@ -3114,7 +3114,13 @@
       "listHeader": "Customer list ({n}) · {sel} selected",
       "exportCsv": "Export CSV",
       "confirmClear": "Clear the whole customer list? This cannot be undone.",
-      "clear": "Clear"
+      "clear": "Clear",
+      "testCallLabel": "Test call",
+      "testCallHint": "Call your own number using the first voice script and the key settings (charged by usage)",
+      "testCallBtn": "Call test",
+      "testNeedScript": "Please fill in a voice script in Step 4 first",
+      "testOk": "Calling (provider: {provider}), please answer",
+      "testFail": "Call failed: {error}"
     }
   },
   "MA": {
