@@ -215,7 +215,7 @@ export async function POST(req: NextRequest) {
           await recordCall(p, r.callId, pProvider.name)
           results.push({ phone: p, ok: true, id: r.callId ?? undefined, provider: pProvider.name })
         } catch (e) {
-          results.push({ phone: p, ok: false, provider: pProvider.name, error: String(e) })
+          results.push({ phone: p, ok: false, provider: pProvider.name, error: `[${pProvider.name}] ${e instanceof Error ? e.message : String(e)}` })
         }
         await new Promise(r => setTimeout(r, 600))
       }

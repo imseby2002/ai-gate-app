@@ -98,8 +98,8 @@ export const twilioProvider: TelephonyProvider = {
 
     const data = await res.json().catch(() => ({}))
     if (!res.ok) {
-      const errMsg = data?.message || data?.error_message || `Twilio 撥打失敗 (${res.status})`
-      throw new Error(errMsg)
+      const detail = [data?.code, data?.message || data?.error_message].filter(Boolean).join(' / ') || '未知錯誤'
+      throw new Error(`Twilio 撥打失敗 (HTTP ${res.status})：${detail}${data?.more_info ? `（${data.more_info}）` : ''}`)
     }
 
     return { callId: data?.sid ?? null }
