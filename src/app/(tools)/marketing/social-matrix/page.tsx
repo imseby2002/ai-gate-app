@@ -2580,6 +2580,20 @@ function SocialMatrixContent() {
                         className="w-full px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-800 bg-background font-mono"
                       />
                     </div>
+                    <div>
+                      <label className="font-bold text-amber-900 dark:text-amber-300 block mb-1">
+                        🌏 {t('fResiCountry')}
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        maxLength={2}
+                        value={newOfficialForm.country}
+                        onChange={e => setNewOfficialForm(p => ({ ...p, country: e.target.value.toUpperCase() }))}
+                        placeholder="VN"
+                        className="w-full px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-800 bg-background font-mono uppercase"
+                      />
+                    </div>
                     <p className="col-span-2 text-[11px] text-amber-900 dark:text-amber-300">{t('resiGroupHint')}</p>
                   </>
                 ) : (
@@ -2722,6 +2736,18 @@ function SocialMatrixContent() {
                         onChange={e => setEditingOfficial({ ...editingOfficial, api_token: e.target.value })}
                         placeholder={t('apiTokenPh')}
                         className="w-full px-3 py-1.5 rounded-lg border border-border font-mono bg-background"
+                      />
+                    </div>
+                    <div>
+                      <label className="font-bold text-foreground block mb-1">{t('fResiCountry')}</label>
+                      <input
+                        type="text"
+                        required
+                        maxLength={2}
+                        value={editingOfficial.country ?? ''}
+                        onChange={e => setEditingOfficial({ ...editingOfficial, country: e.target.value.toUpperCase() })}
+                        placeholder="VN"
+                        className="w-full px-3 py-1.5 rounded-lg border border-border font-mono uppercase bg-background"
                       />
                     </div>
                   </div>

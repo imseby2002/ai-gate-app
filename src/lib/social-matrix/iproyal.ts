@@ -36,6 +36,13 @@ export async function giveResiTraffic(token: string, hash: string, amountGb: num
   await call(token, `/residential-subusers/${encodeURIComponent(hash)}/give-traffic`, { amount: amountGb })
 }
 
+// 黏性 IP：密碼後綴指定國家＋session（8 碼），lifetime 7 天內維持同一個 IP
+export function resiStickyPassword(password: string, country?: string | null) {
+  const cc = (country || '').trim().toLowerCase()
+  const countryPart = /^[a-z]{2}$/.test(cc) ? `_country-${cc}` : ''
+  return `${password}${countryPart}_session-${randomId(8)}_lifetime-7d`
+}
+
 export function resiApiToken(off: { api_token?: string | null }) {
   return off.api_token || process.env.IPROYAL_RESI_API_TOKEN || null
 }

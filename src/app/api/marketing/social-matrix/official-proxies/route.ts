@@ -5,7 +5,7 @@ import { getUsdToTwdRate } from '@/lib/fx'
 import { isBillableUser } from '@/lib/marketing/billing'
 import { deductCredits, getBalance } from '@/lib/skills/billing'
 import { resiPackUsd } from '@/lib/social-matrix/pricing'
-import { createResiSubuser, giveResiTraffic, resiApiToken } from '@/lib/social-matrix/iproyal'
+import { createResiSubuser, giveResiTraffic, resiApiToken, resiStickyPassword } from '@/lib/social-matrix/iproyal'
 import { officialProxyCredits, nextExpiry, OFFICIAL_PRICE_COLS } from '@/lib/social-matrix/lease-billing'
 
 export async function GET(req: NextRequest) {
@@ -242,7 +242,7 @@ export async function POST(req: NextRequest) {
           host: off.host,
           port: off.port,
           username: resi?.username ?? off.username,
-          password: resi?.password ?? off.password,
+          password: resi ? resiStickyPassword(resi.password, off.country) : off.password,
           country: off.country,
           city: off.city,
           isp: off.isp,
