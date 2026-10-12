@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { requireSocialMatrix, requirePlatformAdmin } from '@/lib/social-matrix/access'
 
 const EDITABLE = ['name', 'proxy_type', 'protocol', 'host', 'port', 'username', 'password', 'country', 'city', 'isp',
-  'latency_ms', 'monthly_price_twd', 'max_tenants', 'status', 'is_active', 'notes'] as const
+  'latency_ms', 'monthly_price_twd', 'monthly_price_usd', 'price_per_gb_usd', 'api_token', 'is_shared', 'max_tenants', 'status', 'is_active', 'notes'] as const
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const guard = await requireSocialMatrix(req)

@@ -44,7 +44,11 @@ export interface OfficialRentableProxy {
   city?: string
   isp?: string
   latency_ms: number
-  monthly_price_twd: number
+  monthly_price_twd?: number | null
+  monthly_price_usd?: number | null // ISP 按 IP 月租（USD）
+  price_per_gb_usd?: number | null // 住宅代理每 GB 售價（USD）
+  api_token?: string | null // 住宅代理：該組 IPRoyal 帳號的 API 金鑰（僅管理員可見）
+  is_shared?: boolean // 上游為共享 IP
   max_tenants: number // 1 = 專屬獨享
   current_tenants_count: number
   status: OfficialProxyStatus
@@ -61,6 +65,8 @@ export interface ProxyLease {
   status: 'active' | 'expired' | 'canceled'
   rented_at: string
   expires_at: string
+  traffic_gb?: number | null // 住宅代理：累計購買 GB
+  subuser_hash?: string | null // 住宅代理：IPRoyal 子帳號
   official_proxy?: OfficialRentableProxy
   created_at?: string
   updated_at?: string
