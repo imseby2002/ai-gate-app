@@ -8,7 +8,7 @@ import { officialPriceUsd, type OfficialPriceFields } from './pricing'
 
 export const LEASE_PERIOD_DAYS = 30
 
-export const OFFICIAL_PRICE_COLS = 'proxy_type, monthly_price_usd, price_per_gb_usd, traffic_gb, monthly_price_twd'
+export const OFFICIAL_PRICE_COLS = 'proxy_type, monthly_price_usd, price_per_gb_usd, monthly_price_twd'
 
 export async function officialProxyCredits(off: OfficialPriceFields): Promise<number | null> {
   const needsRate = !officialPriceUsd(off, null)
