@@ -73,7 +73,9 @@ function birdErrorText(data: any): string {
   const text = parts.join(' / ') || '未知錯誤'
   // 驗證錯誤時附上欄位明細（結構未定，原樣輸出前 500 字）
   const extra = e?.details ?? e?.errors ?? e?.fields ?? e?.issues ?? data?.errors ?? data?.details
-  const detail = extra ? ` ${JSON.stringify(extra).slice(0, 500)}` : ''
+  // 找不到已知明細欄位時，驗證錯誤直接附原始回應，方便對照 Bird 實際格式
+  const raw = !extra && e?.type === 'validation_error' ? data : null
+  const detail = extra || raw ? ` ${JSON.stringify(extra ?? raw).slice(0, 800)}` : ''
   return (e?.doc_url ? `${text}（${e.doc_url}）` : text) + detail
 }
 
