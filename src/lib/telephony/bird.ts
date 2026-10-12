@@ -1,9 +1,12 @@
 /**
  * Bird provider（新版平台 API，Bearer 驗證）：語音外撥 + SMS。
  *
- * 語音：POST {BIRD_API_URL}/v1/voice/calls，body { from, to, sequence: { id, entry_node_id, trigger_data } }
- * 通話流程在 Bird 後台的 Sequence 建立；trigger_data 帶入 audio_url（ElevenLabs 語音檔）供 Sequence 播放。
- * 環境變數：BIRD_API_KEY、BIRD_VOICE_SEQUENCE_ID、BIRD_VOICE_ENTRY_NODE_ID、
+ * 語音：POST {BIRD_API_URL}/v1/voice/sequences/{sequenceId}/runs
+ *   body { from, to, version, mode, entry_node_id, trigger_data }（格式取自 Bird 後台 Sequence「Create a call」範例）
+ * 通話流程在 Bird 後台的 Sequence（vsq_…）建立；trigger_data 帶入 audio_url（ElevenLabs 語音檔）供 Sequence 播放。
+ * 環境變數：BIRD_API_KEY、BIRD_VOICE_SEQUENCE_ID（vsq_…）、
+ *          BIRD_VOICE_ENTRY_NODE_ID（預設 start）、BIRD_VOICE_VERSION（預設 draft；發佈後可改 published 版本）、
+ *          BIRD_VOICE_MODE（預設 test；正式撥打改 production）、
  *          BIRD_VOICE_FROM（未設定時沿用 BIRD_SMS_FROM）、BIRD_API_URL（預設 https://us1.platform.bird.com）
  */
 import { randomUUID } from 'crypto'
@@ -19,7 +22,6 @@ export const birdProvider: TelephonyProvider = {
     return !!(
       process.env.BIRD_API_KEY &&
       process.env.BIRD_VOICE_SEQUENCE_ID &&
-      process.env.BIRD_VOICE_ENTRY_NODE_ID &&
       (process.env.BIRD_VOICE_FROM || process.env.BIRD_SMS_FROM)
     )
   },
@@ -27,13 +29,13 @@ export const birdProvider: TelephonyProvider = {
   async call({ phone, audioUrl }: VoiceCallParams) {
     const apiKey = process.env.BIRD_API_KEY
     const sequenceId = process.env.BIRD_VOICE_SEQUENCE_ID
-    const entryNodeId = process.env.BIRD_VOICE_ENTRY_NODE_ID
+    const entryNodeId = process.env.BIRD_VOICE_ENTRY_NODE_ID || 'start'
     const from = process.env.BIRD_VOICE_FROM || process.env.BIRD_SMS_FROM
-    if (!apiKey || !sequenceId || !entryNodeId || !from) {
-      throw new Error('Bird 語音未設定（需 BIRD_API_KEY / BIRD_VOICE_SEQUENCE_ID / BIRD_VOICE_ENTRY_NODE_ID / BIRD_VOICE_FROM）')
+    if (!apiKey || !sequenceId || !from) {
+      throw new Error('Bird 語音未設定（需 BIRD_API_KEY / BIRD_VOICE_SEQUENCE_ID / BIRD_VOICE_FROM 或 BIRD_SMS_FROM）')
     }
 
-    const res = await fetch(`${API_URL()}/v1/voice/calls`, {
+    const res = await fetch(`${API_URL()}/v1/voice/sequences/${encodeURIComponent(sequenceId)}/runs`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -44,12 +46,15 @@ export const birdProvider: TelephonyProvider = {
       body: JSON.stringify({
         from,
         to: formatToE164(phone),
-        sequence: { id: sequenceId, entry_node_id: entryNodeId, trigger_data: { audio_url: audioUrl } },
+        version: process.env.BIRD_VOICE_VERSION || 'draft',
+        mode: process.env.BIRD_VOICE_MODE || 'test',
+        entry_node_id: entryNodeId,
+        trigger_data: { audio_url: audioUrl },
       }),
     })
     const data = await res.json().catch(() => ({}))
     if (!res.ok) throw new Error(`Bird 撥打失敗 (HTTP ${res.status})：${birdErrorText(data)}`)
-    return { callId: data?.id ?? data?.call_id ?? null }
+    return { callId: data?.id ?? data?.call_id ?? data?.run_id ?? null }
   },
 
   // SMS：POST {BIRD_API_URL}/v1/sms/messages（Bearer）
