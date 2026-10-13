@@ -10252,7 +10252,7 @@
     "resiOwned": "Đã có kết nối",
     "confirmAddConn": "Thêm 1 kết nối IP cố định dùng lưu lượng dân cư hiện có (không trừ điểm). Tiếp tục?",
     "addConn": "Thêm 1 kết nối",
-    "resiConnHint": "Mỗi lần mua thêm 1 IP cố định",
+    "resiConnHint": "Mỗi lần mua thêm 1 IP cố định (tự đổi mỗi 7 ngày)",
     "confirmTopupResi": "Sẽ trừ {credits} điểm để mua thêm {gb} GB lưu lượng dân cư (không hết hạn). Tiếp tục?",
     "fResiCountry": "Mã quốc gia IP (vd. VN, TW) *",
     "fPlanPreset": "Áp dụng nhanh",

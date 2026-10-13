@@ -10345,7 +10345,7 @@
     "resiOwned": "Connected",
     "confirmAddConn": "Add 1 sticky-IP connection using your existing residential traffic (no extra charge). Continue?",
     "addConn": "Add 1 connection",
-    "resiConnHint": "Each purchase adds 1 sticky IP",
+    "resiConnHint": "Each purchase adds 1 sticky IP (auto-rotates every 7 days)",
     "confirmTopupResi": "{credits} credits will be charged to add {gb} GB of residential traffic (never expires). Continue?",
     "fResiCountry": "IP country code (e.g. VN, TW) *",
     "fPlanPreset": "Quick preset",

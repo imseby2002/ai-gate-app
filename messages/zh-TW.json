@@ -10345,7 +10345,7 @@
     "resiOwned": "已有連線",
     "confirmAddConn": "新增 1 條固定 IP 連線（使用您現有的住宅流量，不另扣點）。確定新增？",
     "addConn": "新增 1 條連線",
-    "resiConnHint": "每次購買新增 1 條固定 IP",
+    "resiConnHint": "每次購買新增 1 條固定 IP（每 7 天自動更換）",
     "confirmTopupResi": "將扣 {credits} 點加購住宅代理 {gb} GB（流量不過期）。確定加購？",
     "fResiCountry": "IP 國家代碼（如 VN、TW）*",
     "fPlanPreset": "快速套用方案",
