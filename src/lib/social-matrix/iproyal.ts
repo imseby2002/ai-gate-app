@@ -39,11 +39,11 @@ export async function giveResiTraffic(token: string, hash: string, amountGb: num
 // 每個子帳號最多的固定 IP 連線數（同一子帳號、不同 session）；滿了再開新子帳號
 export const RESI_MAX_SESSIONS_PER_SUBUSER = 10
 
-// 黏性 IP：密碼後綴指定國家＋session（8 碼），lifetime 7 天內維持同一個 IP
+// 黏性 IP：密碼後綴指定國家＋session（8 碼），lifetime 168h（7 天）內維持同一個 IP
 export function resiStickyPassword(password: string, country?: string | null) {
   const cc = (country || '').trim().toLowerCase()
   const countryPart = /^[a-z]{2}$/.test(cc) ? `_country-${cc}` : ''
-  return `${password}${countryPart}_session-${randomId(8)}_lifetime-7d`
+  return `${password}${countryPart}_session-${randomId(8)}_lifetime-168h`
 }
 
 // 住宅代理 API 金鑰統一由環境變數設定
