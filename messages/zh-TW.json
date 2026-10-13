@@ -2843,8 +2843,7 @@
       "noPhoneTitle": "選取的名單都沒有門號",
       "noPhoneHint": "請先蒐集含電話的名單，或改用其他分頁。",
       "bodyPrefix": "內容：",
-      "noBody": "（模板尚未填內容）",
-      "countryNote": "自動分流：🇹🇼 sms-get.com／🇻🇳 Stringee·Zalo／🌐 Twilio（需先購買門號）。座機號碼不會收到簡訊。"
+      "countryNote": "自動分流：🇹🇼 sms-get.com／🇻🇳 Zalo ZNS·Twilio／🌐 Twilio（需先購買門號）。座機號碼不會收到簡訊。"
     },
     "cats": {
       "factory": "製造/工廠",
@@ -2997,9 +2996,7 @@
     },
     "s6p": {
       "title": "Step 6 — 撥話設定",
-      "callerId": "外顯來電號碼（Caller ID）",
-      "callerIdHint": " — 接收方看到的來電號碼（你的公司號碼）",
-      "callerIdWarn": "⚠️ 未填寫則無法撥打，請填入已驗證的號碼（台灣填 Twilio 驗證號碼、越南填 Stringee 外顯、美國填 Bird 號碼）",
+      "callerIdWarn": "⚠️ 未填寫則無法撥打，請填入已驗證的號碼（台灣與越南填 Twilio 驗證/已購號碼、美國填 Bird 號碼）",
       "dialList": "待撥清單（共 {count} 支有效號碼）",
       "fromFilter": " — 來自篩選結果",
       "needRules": "請先在 Step 5 建立撥打規則",
@@ -3099,7 +3096,7 @@
       "called": "已撥",
       "joined": "已加入",
       "dedup": "（新增 {added}、重複 {dup}）",
-      "callerIdPh": "+886xxxxxxxxx (Twilio 驗證號碼) / +84xxxxxxxxx (Stringee 外顯)",
+      "callerIdPh": "+886xxxxxxxxx (Twilio 驗證/已購號碼) / +84xxxxxxxxx",
       "keyJoinTitle": "撥號後按鍵加入社群",
       "keyJoinDesc": "客戶聽完語音後按數字鍵，系統自動以簡訊／ZNS 傳送加入連結（LINE／WhatsApp／ZALO）。語音腳本內請提示按鍵說明，例：「加 LINE 請按 1」。未設定則維持純語音播報。",
       "keyPh": "鍵",
@@ -3116,7 +3113,7 @@
       "confirmClear": "確定清空整份客戶名單？此動作無法復原。",
       "clear": "清空",
       "testCallLabel": "測試撥號",
-      "testCallHint": "依門號國別自動路由（台灣走 Twilio 播 ElevenLabs 真人語音、美國走 Bird、越南走 Stringee），播放第 1 個語音腳本（不收按鍵，會依實際用量扣點）",
+      "testCallHint": "依門號國別自動路由（台灣與越南走 Twilio 播 ElevenLabs 真人語音、美國走 Bird），播放第 1 個語音腳本（不收按鍵，會依實際用量扣點）",
       "testCallBtn": "撥出測試",
       "testNeedScript": "請先在 Step 4 填寫語音腳本",
       "testOk": "已撥出（通道：{provider}），請接聽",
@@ -3743,7 +3740,7 @@
       "sent": "已寄出",
       "envNotice": "需在 Vercel 設定環境變數：",
       "ttsProvider": "TTS：ElevenLabs",
-      "callProvider": "撥打：Twilio / Stringee (智慧多國分流)",
+      "callProvider": "撥打：Twilio / Bird (智慧多國分流)",
       "vbeeLocked": "VBEE — 待日後啟用",
       "voiceDialSettings": "語音 / 撥號設定",
       "elevenVoice": "ElevenLabs 語音",

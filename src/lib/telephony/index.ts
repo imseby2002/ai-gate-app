@@ -2,13 +2,13 @@
  * Telephony provider 工廠與智慧多國語音路由中心
  *
  * 語音通話智慧路由：
- * - 🇻🇳 越南門號 (+84 / 03,05,07,08,09xx) ── 優先走 Stringee (越南境內線路，約 NT$ 0.8~1.2/分，免國際警告)
+ * - 🇻🇳 越南門號 (+84 / 03,05,07,08,09xx) ── 走 Twilio Voice (支援 ElevenLabs 真人語音，備援 Bird)
  * - 🇺🇸 北美門號 (+1) ─────────────── 優先走 Bird（約 $0.0049/分）；需按鍵加入社群時走 Twilio（Bird 按鍵回報尚未串接）
  * - 🇹🇼 台灣門號 (+886 / 09xx) ───────── 走 Twilio Voice (支援驗證主叫號碼 Verified Caller ID，不需買號碼，支援手機/市話外顯)
- * - 🌐 其他國際門號 (+1, +81, +82 等) ───── 走 Twilio Voice (支援 Bird 作為備援)
+ * - 🌐 其他國際門號 (+81, +82 等) ───── 走 Twilio Voice (支援 Bird 作為備援)
  *
  * 亦支援透過環境變數強制指定：
- * - TELEPHONY_PROVIDER = 'twilio' | 'stringee' | 'bird'
+ * - TELEPHONY_PROVIDER = 'twilio' | 'bird'
  */
 import type { TelephonyProvider } from './types'
 import { birdProvider } from './bird'
@@ -54,9 +54,8 @@ export function getTelephonyProviderForPhone(phone: string, opts?: { collectDtmf
 
   const country = detectPhoneCountry(phone)
 
-  // 🇻🇳 越南號碼：優先 Stringee，次選 Twilio，後備 Bird
+  // 🇻🇳 越南號碼：優先 Twilio，後備 Bird
   if (country === 'VN') {
-    if (stringeeProvider.isConfigured()) return stringeeProvider
     if (twilioProvider.isConfigured()) return twilioProvider
     return birdProvider
   }
@@ -64,10 +63,9 @@ export function getTelephonyProviderForPhone(phone: string, opts?: { collectDtmf
   // 🇺🇸 北美號碼：優先 Bird（較便宜）；需收按鍵時走 Twilio
   if (country === 'US' && !opts?.collectDtmf && birdProvider.isConfigured()) return birdProvider
 
-  // 🇹🇼 台灣與 🌐 國際號碼：優先 Twilio，次選 Bird，後備 Stringee
+  // 🇹🇼 台灣與 🌐 國際號碼：優先 Twilio，次選 Bird
   if (twilioProvider.isConfigured()) return twilioProvider
   if (birdProvider.isConfigured()) return birdProvider
-  if (stringeeProvider.isConfigured()) return stringeeProvider
 
   // 預設 Twilio
   return twilioProvider
@@ -86,10 +84,9 @@ export function getTelephonyProvider(preferred?: string): TelephonyProvider {
     return PROVIDERS[key]
   }
 
-  // 預設優先選擇已設定的 Provider：Twilio > Bird > Stringee
+  // 預設優先選擇已設定的 Provider：Twilio > Bird
   if (twilioProvider.isConfigured()) return twilioProvider
   if (birdProvider.isConfigured()) return birdProvider
-  if (stringeeProvider.isConfigured()) return stringeeProvider
 
   return twilioProvider
 }

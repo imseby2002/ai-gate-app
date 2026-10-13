@@ -3,7 +3,7 @@
  * 批次寄送行銷簡訊（智慧多國分流）
  *
  * - 🇹🇼 台灣號碼：自動經由 sms-get.com
- * - 🇻🇳 越南號碼：自動經由 Stringee (或 Zalo ZNS)
+ * - 🇻🇳 越南號碼：自動經由 Zalo ZNS (備援 Twilio)
  * - 🇺🇸 北美號碼：自動經由 Bird (備援 Twilio)
  * - 🌐 其他國際：自動經由 Twilio (備援 Bird)
  *

@@ -3,7 +3,7 @@
  *
  * 依電話門號國碼自動分流：
  * 1. 🇹🇼 台灣門號 (+886 / 09xx) ─── 走 sms-get.com (簡訊特惠網，成本約 NT$ 0.72 ~ 0.86 / 則)
- * 2. 🇻🇳 越南門號 (+84 / 03,05,07,08,09xx) ─ 優先走 Zalo ZNS，若無則走 Stringee (SMS Brandname，成本約 NT$ 0.55 ~ 0.8 / 則)
+ * 2. 🇻🇳 越南門號 (+84 / 03,05,07,08,09xx) ─ 優先走 Zalo ZNS，若無或未設定則走 Twilio SMS
  * 3. 🇺🇸 北美門號 (+1) ─────────────── 優先走 Bird（約 $0.0035 / 則），未設定或失敗改走 Twilio
  * 4. 🌐 其他國際門號 (+81, +82, +65 等) ─ 走 Twilio (全區通用，支援 Bird 作為備援)
  */
@@ -171,55 +171,7 @@ async function sendViaSmsGet(
   }
 }
 
-// ── 2. 越南通道：Stringee / Zalo ZNS ─────────────────────────────────────────
-function createStringeeJwt(sid: string, secret: string): string {
-  const header = Buffer.from(JSON.stringify({ typ: 'JWT', alg: 'HS256', cty: 'stringee-api;v=1' })).toString('base64url')
-  const now = Math.floor(Date.now() / 1000)
-  const payload = Buffer.from(JSON.stringify({
-    jti: `${sid}-${now}`,
-    iss: sid,
-    exp: now + 3600,
-    rest_api: true,
-  })).toString('base64url')
-
-  const sig = crypto.createHmac('sha256', secret).update(`${header}.${payload}`).digest('base64url')
-  return `${header}.${payload}.${sig}`
-}
-
-async function sendViaStringee(phone: string, text: string): Promise<{ ok: boolean; messageId?: string; error?: string }> {
-  const sid = process.env.STRINGEE_API_KEY_SID || process.env.STRINGEE_ACCOUNT_SID
-  const secret = process.env.STRINGEE_API_KEY_SECRET || process.env.STRINGEE_ACCOUNT_KEY
-  const brandname = process.env.STRINGEE_SMS_BRANDNAME || 'NOTICE'
-  if (!sid || !secret) {
-    return { ok: false, error: 'Stringee 未設定（請設定 STRINGEE_ACCOUNT_SID / STRINGEE_ACCOUNT_KEY）' }
-  }
-
-  try {
-    const token = createStringeeJwt(sid, secret)
-    const res = await fetch('https://api.stringee.com/v1/sms', {
-      method: 'POST',
-      headers: {
-        'X-STRINGEE-AUTH': token,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        sms: [{
-          from: brandname,
-          to: phone,
-          text,
-        }],
-      }),
-    })
-
-    const data = await res.json().catch(() => ({}))
-    if (res.ok && (data.r === 0 || data.status === 'success' || data.messages?.[0]?.status === 'queued')) {
-      return { ok: true, messageId: data.messages?.[0]?.id || 'stringee-ok' }
-    }
-    return { ok: false, error: data.message || data.error || `Stringee 錯誤 (${res.status})` }
-  } catch (e) {
-    return { ok: false, error: `Stringee 連線異常：${String(e)}` }
-  }
-}
+// ── 2. 越南通道：Zalo ZNS (備援 Twilio) ────────────────────────────────────
 
 async function sendViaZaloZns(
   phone: string,
@@ -331,7 +283,7 @@ export async function sendSmsMessage(options: SmsSendOptions): Promise<SmsSendRe
     }
   }
 
-  // 🇻🇳 越南號碼 ── 優先嘗試 Zalo ZNS，次選 Stringee，未設定或失敗時改走 Twilio
+  // 🇻🇳 越南號碼 ── 優先嘗試 Zalo ZNS，未設定或失敗時改走 Twilio
   if (country === 'VN') {
     if (zaloTemplateId && (zaloAccessToken || process.env.ZALO_ZNS_ACCESS_TOKEN || process.env.ZALO_OA_ACCESS_TOKEN)) {
       const znsRes = await sendViaZaloZns(normalizedPhone, zaloTemplateId, zaloTemplateData, zaloAccessToken)
@@ -346,21 +298,6 @@ export async function sendSmsMessage(options: SmsSendOptions): Promise<SmsSendRe
         }
       }
       // ZNS 失敗時繼續 fallback
-    }
-
-    if (process.env.STRINGEE_API_KEY_SID || process.env.STRINGEE_ACCOUNT_SID) {
-      const stringeeRes = await sendViaStringee(normalizedPhone, text)
-      if (stringeeRes.ok) {
-        return {
-          phone: rawPhone,
-          normalizedPhone,
-          country,
-          provider: 'stringee',
-          ok: true,
-          messageId: stringeeRes.messageId,
-        }
-      }
-      console.warn('[sms] Stringee 發送失敗，改走 Twilio:', stringeeRes.error)
     }
 
     const twilioRes = await sendViaTwilio(normalizePhoneForCountry(rawPhone, 'INTL'), text)

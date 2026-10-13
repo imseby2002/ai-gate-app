@@ -165,12 +165,12 @@ function isTwMobile(rawPhone: string): boolean {
 
 // 語音（每分鐘，未滿 1 分鐘以 1 分鐘計，與 Twilio 計費方式一致）
 // Twilio 台灣：手機 $0.1985、市話 $0.1196；美國 $0.013（Bird $0.0049）；越南手機 $0.1777
-// Stringee 越南境內：約 NT$0.8~1.2／分，取 $0.04；其他國家未逐一建表，保守取 $0.20
+// 其他國家未逐一建表，保守取 $0.20
 export function voiceCostPerMinute(phone: string, provider: string): number {
   const country = detectTelcoCountry(phone)
   if (country === 'TW') return isTwMobile(phone) ? 0.1985 : 0.1196
   if (country === 'US') return provider === 'bird' ? 0.0049 : 0.013
-  if (country === 'VN') return provider === 'stringee' ? 0.04 : 0.1777
+  if (country === 'VN') return 0.1777
   return 0.2
 }
 
@@ -180,8 +180,8 @@ export function callCost(phone: string, provider: string, durationSec: number): 
 }
 
 // 簡訊（每段）：台灣 sms-get NT$0.86 ≈ $0.027；美國 Bird $0.0035；
-// 越南 Stringee 約 NT$0.55~0.8 ≈ $0.025；其他國家（Twilio）未逐一建表，保守取 $0.10
-const SMS_SEGMENT_COSTS: Record<TelcoCountry, number> = { TW: 0.027, US: 0.0035, VN: 0.025, INTL: 0.1 }
+// 越南（Twilio / Zalo ZNS）取 $0.05；其他國家（Twilio）未逐一建表，保守取 $0.10
+const SMS_SEGMENT_COSTS: Record<TelcoCountry, number> = { TW: 0.027, US: 0.0035, VN: 0.05, INTL: 0.1 }
 
 // GSM-7 基本字元集（含常用符號）；出現其他字元（中文、emoji 等）即改 UCS-2
 const GSM7 = /^[@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !"#¤%&'()*+,\-./0-9:;<=>?¡A-ZÄÖÑÜ§¿a-zäöñüà^{}\\[~\]|€]*$/

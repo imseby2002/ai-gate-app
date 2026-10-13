@@ -3794,7 +3794,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
             <span className="text-base">🇻🇳</span>
             <div>
               <div className="font-semibold text-gray-800">{t('x.vnNumber')}</div>
-              <div className="text-[11px] text-gray-500">{t('x.via')} <span className="font-mono font-medium text-sky-700">Stringee Voice</span></div>
+              <div className="text-[11px] text-gray-500">{t('x.via')} <span className="font-mono font-medium text-sky-700">Twilio Voice</span></div>
               <div className="text-[10px] text-sky-600 mt-0.5 font-medium">{t('x.vnVoiceNote')}</div>
             </div>
           </div>
@@ -3892,7 +3892,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
           )}
           {phoneBreakdown.vn > 0 && (
             <span className="px-2 py-1 rounded-md bg-sky-50 text-sky-700 border border-sky-200">
-              🇻🇳 {t('x.vn')}<strong>{phoneBreakdown.vn}</strong> (Stringee Voice)
+              🇻🇳 {t('x.vn')}<strong>{phoneBreakdown.vn}</strong> (Twilio Voice)
             </span>
           )}
           {phoneBreakdown.intl > 0 && (
@@ -3944,7 +3944,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
           </div>
           {savedData?.lastBatch && (
             <div className="text-[10px] text-gray-400">
-              {new Date(savedData.lastBatch.calledAt).toLocaleString(locale)} · ElevenLabs TTS + Twilio / Stringee
+              {new Date(savedData.lastBatch.calledAt).toLocaleString(locale)} · ElevenLabs TTS + Twilio / Bird
             </div>
           )}
         </div>
@@ -3956,11 +3956,8 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
         <div className="flex gap-2 flex-wrap text-[11px]">
           <code className="bg-blue-100 px-1.5 py-0.5 rounded">ELEVENLABS_API_KEY</code>
           <code className="bg-blue-100 px-1.5 py-0.5 rounded">TWILIO_ACCOUNT_SID</code>
-          <code className="bg-blue-100 px-1.5 py-0.5 rounded">TWILIO_API_KEY_SID</code>
-          <code className="bg-blue-100 px-1.5 py-0.5 rounded">TWILIO_API_KEY_SECRET</code>
+          <code className="bg-blue-100 px-1.5 py-0.5 rounded">TWILIO_AUTH_TOKEN</code>
           <code className="bg-blue-100 px-1.5 py-0.5 rounded">TWILIO_FROM_NUMBER</code>
-          <code className="bg-blue-100 px-1.5 py-0.5 rounded">STRINGEE_API_KEY_SID</code>
-          <code className="bg-blue-100 px-1.5 py-0.5 rounded">STRINGEE_API_KEY_SECRET</code>
         </div>
       </div>
       </div>}
@@ -3994,7 +3991,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
                 <span className="text-base">🇻🇳</span>
                 <div>
                   <div className="font-semibold text-gray-800">{t('x.vnNumber')}</div>
-                  <div className="text-[11px] text-gray-500">{t('x.via')} <span className="font-mono font-medium text-teal-700">Stringee / ZNS</span></div>
+                  <div className="text-[11px] text-gray-500">{t('x.via')} <span className="font-mono font-medium text-teal-700">ZNS / Twilio</span></div>
                   <div className="text-[10px] text-teal-600 mt-0.5 font-medium">{t('x.vnSmsNote')}</div>
                 </div>
               </div>
@@ -4109,7 +4106,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
               )}
               {smsBreakdown.vn > 0 && (
                 <span className="px-2 py-1 rounded-md bg-teal-50 text-teal-700 border border-teal-200">
-                  🇻🇳 {t('x.vn')}<strong>{smsBreakdown.vn}</strong> (Stringee / ZNS)
+                  🇻🇳 {t('x.vn')}<strong>{smsBreakdown.vn}</strong> (ZNS / Twilio)
                 </span>
               )}
               {smsBreakdown.intl > 0 && (
@@ -4197,11 +4194,9 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
             <div className="flex gap-2 flex-wrap text-[11px]">
               <span className="bg-white border px-1.5 py-0.5 rounded text-gray-700 font-mono">SMSGET_USERNAME</span>
               <span className="bg-white border px-1.5 py-0.5 rounded text-gray-700 font-mono">SMSGET_PASSWORD</span>
-              <span className="bg-white border px-1.5 py-0.5 rounded text-teal-700 font-mono">STRINGEE_API_KEY_SID</span>
-              <span className="bg-white border px-1.5 py-0.5 rounded text-teal-700 font-mono">STRINGEE_API_KEY_SECRET</span>
+              <span className="bg-white border px-1.5 py-0.5 rounded text-teal-700 font-mono">ZALO_ZNS_ACCESS_TOKEN</span>
               <span className="bg-white border px-1.5 py-0.5 rounded text-blue-700 font-mono">TWILIO_ACCOUNT_SID</span>
-              <span className="bg-white border px-1.5 py-0.5 rounded text-blue-700 font-mono">TWILIO_API_KEY_SID</span>
-              <span className="bg-white border px-1.5 py-0.5 rounded text-blue-700 font-mono">TWILIO_API_KEY_SECRET</span>
+              <span className="bg-white border px-1.5 py-0.5 rounded text-blue-700 font-mono">TWILIO_AUTH_TOKEN</span>
             </div>
           </div>
         </div>
