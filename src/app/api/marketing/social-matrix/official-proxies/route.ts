@@ -5,7 +5,7 @@ import { getUsdToTwdRate } from '@/lib/fx'
 import { isBillableUser } from '@/lib/marketing/billing'
 import { deductCredits, getBalance } from '@/lib/skills/billing'
 import { resiPackUsd } from '@/lib/social-matrix/pricing'
-import { createResiSubuser, giveResiTraffic, resiApiToken, resiStickyPassword, RESI_MAX_SESSIONS_PER_SUBUSER } from '@/lib/social-matrix/iproyal'
+import { createResiSubuser, giveResiTraffic, resiApiToken, resiStickyPassword } from '@/lib/social-matrix/iproyal'
 import { officialProxyCredits, nextExpiry, OFFICIAL_PRICE_COLS } from '@/lib/social-matrix/lease-billing'
 
 export async function GET(req: NextRequest) {
@@ -180,8 +180,8 @@ export async function POST(req: NextRequest) {
         }
 
         // 住宅代理（附贈名額不適用）：每位使用者一個 IPRoyal 子帳號，所有國家的連線共用該子帳號流量（不過期，可加購）。
-        // 每次購買新增 1 條固定 IP 連線（新 session）；子帳號連線未滿 RESI_MAX_SESSIONS_PER_SUBUSER 時可只新增連線不買 GB，
-        // 首次購買或子帳號連線已滿時需購買 GB 建立新子帳號。
+        // 國家由連線密碼的 _country-xx 指定，同一子帳號可用多國。每次購買新增 1 條固定 IP 連線（新 session），
+        // 已有子帳號時可只新增連線不買 GB；首次購買需買 GB 建立子帳號。
         type ResiAccount = { id: string; subuser_hash: string; username: string; password: string; traffic_gb: number | null; sessions_count: number | null }
         let resi: { gb: number; account: ResiAccount } | null = null
         let resiPrice = 0
@@ -192,16 +192,15 @@ export async function POST(req: NextRequest) {
           const token = resiApiToken()
           if (!token) return NextResponse.json({ error: '住宅代理尚未設定 IPRoyal API 金鑰' }, { status: 409 })
 
-          const { data: openAccounts } = await admin
+          const { data: accounts } = await admin
             .from('marketing_resi_accounts')
             .select('*')
             .eq('user_id', authUser.id)
-            .lt('sessions_count', RESI_MAX_SESSIONS_PER_SUBUSER)
             .order('created_at', { ascending: true })
             .limit(1)
-          let account = (openAccounts?.[0] ?? null) as ResiAccount | null
+          let account = (accounts?.[0] ?? null) as ResiAccount | null
           if (!account && gb < 1) {
-            return NextResponse.json({ error: '首次購買（或連線已滿 10 條）請至少購買 1 GB 流量' }, { status: 400 })
+            return NextResponse.json({ error: '首次購買請至少購買 1 GB 流量' }, { status: 400 })
           }
 
           resiPrice = gb > 0 ? resiPackUsd(Number(off.price_per_gb_usd), gb) : 0

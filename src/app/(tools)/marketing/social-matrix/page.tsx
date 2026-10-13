@@ -95,9 +95,9 @@ function SocialMatrixContent() {
     residential: { proxy_type: 'residential' as ProxyType, is_shared: false, price_per_gb_usd: 5.25, max_tenants: 1, protocol: 'http' as ProxyProtocol, host: 'geo.iproyal.com', port: 12321, username: '', password: '' },
   }
   const [resiGb, setResiGb] = useState<Record<string, number>>({})
-  // 使用者的住宅代理子帳號（所有國家連線共用流量）；有未滿 10 條的子帳號時新增連線可不買 GB
+  // 使用者的住宅代理子帳號（所有國家連線共用流量）；已有子帳號時新增連線可不買 GB
   const [resiAccounts, setResiAccounts] = useState<ResiAccountSummary[]>([])
-  const resiHasRoom = resiAccounts.some(a => Number(a.sessions_count ?? 0) < 10)
+  const resiHasRoom = resiAccounts.length > 0
   const [isToppingUpId, setIsToppingUpId] = useState<string | null>(null)
 
 

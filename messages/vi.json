@@ -10247,7 +10247,7 @@
     "resiTraffic": "Lưu lượng đã mua",
     "gbBought": "{gb} GB",
     "buyGb": "Mua ({n} điểm)",
-    "resiGroupHint": "Mỗi khách có một tài khoản con IPRoyal riêng; kết nối ở mọi quốc gia dùng chung lưu lượng (không hết hạn, có thể mua thêm). Mỗi lần mua thêm 1 kết nối IP cố định (đổi mỗi 7 ngày) cho một tài khoản mạng xã hội; đủ 10 kết nối sẽ tự mở tài khoản con mới. Đặt API key trong biến môi trường Vercel IPROYAL_RESI_API_TOKEN.",
+    "resiGroupHint": "Mỗi khách có một tài khoản con IPRoyal riêng; kết nối ở mọi quốc gia dùng chung lưu lượng (không hết hạn, có thể mua thêm). Mỗi lần mua thêm 1 kết nối IP cố định (đổi mỗi 7 ngày) cho một tài khoản mạng xã hội; lần đầu cần mua GB, các kết nối sau miễn phí. Đặt API key trong biến môi trường Vercel IPROYAL_RESI_API_TOKEN.",
     "confirmAddConn": "Thêm 1 kết nối IP cố định dùng lưu lượng dân cư hiện có (không trừ điểm). Tiếp tục?",
     "addConn": "Thêm 1 kết nối",
     "resiConnHint": "Mỗi lần mua thêm 1 IP cố định",
