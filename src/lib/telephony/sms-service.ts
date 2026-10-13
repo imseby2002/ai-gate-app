@@ -302,21 +302,36 @@ export async function sendSmsMessage(options: SmsSendOptions): Promise<SmsSendRe
   const country = detectSmsCountry(rawPhone)
   const normalizedPhone = normalizePhoneForCountry(rawPhone, country)
 
-  // 🇹🇼 台灣號碼 ── 走 sms-get.com
+  // 🇹🇼 台灣號碼 ── 優先 sms-get.com，未設定或失敗時自動改走 Twilio (備援 Bird)
   if (country === 'TW') {
-    const res = await sendViaSmsGet(normalizedPhone, text)
+    if (process.env.SMSGET_USERNAME && process.env.SMSGET_PASSWORD) {
+      const res = await sendViaSmsGet(normalizedPhone, text)
+      if (res.ok) {
+        return {
+          phone: rawPhone,
+          normalizedPhone,
+          country,
+          provider: 'sms-get',
+          ok: res.ok,
+          messageId: res.messageId,
+        }
+      }
+      console.warn('[sms] sms-get 發送失敗，改走 Twilio:', res.error)
+    }
+
+    const twilioRes = await sendViaTwilio(normalizePhoneForCountry(rawPhone, 'INTL'), text)
     return {
       phone: rawPhone,
       normalizedPhone,
       country,
-      provider: 'sms-get',
-      ok: res.ok,
-      messageId: res.messageId,
-      error: res.error,
+      provider: process.env.TWILIO_ACCOUNT_SID ? 'twilio' : 'bird',
+      ok: twilioRes.ok,
+      messageId: twilioRes.messageId,
+      error: twilioRes.error,
     }
   }
 
-  // 🇻🇳 越南號碼 ── 優先嘗試 Zalo ZNS，若無則走 Stringee
+  // 🇻🇳 越南號碼 ── 優先嘗試 Zalo ZNS，次選 Stringee，未設定或失敗時改走 Twilio
   if (country === 'VN') {
     if (zaloTemplateId && (zaloAccessToken || process.env.ZALO_ZNS_ACCESS_TOKEN || process.env.ZALO_OA_ACCESS_TOKEN)) {
       const znsRes = await sendViaZaloZns(normalizedPhone, zaloTemplateId, zaloTemplateData, zaloAccessToken)
@@ -330,18 +345,33 @@ export async function sendSmsMessage(options: SmsSendOptions): Promise<SmsSendRe
           messageId: znsRes.messageId,
         }
       }
-      // ZNS 失敗時繼續 fallback 到 Stringee 一般 SMS
+      // ZNS 失敗時繼續 fallback
     }
 
-    const stringeeRes = await sendViaStringee(normalizedPhone, text)
+    if (process.env.STRINGEE_API_KEY_SID || process.env.STRINGEE_ACCOUNT_SID) {
+      const stringeeRes = await sendViaStringee(normalizedPhone, text)
+      if (stringeeRes.ok) {
+        return {
+          phone: rawPhone,
+          normalizedPhone,
+          country,
+          provider: 'stringee',
+          ok: true,
+          messageId: stringeeRes.messageId,
+        }
+      }
+      console.warn('[sms] Stringee 發送失敗，改走 Twilio:', stringeeRes.error)
+    }
+
+    const twilioRes = await sendViaTwilio(normalizePhoneForCountry(rawPhone, 'INTL'), text)
     return {
       phone: rawPhone,
       normalizedPhone,
       country,
-      provider: 'stringee',
-      ok: stringeeRes.ok,
-      messageId: stringeeRes.messageId,
-      error: stringeeRes.error,
+      provider: process.env.TWILIO_ACCOUNT_SID ? 'twilio' : 'bird',
+      ok: twilioRes.ok,
+      messageId: twilioRes.messageId,
+      error: twilioRes.error,
     }
   }
 
