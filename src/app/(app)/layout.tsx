@@ -5,7 +5,7 @@ import { getLocale } from 'next-intl/server'
 import { AppShell } from '@/components/layout/AppShell'
 import { systemForHost } from '@/lib/systems'
 import { getBalance } from '@/lib/skills/billing'
-import { getCompanyBillingContext } from '@/lib/company/entitlements'
+import { getCompanyBillingContext } from '@/lib/company/billing-context'
 
 export const dynamic = 'force-dynamic'
 

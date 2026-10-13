@@ -2,7 +2,8 @@
 // 生效順序：內部帳號（admin／employee）→ MAX；專屬客製-企業版或所屬公司開通此模組 → MAX；
 // 否則為 module_subscriptions 的帳號方案（到期或非 active 視同 FREE）。
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getCompanyBillingContext, hasCompanyModuleGrant } from '@/lib/company/entitlements'
+import { hasCompanyModuleGrant } from '@/lib/company/entitlements'
+import { getCompanyBillingContext } from '@/lib/company/billing-context'
 import {
   MODULE_PLAN_FEATURES, MODULE_PLANS, MODULE_PLAN_LABEL,
   type ModuleFeatureMap, type ModulePlan, type PlanModuleId,
