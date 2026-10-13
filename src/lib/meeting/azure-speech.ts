@@ -32,6 +32,7 @@ export function preloadAzureSpeechSdk(): Promise<typeof SpeechSDKType> {
 
 export interface AzureRecognitionController {
   stop: () => Promise<void>
+  setMaxSpeakers?: (max: number) => void
 }
 
 // Azure 授權 token 有效 10 分鐘，提前更新避免重連時以過期 token 失敗
@@ -41,6 +42,7 @@ export async function startAzureRecognition(options: {
   token: string
   region: string
   mode: 'online' | 'in_person'
+  maxSpeakers?: number
   /** 辨識語言（app 代碼 zh-TW / vi / en），第一個為主要語言；只有一個時不做自動偵測 */
   languages: string[]
   onRecognized: (text: string, speakerLabel?: string, detectedLang?: string) => void
@@ -56,6 +58,10 @@ export async function startAzureRecognition(options: {
   try {
     speechConfig.setProperty('SpeechServiceConnection_EnableSpeakerDiarization', 'true')
     speechConfig.setProperty('SpeechServiceResponse_DiarizeIntermediateResults', 'true')
+    if (options.maxSpeakers && options.maxSpeakers > 0) {
+      speechConfig.setPropertyByName('maxSpeakerCount', String(options.maxSpeakers))
+      speechConfig.setProperty('SpeechServiceConnection_DiarizationMaxSpeakers', String(options.maxSpeakers))
+    }
   } catch {}
 
   const LOCALES: Record<string, string> = { 'zh-TW': 'zh-TW', vi: 'vi-VN', en: 'en-US' }
@@ -110,7 +116,8 @@ export async function startAzureRecognition(options: {
       ? SpeechSDK.ConversationTranscriber.FromConfig(speechConfig, autoDetectConfig, audioConfig)
       : new SpeechSDK.ConversationTranscriber(speechConfig, audioConfig)
 
-    // 維護講者編號與多講者對映
+    // 維護講者編號與多講者對映（受限於現場人數上限，防止過度分群）
+    let currentMaxSpeakers = options.maxSpeakers && options.maxSpeakers > 0 ? options.maxSpeakers : 3
     let lastKnownSpeaker = '講者 1'
     const speakerMap = new Map<string, string>()
     let nextNum = 1
@@ -120,12 +127,20 @@ export async function startAzureRecognition(options: {
       // 匹配 Guest-1, Guest_1, Guest 1, Speaker-1, Speaker_1, Speaker 1, 或純數字 1, 2, 3
       const m = rawId.match(/(?:Guest|Speaker)[-_ ]?(\d+)/i) || rawId.match(/^(\d+)$/)
       if (m) {
-        const label = `講者 ${m[1]}`
+        let num = parseInt(m[1], 10)
+        if (currentMaxSpeakers > 0) {
+          num = ((num - 1) % currentMaxSpeakers) + 1
+        }
+        const label = `講者 ${num}`
         lastKnownSpeaker = label
         return label
       }
       if (!speakerMap.has(rawId)) {
-        speakerMap.set(rawId, `講者 ${nextNum++}`)
+        let num = nextNum++
+        if (currentMaxSpeakers > 0) {
+          num = ((num - 1) % currentMaxSpeakers) + 1
+        }
+        speakerMap.set(rawId, `講者 ${num}`)
       }
       const mapped = speakerMap.get(rawId)!
       lastKnownSpeaker = mapped
@@ -174,6 +189,9 @@ export async function startAzureRecognition(options: {
         } catch (e) {
           console.warn('[AzureSpeech] Transcriber stop error:', e)
         }
+      },
+      setMaxSpeakers: (max: number) => {
+        if (max > 0) currentMaxSpeakers = max
       },
     }
   }
