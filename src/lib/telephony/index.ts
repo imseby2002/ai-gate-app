@@ -35,6 +35,7 @@ export function detectPhoneCountry(rawPhone: string): PhoneCountry {
   const cleaned = rawPhone.replace(/[^\d+]/g, '')
   if (cleaned.startsWith('+886') || cleaned.startsWith('886')) return 'TW'
   if (cleaned.startsWith('09') && cleaned.length === 10) return 'TW'
+  if (/^0[2-8]\d{7,8}$/.test(cleaned)) return 'TW'
   if (cleaned.startsWith('+84') || cleaned.startsWith('84')) return 'VN'
   if (/^0[35789]\d{8}$/.test(cleaned)) return 'VN'
   if (cleaned.startsWith('+1') || (cleaned.startsWith('1') && cleaned.length === 11)) return 'US'

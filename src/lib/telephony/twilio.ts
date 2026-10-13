@@ -41,10 +41,16 @@ export function getTwilioAuth() {
 export function formatToE164(phone: string): string {
   const cleaned = phone.replace(/[^\d+]/g, '')
   if (cleaned.startsWith('+')) return cleaned
-  if (cleaned.startsWith('09') && cleaned.length === 10) return '+886' + cleaned.slice(1)
   if (cleaned.startsWith('886')) return '+' + cleaned
-  if (cleaned.startsWith('0') && /^0[35789]\d{8}$/.test(cleaned)) return '+84' + cleaned.slice(1)
   if (cleaned.startsWith('84')) return '+' + cleaned
+  // 台灣手機 09xx (10 碼)
+  if (cleaned.startsWith('09') && cleaned.length === 10) return '+886' + cleaned.slice(1)
+  // 台灣市話 02~08 (9~10 碼，如 02-xxxx-xxxx, 04-xxxx-xxxx)
+  if (/^0[2-8]\d{7,8}$/.test(cleaned)) return '+886' + cleaned.slice(1)
+  // 越南手機 (03,05,07,08,09) 10 碼
+  if (/^0[35789]\d{8}$/.test(cleaned)) return '+84' + cleaned.slice(1)
+  // 北美 1xxxxxxxxxx (11 碼)
+  if (cleaned.startsWith('1') && cleaned.length === 11) return '+' + cleaned
   return '+' + cleaned
 }
 

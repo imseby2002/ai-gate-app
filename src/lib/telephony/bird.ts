@@ -20,10 +20,10 @@ export const birdProvider: TelephonyProvider = {
     return !!(process.env.BIRD_API_KEY && (process.env.BIRD_VOICE_FROM || process.env.BIRD_SMS_FROM))
   },
 
-  async call({ phone, audioUrl, text }: VoiceCallParams) {
+  async call({ phone, audioUrl, text, callerId }: VoiceCallParams) {
     const apiKey = process.env.BIRD_API_KEY
     const sequenceId = process.env.BIRD_VOICE_SEQUENCE_ID
-    const from = process.env.BIRD_VOICE_FROM || process.env.BIRD_SMS_FROM
+    const from = callerId?.trim() || process.env.BIRD_VOICE_FROM || process.env.BIRD_SMS_FROM
     if (!apiKey || !from) {
       throw new Error('Bird 語音未設定（需 BIRD_API_KEY / BIRD_VOICE_FROM 或 BIRD_SMS_FROM）')
     }

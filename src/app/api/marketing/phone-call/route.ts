@@ -197,11 +197,16 @@ export async function POST(req: NextRequest) {
       if (!phone) return NextResponse.json({ error: '請提供電話號碼' }, { status: 400 })
       const audioUrl = await elevenLabsTTS(script, voiceId, modelId, supabase, user.id)
       const pProvider = pickProvider(phone)
-      const result = await pProvider.call({ phone, audioUrl, callerId: finalCallerId, collectDtmf, text: script })
-      await recordCall(phone, result.callId, pProvider.name)
-      await chargeUsage(user.id, ttsCostUsd, '[marketing] 電話行銷 TTS')
-      await chargeUpfrontCalls('[marketing] 電話行銷撥打 1 通（以 1 分鐘計）')
-      return NextResponse.json({ ok: true, phone, callId: result.callId, audioUrl, provider: pProvider.name })
+      try {
+        const result = await pProvider.call({ phone, audioUrl, callerId: finalCallerId, collectDtmf, text: script })
+        await recordCall(phone, result.callId, pProvider.name)
+        await chargeUsage(user.id, ttsCostUsd, '[marketing] 電話行銷 TTS')
+        await chargeUpfrontCalls('[marketing] 電話行銷撥打 1 通（以 1 分鐘計）')
+        return NextResponse.json({ ok: true, phone, callId: result.callId, audioUrl, provider: pProvider.name })
+      } catch (callErr) {
+        const errDetail = callErr instanceof Error ? callErr.message : String(callErr)
+        throw new Error(`[${pProvider.name}] 撥打失敗：${errDetail}`)
+      }
     }
 
     // ── Batch calls ───────────────────────────────────────────────────────────
