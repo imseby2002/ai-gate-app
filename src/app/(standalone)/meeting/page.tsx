@@ -200,7 +200,7 @@ export default function MeetingPage() {
   const [speakerModalActiveTab, setSpeakerModalActiveTab] = useState<string | null>(null)
 
   const handleSpeakerCountChange = (count: number) => {
-    const valid = Math.max(1, Math.min(10, count))
+    const valid = Math.max(1, Math.min(36, count))
     setExpectedSpeakers(valid)
     expectedSpeakersRef.current = valid
     if (azureControllerRef.current?.setMaxSpeakers) {
@@ -1146,13 +1146,13 @@ export default function MeetingPage() {
                       限制聲紋分離最多 {expectedSpeakers} 人
                     </span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {[2, 3, 4, 5, 6].map(num => (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {[2, 3, 4, 5, 6, 8, 10, 12].map(num => (
                       <button
                         key={num}
                         type="button"
                         onClick={() => handleSpeakerCountChange(num)}
-                        className={`flex-1 py-1.5 rounded-md text-xs font-medium border transition-all ${
+                        className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-all ${
                           expectedSpeakers === num
                             ? 'border-amber-600 bg-amber-600 text-white shadow-sm font-bold'
                             : 'border-amber-200 bg-background text-foreground hover:bg-amber-100/50 dark:border-amber-900/60'
@@ -1161,9 +1161,21 @@ export default function MeetingPage() {
                         {num} 人 {num === 3 && <span className="text-[10px] opacity-80">(預設)</span>}
                       </button>
                     ))}
+                    <div className="flex items-center gap-1 ml-auto text-xs text-amber-900 dark:text-amber-200">
+                      <span>自訂：</span>
+                      <input
+                        type="number"
+                        min={1}
+                        max={36}
+                        value={expectedSpeakers}
+                        onChange={e => handleSpeakerCountChange(parseInt(e.target.value, 10) || 1)}
+                        className="w-14 h-7 text-center rounded border bg-background text-xs font-bold text-foreground focus:outline-none focus:ring-1 focus:ring-amber-500"
+                      />
+                      <span>人</span>
+                    </div>
                   </div>
                   <p className="text-[11px] text-amber-700/80 dark:text-amber-400/70">
-                    💡 聲紋分離將嚴格約束在此人數內，超額分群將自動折疊歸併，防止一人說話被誤判為多人。
+                    💡 聲紋分離最高支援 36 人。設定現場人數後，系統將嚴格約束在此人數內，防止一人說話因距離或換氣被誤判為多人。
                   </p>
                 </div>
 
@@ -1484,7 +1496,7 @@ export default function MeetingPage() {
                 className="bg-transparent font-semibold text-foreground focus:outline-none cursor-pointer"
                 title="調整現場發言人數上限（約束聲紋分離分群）"
               >
-                {[2, 3, 4, 5, 6, 7, 8].map(n => (
+                {[2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20, 25, 30, 36].map(n => (
                   <option key={n} value={n}>{n} 人</option>
                 ))}
               </select>
@@ -1749,8 +1761,8 @@ export default function MeetingPage() {
                   <Users className="h-4 w-4 text-primary" />
                   <span className="font-medium">現場發言人數上限：</span>
                 </div>
-                <div className="flex items-center gap-1">
-                  {[2, 3, 4, 5, 6].map(num => (
+                <div className="flex flex-wrap items-center gap-1">
+                  {[2, 3, 4, 5, 6, 8, 10, 12].map(num => (
                     <button
                       key={num}
                       type="button"
@@ -1764,6 +1776,18 @@ export default function MeetingPage() {
                       {num} 人
                     </button>
                   ))}
+                  <div className="flex items-center gap-1 text-xs pl-1">
+                    <span>自訂：</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={36}
+                      value={expectedSpeakers}
+                      onChange={e => handleSpeakerCountChange(parseInt(e.target.value, 10) || 1)}
+                      className="w-12 h-6 text-center rounded border bg-background text-xs font-bold text-foreground focus:outline-none"
+                    />
+                    <span>人</span>
+                  </div>
                 </div>
               </div>
 
