@@ -36,8 +36,8 @@ export async function giveResiTraffic(token: string, hash: string, amountGb: num
   await call(token, `/residential-subusers/${encodeURIComponent(hash)}/give-traffic`, { amount: amountGb })
 }
 
-// 每買一組住宅代理產生的固定 IP 連線數上限（同一子帳號、不同 session）
-export const RESI_MAX_SESSIONS_PER_LEASE = 10
+// 每個子帳號最多的固定 IP 連線數（同一子帳號、不同 session）；滿了再開新子帳號
+export const RESI_MAX_SESSIONS_PER_SUBUSER = 10
 
 // 黏性 IP：密碼後綴指定國家＋session（8 碼），lifetime 7 天內維持同一個 IP
 export function resiStickyPassword(password: string, country?: string | null) {

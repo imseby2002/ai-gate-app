@@ -12,7 +12,7 @@ import {
 import {
   SocialProxy, SocialAccount, SocialLog, TargetGroup,
   MatrixCopy, ProxyType, ProxyProtocol, SocialPlatform,
-  OfficialRentableProxy, ProxyLease, OfficialProxyStatus
+  OfficialRentableProxy, ProxyLease, OfficialProxyStatus, ResiAccountSummary
 } from '@/lib/social-matrix/types'
 import { officialPriceUsd, resiPackUsd } from '@/lib/social-matrix/pricing'
 import { PlanGate } from '@/components/marketing/PlanGate'
@@ -83,7 +83,6 @@ function SocialMatrixContent() {
     latency_ms: 18,
     monthly_price_usd: 3,
     price_per_gb_usd: 5.25,
-    sessions_per_lease: 1,
     is_shared: false,
     max_tenants: 1,
     notes: '家用原生固定 IP，純天然住宅寬頻，抗封號評級最高',
@@ -93,9 +92,12 @@ function SocialMatrixContent() {
   const OFFICIAL_PRESETS = {
     isp_dedicated: { proxy_type: 'home_static' as ProxyType, is_shared: false, monthly_price_usd: 3, max_tenants: 1 },
     isp_shared: { proxy_type: 'home_static' as ProxyType, is_shared: true, monthly_price_usd: 2.8, max_tenants: 1 },
-    residential: { proxy_type: 'residential' as ProxyType, is_shared: false, price_per_gb_usd: 5.25, max_tenants: 1, sessions_per_lease: 1, protocol: 'http' as ProxyProtocol, host: 'geo.iproyal.com', port: 12321, username: '', password: '' },
+    residential: { proxy_type: 'residential' as ProxyType, is_shared: false, price_per_gb_usd: 5.25, max_tenants: 1, protocol: 'http' as ProxyProtocol, host: 'geo.iproyal.com', port: 12321, username: '', password: '' },
   }
   const [resiGb, setResiGb] = useState<Record<string, number>>({})
+  // 使用者的住宅代理子帳號（所有國家連線共用流量）；有未滿 10 條的子帳號時新增連線可不買 GB
+  const [resiAccounts, setResiAccounts] = useState<ResiAccountSummary[]>([])
+  const resiHasRoom = resiAccounts.some(a => Number(a.sessions_count ?? 0) < 10)
   const [isToppingUpId, setIsToppingUpId] = useState<string | null>(null)
 
 
@@ -186,6 +188,7 @@ function SocialMatrixContent() {
       const serverProxies: SocialProxy[] = pRes.proxies || []
       if (offRes.official_proxies) setOfficialProxies(offRes.official_proxies)
       if (offRes.leases) setLeases(offRes.leases)
+      if (offRes.resi_accounts) setResiAccounts(offRes.resi_accounts)
       setIsPlatformAdmin(offRes.is_admin === true)
       if (typeof offRes.lease_quota === 'number') setLeaseQuota({ quota: offRes.lease_quota, used: offRes.lease_used ?? 0 })
       if (typeof offRes.usd_twd_rate === 'number') setUsdTwdRate(offRes.usd_twd_rate)
@@ -329,7 +332,7 @@ function SocialMatrixContent() {
   const handleLeaseOfficial = async (offProxy: OfficialRentableProxy, gb?: number) => {
     if (offProxy.proxy_type === 'residential') {
       const total = resiPackUsd(Number(offProxy.price_per_gb_usd ?? 0), gb ?? 0)
-      if (!confirm(t('confirmBuyResi', { gb: String(gb), credits: String(total), n: String(offProxy.sessions_per_lease ?? 1) }))) return
+      if (!confirm(gb ? t('confirmBuyResi', { gb: String(gb), credits: String(total) }) : t('confirmAddConn'))) return
     } else if (!hasFreeQuota) {
       const credits = priceFor(offProxy)
       if (!confirm(t('confirmBuy', { credits: String(credits ?? '—') }))) return
@@ -978,7 +981,7 @@ function SocialMatrixContent() {
                             {resiLease && (
                               <div className="flex justify-between text-indigo-600 dark:text-indigo-400 pt-1 border-t border-slate-200 dark:border-slate-800">
                                 <span>{t('resiTraffic')}</span>
-                                <span>{t('gbBought', { gb: String(resiLease.traffic_gb ?? 0) })}</span>
+                                <span>{t('gbBought', { gb: String(resiLease.resi_account?.traffic_gb ?? 0) })}</span>
                               </div>
                             )}
                             {isOfficial && proxy.expires_at && (
@@ -1032,7 +1035,8 @@ function SocialMatrixContent() {
                               >
                                 {isToppingUpId === resiLease.id ? t('processing') : t('topup')}
                               </button>
-                            ) : isOfficial ? (
+                            ) : null}
+                            {isOfficial ? (
                               <button
                                 onClick={() => handleReleaseLease(proxy.lease_id || proxy.id)}
                                 disabled={isReleasingId === (proxy.lease_id || proxy.id)}
@@ -1184,7 +1188,7 @@ function SocialMatrixContent() {
                             </div>
                             <div>
                               <span className="text-muted-foreground block text-[10px]">{t('tenantQuota')}</span>
-                              <span className="font-bold text-foreground">{offProxy.proxy_type === 'residential' ? t('resiConns', { n: String(offProxy.sessions_per_lease ?? 1) }) : t('oneTenant', { cur: offProxy.current_tenants_count, max: offProxy.max_tenants })}</span>
+                              <span className="font-bold text-foreground">{offProxy.proxy_type === 'residential' ? t('resiConnHint') : t('oneTenant', { cur: offProxy.current_tenants_count, max: offProxy.max_tenants })}</span>
                             </div>
                           </div>
 
@@ -1222,20 +1226,20 @@ function SocialMatrixContent() {
                               <div className="flex items-center gap-2">
                                 <input
                                   type="number"
-                                  min={1}
+                                  min={resiHasRoom ? 0 : 1}
                                   max={1000}
-                                  value={resiGb[offProxy.id] ?? 10}
+                                  value={resiGb[offProxy.id] ?? (resiHasRoom ? 0 : 10)}
                                   onChange={e => setResiGb(prev => ({ ...prev, [offProxy.id]: Number(e.target.value) }))}
                                   className="w-16 px-2 py-2 rounded-lg border border-border bg-background text-xs font-bold"
                                   aria-label="GB"
                                 />
                                 <button
-                                  onClick={() => handleLeaseOfficial(offProxy, Math.floor(resiGb[offProxy.id] ?? 10))}
-                                  disabled={isLeasing || !((resiGb[offProxy.id] ?? 10) >= 1)}
+                                  onClick={() => handleLeaseOfficial(offProxy, Math.floor(resiGb[offProxy.id] ?? (resiHasRoom ? 0 : 10)))}
+                                  disabled={isLeasing || !((resiGb[offProxy.id] ?? (resiHasRoom ? 0 : 10)) >= (resiHasRoom ? 0 : 1))}
                                   className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-violet-700 hover:from-indigo-700 hover:to-violet-800 text-white shadow-md active:scale-95 transition-all disabled:opacity-50"
                                 >
                                   <Zap className={`h-4 w-4 text-amber-300 ${isLeasing ? 'animate-spin' : ''}`} />
-                                  <span>{isLeasing ? t('activating') : t('buyGb', { n: String(resiPackUsd(Number(offProxy.price_per_gb_usd ?? 0), Math.floor(resiGb[offProxy.id] ?? 10))) })}</span>
+                                  <span>{isLeasing ? t('activating') : (resiGb[offProxy.id] ?? (resiHasRoom ? 0 : 10)) > 0 ? t('buyGb', { n: String(resiPackUsd(Number(offProxy.price_per_gb_usd ?? 0), Math.floor(resiGb[offProxy.id] ?? (resiHasRoom ? 0 : 10)))) }) : t('addConn')}</span>
                                 </button>
                               </div>
                             ) : isAvailable ? (
@@ -2577,20 +2581,6 @@ function SocialMatrixContent() {
                     </div>
                     <div>
                       <label className="font-bold text-amber-900 dark:text-amber-300 block mb-1">
-                        🔗 {t('fResiSessions')}
-                      </label>
-                      <input
-                        type="number"
-                        required
-                        min={1}
-                        max={10}
-                        value={newOfficialForm.sessions_per_lease}
-                        onChange={e => setNewOfficialForm(p => ({ ...p, sessions_per_lease: Number(e.target.value) }))}
-                        className="w-full px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-800 bg-background font-bold"
-                      />
-                    </div>
-                    <div>
-                      <label className="font-bold text-amber-900 dark:text-amber-300 block mb-1">
                         🌏 {t('fResiCountry')}
                       </label>
                       <input
@@ -2737,18 +2727,6 @@ function SocialMatrixContent() {
                         value={editingOfficial.price_per_gb_usd ?? ''}
                         onChange={e => setEditingOfficial({ ...editingOfficial, price_per_gb_usd: Number(e.target.value) })}
                         className="w-full px-3 py-1.5 rounded-lg border border-border font-bold text-indigo-600 bg-background"
-                      />
-                    </div>
-                    <div>
-                      <label className="font-bold text-foreground block mb-1">{t('fResiSessions')}</label>
-                      <input
-                        type="number"
-                        required
-                        min={1}
-                        max={10}
-                        value={editingOfficial.sessions_per_lease ?? 1}
-                        onChange={e => setEditingOfficial({ ...editingOfficial, sessions_per_lease: Number(e.target.value) })}
-                        className="w-full px-3 py-1.5 rounded-lg border border-border font-bold bg-background"
                       />
                     </div>
                     <div>
