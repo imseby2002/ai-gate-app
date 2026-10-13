@@ -10341,6 +10341,8 @@
     "gbBought": "{gb} GB",
     "buyGb": "Buy ({n} credits)",
     "resiGroupHint": "Each customer gets one dedicated IPRoyal sub-user; connections in every country share its traffic (never expires; top up anytime). Each purchase adds 1 sticky-IP connection (rotates every 7 days) for one social account; the first purchase requires GB, later connections are free. Set the API key in the Vercel env var IPROYAL_RESI_API_TOKEN.",
+    "ispBillingNote": "ISP static IP: each includes 100GB/month, billed monthly",
+    "resiBillingNote": "Residential: billed only by traffic used (GB); GB never expires",
     "resiPlan": "Residential traffic (per GB)",
     "resiOwned": "Connected",
     "confirmAddConn": "Add 1 sticky-IP connection using your existing residential traffic (no extra charge). Continue?",
