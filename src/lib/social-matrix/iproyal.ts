@@ -36,8 +36,8 @@ export async function giveResiTraffic(token: string, hash: string, amountGb: num
   await call(token, `/residential-subusers/${encodeURIComponent(hash)}/give-traffic`, { amount: amountGb })
 }
 
-// 每買一組住宅代理產生的固定 IP 連線數（同一子帳號、不同 session）
-export const RESI_SESSIONS_PER_LEASE = 10
+// 每買一組住宅代理產生的固定 IP 連線數上限（同一子帳號、不同 session）
+export const RESI_MAX_SESSIONS_PER_LEASE = 10
 
 // 黏性 IP：密碼後綴指定國家＋session（8 碼），lifetime 7 天內維持同一個 IP
 export function resiStickyPassword(password: string, country?: string | null) {
@@ -46,6 +46,7 @@ export function resiStickyPassword(password: string, country?: string | null) {
   return `${password}${countryPart}_session-${randomId(8)}_lifetime-7d`
 }
 
-export function resiApiToken(off: { api_token?: string | null }) {
-  return off.api_token || process.env.IPROYAL_RESI_API_TOKEN || null
+// 住宅代理 API 金鑰統一由環境變數設定
+export function resiApiToken() {
+  return process.env.IPROYAL_RESI_API_TOKEN || null
 }
