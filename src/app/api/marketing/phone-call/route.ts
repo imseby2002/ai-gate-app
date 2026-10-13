@@ -197,7 +197,7 @@ export async function POST(req: NextRequest) {
       if (!phone) return NextResponse.json({ error: '請提供電話號碼' }, { status: 400 })
       const audioUrl = await elevenLabsTTS(script, voiceId, modelId, supabase, user.id)
       const pProvider = pickProvider(phone)
-      const result = await pProvider.call({ phone, audioUrl, callerId: finalCallerId, collectDtmf })
+      const result = await pProvider.call({ phone, audioUrl, callerId: finalCallerId, collectDtmf, text: script })
       await recordCall(phone, result.callId, pProvider.name)
       await chargeUsage(user.id, ttsCostUsd, '[marketing] 電話行銷 TTS')
       await chargeUpfrontCalls('[marketing] 電話行銷撥打 1 通（以 1 分鐘計）')
@@ -216,7 +216,7 @@ export async function POST(req: NextRequest) {
       for (const p of list) {
         const pProvider = pickProvider(p)
         try {
-          const r = await pProvider.call({ phone: p, audioUrl, callerId: finalCallerId, collectDtmf })
+          const r = await pProvider.call({ phone: p, audioUrl, callerId: finalCallerId, collectDtmf, text: script })
           await recordCall(p, r.callId, pProvider.name)
           results.push({ phone: p, ok: true, id: r.callId ?? undefined, provider: pProvider.name })
         } catch (e) {
