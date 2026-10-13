@@ -12,11 +12,11 @@ const BASE = 'https://api.twilio.com/2010-04-01'
  * 注意：兩種方式的 API 路徑都仍需 Account SID（AC 開頭），故 TWILIO_ACCOUNT_SID 為必填。
  */
 export function getTwilioAuth() {
-  const accountSid = process.env.TWILIO_ACCOUNT_SID
+  const accountSid = process.env.TWILIO_ACCOUNT_SID?.trim()
   if (!accountSid) return null
 
-  const apiKeySid = process.env.TWILIO_API_KEY_SID
-  const apiKeySecret = process.env.TWILIO_API_KEY_SECRET
+  const apiKeySid = process.env.TWILIO_API_KEY_SID?.trim()
+  const apiKeySecret = process.env.TWILIO_API_KEY_SECRET?.trim()
   if (apiKeySid && apiKeySecret) {
     return {
       accountSid,
@@ -25,7 +25,7 @@ export function getTwilioAuth() {
     }
   }
 
-  const authToken = process.env.TWILIO_AUTH_TOKEN
+  const authToken = process.env.TWILIO_AUTH_TOKEN?.trim()
   if (authToken) {
     return {
       accountSid,
@@ -95,7 +95,7 @@ export const twilioProvider: TelephonyProvider = {
       params.set('StatusCallbackMethod', 'POST')
     }
 
-    const res = await fetch(`${BASE}/Accounts/${creds.accountSid}/Calls.json`, {
+    let res = await fetch(`${BASE}/Accounts/${creds.accountSid}/Calls.json`, {
       method: 'POST',
       headers: {
         Authorization: creds.authHeader,
@@ -104,10 +104,32 @@ export const twilioProvider: TelephonyProvider = {
       body: params.toString(),
     })
 
-    const data = await res.json().catch(() => ({}))
+    let data = await res.json().catch(() => ({}))
+    let activeAuthType: string = creds.authType
+
+    // 若 API Key 認證失敗 (401)，且有設定 TWILIO_AUTH_TOKEN，自動以 Auth Token 重試一次
+    if (!res.ok && res.status === 401 && creds.authType === 'api_key' && process.env.TWILIO_AUTH_TOKEN?.trim()) {
+      const fallbackToken = process.env.TWILIO_AUTH_TOKEN.trim()
+      const fallbackHeader = `Basic ${Buffer.from(`${creds.accountSid}:${fallbackToken}`).toString('base64')}`
+      const retryRes = await fetch(`${BASE}/Accounts/${creds.accountSid}/Calls.json`, {
+        method: 'POST',
+        headers: {
+          Authorization: fallbackHeader,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: params.toString(),
+      })
+      const retryData = await retryRes.json().catch(() => ({}))
+      if (retryRes.ok) {
+        res = retryRes
+        data = retryData
+        activeAuthType = 'auth_token'
+      }
+    }
+
     if (!res.ok) {
       const detail = [data?.code, data?.message || data?.error_message].filter(Boolean).join(' / ') || '未知錯誤'
-      const authInfo = creds.authType === 'api_key' ? 'API Key (TWILIO_API_KEY_SID)' : 'Auth Token (TWILIO_AUTH_TOKEN)'
+      const authInfo = activeAuthType === 'api_key' ? 'API Key (TWILIO_API_KEY_SID)' : 'Auth Token (TWILIO_AUTH_TOKEN)'
       throw new Error(`Twilio 撥打失敗 (HTTP ${res.status})：${detail} [認證方式: ${authInfo}]${data?.more_info ? `（${data.more_info}）` : ''}`)
     }
 
