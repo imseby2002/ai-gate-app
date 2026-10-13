@@ -9,6 +9,7 @@ export interface VoiceCallParams {
   audioUrl: string        // 要播放的語音檔（ElevenLabs TTS 產生）
   callerId: string        // 顯示號碼
   collectDtmf?: boolean    // 播完是否收 1 碼按鍵（按鍵加入社群）
+  text?: string            // 腳本原文（Bird 以 inline sequence 的 voice.say 朗讀）
 }
 
 export interface SmsParams {
