@@ -1341,12 +1341,17 @@ function SocialMatrixContent() {
                               <span className="text-[10px] text-muted-foreground">{p.country} - {p.city || t('local')}</span>
                             </td>
                             <td className="px-4 py-3 font-bold text-indigo-600 dark:text-indigo-400">
-                              US$ {priceFor(p) ?? '—'}
-                              <span className="text-[10px] text-muted-foreground font-normal block">{priceUnit(p)}</span>
+                              {/* 住宅代理按買家總流量計費，不在庫存列顯示單筆售價／配額 */}
+                              {p.proxy_type === 'residential' ? '—' : (
+                                <>
+                                  US$ {priceFor(p) ?? '—'}
+                                  <span className="text-[10px] text-muted-foreground font-normal block">{priceUnit(p)}</span>
+                                </>
+                              )}
                             </td>
                             <td className="px-4 py-3">
                               <span className="font-mono font-semibold">
-                                {p.current_tenants_count} / {p.max_tenants}
+                                {p.proxy_type === 'residential' ? '—' : `${p.current_tenants_count} / ${p.max_tenants}`}
                               </span>
                             </td>
                             <td className="px-4 py-3">
