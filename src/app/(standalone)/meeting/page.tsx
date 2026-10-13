@@ -177,6 +177,24 @@ export default function MeetingPage() {
   const [history, setHistory] = useState<Meeting[]>([])
   const [downloading, setDownloading] = useState(false)
   const [interim, setInterim] = useState<{ text: string; speaker?: string } | null>(null)
+  const [speakerAliases, setSpeakerAliases] = useState<Record<string, string>>({})
+
+  const handleRenameSpeaker = (oldName: string) => {
+    if (!oldName) return
+    const current = speakerAliases[oldName] || oldName
+    const input = window.prompt(`為「${oldName}」設定名稱（例如：王廠長、阮課長；留空以重設）：`, current === oldName ? '' : current)
+    if (input === null) return
+    const trimmed = input.trim()
+    setSpeakerAliases(prev => {
+      const next = { ...prev }
+      if (trimmed && trimmed !== oldName) {
+        next[oldName] = trimmed
+      } else {
+        delete next[oldName]
+      }
+      return next
+    })
+  }
 
   const toggleDept = (key: string) => {
     setSelectedDepts(prev =>
@@ -481,7 +499,9 @@ export default function MeetingPage() {
       ].filter(Boolean)
       const body = lines.map(l => {
         const tr = translatedOf(l)
-        const first = `[${fmtDate(l.created_at)} ${fmtTime(l.created_at)}] ${l.speaker_name || '—'}：${l.content}`
+        const rawSpeaker = l.speaker_name || (meeting.meeting_mode === 'in_person' ? '講者 1' : '')
+        const speaker = speakerAliases[rawSpeaker] || rawSpeaker || '—'
+        const first = `[${fmtDate(l.created_at)} ${fmtTime(l.created_at)}] ${speaker}：${l.content}`
         return tr ? `${first}\n    ↳ ${tr}` : first
       })
       const blob = new Blob(['\ufeff' + [...head, '', ...body].join('\n') + '\n'], { type: 'text/plain;charset=utf-8' })
@@ -1427,17 +1447,31 @@ export default function MeetingPage() {
             const tr = translatedOf(l)
             const mine = l.speaker_id === me?.id
 
+            // 實體現場會議由同一台麥克風收錄全場，或是具有 Azure 講者分離標籤時，一律顯示講者標籤（如「講者 1」、「講者 2」）
+            // 只有線上會議且未分離出講者、且為自己發言時，才顯示「你」
+            const isDiarized = l.speaker_name && (
+              l.speaker_name.startsWith('講者') ||
+              l.speaker_name.startsWith('Speaker') ||
+              l.speaker_name.startsWith('Guest')
+            )
+            const rawSpeaker = l.speaker_name || (meeting.meeting_mode === 'in_person' ? '講者 1' : '')
+            const customName = speakerAliases[rawSpeaker]
+            const displayName = isDiarized || meeting.meeting_mode === 'in_person'
+              ? (customName || rawSpeaker || '講者 1')
+              : (mine ? t('you') : (customName || l.speaker_name || '—'))
+
+            const badgeClass = getSpeakerBadgeClass(rawSpeaker, mine, meeting.meeting_mode)
+            const canRename = isDiarized || meeting.meeting_mode === 'in_person'
+
             return (
               <div key={l.id} className="text-sm border-b pb-2 last:border-b-0">
                 <div className="flex items-baseline gap-2">
-                  <span className={`font-medium ${
-                    l.speaker_name?.startsWith('講者')
-                      ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-200 px-1.5 py-0.5 rounded text-xs font-semibold'
-                      : mine
-                      ? 'text-blue-600 dark:text-blue-400'
-                      : 'text-foreground'
-                  }`}>
-                    {mine ? t('you') : (l.speaker_name || '—')}
+                  <span
+                    onClick={() => canRename && handleRenameSpeaker(rawSpeaker)}
+                    title={canRename ? `點擊可將「${displayName}」自訂為真實姓名` : undefined}
+                    className={badgeClass}
+                  >
+                    {displayName}
                   </span>
                   <span className="text-[11px] text-muted-foreground">{fmtTime(l.created_at)}</span>
                   {l.source_lang && (
@@ -1474,9 +1508,13 @@ export default function MeetingPage() {
         )}
         {/* 辨識中（尚未定稿）的即時文字 */}
         {interim && (
-          <div className="text-sm text-muted-foreground italic">
-            {interim.speaker && <span className="mr-2 not-italic text-xs font-semibold">{interim.speaker}</span>}
-            {interim.text}…
+          <div className="text-sm text-muted-foreground italic flex items-baseline gap-2">
+            {interim.speaker && (
+              <span className={getSpeakerBadgeClass(interim.speaker, true, meeting.meeting_mode)}>
+                {speakerAliases[interim.speaker] || interim.speaker}
+              </span>
+            )}
+            <span>{interim.text}…</span>
           </div>
         )}
         <div ref={bottomRef} />
@@ -1511,4 +1549,30 @@ function LangPicker({
       </select>
     </label>
   )
+}
+
+function getSpeakerBadgeClass(rawSpeaker: string | undefined, isMine: boolean, mode?: string) {
+  const name = rawSpeaker || ''
+  const isDiarized = name.startsWith('講者') || name.startsWith('Speaker') || name.startsWith('Guest')
+
+  if (isDiarized || mode === 'in_person') {
+    const numMatch = name.match(/\d+/)
+    const num = numMatch ? parseInt(numMatch[0], 10) : 1
+    const palettes = [
+      'bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-200 border border-blue-300 dark:border-blue-800',
+      'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-800',
+      'bg-purple-100 text-purple-800 dark:bg-purple-950/80 dark:text-purple-200 border border-purple-300 dark:border-purple-800',
+      'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-200 border border-amber-300 dark:border-amber-800',
+      'bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-200 border border-rose-300 dark:border-rose-800',
+      'bg-cyan-100 text-cyan-800 dark:bg-cyan-950/80 dark:text-cyan-200 border border-cyan-300 dark:border-cyan-800',
+    ]
+    const chosen = palettes[(num - 1) % palettes.length]
+    return `${chosen} px-2 py-0.5 rounded-md text-xs font-semibold cursor-pointer hover:opacity-80 transition-opacity select-none shadow-sm`
+  }
+
+  if (isMine) {
+    return 'text-blue-600 dark:text-blue-400 font-semibold'
+  }
+
+  return 'text-foreground font-semibold'
 }

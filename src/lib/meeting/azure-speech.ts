@@ -50,6 +50,14 @@ export async function startAzureRecognition(options: {
   const SpeechSDK = await preloadAzureSpeechSdk()
 
   const speechConfig = SpeechSDK.SpeechConfig.fromAuthorizationToken(options.token, options.region)
+  speechConfig.enableDictation()
+
+  // 實體現場會議：強制開啟多人聲紋分離 (Diarization)
+  try {
+    speechConfig.setProperty('SpeechServiceConnection_EnableSpeakerDiarization', 'true')
+    speechConfig.setProperty('SpeechServiceResponse_DiarizeIntermediateResults', 'true')
+  } catch {}
+
   const LOCALES: Record<string, string> = { 'zh-TW': 'zh-TW', vi: 'vi-VN', en: 'en-US' }
   const locales = options.languages.map(l => LOCALES[l]).filter(Boolean)
   if (!locales.length) locales.push('zh-TW')
@@ -102,17 +110,39 @@ export async function startAzureRecognition(options: {
       ? SpeechSDK.ConversationTranscriber.FromConfig(speechConfig, autoDetectConfig, audioConfig)
       : new SpeechSDK.ConversationTranscriber(speechConfig, audioConfig)
 
+    // 維護講者編號與多講者對映
+    let lastKnownSpeaker = '講者 1'
+    const speakerMap = new Map<string, string>()
+    let nextNum = 1
+
+    const resolveSpeaker = (rawId?: string | null): string => {
+      if (!rawId || rawId === 'Unknown') return lastKnownSpeaker
+      // 匹配 Guest-1, Guest_1, Guest 1, Speaker-1, Speaker_1, Speaker 1, 或純數字 1, 2, 3
+      const m = rawId.match(/(?:Guest|Speaker)[-_ ]?(\d+)/i) || rawId.match(/^(\d+)$/)
+      if (m) {
+        const label = `講者 ${m[1]}`
+        lastKnownSpeaker = label
+        return label
+      }
+      if (!speakerMap.has(rawId)) {
+        speakerMap.set(rawId, `講者 ${nextNum++}`)
+      }
+      const mapped = speakerMap.get(rawId)!
+      lastKnownSpeaker = mapped
+      return mapped
+    }
+
     transcriber.transcribing = (_s, e) => {
       if (e.result.text?.trim()) {
-        options.onInterim?.(e.result.text.trim(), e.result.speakerId ? formatSpeakerLabel(e.result.speakerId) : undefined)
+        const label = resolveSpeaker(e.result.speakerId)
+        options.onInterim?.(e.result.text.trim(), label)
       }
     }
 
     transcriber.transcribed = (_s, e) => {
       if (e.result.reason === SpeechSDK.ResultReason.RecognizedSpeech && e.result.text?.trim()) {
         const text = e.result.text.trim()
-        const speakerRaw = e.result.speakerId || 'Guest-1'
-        const speakerLabel = formatSpeakerLabel(speakerRaw)
+        const speakerLabel = resolveSpeaker(e.result.speakerId)
         const lang = resolveLanguage(e.result as unknown as SpeechSDKType.SpeechRecognitionResult)
         options.onRecognized(text, speakerLabel, lang)
       }
@@ -196,8 +226,9 @@ export async function startAzureRecognition(options: {
 }
 
 function formatSpeakerLabel(rawId: string): string {
-  // Guest-1 -> 講者 1 / Speaker 1
-  const match = rawId.match(/Guest-(\d+)/i)
+  if (!rawId || rawId === 'Unknown') return '講者 1'
+  // Guest-1, Guest_1, Guest 1, Speaker-1, Speaker_1, Speaker 1, 或純數字 1, 2, 3
+  const match = rawId.match(/(?:Guest|Speaker)[-_ ]?(\d+)/i) || rawId.match(/^(\d+)$/)
   if (match) {
     return `講者 ${match[1]}`
   }
