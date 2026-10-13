@@ -1142,8 +1142,8 @@ export default function MeetingPage() {
                       <Users className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
                       現場預計與會人數
                     </label>
-                    <span className="text-[11px] text-amber-700/80 dark:text-amber-400/80">
-                      限制聲紋分離最多 {expectedSpeakers} 人
+                    <span className="text-[11px] font-semibold text-amber-800 dark:text-amber-300 bg-amber-100/70 dark:bg-amber-900/40 px-2.5 py-0.5 rounded-full border border-amber-300/60 dark:border-amber-800/60">
+                      目前選定：{expectedSpeakers} 人
                     </span>
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5">
