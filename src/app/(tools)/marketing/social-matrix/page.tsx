@@ -978,6 +978,11 @@ function SocialMatrixContent() {
                               <span>{t('location')}</span>
                               <span>{proxy.country} - {proxy.city || t('localNode')}</span>
                             </div>
+                            {isOfficial && (
+                              <div className="text-[11px] text-indigo-600 dark:text-indigo-400 pt-1 border-t border-slate-200 dark:border-slate-800">
+                                📊 {proxy.proxy_type === 'residential' ? t('resiBillingNote') : t('ispBillingNote')}
+                              </div>
+                            )}
                             {resiLease && (
                               <div className="flex justify-between text-indigo-600 dark:text-indigo-400 pt-1 border-t border-slate-200 dark:border-slate-800">
                                 <span>{t('resiTraffic')}</span>
@@ -1193,6 +1198,9 @@ function SocialMatrixContent() {
                           </div>
 
                           {/* Description */}
+                          <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 rounded-lg px-3 py-2">
+                            📊 {offProxy.proxy_type === 'residential' ? t('resiBillingNote') : t('ispBillingNote')}
+                          </p>
                           <p className="text-xs text-muted-foreground leading-relaxed">
                             💡 {offProxy.notes || t('offNoteDefault')}
                           </p>
@@ -2543,13 +2551,25 @@ function SocialMatrixContent() {
                 </div>
                 <div>
                   <label className="font-bold text-foreground block mb-1">{t('fCountryCity')}</label>
-                  <input
-                    type="text"
-                    value={newOfficialForm.city}
-                    onChange={e => setNewOfficialForm(p => ({ ...p, city: e.target.value }))}
-                    placeholder={t('cityPh3')}
-                    className="w-full px-3 py-1.5 rounded-lg border border-border bg-background"
-                  />
+                  <div className="flex gap-1.5">
+                    <input
+                      type="text"
+                      required
+                      maxLength={2}
+                      value={newOfficialForm.country}
+                      onChange={e => setNewOfficialForm(p => ({ ...p, country: e.target.value.toUpperCase() }))}
+                      placeholder="TW"
+                      aria-label="Country code"
+                      className="w-14 px-2 py-1.5 rounded-lg border border-border bg-background font-mono uppercase"
+                    />
+                    <input
+                      type="text"
+                      value={newOfficialForm.city}
+                      onChange={e => setNewOfficialForm(p => ({ ...p, city: e.target.value }))}
+                      placeholder={t('cityPh3')}
+                      className="w-full min-w-0 px-3 py-1.5 rounded-lg border border-border bg-background"
+                    />
+                  </div>
                 </div>
                 <div>
                   <label className="font-bold text-foreground block mb-1">{t('fLatency')}</label>
@@ -2582,20 +2602,6 @@ function SocialMatrixContent() {
                           className="w-full pl-11 pr-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-800 bg-background font-bold text-amber-700 dark:text-amber-300"
                         />
                       </div>
-                    </div>
-                    <div>
-                      <label className="font-bold text-amber-900 dark:text-amber-300 block mb-1">
-                        🌏 {t('fResiCountry')}
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        maxLength={2}
-                        value={newOfficialForm.country}
-                        onChange={e => setNewOfficialForm(p => ({ ...p, country: e.target.value.toUpperCase() }))}
-                        placeholder="VN"
-                        className="w-full px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-800 bg-background font-mono uppercase"
-                      />
                     </div>
                     <p className="col-span-2 text-[11px] text-amber-900 dark:text-amber-300">{t('resiGroupHint')}</p>
                   </>
@@ -2733,18 +2739,6 @@ function SocialMatrixContent() {
                         className="w-full px-3 py-1.5 rounded-lg border border-border font-bold text-indigo-600 bg-background"
                       />
                     </div>
-                    <div>
-                      <label className="font-bold text-foreground block mb-1">{t('fResiCountry')}</label>
-                      <input
-                        type="text"
-                        required
-                        maxLength={2}
-                        value={editingOfficial.country ?? ''}
-                        onChange={e => setEditingOfficial({ ...editingOfficial, country: e.target.value.toUpperCase() })}
-                        placeholder="VN"
-                        className="w-full px-3 py-1.5 rounded-lg border border-border font-mono uppercase bg-background"
-                      />
-                    </div>
                   </div>
                 ) : (
                   <div>
@@ -2793,13 +2787,25 @@ function SocialMatrixContent() {
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-foreground block mb-1">{t('fCity')}</label>
-                  <input
-                    type="text"
-                    value={editingOfficial.city || ''}
-                    onChange={e => setEditingOfficial({ ...editingOfficial, city: e.target.value })}
-                    className="w-full px-3 py-1.5 rounded-lg border border-border bg-background"
-                  />
+                  <label className="font-bold text-foreground block mb-1">{t('fCountryCity')}</label>
+                  <div className="flex gap-1.5">
+                    <input
+                      type="text"
+                      required
+                      maxLength={2}
+                      value={editingOfficial.country ?? ''}
+                      onChange={e => setEditingOfficial({ ...editingOfficial, country: e.target.value.toUpperCase() })}
+                      placeholder="TW"
+                      aria-label="Country code"
+                      className="w-14 px-2 py-1.5 rounded-lg border border-border bg-background font-mono uppercase"
+                    />
+                    <input
+                      type="text"
+                      value={editingOfficial.city || ''}
+                      onChange={e => setEditingOfficial({ ...editingOfficial, city: e.target.value })}
+                      className="w-full min-w-0 px-3 py-1.5 rounded-lg border border-border bg-background"
+                    />
+                  </div>
                 </div>
               </div>
 
