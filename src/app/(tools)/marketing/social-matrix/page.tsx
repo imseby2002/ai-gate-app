@@ -83,7 +83,7 @@ function SocialMatrixContent() {
     latency_ms: 18,
     monthly_price_usd: 3,
     price_per_gb_usd: 5.25,
-    api_token: '',
+    sessions_per_lease: 1,
     is_shared: false,
     max_tenants: 1,
     notes: '家用原生固定 IP，純天然住宅寬頻，抗封號評級最高',
@@ -93,7 +93,7 @@ function SocialMatrixContent() {
   const OFFICIAL_PRESETS = {
     isp_dedicated: { proxy_type: 'home_static' as ProxyType, is_shared: false, monthly_price_usd: 3, max_tenants: 1 },
     isp_shared: { proxy_type: 'home_static' as ProxyType, is_shared: true, monthly_price_usd: 2.8, max_tenants: 1 },
-    residential: { proxy_type: 'residential' as ProxyType, is_shared: false, price_per_gb_usd: 5.25, max_tenants: 1 },
+    residential: { proxy_type: 'residential' as ProxyType, is_shared: false, price_per_gb_usd: 5.25, max_tenants: 1, sessions_per_lease: 1, protocol: 'http' as ProxyProtocol, host: 'geo.iproyal.com', port: 12321, username: '', password: '' },
   }
   const [resiGb, setResiGb] = useState<Record<string, number>>({})
   const [isToppingUpId, setIsToppingUpId] = useState<string | null>(null)
@@ -329,7 +329,7 @@ function SocialMatrixContent() {
   const handleLeaseOfficial = async (offProxy: OfficialRentableProxy, gb?: number) => {
     if (offProxy.proxy_type === 'residential') {
       const total = resiPackUsd(Number(offProxy.price_per_gb_usd ?? 0), gb ?? 0)
-      if (!confirm(t('confirmBuyResi', { gb: String(gb), credits: String(total) }))) return
+      if (!confirm(t('confirmBuyResi', { gb: String(gb), credits: String(total), n: String(offProxy.sessions_per_lease ?? 1) }))) return
     } else if (!hasFreeQuota) {
       const credits = priceFor(offProxy)
       if (!confirm(t('confirmBuy', { credits: String(credits ?? '—') }))) return
@@ -367,7 +367,7 @@ function SocialMatrixContent() {
     const input = prompt(t('topupPrompt', { per: String(pricePerGb) }), '10')
     const gb = Math.floor(Number(input))
     if (!input || !(gb >= 1)) return
-    if (!confirm(t('confirmBuyResi', { gb: String(gb), credits: String(resiPackUsd(pricePerGb, gb)) }))) return
+    if (!confirm(t('confirmTopupResi', { gb: String(gb), credits: String(resiPackUsd(pricePerGb, gb)) }))) return
     setIsToppingUpId(leaseId)
     try {
       const res = await fetch('/api/marketing/social-matrix/official-proxies', {
@@ -1184,7 +1184,7 @@ function SocialMatrixContent() {
                             </div>
                             <div>
                               <span className="text-muted-foreground block text-[10px]">{t('tenantQuota')}</span>
-                              <span className="font-bold text-foreground">{offProxy.proxy_type === 'residential' ? t('resiSeats', { cur: offProxy.current_tenants_count, max: offProxy.max_tenants }) : t('oneTenant', { cur: offProxy.current_tenants_count, max: offProxy.max_tenants })}</span>
+                              <span className="font-bold text-foreground">{offProxy.proxy_type === 'residential' ? t('resiConns', { n: String(offProxy.sessions_per_lease ?? 1) }) : t('oneTenant', { cur: offProxy.current_tenants_count, max: offProxy.max_tenants })}</span>
                             </div>
                           </div>
 
@@ -2384,7 +2384,7 @@ function SocialMatrixContent() {
       {/* MODAL: ADMIN ADD OFFICIAL PROXY (管理者新增供租用 IP) */}
       {isAddOfficialOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-card border border-border rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4">
+          <div className="bg-white dark:bg-card border border-border rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-2 border-b border-border">
               <div className="flex items-center gap-2">
                 <div className="p-2 bg-amber-500/10 text-amber-600 rounded-lg">
@@ -2572,14 +2572,16 @@ function SocialMatrixContent() {
                     </div>
                     <div>
                       <label className="font-bold text-amber-900 dark:text-amber-300 block mb-1">
-                        🔑 {t('fApiToken')}
+                        🔗 {t('fResiSessions')}
                       </label>
                       <input
-                        type="password"
-                        value={newOfficialForm.api_token}
-                        onChange={e => setNewOfficialForm(p => ({ ...p, api_token: e.target.value }))}
-                        placeholder={t('apiTokenPh')}
-                        className="w-full px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-800 bg-background font-mono"
+                        type="number"
+                        required
+                        min={1}
+                        max={10}
+                        value={newOfficialForm.sessions_per_lease}
+                        onChange={e => setNewOfficialForm(p => ({ ...p, sessions_per_lease: Number(e.target.value) }))}
+                        className="w-full px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-800 bg-background font-bold"
                       />
                     </div>
                     <div>
@@ -2668,7 +2670,7 @@ function SocialMatrixContent() {
       {/* MODAL: ADMIN EDIT OFFICIAL PROXY (管理者編輯供租用 IP) */}
       {isEditOfficialOpen && editingOfficial && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-card border border-border rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4">
+          <div className="bg-white dark:bg-card border border-border rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-2 border-b border-border">
               <h3 className="font-bold text-base flex items-center gap-2">
                 <Pencil className="h-5 w-5 text-amber-600" />
@@ -2733,13 +2735,15 @@ function SocialMatrixContent() {
                       />
                     </div>
                     <div>
-                      <label className="font-bold text-foreground block mb-1">{t('fApiToken')}</label>
+                      <label className="font-bold text-foreground block mb-1">{t('fResiSessions')}</label>
                       <input
-                        type="password"
-                        value={editingOfficial.api_token ?? ''}
-                        onChange={e => setEditingOfficial({ ...editingOfficial, api_token: e.target.value })}
-                        placeholder={t('apiTokenPh')}
-                        className="w-full px-3 py-1.5 rounded-lg border border-border font-mono bg-background"
+                        type="number"
+                        required
+                        min={1}
+                        max={10}
+                        value={editingOfficial.sessions_per_lease ?? 1}
+                        onChange={e => setEditingOfficial({ ...editingOfficial, sessions_per_lease: Number(e.target.value) })}
+                        className="w-full px-3 py-1.5 rounded-lg border border-border font-bold bg-background"
                       />
                     </div>
                     <div>

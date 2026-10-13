@@ -5,7 +5,7 @@ import { getUsdToTwdRate } from '@/lib/fx'
 import { isBillableUser } from '@/lib/marketing/billing'
 import { deductCredits, getBalance } from '@/lib/skills/billing'
 import { resiPackUsd } from '@/lib/social-matrix/pricing'
-import { createResiSubuser, giveResiTraffic, resiApiToken, resiStickyPassword, RESI_SESSIONS_PER_LEASE } from '@/lib/social-matrix/iproyal'
+import { createResiSubuser, giveResiTraffic, resiApiToken, resiStickyPassword, RESI_MAX_SESSIONS_PER_LEASE } from '@/lib/social-matrix/iproyal'
 import { officialProxyCredits, nextExpiry, OFFICIAL_PRICE_COLS } from '@/lib/social-matrix/lease-billing'
 
 export async function GET(req: NextRequest) {
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     const admin = createAdminClient()
     const offCols = isAdmin
       ? '*'
-      : 'id, name, proxy_type, protocol, host, port, country, city, isp, latency_ms, monthly_price_twd, monthly_price_usd, price_per_gb_usd, is_shared, max_tenants, current_tenants_count, status, is_active, notes, created_at, updated_at'
+      : 'id, name, proxy_type, protocol, host, port, country, city, isp, latency_ms, monthly_price_twd, monthly_price_usd, price_per_gb_usd, sessions_per_lease, is_shared, max_tenants, current_tenants_count, status, is_active, notes, created_at, updated_at'
     let offQuery = admin.from('marketing_official_proxies').select(offCols).order('created_at', { ascending: false })
     if (!isAdmin) offQuery = offQuery.eq('is_active', true)
     const { data: dbOfficial, error: offErr } = await offQuery
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
         latency_ms = 20,
         monthly_price_usd,
         price_per_gb_usd,
-        api_token,
+        sessions_per_lease,
         is_shared = false,
         max_tenants = 1,
         notes,
@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
           monthly_price_twd: null,
           monthly_price_usd: isResidential ? null : Number(monthly_price_usd),
           price_per_gb_usd: isResidential ? Number(price_per_gb_usd) : null,
-          api_token: isResidential ? (api_token || null) : null,
+          sessions_per_lease: isResidential ? Math.min(RESI_MAX_SESSIONS_PER_LEASE, Math.max(1, Math.floor(Number(sessions_per_lease)) || 1)) : null,
           is_shared: !isResidential && Boolean(is_shared),
           max_tenants: isResidential ? 0 : Number(max_tenants) || 1,
           current_tenants_count: 0,
@@ -175,13 +175,13 @@ export async function POST(req: NextRequest) {
         }
 
         // 住宅代理：一律付費（附贈名額不適用），以 IPRoyal API 建立買家專屬子帳號並配發 GB（不過期，可加購）；
-        // 每買一組產生 RESI_SESSIONS_PER_LEASE 條固定 IP 連線供買家綁不同社群帳號，超過再買下一組
+        // 每買一組產生 sessions_per_lease 條固定 IP 連線（管理者設定 1–10）供買家綁不同社群帳號
         let resi: { gb: number; hash: string; username: string; password: string } | null = null
         if (isResi) {
           const gb = Math.floor(Number(body.gb))
           if (!(gb >= 1 && gb <= 1000)) return NextResponse.json({ error: '請輸入 1–1000 GB' }, { status: 400 })
           if (!off.price_per_gb_usd) return NextResponse.json({ error: '此住宅代理尚未設定每 GB 售價' }, { status: 409 })
-          const token = resiApiToken(off)
+          const token = resiApiToken()
           if (!token) return NextResponse.json({ error: '此住宅代理尚未設定 IPRoyal API 金鑰' }, { status: 409 })
           const price = resiPackUsd(Number(off.price_per_gb_usd), gb)
           const chargeIt = !isAdmin && billable
@@ -231,7 +231,7 @@ export async function POST(req: NextRequest) {
         const proxyRow = (n?: number) => ({
           user_id: authUser.id,
           lease_id: lease.id,
-          name: n ? `🌐 [官方住宅] ${off.name} #${n}` : `🏢 [官方租用] ${off.name}`,
+          name: resi ? `🌐 [官方住宅] ${off.name}${n ? ` #${n}` : ''}` : `🏢 [官方租用] ${off.name}`,
           proxy_type: off.proxy_type,
           protocol: off.protocol,
           host: off.host,
@@ -245,7 +245,8 @@ export async function POST(req: NextRequest) {
           latency_ms: off.latency_ms,
           notes: off.notes,
         })
-        const rows = resi ? Array.from({ length: RESI_SESSIONS_PER_LEASE }, (_, i) => proxyRow(i + 1)) : [proxyRow()]
+        const sessions = Math.min(RESI_MAX_SESSIONS_PER_LEASE, Math.max(1, Number(off.sessions_per_lease) || 1))
+        const rows = resi ? Array.from({ length: sessions }, (_, i) => proxyRow(sessions > 1 ? i + 1 : undefined)) : [proxyRow()]
         const { data: insertedProxies } = await admin.from('marketing_proxies').insert(rows).select()
         const proxy = insertedProxies?.[0] ?? null
 
@@ -255,7 +256,7 @@ export async function POST(req: NextRequest) {
           .update({ current_tenants_count: tenants, status: !isResi && tenants >= (off.max_tenants ?? 1) ? 'rented_out' : 'available', updated_at: new Date().toISOString() })
           .eq('id', official_proxy_id)
 
-        const message = resi ? `🎉 住宅代理已開通 ${resi.gb} GB（扣 ${paid ? price : 0} 點），已產生 ${RESI_SESSIONS_PER_LEASE} 條固定 IP 連線放進您的代理池，每個社群帳號綁一條；流量用完可加購。` : successMessage(price)
+        const message = resi ? `🎉 住宅代理已開通 ${resi.gb} GB（扣 ${paid ? price : 0} 點），已產生 ${rows.length} 條固定 IP 連線放進您的代理池，每個社群帳號綁一條；流量用完可加購。` : successMessage(price)
         return NextResponse.json({ success: true, lease, proxy, charged_credits: price, message })
       }
 
@@ -273,17 +274,17 @@ export async function POST(req: NextRequest) {
       const admin = createAdminClient()
       const { data: lease } = await admin
         .from('marketing_proxy_leases')
-        .select('id, traffic_gb, subuser_hash, official_proxy:marketing_official_proxies(id, name, proxy_type, price_per_gb_usd, api_token)')
+        .select('id, traffic_gb, subuser_hash, official_proxy:marketing_official_proxies(id, name, proxy_type, price_per_gb_usd)')
         .eq('id', lease_id)
         .eq('user_id', authUser.id)
         .eq('status', 'active')
         .maybeSingle()
       const off = (Array.isArray(lease?.official_proxy) ? lease?.official_proxy[0] : lease?.official_proxy) as
-        { name: string; proxy_type: string; price_per_gb_usd: number | null; api_token: string | null } | null | undefined
+        { name: string; proxy_type: string; price_per_gb_usd: number | null } | null | undefined
       if (!lease || !off || off.proxy_type !== 'residential' || !lease.subuser_hash) {
         return NextResponse.json({ error: '找不到此住宅代理' }, { status: 404 })
       }
-      const token = resiApiToken(off)
+      const token = resiApiToken()
       if (!off.price_per_gb_usd || !token) return NextResponse.json({ error: '此住宅代理尚未設定售價或 API 金鑰' }, { status: 409 })
 
       const isAdmin = await isPlatformAdmin(authUser)

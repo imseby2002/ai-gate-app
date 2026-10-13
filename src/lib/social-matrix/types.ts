@@ -47,7 +47,7 @@ export interface OfficialRentableProxy {
   monthly_price_twd?: number | null
   monthly_price_usd?: number | null // ISP 按 IP 月租（USD）
   price_per_gb_usd?: number | null // 住宅代理每 GB 售價（USD）
-  api_token?: string | null // 住宅代理：該組 IPRoyal 帳號的 API 金鑰（僅管理員可見）
+  sessions_per_lease?: number | null // 住宅代理：每次購買產生的固定 IP 連線數（1–10）
   is_shared?: boolean // 上游為共享 IP
   max_tenants: number // 1 = 專屬獨享
   current_tenants_count: number
