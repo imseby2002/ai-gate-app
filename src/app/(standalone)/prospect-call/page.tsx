@@ -1077,7 +1077,6 @@ export default function ProspectCallPage() {
           callerId: config.birdCallerId,
           birdCallerId: config.birdCallerId,
           keyMappings: config.keyMappings,
-          provider: 'bird',
         }),
       })
       const data = await res.json()
@@ -1534,8 +1533,8 @@ export default function ProspectCallPage() {
                   </label>
                   <div className="flex gap-2">
                     <input value={testPhone} onChange={e => setTestPhone(e.target.value)}
-                      placeholder="+1..."
-                      className="flex-1 h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
+                      placeholder="+8869... / +84... / +1..."
+                      className="flex-1 h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2 font-mono" />
                     <button onClick={testCall} disabled={testCalling || testPhone.trim().length < 8}
                       className="h-9 px-3 rounded-lg bg-indigo-600 text-white text-xs font-semibold disabled:opacity-50 flex items-center gap-1">
                       {testCalling ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Phone className="h-3.5 w-3.5" />}
