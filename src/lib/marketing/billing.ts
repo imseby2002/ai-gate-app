@@ -7,7 +7,7 @@
 // credits for external users」、lib/skills/billing.ts 的 skills/run route、
 // lib/resume/billing.ts）。這條規則晚於行銷模組原始設計，這裡補齊。
 import { getBalance, deductCredits as deductCreditsRaw } from '@/lib/skills/billing'
-import { getCompanyBillingContext } from '@/lib/company/entitlements'
+import { getCompanyBillingContext } from '@/lib/company/billing-context'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getMarketingEntitlements, type MarketingPlan } from './entitlements'
 

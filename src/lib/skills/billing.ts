@@ -1,6 +1,6 @@
 // Skill 點數計價共用層（server-side，使用 service-role 略過 RLS）
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getCompanyBillingContext } from '@/lib/company/entitlements'
+import { getCompanyBillingContext } from '@/lib/company/billing-context'
 import { checkEnterpriseCostAlert } from '@/lib/company/enterprise'
 
 // 查詢使用者可用點數。專屬客製-企業版不限點數（Infinity）；公司版回傳公司錢包餘額（本月贈點＋儲值）；
