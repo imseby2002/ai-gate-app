@@ -1168,7 +1168,7 @@ function SocialMatrixContent() {
                                 : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
                             }`}>
                               <span className={`h-2 w-2 rounded-full ${isLeasedByMe ? 'bg-emerald-500' : isAvailable ? 'bg-indigo-500' : 'bg-slate-400'}`} />
-                              {isLeasedByMe ? t('leasedByMe') : isAvailable ? t('available') : t('leasedOut')}
+                              {isLeasedByMe ? (isResiOffer ? t('resiOwned') : t('leasedByMe')) : isAvailable ? t('available') : t('leasedOut')}
                             </span>
                           </div>
 
@@ -1201,7 +1201,7 @@ function SocialMatrixContent() {
                         {/* Pricing & CTA */}
                         <div className="pt-4 mt-3 border-t border-border flex items-center justify-between gap-4">
                           <div>
-                            <span className="text-[10px] text-muted-foreground block">{t('leasePlan')}</span>
+                            <span className="text-[10px] text-muted-foreground block">{isResiOffer ? t('resiPlan') : t('leasePlan')}</span>
                             <div className="flex items-baseline gap-1">
                               <span className="text-xl font-extrabold text-indigo-600 dark:text-indigo-400">
                                 US$ {priceFor(offProxy) ?? '—'}
@@ -1224,15 +1224,18 @@ function SocialMatrixContent() {
                               </button>
                             ) : isAvailable && offProxy.proxy_type === 'residential' ? (
                               <div className="flex items-center gap-2">
-                                <input
-                                  type="number"
-                                  min={resiHasRoom ? 0 : 1}
-                                  max={1000}
-                                  value={resiGb[offProxy.id] ?? (resiHasRoom ? 0 : 10)}
-                                  onChange={e => setResiGb(prev => ({ ...prev, [offProxy.id]: Number(e.target.value) }))}
-                                  className="w-16 px-2 py-2 rounded-lg border border-border bg-background text-xs font-bold"
-                                  aria-label="GB"
-                                />
+                                <label className="flex items-center gap-1 px-2 py-1 rounded-lg border border-border bg-background">
+                                  <input
+                                    type="number"
+                                    min={resiHasRoom ? 0 : 1}
+                                    max={1000}
+                                    value={resiGb[offProxy.id] ?? (resiHasRoom ? 0 : 10)}
+                                    onChange={e => setResiGb(prev => ({ ...prev, [offProxy.id]: Number(e.target.value) }))}
+                                    className="w-12 py-1 bg-transparent text-xs font-bold outline-none"
+                                    aria-label="GB"
+                                  />
+                                  <span className="text-xs font-bold text-muted-foreground">GB</span>
+                                </label>
                                 <button
                                   onClick={() => handleLeaseOfficial(offProxy, Math.floor(resiGb[offProxy.id] ?? (resiHasRoom ? 0 : 10)))}
                                   disabled={isLeasing || !((resiGb[offProxy.id] ?? (resiHasRoom ? 0 : 10)) >= (resiHasRoom ? 0 : 1))}
