@@ -47,7 +47,6 @@ export interface OfficialRentableProxy {
   monthly_price_twd?: number | null
   monthly_price_usd?: number | null // ISP 按 IP 月租（USD）
   price_per_gb_usd?: number | null // 住宅代理每 GB 售價（USD）
-  sessions_per_lease?: number | null // 住宅代理：每次購買產生的固定 IP 連線數（1–10）
   is_shared?: boolean // 上游為共享 IP
   max_tenants: number // 1 = 專屬獨享
   current_tenants_count: number
@@ -58,6 +57,12 @@ export interface OfficialRentableProxy {
   updated_at?: string
 }
 
+export interface ResiAccountSummary {
+  id: string
+  traffic_gb: number | null // 子帳號累計配發 GB（所有連線共用）
+  sessions_count: number | null
+}
+
 export interface ProxyLease {
   id: string
   user_id?: string
@@ -65,8 +70,9 @@ export interface ProxyLease {
   status: 'active' | 'expired' | 'canceled'
   rented_at: string
   expires_at: string
-  traffic_gb?: number | null // 住宅代理：累計購買 GB
-  subuser_hash?: string | null // 住宅代理：IPRoyal 子帳號
+  traffic_gb?: number | null // 住宅代理：此次購買的 GB
+  resi_account_id?: string | null // 住宅代理：所屬子帳號
+  resi_account?: ResiAccountSummary | null
   official_proxy?: OfficialRentableProxy
   created_at?: string
   updated_at?: string
