@@ -25,8 +25,9 @@ interface ManagedRequest {
   auto_renew: boolean
   next_env_quota: number | null
   next_billing_cycle: BillingCycle | null
-  balance: number | null
+  balance: number | null // -1 = 企業版不限點數
   profile: { email: string | null; full_name: string | null } | null
+  company_name: string | null
 }
 
 const STATUS_LABEL: Record<Status, string> = { pending: '待開通', active: '已開通', suspended: '已暫停', rejected: '已拒絕', revoked: '已停用' }
@@ -123,6 +124,7 @@ export function AdspowerManagedTable() {
               return (
                 <tr key={r.user_id} className="border-t align-top">
                   <td className="py-2.5 px-3">
+                    {r.company_name && <div className="font-semibold text-indigo-700">🏢 {r.company_name}</div>}
                     <div className="font-medium text-gray-900">{r.profile?.full_name || '—'}</div>
                     <div className="text-xs text-gray-500">{r.profile?.email ?? r.user_id}</div>
                     <div className="text-[11px] text-gray-400 mt-0.5">{new Date(r.requested_at).toLocaleString('zh-TW')}</div>
@@ -151,8 +153,8 @@ export function AdspowerManagedTable() {
                           </select>
                         </div>
                         {d && <div>開通扣 {periodPrice(d.env_quota, d.billing_cycle)} 點</div>}
-                        <div className={r.balance !== null && d && r.balance < periodPrice(d.env_quota, d.billing_cycle) ? 'text-rose-600' : 'text-gray-500'}>
-                          客人餘額 {r.balance === null ? '—' : Number.isFinite(r.balance) ? r.balance.toFixed(2) : '不限'} 點
+                        <div className={r.balance !== null && r.balance >= 0 && d && r.balance < periodPrice(d.env_quota, d.billing_cycle) ? 'text-rose-600' : 'text-gray-500'}>
+                          {r.company_name ? '公司' : '客人'}餘額 {r.balance === null ? '—' : r.balance < 0 ? '不限' : r.balance.toFixed(2)} 點
                         </div>
                       </>
                     )}
