@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireSocialMatrix, requirePlatformAdmin, isPlatformAdmin, getOfficialProxyQuota } from '@/lib/social-matrix/access'
+import { resolveUserCompanyId } from '@/lib/company/activeCompany'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getUsdToTwdRate } from '@/lib/fx'
 import { isBillableUser } from '@/lib/marketing/billing'
@@ -7,6 +8,12 @@ import { deductCredits, getBalance } from '@/lib/skills/billing'
 import { resiPackUsd } from '@/lib/social-matrix/pricing'
 import { createResiSubuser, giveResiTraffic, resiApiToken, resiStickyPassword } from '@/lib/social-matrix/iproyal'
 import { officialProxyCredits, nextExpiry, OFFICIAL_PRICE_COLS } from '@/lib/social-matrix/lease-billing'
+
+// 使用者目前操作的公司（右上角切換；無則個人）
+async function currentCompanyId(admin: ReturnType<typeof createAdminClient>, userId: string) {
+  const { data: profile } = await admin.from('profiles').select('company_id').eq('id', userId).maybeSingle()
+  return resolveUserCompanyId(admin, userId, profile?.company_id ?? null)
+}
 
 export async function GET(req: NextRequest) {
   const guard = await requireSocialMatrix(req)
@@ -34,12 +41,14 @@ export async function GET(req: NextRequest) {
       .eq('user_id', authUser.id)
       .eq('status', 'active')
 
-    // 3. 住宅代理子帳號（每位使用者共用流量；連線數未滿時新增連線免另購 GB）
-    const { data: resiAccounts } = await admin
+    // 3. 住宅代理子帳號：隸屬購買時的公司（右上角切換），只列目前公司的
+    const resiCompanyId = authUser.isCron ? null : await currentCompanyId(admin, authUser.id)
+    let resiQuery = admin
       .from('marketing_resi_accounts')
       .select('id, traffic_gb, sessions_count')
       .eq('user_id', authUser.id)
-      .order('created_at', { ascending: true })
+    resiQuery = resiCompanyId ? resiQuery.eq('company_id', resiCompanyId) : resiQuery.is('company_id', null)
+    const { data: resiAccounts } = await resiQuery.order('created_at', { ascending: true })
 
     if (offErr) return NextResponse.json({ ...meta, error: `讀取官方 IP 失敗：${offErr.message}`, official_proxies: [], leases: [] }, { status: 500 })
     return NextResponse.json({ ...meta, official_proxies: dbOfficial ?? [], leases: dbLeases ?? [], resi_accounts: resiAccounts ?? [] })
@@ -192,10 +201,14 @@ export async function POST(req: NextRequest) {
           const token = resiApiToken()
           if (!token) return NextResponse.json({ error: '住宅代理尚未設定 IPRoyal API 金鑰' }, { status: 409 })
 
-          const { data: accounts } = await admin
+          // 住宅代理隸屬購買時的公司：同一使用者在不同公司各自一個子帳號、各自流量與扣款
+          const companyId = await currentCompanyId(admin, authUser.id)
+          let accountQuery = admin
             .from('marketing_resi_accounts')
             .select('*')
             .eq('user_id', authUser.id)
+          accountQuery = companyId ? accountQuery.eq('company_id', companyId) : accountQuery.is('company_id', null)
+          const { data: accounts } = await accountQuery
             .order('created_at', { ascending: true })
             .limit(1)
           let account = (accounts?.[0] ?? null) as ResiAccount | null
@@ -205,7 +218,7 @@ export async function POST(req: NextRequest) {
 
           resiPrice = gb > 0 ? resiPackUsd(Number(off.price_per_gb_usd), gb) : 0
           const chargeIt = !isAdmin && billable && resiPrice > 0
-          if (chargeIt && (await getBalance(authUser.id)) < resiPrice) {
+          if (chargeIt && (await getBalance(authUser.id, companyId)) < resiPrice) {
             return NextResponse.json({ error: '點數不足', required: resiPrice }, { status: 402 })
           }
           try {
@@ -213,7 +226,7 @@ export async function POST(req: NextRequest) {
               const created = await createResiSubuser(token, gb)
               const { data: inserted, error: accErr } = await admin
                 .from('marketing_resi_accounts')
-                .insert({ user_id: authUser.id, subuser_hash: created.hash, username: created.username, password: created.password, traffic_gb: gb, sessions_count: 0 })
+                .insert({ user_id: authUser.id, company_id: companyId, subuser_hash: created.hash, username: created.username, password: created.password, traffic_gb: gb, sessions_count: 0 })
                 .select()
                 .single()
               if (accErr || !inserted) {
@@ -232,7 +245,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: '住宅代理開通失敗，請稍後再試或聯繫客服' }, { status: 502 })
           }
           if (chargeIt) {
-            const r = await deductCredits(authUser.id, resiPrice, `住宅代理 ${gb} GB：${off.name}`)
+            const r = await deductCredits(authUser.id, resiPrice, `住宅代理 ${gb} GB：${off.name}`, companyId)
             if (!r.ok) console.error('[official-proxies lease] deduct failed after IPRoyal provisioning', { userId: authUser.id, official_proxy_id, price: resiPrice, account: account.id })
           }
           resi = { gb, account }
@@ -325,7 +338,7 @@ export async function POST(req: NextRequest) {
       const off = (Array.isArray(lease?.official_proxy) ? lease?.official_proxy[0] : lease?.official_proxy) as
         { name: string; price_per_gb_usd: number | null } | null | undefined
       const { data: account } = lease?.resi_account_id
-        ? await admin.from('marketing_resi_accounts').select('id, subuser_hash, traffic_gb').eq('id', lease.resi_account_id).eq('user_id', authUser.id).maybeSingle()
+        ? await admin.from('marketing_resi_accounts').select('id, company_id, subuser_hash, traffic_gb').eq('id', lease.resi_account_id).eq('user_id', authUser.id).maybeSingle()
         : { data: null }
       if (!lease || !off || !account) {
         return NextResponse.json({ error: '找不到此住宅代理' }, { status: 404 })
@@ -336,7 +349,7 @@ export async function POST(req: NextRequest) {
       const isAdmin = await isPlatformAdmin(authUser)
       const price = resiPackUsd(Number(off.price_per_gb_usd), gb)
       const chargeIt = !isAdmin && await isBillableUser(authUser.id)
-      if (chargeIt && (await getBalance(authUser.id)) < price) {
+      if (chargeIt && (await getBalance(authUser.id, account.company_id)) < price) {
         return NextResponse.json({ error: '點數不足', required: price }, { status: 402 })
       }
       try {
@@ -346,7 +359,8 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: '加購失敗，請稍後再試或聯繫客服' }, { status: 502 })
       }
       if (chargeIt) {
-        const r = await deductCredits(authUser.id, price, `住宅代理加購 ${gb} GB：${off.name}`)
+        // 加購扣子帳號所屬公司（購買時的公司）
+        const r = await deductCredits(authUser.id, price, `住宅代理加購 ${gb} GB：${off.name}`, account.company_id)
         if (!r.ok) console.error('[official-proxies topup] deduct failed after IPRoyal give-traffic', { userId: authUser.id, lease_id, price })
       }
       const total = Number(account.traffic_gb ?? 0) + gb
