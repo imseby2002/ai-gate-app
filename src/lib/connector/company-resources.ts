@@ -2,6 +2,7 @@
 // 企業版為方案內附贈、不扣點；一般公司版從公司錢包扣（扣點以公司建立者身分走 lib/skills/billing 的公司錢包）。
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { resolveUserCompanyId } from '@/lib/company/activeCompany'
 import { deductCredits } from '@/lib/skills/billing'
 import { notifyAdmin } from '@/lib/notify/adminAlert'
 import { companyPeriodPrice, periodEnd, type BillingCycle } from './managed-pricing'
@@ -37,17 +38,18 @@ export function defaultCompanyGroupName(companyId: string) {
   return `AIGATE-C-${companyId.replace(/-/g, '').slice(0, 8)}`
 }
 
-/** 使用者所屬公司（profiles.company_id）與該公司的資源設定；無公司或未設定回 null */
+/** 使用者目前所屬公司（右上角切換，否則 profiles.company_id）與該公司的資源設定；無公司回 null */
 export async function getUserCompanyResources(userId: string): Promise<{ companyId: string; resources: CompanyResources | null } | null> {
   const admin = createAdminClient()
   const { data: profile } = await admin.from('profiles').select('company_id').eq('id', userId).maybeSingle()
-  if (!profile?.company_id) return null
+  const companyId = await resolveUserCompanyId(admin, userId, profile?.company_id ?? null)
+  if (!companyId) return null
   const { data } = await admin
     .from('marketing_company_social_resources')
     .select('*')
-    .eq('company_id', profile.company_id)
+    .eq('company_id', companyId)
     .maybeSingle()
-  return { companyId: profile.company_id, resources: (data as CompanyResources | null) ?? null }
+  return { companyId, resources: (data as CompanyResources | null) ?? null }
 }
 
 /** 公司在職成員的 user id */
