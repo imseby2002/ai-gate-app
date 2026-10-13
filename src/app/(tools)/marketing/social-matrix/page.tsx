@@ -2351,7 +2351,8 @@ function SocialMatrixContent() {
                   <option value="">{t('pickNode')}</option>
                   {proxies.map(p => (
                     <option key={p.id} value={p.id}>
-                      {p.source === 'official_leased' ? t('srcOfficial') : t('srcOwn')}
+                      {/* 官方租用節點名稱已含「[官方租用]/[官方住宅]」前綴 */}
+                      {p.source === 'official_leased' ? '' : t('srcOwn')}
                       {p.name} ({p.host}:{p.port})
                     </option>
                   ))}

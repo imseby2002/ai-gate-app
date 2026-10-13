@@ -27,16 +27,22 @@ export async function GET() {
   const admin = createAdminClient()
   const { data, error } = await admin
     .from('marketing_adspower_managed')
-    .select('user_id, status, contact, note, login_account, login_password_enc, group_name, admin_note, requested_at, activated_at, env_quota, billing_cycle, price_credits, paid_until, auto_renew, next_env_quota, next_billing_cycle')
+    .select('user_id, company_id, status, contact, note, login_account, login_password_enc, group_name, admin_note, requested_at, activated_at, env_quota, billing_cycle, price_credits, paid_until, auto_renew, next_env_quota, next_billing_cycle')
     .order('requested_at', { ascending: false })
     .limit(200)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   const ids = (data ?? []).map(r => r.user_id)
   const { data: profiles } = ids.length
-    ? await admin.from('profiles').select('id, email, full_name').in('id', ids)
+    ? await admin.from('profiles').select('id, email, full_name, company_id').in('id', ids)
     : { data: [] }
   const byId = new Map((profiles ?? []).map(p => [p.id, p]))
+  // 公司成員申請時顯示所屬公司（點數由公司錢包扣）
+  const companyIds = [...new Set([...(profiles ?? []).map(p => p.company_id), ...(data ?? []).map(r => r.company_id)].filter(Boolean))] as string[]
+  const { data: companies } = companyIds.length
+    ? await admin.from('companies').select('id, name').in('id', companyIds)
+    : { data: [] }
+  const companyName = new Map((companies ?? []).map(c => [c.id, c.name as string]))
 
   // 待開通者附上點數餘額與開通應收金額，方便管理員先確認再到 AdsPower 建成員
   const requests = await Promise.all((data ?? []).map(async ({ login_password_enc, ...r }) => ({
@@ -44,8 +50,10 @@ export async function GET() {
     has_password: !!login_password_enc,
     default_group_name: defaultManagedGroupName(r.user_id),
     profile: byId.get(r.user_id) ?? null,
+    company_name: companyName.get(r.company_id ?? byId.get(r.user_id)?.company_id ?? '') ?? null,
     period_price: periodPrice(r.env_quota, r.billing_cycle as BillingCycle),
-    balance: r.status === 'active' ? null : await getBalance(r.user_id).catch(() => null),
+    // 企業版不限點數：Infinity 無法以 JSON 傳遞，改用 -1 表示
+    balance: r.status === 'active' ? null : await getBalance(r.user_id, r.company_id).then(b => (Number.isFinite(b) ? b : -1)).catch(() => null),
   })))
   return NextResponse.json({ requests })
 }

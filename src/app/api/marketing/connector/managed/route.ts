@@ -8,6 +8,7 @@ import { decryptSecret } from '@/lib/crypto/secret'
 import { isCycle, isPackage, type BillingCycle } from '@/lib/connector/managed-pricing'
 import { activateManaged } from '@/lib/connector/managed-billing'
 import { getUserCompanyResources, defaultCompanyGroupName } from '@/lib/connector/company-resources'
+import { resolveUserCompanyId } from '@/lib/company/activeCompany'
 
 /** 公司共享代管（後台開通）：回傳公司方案與指派給此成員的 AdsPower 席次 */
 async function companyManaged(userId: string, reveal: boolean) {
@@ -107,9 +108,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: msg }, { status: 409 })
   }
 
+  // 記錄申請當下右上角切換的公司，之後開通與續費都扣這家公司
+  const { data: profile } = await admin.from('profiles').select('company_id').eq('id', guard.user.id).maybeSingle()
+  const companyId = await resolveUserCompanyId(admin, guard.user.id, profile?.company_id ?? null)
   const now = new Date().toISOString()
   const { error } = await admin.from('marketing_adspower_managed').upsert({
     user_id: guard.user.id,
+    company_id: companyId,
     status: 'pending',
     contact,
     note: note || null,

@@ -44,3 +44,26 @@ export async function resolveActiveCompanyId(
 
   return fallbackCompanyId
 }
+
+// 以「使用者 id」計算公司的共用層（扣點、公司方案、社群矩陣資源）用：
+// 只有在目前請求的登入者就是該使用者時，才採用右上角切換的公司（需有 active 成員資格）；
+// 排程（無請求）或管理員代他人操作時，沿用 profiles.company_id。
+export async function resolveUserCompanyId(admin: Admin, userId: string, fallbackCompanyId: string | null): Promise<string | null> {
+  let requested: string | undefined
+  try {
+    requested = (await cookies()).get(ACTIVE_COMPANY_COOKIE)?.value
+  } catch {
+    return fallbackCompanyId
+  }
+  if (!requested || requested === fallbackCompanyId) return fallbackCompanyId
+  try {
+    const { createClient } = await import('@/lib/supabase/server')
+    const { data: { user } } = await (await createClient()).auth.getUser()
+    if (user?.id !== userId) return fallbackCompanyId
+  } catch {
+    return fallbackCompanyId
+  }
+  const { data } = await admin.from('company_members')
+    .select('id').eq('company_id', requested).eq('member_id', userId).eq('status', 'active').maybeSingle()
+  return data ? requested : fallbackCompanyId
+}

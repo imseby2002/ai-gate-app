@@ -8,10 +8,11 @@ import { periodPrice, periodEnd, type BillingCycle } from './managed-pricing'
 const CYCLE_LABEL: Record<BillingCycle, string> = { monthly: '月付', annual: '年付' }
 
 /** 預收一期費用；非付費帳號（管理員／員工）不扣點 */
-export async function chargeManagedPeriod(userId: string, envs: number, cycle: BillingCycle, reason: string) {
+export async function chargeManagedPeriod(userId: string, envs: number, cycle: BillingCycle, reason: string, companyId?: string | null) {
   const price = periodPrice(envs, cycle)
   if (!(await isBillableUser(userId))) return { ok: true as const, price: 0 }
-  const res = await deductCredits(userId, price, `AdsPower 代管 ${envs} 環境（${CYCLE_LABEL[cycle]}）${reason}`)
+  // 申請時記錄的公司優先（扣該公司錢包）；沒有則依使用者預設公司
+  const res = await deductCredits(userId, price, `AdsPower 代管 ${envs} 環境（${CYCLE_LABEL[cycle]}）${reason}`, companyId)
   return res.ok ? { ok: true as const, price } : { ok: false as const, price, reason: res.reason }
 }
 
@@ -23,7 +24,8 @@ export async function activateManaged(
   cycle: BillingCycle,
   extra: Record<string, unknown> = {},
 ) {
-  const charge = await chargeManagedPeriod(userId, envs, cycle, '開通')
+  const { data: row } = await admin.from('marketing_adspower_managed').select('company_id').eq('user_id', userId).maybeSingle()
+  const charge = await chargeManagedPeriod(userId, envs, cycle, '開通', row?.company_id ?? null)
   if (!charge.ok) return charge
   const now = new Date()
   const { error } = await admin
@@ -48,7 +50,7 @@ export async function activateManaged(
 export async function renewExpiredManaged(admin: SupabaseClient) {
   const { data: rows, error } = await admin
     .from('marketing_adspower_managed')
-    .select('user_id, login_account, group_name, env_quota, billing_cycle, auto_renew, paid_until, next_env_quota, next_billing_cycle')
+    .select('user_id, company_id, login_account, group_name, env_quota, billing_cycle, auto_renew, paid_until, next_env_quota, next_billing_cycle')
     .eq('status', 'active')
     .lte('paid_until', new Date().toISOString())
   if (error) throw error
@@ -58,7 +60,7 @@ export async function renewExpiredManaged(admin: SupabaseClient) {
   for (const r of rows ?? []) {
     const envs = r.next_env_quota ?? r.env_quota
     const cycle = (r.next_billing_cycle ?? r.billing_cycle) as BillingCycle
-    const charge = r.auto_renew ? await chargeManagedPeriod(r.user_id, envs, cycle, '續費') : null
+    const charge = r.auto_renew ? await chargeManagedPeriod(r.user_id, envs, cycle, '續費', r.company_id) : null
     const now = new Date().toISOString()
     if (charge?.ok) {
       await admin
