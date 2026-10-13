@@ -21,6 +21,7 @@ export function getTwilioAuth() {
     return {
       accountSid,
       authHeader: `Basic ${Buffer.from(`${apiKeySid}:${apiKeySecret}`).toString('base64')}`,
+      authType: 'api_key' as const,
     }
   }
 
@@ -29,6 +30,7 @@ export function getTwilioAuth() {
     return {
       accountSid,
       authHeader: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString('base64')}`,
+      authType: 'auth_token' as const,
     }
   }
 
@@ -105,7 +107,8 @@ export const twilioProvider: TelephonyProvider = {
     const data = await res.json().catch(() => ({}))
     if (!res.ok) {
       const detail = [data?.code, data?.message || data?.error_message].filter(Boolean).join(' / ') || '未知錯誤'
-      throw new Error(`Twilio 撥打失敗 (HTTP ${res.status})：${detail}${data?.more_info ? `（${data.more_info}）` : ''}`)
+      const authInfo = creds.authType === 'api_key' ? 'API Key (TWILIO_API_KEY_SID)' : 'Auth Token (TWILIO_AUTH_TOKEN)'
+      throw new Error(`Twilio 撥打失敗 (HTTP ${res.status})：${detail} [認證方式: ${authInfo}]${data?.more_info ? `（${data.more_info}）` : ''}`)
     }
 
     return { callId: data?.sid ?? null }
