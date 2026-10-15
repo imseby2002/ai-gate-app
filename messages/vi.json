@@ -1944,7 +1944,13 @@
       "published": "Đã xuất bản",
       "draft": "Bản nháp",
       "viewArticle": "Xem trang đích",
-      "refresh": "Làm mới"
+      "refresh": "Làm mới",
+      "companyAssetsLinked": "Đã tự động liên kết Kho tài nguyên công ty",
+      "syncCompany": "Đồng bộ dữ liệu mới nhất",
+      "quickFillStore": "Áp dụng nhanh thông tin cửa hàng:",
+      "selectStoreToFill": "Chọn cửa hàng để tự động điền địa chỉ & giờ mở cửa...",
+      "companyAssetsFacts": "Dữ liệu thực tế từ Kho tài nguyên (Điểm bán hàng, thông số, cửa hàng)",
+      "insertToTopic": "Chèn vào chủ đề"
     },
     "features": {
       "templates": {

@@ -10,7 +10,7 @@ import {
   Settings, Save, Award, BarChart3, Printer, TrendingDown,
   Wrench, Bot, ScrollText, Gauge as GaugeIcon,
   Library, Plus, Trash2, MapPin, UserCircle,
-  History, Eye, Calendar,
+  History, Eye, Calendar, Building2, Store,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -41,6 +41,20 @@ interface HistoryProject {
   }>
   questionsCount: number
   writtenCount: number
+}
+interface CompanyStore {
+  id: string
+  name: string
+  address: string
+  openingHours: string
+  story: string
+  mapsUrl: string
+  features: string[]
+}
+interface CompanyFact {
+  label: string
+  text: string
+  source: 'brand' | 'product' | 'store'
 }
 interface GeoCluster { id: string; title: string; pillar: boolean; questionIds: string[] }
 interface TrackResult { id: string; cited: boolean; rank: number | null; sources: string[] }
@@ -210,24 +224,42 @@ export default function GeoWriterPage() {
   const [savingSettings, setSavingSettings] = useState(false)
   const [settingsSaved, setSettingsSaved] = useState(false)
 
-  // 素材庫
+  // 素材庫（已與公司資源庫全面合併）
   const [business, setBusiness] = useState<BusinessProfile>({})
   const [authors, setAuthors] = useState<AuthorProfile[]>([])
   const [facts, setFacts] = useState<FactItem[]>([])
+  const [companyFacts, setCompanyFacts] = useState<CompanyFact[]>([])
+  const [companyStores, setCompanyStores] = useState<CompanyStore[]>([])
+  const [companyName, setCompanyName] = useState('')
+  const [companyWebsite, setCompanyWebsite] = useState('')
+  const [loadingMat, setLoadingMat] = useState(false)
   const [savingMat, setSavingMat] = useState(false)
   const [matSaved, setMatSaved] = useState(false)
 
-  useEffect(() => {
-    fetch('/api/marketing/geo/material')
-      .then(r => r.ok ? r.json() : null)
-      .then(d => {
-        if (!d) return
-        setBusiness(d.business ?? {})
-        setAuthors(d.authors ?? [])
-        setFacts(d.facts ?? [])
-      })
-      .catch(() => {})
+  const fetchMaterial = useCallback(async () => {
+    setLoadingMat(true)
+    try {
+      const r = await fetch('/api/marketing/geo/material')
+      if (r.ok) {
+        const d = await r.json()
+        if (d.business) setBusiness(d.business)
+        if (d.authors) setAuthors(d.authors)
+        if (d.facts) setFacts(d.facts)
+        if (d.companyFacts) setCompanyFacts(d.companyFacts)
+        if (d.companyStores) setCompanyStores(d.companyStores)
+        if (d.companyName) setCompanyName(d.companyName)
+        if (d.companyWebsite) setCompanyWebsite(d.companyWebsite)
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLoadingMat(false)
+    }
   }, [])
+
+  useEffect(() => {
+    fetchMaterial()
+  }, [fetchMaterial])
 
   async function saveMaterial() {
     setSavingMat(true); setMatSaved(false); setError('')
@@ -713,17 +745,72 @@ export default function GeoWriterPage() {
           </div>
         )}
 
-        {/* 素材庫：商家檔案(LocalBusiness) / 作者(Person) / 獨家事實 */}
+        {/* 素材庫：已與公司資源庫全面合併（LocalBusiness / Person / 獨家事實） */}
         {showMaterial && (
-          <div className="bg-card rounded-xl border p-5 space-y-5 shadow-sm">
-            <h2 className="text-sm font-semibold flex items-center gap-2">
-              <Library className="h-4 w-4 text-indigo-600" /> {t('geo.material')}
-            </h2>
+          <div className="bg-card rounded-xl border p-5 space-y-5 shadow-sm animate-in fade-in duration-200">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold flex items-center gap-2">
+                <Library className="h-4 w-4 text-indigo-600" /> {t('geo.material')}
+              </h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={fetchMaterial}
+                disabled={loadingMat}
+                className="h-7 text-xs text-indigo-600 hover:text-indigo-800"
+              >
+                <RefreshCw className={cn("h-3 w-3 mr-1", loadingMat && "animate-spin")} />
+                {t('geo.syncCompany')}
+              </Button>
+            </div>
             <p className="text-[11px] text-muted-foreground">{t('geo.materialHint')}</p>
 
+            {/* 公司資源庫連動橫幅 */}
+            <div className="bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded-lg p-3 text-xs flex items-center gap-2.5">
+              <Building2 className="h-4 w-4 text-indigo-600 shrink-0" />
+              <div className="flex-1">
+                <span className="font-semibold text-indigo-900 dark:text-indigo-200">
+                  {t('geo.companyAssetsLinked')}
+                </span>
+                <span className="text-indigo-700/80 dark:text-indigo-300/80 ml-1.5">
+                  {companyName ? `(${companyName})` : ''} — 品牌基本資料、門市地址與產品規格已由公司中樞自動同步
+                </span>
+              </div>
+            </div>
+
             {/* 商家檔案 */}
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{t('geo.bizSection')}</p>
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                  <MapPin className="h-3.5 w-3.5" />{t('geo.bizSection')}
+                </p>
+                {/* 門市快速選單 */}
+                {companyStores.length > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    <Store className="h-3.5 w-3.5 text-muted-foreground" />
+                    <select
+                      onChange={(e) => {
+                        const s = companyStores.find(st => st.id === e.target.value)
+                        if (!s) return
+                        setBusiness(b => ({
+                          ...b,
+                          name: s.name,
+                          streetAddress: s.address,
+                          openingHours: s.openingHours || b.openingHours,
+                        }))
+                      }}
+                      className="h-7 rounded border bg-background px-2 text-[11px]"
+                      defaultValue=""
+                    >
+                      <option value="" disabled>{t('geo.selectStoreToFill')}</option>
+                      {companyStores.map(st => (
+                        <option key={st.id} value={st.id}>{st.name} {st.address ? `(${st.address})` : ''}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
               <div className="grid grid-cols-2 gap-2">
                 <Input value={business.name ?? ''} onChange={e => bz('name', e.target.value)} placeholder={t('geo.bizName')} />
                 <select value={business.type ?? 'LocalBusiness'} onChange={e => bz('type', e.target.value)}
@@ -743,7 +830,38 @@ export default function GeoWriterPage() {
               </div>
             </div>
 
-            {/* 作者 */}
+            {/* 來自公司資源庫的事實（品牌、產品、門市） */}
+            {companyFacts.length > 0 && (
+              <div className="space-y-2 border-t pt-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <Sparkles className="h-3.5 w-3.5 text-indigo-500" />
+                    {t('geo.companyAssetsFacts')}
+                  </p>
+                  <span className="text-[11px] text-muted-foreground">{companyFacts.length} 項事實可供插入</span>
+                </div>
+                <div className="grid grid-cols-1 gap-1.5 max-h-48 overflow-y-auto pr-1">
+                  {companyFacts.map((cf, idx) => (
+                    <div key={idx} className="flex items-start justify-between gap-2 p-2 bg-muted/40 rounded border text-xs hover:border-indigo-300 transition-colors">
+                      <div className="min-w-0 flex-1">
+                        <span className="font-semibold text-indigo-700 dark:text-indigo-400 mr-1.5">[{cf.label}]</span>
+                        <span className="text-muted-foreground line-clamp-2">{cf.text}</span>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-6 text-[11px] px-2 shrink-0 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-300"
+                        onClick={() => insertFact({ label: cf.label, text: cf.text })}
+                      >
+                        <Plus className="h-3 w-3 mr-0.5" /> {t('geo.insertToTopic')}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 作者 (E-E-A-T) */}
             <div className="space-y-2 border-t pt-4">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-medium text-muted-foreground flex items-center gap-1"><UserCircle className="h-3.5 w-3.5" />{t('geo.authorSection')}</p>
@@ -760,7 +878,7 @@ export default function GeoWriterPage() {
               ))}
             </div>
 
-            {/* 獨家事實 */}
+            {/* 自訂事實片段 */}
             <div className="space-y-2 border-t pt-4">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-medium text-muted-foreground">{t('geo.factSection')}</p>

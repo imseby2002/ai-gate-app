@@ -123,21 +123,48 @@ export const POST = withUsage('[marketing] GEO 產文', async function POST(req:
     return NextResponse.json({ error: '找不到勾選的問句' }, { status: 404 })
   }
 
-  // 素材庫（商家檔案 / 作者 / 獨家事實）
+  // 素材庫（商家檔案 / 作者 / 獨家事實）— 自動連動公司資源庫
   const { data: material } = await supabase
     .from('geo_material')
     .select('business, authors, facts')
     .eq('user_id', user.id)
     .single()
+
+  let companyProfile = null
+  try {
+    const { currentDataOwner, loadCompanyProfile } = await import('@/lib/company/profile')
+    const c = await currentDataOwner()
+    if (c) {
+      companyProfile = await loadCompanyProfile(c.admin, c.ownerId)
+    }
+  } catch {}
+
+  const mergedBusiness = {
+    ...(companyProfile?.companyName ? {
+      name: companyProfile.companyName,
+      url: companyProfile.website,
+      streetAddress: companyProfile.address,
+      type: 'LocalBusiness',
+    } : {}),
+    ...(material?.business ?? {}),
+  }
+
+  const defaultAuthorName = companyProfile?.companyName ? `${companyProfile.companyName} 專業團隊` : '在地專業行銷團隊'
+
   const mat: Material = {
-    business: material?.business ?? null,
-    authors: material?.authors ?? [],
+    business: Object.keys(mergedBusiness).length > 0 ? mergedBusiness : null,
+    authors: (material?.authors && material.authors.length > 0)
+      ? material.authors
+      : [{
+          name: defaultAuthorName,
+          jobTitle: '品牌首席顧問',
+        }],
     facts: material?.facts ?? [],
   }
 
   const topic = project.seed_topic
   const exclusiveFacts = project.exclusive_facts ?? ''
-  const author = (project.author ?? '').trim() || mat.authors?.[0]?.name || ''
+  const author = (project.author ?? '').trim() || mat.authors?.[0]?.name || defaultAuthorName
   const questions = qRows.map(r => r.question)
 
   const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -152,7 +179,7 @@ ${questions.map((q, i) => `${i + 1}. ${q}`).join('\n')}
 
 ${exclusiveFacts.trim() ? `【獨家資訊（務必融入，提升可信度與被引用率）】\n${exclusiveFacts}\n` : ''}
 【署名（E-E-A-T author）】
-${author.trim() || 'im-tourist 峴港在地團隊'}
+${author.trim() || defaultAuthorName}
 
 請依輸出規則產出文章與 JSON-LD。`
 

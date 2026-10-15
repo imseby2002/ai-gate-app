@@ -1944,7 +1944,13 @@
       "published": "Published",
       "draft": "Draft",
       "viewArticle": "View Landing Page",
-      "refresh": "Refresh"
+      "refresh": "Refresh",
+      "companyAssetsLinked": "Integrated with Company Resource Library",
+      "syncCompany": "Sync Latest Data",
+      "quickFillStore": "Quick apply store info:",
+      "selectStoreToFill": "Select store to auto-fill address & hours...",
+      "companyAssetsFacts": "Company Resource Facts (Brand highlights, product specs, store info)",
+      "insertToTopic": "Insert to Topic"
     },
     "features": {
       "templates": {
