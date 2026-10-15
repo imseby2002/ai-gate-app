@@ -1409,11 +1409,11 @@ const SIZE_OPTIONS = [
 function extractPrompt(content: string): string {
   if (!content?.trim()) return ''
   // 1. Content inside a code block after the label
-  const codeBlockMatch = content.match(/AI\s*生成\s*Prompt[：:][^\n]*\n```[^\n]*\n([\s\S]+?)```/i)
+  const codeBlockMatch = content.match(/(?:AI\s*生成\s*Prompt|Prompt\s*tạo\s*AI|Gợi\s*ý\s*tạo\s*ảnh\s*AI|AI\s*Prompt|Prompt)[：:][^\n]*\n```[^\n]*\n([\s\S]+?)```/i)
   if (codeBlockMatch) return codeBlockMatch[1].trim()
   // 2. Same line or next non-empty line after the label
   const patterns = [
-    /AI\s*生成\s*Prompt[：:]\**\s*(.+?)(?:\n|$)/i,
+    /(?:AI\s*生成\s*Prompt|Prompt\s*tạo\s*AI|Gợi\s*ý\s*tạo\s*ảnh\s*AI|AI\s*Prompt|Prompt\s*AI)[：:]\**\s*(.+?)(?:\n|$)/i,
     /Prompt[：:]\**\s*(.+?)(?:\n|$)/i,
   ]
   for (const re of patterns) {
@@ -1436,14 +1436,20 @@ function buildImageGenPrompt(content: string): string {
   if (!content?.trim()) return ''
   const aiPrompt = extractPrompt(content)
 
-  const extractField = (label: string) => {
-    const re = new RegExp(`${label}[：:]\\**\\s*([\\s\\S]+?)(?=\\n\\s*\\d+[\\.、]|\\n===|$)`, 'i')
-    const m = content.match(re)
-    return m ? m[1].replace(/\*+/g, '').replace(/\n+/g, ' ').trim().slice(0, 120) : ''
+  const extractField = (labels: string[]) => {
+    for (const label of labels) {
+      const re = new RegExp(`${label}[：:]\\**\\s*([\\s\\S]+?)(?=\\n\\s*\\d+[\\.、]|\\n===|$)`, 'i')
+      const m = content.match(re)
+      if (m) {
+        const val = m[1].replace(/\*+/g, '').replace(/\n+/g, ' ').trim().slice(0, 120)
+        if (val.length > 3) return val
+      }
+    }
+    return ''
   }
 
-  const scene = extractField('視覺場景')
-  const style = extractField('色調風格')
+  const scene = extractField(['視覺場景', 'Bối cảnh thị giác', 'Cảnh thị giác', 'Khung cảnh thị giác', 'Khung cảnh', 'Visual scene'])
+  const style = extractField(['色調風格', 'Phong cách tông màu', 'Tông màu phong cách', 'Phong cách màu sắc', 'Màu sắc phong cách', 'Color style'])
 
   const parts = [aiPrompt, scene, style].filter(s => s.length > 3)
   return parts.join('. ')
@@ -2302,7 +2308,7 @@ function extractVideoPrompt(content: string): string {
   if (!content?.trim()) return ''
 
   // 1. Extract entire 分鏡腳本 section (preferred — gives model full visual context)
-  const storyboardMatch = content.match(/分鏡腳本[\s\S]*?\n([\s\S]+?)(?:===|$)/i)
+  const storyboardMatch = content.match(/(?:分鏡腳本|Kịch bản phân cảnh|Phân cảnh storyboard|Phân cảnh|Storyboard)[\s\S]*?\n([\s\S]+?)(?:===|$)/i)
   if (storyboardMatch?.[1]) {
     const storyboard = storyboardMatch[1]
       .split('\n')
@@ -2312,22 +2318,22 @@ function extractVideoPrompt(content: string): string {
     if (storyboard.length > 30) return storyboard.slice(0, 2000)
   }
 
-  // 2. All time-coded storyboard lines — broad regex covers [0-3秒] [0~3s] [00:00-00:03] [第1場] etc.
-  const timeLines = [...content.matchAll(/\[[\d:：\-–~～\s秒sS第場景幕段一二三四五六七八九十百]+\]\s*([^\n|]+)/g)]
+  // 2. All time-coded storyboard lines — broad regex covers [0-3秒] [0~3s] [00:00-00:03] [第1場] [Cảnh 1] etc.
+  const timeLines = [...content.matchAll(/\[[\d:：\-–~～\s秒sS第場景幕段一二三四五六七八九十百CảnhPhân]+\]\s*([^\n|]+)/gi)]
   const timeParts = timeLines.map(m => stripMd(m[1].split('|')[0])).filter(d => d.length > 5)
   if (timeParts.length > 0) {
-    const hookMatch = content.match(/開頭\s*Hook[^）\n]*[）\n][^]*?畫面[：:]\s*(.+?)(?:\n|$)/i)
+    const hookMatch = content.match(/(?:開頭\s*Hook|Hook\s*mở\s*đầu|Mở\s*đầu)[^）\n]*[）\n][^]*?(?:畫面|Khung hình|Cảnh quay|Cảnh)[：:]\s*(.+?)(?:\n|$)/i)
     const hook = hookMatch?.[1] ? [stripMd(hookMatch[1]).slice(0, 100)] : []
     return [...hook, ...timeParts].join('。').slice(0, 2000)
   }
 
   // 3. All 畫面: descriptions
-  const sceneMatches = [...content.matchAll(/畫面[：:]\s*(.+?)(?:\n|$)/gi)]
+  const sceneMatches = [...content.matchAll(/(?:畫面|Khung hình|Cảnh quay|Cảnh)[：:]\s*(.+?)(?:\n|$)/gi)]
   const scenes = sceneMatches.map(m => stripMd(m[1])).filter(Boolean)
   if (scenes.length > 0) return scenes.join('。').slice(0, 2000)
 
   // 4. 影片標題 fallback
-  const titleMatch = content.match(/影片標題[：:]\s*(.+?)(?:\n|$)/i)
+  const titleMatch = content.match(/(?:影片標題|Tiêu đề video)[：:]\s*(.+?)(?:\n|$)/i)
   if (titleMatch?.[1]?.trim()) return stripMd(titleMatch[1])
 
   // 5. Last resort: first meaningful non-header lines

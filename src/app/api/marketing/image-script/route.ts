@@ -1,4 +1,4 @@
-﻿/**
+/**
  * POST /api/marketing/image-script
  * 圖片腳本單元 — Claude Sonnet 生成圖片視覺腳本
  *
@@ -97,6 +97,8 @@ export async function POST(req: NextRequest) {
     ? `\n\n【參考圖片說明】\n以上圖片為品牌實際場景照片，請仔細觀察圖片中的空間、物件、色調與氛圍，腳本的視覺場景和 AI Prompt 必須以此圖片的風格為基礎進行延伸創作，生成的圖片應與此參考圖片保持視覺連貫性。`
     : ''
 
+  const isVi = language === 'vi'
+
   const userContent = referenceImage
     ? [
         {
@@ -134,7 +136,7 @@ ${feedbackSection}
 5. 文字疊加：建議放在圖片上的標題文字與副文案（${langTxt}）
 6. 情感訴求：圖片要傳達的核心情感或價值
 7. 適用平台：最適合發布此圖的平台及比例建議（如 1:1 Instagram、4:5 Facebook）
-8. AI 生成 Prompt：英文，30-60字，可直接用於 Midjourney/DALL-E/Stable Diffusion 生成此圖（須反映參考圖片的風格）
+8. ${isVi ? 'Prompt tạo AI（AI 圖片生成提示詞）：越文，30-60字，可直接用於 AI 圖片生成（須反映參考圖片的風格）' : 'AI 生成 Prompt：英文，30-60字，可直接用於 Midjourney/DALL-E/Stable Diffusion 生成此圖（須反映參考圖片的風格）'}
 
 請確保每張圖片腳本風格各異，涵蓋不同訴求角度（如：產品展示/生活情境/數據/人物故事/促銷活動等）。`,
         },
@@ -166,16 +168,16 @@ ${feedbackSection}
 5. 文字疊加：建議放在圖片上的標題文字與副文案（${langTxt}）
 6. 情感訴求：圖片要傳達的核心情感或價值
 7. 適用平台：最適合發布此圖的平台及比例建議（如 1:1 Instagram、4:5 Facebook）
-8. AI 生成 Prompt：英文，30-60字，可直接用於 Midjourney/DALL-E/Stable Diffusion 生成此圖
+8. ${isVi ? 'Prompt tạo AI（AI 圖片生成提示詞）：越文，30-60字，可直接用於 AI 圖片生成' : 'AI 生成 Prompt：英文，30-60字，可直接用於 Midjourney/DALL-E/Stable Diffusion 生成此圖'}
 
 請確保每張圖片腳本風格各異，涵蓋不同訴求角度（如：產品展示/生活情境/數據/人物故事/促銷活動等）。`
 
   const { text } = await generateText({
     model: anthropic('claude-sonnet-4-5'),
     system: `你是一位頂尖的視覺行銷設計顧問，擅長根據品牌特性與行銷文案，撰寫清晰可執行的圖片視覺腳本。
-每張圖片的腳本應包含：視覺場景、色調風格、主要元素、文字疊加、情感訴求、設計建議，以及 AI 圖片生成的英文 Prompt。
+每張圖片的腳本應包含：視覺場景、色調風格、主要元素、文字疊加、情感訴求、設計建議，以及 AI 圖片生成的${isVi ? '越文' : '英文'} Prompt。
 輸出格式：每張圖片用「===【圖片 N】===」作為分隔標題，直接輸出腳本內容，不需其他說明。
-${langInstruction(language)}（分隔標題「===【圖片 N】===」維持原樣；唯有「AI 生成 Prompt」一律用英文，其餘文字疊加與說明用該語言）`,
+${langInstruction(language)}（分隔標題「===【圖片 N】===」維持原樣；${isVi ? '所有標題、欄位、內容與「Prompt tạo AI（AI 圖片生成提示詞）」一律使用越文輸出，不需使用英文' : '唯有「AI 生成 Prompt」一律用英文，其餘文字疊加與說明用該語言'}）`,
     messages: [{ role: 'user', content: userContent }],
     maxOutputTokens: 4000,
   })
