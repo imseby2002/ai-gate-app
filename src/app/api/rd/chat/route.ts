@@ -1,9 +1,10 @@
 import { getUnitContext } from '@/lib/auth/unit-access'
 import type { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
-import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 import { summarizeChat } from '@/lib/rd/summarize'
+import { getOfficeTieredModel } from '@/lib/office/tiered-chat-model'
+import { trackAiUsage } from '@/lib/ai/universal-tracker'
 
 export const maxDuration = 60
 
@@ -43,7 +44,6 @@ async function buildContext(supabase: SB, ownerId: string): Promise<string> {
 export async function POST(req: NextRequest) {
   const { user, supabase , status } = await getAdminUser()
   if (!user) return NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
-  if (!process.env.ANTHROPIC_API_KEY) return NextResponse.json({ error: 'ANTHROPIC_API_KEY 未設定' }, { status: 400 })
   const b = await req.json().catch(() => ({}))
   const message = s(b.message)
   if (!message) return NextResponse.json({ error: '訊息必填' }, { status: 400 })
@@ -70,11 +70,35 @@ export async function POST(req: NextRequest) {
 
   const messages = (hist ?? []).map(m => ({ role: m.role === 'assistant' ? 'assistant' as const : 'user' as const, content: m.content }))
 
+  // 判定模型階梯：配方設計/新產品研發/香氣調配/深度風味為 complex (Claude Sonnet)，常規原物料規格查詢/歷史問答為 daily (DeepSeek)
+  const tierDecision = getOfficeTieredModel({
+    message,
+    additionalComplexKeywords: ['配方', '研發', '茶湯調配', '糖度設計', '風味', '萃取曲線', '香氣平衡', '成本試算', '原料置換'],
+  })
+
   let text = ''
   try {
-    const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-    const res = await generateText({ model: anthropic('claude-sonnet-4-5'), system, maxOutputTokens: 2000, messages })
+    const res = await generateText({
+      model: tierDecision.model,
+      system,
+      maxOutputTokens: 2000,
+      messages,
+    })
     text = res.text
+
+    const usage = (res as any).usage ?? {}
+    const inTokens = Number(usage.inputTokens ?? usage.promptTokens ?? 0)
+    const outTokens = Number(usage.outputTokens ?? usage.completionTokens ?? 0)
+    if (inTokens > 0 || outTokens > 0) {
+      void trackAiUsage({
+        feature: 'rd',
+        modelId: tierDecision.modelId,
+        inputTokens: inTokens,
+        outputTokens: outTokens,
+        sourceChannel: tierDecision.sourceChannel,
+        metadata: { tier: tierDecision.tier, reason: tierDecision.reason },
+      })
+    }
   } catch (e) {
     return NextResponse.json({ error: `AI 回覆失敗：${e instanceof Error ? e.message : e}` }, { status: 500 })
   }

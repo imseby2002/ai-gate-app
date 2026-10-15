@@ -3,10 +3,8 @@ import { getUnitContext } from '@/lib/auth/unit-access'
 import { STORE_COACH_KNOWLEDGE } from '@/lib/store-coach/knowledge-base'
 import type { CompanyRegulation } from '@/lib/types/store-coach'
 import { generateText } from 'ai'
-import { createAnthropic } from '@ai-sdk/anthropic'
-import { createGoogleGenerativeAI } from '@ai-sdk/google'
-import { createOpenAI } from '@ai-sdk/openai'
 import { trackAiUsage } from '@/lib/ai/universal-tracker'
+import { getOfficeTieredModel } from '@/lib/office/tiered-chat-model'
 
 export const maxDuration = 60
 
@@ -68,10 +66,6 @@ export async function POST(req: NextRequest) {
 
     // 模式 1：依據公司規範提問 (Ask Company Regulations Compliance AI)
     if (query_prompt) {
-      const hasAnthropic = !!process.env.ANTHROPIC_API_KEY
-      const hasGoogle = !!(process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY)
-      const hasOpenAI = !!process.env.OPENAI_API_KEY
-
       const regList = STORE_COACH_KNOWLEDGE.companyRegulations
       const regContext = regList
         .map(
@@ -94,60 +88,37 @@ ${regContext}
 3. 【違規罰則與處分程序】：
 4. 【店長現場執行與溝通指引】：`
 
-      let answer = ''
-      let usedModel = ''
-      let usedChannel: 'anthropic' | 'google' | 'openai' = 'anthropic'
-      let usageData: any = null
+      // 規章檢索/諮詢預設屬於日常檢索問答 (DeepSeek)，除非涉及合約條款爭議或懲處辯論 (Claude Sonnet)
+      const tierDecision = getOfficeTieredModel({
+        message: query_prompt,
+        additionalComplexKeywords: ['解僱', '資遣', '勞資爭議', '違約金', '法務訴訟', '商業機密'],
+      })
 
-      if (hasAnthropic) {
-        usedModel = 'claude-sonnet-4-5'
-        usedChannel = 'anthropic'
-        const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+      let answer = ''
+      try {
         const res = await generateText({
-          model: anthropic('claude-sonnet-4-5'),
+          model: tierDecision.model,
           messages: [{ role: 'user', content: systemPrompt }],
           maxOutputTokens: 2000,
         })
         answer = res.text
-        usageData = (res as any).usage
-      } else if (hasGoogle) {
-        usedModel = 'gemini-2.0-flash'
-        usedChannel = 'google'
-        const google = createGoogleGenerativeAI({
-          apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY,
-        })
-        const res = await generateText({
-          model: google('gemini-2.0-flash'),
-          messages: [{ role: 'user', content: systemPrompt }],
-        })
-        answer = res.text
-        usageData = (res as any).usage
-      } else if (hasOpenAI) {
-        usedModel = 'gpt-4o'
-        usedChannel = 'openai'
-        const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY })
-        const res = await generateText({
-          model: openai('gpt-4o'),
-          messages: [{ role: 'user', content: systemPrompt }],
-        })
-        answer = res.text
-        usageData = (res as any).usage
-      } else {
-        answer = `【適用規章】：依據《Feeling Tea 門市管理規章》之相關規範。\n【核心要求】：現場落實標準作業手冊，恪守食安衛生與收銀誠信紅線。\n【違規處分】：首次給予警示糾正，重大或累犯者呈報人評會議處。\n【店長指引】：以客觀陳述事實引導同仁理解規章背後的品牌責任。`
-      }
 
-      if (usedModel && usageData) {
-        const inTokens = Number(usageData.inputTokens ?? usageData.promptTokens ?? 0)
-        const outTokens = Number(usageData.outputTokens ?? usageData.completionTokens ?? 0)
+        const usage = (res as any).usage ?? {}
+        const inTokens = Number(usage.inputTokens ?? usage.promptTokens ?? 0)
+        const outTokens = Number(usage.outputTokens ?? usage.completionTokens ?? 0)
         if (inTokens > 0 || outTokens > 0) {
           void trackAiUsage({
             feature: 'store_coach',
-            modelId: usedModel,
+            modelId: tierDecision.modelId,
             inputTokens: inTokens,
             outputTokens: outTokens,
-            sourceChannel: usedChannel,
+            sourceChannel: tierDecision.sourceChannel,
+            metadata: { module: 'regulations', tier: tierDecision.tier, reason: tierDecision.reason },
           })
         }
+      } catch (err) {
+        console.warn('Regulations AI tiered model error, falling back:', err)
+        answer = `【適用規章】：依據《Feeling Tea 門市管理規章》之相關規範。\n【核心要求】：現場落實標準作業手冊，恪守食安衛生與收銀誠信紅線。\n【違規處分】：首次給予警示糾正，重大或累犯者呈報人評會議處。\n【店長指引】：以客觀陳述事實引導同仁理解規章背後的品牌責任。`
       }
 
       return NextResponse.json({

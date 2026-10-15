@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { createOpenAI } from '@ai-sdk/openai'
 import { generateText } from 'ai'
@@ -56,8 +57,40 @@ export async function POST(req: NextRequest) {
 
   let jsonText = ''
 
-  // 1. 優先使用 Anthropic Claude 3.5
-  if (process.env.ANTHROPIC_API_KEY) {
+  // 1. 照片 / 文件影像掃描優先使用 Google Gemini 2.5 Flash (快速、成本極低且多模態強大)
+  const googleApiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY
+  if (googleApiKey) {
+    try {
+      const google = createGoogleGenerativeAI({ apiKey: googleApiKey })
+      const res = await generateText({
+        model: google('gemini-2.5-flash'),
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: promptText },
+              { type: 'file', data: buf, mediaType },
+            ],
+          },
+        ],
+      })
+      jsonText = res.text
+      const usage = (res as any).usage ?? {}
+      void trackAiUsage({
+        feature: 'affairs',
+        modelId: 'gemini-2.5-flash',
+        inputTokens: Number(usage.inputTokens ?? usage.promptTokens ?? 0),
+        outputTokens: Number(usage.outputTokens ?? usage.completionTokens ?? 0),
+        sourceChannel: 'google',
+        metadata: { module: 'affairs_doc_extract', file: file.name },
+      })
+    } catch (e) {
+      console.warn('[affairs/ai-extract] Gemini Flash failed, trying Anthropic:', e)
+    }
+  }
+
+  // 2. 備援使用 Anthropic Claude 3.5 Sonnet
+  if (!jsonText && process.env.ANTHROPIC_API_KEY) {
     try {
       const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
       const res = await generateText({
@@ -81,6 +114,7 @@ export async function POST(req: NextRequest) {
         inputTokens: Number(usage.inputTokens ?? usage.promptTokens ?? 0),
         outputTokens: Number(usage.outputTokens ?? usage.completionTokens ?? 0),
         sourceChannel: 'anthropic',
+        metadata: { module: 'affairs_doc_extract', file: file.name },
       })
     } catch (e) {
       console.warn('[affairs/ai-extract] Anthropic failed, trying OpenAI:', e)
