@@ -14,16 +14,33 @@ function safeEqualHex(a: string, b: string): boolean {
 }
 
 /**
- * Bird webhook：HMAC-SHA256(rawBody, secret) 與標頭比對（hex）。
- * 標頭值可能含 "sha256=" 前綴，會自動剝除。
+ * Bird webhook（Standard Webhooks 格式）：
+ * 標頭 webhook-id / webhook-timestamp / webhook-signature（"v1,<base64>"，可多組空白分隔），
+ * 簽章 = base64(HMAC-SHA256(secret, `${id}.${timestamp}.${rawBody}`))。
+ * 密鑰若為 "whsec_<base64>" 取 base64 解碼後的位元組，否則同時嘗試原字串。
+ * 時間戳與現在相差超過 5 分鐘視為重放，拒絕。
  */
-export function verifyBirdSignature(rawBody: string, signature: string | null): boolean {
+export function verifyBirdStandardWebhook(
+  rawBody: string,
+  id: string | null,
+  timestamp: string | null,
+  signatureHeader: string | null,
+): boolean {
   const secret = process.env.BIRD_WEBHOOK_SECRET
   if (!secret) return true // 尚未配置，放行
-  if (!signature) return false
-  const provided = signature.replace(/^sha256=/i, '').trim().toLowerCase()
-  const expected = createHmac('sha256', secret).update(rawBody, 'utf8').digest('hex')
-  return safeEqualHex(provided, expected)
+  if (!id || !timestamp || !signatureHeader) return false
+  const ts = Number(timestamp)
+  if (!Number.isFinite(ts) || Math.abs(Date.now() / 1000 - ts) > 300) return false
+
+  const keys: Buffer[] = [Buffer.from(secret, 'utf8')]
+  if (secret.startsWith('whsec_')) keys.unshift(Buffer.from(secret.slice(6), 'base64'))
+  const signed = `${id}.${timestamp}.${rawBody}`
+  const provided = signatureHeader.split(' ').map((s) => s.split(',')[1]).filter(Boolean)
+
+  return keys.some((key) => {
+    const expected = createHmac('sha256', key).update(signed, 'utf8').digest('base64')
+    return provided.some((p) => safeEqualHex(p, expected))
+  })
 }
 
 /**

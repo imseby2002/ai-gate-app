@@ -2,17 +2,18 @@
  * POST /api/ivr/webhook/voice
  * Bird Voice callback：接收通話狀態與 DTMF 按鍵。
  * - 更新 ivr_calls 狀態
+ * - voice_call.ended → 依 data.billable_ms 實際秒數 × 國別費率 × 方案倍率扣點（billed_at 原子鎖防重送重扣）
  * - 客戶按鍵 → 依 campaign+digit 找對應通路，建立 ivr_join_event 並派送加入短連結
  *
  * 公開端點（來自 Bird，無 session），以 service role 寫入。
- * 簽章驗證：HMAC-SHA256(rawBody, BIRD_WEBHOOK_SECRET)。
- * TODO: 確認 Bird 實際簽章標頭名（暫涵蓋 X-Bird-Signature / Bird-Signature / Messagebird-Signature）。
+ * 簽章驗證：Standard Webhooks（webhook-id / webhook-timestamp / webhook-signature）。
+ * Bird 事件格式：{ type: 'voice_call.initiated|answered|ended', data: { call_id, status, billable_ms, ... } }
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { generateShortToken, buildShortUrl, dispatchJoinLink, type DispatchChannel } from '@/lib/ivr/dispatch'
-import { verifyBirdSignature } from '@/lib/ivr/verify'
-import { chargeUsage } from '@/lib/marketing/billing'
+import { verifyBirdStandardWebhook } from '@/lib/ivr/verify'
+import { callCost, chargeUsage } from '@/lib/marketing/billing'
 
 // 將 Bird 通話狀態正規化為本系統狀態
 function normalizeStatus(s?: string): string | null {
@@ -29,11 +30,12 @@ export async function POST(req: NextRequest) {
   const sb = createAdminClient()
 
   const rawBody = await req.text()
-  const signature =
-    req.headers.get('x-bird-signature') ||
-    req.headers.get('bird-signature') ||
-    req.headers.get('messagebird-signature')
-  const verified = verifyBirdSignature(rawBody, signature)
+  const verified = verifyBirdStandardWebhook(
+    rawBody,
+    req.headers.get('webhook-id'),
+    req.headers.get('webhook-timestamp'),
+    req.headers.get('webhook-signature'),
+  )
 
   // 留存原始內容，用來確認 Bird 實際的欄位名與簽章標頭（不存 cookie／authorization 值）
   const headers: Record<string, string> = {}
@@ -50,24 +52,42 @@ export async function POST(req: NextRequest) {
   try { payload = JSON.parse(rawBody) } catch { payload = null }
   if (!payload) return NextResponse.json({ error: 'bad_payload' }, { status: 400 })
 
-  // Bird payload 欄位名待後台確認，先涵蓋常見命名
-  const callId: string | undefined =
-    payload.callId || payload.call_id || payload.id || payload?.call?.id
-  const digit: string | undefined =
-    payload.dtmf || payload.digit || payload.digits || payload?.dtmf?.digit
-  const rawStatus: string | undefined =
-    payload.status || payload.event || payload?.call?.status
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data = (payload.data ?? payload) as Record<string, any>
+  const eventType: string = payload.type ?? ''
+  const callId: string | undefined = data.call_id || data.callId || data.id
+  const digit: string | undefined = data.dtmf || data.digit || data.digits
+  // voice_call.ended 的 data.status 是結束原因（answered = 有接通）
+  const rawStatus: string | undefined = eventType === 'voice_call.ended'
+    ? (data.status === 'answered' ? 'completed' : data.status || 'failed')
+    : eventType === 'voice_call.answered' ? 'answered' : data.status
 
   if (!callId) return NextResponse.json({ error: 'no_call_id' }, { status: 400 })
 
   // 依 provider_call_id 對應通話
   const { data: call } = await sb
     .from('ivr_calls')
-    .select('id, user_id, campaign_id, phone, pressed_digit')
+    .select('id, user_id, campaign_id, phone, pressed_digit, billed_at')
     .eq('provider_call_id', callId)
-    .single()
+    .maybeSingle()
 
-  if (!call) return NextResponse.json({ error: 'call_not_found' }, { status: 404 })
+  // 非本系統發起的通話（例如後台測試撥號）→ 回 200 避免 Bird 重送
+  if (!call) return NextResponse.json({ ok: true, note: 'call_not_found' })
+
+  if (eventType === 'voice_call.ended' && !call.billed_at) {
+    const durationSec = Math.ceil((Number(data.billable_ms) || 0) / 1000)
+    const { data: claimed } = await sb
+      .from('ivr_calls')
+      .update({ billed_at: new Date().toISOString(), duration_sec: durationSec })
+      .eq('id', call.id)
+      .is('billed_at', null)
+      .select('id')
+    if (claimed?.length) {
+      const minutes = Math.ceil(durationSec / 60)
+      const credits = await chargeUsage(call.user_id, callCost(call.phone, 'bird', durationSec), `[marketing] 電話行銷通話 ${minutes} 分鐘`)
+      await sb.from('ivr_calls').update({ billed_credits: credits }).eq('id', call.id)
+    }
+  }
 
   // 更新通話狀態
   const status = normalizeStatus(rawStatus)

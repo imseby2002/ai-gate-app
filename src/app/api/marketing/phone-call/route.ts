@@ -176,8 +176,11 @@ export async function POST(req: NextRequest) {
     // 有按鍵加入社群設定 → 建立/更新活動；每通都記錄，供 webhook 對應按鍵與通話秒數扣點
     const campaignId = collectDtmf ? await ensureIvrCampaign(supabase, user.id, mappings) : null
     const admin = await createAdminClient()
-    // Twilio 需有 NEXT_PUBLIC_APP_URL 才會回報通話結束；沒有回報的通道撥出即以 1 分鐘計
-    const billedOnCallback = (providerName: string) => providerName === 'twilio' && !!process.env.NEXT_PUBLIC_APP_URL
+    // 有通話結束回報的通道依實際秒數於 webhook 扣點：Twilio 需 NEXT_PUBLIC_APP_URL、Bird 需 BIRD_WEBHOOK_SECRET（已設定 webhook）；
+    // 其餘撥出即以 1 分鐘計
+    const billedOnCallback = (providerName: string) =>
+      (providerName === 'twilio' && !!process.env.NEXT_PUBLIC_APP_URL) ||
+      (providerName === 'bird' && !!process.env.BIRD_WEBHOOK_SECRET)
     let upfrontCallCostUsd = 0
     const recordCall = async (p: string, callId: string | null, providerName: string) => {
       const later = billedOnCallback(providerName) && !!callId
