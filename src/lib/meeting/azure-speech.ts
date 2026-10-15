@@ -81,8 +81,15 @@ export async function startAzureRecognition(options: {
 
   const audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput()
 
-  // 偵測不出語言時以主要語言為準
-  function resolveLanguage(result: SpeechSDKType.SpeechRecognitionResult): string {
+  const VI_CHAR_REGEX = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i
+  const ZH_CHAR_REGEX = /[\u4e00-\u9fa5]/
+
+  // 偵測不出語言時以主要語言為準；若辨識出的文字已有明確語種特徵則優先判定
+  function resolveLanguage(result: SpeechSDKType.SpeechRecognitionResult, text?: string): string {
+    if (text) {
+      if (VI_CHAR_REGEX.test(text)) return 'vi'
+      if (ZH_CHAR_REGEX.test(text)) return 'zh-TW'
+    }
     try {
       const autoRes = SpeechSDK.AutoDetectSourceLanguageResult.fromResult(result)
       if (autoRes?.language) {
@@ -158,7 +165,7 @@ export async function startAzureRecognition(options: {
       if (e.result.reason === SpeechSDK.ResultReason.RecognizedSpeech && e.result.text?.trim()) {
         const text = e.result.text.trim()
         const speakerLabel = resolveSpeaker(e.result.speakerId)
-        const lang = resolveLanguage(e.result as unknown as SpeechSDKType.SpeechRecognitionResult)
+        const lang = resolveLanguage(e.result as unknown as SpeechSDKType.SpeechRecognitionResult, text)
         options.onRecognized(text, speakerLabel, lang)
       }
     }
@@ -208,7 +215,7 @@ export async function startAzureRecognition(options: {
   recognizer.recognized = (_s, e) => {
     if (e.result.reason === SpeechSDK.ResultReason.RecognizedSpeech && e.result.text?.trim()) {
       const text = e.result.text.trim()
-      const lang = resolveLanguage(e.result)
+      const lang = resolveLanguage(e.result, text)
       options.onRecognized(text, undefined, lang)
     }
   }

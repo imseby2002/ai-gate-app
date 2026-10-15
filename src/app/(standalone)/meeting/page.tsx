@@ -146,6 +146,21 @@ function loadJaasScript(appId: string): Promise<void> {
 const transCache = new Map<string, string>()
 const tkey = (locale: string, text: string) => `${locale}:${text}`
 
+// 語言特徵判斷（防範 Azure 語音辨識語言自動判斷失準或回退為主要語言）
+const VI_CHAR_REGEX = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i
+const ZH_CHAR_REGEX = /[\u4e00-\u9fa5]/
+
+function isTranslatableLine(l: { content: string; source_lang: string }, target: string): boolean {
+  if (!TRANSLATABLE.has(target)) return false
+  const txt = l.content.trim()
+  if (!txt) return false
+  if (l.source_lang !== target) return true
+  // 語言標籤與目標語言相同，但字面上明顯屬於另一語言（例如標記為中文但內容實為越文）
+  if (target === 'zh-TW' && VI_CHAR_REGEX.test(txt)) return true
+  if (target === 'vi' && ZH_CHAR_REGEX.test(txt)) return true
+  return false
+}
+
 function fmtDate(iso: string) {
   const d = new Date(iso)
   return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`
@@ -313,6 +328,7 @@ export default function MeetingPage() {
   const audioKeepAliveRef = useRef<AudioContext | null>(null)
   const lastActiveRef = useRef<number>(Date.now())
   const bottomRef = useRef<HTMLDivElement | null>(null)
+  const inFlightRef = useRef<Set<string>>(new Set())
 
   // 視訊（JaaS）
   const [video, setVideo] = useState<{ jwt: string; room: string } | null>(null)
@@ -446,14 +462,25 @@ export default function MeetingPage() {
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [lines.length])
 
   // ── 上下文滑動視窗意譯：把非目標語言的發言翻譯成所選 targetLang ──
-  const [, forceTick] = useState(0)
+  const [tick, forceTick] = useState(0)
   useEffect(() => {
     if (!TRANSLATABLE.has(targetLang) || !meeting) return
+
+    // 找出尚未翻譯且未在處理佇列中的句子
     const need = Array.from(
-      new Set(lines.filter(l => l.source_lang !== targetLang).map(l => l.content.trim()).filter(Boolean)),
-    ).filter(txt => !transCache.has(tkey(targetLang, txt)))
+      new Set(
+        lines
+          .filter(l => isTranslatableLine(l, targetLang))
+          .map(l => l.content.trim())
+          .filter(Boolean),
+      ),
+    ).filter(txt => !transCache.has(tkey(targetLang, txt)) && !inFlightRef.current.has(tkey(targetLang, txt)))
+
     if (!need.length) return
-    let alive = true
+
+    // 單次發送最多 8 句，平滑佇列避免雪崩與截斷
+    const batch = need.slice(0, 8)
+    batch.forEach(txt => inFlightRef.current.add(tkey(targetLang, txt)))
 
     const meetingDeptLabels = (
       meeting.departments?.length
@@ -478,20 +505,33 @@ export default function MeetingPage() {
     fetch('/api/meeting/translate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ texts: need, target: targetLang, context }),
+      body: JSON.stringify({ texts: batch, target: targetLang, context }),
     })
       .then(r => r.json())
       .then(d => {
-        if (!alive || !Array.isArray(d.translations)) return
-        need.forEach((txt, i) => transCache.set(tkey(targetLang, txt), d.translations[i] ?? txt))
+        if (Array.isArray(d?.translations)) {
+          batch.forEach((txt, i) => {
+            const tr = d.translations[i]
+            // 只有成功取得不同於原文的非空字串才寫入快取，防止失敗時把原文毒化進快取
+            if (typeof tr === 'string' && tr.trim() && tr.trim() !== txt) {
+              transCache.set(tkey(targetLang, txt), tr.trim())
+            }
+          })
+          forceTick(x => x + 1)
+        }
+      })
+      .catch(err => {
+        console.warn('[Meeting] translate request failed:', err)
+      })
+      .finally(() => {
+        batch.forEach(txt => inFlightRef.current.delete(tkey(targetLang, txt)))
+        // 若還有未處理的句子，觸發下一個 batch
         forceTick(x => x + 1)
       })
-      .catch(() => {})
-    return () => { alive = false }
-  }, [lines, targetLang, meeting, participants, departments])
+  }, [lines, targetLang, meeting, participants, departments, tick])
 
   function translatedOf(l: Line): string | null {
-    if (l.source_lang === targetLang || !TRANSLATABLE.has(targetLang)) return null
+    if (!isTranslatableLine(l, targetLang)) return null
     const tr = transCache.get(tkey(targetLang, l.content.trim()))
     return tr && tr !== l.content.trim() ? tr : null
   }
@@ -545,10 +585,10 @@ export default function MeetingPage() {
     setDownloading(true)
     try {
       const need = Array.from(new Set(
-        lines.filter(l => l.source_lang !== targetLang).map(l => l.content.trim()).filter(Boolean),
+        lines.filter(l => isTranslatableLine(l, targetLang)).map(l => l.content.trim()).filter(Boolean),
       )).filter(txt => !transCache.has(tkey(targetLang, txt)))
-      for (let i = 0; i < need.length; i += 40) {
-        const chunk = need.slice(i, i + 40)
+      for (let i = 0; i < need.length; i += 8) {
+        const chunk = need.slice(i, i + 8)
         try {
           const r = await fetch('/api/meeting/translate', {
             method: 'POST',
@@ -556,7 +596,14 @@ export default function MeetingPage() {
             body: JSON.stringify({ texts: chunk, target: targetLang, context: { title: meeting.title, keywords: meeting.context_keywords } }),
           })
           const d = await r.json()
-          if (Array.isArray(d.translations)) chunk.forEach((txt, j) => transCache.set(tkey(targetLang, txt), d.translations[j] ?? txt))
+          if (Array.isArray(d?.translations)) {
+            chunk.forEach((txt, j) => {
+              const tr = d.translations[j]
+              if (typeof tr === 'string' && tr.trim() && tr.trim() !== txt) {
+                transCache.set(tkey(targetLang, txt), tr.trim())
+              }
+            })
+          }
         } catch {}
       }
       const langLabel = TARGET_LANGS.find(l => l.code === targetLang)?.label ?? ''

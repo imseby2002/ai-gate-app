@@ -29,6 +29,41 @@ function getModel() {
   return null
 }
 
+async function translateChunk(
+  chunk: string[],
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  model: any,
+  systemPrompt: string
+): Promise<string[]> {
+  try {
+    const { text } = await generateText({
+      model,
+      system: systemPrompt,
+      prompt: JSON.stringify(chunk),
+      maxOutputTokens: 4000,
+    })
+
+    let arr: string[] = []
+    try {
+      const cleaned = text.trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim()
+      arr = JSON.parse(cleaned)
+    } catch {
+      // 容錯救援：若 JSON 因尾端逗號或引號未閉合導致解析失敗，嘗試正規匹配已完成的字串項目
+      const matches = Array.from(text.matchAll(/"((?:\\.|[^"\\])*)"/g)).map(m => m[1].replace(/\\"/g, '"'))
+      if (matches.length > 0) {
+        arr = matches
+      }
+    }
+
+    return chunk.map((original, i) =>
+      typeof arr[i] === 'string' && arr[i].trim() ? arr[i].trim() : original
+    )
+  } catch (err) {
+    console.error('[MeetingTranslate] chunk generation failed:', err)
+    return chunk
+  }
+}
+
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -98,26 +133,16 @@ TRANSLATION GOAL & RULES:
 5. If a string is already in the target language (${langName}), return it unchanged.
 6. OUTPUT FORMAT: Return ONLY a valid JSON array of translated strings in the EXACT same order as the input array. No commentary or markdown formatting.`
 
-  try {
-    const { text } = await generateText({
-      model,
-      system: systemPrompt,
-      prompt: JSON.stringify(texts),
-      maxOutputTokens: 2000,
-    })
-
-    let arr: string[] = []
-    try {
-      const cleaned = text.trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim()
-      arr = JSON.parse(cleaned)
-    } catch {
-      arr = []
-    }
-
-    const translations = texts.map((original, i) => (typeof arr[i] === 'string' && arr[i].trim() ? arr[i].trim() : original))
-    return NextResponse.json({ translations })
-  } catch (err) {
-    console.error('[MeetingTranslate] generation failed:', err)
-    return NextResponse.json({ translations: texts })
+  // 分批併行處理，每批最多 8 句，徹底杜絕 Token 超限與截斷問題
+  const CHUNK_SIZE = 8
+  const chunks: string[][] = []
+  for (let i = 0; i < texts.length; i += CHUNK_SIZE) {
+    chunks.push(texts.slice(i, i + CHUNK_SIZE))
   }
+
+  const results = await Promise.all(
+    chunks.map(chunk => translateChunk(chunk, model, systemPrompt))
+  )
+  const translations = results.flat()
+  return NextResponse.json({ translations })
 }
