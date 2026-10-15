@@ -1,8 +1,8 @@
 // 研發 6 大協同 Agent 架構 (6 R&D Collaborative Agents)
 // 包含知識檢索、配方設計、成本優化、法規審查、實驗評估與跨界創新
 
-import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
+import { generateWithFreeFirst } from '@/lib/ai/free-first-caller'
 
 export type RdAgentType =
   | 'knowledge'   // 🧠 Agent 1: 研發大腦檢索 (找過去做過什麼)
@@ -74,16 +74,15 @@ export async function runRdAgent(params: RdAgentCallParams): Promise<{
     ? `【當前研發環境數據】：\n${contextData}\n\n【研發人員提問/指令】：\n${params.prompt}`
     : params.prompt
 
-  const anthropic = createAnthropic({ apiKey })
-  const res = await generateText({
-    model: anthropic('claude-sonnet-4-5'),
-    system,
+  const reply = await generateWithFreeFirst({
+    feature: 'rd',
+    systemPrompt: system,
+    prompt: userContent,
     maxOutputTokens: 2000,
-    messages: [{ role: 'user', content: userContent }],
   })
 
   return {
-    reply: res.text.trim(),
+    reply: reply.trim(),
     agent: params.agent,
   }
 }

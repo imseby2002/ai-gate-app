@@ -1,6 +1,7 @@
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { generateWithFreeFirst } from '@/lib/ai/free-first-caller'
 import type { FtMenu, FtTranslations } from './types'
 
 // 菜單多語系：以 iPOS 越南文原文為 key 查 ft_menu_translations；
@@ -73,16 +74,15 @@ export async function applyTranslations(menu: FtMenu): Promise<string[]> {
 }
 
 async function translateBatch(sources: string[]): Promise<Row[]> {
-  const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
-  const { text } = await generateText({
-    model: anthropic('claude-opus-5-5'),
-    system:
+  const text = await generateWithFreeFirst({
+    feature: 'other',
+    systemPrompt:
       'You translate Vietnamese bubble-tea / café menu text (drink names, sizes, sugar and ice levels, toppings, categories, descriptions) ' +
       'into Traditional Chinese as used in Taiwan and into English. Keep brand names and product codes as-is. ' +
       'Use the terms a Taiwanese tea shop menu would use (e.g. 正常冰, 少冰, 去冰, 半糖, 珍珠). ' +
       'Return ONLY a JSON object mapping each input string exactly to {"zh":"...","en":"..."}. No prose, no code fences.',
     prompt: JSON.stringify(sources),
-    maxOutputTokens: 16000,
+    maxOutputTokens: 8000,
   })
   const cleaned = text.trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim()
   const parsed = JSON.parse(cleaned) as Record<string, { zh?: string; en?: string }>

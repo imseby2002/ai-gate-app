@@ -15,8 +15,7 @@
  */
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { createAnthropic } from '@ai-sdk/anthropic'
-import { generateText } from 'ai'
+import { generateWithFreeFirst } from '@/lib/ai/free-first-caller'
 
 const IDLE_MIN = 10      // 距最後一則訊息至少 10 分鐘，避免對話進行中被打斷重新彙整
 const LOOKBACK_DAYS = 14 // 太久沒互動的客人不用再花錢彙整
@@ -35,10 +34,6 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
   }
-
-  const anthropicKey = process.env.ANTHROPIC_API_KEY
-  if (!anthropicKey) return NextResponse.json({ error: 'ANTHROPIC_API_KEY not set' }, { status: 503 })
-  const anthropic = createAnthropic({ apiKey: anthropicKey })
 
   const supabase = createAdminClient()
   const now = Date.now()
@@ -76,9 +71,9 @@ export async function GET(req: Request) {
         .map(m => `客人：${m.message ?? ''}${m.reply ? `\n客服：${m.reply}` : ''}`).join('\n')
       if (!convo.trim()) continue
 
-      const { text } = await generateText({
-        model: anthropic('claude-haiku-4-5'),
-        system: '你是客服系統的內部工具，負責把客人對話摘要成給下一位客服（AI 或真人）看的簡短背景筆記。只寫「事實」，不要猜測、不要編造。輸出 2-4 句繁體中文，涵蓋：客人是誰/什麼身份（若有提及）、已經表達過的偏好或特殊需求、目前對話進行到哪個階段或還有什麼事沒解決。不要包含訂單號碼、電話、密碼等識別資訊或敏感資料（那些另有機制記錄）。沒有值得記的內容就輸出「無特別事項」。只輸出摘要本身，不要加任何前綴或標題。',
+      const text = await generateWithFreeFirst({
+        feature: 'other',
+        systemPrompt: '你是客服系統的內部工具，負責把客人對話摘要成給下一位客服（AI 或真人）看的簡短背景筆記。只寫「事實」，不要猜測、不要編造。輸出 2-4 句繁體中文，涵蓋：客人是誰/什麼身份（若有提及）、已經表達過的偏好或特殊需求、目前對話進行到哪個階段或還有什麼事沒解決。不要包含訂單號碼、電話、密碼等識別資訊或敏感資料（那些另有機制記錄）。沒有值得記的內容就輸出「無特別事項」。只輸出摘要本身，不要加任何前綴或標題。',
         prompt: `客戶稱呼：${c.name || '（未知）'}\n\n對話紀錄：\n${convo.slice(-4000)}\n\n請寫摘要：`,
         maxOutputTokens: 200,
       })

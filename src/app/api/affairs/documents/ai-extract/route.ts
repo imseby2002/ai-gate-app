@@ -3,6 +3,7 @@ import { createAnthropic } from '@ai-sdk/anthropic'
 import { createOpenAI } from '@ai-sdk/openai'
 import { generateText } from 'ai'
 import { getUnitContext } from '@/lib/auth/unit-access'
+import { trackAiUsage } from '@/lib/ai/universal-tracker'
 
 export const maxDuration = 120
 
@@ -73,6 +74,14 @@ export async function POST(req: NextRequest) {
         ],
       })
       jsonText = res.text
+      const usage = (res as any).usage ?? {}
+      void trackAiUsage({
+        feature: 'affairs',
+        modelId: 'claude-3-5-sonnet-20241022',
+        inputTokens: Number(usage.inputTokens ?? usage.promptTokens ?? 0),
+        outputTokens: Number(usage.outputTokens ?? usage.completionTokens ?? 0),
+        sourceChannel: 'anthropic',
+      })
     } catch (e) {
       console.warn('[affairs/ai-extract] Anthropic failed, trying OpenAI:', e)
     }
@@ -100,6 +109,14 @@ export async function POST(req: NextRequest) {
         ],
       })
       jsonText = res.text
+      const usage = (res as any).usage ?? {}
+      void trackAiUsage({
+        feature: 'affairs',
+        modelId: 'gpt-4o',
+        inputTokens: Number(usage.inputTokens ?? usage.promptTokens ?? 0),
+        outputTokens: Number(usage.outputTokens ?? usage.completionTokens ?? 0),
+        sourceChannel: 'openai',
+      })
     } catch (e) {
       console.error('[affairs/ai-extract] OpenAI failed:', e)
     }

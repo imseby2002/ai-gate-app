@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptSecret, encryptSecret, isEncrypted } from '@/lib/crypto/secret'
 import { findOrCreateOrder } from './orders'
 import { calculateModelCosts, estimateTextTokens } from '@/lib/ai/token-cost-tracker'
+import { generateWithFreeFirst } from '@/lib/ai/free-first-caller'
 
 interface AdditionalRoom {
   property_name: string | null
@@ -1082,6 +1083,23 @@ async function logAiSourceUsage(channel: string, modelId: string, inTokens: numb
 }
 
 async function callModel(provider: 'deepseek' | 'claude', prompt: string, maxTokens = 1000): Promise<string> {
+  // 優先嘗試免費代理通道 (CLIProxy / FreeLLM) 零成本執行郵件提取
+  const cliUrl = process.env.CLI_PROXY_API_URL ?? process.env.NEXT_PUBLIC_CLI_PROXY_API_URL
+  const freeUrl = process.env.FREE_LLM_URL ?? process.env.NEXT_PUBLIC_FREE_LLM_URL
+
+  if (cliUrl || freeUrl) {
+    try {
+      const reply = await generateWithFreeFirst({
+        feature: 'email_sync',
+        prompt,
+        maxOutputTokens: maxTokens,
+      })
+      if (reply) return reply
+    } catch {
+      // fallback to direct vendor
+    }
+  }
+
   if (provider === 'deepseek') {
     const res = await fetch('https://api.deepseek.com/chat/completions', {
       method: 'POST',
