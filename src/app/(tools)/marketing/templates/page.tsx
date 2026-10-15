@@ -44,6 +44,7 @@ const ASPECT_RATIOS: { value: '1:1' | '4:5' | '3:4' | '16:9' | '9:16'; label: st
 
 export default function VisualTemplatesPage() {
   const t = useTranslations('MktTemplates')
+  const tMkt = useTranslations('Marketing')
   const tr = useDataDict('templates')
   const imgTemplates = useMemo(() => VISUAL_TEMPLATES.map(x => localizeVisual(x, tr)), [tr])
   const videoTemplates = useMemo(() => VIDEO_TEMPLATES.map(x => localizeVideo(x, tr)), [tr])
@@ -490,7 +491,7 @@ ${selectedVideoTemplate.rawScript}
               className="gap-1.5 bg-white/20 hover:bg-white/30 text-white border-0 backdrop-blur-xs font-semibold"
             >
               <FolderArchive className="h-4 w-4" />
-              <span>雲端封存區</span>
+              <span>{tMkt('archive.btnArchive')}</span>
             </Button>
             <Link href="/marketing/ai-studio">
               <Button variant="secondary" size="sm" className="gap-1.5 bg-white/20 hover:bg-white/30 text-white border-0 backdrop-blur-xs font-semibold">

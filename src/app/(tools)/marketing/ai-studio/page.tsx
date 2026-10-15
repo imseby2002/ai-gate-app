@@ -196,14 +196,14 @@ function AiStudioContent() {
   }, [nodes, isRestored])
 
   const handleResetCanvas = useCallback(() => {
-    if (confirm('確定要開新畫布嗎？當前編輯狀態將被重置，但所有已生成的歷史作品仍會完整保存在「雲端封存區」中。')) {
+    if (confirm(t('archive.resetConfirm'))) {
       try { localStorage.removeItem(DRAFT_KEY) } catch {}
       setNodes([
         makeNode('input', `${uid}-${Date.now()}-0`),
         makeNode('edit', `${uid}-${Date.now()}-1`),
       ])
     }
-  }, [uid])
+  }, [uid, t])
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [runningAll, setRunningAll] = useState(false)
   const [publishMedia, setPublishMedia] = useState<{
@@ -541,10 +541,10 @@ function AiStudioContent() {
             size="sm"
             onClick={handleResetCanvas}
             className="text-xs text-muted-foreground hover:text-foreground h-8 gap-1"
-            title="清空當前畫布開始新設計"
+            title={t('archive.btnResetCanvasTip')}
           >
             <RotateCcw className="h-3.5 w-3.5" />
-            <span>開新畫布</span>
+            <span>{t('archive.btnResetCanvas')}</span>
           </Button>
 
           <Button
@@ -553,7 +553,7 @@ function AiStudioContent() {
             className="gap-1.5 text-xs font-bold bg-violet-600 hover:bg-violet-700 text-white shadow-sm h-8"
           >
             <FolderArchive className="h-3.5 w-3.5" />
-            <span>📁 雲端封存區</span>
+            <span>{t('archive.btnArchiveFolder')}</span>
           </Button>
 
           <Button
@@ -912,7 +912,7 @@ function NodeCard({ node, index, canRemove, onUpdate, onRun, onRemove, onUpload,
         <div className="bg-emerald-50 dark:bg-emerald-950/40 border-b border-emerald-100 dark:border-emerald-900 px-3 py-1.5 flex items-center justify-between text-[11px] text-emerald-700 dark:text-emerald-300">
           <span className="flex items-center gap-1 font-medium">
             <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
-            已自動備份至封存區
+            {t('archive.autoSaved')}
           </span>
           {onOpenArchive && (
             <button
@@ -920,7 +920,7 @@ function NodeCard({ node, index, canRemove, onUpdate, onRun, onRemove, onUpload,
               onClick={onOpenArchive}
               className="text-[10px] text-emerald-700 dark:text-emerald-300 hover:underline font-bold"
             >
-              查看封存區 →
+              {t('archive.viewArchive')}
             </button>
           )}
         </div>

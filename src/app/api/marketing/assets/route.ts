@@ -6,6 +6,7 @@ export interface UserAssetItem {
   name: string
   url: string
   type: 'studio' | 'template' | 'img' | 'video' | 'other'
+  typeKey?: string
   typeLabel: string
   subType?: string
   createdAt: string
@@ -13,11 +14,11 @@ export interface UserAssetItem {
   isVideo: boolean
 }
 
-function parseAssetType(name: string): { type: UserAssetItem['type']; typeLabel: string; subType?: string } {
+function parseAssetType(name: string): { type: UserAssetItem['type']; typeKey: string; typeLabel: string; subType?: string } {
   const isVideo = name.endsWith('.mp4') || name.endsWith('.webm') || name.startsWith('sora-') || name.includes('video')
 
   if (isVideo) {
-    return { type: 'video', typeLabel: 'AI 影片' }
+    return { type: 'video', typeKey: 'video', typeLabel: 'AI 影片' }
   }
 
   if (name.startsWith('studio-')) {
@@ -32,22 +33,32 @@ function parseAssetType(name: string): { type: UserAssetItem['type']; typeLabel:
       'enhance': '超高解析度放大',
       'video': '視覺工坊影片',
     }
+    const keyMap: Record<string, string> = {
+      'redesign': 'redesign',
+      'inpaint': 'inpaint',
+      'outpaint': 'outpaint',
+      'bg-remove': 'bgRemove',
+      'style': 'style',
+      'enhance': 'enhance',
+      'video': 'video',
+    }
     return {
       type: 'studio',
+      typeKey: keyMap[sub] || 'studio',
       typeLabel: subLabels[sub] || '視覺工坊設計',
       subType: sub,
     }
   }
 
   if (name.startsWith('template-')) {
-    return { type: 'template', typeLabel: '行銷風格模板' }
+    return { type: 'template', typeKey: 'template', typeLabel: '行銷風格模板' }
   }
 
   if (name.startsWith('img-')) {
-    return { type: 'img', typeLabel: '產品設計生成' }
+    return { type: 'img', typeKey: 'img', typeLabel: '產品設計生成' }
   }
 
-  return { type: 'other', typeLabel: '行銷素材' }
+  return { type: 'other', typeKey: 'other', typeLabel: '行銷素材' }
 }
 
 export async function GET(req: NextRequest) {
@@ -76,13 +87,14 @@ export async function GET(req: NextRequest) {
           .getPublicUrl(`${user.id}/${f.name}`)
 
         const isVideo = f.name.endsWith('.mp4') || f.name.endsWith('.webm') || f.name.startsWith('sora-')
-        const { type, typeLabel, subType } = parseAssetType(f.name)
+        const { type, typeKey, typeLabel, subType } = parseAssetType(f.name)
 
         return {
           id: f.id || f.name,
           name: f.name,
           url: publicUrl,
           type,
+          typeKey,
           typeLabel,
           subType,
           createdAt: f.created_at || new Date().toISOString(),
