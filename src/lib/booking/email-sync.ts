@@ -3,6 +3,7 @@ import { simpleParser } from 'mailparser'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptSecret, encryptSecret, isEncrypted } from '@/lib/crypto/secret'
 import { findOrCreateOrder } from './orders'
+import { calculateModelCosts, estimateTextTokens } from '@/lib/ai/token-cost-tracker'
 
 interface AdditionalRoom {
   property_name: string | null
@@ -1045,6 +1046,41 @@ ${roomListStr}${hint}${preLine}${fewShot}
   return null
 }
 
+async function logAiSourceUsage(channel: string, modelId: string, inTokens: number, outTokens: number, costUsd: number) {
+  try {
+    const today = new Date().toISOString().split('T')[0]
+    const supabase = createAdminClient()
+    const { data: row } = await supabase
+      .from('ai_source_usage_daily')
+      .select('message_count, input_tokens, output_tokens, total_cost_usd')
+      .eq('date', today)
+      .eq('source_channel', channel)
+      .eq('model_id', modelId)
+      .maybeSingle()
+
+    if (row) {
+      await supabase.from('ai_source_usage_daily').update({
+        message_count: (row.message_count ?? 0) + 1,
+        input_tokens: Number(row.input_tokens ?? 0) + inTokens,
+        output_tokens: Number(row.output_tokens ?? 0) + outTokens,
+        total_cost_usd: Number((Number(row.total_cost_usd ?? 0) + costUsd).toFixed(6)),
+      }).eq('date', today).eq('source_channel', channel).eq('model_id', modelId)
+    } else {
+      await supabase.from('ai_source_usage_daily').insert({
+        date: today,
+        source_channel: channel,
+        model_id: modelId,
+        message_count: 1,
+        input_tokens: inTokens,
+        output_tokens: outTokens,
+        total_cost_usd: Number(costUsd.toFixed(6)),
+      })
+    }
+  } catch {
+    // Non-blocking logging
+  }
+}
+
 async function callModel(provider: 'deepseek' | 'claude', prompt: string, maxTokens = 1000): Promise<string> {
   if (provider === 'deepseek') {
     const res = await fetch('https://api.deepseek.com/chat/completions', {
@@ -1060,7 +1096,12 @@ async function callModel(provider: 'deepseek' | 'claude', prompt: string, maxTok
       signal: AbortSignal.timeout(20000),
     })
     const data = await res.json()
-    return data.choices?.[0]?.message?.content ?? ''
+    const reply = data.choices?.[0]?.message?.content ?? ''
+    const inTokens = (data.usage?.prompt_tokens ?? estimateTextTokens(prompt)) as number
+    const outTokens = (data.usage?.completion_tokens ?? estimateTextTokens(reply)) as number
+    const costs = calculateModelCosts('deepseek-chat', inTokens, outTokens, 'deepseek')
+    void logAiSourceUsage('direct', 'deepseek-chat', inTokens, outTokens, costs.actualCostUsd)
+    return reply
   }
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -1078,5 +1119,10 @@ async function callModel(provider: 'deepseek' | 'claude', prompt: string, maxTok
     signal: AbortSignal.timeout(20000),
   })
   const data = await res.json()
-  return data.content?.[0]?.text ?? ''
+  const reply = data.content?.[0]?.text ?? ''
+  const inTokens = (data.usage?.input_tokens ?? estimateTextTokens(prompt)) as number
+  const outTokens = (data.usage?.output_tokens ?? estimateTextTokens(reply)) as number
+  const costs = calculateModelCosts('claude-haiku-4-5-20251001', inTokens, outTokens, 'anthropic')
+  void logAiSourceUsage('direct', 'claude-haiku-4-5-20251001', inTokens, outTokens, costs.actualCostUsd)
+  return reply
 }
