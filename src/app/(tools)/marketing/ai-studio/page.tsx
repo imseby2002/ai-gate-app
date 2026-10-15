@@ -36,6 +36,7 @@ interface PipelineNode {
   inpaintMode: 'text' | 'reference'
   referenceImageDataUrl: string | null
   referenceImageMimeType: string | null
+  referenceImages?: string[]
   // composite node: source B
   sourceBImageDataUrl: string | null
   sourceBImageMimeType: string | null
@@ -132,6 +133,7 @@ function makeNode(type: NodeType, id: string): PipelineNode {
     inpaintMode: 'text',
     referenceImageDataUrl: null,
     referenceImageMimeType: null,
+    referenceImages: [],
     sourceBImageDataUrl: null,
     sourceBImageMimeType: null,
     sourceBMaskDataUrl: null,
@@ -791,7 +793,12 @@ function NodeCard({ node, index, canRemove, onUpdate, onRun, onRemove, onUpload,
       const res = await fetch('/api/marketing/ai-studio', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'suggest', imageUrl: node.inputUrl, mode: node.type }),
+        body: JSON.stringify({
+          type: 'suggest',
+          imageUrl: node.inputUrl,
+          mode: node.type,
+          referenceImages: node.referenceImages || [],
+        }),
       })
       const data = await res.json()
       if (res.ok && data.suggestion) onUpdate({ prompt: data.suggestion })
@@ -958,6 +965,12 @@ function NodeCard({ node, index, canRemove, onUpdate, onRun, onRemove, onUpload,
               rows={2}
               className="text-xs resize-none"
             />
+            <MultiReferenceUpload
+              images={node.referenceImages || []}
+              onChange={images => onUpdate({ referenceImages: images })}
+              t={t}
+              max={3}
+            />
             <button
               type="button"
               onClick={aiSuggest}
@@ -980,6 +993,12 @@ function NodeCard({ node, index, canRemove, onUpdate, onRun, onRemove, onUpload,
               placeholder={t('studio.redesignPromptPh')}
               rows={3}
               className="text-xs resize-none"
+            />
+            <MultiReferenceUpload
+              images={node.referenceImages || []}
+              onChange={images => onUpdate({ referenceImages: images })}
+              t={t}
+              max={3}
             />
             <button
               type="button"
@@ -1588,6 +1607,142 @@ function InpaintReferenceUpload({
           className="text-xs resize-none"
         />
       </div>
+    </div>
+  )
+}
+
+// ─── Multi-Reference Upload Component (For Edit / Redesign) ───────────────────
+
+function compressImageFile(file: File, maxDim = 1024, quality = 0.85): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = ev => {
+      const src = ev.target?.result as string
+      const img = new Image()
+      img.onload = () => {
+        let { width, height } = img
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width)
+            width = maxDim
+          } else {
+            width = Math.round((width * maxDim) / height)
+            height = maxDim
+          }
+        }
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')
+        if (!ctx) { resolve(src); return }
+        ctx.drawImage(img, 0, 0, width, height)
+        resolve(canvas.toDataURL('image/jpeg', quality))
+      }
+      img.onerror = reject
+      img.src = src
+    }
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
+interface MultiReferenceUploadProps {
+  images: string[]
+  onChange: (images: string[]) => void
+  t: ReturnType<typeof useTranslations<'Marketing'>>
+  max?: number
+}
+
+function MultiReferenceUpload({ images = [], onChange, t, max = 3 }: MultiReferenceUploadProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+
+  const handleFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    if (!files.length) return
+    const remainingSlots = max - images.length
+    if (remainingSlots <= 0) return
+
+    setUploading(true)
+    try {
+      const toProcess = files.slice(0, remainingSlots)
+      const compressedList = await Promise.all(toProcess.map(f => compressImageFile(f)))
+      onChange([...images, ...compressedList].slice(0, max))
+    } catch {
+      /* ignore */
+    } finally {
+      setUploading(false)
+      e.target.value = ''
+    }
+  }
+
+  const removeImage = (idx: number) => {
+    onChange(images.filter((_, i) => i !== idx))
+  }
+
+  return (
+    <div className="space-y-1.5 pt-1 border-t border-border/60">
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] font-medium text-foreground/80">
+          {t('studio.refImagesLabel')}
+        </span>
+        <span className="text-[10px] text-muted-foreground font-mono">
+          {images.length}/{max}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-3 gap-1.5">
+        {images.map((imgUrl, idx) => (
+          <div
+            key={idx}
+            className="group relative aspect-square rounded-lg border border-border overflow-hidden bg-slate-50 dark:bg-slate-800"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={imgUrl} alt={`ref-${idx}`} className="w-full h-full object-cover" />
+            <button
+              type="button"
+              onClick={() => removeImage(idx)}
+              className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/70 hover:bg-black text-white flex items-center justify-center opacity-80 hover:opacity-100 transition-opacity"
+              title="Remove"
+            >
+              <X className="h-3 w-3" />
+            </button>
+            <div className="absolute bottom-1 left-1 bg-black/60 text-[9px] text-white px-1 rounded font-mono">
+              #{idx + 1}
+            </div>
+          </div>
+        ))}
+
+        {images.length < max && (
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="aspect-square rounded-lg border border-dashed border-border hover:border-violet-400 dark:hover:border-violet-600 flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-foreground transition-all bg-slate-50/50 dark:bg-slate-850/50"
+          >
+            {uploading ? (
+              <Loader2 className="h-4 w-4 animate-spin text-violet-500" />
+            ) : (
+              <>
+                <Plus className="h-4 w-4 text-violet-500" />
+                <span className="text-[9px] text-center px-1 font-medium leading-tight">
+                  {t('studio.addRefImage')}
+                </span>
+              </>
+            )}
+          </button>
+        )}
+      </div>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={handleFiles}
+      />
+      <p className="text-[9px] text-muted-foreground leading-tight">{t('studio.refImagesDesc')}</p>
     </div>
   )
 }

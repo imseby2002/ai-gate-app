@@ -174,7 +174,7 @@ async function handlePost(req: NextRequest) {
   const insufficient = await precheckUsage(user.id, type === 'suggest' ? AI_STUDIO_SUGGEST_ESTIMATE : AI_STUDIO_NODE_ESTIMATE)
   if (insufficient) return NextResponse.json(insufficient, { status: 402 })
 
-  // ── AI 建議：使用者沒方向時，讓 Claude 看圖提一個具體可套用的修改建議 ──
+  // ── AI 建議：使用者沒方向或上傳了多張參考圖片時，讓 Claude 看原圖＋參考圖生成具體可套用的修改指令 ──
   if (type === 'suggest') {
     const anthropicKey = process.env.ANTHROPIC_API_KEY
     if (!anthropicKey) return NextResponse.json({ error: 'ANTHROPIC_API_KEY 未設定' }, { status: 500 })
@@ -185,21 +185,59 @@ async function handlePost(req: NextRequest) {
       const mediaType = (['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(mt) ? mt : 'image/jpeg') as 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif'
       const b64 = Buffer.from(await imgRes.arrayBuffer()).toString('base64')
 
-      const ask = body.mode === 'inpaint'
-        ? '使用者會用遮罩塗抹這張圖的某個區域（通常是招牌背板之類）做局部替換，但沒有想法。請看圖後，提出一個「具體、有品味、適合這個場景」的材質或外觀建議，只描述那塊區域可以換成什麼（含材質、顏色、質感），例如「深胡桃木色實木直紋，霧面質感」。'
-        : body.mode === 'redesign'
-        ? '使用者想請 AI 設計師「重新設計」這間店面，但沒有想法。請以專業店面設計師角度，看圖後提出一個完整的改造方向（門面材質、配色、燈光、招牌風格、整體氛圍），並明確保留 LOGO、招牌文字與整體格局，例如「保留 LOGO 與格局，門面改為溫潤原木與暖白燈光的日系極簡風，招牌底改霧黑金屬」。'
-        : '使用者想用 AI 修改這張圖但沒有方向。請看圖後，提出一個「具體、有品味、能提升整體質感」的修改建議，明確說要改什麼、並保留招牌 LOGO 與文字，例如「把招牌背板換成深灰色拉絲金屬，保留 LOGO 與店名文字」。'
+      // 支援使用者上傳 1~3 張參考圖片 (可為 data URL 或 http/https URL)
+      const rawRefImages: unknown[] = Array.isArray(body.referenceImages) ? body.referenceImages.slice(0, 3) : []
+      const refContents: Array<{ type: 'image'; image: string; mediaType: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif' }> = []
+
+      for (const item of rawRefImages) {
+        if (typeof item !== 'string' || !item.trim()) continue
+        if (item.startsWith('data:')) {
+          const match = item.match(/^data:([^;]+);base64,(.+)$/)
+          if (match) {
+            const rawMime = match[1]
+            const cleanMime = (['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(rawMime) ? rawMime : 'image/jpeg') as 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif'
+            refContents.push({ type: 'image', image: match[2], mediaType: cleanMime })
+          }
+        } else if (item.startsWith('http://') || item.startsWith('https://')) {
+          try {
+            const r = await fetch(item)
+            if (r.ok) {
+              const rmt = (r.headers.get('content-type') ?? 'image/jpeg').split(';')[0]
+              const cleanMime = (['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(rmt) ? rmt : 'image/jpeg') as 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif'
+              const rb64 = Buffer.from(await r.arrayBuffer()).toString('base64')
+              refContents.push({ type: 'image', image: rb64, mediaType: cleanMime })
+            }
+          } catch { /* ignore failed ref image fetch */ }
+        }
+      }
+
+      const hasRefs = refContents.length > 0
+      let ask = ''
+
+      if (hasRefs) {
+        if (body.mode === 'redesign') {
+          ask = `第一張圖片是「當前原圖（待重新設計的店面/商品場景）」，後續 ${refContents.length} 張是「使用者喜愛的風格/材質/元素參考圖片」。\n請以專業商業空間設計師與品牌總監的角度，分析參考圖片中的設計風格、材質質感、燈光氛圍、配色與陳列手法，為第一張原圖提出一個精準的重新設計指令。\n要求：\n1. 明確指出要將原圖中的哪些部分（例如門面、牆面、招牌底板、燈光、裝飾）換成參考圖中的哪種特定材質或風格。\n2. 明確宣告「保留原圖既有的招牌LOGO、店名文字與整體建築格局結構」。\n3. 語氣肯定、具體且符合專業設計指令。`
+        } else {
+          ask = `第一張圖片是「當前原圖（待修改的圖片）」，後續 ${refContents.length} 張是「使用者提供的修改風格/材質/目標參考圖片」。\n請分析參考圖片中的關鍵特色（如材質、色彩、燈飾、裝飾元素），為第一張原圖撰寫一句具體可執行的修改指令。\n要求：\n1. 清楚說明把原圖的哪個部分修改成參考圖的風格或材質（例如：把招牌背景改成參考圖的溫潤深胡桃木格柵與暖白背光）。\n2. 明確說明「保留原圖中的招牌LOGO與店名文字」。\n3. 具體有品味，易於 AI 圖像模型精準執行。`
+        }
+      } else {
+        ask = body.mode === 'inpaint'
+          ? '使用者會用遮罩塗抹這張圖的某個區域（通常是招牌背板之類）做局部替換，但沒有想法。請看圖後，提出一個「具體、有品味、適合這個場景」的材質或外觀建議，只描述那塊區域可以換成什麼（含材質、顏色、質感），例如「深胡桃木色實木直紋，霧面質感」。'
+          : body.mode === 'redesign'
+          ? '使用者想請 AI 設計師「重新設計」這間店面，但沒有想法。請以專業店面設計師角度，看圖後提出一個完整的改造方向（門面材質、配色、燈光、招牌風格、整體氛圍），並明確保留 LOGO、招牌文字與整體格局，例如「保留 LOGO 與格局，門面改為溫潤原木與暖白燈光的日系極簡風，招牌底改霧黑金屬」。'
+          : '使用者想用 AI 修改這張圖但沒有方向。請看圖後，提出一個「具體、有品味、能提升整體質感」的修改建議，明確說要改什麼、並保留招牌 LOGO 與文字，例如「把招牌背板換成深灰色拉絲金屬，保留 LOGO 與店名文字」。'
+      }
 
       const { text } = await claudeText({
         messages: [{
           role: 'user',
           content: [
             { type: 'image', image: b64, mediaType },
+            ...refContents,
             { type: 'text', text: `${ask}\n\n用繁體中文輸出一句建議即可，不要前言、不要選項、不要引號。` },
           ],
         }],
-        maxOutputTokens: 150,
+        maxOutputTokens: 250,
       }, anthropicKey)
       const suggestion = text.trim()
       if (!suggestion) return NextResponse.json({ error: 'AI 無法產生建議，請再試一次' }, { status: 502 })
