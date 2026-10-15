@@ -1933,7 +1933,18 @@
         "local": "Địa phương",
         "compare": "So sánh",
         "transact": "Giao dịch"
-      }
+      },
+      "history": "Lịch sử",
+      "noHistory": "Chưa có dự án lịch sử nào. Nhập chủ đề bên dưới và nhấn 'Tìm câu hỏi giá trị cao' để bắt đầu!",
+      "loadProject": "Tải dự án",
+      "deleteProject": "Xóa",
+      "confirmDelete": "Bạn có chắc chắn muốn xóa dự án này và tất cả bài viết liên quan không?",
+      "articlesCount": "bài viết đã tạo",
+      "questionsCount": "câu hỏi",
+      "published": "Đã xuất bản",
+      "draft": "Bản nháp",
+      "viewArticle": "Xem trang đích",
+      "refresh": "Làm mới"
     },
     "features": {
       "templates": {

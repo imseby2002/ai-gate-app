@@ -1933,7 +1933,18 @@
         "local": "在地",
         "compare": "比較",
         "transact": "成交"
-      }
+      },
+      "history": "歷史紀錄",
+      "noHistory": "目前尚無歷史專案，在下方輸入主題後點擊「尋找高價值問句」即可開始！",
+      "loadProject": "載入專案",
+      "deleteProject": "刪除",
+      "confirmDelete": "確定要刪除此歷史專案與所有產出文章嗎？",
+      "articlesCount": "篇已產出文章",
+      "questionsCount": "個問句",
+      "published": "已發佈",
+      "draft": "草稿",
+      "viewArticle": "檢視落地頁",
+      "refresh": "重新整理"
     },
     "features": {
       "templates": {

@@ -1933,7 +1933,18 @@
         "local": "Local",
         "compare": "Compare",
         "transact": "Transact"
-      }
+      },
+      "history": "History",
+      "noHistory": "No historical projects yet. Enter a topic below and click 'Find High-Value Questions' to begin!",
+      "loadProject": "Load Project",
+      "deleteProject": "Delete",
+      "confirmDelete": "Are you sure you want to delete this historical project and all generated articles?",
+      "articlesCount": "articles generated",
+      "questionsCount": "questions",
+      "published": "Published",
+      "draft": "Draft",
+      "viewArticle": "View Landing Page",
+      "refresh": "Refresh"
     },
     "features": {
       "templates": {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import Link from 'next/link'
 import {
@@ -10,6 +10,7 @@ import {
   Settings, Save, Award, BarChart3, Printer, TrendingDown,
   Wrench, Bot, ScrollText, Gauge as GaugeIcon,
   Library, Plus, Trash2, MapPin, UserCircle,
+  History, Eye, Calendar,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,6 +24,24 @@ interface GeoQuestion {
   opportunity_score?: number; volume_source?: VolumeSource
 }
 interface GeoArticle { articleId?: string; title: string; body_md: string; json_ld: unknown }
+interface HistoryProject {
+  id: string
+  seed_topic: string
+  target_domain?: string | null
+  author?: string | null
+  created_at: string
+  locale: string
+  auto_track?: boolean
+  articles: Array<{
+    id: string
+    title: string
+    status: string
+    published_url?: string | null
+    created_at: string
+  }>
+  questionsCount: number
+  writtenCount: number
+}
 interface GeoCluster { id: string; title: string; pillar: boolean; questionIds: string[] }
 interface TrackResult { id: string; cited: boolean; rank: number | null; sources: string[] }
 interface PassageScore { index: number; heading: string | null; excerpt: string; score: number; reasons: string[] }
@@ -81,12 +100,104 @@ export default function GeoWriterPage() {
   const [loadingP, setLoadingP] = useState(false)
   const [loadingTr, setLoadingTr] = useState(false)
 
-  // 三個輔助面板（素材庫 / GEO工具 / 發布設定）互斥，一次只開一個
-  const [panel, setPanel] = useState<'material' | 'tools' | 'settings' | null>(null)
-  const togglePanel = (p: 'material' | 'tools' | 'settings') => setPanel(cur => cur === p ? null : p)
+  // 輔助面板（歷史紀錄 / 素材庫 / GEO工具 / 發布設定）互斥，一次只開一個
+  const [panel, setPanel] = useState<'history' | 'material' | 'tools' | 'settings' | null>(null)
+  const togglePanel = (p: 'history' | 'material' | 'tools' | 'settings') => setPanel(cur => cur === p ? null : p)
+  const showHistory = panel === 'history'
   const showMaterial = panel === 'material'
   const showTools = panel === 'tools'
   const showSettings = panel === 'settings'
+
+  // 歷史專案
+  const [historyProjects, setHistoryProjects] = useState<HistoryProject[]>([])
+  const [loadingHistory, setLoadingHistory] = useState(false)
+  const [loadingProjectId, setLoadingProjectId] = useState<string | null>(null)
+
+  const fetchHistory = useCallback(async () => {
+    setLoadingHistory(true)
+    try {
+      const res = await fetch('/api/marketing/geo/history')
+      const data = await res.json()
+      if (res.ok && data.projects) {
+        setHistoryProjects(data.projects)
+      }
+    } catch {
+      // silent catch
+    } finally {
+      setLoadingHistory(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (showHistory) {
+      fetchHistory()
+    }
+  }, [showHistory, fetchHistory])
+
+  async function loadProject(pId: string) {
+    setLoadingProjectId(pId)
+    setError('')
+    try {
+      const res = await fetch(`/api/marketing/geo/history?projectId=${pId}`)
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'error')
+
+      const { project, questions: qs, clusters: cls, articles: arts, tracking: trs } = data
+      setProjectId(project.id)
+      setTopic(project.seed_topic || '')
+      setExclusiveFacts(project.exclusive_facts || '')
+      setAuthor(project.author || '')
+      setTargetDomain(project.target_domain || '')
+      setAutoTrack(!!project.auto_track)
+
+      setQuestions(qs || [])
+      setSelected(new Set((qs || []).map((_: unknown, i: number) => i)))
+      setClusters(cls || [])
+      setActiveCluster(null)
+
+      if (arts && arts.length > 0) {
+        const latestArt = arts[0]
+        setArticle({
+          articleId: latestArt.id,
+          title: latestArt.title,
+          body_md: latestArt.body_md,
+          json_ld: latestArt.json_ld,
+        })
+        setPublishedUrl(latestArt.published_url || null)
+      } else {
+        setArticle(null)
+        setPublishedUrl(null)
+      }
+
+      setTracking(trs || [])
+      setCitability(null)
+      setReport(null)
+      setScored(true)
+
+      setPanel(null)
+    } catch (e) {
+      setError(String(e instanceof Error ? e.message : e))
+    } finally {
+      setLoadingProjectId(null)
+    }
+  }
+
+  async function deleteProject(pId: string) {
+    if (!window.confirm(t('geo.confirmDelete'))) return
+    try {
+      const res = await fetch(`/api/marketing/geo/history?projectId=${pId}`, { method: 'DELETE' })
+      if (res.ok) {
+        setHistoryProjects(prev => prev.filter(p => p.id !== pId))
+        if (projectId === pId) {
+          setProjectId(null)
+          setArticle(null)
+          setQuestions([])
+        }
+      }
+    } catch (e) {
+      setError(String(e instanceof Error ? e.message : e))
+    }
+  }
 
   // 發佈設定（per-user）
   const [wpBaseUrl, setWpBaseUrl] = useState('')
@@ -461,6 +572,9 @@ export default function GeoWriterPage() {
             </h1>
             <p className="text-sm text-muted-foreground">{t('geo.subtitle')}</p>
           </div>
+          <Button variant={showHistory ? 'default' : 'outline'} size="sm" onClick={() => togglePanel('history')}>
+            <History className="h-3.5 w-3.5" /> {t('geo.history')}
+          </Button>
           <Button variant={showMaterial ? 'default' : 'outline'} size="sm" onClick={() => togglePanel('material')}>
             <Library className="h-3.5 w-3.5" /> {t('geo.material')}
           </Button>
@@ -471,6 +585,133 @@ export default function GeoWriterPage() {
             <Settings className="h-3.5 w-3.5" /> {t('geo.publishSettings')}
           </Button>
         </div>
+
+        {/* 歷史紀錄面板 */}
+        {showHistory && (
+          <div className="bg-card rounded-xl border p-5 space-y-4 shadow-sm animate-in fade-in duration-200">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold flex items-center gap-2">
+                <History className="h-4 w-4 text-indigo-600" /> {t('geo.history')}
+              </h2>
+              <Button variant="ghost" size="sm" onClick={fetchHistory} disabled={loadingHistory} className="h-7 text-xs">
+                <RefreshCw className={cn("h-3 w-3 mr-1", loadingHistory && "animate-spin")} />
+                {t('geo.refresh')}
+              </Button>
+            </div>
+
+            {loadingHistory ? (
+              <div className="flex items-center justify-center py-8 text-muted-foreground text-sm">
+                <Loader2 className="h-4 w-4 animate-spin mr-2" /> 載入中...
+              </div>
+            ) : historyProjects.length === 0 ? (
+              <div className="text-center py-8 text-sm text-muted-foreground bg-muted/30 rounded-lg p-4">
+                {t('geo.noHistory')}
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-[460px] overflow-y-auto pr-1">
+                {historyProjects.map(p => (
+                  <div
+                    key={p.id}
+                    className={cn(
+                      "p-3.5 rounded-lg border text-sm transition-all bg-card/60 hover:bg-card hover:border-indigo-300 dark:hover:border-indigo-800 space-y-2.5",
+                      projectId === p.id && "border-indigo-500 bg-indigo-50/20 dark:bg-indigo-950/20"
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-foreground text-sm truncate">{p.seed_topic}</span>
+                          {p.target_domain && (
+                            <span className="text-[11px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                              {p.target_domain}
+                            </span>
+                          )}
+                          {projectId === p.id && (
+                            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+                              目前載入中
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 text-[11px] text-muted-foreground mt-1 flex-wrap">
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {new Date(p.created_at).toLocaleString(locale === 'zh-TW' ? 'zh-TW' : locale === 'vi' ? 'vi-VN' : 'en-US', {
+                              year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                            })}
+                          </span>
+                          <span>•</span>
+                          <span>{p.questionsCount} {t('geo.questionsCount')}</span>
+                          <span>•</span>
+                          <span>{p.articles.length} {t('geo.articlesCount')}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <Button
+                          size="sm"
+                          variant={projectId === p.id ? "secondary" : "default"}
+                          className="h-7 text-xs px-2.5"
+                          disabled={loadingProjectId === p.id}
+                          onClick={() => loadProject(p.id)}
+                        >
+                          {loadingProjectId === p.id ? (
+                            <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                          ) : (
+                            <FileText className="h-3 w-3 mr-1" />
+                          )}
+                          {t('geo.loadProject')}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 w-7 p-0 text-muted-foreground hover:text-red-600"
+                          onClick={() => deleteProject(p.id)}
+                          title={t('geo.deleteProject')}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* 若有產出文章列表 */}
+                    {p.articles.length > 0 && (
+                      <div className="pt-2 border-t space-y-1.5">
+                        {p.articles.map(art => (
+                          <div key={art.id} className="flex items-center justify-between text-xs bg-muted/40 rounded px-2.5 py-1.5">
+                            <span className="truncate flex-1 font-medium text-slate-700 dark:text-slate-300 mr-2">
+                              {art.title}
+                            </span>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className={cn(
+                                "text-[10px] px-1.5 py-0.5 rounded font-medium",
+                                art.status === 'published'
+                                  ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+                                  : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+                              )}>
+                                {art.status === 'published' ? t('geo.published') : t('geo.draft')}
+                              </span>
+                              {art.status === 'published' && (
+                                <a
+                                  href={art.published_url || `/geo/${art.id}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-indigo-600 hover:text-indigo-700 flex items-center gap-0.5 text-[11px]"
+                                >
+                                  <Eye className="h-3 w-3" />
+                                  {t('geo.viewArticle')}
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* 素材庫：商家檔案(LocalBusiness) / 作者(Person) / 獨家事實 */}
         {showMaterial && (
