@@ -7,7 +7,7 @@ import {
   Loader2, AlertCircle, Megaphone, CalendarDays, Plus, Trash2, Pencil,
   X, Save, Sparkles, Check, RotateCcw, CalendarPlus, Bike, Star, ExternalLink,
   BarChart3, Building2, Globe,
-  CheckCircle2, Search, Tag, Eye, BookOpen, Users, Rocket, FileText, Download
+  CheckCircle2, Search, Tag, Eye, BookOpen, Users, Rocket, FileText, Download, FolderArchive
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge'
 import { CampaignsTab } from '@/components/marketing/CampaignsTab'
 import { CrmTab } from '@/components/marketing/CrmTab'
 import { CompanyProfileEditor, type CompanyProfileTab } from '@/components/company/CompanyProfileEditor'
+import { MarketingAssetArchiveModal } from '@/components/marketing/MarketingAssetArchiveModal'
 
 const selCls = 'h-9 rounded-md border border-input bg-transparent px-3 text-sm'
 const ta = 'w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm'
@@ -25,6 +26,7 @@ export default function MktPage() {
   const [allowed, setAllowed] = useState<boolean | null>(null)
   const [tab, setTab] = useState<Tab>('company')
   const [companyTab, setCompanyTab] = useState<CompanyProfileTab>('basic')
+  const [archiveOpen, setArchiveOpen] = useState(false)
 
   useEffect(() => {
     fetch('/api/mkt/brand').then(r => {
@@ -51,6 +53,15 @@ export default function MktPage() {
           <h1 className="text-2xl font-bold">{t('pageTitle')}</h1>
         </div>
         <div className="ml-auto flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setArchiveOpen(true)}
+            className="gap-1.5 text-xs font-semibold text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800 hover:bg-rose-50 dark:hover:bg-rose-950/40 shadow-xs"
+          >
+            <FolderArchive className="h-3.5 w-3.5 text-rose-600" />
+            <span>雲端封存區</span>
+          </Button>
           <a
             href={typeof window !== 'undefined' && window.location.hostname.endsWith('im-tourist.com') ? 'https://marketing.im-tourist.com/marketing/templates' : '/marketing/templates'}
             target="_blank"
@@ -644,6 +655,12 @@ function CalendarTab() {
           </div>
         </div>
       )}
+
+      {/* 雲端封存資產庫 Modal */}
+      <MarketingAssetArchiveModal
+        open={archiveOpen}
+        onClose={() => setArchiveOpen(false)}
+      />
     </div>
   )
 }

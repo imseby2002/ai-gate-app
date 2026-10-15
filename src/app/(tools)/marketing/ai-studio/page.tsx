@@ -7,13 +7,15 @@ import {
   ChevronLeft, Upload, Sparkles, Loader2, Image as ImageIcon,
   Wand2, Palette, ArrowUpToLine, Scissors, Video, Plus, X,
   ArrowRight, Play, Download, Copy, RefreshCw, MessageSquare,
-  Brush, Eraser, Trash2, Layers, PenTool, Share2,
+  Brush, Eraser, Trash2, Layers, PenTool, Share2, FolderArchive,
+  RotateCcw, CheckCircle2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils/cn'
 import { PlanGate } from '@/components/marketing/PlanGate'
 import { SocialPublishModal } from '@/components/marketing/SocialPublishModal'
+import { MarketingAssetArchiveModal } from '@/components/marketing/MarketingAssetArchiveModal'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -156,10 +158,52 @@ function AiStudioContent() {
   const t = useTranslations('Marketing')
   const uid = useId()
 
+  const DRAFT_KEY = 'ai-studio-canvas-draft-v1'
+
+  // 畫布節點（做到一半自動儲存至瀏覽器本地）
   const [nodes, setNodes] = useState<PipelineNode[]>([
     makeNode('input', `${uid}-0`),
     makeNode('edit', `${uid}-1`),
   ])
+  const [isRestored, setIsRestored] = useState(false)
+
+  // 讀取上次做到一半的畫布草稿
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(DRAFT_KEY)
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setNodes(parsed)
+        }
+      }
+    } catch (e) {
+      console.warn('[ai-studio] 讀取草稿失敗', e)
+    } finally {
+      setIsRestored(true)
+    }
+  }, [])
+
+  // 做到一半自動儲存
+  useEffect(() => {
+    if (isRestored && nodes.length > 0) {
+      try {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(nodes))
+      } catch (e) {
+        console.warn('[ai-studio] 自動儲存草稿失敗', e)
+      }
+    }
+  }, [nodes, isRestored])
+
+  const handleResetCanvas = useCallback(() => {
+    if (confirm('確定要開新畫布嗎？當前編輯狀態將被重置，但所有已生成的歷史作品仍會完整保存在「雲端封存區」中。')) {
+      try { localStorage.removeItem(DRAFT_KEY) } catch {}
+      setNodes([
+        makeNode('input', `${uid}-${Date.now()}-0`),
+        makeNode('edit', `${uid}-${Date.now()}-1`),
+      ])
+    }
+  }, [uid])
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [runningAll, setRunningAll] = useState(false)
   const [publishMedia, setPublishMedia] = useState<{
@@ -168,6 +212,7 @@ function AiStudioContent() {
     title?: string
     initialCopy?: string
   } | null>(null)
+  const [archiveOpen, setArchiveOpen] = useState(false)
 
   const handleOpenPublish = useCallback((node: PipelineNode) => {
     if (!node.outputUrl) return
@@ -346,16 +391,16 @@ function AiStudioContent() {
   }, [nodes, t, updateNode])
 
   const pollVideo = useCallback(async (nodeId: string, requestId: string, model: string) => {
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < 90; i++) {
       await new Promise(r => setTimeout(r, 5000))
       try {
         const res = await fetch(`/api/marketing/generate-video?requestId=${requestId}&model=${model}`)
         const data = await res.json()
-        if (data.status === 'completed' && data.url) {
-          updateNode(nodeId, { status: 'done', outputUrl: data.url, error: null })
+        if (data.status === 'completed' && (data.url || data.videoUrl)) {
+          updateNode(nodeId, { status: 'done', outputUrl: data.url || data.videoUrl, error: null })
           return
         }
-        if (data.status === 'failed') {
+        if (data.status === 'failed' || data.status === 'error') {
           updateNode(nodeId, { status: 'error', error: data.error ?? t('studioX.videoFailed') })
           return
         }
@@ -492,10 +537,30 @@ function AiStudioContent() {
         </div>
         <div className="flex items-center gap-2">
           <Button
+            variant="outline"
+            size="sm"
+            onClick={handleResetCanvas}
+            className="text-xs text-muted-foreground hover:text-foreground h-8 gap-1"
+            title="清空當前畫布開始新設計"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            <span>開新畫布</span>
+          </Button>
+
+          <Button
+            size="sm"
+            onClick={() => setArchiveOpen(true)}
+            className="gap-1.5 text-xs font-bold bg-violet-600 hover:bg-violet-700 text-white shadow-sm h-8"
+          >
+            <FolderArchive className="h-3.5 w-3.5" />
+            <span>📁 雲端封存區</span>
+          </Button>
+
+          <Button
             size="sm"
             onClick={runAll}
             disabled={!canRunAll}
-            className="gap-2 bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-700 hover:to-pink-700"
+            className="gap-2 bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-700 hover:to-pink-700 text-xs font-semibold h-8"
           >
             {runningAll ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
             {runningAll ? t('studio.running') : t('studio.runAll')}
@@ -592,6 +657,7 @@ function AiStudioContent() {
                   onRemove={() => removeNode(node.id)}
                   onUpload={e => handleUpload(e, node.id)}
                   onPublish={handleOpenPublish}
+                  onOpenArchive={() => setArchiveOpen(true)}
                   fileRef={node.type === 'input' ? fileRef : undefined}
                   t={t}
                 />
@@ -659,6 +725,16 @@ function AiStudioContent() {
           sourceName={publishMedia.title}
         />
       )}
+
+      {/* 雲端封存資產庫 Modal */}
+      <MarketingAssetArchiveModal
+        open={archiveOpen}
+        onClose={() => setArchiveOpen(false)}
+        onSelectImage={url => {
+          setNodes(prev => prev.map(n => n.type === 'input' ? { ...n, outputUrl: url } : n))
+        }}
+        selectButtonText="載入至畫布"
+      />
     </div>
   )
 }
@@ -676,11 +752,12 @@ interface NodeCardProps {
   onRemove: () => void
   onUpload: (e: React.ChangeEvent<HTMLInputElement>) => void
   onPublish?: (node: PipelineNode) => void
+  onOpenArchive?: () => void
   fileRef?: React.RefObject<HTMLInputElement | null>
   t: ReturnType<typeof useTranslations<'Marketing'>>
 }
 
-function NodeCard({ node, index, canRemove, onUpdate, onRun, onRemove, onUpload, onPublish, fileRef, t }: NodeCardProps) {
+function NodeCard({ node, index, canRemove, onUpdate, onRun, onRemove, onUpload, onPublish, onOpenArchive, fileRef, t }: NodeCardProps) {
   const meta = NODE_META[node.type]
   const Icon = meta.icon
   const localFileRef = useRef<HTMLInputElement>(null)
@@ -829,6 +906,25 @@ function NodeCard({ node, index, canRemove, onUpdate, onRun, onRemove, onUpload,
           </div>
         )}
       </div>
+
+      {/* 雲端自動儲存通知條 */}
+      {node.status === 'done' && node.outputUrl && (
+        <div className="bg-emerald-50 dark:bg-emerald-950/40 border-b border-emerald-100 dark:border-emerald-900 px-3 py-1.5 flex items-center justify-between text-[11px] text-emerald-700 dark:text-emerald-300">
+          <span className="flex items-center gap-1 font-medium">
+            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+            已自動備份至封存區
+          </span>
+          {onOpenArchive && (
+            <button
+              type="button"
+              onClick={onOpenArchive}
+              className="text-[10px] text-emerald-700 dark:text-emerald-300 hover:underline font-bold"
+            >
+              查看封存區 →
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Config area */}
       <div className="px-3 py-2.5">
