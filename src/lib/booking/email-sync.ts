@@ -4,7 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptSecret, encryptSecret, isEncrypted } from '@/lib/crypto/secret'
 import { findOrCreateOrder } from './orders'
 import { calculateModelCosts, estimateTextTokens } from '@/lib/ai/token-cost-tracker'
-import { generateWithFreeFirst } from '@/lib/ai/free-first-caller'
+import { trackAiUsage } from '@/lib/ai/universal-tracker'
 
 interface AdditionalRoom {
   property_name: string | null
@@ -1083,23 +1083,6 @@ async function logAiSourceUsage(channel: string, modelId: string, inTokens: numb
 }
 
 async function callModel(provider: 'deepseek' | 'claude', prompt: string, maxTokens = 1000): Promise<string> {
-  // 優先嘗試免費代理通道 (CLIProxy / FreeLLM) 零成本執行郵件提取
-  const cliUrl = process.env.CLI_PROXY_API_URL ?? process.env.NEXT_PUBLIC_CLI_PROXY_API_URL
-  const freeUrl = process.env.FREE_LLM_URL ?? process.env.NEXT_PUBLIC_FREE_LLM_URL
-
-  if (cliUrl || freeUrl) {
-    try {
-      const reply = await generateWithFreeFirst({
-        feature: 'email_sync',
-        prompt,
-        maxOutputTokens: maxTokens,
-      })
-      if (reply) return reply
-    } catch {
-      // fallback to direct vendor
-    }
-  }
-
   if (provider === 'deepseek') {
     const res = await fetch('https://api.deepseek.com/chat/completions', {
       method: 'POST',
@@ -1117,10 +1100,17 @@ async function callModel(provider: 'deepseek' | 'claude', prompt: string, maxTok
     const reply = data.choices?.[0]?.message?.content ?? ''
     const inTokens = (data.usage?.prompt_tokens ?? estimateTextTokens(prompt)) as number
     const outTokens = (data.usage?.completion_tokens ?? estimateTextTokens(reply)) as number
-    const costs = calculateModelCosts('deepseek-chat', inTokens, outTokens, 'deepseek')
-    void logAiSourceUsage('direct', 'deepseek-chat', inTokens, outTokens, costs.actualCostUsd)
+    void trackAiUsage({
+      feature: 'email_sync',
+      modelId: 'deepseek-chat',
+      inputTokens: inTokens,
+      outputTokens: outTokens,
+      sourceChannel: 'deepseek',
+    })
     return reply
   }
+
+  // Anthropic Claude Haiku (高精準結構化提取，專門解析複雜 OTA 訂單格式)
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -1140,7 +1130,12 @@ async function callModel(provider: 'deepseek' | 'claude', prompt: string, maxTok
   const reply = data.content?.[0]?.text ?? ''
   const inTokens = (data.usage?.input_tokens ?? estimateTextTokens(prompt)) as number
   const outTokens = (data.usage?.output_tokens ?? estimateTextTokens(reply)) as number
-  const costs = calculateModelCosts('claude-haiku-4-5-20251001', inTokens, outTokens, 'anthropic')
-  void logAiSourceUsage('direct', 'claude-haiku-4-5-20251001', inTokens, outTokens, costs.actualCostUsd)
+  void trackAiUsage({
+    feature: 'email_sync',
+    modelId: 'claude-haiku-4-5-20251001',
+    inputTokens: inTokens,
+    outputTokens: outTokens,
+    sourceChannel: 'anthropic',
+  })
   return reply
 }
