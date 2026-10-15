@@ -6,6 +6,7 @@ import { generateText } from 'ai'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createOpenAI } from '@ai-sdk/openai'
+import { trackAiUsage } from '@/lib/ai/universal-tracker'
 
 export const maxDuration = 60
 
@@ -94,7 +95,13 @@ ${regContext}
 4. 【店長現場執行與溝通指引】：`
 
       let answer = ''
+      let usedModel = ''
+      let usedChannel: 'anthropic' | 'google' | 'openai' = 'anthropic'
+      let usageData: any = null
+
       if (hasAnthropic) {
+        usedModel = 'claude-sonnet-4-5'
+        usedChannel = 'anthropic'
         const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
         const res = await generateText({
           model: anthropic('claude-sonnet-4-5'),
@@ -102,7 +109,10 @@ ${regContext}
           maxOutputTokens: 2000,
         })
         answer = res.text
+        usageData = (res as any).usage
       } else if (hasGoogle) {
+        usedModel = 'gemini-2.0-flash'
+        usedChannel = 'google'
         const google = createGoogleGenerativeAI({
           apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY,
         })
@@ -111,15 +121,33 @@ ${regContext}
           messages: [{ role: 'user', content: systemPrompt }],
         })
         answer = res.text
+        usageData = (res as any).usage
       } else if (hasOpenAI) {
+        usedModel = 'gpt-4o'
+        usedChannel = 'openai'
         const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY })
         const res = await generateText({
           model: openai('gpt-4o'),
           messages: [{ role: 'user', content: systemPrompt }],
         })
         answer = res.text
+        usageData = (res as any).usage
       } else {
         answer = `【適用規章】：依據《Feeling Tea 門市管理規章》之相關規範。\n【核心要求】：現場落實標準作業手冊，恪守食安衛生與收銀誠信紅線。\n【違規處分】：首次給予警示糾正，重大或累犯者呈報人評會議處。\n【店長指引】：以客觀陳述事實引導同仁理解規章背後的品牌責任。`
+      }
+
+      if (usedModel && usageData) {
+        const inTokens = Number(usageData.inputTokens ?? usageData.promptTokens ?? 0)
+        const outTokens = Number(usageData.outputTokens ?? usageData.completionTokens ?? 0)
+        if (inTokens > 0 || outTokens > 0) {
+          void trackAiUsage({
+            feature: 'store_coach',
+            modelId: usedModel,
+            inputTokens: inTokens,
+            outputTokens: outTokens,
+            sourceChannel: usedChannel,
+          })
+        }
       }
 
       return NextResponse.json({

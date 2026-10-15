@@ -645,6 +645,42 @@ export async function GET(req: NextRequest) {
     console.warn('[usage-stats] ai_source_usage_daily error:', e)
   }
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 6. 讀取各功能模組獨立日統計 (ai_feature_usage_daily，如 Meeting, Store Coach, Marketing 等)
+  // ─────────────────────────────────────────────────────────────────────────────
+  const featureTotals: Record<string, { tokens: number; costUsd: number; requests: number; topModel: string }> = {}
+
+  try {
+    let featureQuery = supabase!
+      .from('ai_feature_usage_daily')
+      .select('date, feature_module, model_id, source_channel, request_count, input_tokens, output_tokens, total_cost_usd, saved_cost_usd')
+
+    if (startDateStr) {
+      featureQuery = featureQuery.gte('date', startDateStr)
+    }
+
+    const { data: featureRows, error: featErr } = await featureQuery
+    if (!featErr && featureRows) {
+      for (const row of featureRows) {
+        const feat = row.feature_module || 'other'
+        const inTokens = Number(row.input_tokens) || 0
+        const outTokens = Number(row.output_tokens) || 0
+        const reqCount = Number(row.request_count) || 1
+        const costUsd = Number(row.total_cost_usd) || 0
+        const cleanName = getModelDisplayName(row.model_id ?? '', (row.source_channel as SourceChannel) || 'anthropic')
+
+        if (!featureTotals[feat]) {
+          featureTotals[feat] = { tokens: 0, costUsd: 0, requests: 0, topModel: cleanName }
+        }
+        featureTotals[feat].tokens += (inTokens + outTokens)
+        featureTotals[feat].costUsd += costUsd
+        featureTotals[feat].requests += reqCount
+      }
+    }
+  } catch (e) {
+    console.warn('[usage-stats] ai_feature_usage_daily query error:', e)
+  }
+
   // Prepopulate standard proxy models so the matrix displays them with $0.00 even if not yet triggered
   const standardShowcase: Array<{ model_id: string; channel: SourceChannel }> = [
     { model_id: 'gemini-3-flash', channel: 'cliproxy' },
@@ -716,6 +752,18 @@ export async function GET(req: NextRequest) {
   const dailyTrend = Array.from(dayMap.values()).sort((a, b) => a.date.localeCompare(b.date))
 
   // Feature / Service module breakdown
+  const FEATURE_METADATA: Record<string, { label: string; icon: string; defaultModel: string; defaultChannel: string }> = {
+    meeting:     { label: '會議即時翻譯 (Meeting)', icon: 'Headphones', defaultModel: 'DeepSeek / Gemini Flash', defaultChannel: 'deepseek' },
+    store_coach: { label: '店長教練 (Store Coach)', icon: 'Sparkles', defaultModel: 'Claude 3.7 / Gemini', defaultChannel: 'anthropic' },
+    marketing:   { label: '行銷整套生成 (Marketing)', icon: 'Megaphone', defaultModel: 'Claude 3.7 Sonnet', defaultChannel: 'anthropic' },
+    audit:       { label: '稽核討論日誌 (Audit)', icon: 'FileCheck', defaultModel: 'Claude 3.7 Sonnet', defaultChannel: 'anthropic' },
+    rd:          { label: '研發日誌 (R&D)', icon: 'FlaskConical', defaultModel: 'Claude 3.7 Sonnet', defaultChannel: 'anthropic' },
+    affairs:     { label: '外務 AI 聯網 (Affairs)', icon: 'Globe', defaultModel: 'Claude 3.7 Sonnet', defaultChannel: 'anthropic' },
+    skills:      { label: '專家技能 (Skills)', icon: 'Wrench', defaultModel: 'Claude 3.7 Sonnet', defaultChannel: 'anthropic' },
+    autofix:     { label: '反饋自癒代碼 (Autofix)', icon: 'Code2', defaultModel: 'Claude 3.7 Sonnet', defaultChannel: 'anthropic' },
+    email_sync:  { label: '訂位信件同步 (Email)', icon: 'Mail', defaultModel: 'Claude Haiku / DeepSeek', defaultChannel: 'anthropic' },
+  }
+
   const serviceBreakdown = [
     {
       id: 'agent',
@@ -765,6 +813,26 @@ export async function GET(req: NextRequest) {
       channel: 'google',
       costSharePct: totalCostUsd > 0 ? Number(((totalRoundtableCostUsd / totalCostUsd) * 100).toFixed(1)) : 0,
     },
+    ...Object.entries(featureTotals).map(([featId, stat]) => {
+      const meta = FEATURE_METADATA[featId] || {
+        label: featId.toUpperCase(),
+        icon: 'Sparkles',
+        defaultModel: stat.topModel || 'AI Model',
+        defaultChannel: 'direct',
+      }
+      return {
+        id: featId,
+        label: meta.label,
+        icon: meta.icon,
+        tokens: stat.tokens,
+        costUsd: Number(stat.costUsd.toFixed(4)),
+        costTwd: Number((stat.costUsd * 32).toFixed(2)),
+        requests: stat.requests,
+        topModel: stat.topModel || meta.defaultModel,
+        channel: meta.defaultChannel,
+        costSharePct: totalCostUsd > 0 ? Number(((stat.costUsd / totalCostUsd) * 100).toFixed(1)) : 0,
+      }
+    }),
   ]
 
   return NextResponse.json({

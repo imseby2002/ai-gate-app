@@ -8,12 +8,26 @@ import {
 import {
   DollarSign, Activity, Zap, Shield, Terminal,
   ArrowDownRight, RefreshCw, Search, ArrowUpDown, Info, Sparkles,
-  Layers, MessageSquare, Flame
+  Layers, MessageSquare, Flame, Headphones, Megaphone, FileCheck, FlaskConical, Globe, Wrench, Code2, Mail
 } from 'lucide-react'
 import { formatCost, formatTokens } from '@/lib/utils/format'
 import { type SourceChannel } from '@/lib/ai/token-cost-tracker'
 
-export type ServiceModule = 'all' | 'roundtable' | 'chat' | 'agent' | 'missions'
+export type ServiceModule =
+  | 'all'
+  | 'roundtable'
+  | 'chat'
+  | 'agent'
+  | 'missions'
+  | 'meeting'
+  | 'store_coach'
+  | 'marketing'
+  | 'audit'
+  | 'rd'
+  | 'affairs'
+  | 'skills'
+  | 'autofix'
+  | 'email_sync'
 
 interface ModelStat {
   model_id: string
@@ -612,6 +626,18 @@ export function AdminUsageDashboard({ initialData }: { initialData?: AdminUsageD
                     {svc.id === 'missions' && <Flame className="w-3.5 h-3.5 text-rose-500" />}
                     {svc.id === 'chat' && <MessageSquare className="w-3.5 h-3.5 text-blue-500" />}
                     {svc.id === 'roundtable' && <Layers className="w-3.5 h-3.5 text-purple-500" />}
+                    {svc.id === 'meeting' && <Headphones className="w-3.5 h-3.5 text-indigo-500" />}
+                    {svc.id === 'store_coach' && <Sparkles className="w-3.5 h-3.5 text-emerald-500" />}
+                    {svc.id === 'marketing' && <Megaphone className="w-3.5 h-3.5 text-pink-500" />}
+                    {svc.id === 'audit' && <FileCheck className="w-3.5 h-3.5 text-teal-500" />}
+                    {svc.id === 'rd' && <FlaskConical className="w-3.5 h-3.5 text-violet-500" />}
+                    {svc.id === 'affairs' && <Globe className="w-3.5 h-3.5 text-cyan-500" />}
+                    {svc.id === 'skills' && <Wrench className="w-3.5 h-3.5 text-orange-500" />}
+                    {svc.id === 'autofix' && <Code2 className="w-3.5 h-3.5 text-fuchsia-500" />}
+                    {svc.id === 'email_sync' && <Mail className="w-3.5 h-3.5 text-sky-500" />}
+                    {!['agent', 'missions', 'chat', 'roundtable', 'meeting', 'store_coach', 'marketing', 'audit', 'rd', 'affairs', 'skills', 'autofix', 'email_sync'].includes(svc.id) && (
+                      <Sparkles className="w-3.5 h-3.5 text-slate-500" />
+                    )}
                     {svc.label}
                   </span>
                   <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 dark:bg-muted text-muted-foreground">
@@ -638,7 +664,16 @@ export function AdminUsageDashboard({ initialData }: { initialData?: AdminUsageD
                     className={`h-full rounded-full transition-all duration-500 ${
                       svc.id === 'agent' ? 'bg-amber-500' :
                       svc.id === 'missions' ? 'bg-rose-500' :
-                      svc.id === 'chat' ? 'bg-blue-500' : 'bg-purple-500'
+                      svc.id === 'chat' ? 'bg-blue-500' :
+                      svc.id === 'roundtable' ? 'bg-purple-500' :
+                      svc.id === 'meeting' ? 'bg-indigo-500' :
+                      svc.id === 'store_coach' ? 'bg-emerald-500' :
+                      svc.id === 'marketing' ? 'bg-pink-500' :
+                      svc.id === 'audit' ? 'bg-teal-500' :
+                      svc.id === 'rd' ? 'bg-violet-500' :
+                      svc.id === 'affairs' ? 'bg-cyan-500' :
+                      svc.id === 'skills' ? 'bg-orange-500' :
+                      svc.id === 'autofix' ? 'bg-fuchsia-500' : 'bg-slate-500'
                     }`}
                     style={{ width: `${Math.max(svc.costSharePct, svc.costUsd > 0 ? 3 : 0)}%` }}
                   />

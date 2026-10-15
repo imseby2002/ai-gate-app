@@ -2,6 +2,7 @@
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 import { fal } from '@fal-ai/client'
+import { trackAiUsage } from '@/lib/ai/universal-tracker'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { generateNanoBanana } from '@/lib/ai/nano-banana'
 import type { SkillRunContext } from './registry'
@@ -35,10 +36,23 @@ export function createSkillContext(userId?: string, knowledge?: string): SkillRu
         maxOutputTokens,
       })
       const usage = (res.usage ?? {}) as unknown as Record<string, number | undefined>
+      const inTokens = usage.inputTokens ?? usage.promptTokens ?? 0
+      const outTokens = usage.outputTokens ?? usage.completionTokens ?? 0
+
+      if (inTokens > 0 || outTokens > 0) {
+        void trackAiUsage({
+          feature: 'skills',
+          modelId: 'claude-sonnet-4-6',
+          inputTokens: inTokens,
+          outputTokens: outTokens,
+          sourceChannel: 'anthropic',
+        })
+      }
+
       return {
         text: res.text,
-        inputTokens: usage.inputTokens ?? usage.promptTokens ?? 0,
-        outputTokens: usage.outputTokens ?? usage.completionTokens ?? 0,
+        inputTokens: inTokens,
+        outputTokens: outTokens,
       }
     },
 

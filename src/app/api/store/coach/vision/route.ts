@@ -4,6 +4,7 @@ import type { VisionAnalysisResult } from '@/lib/types/store-coach'
 import { generateText } from 'ai'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { createOpenAI } from '@ai-sdk/openai'
+import { trackAiUsage } from '@/lib/ai/universal-tracker'
 
 export const maxDuration = 90
 
@@ -104,6 +105,19 @@ export async function POST(req: NextRequest) {
 
           const cleanJson = res.text.replace(/```json/gi, '').replace(/```/g, '').trim()
           visionResult = JSON.parse(cleanJson)
+
+          const usage = (res as any).usage ?? {}
+          const inTokens = Number(usage.inputTokens ?? usage.promptTokens ?? 0)
+          const outTokens = Number(usage.outputTokens ?? usage.completionTokens ?? 0)
+          if (inTokens > 0 || outTokens > 0) {
+            void trackAiUsage({
+              feature: 'store_coach',
+              modelId: 'claude-sonnet-4-5',
+              inputTokens: inTokens,
+              outputTokens: outTokens,
+              sourceChannel: 'anthropic',
+            })
+          }
         } else if (hasOpenAI) {
           const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY })
           const res = await generateText({
@@ -125,6 +139,19 @@ export async function POST(req: NextRequest) {
 
           const cleanJson = res.text.replace(/```json/gi, '').replace(/```/g, '').trim()
           visionResult = JSON.parse(cleanJson)
+
+          const usage = (res as any).usage ?? {}
+          const inTokens = Number(usage.inputTokens ?? usage.promptTokens ?? 0)
+          const outTokens = Number(usage.outputTokens ?? usage.completionTokens ?? 0)
+          if (inTokens > 0 || outTokens > 0) {
+            void trackAiUsage({
+              feature: 'store_coach',
+              modelId: 'gpt-4o',
+              inputTokens: inTokens,
+              outputTokens: outTokens,
+              sourceChannel: 'openai',
+            })
+          }
         }
       } catch (visionErr) {
         console.warn('Vision AI LLM processing fallback to standard inspection:', visionErr)
