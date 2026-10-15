@@ -158,7 +158,9 @@ function Unit1Collect({
   const [appIds, setAppIds] = useState(savedData?.appIds?.join('\n') ?? '')
   const [alertRssUrls, setAlertRssUrls] = useState(savedData?.alertRssUrls?.join('\n') ?? '')
   const [limit, setLimit] = useState(10)
-  const [language, setLanguage] = useState('zh-TW')
+  // 預設跟介面語言同步（zh-TW / en / vi），已存過的結果沿用原語言
+  const locale = useLocale()
+  const [language, setLanguage] = useState(savedData?.language ?? (['zh-TW', 'en', 'vi'].includes(locale) ? locale : 'zh-TW'))
   const [running, setRunning] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState<Unit1Data | null>(savedData?.summary ? savedData : null)
@@ -3154,7 +3156,7 @@ function Unit10ProspectMarketing({
   // ── Phone tab state ──────────────────────────────────────────────────────
   const [script, setScript] = useState(savedData?.script ?? '')
   const [generatingScript, setGeneratingScript] = useState(false)
-  const [scriptLang, setScriptLang] = useState('繁體中文')
+  const [scriptLang, setScriptLang] = useState(locale === 'vi' ? '越南語' : locale === 'en' ? 'English' : '繁體中文')
 
   const [voiceId, setVoiceId] = useState(savedData?.voiceId ?? 'EXAVITQu4vr4xnSDxMaL')
   const [callerId, setCallerId] = useState(savedData?.callerId ?? savedData?.birdCallerId ?? '')
