@@ -84,6 +84,14 @@ const TARGET_LANGS: { code: string; label: string }[] = [
   { code: 'en', label: 'English' },
 ]
 
+// 翻譯下拉選項：預設不翻譯 (純原文)，需要時手動調整
+const TRANSLATION_TARGET_OPTIONS: { code: string; label: string }[] = [
+  { code: 'none', label: '不翻譯 (純原文)' },
+  { code: 'zh-TW', label: '繁體中文' },
+  { code: 'vi', label: 'Tiếng Việt' },
+  { code: 'en', label: 'English' },
+]
+
 const TRANSLATABLE = new Set(['zh-TW', 'vi', 'en'])
 
 // 會議語言：主要語言在前，其後為其他會出現的語言
@@ -289,14 +297,12 @@ export default function MeetingPage() {
     )
   }
 
-  // 辨識輸入語言（預設 auto，支援中/越/英自動偵測）與翻譯目標語言（可自由切換）
+  // 辨識輸入語言（預設 auto，支援中/越/英自動偵測）與翻譯目標語言（預設不翻譯，由使用者手動開啟）
   const [inputLang, setInputLang] = useState<string>('auto')
   // 建立會議：主要語言（單選）與其他會出現的語言（多選）
   const [primaryLang, setPrimaryLang] = useState<string>(TRANSLATABLE.has(locale) ? locale : 'zh-TW')
   const [otherLangs, setOtherLangs] = useState<string[]>([])
-  const [targetLang, setTargetLang] = useState<string>(
-    TRANSLATABLE.has(locale) ? locale : 'zh-TW'
-  )
+  const [targetLang, setTargetLang] = useState<string>('none')
   const [err, setErr] = useState('')
   const [creating, setCreating] = useState(false)
   const [joining, setJoining] = useState(false)
@@ -566,10 +572,8 @@ export default function MeetingPage() {
     setHistory(h => h.filter(x => x.id !== m.id))
   }
 
-  // 進入會議；翻譯目標若不是會議語言之一，預設改為主要語言
+  // 進入會議；依需求預設維持不翻譯，由使用者在會議中手動按需開啟
   function enterMeeting(m: Meeting) {
-    const langs = meetingLangs(m)
-    setTargetLang(prev => (langs.includes(prev) ? prev : langs[0]))
     setMeeting(m)
     loadMeetingData(m)
   }
@@ -606,13 +610,13 @@ export default function MeetingPage() {
           }
         } catch {}
       }
-      const langLabel = TARGET_LANGS.find(l => l.code === targetLang)?.label ?? ''
+      const langLabel = TRANSLATION_TARGET_OPTIONS.find(l => l.code === targetLang)?.label ?? ''
       const head = [
         `${t('title')}：${meeting.title || '—'}`,
         `${t('roomCode')}：${meeting.room_code}`,
         meeting.created_at ? `${t('date')}：${fmtDate(meeting.created_at)}` : '',
         participants.length ? `${t('participants')}：${participants.join('、')}` : '',
-        `${t('translateTo')}：${langLabel}`,
+        targetLang !== 'none' ? `${t('translateTo')}：${langLabel}` : '',
       ].filter(Boolean)
       const body = lines.map(l => {
         const tr = translatedOf(l)
@@ -1130,7 +1134,7 @@ export default function MeetingPage() {
             value={targetLang}
             onChange={setTargetLang}
             label={t('targetLangLabel')}
-            options={TARGET_LANGS}
+            options={TRANSLATION_TARGET_OPTIONS}
             compact
             icon={<Languages className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />}
           />
@@ -1594,7 +1598,7 @@ export default function MeetingPage() {
           value={targetLang}
           onChange={setTargetLang}
           label={t('targetLangLabel')}
-          options={TARGET_LANGS}
+          options={TRANSLATION_TARGET_OPTIONS}
           compact
           icon={<Languages className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />}
         />

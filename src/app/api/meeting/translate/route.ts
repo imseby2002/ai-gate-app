@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAnthropic } from '@ai-sdk/anthropic'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createOpenAI } from '@ai-sdk/openai'
 import { generateText } from 'ai'
@@ -14,18 +13,37 @@ const LANG_NAMES: Record<string, string> = {
 }
 
 function getModel() {
-  if (process.env.ANTHROPIC_API_KEY) {
-    const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-    return anthropic('claude-sonnet-4-6')
+  // 優先順位 1：DeepSeek (超低成本、高質量中文/越文翻譯)
+  const deepseekKey = process.env.DEEPSEEK_API_KEY?.trim()
+  if (deepseekKey) {
+    const deepseek = createOpenAI({
+      apiKey: deepseekKey,
+      baseURL: 'https://api.deepseek.com',
+    })
+    return deepseek.chat('deepseek-chat')
   }
+
+  // DeepSeek 備援：OpenRouter DeepSeek
+  if (process.env.OPENROUTER_API_KEY) {
+    const openrouter = createOpenAI({
+      apiKey: process.env.OPENROUTER_API_KEY,
+      baseURL: 'https://openrouter.ai/api/v1',
+    })
+    return openrouter.chat('deepseek/deepseek-chat')
+  }
+
+  // 優先順位 2：Google Gemini 2.5 Flash (快速、低成本備援)
   if (process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
     const google = createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY })
     return google('gemini-2.5-flash')
   }
+
+  // 優先順位 3：OpenAI gpt-4o-mini
   if (process.env.OPENAI_API_KEY) {
     const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY })
     return openai('gpt-4o-mini')
   }
+
   return null
 }
 
