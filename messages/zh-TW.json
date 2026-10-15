@@ -10195,7 +10195,12 @@
     "refImage": "參考圖片",
     "folderPicked": "已選資料夾",
     "fetching": "取圖中…",
-    "another": "換一張"
+    "another": "換一張",
+    "directUpload": "直接上傳圖片",
+    "fromDrive": "Google Drive",
+    "uploadHint": "點擊或拖曳圖片至此（JPG、PNG、WebP）",
+    "uploading": "上傳中…",
+    "clearImage": "清除圖片"
   },
   "ProductLaunches": {
     "status": {

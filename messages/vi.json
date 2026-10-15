@@ -10198,7 +10198,12 @@
     "refImage": "Ảnh tham khảo",
     "folderPicked": "Thư mục đã chọn",
     "fetching": "Đang lấy ảnh…",
-    "another": "Đổi ảnh khác"
+    "another": "Đổi ảnh khác",
+    "directUpload": "Tải ảnh trực tiếp",
+    "fromDrive": "Google Drive",
+    "uploadHint": "Nhấp hoặc kéo thả ảnh vào đây (JPG, PNG, WebP)",
+    "uploading": "Đang tải lên…",
+    "clearImage": "Xóa ảnh"
   },
   "ProductLaunches": {
     "status": {

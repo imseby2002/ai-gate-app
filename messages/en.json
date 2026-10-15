@@ -10198,7 +10198,12 @@
     "refImage": "Reference image",
     "folderPicked": "Selected folder",
     "fetching": "Fetching image…",
-    "another": "Another one"
+    "another": "Another one",
+    "directUpload": "Upload directly",
+    "fromDrive": "Google Drive",
+    "uploadHint": "Click or drag image here (JPG, PNG, WebP)",
+    "uploading": "Uploading…",
+    "clearImage": "Clear image"
   },
   "ProductLaunches": {
     "status": {
