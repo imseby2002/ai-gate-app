@@ -10203,7 +10203,14 @@
     "fromDrive": "Google Drive",
     "uploadHint": "Click or drag image here (JPG, PNG, WebP)",
     "uploading": "Uploading…",
-    "clearImage": "Clear image"
+    "clearImage": "Clear image",
+    "companyAssets": "Company Assets",
+    "allAssets": "All",
+    "storePhotos": "Store Photos",
+    "productPhotos": "Product Photos",
+    "brandAssets": "Brand Assets",
+    "noCompanyAssets": "No photos in company assets yet. You can add photos in Company Profile or upload directly.",
+    "loadingAssets": "Loading company assets…"
   },
   "ProductLaunches": {
     "status": {

@@ -10200,7 +10200,14 @@
     "fromDrive": "Google Drive",
     "uploadHint": "點擊或拖曳圖片至此（JPG、PNG、WebP）",
     "uploading": "上傳中…",
-    "clearImage": "清除圖片"
+    "clearImage": "清除圖片",
+    "companyAssets": "公司資源庫",
+    "allAssets": "全部",
+    "storePhotos": "門市照片",
+    "productPhotos": "產品照片",
+    "brandAssets": "品牌素材",
+    "noCompanyAssets": "公司資源庫尚無照片。您可在「公司資料」中維護門市或產品照片，或在上方直接上傳。",
+    "loadingAssets": "載入公司資源庫中…"
   },
   "ProductLaunches": {
     "status": {

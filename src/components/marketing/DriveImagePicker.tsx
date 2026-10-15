@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { FolderOpen, RefreshCw, Upload, Link, ExternalLink, X, Image as ImageIcon, Loader2 } from 'lucide-react'
+import { FolderOpen, RefreshCw, Upload, Link, ExternalLink, X, Image as ImageIcon, Loader2, Building2, Package, Palette, CheckCircle2 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 
 interface DriveFolder { id: string; name: string }
@@ -12,6 +12,14 @@ interface PickedImage {
   mimeType: string
 }
 
+interface CompanyAsset {
+  id: string
+  url: string
+  name: string
+  category: 'store' | 'product' | 'brand'
+  subGroup?: string
+}
+
 interface Props {
   folderId?: string
   folderName?: string
@@ -19,6 +27,22 @@ interface Props {
   onImagePicked: (img: PickedImage | null) => void
   pickedImage: PickedImage | null
   label?: string
+}
+
+async function urlToDataUrl(url: string): Promise<string> {
+  if (url.startsWith('data:')) return url
+  try {
+    const res = await fetch(url)
+    const blob = await res.blob()
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = reject
+      reader.readAsDataURL(blob)
+    })
+  } catch {
+    return url
+  }
 }
 
 export default function DriveImagePicker({
@@ -30,23 +54,63 @@ export default function DriveImagePicker({
   label,
 }: Props) {
   const t = useTranslations('DrivePicker')
-  const [sourceMode, setSourceMode] = useState<'upload' | 'drive'>('upload')
+  const [sourceMode, setSourceMode] = useState<'company' | 'upload' | 'drive'>('company')
+
+  // Company assets state
+  const [companyAssets, setCompanyAssets] = useState<CompanyAsset[]>([])
+  const [loadingAssets, setLoadingAssets] = useState(false)
+  const [assetFilter, setAssetFilter] = useState<'all' | 'store' | 'product' | 'brand'>('all')
+
+  // Google Drive state
   const [connected, setConnected] = useState<boolean | null>(null)
   const [email, setEmail] = useState('')
   const [folders, setFolders] = useState<DriveFolder[]>([])
   const [loadingFolders, setLoadingFolders] = useState(false)
+  const [showFolderPicker, setShowFolderPicker] = useState(false)
+
+  // General loading & error
   const [loadingImage, setLoadingImage] = useState(false)
   const [error, setError] = useState('')
-  const [showFolderPicker, setShowFolderPicker] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Check connection status
+  // Load company assets
+  useEffect(() => {
+    setLoadingAssets(true)
+    fetch('/api/marketing/company-assets')
+      .then(r => r.json())
+      .then(d => {
+        if (d.assets) setCompanyAssets(d.assets)
+      })
+      .catch(() => {})
+      .finally(() => setLoadingAssets(false))
+  }, [])
+
+  // Check Google Drive connection status
   useEffect(() => {
     fetch('/api/integrations/google-drive/status')
       .then(r => r.json())
       .then(d => { setConnected(d.connected); setEmail(d.email ?? '') })
       .catch(() => setConnected(false))
   }, [])
+
+  const handleSelectCompanyAsset = async (asset: CompanyAsset) => {
+    setLoadingImage(true)
+    setError('')
+    try {
+      const dataUrl = await urlToDataUrl(asset.url)
+      onImagePicked({
+        fileId: asset.id,
+        name: asset.name,
+        dataUrl,
+        publicUrl: asset.url,
+        mimeType: 'image/jpeg',
+      })
+    } catch (e) {
+      setError(String(e))
+    } finally {
+      setLoadingImage(false)
+    }
+  }
 
   const handleFileUpload = async (file: File) => {
     if (!file.type.startsWith('image/')) {
@@ -132,15 +196,37 @@ export default function DriveImagePicker({
     }
   }, [onImagePicked])
 
+  const filteredAssets = companyAssets.filter(a => {
+    if (assetFilter === 'all') return true
+    return a.category === assetFilter
+  })
+
   return (
     <div className="space-y-3">
-      {/* Header and Source Switcher */}
+      {/* Header & Source Tabs */}
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <span className="text-xs font-medium text-gray-700 flex items-center gap-1.5">
+        <span className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
           <ImageIcon className="w-3.5 h-3.5 text-gray-500" />
           {label ?? t('refImage')}
         </span>
         <div className="flex items-center gap-1 bg-gray-100 p-0.5 rounded-lg">
+          <button
+            type="button"
+            onClick={() => setSourceMode('company')}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${
+              sourceMode === 'company'
+                ? 'bg-white text-gray-900 shadow-sm font-semibold'
+                : 'text-gray-500 hover:text-gray-800'
+            }`}
+          >
+            <Building2 className="w-3 h-3 text-indigo-600" />
+            {t('companyAssets')}
+            {companyAssets.length > 0 && (
+              <span className="ml-1 text-[9px] bg-indigo-100 text-indigo-700 px-1 py-0.2 rounded-full font-bold">
+                {companyAssets.length}
+              </span>
+            )}
+          </button>
           <button
             type="button"
             onClick={() => setSourceMode('upload')}
@@ -150,7 +236,7 @@ export default function DriveImagePicker({
                 : 'text-gray-500 hover:text-gray-800'
             }`}
           >
-            <Upload className="w-3 h-3" />
+            <Upload className="w-3 h-3 text-blue-600" />
             {t('directUpload')}
           </button>
           <button
@@ -162,13 +248,128 @@ export default function DriveImagePicker({
                 : 'text-gray-500 hover:text-gray-800'
             }`}
           >
-            <FolderOpen className="w-3 h-3" />
+            <FolderOpen className="w-3 h-3 text-amber-500" />
             {t('fromDrive')}
           </button>
         </div>
       </div>
 
-      {/* Mode 1: Direct File Upload */}
+      {/* Mode 1: Company Asset Library (門市、產品、品牌) */}
+      {sourceMode === 'company' && (
+        <div className="space-y-2 p-3 bg-white rounded-xl border">
+          {/* Filter Pills */}
+          <div className="flex items-center gap-1.5 flex-wrap pb-1 border-b">
+            <button
+              type="button"
+              onClick={() => setAssetFilter('all')}
+              className={`px-2 py-0.5 rounded-md text-[11px] font-medium transition-all ${
+                assetFilter === 'all'
+                  ? 'bg-indigo-600 text-white font-semibold'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              {t('allAssets')} ({companyAssets.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setAssetFilter('store')}
+              className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition-all ${
+                assetFilter === 'store'
+                  ? 'bg-indigo-600 text-white font-semibold'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              <Building2 className="w-2.5 h-2.5" />
+              {t('storePhotos')} ({companyAssets.filter(a => a.category === 'store').length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setAssetFilter('product')}
+              className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition-all ${
+                assetFilter === 'product'
+                  ? 'bg-indigo-600 text-white font-semibold'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              <Package className="w-2.5 h-2.5" />
+              {t('productPhotos')} ({companyAssets.filter(a => a.category === 'product').length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setAssetFilter('brand')}
+              className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition-all ${
+                assetFilter === 'brand'
+                  ? 'bg-indigo-600 text-white font-semibold'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              <Palette className="w-2.5 h-2.5" />
+              {t('brandAssets')} ({companyAssets.filter(a => a.category === 'brand').length})
+            </button>
+          </div>
+
+          {/* Photo Grid */}
+          {loadingAssets ? (
+            <div className="flex items-center justify-center py-6 gap-2 text-xs text-gray-500">
+              <Loader2 className="w-4 h-4 animate-spin text-indigo-600" />
+              {t('loadingAssets')}
+            </div>
+          ) : filteredAssets.length > 0 ? (
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 max-h-56 overflow-y-auto p-1">
+              {filteredAssets.map(asset => {
+                const isSelected = pickedImage?.fileId === asset.id || pickedImage?.publicUrl === asset.url
+                return (
+                  <button
+                    key={asset.id}
+                    type="button"
+                    onClick={() => handleSelectCompanyAsset(asset)}
+                    className={`group relative rounded-lg overflow-hidden border-2 transition-all aspect-square bg-gray-50 text-left ${
+                      isSelected
+                        ? 'border-indigo-600 ring-2 ring-indigo-200'
+                        : 'border-transparent hover:border-indigo-300'
+                    }`}
+                  >
+                    <img src={asset.url} alt={asset.name} className="w-full h-full object-cover" />
+                    {asset.subGroup && (
+                      <span className="absolute bottom-0 inset-x-0 bg-black/60 backdrop-blur-xs text-[9px] text-white px-1 py-0.5 truncate font-medium">
+                        {asset.subGroup}
+                      </span>
+                    )}
+                    {isSelected && (
+                      <div className="absolute inset-0 bg-indigo-600/30 flex items-center justify-center">
+                        <CheckCircle2 className="w-5 h-5 text-white drop-shadow" />
+                      </div>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="py-6 px-4 text-center space-y-2">
+              <p className="text-xs text-gray-500">{t('noCompanyAssets')}</p>
+              <div className="flex justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSourceMode('upload')}
+                  className="inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100"
+                >
+                  <Upload className="w-3 h-3" />
+                  {t('directUpload')}
+                </button>
+                <a
+                  href="/marketing/brand"
+                  target="_blank"
+                  className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-lg border text-gray-600 hover:bg-gray-50"
+                >
+                  前往維護公司資料 ↗
+                </a>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Mode 2: Direct File Upload */}
       {sourceMode === 'upload' && (
         <div className="space-y-2">
           {!pickedImage ? (
@@ -230,7 +431,7 @@ export default function DriveImagePicker({
         </div>
       )}
 
-      {/* Mode 2: Google Drive */}
+      {/* Mode 3: Google Drive */}
       {sourceMode === 'drive' && (
         <div className="space-y-2">
           {connected === null ? (
@@ -301,7 +502,7 @@ export default function DriveImagePicker({
         </div>
       )}
 
-      {/* Picked image preview (shared for both upload & drive) */}
+      {/* Picked image preview (shared for all sources) */}
       {pickedImage && (
         <div className="relative rounded-xl overflow-hidden border border-gray-200 bg-gray-50 group">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -323,3 +524,4 @@ export default function DriveImagePicker({
     </div>
   )
 }
+

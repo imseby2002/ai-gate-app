@@ -10203,7 +10203,14 @@
     "fromDrive": "Google Drive",
     "uploadHint": "Nhấp hoặc kéo thả ảnh vào đây (JPG, PNG, WebP)",
     "uploading": "Đang tải lên…",
-    "clearImage": "Xóa ảnh"
+    "clearImage": "Xóa ảnh",
+    "companyAssets": "Tài nguyên công ty",
+    "allAssets": "Tất cả",
+    "storePhotos": "Hình ảnh cửa hàng",
+    "productPhotos": "Hình ảnh sản phẩm",
+    "brandAssets": "Tài liệu thương hiệu",
+    "noCompanyAssets": "Chưa có hình trong tài nguyên công ty. Bạn có thể thêm hình ở mục Thông tin công ty hoặc tải lên trực tiếp bên dưới.",
+    "loadingAssets": "Đang tải tài nguyên công ty…"
   },
   "ProductLaunches": {
     "status": {
