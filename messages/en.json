@@ -1950,7 +1950,11 @@
       "quickFillStore": "Quick apply store info:",
       "selectStoreToFill": "Select store to auto-fill address & hours...",
       "companyAssetsFacts": "Company Resource Facts (Brand highlights, product specs, store info)",
-      "insertToTopic": "Insert to Topic"
+      "insertToTopic": "Insert to Topic",
+      "autoPilot": "1-Click Auto-Pilot Generation",
+      "autoPiloting": "Auto-generating full article...",
+      "aiSuggestedTopics": "✨ AI Proactive Topic Recommendations (click to apply):",
+      "autoPilotHint": "No manual prompt needed: AI analyzes company resources, picks high-value questions and writes the full article in seconds!"
     },
     "features": {
       "templates": {

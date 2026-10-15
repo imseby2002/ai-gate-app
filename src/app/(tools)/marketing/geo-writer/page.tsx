@@ -11,6 +11,7 @@ import {
   Wrench, Bot, ScrollText, Gauge as GaugeIcon,
   Library, Plus, Trash2, MapPin, UserCircle,
   History, Eye, Calendar, Building2, Store,
+  Rocket, Lightbulb, Zap,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -22,6 +23,12 @@ type VolumeSource = 'measured' | 'estimated' | 'unknown'
 interface GeoQuestion {
   id: string; question: string; intent: Intent
   opportunity_score?: number; volume_source?: VolumeSource
+}
+interface SuggestedTopic {
+  title: string
+  tag: string
+  reason: string
+  exclusiveFacts: string
 }
 interface GeoArticle { articleId?: string; title: string; body_md: string; json_ld: unknown }
 interface HistoryProject {
@@ -279,6 +286,70 @@ export default function GeoWriterPage() {
     const line = f.text?.trim()
     if (!line) return
     setExclusiveFacts(prev => prev ? `${prev}\n${line}` : line)
+  }
+
+  // AI 主動推薦主題與 Auto-Pilot 巡航
+  const [suggestedTopics, setSuggestedTopics] = useState<SuggestedTopic[]>([])
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false)
+  const [runningAutoPilot, setRunningAutoPilot] = useState(false)
+
+  const fetchSuggestedTopics = useCallback(async () => {
+    setLoadingSuggestions(true)
+    try {
+      const res = await fetch('/api/marketing/geo/auto-pilot')
+      if (res.ok) {
+        const data = await res.json()
+        if (data.topics) setSuggestedTopics(data.topics)
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLoadingSuggestions(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchSuggestedTopics()
+  }, [fetchSuggestedTopics])
+
+  async function runAutoPilot(forcedTopic?: string) {
+    setError('')
+    setRunningAutoPilot(true)
+    try {
+      const targetTopic = forcedTopic || topic
+      const res = await fetch('/api/marketing/geo/auto-pilot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic: targetTopic, locale }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'error')
+
+      setProjectId(data.projectId)
+      setTopic(data.topic)
+      if (data.exclusiveFacts) setExclusiveFacts(data.exclusiveFacts)
+      if (data.author) setAuthor(data.author)
+      if (data.targetDomain) setTargetDomain(data.targetDomain)
+
+      const qs: GeoQuestion[] = data.questions ?? []
+      setQuestions(qs)
+      setSelected(new Set(qs.map((_, i) => i)))
+      setArticle(data.article)
+      setPublishedUrl(null)
+      setTracking([])
+      setCitability(null)
+      setReport(null)
+      setScored(true)
+
+      setTimeout(() => {
+        const el = document.getElementById('geo-article-result')
+        if (el) el.scrollIntoView({ behavior: 'smooth' })
+      }, 200)
+    } catch (e) {
+      setError(String(e instanceof Error ? e.message : e))
+    } finally {
+      setRunningAutoPilot(false)
+    }
   }
 
   const bz = (k: keyof BusinessProfile, v: string) => setBusiness(b => ({ ...b, [k]: v }))
@@ -1029,6 +1100,112 @@ export default function GeoWriterPage() {
           </div>
         )}
 
+        {/* 一鍵全自動巡航生成區塊 */}
+        <div className="rounded-xl border-2 border-indigo-500/40 bg-gradient-to-r from-indigo-50/80 via-purple-50/50 to-pink-50/30 dark:from-indigo-950/40 dark:via-purple-950/30 dark:to-pink-950/20 p-5 space-y-3.5 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 rounded-lg bg-indigo-600 text-white shadow-sm">
+                  <Rocket className="h-4 w-4" />
+                </span>
+                <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                  {t('geo.autoPilot')}
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-600 text-white tracking-wider">
+                    AUTO-PILOT
+                  </span>
+                </h2>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-400">
+                {t('geo.autoPilotHint')}
+              </p>
+            </div>
+
+            <Button
+              onClick={() => runAutoPilot()}
+              disabled={runningAutoPilot}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm shrink-0 h-9 px-4 font-semibold text-xs"
+            >
+              {runningAutoPilot ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                  {t('geo.autoPiloting')}
+                </>
+              ) : (
+                <>
+                  <Zap className="h-3.5 w-3.5 mr-1.5 fill-current" />
+                  {t('geo.autoPilot')}
+                </>
+              )}
+            </Button>
+          </div>
+
+          {/* AI 主動推薦主題群 */}
+          {suggestedTopics.length > 0 && (
+            <div className="pt-2 border-t border-indigo-200/50 dark:border-indigo-800/50 space-y-2">
+              <div className="flex items-center justify-between text-xs text-indigo-900 dark:text-indigo-200 font-medium">
+                <span className="flex items-center gap-1.5">
+                  <Lightbulb className="h-3.5 w-3.5 text-amber-500" />
+                  {t('geo.aiSuggestedTopics')}
+                </span>
+                <button
+                  onClick={fetchSuggestedTopics}
+                  disabled={loadingSuggestions}
+                  className="text-[11px] text-indigo-600 hover:underline flex items-center gap-1"
+                >
+                  <RefreshCw className={cn("h-3 w-3", loadingSuggestions && "animate-spin")} />
+                  {t('geo.refresh')}
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {suggestedTopics.map((st, i) => (
+                  <div
+                    key={i}
+                    className="p-2.5 rounded-lg border bg-card/80 hover:bg-card hover:border-indigo-400 dark:hover:border-indigo-700 transition-all text-xs flex flex-col justify-between gap-2 shadow-2xs group"
+                  >
+                    <div>
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+                          {st.tag}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground truncate">{st.reason}</span>
+                      </div>
+                      <p className="font-medium text-foreground group-hover:text-indigo-600 transition-colors">
+                        {st.title}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 pt-1 border-t border-border/50 justify-end">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 text-[11px] px-2"
+                        onClick={() => {
+                          setTopic(st.title)
+                          if (st.exclusiveFacts) {
+                            setExclusiveFacts(prev => prev ? `${prev}\n${st.exclusiveFacts}` : st.exclusiveFacts)
+                          }
+                        }}
+                      >
+                        帶入表單
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="h-6 text-[11px] px-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 dark:bg-indigo-950 dark:text-indigo-300 dark:border-indigo-800"
+                        disabled={runningAutoPilot}
+                        onClick={() => runAutoPilot(st.title)}
+                      >
+                        <Zap className="h-2.5 w-2.5 mr-1" />
+                        直接以此產出
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Step 1: input */}
         <div className="bg-card rounded-xl border p-5 space-y-4 shadow-sm">
           <h2 className="text-sm font-semibold">{t('geo.step1')}</h2>
@@ -1139,7 +1316,7 @@ export default function GeoWriterPage() {
 
         {/* Step 3: article */}
         {article && (
-          <div className="bg-card rounded-xl border p-5 space-y-4 shadow-sm">
+          <div id="geo-article-result" className="bg-card rounded-xl border p-5 space-y-4 shadow-sm scroll-mt-6">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold flex items-center gap-2">
                 <FileText className="h-4 w-4 text-indigo-600" />

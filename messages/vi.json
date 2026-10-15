@@ -1950,7 +1950,11 @@
       "quickFillStore": "Áp dụng nhanh thông tin cửa hàng:",
       "selectStoreToFill": "Chọn cửa hàng để tự động điền địa chỉ & giờ mở cửa...",
       "companyAssetsFacts": "Dữ liệu thực tế từ Kho tài nguyên (Điểm bán hàng, thông số, cửa hàng)",
-      "insertToTopic": "Chèn vào chủ đề"
+      "insertToTopic": "Chèn vào chủ đề",
+      "autoPilot": "Tạo bài viết toàn diện 1-Click",
+      "autoPiloting": "Đang tự động viết bài...",
+      "aiSuggestedTopics": "✨ AI chủ động gợi ý chủ đề (nhấn để áp dụng):",
+      "autoPilotHint": "Không cần tìm câu hỏi thủ công, AI quét kho tài nguyên và viết bài viết chuẩn GEO ngay lập tức!"
     },
     "features": {
       "templates": {
