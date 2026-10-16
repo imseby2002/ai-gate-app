@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { isSuperAdminUser } from '@/lib/auth/admin-check'
 import { resolveActiveCompanyId } from '@/lib/company/activeCompany'
+import { syncEmployeeFromProfile } from '@/lib/hr/account-sync'
 
 interface ManagementAuth {
   user: { id: string; email?: string }
@@ -80,9 +81,16 @@ export async function GET(req: NextRequest) {
   const { data, error } = await query
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  // 已綁定人事資料的帳號：於名冊標示對應員工
+  const ids = (data ?? []).map(u => u.id)
+  const { data: linked } = ids.length
+    ? await supabase.from('hr_employees').select('profile_id, name').in('profile_id', ids)
+    : { data: [] }
+  const empName = new Map((linked ?? []).map(e => [e.profile_id as string, e.name as string]))
   const usersWithStore = (data ?? []).map(u => ({
     ...u,
     store_code: u.store_code || u.department || null,
+    hr_employee_name: empName.get(u.id) ?? null,
   }))
   return NextResponse.json({ users: usersWithStore })
 }
@@ -144,6 +152,12 @@ export async function PATCH(req: NextRequest) {
     .eq('id', userId)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // 回寫綁定的人事資料，維持單位與門市只有一份
+  await syncEmployeeFromProfile(supabase, userId, {
+    units: Array.isArray(updates.units) ? updates.units : undefined,
+    storeCode: updates.store_code !== undefined ? (updates.store_code ? String(updates.store_code).trim() : null) : undefined,
+  })
 
   return NextResponse.json({ success: true })
 }

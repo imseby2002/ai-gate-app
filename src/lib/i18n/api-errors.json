@@ -435,7 +435,9 @@
    "缺少 id": "Missing id",
    "AI 服務暫時無法使用，請稍後再試": "AI service is temporarily unavailable, please try again later",
    "找不到候選點": "Site not found",
-   "請先填寫地址或區域": "Please fill in an address or area first"
+   "請先填寫地址或區域": "Please fill in an address or area first",
+   "此系統帳號不屬於本公司": "This system account does not belong to your company",
+   "未設定會員 APP 後端（FT_API_BASE_URL）": "Member app backend is not configured (FT_API_BASE_URL)"
   },
   "vi": {
    "AI 回傳格式錯誤": "AI trả về sai định dạng",
@@ -884,7 +886,9 @@
    "缺少 id": "Thiếu id",
    "AI 服務暫時無法使用，請稍後再試": "Dịch vụ AI tạm thời không khả dụng, vui lòng thử lại sau",
    "找不到候選點": "Không tìm thấy mặt bằng",
-   "請先填寫地址或區域": "Vui lòng điền địa chỉ hoặc khu vực trước"
+   "請先填寫地址或區域": "Vui lòng điền địa chỉ hoặc khu vực trước",
+   "此系統帳號不屬於本公司": "Tài khoản hệ thống này không thuộc công ty của bạn",
+   "未設定會員 APP 後端（FT_API_BASE_URL）": "Chưa cấu hình hệ thống app thành viên (FT_API_BASE_URL)"
   },
   "zh-TW": {
    "Unauthorized": "未登入或登入已過期",
@@ -1196,6 +1200,11 @@
    "re": "^缺少必填欄位：(.+)$",
    "en": "Missing required field: {1}",
    "vi": "Thiếu trường bắt buộc: {1}"
+  },
+  {
+   "re": "^此系統帳號已綁定員工「(.+?)」$",
+   "en": "This system account is already linked to employee \"{1}\"",
+   "vi": "Tài khoản hệ thống này đã liên kết với nhân viên \"{1}\""
   }
  ]
 }

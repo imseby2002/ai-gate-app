@@ -4768,7 +4768,8 @@
       "saving": "儲存中...",
       "saved": "變更已儲存",
       "saveAll": "儲存權限設定",
-      "userCount": "共 {count} 位成員"
+      "userCount": "共 {count} 位成員",
+      "linkedEmployee": "人事資料：{name}（單位與門市同步）"
     },
     "proposals": {
       "title": "全體問題與想法提案中樞",
@@ -5126,7 +5127,23 @@
     "type_general": "總務",
     "type_accounting": "會計",
     "type_hr": "人事",
-    "type_repair": "維修"
+    "type_repair": "維修",
+    "appImport": "從會員 APP 匯入門市",
+    "appImportTitle": "從會員 APP 後台匯入門市",
+    "appImportDesc": "門市清單來自會員 APP 後台（iPOS 門市）。勾選要建立的門市並確認門市代碼（已依人事資料的門市代碼建議），已建立的門市會更新名稱、地址與電話。",
+    "appImportFailed": "讀取會員 APP 門市失敗",
+    "appImportResult": "已建立 {created} 間、更新 {updated} 間",
+    "appColCode": "門市代碼",
+    "appColName": "名稱",
+    "appColAddress": "地址",
+    "appColStoreNo": "APP 門市編號",
+    "appColStatus": "狀態",
+    "appLinked": "已建立（{code}）",
+    "appNew": "未建立",
+    "appInactive": "APP 停用",
+    "appPicked": "已選 {n} / {total}",
+    "appClose": "關閉",
+    "appImportBtn": "建立／更新 {n} 間門市"
   },
   "Gm": {
     "adminOnly": "僅總經理室可使用",
@@ -7564,7 +7581,16 @@
     "payrollF_pit_contract": "個人所得稅（勞動合約）",
     "payrollF_pit_casual": "個人所得稅（短期 10%）",
     "payrollF_employer_insurance": "公司負擔保險",
-    "payrollF_employer_union": "公司負擔工會費"
+    "payrollF_employer_union": "公司負擔工會費",
+    "unitsLabel": "所屬單位（可多選）",
+    "storeLockedLabel": "系統帳號只能看本店資料（店長、領班勾選；區督導不勾）",
+    "systemAccountLabel": "系統帳號",
+    "noSystemAccount": "— 不需要系統帳號 —",
+    "linkedToOther": "已綁定 {name}",
+    "systemAccountHint": "綁定後，帳號的單位權限與門市鎖定以這裡為準。店長、領班與辦公室人員才需要系統帳號；所有員工都能用打卡編號登入員工專區。",
+    "missingBirthday": "缺生日",
+    "missingBirthdayFilter": "缺生日（{n}）",
+    "missingBirthdayHint": "沒有生日的員工無法第一次登入員工專區，請補上。"
   },
   "FinancePage": {
     "accountBalancesTitle": "各帳戶結餘",

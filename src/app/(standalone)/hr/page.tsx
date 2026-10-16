@@ -13,6 +13,7 @@ import { ExcelImportModal } from '@/components/common/ExcelImportModal'
 import type { ImportColumn } from '@/lib/excel/universal-import'
 import { ContractsTab } from '@/components/hr/ContractsTab'
 import { UnionTab } from '@/components/hr/UnionTab'
+import { getLocalizedUnitAreas } from '@/lib/org-units'
 
 // ─── Types ───────────────────────────────────────────────────────
 type Tab = 'recruitment' | 'attendance' | 'payroll' | 'evaluation' | 'contracts' | 'insurance' | 'union' | 'employees' | 'leave'
@@ -41,8 +42,14 @@ interface Employee {
   payroll_code: string
   store: string
   bank_name: string
+  birthday: string | null
+  units: string[]
+  store_locked: boolean
+  profile_id: string | null
   created_at: string
 }
+
+interface SysAccount { id: string; full_name: string | null; email: string | null; employee: { id: string; name: string } | null }
 
 interface InsSettings { insurance_mode: string; insurance_threshold: number; insurance_currency: string }
 const DEFAULT_INS_SETTINGS: InsSettings = { insurance_mode: 'threshold', insurance_threshold: 5000000, insurance_currency: 'VND' }
@@ -122,6 +129,7 @@ const EMPTY_EMP: Omit<Employee, 'id' | 'created_at'> = {
   staff_category: 'fulltime', insurance_required: false, insurance_status: 'none',
   insurance_number: '', insurance_salary: 0,
   hourly_rate: 0, attendance_no: '', payroll_code: '', store: '', bank_name: '',
+  birthday: null, units: [], store_locked: true, profile_id: null,
 }
 
 const getLabels = (t: (key: string) => string): Record<string, string> => ({
@@ -254,12 +262,14 @@ function SelectEl({ value, onChange, options, disabled }: {
 }
 
 // ─── Employee Form ────────────────────────────────────────────────
-function EmployeeForm({ initial, onSave, onCancel, saving, settings }: {
+function EmployeeForm({ initial, onSave, onCancel, saving, settings, accounts, employeeId }: {
   initial: Omit<Employee, 'id' | 'created_at'>
   onSave: (d: Omit<Employee, 'id' | 'created_at'>) => void
   onCancel: () => void
   saving: boolean
   settings: InsSettings
+  accounts: SysAccount[]
+  employeeId?: string
 }) {
   const t = useTranslations('HrPage')
   const locale = useLocale()
@@ -268,6 +278,18 @@ function EmployeeForm({ initial, onSave, onCancel, saving, settings }: {
   const INS_STATUS_LABEL = getInsStatusLabel(t)
   const [d, setD] = useState(initial)
   const set = (k: keyof typeof d, v: string | number | boolean | null) => setD(prev => ({ ...prev, [k]: v }))
+  const unitAreas = getLocalizedUnitAreas(locale)
+  const units = d.units ?? []
+  const hasUnit = (key: string) => key === 'marketing' || key === 'mkt' ? units.includes('marketing') || units.includes('mkt') : units.includes(key)
+  const toggleUnit = (key: string) => setD(prev => {
+    const cur = prev.units ?? []
+    const isMkt = key === 'marketing' || key === 'mkt'
+    const on = isMkt ? cur.includes('marketing') || cur.includes('mkt') : cur.includes(key)
+    const next = on
+      ? cur.filter(x => isMkt ? x !== 'marketing' && x !== 'mkt' : x !== key)
+      : [...cur, ...(isMkt ? ['marketing', 'mkt'] : [key])]
+    return { ...prev, units: next }
+  })
   const suggested = suggestInsurance(d.staff_category, Number(d.base_salary) || 0, settings)
 
   return (
@@ -295,10 +317,45 @@ function EmployeeForm({ initial, onSave, onCancel, saving, settings }: {
         <Field label={t('bankAccountLabel')}><InputEl value={d.bank_account} onChange={v => set('bank_account', v)} placeholder={t('bankAccountPlaceholder')} disabled={saving} /></Field>
         <Field label={t('bankNameLabel')}><InputEl value={d.bank_name} onChange={v => set('bank_name', v)} placeholder={t('bankNamePlaceholder')} disabled={saving} /></Field>
         <Field label={t('idNumberLabel')}><InputEl value={d.id_number} onChange={v => set('id_number', v)} placeholder="A123456789" disabled={saving} /></Field>
+        <Field label={t('birthdayLabel')}><InputEl value={d.birthday ?? ''} onChange={v => set('birthday', v || null)} type="date" disabled={saving} /></Field>
         <Field label={t('empStatusLabel')}>
           <SelectEl value={d.status} onChange={v => set('status', v)}
             options={EMP_STATUS.map(s => ({ value: s, label: LABELS[s] ?? s }))} disabled={saving} />
         </Field>
+      </div>
+
+      {/* 所屬單位與系統帳號 */}
+      <div className="space-y-2 rounded-lg border bg-white p-3 dark:bg-gray-900/40">
+        <div className="text-sm font-medium">{t('unitsLabel')}</div>
+        <div className="flex flex-wrap gap-1.5">
+          {unitAreas.filter(a => a.key !== 'mkt').map(a => (
+            <button key={a.key} type="button" disabled={saving} onClick={() => toggleUnit(a.key)}
+              className={`px-2.5 py-1 rounded-full text-xs border ${hasUnit(a.key) ? 'bg-primary text-primary-foreground border-primary' : 'bg-white text-gray-600'}`}>
+              {a.label}
+            </button>
+          ))}
+        </div>
+        {units.includes('store') && (
+          <label className="flex items-center gap-1.5 text-xs text-gray-600">
+            <input type="checkbox" checked={d.store_locked !== false} onChange={e => set('store_locked', e.target.checked)} disabled={saving} className="h-4 w-4" />
+            {t('storeLockedLabel')}
+          </label>
+        )}
+        <Field label={t('systemAccountLabel')}>
+          <select value={d.profile_id ?? ''} onChange={e => set('profile_id', e.target.value || null)} disabled={saving}
+            className="h-9 w-full rounded-md border px-2 text-sm bg-white">
+            <option value="">{t('noSystemAccount')}</option>
+            {accounts.map(a => {
+              const other = a.employee && a.employee.id !== employeeId ? a.employee : null
+              return (
+                <option key={a.id} value={a.id} disabled={!!other}>
+                  {a.full_name || a.email || a.id.slice(0, 8)}{a.email && a.full_name ? ` (${a.email})` : ''}{other ? ` — ${t('linkedToOther', { name: other.name })}` : ''}
+                </option>
+              )
+            })}
+          </select>
+        </Field>
+        <p className="text-xs text-gray-500">{t('systemAccountHint')}</p>
       </div>
 
       {/* 保險 */}
@@ -555,6 +612,11 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
   const [docsEmp, setDocsEmp] = useState<Employee | null>(null)
   const [empDocs, setEmpDocs] = useState<{ loading: boolean; linked: boolean; docs: CandDoc[]; checklist: CheckItem[] }>({ loading: false, linked: false, docs: [], checklist: [] })
   const DOC_CATALOG = getDocCatalog(t)
+  const [accounts, setAccounts] = useState<SysAccount[]>([])
+  const loadAccounts = useCallback(() => {
+    fetch('/api/hr/employees/accounts').then(r => r.ok ? r.json() : { accounts: [] }).then(d => setAccounts(d.accounts ?? []))
+  }, [])
+  useEffect(() => { loadAccounts() }, [loadAccounts])
 
   async function openEmpDocs(emp: Employee) {
     setDocsEmp(emp); setEmpDocs({ loading: true, linked: false, docs: [], checklist: [] })
@@ -579,12 +641,11 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
   const save = async (data: Omit<Employee, 'id' | 'created_at'>) => {
     setSaving(true); setErr('')
     try {
-      if (editing) {
-        await fetch('/api/hr/employees', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: editing.id, ...data }) })
-      } else {
-        await fetch('/api/hr/employees', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
-      }
-      setShowForm(false); setEditing(null); onRefresh()
+      const res = editing
+        ? await fetch('/api/hr/employees', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: editing.id, ...data }) })
+        : await fetch('/api/hr/employees', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
+      if (!res.ok) { setErr((await res.json().catch(() => ({}))).error ?? t('saveFailed')); return }
+      setShowForm(false); setEditing(null); onRefresh(); loadAccounts()
     } catch { setErr(t('saveFailed')) } finally { setSaving(false) }
   }
 
@@ -594,7 +655,10 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
     onRefresh()
   }
 
-  const filtered = statusFilter === 'all' ? employees : employees.filter(e => e.status === statusFilter)
+  const noBirthday = employees.filter(e => e.status === 'active' && !e.birthday)
+  const filtered = statusFilter === 'all' ? employees
+    : statusFilter === 'nobirthday' ? noBirthday
+    : employees.filter(e => e.status === statusFilter)
 
   return (
     <div className="space-y-4">
@@ -604,6 +668,11 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
             {s === 'all' ? t('allWithCount', { n: employees.length }) : t('labelWithCount', { label: LABELS[s] ?? s, n: employees.filter(e => e.status === s).length })}
           </Button>
         ))}
+        {noBirthday.length > 0 && (
+          <Button size="sm" variant={statusFilter === 'nobirthday' ? 'default' : 'ghost'} className="text-amber-700" title={t('missingBirthdayHint')} onClick={() => setStatusFilter('nobirthday')}>
+            {t('missingBirthdayFilter', { n: noBirthday.length })}
+          </Button>
+        )}
         <div className="ml-auto flex items-center gap-2">
           <Button size="sm" variant="outline" className="gap-1" onClick={() => setShowSettings(v => !v)}>
             <Shield className="h-4 w-4" />{t('insuranceSettings')}
@@ -646,7 +715,7 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
       )}
 
       {showForm && !editing && (
-        <EmployeeForm initial={{ ...EMPTY_EMP }} onSave={save} onCancel={() => setShowForm(false)} saving={saving} settings={settings} />
+        <EmployeeForm initial={{ ...EMPTY_EMP }} onSave={save} onCancel={() => setShowForm(false)} saving={saving} settings={settings} accounts={accounts} />
       )}
       {err && <p className="text-sm text-red-500">{err}</p>}
 
@@ -671,6 +740,7 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
                     {emp.department && <span className="text-xs text-gray-400">{emp.department}</span>}
                     {emp.position && <span className="text-xs text-gray-400">· {emp.position}</span>}
                     <StatusBadge value={emp.status} kind="emp" />
+                    {emp.status === 'active' && !emp.birthday && <Badge variant="outline" className="text-amber-700 border-amber-300" title={t('missingBirthdayHint')}>{t('missingBirthday')}</Badge>}
                     <Badge variant={emp.staff_category === 'hourly' ? 'secondary' : 'default'}>{STAFF_LABEL[emp.staff_category] ?? emp.staff_category}</Badge>
                     {emp.insurance_required
                       ? <Badge variant={emp.insurance_status === 'enrolled' ? 'success' : 'destructive'} className="gap-1"><Shield className="h-3 w-3" />{INS_STATUS_LABEL[emp.insurance_status] ?? t('insPending')}</Badge>
@@ -697,7 +767,7 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
 
               {editing?.id === emp.id && (
                 <div className="px-4 pb-4">
-                  <EmployeeForm initial={{ ...emp }} onSave={save} onCancel={() => setEditing(null)} saving={saving} settings={settings} />
+                  <EmployeeForm initial={{ ...emp, units: emp.units ?? [], store_locked: emp.store_locked !== false }} onSave={save} onCancel={() => setEditing(null)} saving={saving} settings={settings} accounts={accounts} employeeId={emp.id} />
                 </div>
               )}
 

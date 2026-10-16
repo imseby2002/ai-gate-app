@@ -4768,7 +4768,8 @@
       "saving": "Đang lưu...",
       "saved": "Đã lưu thay đổi",
       "saveAll": "Lưu thiết lập phân quyền",
-      "userCount": "Tổng cộng {count} thành viên"
+      "userCount": "Tổng cộng {count} thành viên",
+      "linkedEmployee": "Hồ sơ nhân sự: {name} (đơn vị và cửa hàng đồng bộ)"
     },
     "proposals": {
       "title": "Trung Tâm Đề Xuất Vấn Đề & Ý Tưởng",
@@ -5126,7 +5127,23 @@
     "type_general": "Tổng vụ",
     "type_accounting": "Kế toán",
     "type_hr": "Nhân sự",
-    "type_repair": "Sửa chữa"
+    "type_repair": "Sửa chữa",
+    "appImport": "Nhập cửa hàng từ app thành viên",
+    "appImportTitle": "Nhập cửa hàng từ hệ thống app thành viên",
+    "appImportDesc": "Danh sách lấy từ hệ thống app thành viên (cửa hàng iPOS). Chọn cửa hàng cần tạo và kiểm tra mã cửa hàng (gợi ý theo mã cửa hàng trong Nhân sự). Cửa hàng đã tạo sẽ được cập nhật tên, địa chỉ và điện thoại.",
+    "appImportFailed": "Không tải được cửa hàng từ app thành viên",
+    "appImportResult": "Đã tạo {created}, cập nhật {updated}",
+    "appColCode": "Mã cửa hàng",
+    "appColName": "Tên",
+    "appColAddress": "Địa chỉ",
+    "appColStoreNo": "Mã cửa hàng app",
+    "appColStatus": "Trạng thái",
+    "appLinked": "Đã tạo ({code})",
+    "appNew": "Chưa tạo",
+    "appInactive": "Ngưng trên app",
+    "appPicked": "Đã chọn {n} / {total}",
+    "appClose": "Đóng",
+    "appImportBtn": "Tạo/cập nhật {n} cửa hàng"
   },
   "Gm": {
     "adminOnly": "Chỉ Văn phòng Tổng Giám Đốc được sử dụng",
@@ -7564,7 +7581,16 @@
     "payrollF_pit_contract": "Thuế TNCN (HĐLĐ)",
     "payrollF_pit_casual": "Thuế TNCN (vãng lai 10%)",
     "payrollF_employer_insurance": "BHXH doanh nghiệp",
-    "payrollF_employer_union": "KPCĐ doanh nghiệp"
+    "payrollF_employer_union": "KPCĐ doanh nghiệp",
+    "unitsLabel": "Đơn vị trực thuộc (chọn nhiều)",
+    "storeLockedLabel": "Tài khoản hệ thống chỉ xem dữ liệu cửa hàng này (tích cho cửa hàng trưởng, tổ trưởng; bỏ tích cho giám sát khu vực)",
+    "systemAccountLabel": "Tài khoản hệ thống",
+    "noSystemAccount": "— Không cần tài khoản hệ thống —",
+    "linkedToOther": "Đã liên kết {name}",
+    "systemAccountHint": "Sau khi liên kết, quyền đơn vị và khóa cửa hàng của tài khoản theo hồ sơ này. Chỉ cửa hàng trưởng, tổ trưởng và nhân viên văn phòng cần tài khoản hệ thống; mọi nhân viên đều đăng nhập Trang nhân viên bằng mã chấm công.",
+    "missingBirthday": "Thiếu ngày sinh",
+    "missingBirthdayFilter": "Thiếu ngày sinh ({n})",
+    "missingBirthdayHint": "Nhân viên chưa có ngày sinh không thể đăng nhập Trang nhân viên lần đầu. Vui lòng bổ sung."
   },
   "FinancePage": {
     "accountBalancesTitle": "Số dư theo tài khoản",

@@ -4768,7 +4768,8 @@
       "saving": "Saving...",
       "saved": "Changes saved",
       "saveAll": "Save Access Settings",
-      "userCount": "{count} members total"
+      "userCount": "{count} members total",
+      "linkedEmployee": "HR record: {name} (units and store synced)"
     },
     "proposals": {
       "title": "Company Problems & Ideas Hub",
@@ -5126,7 +5127,23 @@
     "type_general": "General Affairs",
     "type_accounting": "Accounting",
     "type_hr": "HR",
-    "type_repair": "Repair"
+    "type_repair": "Repair",
+    "appImport": "Import stores from member app",
+    "appImportTitle": "Import stores from the member app backend",
+    "appImportDesc": "The list comes from the member app backend (iPOS stores). Tick the stores to create and check each store code (suggested from the store codes in HR). Stores already created get their name, address and phone updated.",
+    "appImportFailed": "Couldn't load stores from the member app",
+    "appImportResult": "Created {created}, updated {updated}",
+    "appColCode": "Store code",
+    "appColName": "Name",
+    "appColAddress": "Address",
+    "appColStoreNo": "App store no.",
+    "appColStatus": "Status",
+    "appLinked": "Created ({code})",
+    "appNew": "Not created",
+    "appInactive": "Inactive in app",
+    "appPicked": "{n} of {total} selected",
+    "appClose": "Close",
+    "appImportBtn": "Create/update {n} stores"
   },
   "Gm": {
     "adminOnly": "Only GM Office can use this",
@@ -7564,7 +7581,16 @@
     "payrollF_pit_contract": "PIT (contract)",
     "payrollF_pit_casual": "PIT (casual 10%)",
     "payrollF_employer_insurance": "Employer insurance",
-    "payrollF_employer_union": "Employer union fee"
+    "payrollF_employer_union": "Employer union fee",
+    "unitsLabel": "Units (multiple allowed)",
+    "storeLockedLabel": "System account sees only this store (tick for store managers and leaders; untick for area supervisors)",
+    "systemAccountLabel": "System account",
+    "noSystemAccount": "— No system account —",
+    "linkedToOther": "Linked to {name}",
+    "systemAccountHint": "Once linked, the account's unit permissions and store lock follow this record. Only store managers, leaders and office staff need a system account; every employee can log in to the employee portal with their attendance number.",
+    "missingBirthday": "No birthday",
+    "missingBirthdayFilter": "No birthday ({n})",
+    "missingBirthdayHint": "Employees without a birthday can't log in to the employee portal for the first time. Please add it."
   },
   "FinancePage": {
     "accountBalancesTitle": "Balance by account",
