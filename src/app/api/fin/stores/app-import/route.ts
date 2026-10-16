@@ -17,11 +17,10 @@ function suggestCode(name: string, used: Set<string>): string {
   return initials
 }
 
-// 列出會員 APP 後台的門市，標示是否已建立、建議門市代碼
+// 列出會員 APP 後台的門市，標示是否已建立、建議門市代碼（門市清單本身公開，公司成員皆可查看；建立仍限管理者）
 export async function GET() {
   const ctx = await getCompanyContext()
   if (!ctx.ok) return NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status })
-  if (!ctx.isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   let stores
   try {
@@ -44,6 +43,7 @@ export async function GET() {
       return { ...s, linked: linked ? { id: linked.id, code: linked.code } : null, suggested_code: linked?.code ?? suggestCode(s.name, hrCodes) }
     }),
     hr_codes: [...hrCodes].sort(),
+    can_import: ctx.isAdmin,
   })
 }
 
