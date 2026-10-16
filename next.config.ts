@@ -15,6 +15,7 @@ const nextConfig: NextConfig = {
     '/api/docs/marketing-manual': ['./docs/marketing-manual.pdf', './docs/marketing-manual.en.pdf', './docs/marketing-manual.vi.pdf'],
     '/api/docs/affairs-manual': ['./docs/affairs-manual.pdf', './docs/affairs-manual.en.pdf', './docs/affairs-manual.vi.pdf'],
     '/api/docs/rd-manual': ['./docs/rd-manual.pdf', './docs/rd-manual.en.pdf', './docs/rd-manual.vi.pdf'],
+    '/api/docs/store-manual': ['./docs/store-manual.pdf', './docs/store-manual.en.pdf', './docs/store-manual.vi.pdf'],
   },
   typescript: {
     // 避免歷史邊緣頁面型別推導差異阻礙 Vercel 上線部署

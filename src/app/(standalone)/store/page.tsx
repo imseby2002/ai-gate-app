@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl'
 import {
   Store, BarChart3, Boxes, Receipt, Wrench, Calendar, ShoppingBag,
   ArrowRight, ArrowLeft, ShieldCheck, CheckCircle2, Building2,
-  Sparkles, ExternalLink, RefreshCw, Loader2, Compass
+  Sparkles, ExternalLink, RefreshCw, Loader2, Compass, BookOpen, Download
 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -137,12 +137,23 @@ export default function StoreDepartmentHubPage() {
           </div>
         </div>
 
-        <Link href="/office">
-          <Button variant="outline" size="sm" className="gap-1.5 text-xs">
-            <ArrowLeft className="h-4 w-4" />
-            {t('backToOffice')}
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <a href="/api/docs/store-manual" target="_blank" rel="noreferrer">
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+              <BookOpen className="h-4 w-4" />
+              {t('manualDoc')}
+            </Button>
+          </a>
+          <a href="/api/docs/store-manual?download=1" title={t('manualDownload')}>
+            <Button variant="outline" size="sm" className="px-2"><Download className="h-4 w-4" /></Button>
+          </a>
+          <Link href="/office">
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+              <ArrowLeft className="h-4 w-4" />
+              {t('backToOffice')}
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* 門市帳號鎖定提示（若綁定門市） */}

@@ -5217,7 +5217,9 @@
     "feature_pos_desc": "Đặt hàng thu ngân tại quầy, tùy chỉnh đồ uống, in phiếu và thanh toán bán hàng theo thời gian thực.",
     "feature_pos_tags": "Đặt hàng tại quầy、In phiếu thu ngân、Bán hàng thời gian thực",
     "open": "Mở {title}",
-    "enter": "Vào"
+    "enter": "Vào",
+    "manualDoc": "Hướng dẫn sử dụng",
+    "manualDownload": "Tải hướng dẫn sử dụng (PDF)"
   },
   "Shift": {
     "weekday_sun": "CN",
