@@ -12,7 +12,8 @@ export async function extractXlsx(arrayBuffer: ArrayBuffer): Promise<string> {
 
 export async function extractDocx(arrayBuffer: ArrayBuffer): Promise<string> {
   const mammoth = await import('mammoth')
-  const result = await mammoth.extractRawText({ arrayBuffer })
+  // Node 版 mammoth 只認得 { path } / { buffer } / { file }，傳 { arrayBuffer } 會 reject「Could not find file in options」
+  const result = await mammoth.extractRawText({ buffer: Buffer.from(arrayBuffer) })
   return result.value
 }
 
