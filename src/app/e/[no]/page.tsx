@@ -3,7 +3,7 @@
 // 員工專區：<公司子網域>/e/<打卡編號>。首次以生日（DDMMYYYY）登入並設定自己的密碼，之後用密碼登入。
 import { useCallback, useEffect, useState, use } from 'react'
 import Link from 'next/link'
-import { Loader2, LogOut, KeyRound, FileText, CheckCircle2 } from 'lucide-react'
+import { Loader2, LogOut, KeyRound, FileText, CheckCircle2, CalendarDays } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 
@@ -131,9 +131,129 @@ export default function EmployeePortalPage({ params }: { params: Promise<{ no: s
                 ))}
               </div>
             </Card>
+            <ShiftCard api={api} />
           </>
         )}
       </div>
     </div>
+  )
+}
+
+interface Period {
+  id: string; title: string; start_date: string; end_date: string; status: string
+  slots: { code: string; label: string }[]; dates: string[]; selected: string[]; assigned: string[]
+}
+
+// 預設時段代碼的越文名稱；自訂時段沿用店長設定的名稱
+const SLOT_VI: Record<string, string> = { am: 'Sáng', pm: 'Chiều', night: 'Tối' }
+const slotName = (s: { code: string; label: string }) => (SLOT_VI[s.code] ? `${SLOT_VI[s.code]} / ${s.label}` : s.label)
+const WD = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7']
+const wd = (d: string) => WD[new Date(d + 'T00:00:00Z').getUTCDay()] ?? ''
+
+// 工讀生：可上班時段與已確認班表
+function ShiftCard({ api }: { api: string }) {
+  const [periods, setPeriods] = useState<Period[] | null>(null)
+  const [open, setOpen] = useState('')
+  const [sel, setSel] = useState<Set<string>>(new Set())
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState('')
+  const [msgOk, setMsgOk] = useState(true)
+
+  const load = useCallback(async () => {
+    const r = await fetch(`${api}/shifts`)
+    const d = r.ok ? await r.json() : null
+    setPeriods(d?.partTime ? d.periods : null)
+  }, [api])
+
+  useEffect(() => { load() }, [load])
+
+  if (!periods) return null
+
+  const edit = (p: Period) => { setOpen(open === p.id ? '' : p.id); setSel(new Set(p.selected)); setMsg('') }
+  const toggle = (k: string) => setSel(prev => { const n = new Set(prev); if (n.has(k)) n.delete(k); else n.add(k); return n })
+
+  async function submit(p: Period) {
+    setBusy(true); setMsg('')
+    const r = await fetch(`${api}/shifts`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ period_id: p.id, selected: [...sel] }) })
+    const d = await r.json().catch(() => ({}))
+    setBusy(false)
+    setMsgOk(r.ok)
+    if (!r.ok) { setMsg(d.error ?? 'Gửi thất bại / 送出失敗'); return }
+    setMsg('Đã gửi / 已送出 ✓')
+    await load()
+  }
+
+  return (
+    <Card className="p-5 space-y-3">
+      <h2 className="font-bold flex items-center gap-2"><CalendarDays className="h-4 w-4" /> Thời gian có thể làm / 可上班時段</h2>
+      {periods.length === 0 && <p className="text-sm text-slate-500">Chưa có kỳ xếp ca / 目前沒有排班期</p>}
+      {periods.map(p => {
+        const confirmed = p.status === 'confirmed'
+        return (
+          <div key={p.id} className="border rounded-xl p-3 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <div className="font-medium text-sm">{p.title || `${p.start_date} ~ ${p.end_date}`}</div>
+                <div className="text-xs text-slate-500">{p.start_date} ~ {p.end_date}</div>
+              </div>
+              {confirmed
+                ? <span className="text-xs px-2 py-1 rounded-full bg-emerald-50 text-emerald-700">Đã chốt lịch / 已確認</span>
+                : <button onClick={() => edit(p)} className="text-sm px-3 py-1.5 rounded-lg border text-indigo-700">
+                  {p.selected.length ? `Sửa / 修改 (${p.selected.length})` : 'Điền / 填寫'}
+                </button>}
+            </div>
+            {confirmed && (
+              <div className="text-sm">
+                <div className="text-xs text-slate-500 mb-1">Lịch làm của tôi / 我的班表</div>
+                {p.assigned.length === 0 && <p className="text-slate-500">Không có ca / 未排班</p>}
+                {[...p.assigned].sort().map(k => {
+                  const [d, code] = k.split('|')
+                  const slot = p.slots.find(s => s.code === code)
+                  return <div key={k}>{d.slice(5)} ({wd(d)}) · {slot ? slotName(slot) : code}</div>
+                })}
+              </div>
+            )}
+            {!confirmed && open === p.id && (
+              <div className="space-y-2">
+                <p className="text-xs text-slate-500">Chọn ngày và ca bạn có thể làm rồi bấm Gửi. 勾選可以上班的日期與時段後送出。</p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr>
+                        <th className="text-left py-1 text-slate-500 font-normal">Ngày / 日期</th>
+                        {p.slots.map(s => <th key={s.code} className="py-1 text-slate-500 font-normal">{slotName(s)}</th>)}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {p.dates.map(d => (
+                        <tr key={d} className="border-t">
+                          <td className="py-1 whitespace-nowrap">{d.slice(5)} <span className="text-slate-400">({wd(d)})</span></td>
+                          {p.slots.map(s => {
+                            const k = `${d}|${s.code}`
+                            const on = sel.has(k)
+                            return (
+                              <td key={s.code} className="text-center py-1">
+                                <button onClick={() => toggle(k)} className={`w-9 h-9 rounded-lg border ${on ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white text-slate-300'}`}>{on ? '✓' : ''}</button>
+                              </td>
+                            )
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-600">Đã chọn / 已選 <b>{sel.size}</b></span>
+                  <Button onClick={() => submit(p)} disabled={busy} className="h-10 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl">
+                    {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Gửi / 送出'}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        )
+      })}
+      {msg && <p className={`text-sm ${msgOk ? 'text-emerald-700' : 'text-red-600'}`}>{msg}</p>}
+    </Card>
   )
 }

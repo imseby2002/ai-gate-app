@@ -5234,7 +5234,7 @@
     "statusConfirmed": "Đã xác nhận",
     "adminOnly": "Chỉ đơn vị cửa hàng được sử dụng lịch làm việc",
     "title": "Lịch làm việc cửa hàng",
-    "subtitle": "Tạo kỳ lịch → nhân viên điền khung giờ có thể làm qua liên kết riêng → tổng hợp (đề xuất tự động và gửi là bước tiếp theo)",
+    "subtitle": "Tạo kỳ lịch → nhân viên bán thời gian điền giờ có thể làm trong Trang nhân viên (hoặc qua liên kết riêng) → đề xuất tự động → xác nhận và gửi",
     "inventory": "Kiểm kê・Đặt hàng",
     "store": "Cửa hàng",
     "storePlaceholder": "Cửa hàng (VD: YL)",

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { listDates } from '@/lib/shift/util'
+import { saveAvailability } from '@/lib/shift/availability'
 
 type Ctx = { params: Promise<{ token: string }> }
 type Admin = ReturnType<typeof createAdminClient>
@@ -40,27 +41,9 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   const r = await resolve(admin, token)
   if (!r) return NextResponse.json({ error: '連結無效' }, { status: 404 })
   const { tok, period } = r
-  if (period.status === 'confirmed') return NextResponse.json({ error: '此排班已確認，無法再修改' }, { status: 409 })
-
-  const validDates = new Set(listDates(period.start_date, period.end_date))
-  const validSlots = new Set((Array.isArray(period.slots) ? period.slots : []).map((x: { code: string }) => x.code))
   const body = await req.json().catch(() => ({}))
-  const picks = Array.isArray(body.selected) ? body.selected : []
-  const rows: { owner_id: string; period_id: string; employee_id: string; work_date: string; slot_code: string }[] = []
-  const seen = new Set<string>()
-  for (const p of picks) {
-    const [d, slot] = String(p).split('|')
-    if (!validDates.has(d) || !validSlots.has(slot) || seen.has(`${d}|${slot}`)) continue
-    seen.add(`${d}|${slot}`)
-    rows.push({ owner_id: tok.owner_id, period_id: period.id, employee_id: tok.employee_id, work_date: d, slot_code: slot })
-  }
-
-  // 整份覆寫：先刪自己的、再插入
-  await admin.from('shift_availability').delete().eq('period_id', period.id).eq('employee_id', tok.employee_id)
-  if (rows.length > 0) {
-    const { error } = await admin.from('shift_availability').insert(rows)
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  }
+  const res = await saveAvailability(admin, period, tok.owner_id, tok.employee_id, body.selected)
+  if ('error' in res) return NextResponse.json({ error: res.error }, { status: res.status })
   await admin.from('shift_tokens').update({ submitted_at: new Date().toISOString() }).eq('token', token)
-  return NextResponse.json({ ok: true, saved: rows.length })
+  return NextResponse.json({ ok: true, saved: res.saved })
 }

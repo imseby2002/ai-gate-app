@@ -5234,7 +5234,7 @@
     "statusConfirmed": "Confirmed",
     "adminOnly": "Only store units can use scheduling",
     "title": "Store Scheduling",
-    "subtitle": "Create a period → employees submit availability via a dedicated link → summarize (auto-suggest and send are next steps)",
+    "subtitle": "Create a period → part-time staff enter availability in the employee portal (or via their link) → auto-suggest → confirm & send",
     "inventory": "Inventory & Ordering",
     "store": "Store",
     "storePlaceholder": "Store (e.g. YL)",
