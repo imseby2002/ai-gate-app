@@ -7,6 +7,8 @@ import { ArrowLeft, FileText, Loader2, Plus, Trash2, Upload, X } from 'lucide-re
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { getLocalizedDepartments } from '@/lib/org-units'
+import { createClient } from '@/lib/supabase/client'
+import { KNOWLEDGE_BUCKET } from '@/lib/knowledge/constants'
 
 interface Doc {
   id: string; department: string; title: string; source_type: string; file_name: string | null
@@ -53,14 +55,28 @@ export function KnowledgePage() {
     if (!file && !form.text.trim()) { setMsg(t('needContent')); return }
     if (!file && !form.title.trim()) { setMsg(t('needTitle')); return }
     setBusy(true); setMsg('')
-    const fd = new FormData()
-    fd.append('department', form.department)
-    fd.append('title', form.title)
-    if (file) fd.append('file', file); else fd.append('text', form.text)
-    const res = await fetch('/api/knowledge', { method: 'POST', body: fd }).catch(() => null)
+    const fail = (err?: string) => { setBusy(false); setMsg(err === 'unsupported_type' ? t('unsupported') : t('saveFailed')) }
+    let payload: Record<string, string> = { department: form.department, title: form.title }
+    if (file) {
+      // 檔案先直傳 Storage，避開 Vercel 4.5MB 請求上限（含圖片的 Word/PDF 常超過）
+      const ur = await fetch('/api/knowledge/upload-url', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ department: form.department, fileName: file.name }),
+      }).catch(() => null)
+      const u = await ur?.json().catch(() => ({}))
+      if (!ur?.ok) { fail(u?.error); return }
+      const { error: upErr } = await createClient().storage.from(KNOWLEDGE_BUCKET).uploadToSignedUrl(u.path, u.token, file)
+      if (upErr) { fail(); return }
+      payload = { ...payload, storagePath: u.path, fileName: file.name }
+    } else {
+      payload.text = form.text
+    }
+    const res = await fetch('/api/knowledge', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+    }).catch(() => null)
     setBusy(false)
     const d = await res?.json().catch(() => ({}))
-    if (!res?.ok) { setMsg(d?.error === 'unsupported_type' ? t('unsupported') : t('saveFailed')); return }
+    if (!res?.ok) { fail(d?.error); return }
     if (d.truncated) alert(t('truncated'))
     setAdding(false); setForm({ department: '', title: '', text: '' }); setFile(null)
     setReloadKey(k => k + 1)
