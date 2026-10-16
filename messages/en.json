@@ -5025,7 +5025,8 @@
     "cancel": "Cancel",
     "save": "Save",
     "empty": "No logs yet. Add manually, upload Excel, or auto-summarize from R&D discussion AI chats.",
-    "untitled": "(Untitled)"
+    "untitled": "(Untitled)",
+    "manualDoc": "User manual"
   },
   "RdAi": {
     "adminOnly": "Only R&D unit can use R&D Discussion AI",
@@ -5053,7 +5054,8 @@
     "knowledgeTitlePlaceholder": "Title (optional)",
     "knowledgeContentPlaceholder": "Content…",
     "add": "Add",
-    "knowledgeEmpty": "No knowledge entries yet"
+    "knowledgeEmpty": "No knowledge entries yet",
+    "manualDoc": "User manual"
   },
   "AuditLogs": {
     "title": "Audit Logs",
@@ -6502,7 +6504,8 @@
     "runAgentAnalysis": "Run Agent Analysis",
     "agentReportTitle": "Agent R&D Analysis Report",
     "agentError": "Error: {msg}",
-    "agentErrorFallback": "Please check your API key"
+    "agentErrorFallback": "Please check your API key",
+    "manualDoc": "User manual"
   },
   "StoreBills": {
     "pageTitle": "Store Utilities, Gas & Ice Bill Reporting",
@@ -6761,7 +6764,9 @@
     "pushDone": "✅ \"{name}\" has been sent to marketing!\nMarketing can continue in \"Marketing → Product assets → New product launch pipeline\" to plan the VIP early-access period and launch schedule.",
     "pushFailed": "Failed to send",
     "pushTitle": "Send to marketing to start a product launch",
-    "pushBtn": "Send to launch"
+    "pushBtn": "Send to launch",
+    "manualDoc": "User manual",
+    "manualDownload": "Download user manual (PDF)"
   },
   "AuditPlatform": {
     "knowledgeCoreStatus": "COMPANY KNOWLEDGE CORE — shared enterprise knowledge layer connected",

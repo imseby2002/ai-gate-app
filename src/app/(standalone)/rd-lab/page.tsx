@@ -195,6 +195,12 @@ export default function RdLabPage() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          <a href="/api/docs/rd-manual" target="_blank" rel="noreferrer">
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+              <BookOpen className="h-3.5 w-3.5" />
+              {t('manualDoc')}
+            </Button>
+          </a>
           <Link href="/rd">
             <Button variant="outline" size="sm" className="gap-1.5 text-xs">
               <FileText className="h-3.5 w-3.5" />
