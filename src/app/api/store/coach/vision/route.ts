@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getUnitContext } from '@/lib/auth/unit-access'
 import type { VisionAnalysisResult } from '@/lib/types/store-coach'
 import { generateText } from 'ai'
+import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { createOpenAI } from '@ai-sdk/openai'
+import { trackAiUsage } from '@/lib/ai/universal-tracker'
 
 export const maxDuration = 90
 
@@ -34,6 +36,7 @@ export async function POST(req: NextRequest) {
       mimeType = body.mime_type || 'image/jpeg'
     }
 
+    const hasGoogle = !!(process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY)
     const hasAnthropic = !!process.env.ANTHROPIC_API_KEY
     const hasOpenAI = !!process.env.OPENAI_API_KEY
 
@@ -81,9 +84,45 @@ export async function POST(req: NextRequest) {
   "immediate_coaching_tip": "督導或店長可當場讚美夥伴的吧檯乾燥度，並引導示範果糖嘴 60 秒快閃清潔流程。"
 }`
 
-    if (imageBase64 && (hasAnthropic || hasOpenAI)) {
+    if (imageBase64 && (hasGoogle || hasAnthropic || hasOpenAI)) {
       try {
-        if (hasAnthropic) {
+        if (hasGoogle) {
+          const google = createGoogleGenerativeAI({
+            apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY,
+          })
+          const res = await generateText({
+            model: google('gemini-2.5-flash'),
+            messages: [
+              {
+                role: 'user',
+                content: [
+                  { type: 'text', text: systemPrompt },
+                  {
+                    type: 'image',
+                    image: `data:${mimeType};base64,${imageBase64}`,
+                  },
+                ],
+              },
+            ],
+          })
+
+          const cleanJson = res.text.replace(/```json/gi, '').replace(/```/g, '').trim()
+          visionResult = JSON.parse(cleanJson)
+
+          const usage = (res as any).usage ?? {}
+          const inTokens = Number(usage.inputTokens ?? usage.promptTokens ?? 0)
+          const outTokens = Number(usage.outputTokens ?? usage.completionTokens ?? 0)
+          if (inTokens > 0 || outTokens > 0) {
+            void trackAiUsage({
+              feature: 'store_coach',
+              modelId: 'gemini-2.5-flash',
+              inputTokens: inTokens,
+              outputTokens: outTokens,
+              sourceChannel: 'google',
+              metadata: { module: 'store_coach_vision', photo: true },
+            })
+          }
+        } else if (hasAnthropic) {
           const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
           const res = await generateText({
             model: anthropic('claude-sonnet-4-5'),
@@ -104,6 +143,20 @@ export async function POST(req: NextRequest) {
 
           const cleanJson = res.text.replace(/```json/gi, '').replace(/```/g, '').trim()
           visionResult = JSON.parse(cleanJson)
+
+          const usage = (res as any).usage ?? {}
+          const inTokens = Number(usage.inputTokens ?? usage.promptTokens ?? 0)
+          const outTokens = Number(usage.outputTokens ?? usage.completionTokens ?? 0)
+          if (inTokens > 0 || outTokens > 0) {
+            void trackAiUsage({
+              feature: 'store_coach',
+              modelId: 'claude-sonnet-4-5',
+              inputTokens: inTokens,
+              outputTokens: outTokens,
+              sourceChannel: 'anthropic',
+              metadata: { module: 'store_coach_vision', photo: true },
+            })
+          }
         } else if (hasOpenAI) {
           const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY })
           const res = await generateText({
@@ -125,6 +178,20 @@ export async function POST(req: NextRequest) {
 
           const cleanJson = res.text.replace(/```json/gi, '').replace(/```/g, '').trim()
           visionResult = JSON.parse(cleanJson)
+
+          const usage = (res as any).usage ?? {}
+          const inTokens = Number(usage.inputTokens ?? usage.promptTokens ?? 0)
+          const outTokens = Number(usage.outputTokens ?? usage.completionTokens ?? 0)
+          if (inTokens > 0 || outTokens > 0) {
+            void trackAiUsage({
+              feature: 'store_coach',
+              modelId: 'gpt-4o',
+              inputTokens: inTokens,
+              outputTokens: outTokens,
+              sourceChannel: 'openai',
+              metadata: { module: 'store_coach_vision', photo: true },
+            })
+          }
         }
       } catch (visionErr) {
         console.warn('Vision AI LLM processing fallback to standard inspection:', visionErr)

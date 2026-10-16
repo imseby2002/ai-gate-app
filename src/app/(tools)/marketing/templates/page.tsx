@@ -9,7 +9,7 @@ import {
   Megaphone, Search, Upload, X, Copy, Check, Download, Loader2, ArrowRight,
   Sliders, RefreshCw, Eye, ExternalLink, HelpCircle, Layers, Image as ImageIcon,
   Share2, Video, Film, Flame, Box, BookOpen, Clock, Smartphone, Monitor,
-  Play, FileText, CheckCircle2, AlertCircle, Send
+  Play, FileText, CheckCircle2, AlertCircle, Send, FolderArchive
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,6 +17,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { SocialPublishModal } from '@/components/marketing/SocialPublishModal'
+import { MarketingAssetArchiveModal } from '@/components/marketing/MarketingAssetArchiveModal'
 import {
   VISUAL_TEMPLATES,
   CATEGORIES as IMAGE_CATEGORIES,
@@ -43,6 +44,7 @@ const ASPECT_RATIOS: { value: '1:1' | '4:5' | '3:4' | '16:9' | '9:16'; label: st
 
 export default function VisualTemplatesPage() {
   const t = useTranslations('MktTemplates')
+  const tMkt = useTranslations('Marketing')
   const tr = useDataDict('templates')
   const imgTemplates = useMemo(() => VISUAL_TEMPLATES.map(x => localizeVisual(x, tr)), [tr])
   const videoTemplates = useMemo(() => VIDEO_TEMPLATES.map(x => localizeVideo(x, tr)), [tr])
@@ -99,6 +101,7 @@ export default function VisualTemplatesPage() {
   const [expandedAiScript, setExpandedAiScript] = useState<string | null>(null)
   const [expandingAiScript, setExpandingAiScript] = useState(false)
   const [showVideoPublishModal, setShowVideoPublishModal] = useState(false)
+  const [archiveOpen, setArchiveOpen] = useState(false)
 
   // ─── 圖片篩選 ───────────────────────────────────────────────────
   const filteredImgTemplates = useMemo(() => {
@@ -423,27 +426,31 @@ ${selectedVideoTemplate.rawScript}
 
       setVideoPollStatus(t('pollSubmitted'))
 
-      // Polling
-      for (let i = 0; i < 40; i++) {
+      // Polling - 延長輪詢至 100 次 (每次 4 秒 = 最多 400 秒 / ~6.7 分鐘)
+      // 進度條平滑漸進至 92%，不再於 160 秒時抵達 90% 便假性超時出錯
+      const MAX_POLLS = 100
+      for (let i = 0; i < MAX_POLLS; i++) {
         await new Promise(r => setTimeout(r, 4000))
-        setVideoPollStatus(t('pollProgress', { p: Math.min(15 + i * 2, 95) }))
+        const simulatedProgress = Math.min(15 + Math.round((i / MAX_POLLS) * 78), 93)
+        setVideoPollStatus(t('pollProgress', { p: simulatedProgress }))
 
         try {
           const pollRes = await fetch(`/api/marketing/generate-video?requestId=${requestId}&model=${videoModel}`)
           const pollData = await pollRes.json()
 
-          if (pollData.status === 'completed' && pollData.url) {
-            setVideoResultUrl(pollData.url)
+          if (pollData.status === 'completed' && (pollData.url || pollData.videoUrl)) {
+            setVideoResultUrl(pollData.url || pollData.videoUrl)
             setVideoPollStatus(null)
             setGeneratingVideo(false)
             return
           }
 
-          if (pollData.status === 'failed') {
+          if (pollData.status === 'failed' || pollData.status === 'error' || !pollRes.ok) {
             throw new Error(pollData.error || t('renderFailed'))
           }
         } catch (pollErr: any) {
-          if (pollErr.message && !pollErr.message.includes('fetch')) {
+          // 若為模型失敗或後端明確拋出的錯誤，立即中斷；若僅為暫時性網路斷線則繼續重試
+          if (pollErr.message && !pollErr.message.includes('fetch') && !pollErr.message.includes('Failed to fetch')) {
             throw pollErr
           }
         }
@@ -477,6 +484,15 @@ ${selectedVideoTemplate.rawScript}
           </div>
 
           <div className="flex items-center gap-2 self-start md:self-auto flex-wrap">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setArchiveOpen(true)}
+              className="gap-1.5 bg-white/20 hover:bg-white/30 text-white border-0 backdrop-blur-xs font-semibold"
+            >
+              <FolderArchive className="h-4 w-4" />
+              <span>{tMkt('archive.btnArchive')}</span>
+            </Button>
             <Link href="/marketing/ai-studio">
               <Button variant="secondary" size="sm" className="gap-1.5 bg-white/20 hover:bg-white/30 text-white border-0 backdrop-blur-xs font-semibold">
                 <Sliders className="h-4 w-4" />
@@ -1489,6 +1505,12 @@ ${selectedVideoTemplate.rawScript}
           t('videoCopy', { title: selectedVideoTemplate.title, product: videoProductName ? t('videoCopyProduct', { p: videoProductName }) : '', key: videoKeyPoint ? t('videoCopyKey', { k: videoKeyPoint }) : '' })
         }
         sourceName={`${t('title')} - ${t('videoStoryboard')} (${selectedVideoTemplate.command})`}
+      />
+
+      {/* 雲端封存資產庫 Modal */}
+      <MarketingAssetArchiveModal
+        open={archiveOpen}
+        onClose={() => setArchiveOpen(false)}
       />
     </div>
   )

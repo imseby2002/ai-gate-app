@@ -1,10 +1,8 @@
 import { getUnitContextAny } from '@/lib/auth/unit-access'
 import { NextRequest, NextResponse } from 'next/server'
 import { generateText } from 'ai'
-import { createAnthropic } from '@ai-sdk/anthropic'
-import { createGoogleGenerativeAI } from '@ai-sdk/google'
-import { createOpenAI } from '@ai-sdk/openai'
-import { createGroq } from '@ai-sdk/groq'
+import { getOfficeTieredModel } from '@/lib/office/tiered-chat-model'
+import { trackAiUsage } from '@/lib/ai/universal-tracker'
 
 export const maxDuration = 60
 
@@ -89,44 +87,34 @@ ${productListStr}
 
   let proposal: any = null
 
-  // 依序嘗試可用之模型
-  if (process.env.ANTHROPIC_API_KEY) {
-    try {
-      const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-      const res = await generateText({
-        model: anthropic('claude-3-5-sonnet-latest'),
-        prompt,
-      })
-      proposal = JSON.parse(res.text.replace(/```json/g, '').replace(/```/g, '').trim())
-    } catch (e) {
-      console.warn('Anthropic generation fallback:', e)
-    }
-  }
+  // 行銷策劃通常需要創意架構與品牌文案，依照是否有涉及複雜策略判斷模型
+  const tierDecision = getOfficeTieredModel({
+    message: `${topic} ${brief}`,
+    additionalComplexKeywords: ['策劃', '活動方案', 'kpi', '品牌定位', '第二杯半價', '轉換率'],
+  })
 
-  if (!proposal && process.env.GEMINI_API_KEY) {
-    try {
-      const google = createGoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY })
-      const res = await generateText({
-        model: google('gemini-2.0-flash'),
-        prompt,
-      })
-      proposal = JSON.parse(res.text.replace(/```json/g, '').replace(/```/g, '').trim())
-    } catch (e) {
-      console.warn('Gemini generation fallback:', e)
-    }
-  }
+  try {
+    const res = await generateText({
+      model: tierDecision.model,
+      prompt,
+    })
+    proposal = JSON.parse(res.text.replace(/```json/g, '').replace(/```/g, '').trim())
 
-  if (!proposal && process.env.GROQ_API_KEY) {
-    try {
-      const groq = createGroq({ apiKey: process.env.GROQ_API_KEY })
-      const res = await generateText({
-        model: groq('llama-3.3-70b-versatile'),
-        prompt,
+    const usage = (res as any).usage ?? {}
+    const inTokens = Number(usage.inputTokens ?? usage.promptTokens ?? 0)
+    const outTokens = Number(usage.outputTokens ?? usage.completionTokens ?? 0)
+    if (inTokens > 0 || outTokens > 0) {
+      void trackAiUsage({
+        feature: 'marketing',
+        modelId: tierDecision.modelId,
+        inputTokens: inTokens,
+        outputTokens: outTokens,
+        sourceChannel: tierDecision.sourceChannel,
+        metadata: { module: 'mkt_campaign_ai_plan', topic },
       })
-      proposal = JSON.parse(res.text.replace(/```json/g, '').replace(/```/g, '').trim())
-    } catch (e) {
-      console.warn('Groq generation fallback:', e)
     }
+  } catch (e) {
+    console.warn('Mkt campaign tiered model generation fallback:', e)
   }
 
   // 若外部模型未配置，提供結構化高品質 fallback

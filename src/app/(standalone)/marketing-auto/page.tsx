@@ -158,7 +158,9 @@ function Unit1Collect({
   const [appIds, setAppIds] = useState(savedData?.appIds?.join('\n') ?? '')
   const [alertRssUrls, setAlertRssUrls] = useState(savedData?.alertRssUrls?.join('\n') ?? '')
   const [limit, setLimit] = useState(10)
-  const [language, setLanguage] = useState('zh-TW')
+  // 預設跟介面語言同步（zh-TW / en / vi），已存過的結果沿用原語言
+  const locale = useLocale()
+  const [language, setLanguage] = useState(savedData?.language ?? (['zh-TW', 'en', 'vi'].includes(locale) ? locale : 'zh-TW'))
   const [running, setRunning] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState<Unit1Data | null>(savedData?.summary ? savedData : null)
@@ -1409,11 +1411,11 @@ const SIZE_OPTIONS = [
 function extractPrompt(content: string): string {
   if (!content?.trim()) return ''
   // 1. Content inside a code block after the label
-  const codeBlockMatch = content.match(/AI\s*生成\s*Prompt[：:][^\n]*\n```[^\n]*\n([\s\S]+?)```/i)
+  const codeBlockMatch = content.match(/(?:AI\s*生成\s*Prompt|Prompt\s*tạo\s*AI|Gợi\s*ý\s*tạo\s*ảnh\s*AI|AI\s*Prompt|Prompt)[：:][^\n]*\n```[^\n]*\n([\s\S]+?)```/i)
   if (codeBlockMatch) return codeBlockMatch[1].trim()
   // 2. Same line or next non-empty line after the label
   const patterns = [
-    /AI\s*生成\s*Prompt[：:]\**\s*(.+?)(?:\n|$)/i,
+    /(?:AI\s*生成\s*Prompt|Prompt\s*tạo\s*AI|Gợi\s*ý\s*tạo\s*ảnh\s*AI|AI\s*Prompt|Prompt\s*AI)[：:]\**\s*(.+?)(?:\n|$)/i,
     /Prompt[：:]\**\s*(.+?)(?:\n|$)/i,
   ]
   for (const re of patterns) {
@@ -1436,14 +1438,20 @@ function buildImageGenPrompt(content: string): string {
   if (!content?.trim()) return ''
   const aiPrompt = extractPrompt(content)
 
-  const extractField = (label: string) => {
-    const re = new RegExp(`${label}[：:]\\**\\s*([\\s\\S]+?)(?=\\n\\s*\\d+[\\.、]|\\n===|$)`, 'i')
-    const m = content.match(re)
-    return m ? m[1].replace(/\*+/g, '').replace(/\n+/g, ' ').trim().slice(0, 120) : ''
+  const extractField = (labels: string[]) => {
+    for (const label of labels) {
+      const re = new RegExp(`${label}[：:]\\**\\s*([\\s\\S]+?)(?=\\n\\s*\\d+[\\.、]|\\n===|$)`, 'i')
+      const m = content.match(re)
+      if (m) {
+        const val = m[1].replace(/\*+/g, '').replace(/\n+/g, ' ').trim().slice(0, 120)
+        if (val.length > 3) return val
+      }
+    }
+    return ''
   }
 
-  const scene = extractField('視覺場景')
-  const style = extractField('色調風格')
+  const scene = extractField(['視覺場景', 'Bối cảnh thị giác', 'Cảnh thị giác', 'Khung cảnh thị giác', 'Khung cảnh', 'Visual scene'])
+  const style = extractField(['色調風格', 'Phong cách tông màu', 'Tông màu phong cách', 'Phong cách màu sắc', 'Màu sắc phong cách', 'Color style'])
 
   const parts = [aiPrompt, scene, style].filter(s => s.length > 3)
   return parts.join('. ')
@@ -2302,7 +2310,7 @@ function extractVideoPrompt(content: string): string {
   if (!content?.trim()) return ''
 
   // 1. Extract entire 分鏡腳本 section (preferred — gives model full visual context)
-  const storyboardMatch = content.match(/分鏡腳本[\s\S]*?\n([\s\S]+?)(?:===|$)/i)
+  const storyboardMatch = content.match(/(?:分鏡腳本|Kịch bản phân cảnh|Phân cảnh storyboard|Phân cảnh|Storyboard)[\s\S]*?\n([\s\S]+?)(?:===|$)/i)
   if (storyboardMatch?.[1]) {
     const storyboard = storyboardMatch[1]
       .split('\n')
@@ -2312,22 +2320,22 @@ function extractVideoPrompt(content: string): string {
     if (storyboard.length > 30) return storyboard.slice(0, 2000)
   }
 
-  // 2. All time-coded storyboard lines — broad regex covers [0-3秒] [0~3s] [00:00-00:03] [第1場] etc.
-  const timeLines = [...content.matchAll(/\[[\d:：\-–~～\s秒sS第場景幕段一二三四五六七八九十百]+\]\s*([^\n|]+)/g)]
+  // 2. All time-coded storyboard lines — broad regex covers [0-3秒] [0~3s] [00:00-00:03] [第1場] [Cảnh 1] etc.
+  const timeLines = [...content.matchAll(/\[[\d:：\-–~～\s秒sS第場景幕段一二三四五六七八九十百CảnhPhân]+\]\s*([^\n|]+)/gi)]
   const timeParts = timeLines.map(m => stripMd(m[1].split('|')[0])).filter(d => d.length > 5)
   if (timeParts.length > 0) {
-    const hookMatch = content.match(/開頭\s*Hook[^）\n]*[）\n][^]*?畫面[：:]\s*(.+?)(?:\n|$)/i)
+    const hookMatch = content.match(/(?:開頭\s*Hook|Hook\s*mở\s*đầu|Mở\s*đầu)[^）\n]*[）\n][^]*?(?:畫面|Khung hình|Cảnh quay|Cảnh)[：:]\s*(.+?)(?:\n|$)/i)
     const hook = hookMatch?.[1] ? [stripMd(hookMatch[1]).slice(0, 100)] : []
     return [...hook, ...timeParts].join('。').slice(0, 2000)
   }
 
   // 3. All 畫面: descriptions
-  const sceneMatches = [...content.matchAll(/畫面[：:]\s*(.+?)(?:\n|$)/gi)]
+  const sceneMatches = [...content.matchAll(/(?:畫面|Khung hình|Cảnh quay|Cảnh)[：:]\s*(.+?)(?:\n|$)/gi)]
   const scenes = sceneMatches.map(m => stripMd(m[1])).filter(Boolean)
   if (scenes.length > 0) return scenes.join('。').slice(0, 2000)
 
   // 4. 影片標題 fallback
-  const titleMatch = content.match(/影片標題[：:]\s*(.+?)(?:\n|$)/i)
+  const titleMatch = content.match(/(?:影片標題|Tiêu đề video)[：:]\s*(.+?)(?:\n|$)/i)
   if (titleMatch?.[1]?.trim()) return stripMd(titleMatch[1])
 
   // 5. Last resort: first meaningful non-header lines
@@ -3148,7 +3156,7 @@ function Unit10ProspectMarketing({
   // ── Phone tab state ──────────────────────────────────────────────────────
   const [script, setScript] = useState(savedData?.script ?? '')
   const [generatingScript, setGeneratingScript] = useState(false)
-  const [scriptLang, setScriptLang] = useState('繁體中文')
+  const [scriptLang, setScriptLang] = useState(locale === 'vi' ? '越南語' : locale === 'en' ? 'English' : '繁體中文')
 
   const [voiceId, setVoiceId] = useState(savedData?.voiceId ?? 'EXAVITQu4vr4xnSDxMaL')
   const [callerId, setCallerId] = useState(savedData?.callerId ?? savedData?.birdCallerId ?? '')
@@ -3794,7 +3802,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
             <span className="text-base">🇻🇳</span>
             <div>
               <div className="font-semibold text-gray-800">{t('x.vnNumber')}</div>
-              <div className="text-[11px] text-gray-500">{t('x.via')} <span className="font-mono font-medium text-sky-700">Stringee Voice</span></div>
+              <div className="text-[11px] text-gray-500">{t('x.via')} <span className="font-mono font-medium text-sky-700">Twilio Voice</span></div>
               <div className="text-[10px] text-sky-600 mt-0.5 font-medium">{t('x.vnVoiceNote')}</div>
             </div>
           </div>
@@ -3892,7 +3900,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
           )}
           {phoneBreakdown.vn > 0 && (
             <span className="px-2 py-1 rounded-md bg-sky-50 text-sky-700 border border-sky-200">
-              🇻🇳 {t('x.vn')}<strong>{phoneBreakdown.vn}</strong> (Stringee Voice)
+              🇻🇳 {t('x.vn')}<strong>{phoneBreakdown.vn}</strong> (Twilio Voice)
             </span>
           )}
           {phoneBreakdown.intl > 0 && (
@@ -3944,7 +3952,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
           </div>
           {savedData?.lastBatch && (
             <div className="text-[10px] text-gray-400">
-              {new Date(savedData.lastBatch.calledAt).toLocaleString(locale)} · ElevenLabs TTS + Twilio / Stringee
+              {new Date(savedData.lastBatch.calledAt).toLocaleString(locale)} · ElevenLabs TTS + Twilio / Bird
             </div>
           )}
         </div>
@@ -3956,11 +3964,8 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
         <div className="flex gap-2 flex-wrap text-[11px]">
           <code className="bg-blue-100 px-1.5 py-0.5 rounded">ELEVENLABS_API_KEY</code>
           <code className="bg-blue-100 px-1.5 py-0.5 rounded">TWILIO_ACCOUNT_SID</code>
-          <code className="bg-blue-100 px-1.5 py-0.5 rounded">TWILIO_API_KEY_SID</code>
-          <code className="bg-blue-100 px-1.5 py-0.5 rounded">TWILIO_API_KEY_SECRET</code>
+          <code className="bg-blue-100 px-1.5 py-0.5 rounded">TWILIO_AUTH_TOKEN</code>
           <code className="bg-blue-100 px-1.5 py-0.5 rounded">TWILIO_FROM_NUMBER</code>
-          <code className="bg-blue-100 px-1.5 py-0.5 rounded">STRINGEE_API_KEY_SID</code>
-          <code className="bg-blue-100 px-1.5 py-0.5 rounded">STRINGEE_API_KEY_SECRET</code>
         </div>
       </div>
       </div>}
@@ -3994,7 +3999,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
                 <span className="text-base">🇻🇳</span>
                 <div>
                   <div className="font-semibold text-gray-800">{t('x.vnNumber')}</div>
-                  <div className="text-[11px] text-gray-500">{t('x.via')} <span className="font-mono font-medium text-teal-700">Stringee / ZNS</span></div>
+                  <div className="text-[11px] text-gray-500">{t('x.via')} <span className="font-mono font-medium text-teal-700">ZNS / Twilio</span></div>
                   <div className="text-[10px] text-teal-600 mt-0.5 font-medium">{t('x.vnSmsNote')}</div>
                 </div>
               </div>
@@ -4109,7 +4114,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
               )}
               {smsBreakdown.vn > 0 && (
                 <span className="px-2 py-1 rounded-md bg-teal-50 text-teal-700 border border-teal-200">
-                  🇻🇳 {t('x.vn')}<strong>{smsBreakdown.vn}</strong> (Stringee / ZNS)
+                  🇻🇳 {t('x.vn')}<strong>{smsBreakdown.vn}</strong> (ZNS / Twilio)
                 </span>
               )}
               {smsBreakdown.intl > 0 && (
@@ -4197,11 +4202,9 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
             <div className="flex gap-2 flex-wrap text-[11px]">
               <span className="bg-white border px-1.5 py-0.5 rounded text-gray-700 font-mono">SMSGET_USERNAME</span>
               <span className="bg-white border px-1.5 py-0.5 rounded text-gray-700 font-mono">SMSGET_PASSWORD</span>
-              <span className="bg-white border px-1.5 py-0.5 rounded text-teal-700 font-mono">STRINGEE_API_KEY_SID</span>
-              <span className="bg-white border px-1.5 py-0.5 rounded text-teal-700 font-mono">STRINGEE_API_KEY_SECRET</span>
+              <span className="bg-white border px-1.5 py-0.5 rounded text-teal-700 font-mono">ZALO_ZNS_ACCESS_TOKEN</span>
               <span className="bg-white border px-1.5 py-0.5 rounded text-blue-700 font-mono">TWILIO_ACCOUNT_SID</span>
-              <span className="bg-white border px-1.5 py-0.5 rounded text-blue-700 font-mono">TWILIO_API_KEY_SID</span>
-              <span className="bg-white border px-1.5 py-0.5 rounded text-blue-700 font-mono">TWILIO_API_KEY_SECRET</span>
+              <span className="bg-white border px-1.5 py-0.5 rounded text-blue-700 font-mono">TWILIO_AUTH_TOKEN</span>
             </div>
           </div>
         </div>

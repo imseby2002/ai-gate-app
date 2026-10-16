@@ -78,17 +78,45 @@ export async function POST(req: NextRequest) {
       const endpoint = FAL_ENDPOINTS[model]
       if (!endpoint) return NextResponse.json({ error: '不支援的模型' }, { status: 400 })
       fal.config({ credentials: apiKey })
-      const input: Record<string, unknown> = { prompt: prompt.trim(), duration, aspect_ratio: aspectRatio }
+
+      // Kling v1.6 嚴格限定 duration 為 '5' 或 '10' 秒
+      const klingDuration = Number(duration) >= 8 ? '10' : '5'
+
+      let refImageUrl = imageUrl
       if (model === 'kling-img2video') {
         if (!imageUrl) return NextResponse.json({ error: '圖生影片需要參考圖片' }, { status: 400 })
         // base64 參考圖先上傳至 fal storage 取得 URL
         if (typeof imageUrl === 'string' && imageUrl.startsWith('data:')) {
-          const blob = await (await fetch(imageUrl)).blob()
-          input.image_url = await fal.storage.upload(blob)
-        } else {
-          input.image_url = imageUrl
+          try {
+            const [header, base64Data] = imageUrl.split(',', 2)
+            const mime = header.match(/:(.*?);/)?.[1] || 'image/jpeg'
+            const buffer = Buffer.from(base64Data, 'base64')
+            const blob = new Blob([buffer], { type: mime })
+            refImageUrl = await fal.storage.upload(blob)
+          } catch (uploadErr) {
+            console.error('[fal storage upload Buffer failed, falling back to fetch]', uploadErr)
+            const blob = await (await fetch(imageUrl)).blob()
+            refImageUrl = await fal.storage.upload(blob)
+          }
         }
       }
+
+      // 注意：fal kling-video/v1.6/standard/image-to-video 不接受 aspect_ratio 參數（由原圖比例決定），傳入會被 Pydantic extra_forbidden 拒絕
+      // 而 text-to-video 僅支援 '16:9' | '9:16' | '1:1'，若為 '4:5' 或 '3:4' 應映射為 '9:16'
+      const validAspect = (aspectRatio === '9:16' || aspectRatio === '16:9' || aspectRatio === '1:1')
+        ? aspectRatio
+        : (aspectRatio === '4:5' || aspectRatio === '3:4' ? '9:16' : '16:9')
+
+      const input: Record<string, unknown> = {
+        prompt: prompt.trim(),
+        duration: klingDuration,
+      }
+      if (model === 'kling-img2video') {
+        input.image_url = refImageUrl
+      } else {
+        input.aspect_ratio = validAspect
+      }
+
       const { request_id } = await fal.queue.submit(endpoint, { input })
       await charge()
       return NextResponse.json({ requestId: request_id, model, scriptId, endpoint, cost, submittedAt: new Date().toISOString() })
@@ -173,17 +201,39 @@ export async function GET(req: NextRequest) {
       const endpoint = FAL_ENDPOINTS[model]
       if (!endpoint) return NextResponse.json({ status: 'error', error: `不支援的模型：${model}` }, { status: 400 })
       fal.config({ credentials: apiKey })
-      const status = await fal.queue.status(endpoint, { requestId, logs: false })
-      const falStatus = status.status as string
-      if (falStatus === 'IN_QUEUE' || falStatus === 'IN_PROGRESS') return NextResponse.json({ status: 'processing', falStatus })
-      if (falStatus === 'FAILED') return NextResponse.json({ status: 'failed', error: '影片生成失敗' })
-      const result = await fal.queue.result(endpoint, { requestId })
-      const output = result.data as Record<string, unknown>
-      const url: string =
-        (output?.video as { url?: string })?.url ??
-        (output?.videos as { url?: string }[])?.[0]?.url ?? ''
-      if (!url) return NextResponse.json({ status: 'error', error: '未收到影片 URL' }, { status: 500 })
-      return NextResponse.json({ status: 'completed', url, requestId, model, scriptId, generatedAt: new Date().toISOString() })
+
+      try {
+        const status = await fal.queue.status(endpoint, { requestId, logs: false })
+        const falStatus = String(status.status || '').toUpperCase()
+        if (falStatus === 'IN_QUEUE' || falStatus === 'IN_PROGRESS') {
+          return NextResponse.json({ status: 'processing', falStatus })
+        }
+        if (falStatus === 'FAILED' || falStatus === 'ERROR') {
+          return NextResponse.json({ status: 'failed', error: '影片生成失敗' }, { status: 200 })
+        }
+
+        const result = await fal.queue.result(endpoint, { requestId })
+        const output = result.data as Record<string, unknown>
+        const url: string =
+          (output?.video as { url?: string })?.url ??
+          (output?.videos as { url?: string }[])?.[0]?.url ?? ''
+        if (!url) {
+          return NextResponse.json({ status: 'failed', error: '未收到影片 URL' }, { status: 200 })
+        }
+        return NextResponse.json({
+          status: 'completed',
+          url,
+          videoUrl: url,
+          requestId,
+          model,
+          scriptId,
+          generatedAt: new Date().toISOString()
+        })
+      } catch (falErr: any) {
+        console.error('[fal queue poll error]', falErr)
+        const errMsg = falErr?.message || falErr?.body?.detail || String(falErr)
+        return NextResponse.json({ status: 'failed', error: errMsg }, { status: 200 })
+      }
     }
 
     // ── Google VEO3 ───────────────────────────────────────────────────────────
@@ -195,11 +245,19 @@ export async function GET(req: NextRequest) {
       })
       const data = await res.json()
       if (!data.done) return NextResponse.json({ status: 'processing' })
-      if (data.error) return NextResponse.json({ status: 'failed', error: data.error.message })
+      if (data.error) return NextResponse.json({ status: 'failed', error: data.error.message }, { status: 200 })
       const url: string =
         data.response?.generateVideoResponse?.generatedSamples?.[0]?.video?.uri ?? ''
-      if (!url) return NextResponse.json({ status: 'error', error: '未收到影片 URL' }, { status: 500 })
-      return NextResponse.json({ status: 'completed', url, requestId, model, scriptId, generatedAt: new Date().toISOString() })
+      if (!url) return NextResponse.json({ status: 'failed', error: '未收到影片 URL' }, { status: 200 })
+      return NextResponse.json({
+        status: 'completed',
+        url,
+        videoUrl: url,
+        requestId,
+        model,
+        scriptId,
+        generatedAt: new Date().toISOString()
+      })
     }
 
     // ── OpenAI SORA ───────────────────────────────────────────────────────────
@@ -212,7 +270,7 @@ export async function GET(req: NextRequest) {
       const data = await res.json()
       if (!res.ok) return NextResponse.json({ status: 'error', error: data.error?.message ?? `SORA 查詢失敗 (${res.status})` }, { status: 500 })
       if (data.status === 'queued' || data.status === 'in_progress') return NextResponse.json({ status: 'processing', progress: data.progress })
-      if (data.status === 'failed') return NextResponse.json({ status: 'failed', error: data.error?.message ?? 'SORA 生成失敗' })
+      if (data.status === 'failed') return NextResponse.json({ status: 'failed', error: data.error?.message ?? 'SORA 生成失敗' }, { status: 200 })
 
       // 完成：影片內容需帶金鑰下載，轉存 Storage 後回傳公開網址
       const fileName = `${user.id}/sora-${requestId}.mp4`
@@ -228,7 +286,15 @@ export async function GET(req: NextRequest) {
         if (uploadErr) return NextResponse.json({ status: 'error', error: `影片儲存失敗：${uploadErr.message}` }, { status: 500 })
       }
       const url = supabase.storage.from('marketing-assets').getPublicUrl(fileName).data.publicUrl
-      return NextResponse.json({ status: 'completed', url, requestId, model, scriptId, generatedAt: new Date().toISOString() })
+      return NextResponse.json({
+        status: 'completed',
+        url,
+        videoUrl: url,
+        requestId,
+        model,
+        scriptId,
+        generatedAt: new Date().toISOString()
+      })
     }
 
     return NextResponse.json({ status: 'error', error: '不支援的模型' }, { status: 400 })

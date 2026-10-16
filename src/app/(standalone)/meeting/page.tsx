@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -9,12 +9,25 @@ import { Input } from '@/components/ui/input'
 import {
   Mic, MicOff, Copy, LogOut, Plus, Users, Video, VideoOff,
   Building2, Store, CheckCircle2, AlertCircle, Languages,
-  Sparkles, Radio, Eye, Loader2, Download, History, Trash2
+  Sparkles, Radio, Eye, Loader2, Download, History, Trash2,
+  Globe, UserCheck, X
 } from 'lucide-react'
 import {
   fetchAzureSpeechToken, preloadAzureSpeechSdk, startAzureRecognition,
   type AzureRecognitionController, type AzureSpeechToken,
 } from '@/lib/meeting/azure-speech'
+
+// 解析講者別名與合併對映（支援鏈式合併）
+function resolveSpeakerDisplayName(rawSpeaker: string, aliases: Record<string, string>): string {
+  if (!rawSpeaker) return ''
+  let curr = rawSpeaker
+  const visited = new Set<string>()
+  while (aliases[curr] && !visited.has(curr)) {
+    visited.add(curr)
+    curr = aliases[curr]
+  }
+  return curr || rawSpeaker
+}
 
 // ── 型別 ──────────────────────────────────────────────────────────
 interface Me { id: string; name: string }
@@ -66,6 +79,14 @@ const INPUT_LANGS: { code: string; label: string; sr: string }[] = [
 
 // 支援的翻譯目標語言
 const TARGET_LANGS: { code: string; label: string }[] = [
+  { code: 'zh-TW', label: '繁體中文' },
+  { code: 'vi', label: 'Tiếng Việt' },
+  { code: 'en', label: 'English' },
+]
+
+// 翻譯下拉選項：預設不翻譯 (純原文)，需要時手動調整
+const TRANSLATION_TARGET_OPTIONS: { code: string; label: string }[] = [
+  { code: 'none', label: '不翻譯 (純原文)' },
   { code: 'zh-TW', label: '繁體中文' },
   { code: 'vi', label: 'Tiếng Việt' },
   { code: 'en', label: 'English' },
@@ -133,6 +154,21 @@ function loadJaasScript(appId: string): Promise<void> {
 const transCache = new Map<string, string>()
 const tkey = (locale: string, text: string) => `${locale}:${text}`
 
+// 語言特徵判斷（防範 Azure 語音辨識語言自動判斷失準或回退為主要語言）
+const VI_CHAR_REGEX = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i
+const ZH_CHAR_REGEX = /[\u4e00-\u9fa5]/
+
+function isTranslatableLine(l: { content: string; source_lang: string }, target: string): boolean {
+  if (!TRANSLATABLE.has(target)) return false
+  const txt = l.content.trim()
+  if (!txt) return false
+  if (l.source_lang !== target) return true
+  // 語言標籤與目標語言相同，但字面上明顯屬於另一語言（例如標記為中文但內容實為越文）
+  if (target === 'zh-TW' && VI_CHAR_REGEX.test(txt)) return true
+  if (target === 'vi' && ZH_CHAR_REGEX.test(txt)) return true
+  return false
+}
+
 function fmtDate(iso: string) {
   const d = new Date(iso)
   return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`
@@ -177,6 +213,81 @@ export default function MeetingPage() {
   const [history, setHistory] = useState<Meeting[]>([])
   const [downloading, setDownloading] = useState(false)
   const [interim, setInterim] = useState<{ text: string; speaker?: string } | null>(null)
+  const [speakerAliases, setSpeakerAliases] = useState<Record<string, string>>({})
+
+  // ── 實體現場會議：人數上限與講者設定 ──
+  const [expectedSpeakers, setExpectedSpeakers] = useState<number>(3)
+  const expectedSpeakersRef = useRef<number>(3)
+  const [speakerNamesInput, setSpeakerNamesInput] = useState<string>('')
+  const [speakerModalOpen, setSpeakerModalOpen] = useState(false)
+  const [speakerModalActiveTab, setSpeakerModalActiveTab] = useState<string | null>(null)
+
+  const handleSpeakerCountChange = (count: number) => {
+    const valid = Math.max(1, Math.min(36, count))
+    setExpectedSpeakers(valid)
+    expectedSpeakersRef.current = valid
+    if (azureControllerRef.current?.setMaxSpeakers) {
+      azureControllerRef.current.setMaxSpeakers(valid)
+    }
+  }
+
+  const handleSetSpeakerAlias = (speakerId: string, alias: string) => {
+    const trimmed = alias.trim()
+    setSpeakerAliases(prev => {
+      const next = { ...prev }
+      if (trimmed && trimmed !== speakerId) {
+        next[speakerId] = trimmed
+      } else {
+        delete next[speakerId]
+      }
+      return next
+    })
+  }
+
+  const handleMergeSpeaker = (sourceSpeaker: string, targetSpeaker: string) => {
+    if (!sourceSpeaker || !targetSpeaker || sourceSpeaker === targetSpeaker) return
+    setSpeakerAliases(prev => ({
+      ...prev,
+      [sourceSpeaker]: targetSpeaker,
+    }))
+  }
+
+  const handleUnmergeSpeaker = (sourceSpeaker: string) => {
+    setSpeakerAliases(prev => {
+      const next = { ...prev }
+      delete next[sourceSpeaker]
+      return next
+    })
+  }
+
+  // 統計所有出現過的現場講者與其發言次數
+  const { modalSpeakerList, speakerCountMap } = useMemo(() => {
+    const counts: Record<string, number> = {}
+    const set = new Set<string>()
+
+    // 預設列出 講者 1..expectedSpeakers
+    for (let i = 1; i <= Math.max(expectedSpeakers, 2); i++) {
+      set.add(`講者 ${i}`)
+    }
+
+    // 匯總 lines 中出現過的講者
+    lines.forEach(l => {
+      if (meeting?.meeting_mode === 'in_person' && l.speaker_id !== meeting?.host_id) return
+      const s = l.speaker_name || '講者 1'
+      counts[s] = (counts[s] || 0) + 1
+      if (s.startsWith('講者') || s.startsWith('Speaker') || s.startsWith('Guest')) {
+        set.add(s)
+      }
+    })
+
+    const list = Array.from(set).sort((a, b) => {
+      const numA = parseInt(a.match(/\d+/)?.[0] || '999', 10)
+      const numB = parseInt(b.match(/\d+/)?.[0] || '999', 10)
+      return numA - numB
+    }).map(id => ({ id }))
+
+    return { modalSpeakerList: list, speakerCountMap: counts }
+  }, [lines, expectedSpeakers, meeting])
 
   const toggleDept = (key: string) => {
     setSelectedDepts(prev =>
@@ -186,14 +297,12 @@ export default function MeetingPage() {
     )
   }
 
-  // 辨識輸入語言（預設 auto，支援中/越/英自動偵測）與翻譯目標語言（可自由切換）
+  // 辨識輸入語言（預設 auto，支援中/越/英自動偵測）與翻譯目標語言（預設不翻譯，由使用者手動開啟）
   const [inputLang, setInputLang] = useState<string>('auto')
   // 建立會議：主要語言（單選）與其他會出現的語言（多選）
   const [primaryLang, setPrimaryLang] = useState<string>(TRANSLATABLE.has(locale) ? locale : 'zh-TW')
   const [otherLangs, setOtherLangs] = useState<string[]>([])
-  const [targetLang, setTargetLang] = useState<string>(
-    TRANSLATABLE.has(locale) ? locale : 'zh-TW'
-  )
+  const [targetLang, setTargetLang] = useState<string>('none')
   const [err, setErr] = useState('')
   const [creating, setCreating] = useState(false)
   const [joining, setJoining] = useState(false)
@@ -225,6 +334,7 @@ export default function MeetingPage() {
   const audioKeepAliveRef = useRef<AudioContext | null>(null)
   const lastActiveRef = useRef<number>(Date.now())
   const bottomRef = useRef<HTMLDivElement | null>(null)
+  const inFlightRef = useRef<Set<string>>(new Set())
 
   // 視訊（JaaS）
   const [video, setVideo] = useState<{ jwt: string; room: string } | null>(null)
@@ -358,14 +468,25 @@ export default function MeetingPage() {
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [lines.length])
 
   // ── 上下文滑動視窗意譯：把非目標語言的發言翻譯成所選 targetLang ──
-  const [, forceTick] = useState(0)
+  const [tick, forceTick] = useState(0)
   useEffect(() => {
     if (!TRANSLATABLE.has(targetLang) || !meeting) return
+
+    // 找出尚未翻譯且未在處理佇列中的句子
     const need = Array.from(
-      new Set(lines.filter(l => l.source_lang !== targetLang).map(l => l.content.trim()).filter(Boolean)),
-    ).filter(txt => !transCache.has(tkey(targetLang, txt)))
+      new Set(
+        lines
+          .filter(l => isTranslatableLine(l, targetLang))
+          .map(l => l.content.trim())
+          .filter(Boolean),
+      ),
+    ).filter(txt => !transCache.has(tkey(targetLang, txt)) && !inFlightRef.current.has(tkey(targetLang, txt)))
+
     if (!need.length) return
-    let alive = true
+
+    // 單次發送最多 8 句，平滑佇列避免雪崩與截斷
+    const batch = need.slice(0, 8)
+    batch.forEach(txt => inFlightRef.current.add(tkey(targetLang, txt)))
 
     const meetingDeptLabels = (
       meeting.departments?.length
@@ -390,20 +511,33 @@ export default function MeetingPage() {
     fetch('/api/meeting/translate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ texts: need, target: targetLang, context }),
+      body: JSON.stringify({ texts: batch, target: targetLang, context }),
     })
       .then(r => r.json())
       .then(d => {
-        if (!alive || !Array.isArray(d.translations)) return
-        need.forEach((txt, i) => transCache.set(tkey(targetLang, txt), d.translations[i] ?? txt))
+        if (Array.isArray(d?.translations)) {
+          batch.forEach((txt, i) => {
+            const tr = d.translations[i]
+            // 只有成功取得不同於原文的非空字串才寫入快取，防止失敗時把原文毒化進快取
+            if (typeof tr === 'string' && tr.trim() && tr.trim() !== txt) {
+              transCache.set(tkey(targetLang, txt), tr.trim())
+            }
+          })
+          forceTick(x => x + 1)
+        }
+      })
+      .catch(err => {
+        console.warn('[Meeting] translate request failed:', err)
+      })
+      .finally(() => {
+        batch.forEach(txt => inFlightRef.current.delete(tkey(targetLang, txt)))
+        // 若還有未處理的句子，觸發下一個 batch
         forceTick(x => x + 1)
       })
-      .catch(() => {})
-    return () => { alive = false }
-  }, [lines, targetLang, meeting, participants, departments])
+  }, [lines, targetLang, meeting, participants, departments, tick])
 
   function translatedOf(l: Line): string | null {
-    if (l.source_lang === targetLang || !TRANSLATABLE.has(targetLang)) return null
+    if (!isTranslatableLine(l, targetLang)) return null
     const tr = transCache.get(tkey(targetLang, l.content.trim()))
     return tr && tr !== l.content.trim() ? tr : null
   }
@@ -438,10 +572,8 @@ export default function MeetingPage() {
     setHistory(h => h.filter(x => x.id !== m.id))
   }
 
-  // 進入會議；翻譯目標若不是會議語言之一，預設改為主要語言
+  // 進入會議；依需求預設維持不翻譯，由使用者在會議中手動按需開啟
   function enterMeeting(m: Meeting) {
-    const langs = meetingLangs(m)
-    setTargetLang(prev => (langs.includes(prev) ? prev : langs[0]))
     setMeeting(m)
     loadMeetingData(m)
   }
@@ -457,10 +589,10 @@ export default function MeetingPage() {
     setDownloading(true)
     try {
       const need = Array.from(new Set(
-        lines.filter(l => l.source_lang !== targetLang).map(l => l.content.trim()).filter(Boolean),
+        lines.filter(l => isTranslatableLine(l, targetLang)).map(l => l.content.trim()).filter(Boolean),
       )).filter(txt => !transCache.has(tkey(targetLang, txt)))
-      for (let i = 0; i < need.length; i += 40) {
-        const chunk = need.slice(i, i + 40)
+      for (let i = 0; i < need.length; i += 8) {
+        const chunk = need.slice(i, i + 8)
         try {
           const r = await fetch('/api/meeting/translate', {
             method: 'POST',
@@ -468,20 +600,32 @@ export default function MeetingPage() {
             body: JSON.stringify({ texts: chunk, target: targetLang, context: { title: meeting.title, keywords: meeting.context_keywords } }),
           })
           const d = await r.json()
-          if (Array.isArray(d.translations)) chunk.forEach((txt, j) => transCache.set(tkey(targetLang, txt), d.translations[j] ?? txt))
+          if (Array.isArray(d?.translations)) {
+            chunk.forEach((txt, j) => {
+              const tr = d.translations[j]
+              if (typeof tr === 'string' && tr.trim() && tr.trim() !== txt) {
+                transCache.set(tkey(targetLang, txt), tr.trim())
+              }
+            })
+          }
         } catch {}
       }
-      const langLabel = TARGET_LANGS.find(l => l.code === targetLang)?.label ?? ''
+      const langLabel = TRANSLATION_TARGET_OPTIONS.find(l => l.code === targetLang)?.label ?? ''
       const head = [
         `${t('title')}：${meeting.title || '—'}`,
         `${t('roomCode')}：${meeting.room_code}`,
         meeting.created_at ? `${t('date')}：${fmtDate(meeting.created_at)}` : '',
         participants.length ? `${t('participants')}：${participants.join('、')}` : '',
-        `${t('translateTo')}：${langLabel}`,
+        targetLang !== 'none' ? `${t('translateTo')}：${langLabel}` : '',
       ].filter(Boolean)
       const body = lines.map(l => {
         const tr = translatedOf(l)
-        const first = `[${fmtDate(l.created_at)} ${fmtTime(l.created_at)}] ${l.speaker_name || '—'}：${l.content}`
+        const isRemote = meeting.meeting_mode === 'in_person' && l.speaker_id !== meeting.host_id
+        const rawSpeaker = l.speaker_name || (meeting.meeting_mode === 'in_person' ? '講者 1' : '')
+        const speaker = isRemote
+          ? `${l.speaker_name || '遠端成員'} (遠端)`
+          : (resolveSpeakerDisplayName(rawSpeaker, speakerAliases) || rawSpeaker || '—')
+        const first = `[${fmtDate(l.created_at)} ${fmtTime(l.created_at)}] ${speaker}：${l.content}`
         return tr ? `${first}\n    ↳ ${tr}` : first
       })
       const blob = new Blob(['\ufeff' + [...head, '', ...body].join('\n') + '\n'], { type: 'text/plain;charset=utf-8' })
@@ -508,6 +652,18 @@ export default function MeetingPage() {
     setErr('')
     setCreating(true)
     try {
+      // 實體會議：若有預先輸入現場人員名單，自動映射為 講者 1, 講者 2...
+      if (selectedMode === 'in_person' && speakerNamesInput.trim()) {
+        const parsedNames = speakerNamesInput
+          .split(/[,，\n]/)
+          .map(s => s.trim())
+          .filter(Boolean)
+        const initialAliases: Record<string, string> = {}
+        parsedNames.forEach((name, idx) => {
+          initialAliases[`講者 ${idx + 1}`] = name
+        })
+        setSpeakerAliases(prev => ({ ...prev, ...initialAliases }))
+      }
       const selectedDeptObjs = departments.filter(d => selectedDepts.includes(d.key))
       const deptLabels = selectedDeptObjs.map(d => d.label).join('、')
       const storeNames = selectedStores
@@ -749,6 +905,7 @@ export default function MeetingPage() {
         region: tokenData.region,
         mode: meeting?.meeting_mode || 'online',
         languages: inputLang === 'auto' && meeting ? meetingLangs(meeting) : [inputLang],
+        maxSpeakers: expectedSpeakersRef.current || expectedSpeakers,
         onInterim: (text, speaker) => {
           lastActiveRef.current = Date.now()
           setInterim({ text, speaker })
@@ -977,7 +1134,7 @@ export default function MeetingPage() {
             value={targetLang}
             onChange={setTargetLang}
             label={t('targetLangLabel')}
-            options={TARGET_LANGS}
+            options={TRANSLATION_TARGET_OPTIONS}
             compact
             icon={<Languages className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />}
           />
@@ -1026,6 +1183,84 @@ export default function MeetingPage() {
                 placeholder="會議主題（例：河內門市設備報修與夏季物料備貨盤點）"
               />
             </div>
+
+            {/* 實體現場會議設定：人數限制與現場人員名單 */}
+            {selectedMode === 'in_person' && (
+              <div className="rounded-lg border border-amber-200/70 bg-amber-50/40 p-3 space-y-3 dark:border-amber-900/40 dark:bg-amber-950/20">
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                      <Users className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                      現場預計與會人數
+                    </label>
+                    <span className="text-[11px] font-semibold text-amber-800 dark:text-amber-300 bg-amber-100/70 dark:bg-amber-900/40 px-2.5 py-0.5 rounded-full border border-amber-300/60 dark:border-amber-800/60">
+                      目前選定：{expectedSpeakers} 人
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {[2, 3, 4, 5, 6, 8, 10, 12].map(num => (
+                      <button
+                        key={num}
+                        type="button"
+                        onClick={() => handleSpeakerCountChange(num)}
+                        className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-all ${
+                          expectedSpeakers === num
+                            ? 'border-amber-600 bg-amber-600 text-white shadow-sm font-bold'
+                            : 'border-amber-200 bg-background text-foreground hover:bg-amber-100/50 dark:border-amber-900/60'
+                        }`}
+                      >
+                        {num} 人 {num === 3 && <span className="text-[10px] opacity-80">(預設)</span>}
+                      </button>
+                    ))}
+                    <div className="flex items-center gap-1 ml-auto text-xs text-amber-900 dark:text-amber-200">
+                      <span>自訂：</span>
+                      <input
+                        type="number"
+                        min={1}
+                        max={36}
+                        value={expectedSpeakers}
+                        onChange={e => handleSpeakerCountChange(parseInt(e.target.value, 10) || 1)}
+                        className="w-14 h-7 text-center rounded border bg-background text-xs font-bold text-foreground focus:outline-none focus:ring-1 focus:ring-amber-500"
+                      />
+                      <span>人</span>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-amber-700/80 dark:text-amber-400/70">
+                    💡 聲紋分離最高支援 36 人。設定現場人數後，系統將嚴格約束在此人數內，防止一人說話因距離或換氣被誤判為多人。
+                  </p>
+                </div>
+
+                <div className="space-y-1.5 pt-1 border-t border-amber-200/50 dark:border-amber-900/30">
+                  <label className="text-xs font-semibold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                    <UserCheck className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                    現場人員姓名預設（選填）
+                  </label>
+                  <Input
+                    value={speakerNamesInput}
+                    onChange={e => setSpeakerNamesInput(e.target.value)}
+                    placeholder="例如：王廠長, 阮助理, 陳主任（以逗號分隔）"
+                    className="text-xs bg-background"
+                  />
+                  {speakerNamesInput.trim() && (
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {speakerNamesInput
+                        .split(/[,，\n]/)
+                        .map(s => s.trim())
+                        .filter(Boolean)
+                        .map((name, idx) => (
+                          <span
+                            key={idx}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] bg-amber-100 text-amber-900 dark:bg-amber-900/50 dark:text-amber-200 border border-amber-300 dark:border-amber-800"
+                          >
+                            <span className="font-mono text-[10px] opacity-70">講者 {idx + 1} ➜</span>
+                            <span className="font-semibold">{name}</span>
+                          </span>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* 會議語言：主要語言（單選）＋其他會出現的語言（多選） */}
             <div className="space-y-1.5">
@@ -1295,11 +1530,42 @@ export default function MeetingPage() {
         </Button>
       </div>
 
-      {/* 實體會議非主持人閱覽模式提醒 */}
-      {meeting.meeting_mode === 'in_person' && !isHost && (
-        <div className="rounded-lg bg-amber-50/70 border border-amber-200/60 p-2 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-300 flex items-center gap-1.5">
-          <Radio className="h-3.5 w-3.5 shrink-0 text-amber-600" />
-          <span>{t('inPersonNotice')}</span>
+      {/* 實體會議狀態與現場控制列 */}
+      {meeting.meeting_mode === 'in_person' && (
+        <div className="rounded-lg bg-amber-50/60 border border-amber-200/60 p-2 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-900/40 flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5">
+            <Radio className="h-3.5 w-3.5 shrink-0 text-amber-600" />
+            <span>{!isHost ? t('inPersonNotice') : '現場收音中：一人開麥即可辨識全場發言'}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 bg-background/90 px-2 py-0.5 rounded border text-xs">
+              <Users className="h-3 w-3 text-amber-600 dark:text-amber-400" />
+              <span className="text-muted-foreground">現場人數：</span>
+              <select
+                value={expectedSpeakers}
+                onChange={e => handleSpeakerCountChange(Number(e.target.value))}
+                className="bg-transparent font-semibold text-foreground focus:outline-none cursor-pointer"
+                title="調整現場發言人數上限（約束聲紋分離分群）"
+              >
+                {[2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20, 25, 30, 36].map(n => (
+                  <option key={n} value={n}>{n} 人</option>
+                ))}
+              </select>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setSpeakerModalActiveTab(null)
+                setSpeakerModalOpen(true)
+              }}
+              className="h-6 px-2 text-xs gap-1 bg-background"
+              title="管理與合併講者姓名"
+            >
+              <UserCheck className="h-3 w-3 text-amber-600 dark:text-amber-400" />
+              講者管理 / 合併
+            </Button>
+          </div>
         </div>
       )}
 
@@ -1332,7 +1598,7 @@ export default function MeetingPage() {
           value={targetLang}
           onChange={setTargetLang}
           label={t('targetLangLabel')}
-          options={TARGET_LANGS}
+          options={TRANSLATION_TARGET_OPTIONS}
           compact
           icon={<Languages className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />}
         />
@@ -1426,19 +1692,49 @@ export default function MeetingPage() {
           lines.map(l => {
             const tr = translatedOf(l)
             const mine = l.speaker_id === me?.id
+            const isRemoteAttendee = meeting.meeting_mode === 'in_person' && l.speaker_id !== meeting.host_id
+
+            // 實體現場會議由同一台麥克風收錄全場，或是具有 Azure 講者分離標籤時，一律顯示講者標籤（如「講者 1」、「講者 2」）
+            // 只有線上會議且未分離出講者、且為自己發言時，才顯示「你」
+            const isDiarized = l.speaker_name && (
+              l.speaker_name.startsWith('講者') ||
+              l.speaker_name.startsWith('Speaker') ||
+              l.speaker_name.startsWith('Guest')
+            )
+            const rawSpeaker = l.speaker_name || (meeting.meeting_mode === 'in_person' ? '講者 1' : '')
+            const resolvedName = resolveSpeakerDisplayName(rawSpeaker, speakerAliases)
+            const displayName = isRemoteAttendee
+              ? `${l.speaker_name || '遠端成員'}`
+              : (isDiarized || meeting.meeting_mode === 'in_person'
+                ? (resolvedName || rawSpeaker || '講者 1')
+                : (mine ? t('you') : (resolvedName || l.speaker_name || '—')))
+
+            const badgeClass = getSpeakerBadgeClass(rawSpeaker, mine, meeting.meeting_mode)
+            const canManage = !isRemoteAttendee && (isDiarized || meeting.meeting_mode === 'in_person')
 
             return (
               <div key={l.id} className="text-sm border-b pb-2 last:border-b-0">
                 <div className="flex items-baseline gap-2">
-                  <span className={`font-medium ${
-                    l.speaker_name?.startsWith('講者')
-                      ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-200 px-1.5 py-0.5 rounded text-xs font-semibold'
-                      : mine
-                      ? 'text-blue-600 dark:text-blue-400'
-                      : 'text-foreground'
-                  }`}>
-                    {mine ? t('you') : (l.speaker_name || '—')}
-                  </span>
+                  {isRemoteAttendee ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-800 shadow-sm">
+                      <Globe className="h-3 w-3" />
+                      {displayName}
+                      <span className="text-[10px] font-normal opacity-80">(遠端)</span>
+                    </span>
+                  ) : (
+                    <span
+                      onClick={() => {
+                        if (canManage) {
+                          setSpeakerModalActiveTab(rawSpeaker)
+                          setSpeakerModalOpen(true)
+                        }
+                      }}
+                      title={canManage ? `點擊可管理「${rawSpeaker}」姓名或合併講者` : undefined}
+                      className={badgeClass}
+                    >
+                      {displayName}
+                    </span>
+                  )}
                   <span className="text-[11px] text-muted-foreground">{fmtTime(l.created_at)}</span>
                   {l.source_lang && (
                     <span className="text-[10px] text-muted-foreground/60 uppercase">({l.source_lang})</span>
@@ -1474,13 +1770,171 @@ export default function MeetingPage() {
         )}
         {/* 辨識中（尚未定稿）的即時文字 */}
         {interim && (
-          <div className="text-sm text-muted-foreground italic">
-            {interim.speaker && <span className="mr-2 not-italic text-xs font-semibold">{interim.speaker}</span>}
-            {interim.text}…
+          <div className="text-sm text-muted-foreground italic flex items-baseline gap-2">
+            {interim.speaker && (
+              <span className={getSpeakerBadgeClass(interim.speaker, true, meeting.meeting_mode)}>
+                {resolveSpeakerDisplayName(interim.speaker, speakerAliases) || interim.speaker}
+              </span>
+            )}
+            <span>{interim.text}…</span>
           </div>
         )}
         <div ref={bottomRef} />
       </div>
+
+      {/* 現場講者管理與合併彈窗 */}
+      {speakerModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <Card className="w-full max-w-lg p-5 space-y-4 shadow-xl border bg-background max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between border-b pb-3 shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                  <UserCheck className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base">現場講者管理與合併</h3>
+                  <p className="text-xs text-muted-foreground">自訂講者真實姓名，或將誤判的講者合併為同一人</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSpeakerModalOpen(false)}
+                className="rounded-md p-1 hover:bg-muted text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 overflow-y-auto pr-1 flex-1">
+              {/* 現場人數快速調節 */}
+              <div className="flex items-center justify-between p-2.5 rounded-lg border bg-muted/20 text-xs">
+                <div className="flex items-center gap-1.5">
+                  <Users className="h-4 w-4 text-primary" />
+                  <span className="font-medium">現場發言人數上限：</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-1">
+                  {[2, 3, 4, 5, 6, 8, 10, 12].map(num => (
+                    <button
+                      key={num}
+                      type="button"
+                      onClick={() => handleSpeakerCountChange(num)}
+                      className={`px-2 py-0.5 rounded text-xs transition-all ${
+                        expectedSpeakers === num
+                          ? 'bg-primary text-primary-foreground font-semibold'
+                          : 'bg-background border hover:bg-muted'
+                      }`}
+                    >
+                      {num} 人
+                    </button>
+                  ))}
+                  <div className="flex items-center gap-1 text-xs pl-1">
+                    <span>自訂：</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={36}
+                      value={expectedSpeakers}
+                      onChange={e => handleSpeakerCountChange(parseInt(e.target.value, 10) || 1)}
+                      className="w-12 h-6 text-center rounded border bg-background text-xs font-bold text-foreground focus:outline-none"
+                    />
+                    <span>人</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 講者清單 */}
+              <div className="space-y-2.5">
+                {modalSpeakerList.map(sp => {
+                  const raw = sp.id
+                  const isMerged = !!speakerAliases[raw] && modalSpeakerList.some(other => other.id === speakerAliases[raw])
+                  const targetMergedId = isMerged ? speakerAliases[raw] : null
+                  const currentCustomName = !isMerged ? (speakerAliases[raw] || '') : ''
+                  const count = speakerCountMap[raw] || 0
+
+                  return (
+                    <div
+                      key={raw}
+                      className={`p-3 rounded-lg border text-xs space-y-2 transition-all ${
+                        speakerModalActiveTab === raw ? 'ring-2 ring-primary border-primary' : 'bg-card'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className={getSpeakerBadgeClass(raw, false, 'in_person')}>
+                            {raw}
+                          </span>
+                          <span className="text-[11px] text-muted-foreground">
+                            （{count} 則發言）
+                          </span>
+                        </div>
+                        {isMerged && (
+                          <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-900/50">
+                            已合併至 {targetMergedId}
+                          </span>
+                        )}
+                      </div>
+
+                      {isMerged ? (
+                        <div className="flex items-center justify-between bg-muted/40 p-2 rounded">
+                          <span className="text-muted-foreground">
+                            此講者的所有發言已合併顯示為「{resolveSpeakerDisplayName(targetMergedId!, speakerAliases)}」
+                          </span>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleUnmergeSpeaker(raw)}
+                            className="h-6 px-2 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40"
+                          >
+                            取消合併
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                          <div className="space-y-1">
+                            <label className="text-[11px] text-muted-foreground">姓名設定：</label>
+                            <Input
+                              value={currentCustomName}
+                              onChange={e => handleSetSpeakerAlias(raw, e.target.value)}
+                              placeholder="自訂姓名（例：王廠長）"
+                              className="h-7 text-xs"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[11px] text-muted-foreground">合併發言至其他講者：</label>
+                            <select
+                              value=""
+                              onChange={e => {
+                                if (e.target.value) handleMergeSpeaker(raw, e.target.value)
+                              }}
+                              className="w-full h-7 rounded-md border bg-background px-2 text-xs focus:outline-none"
+                            >
+                              <option value="">選擇要合併的目標講者…</option>
+                              {modalSpeakerList
+                                .filter(other => other.id !== raw && speakerAliases[other.id] !== raw)
+                                .map(other => (
+                                  <option key={other.id} value={other.id}>
+                                    合併至 {resolveSpeakerDisplayName(other.id, speakerAliases) || other.id}
+                                  </option>
+                                ))}
+                            </select>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div className="pt-2 border-t flex justify-end shrink-0">
+              <Button onClick={() => setSpeakerModalOpen(false)} className="px-5 text-xs h-8">
+                完成
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }
@@ -1511,4 +1965,30 @@ function LangPicker({
       </select>
     </label>
   )
+}
+
+function getSpeakerBadgeClass(rawSpeaker: string | undefined, isMine: boolean, mode?: string) {
+  const name = rawSpeaker || ''
+  const isDiarized = name.startsWith('講者') || name.startsWith('Speaker') || name.startsWith('Guest')
+
+  if (isDiarized || mode === 'in_person') {
+    const numMatch = name.match(/\d+/)
+    const num = numMatch ? parseInt(numMatch[0], 10) : 1
+    const palettes = [
+      'bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-200 border border-blue-300 dark:border-blue-800',
+      'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-800',
+      'bg-purple-100 text-purple-800 dark:bg-purple-950/80 dark:text-purple-200 border border-purple-300 dark:border-purple-800',
+      'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-200 border border-amber-300 dark:border-amber-800',
+      'bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-200 border border-rose-300 dark:border-rose-800',
+      'bg-cyan-100 text-cyan-800 dark:bg-cyan-950/80 dark:text-cyan-200 border border-cyan-300 dark:border-cyan-800',
+    ]
+    const chosen = palettes[(num - 1) % palettes.length]
+    return `${chosen} px-2 py-0.5 rounded-md text-xs font-semibold cursor-pointer hover:opacity-80 transition-opacity select-none shadow-sm`
+  }
+
+  if (isMine) {
+    return 'text-blue-600 dark:text-blue-400 font-semibold'
+  }
+
+  return 'text-foreground font-semibold'
 }

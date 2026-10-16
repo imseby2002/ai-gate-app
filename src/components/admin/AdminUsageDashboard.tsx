@@ -8,17 +8,33 @@ import {
 import {
   DollarSign, Activity, Zap, Shield, Terminal,
   ArrowDownRight, RefreshCw, Search, ArrowUpDown, Info, Sparkles,
-  Layers, MessageSquare, Flame
+  Layers, MessageSquare, Flame, Headphones, Megaphone, FileCheck, FlaskConical, Globe, Wrench, Code2, Mail
 } from 'lucide-react'
 import { formatCost, formatTokens } from '@/lib/utils/format'
 import { type SourceChannel } from '@/lib/ai/token-cost-tracker'
+
+export type ServiceModule =
+  | 'all'
+  | 'roundtable'
+  | 'chat'
+  | 'agent'
+  | 'missions'
+  | 'meeting'
+  | 'store_coach'
+  | 'marketing'
+  | 'audit'
+  | 'rd'
+  | 'affairs'
+  | 'skills'
+  | 'autofix'
+  | 'email_sync'
 
 interface ModelStat {
   model_id: string
   display_name: string
   source_channel: SourceChannel
   channel_label: string
-  service_module: 'all' | 'roundtable' | 'chat'
+  service_module: ServiceModule
   is_free: boolean
   requests: number
   input_tokens: number
@@ -63,6 +79,12 @@ interface UsageSummary {
   chatTokens: number
   chatCostUsd: number
   chatRequests: number
+  agentTokens?: number
+  agentCostUsd?: number
+  agentRequests?: number
+  missionsTokens?: number
+  missionsCostUsd?: number
+  missionsRequests?: number
 }
 
 interface DailyTrendItem {
@@ -80,11 +102,25 @@ interface DailyTrendItem {
   requests: number
 }
 
+export interface ServiceBreakdownItem {
+  id: string
+  label: string
+  icon: string
+  tokens: number
+  costUsd: number
+  costTwd: number
+  requests: number
+  topModel: string
+  channel: string
+  costSharePct: number
+}
+
 interface AdminUsageData {
   summary: UsageSummary
   channels: Record<SourceChannel, ChannelStat>
   byModelAndSource: ModelStat[]
   dailyTrend: DailyTrendItem[]
+  serviceBreakdown?: ServiceBreakdownItem[]
 }
 
 const CHANNEL_COLORS: Record<SourceChannel, string> = {
@@ -102,7 +138,7 @@ export function AdminUsageDashboard({ initialData }: { initialData?: AdminUsageD
   const [data, setData] = useState<AdminUsageData | null>(initialData ?? null)
   const [loading, setLoading] = useState(!initialData)
   const [timeRange, setTimeRange] = useState<string>('all')
-  const [selectedService, setSelectedService] = useState<'all' | 'roundtable' | 'chat'>('all')
+  const [selectedService, setSelectedService] = useState<ServiceModule>('all')
   const [selectedChannel, setSelectedChannel] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState<'cost' | 'tokens' | 'requests'>('cost')
@@ -110,7 +146,7 @@ export function AdminUsageDashboard({ initialData }: { initialData?: AdminUsageD
   const [testingProxy, setTestingProxy] = useState<string | null>(null)
   const [testResult, setTestResult] = useState<string | null>(null)
 
-  const fetchData = async (range: string, service = selectedService) => {
+  const fetchData = async (range: string, service: ServiceModule = selectedService) => {
     setLoading(true)
     try {
       const res = await fetch(`/api/admin/usage-stats?days=${range}&service=${service}`)
@@ -137,7 +173,7 @@ export function AdminUsageDashboard({ initialData }: { initialData?: AdminUsageD
     fetchData(newRange, selectedService)
   }
 
-  const handleServiceChange = (service: 'all' | 'roundtable' | 'chat') => {
+  const handleServiceChange = (service: ServiceModule) => {
     setSelectedService(service)
     fetchData(timeRange, service)
   }
@@ -307,16 +343,18 @@ export function AdminUsageDashboard({ initialData }: { initialData?: AdminUsageD
           </div>
         </div>
 
-        <div className="inline-flex items-center bg-white/10 p-1 rounded-xl text-xs font-medium backdrop-blur-sm self-start sm:self-auto">
+        <div className="inline-flex items-center bg-white/10 p-1 rounded-xl text-xs font-medium backdrop-blur-sm self-start sm:self-auto flex-wrap gap-1">
           {[
-            { id: 'all',         label: '全部業務', count: `${formatTokens(summary?.totalTokens ?? 0)} Tokens` },
-            { id: 'roundtable',  label: '🏛️ AI 圓桌會議', count: `${formatTokens(summary?.roundtableTokens ?? 0)} Tokens` },
-            { id: 'chat',        label: '💬 智慧對話', count: `${formatTokens(summary?.chatTokens ?? 0)} Tokens` },
+            { id: 'all',         label: '全部業務', count: `${formatTokens(summary?.totalTokens ?? 0)}` },
+            { id: 'agent',       label: '⚡ 自主特務 (Agent)', count: `${formatTokens(summary?.agentTokens ?? 0)}` },
+            { id: 'missions',    label: '📋 任務企劃', count: `${formatTokens(summary?.missionsTokens ?? 0)}` },
+            { id: 'chat',        label: '💬 智慧對話', count: `${formatTokens(summary?.chatTokens ?? 0)}` },
+            { id: 'roundtable',  label: '🏛️ AI 圓桌會議', count: `${formatTokens(summary?.roundtableTokens ?? 0)}` },
           ].map(tab => (
             <button
               key={tab.id}
-              onClick={() => handleServiceChange(tab.id as 'all' | 'roundtable' | 'chat')}
-              className={`px-3.5 py-2 rounded-lg transition-all flex items-center gap-1.5 ${
+              onClick={() => handleServiceChange(tab.id as ServiceModule)}
+              className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
                 selectedService === tab.id
                   ? 'bg-white text-slate-900 font-bold shadow'
                   : 'text-slate-200 hover:text-white hover:bg-white/5'
@@ -519,8 +557,8 @@ export function AdminUsageDashboard({ initialData }: { initialData?: AdminUsageD
           <div className="text-2xl font-bold text-gray-900 dark:text-foreground">
             {formatTokens(summary?.totalTokens ?? 0)}
           </div>
-          <div className="text-xs text-muted-foreground mt-1">
-            圓桌 {formatTokens(summary?.roundtableTokens ?? 0)} / 對話 {formatTokens(summary?.chatTokens ?? 0)}
+          <div className="text-xs text-muted-foreground mt-1 truncate" title={`特務 ${formatTokens(summary?.agentTokens ?? 0)} / 企劃 ${formatTokens(summary?.missionsTokens ?? 0)} / 對話 ${formatTokens(summary?.chatTokens ?? 0)} / 圓桌 ${formatTokens(summary?.roundtableTokens ?? 0)}`}>
+            特務 {formatTokens(summary?.agentTokens ?? 0)} · 企劃 {formatTokens(summary?.missionsTokens ?? 0)} · 對話 {formatTokens(summary?.chatTokens ?? 0)} · 圓桌 {formatTokens(summary?.roundtableTokens ?? 0)}
           </div>
         </div>
 
@@ -535,8 +573,8 @@ export function AdminUsageDashboard({ initialData }: { initialData?: AdminUsageD
           <div className="text-2xl font-bold text-gray-900 dark:text-foreground">
             {summary?.totalRequests ?? 0} <span className="text-sm font-normal text-muted-foreground">次</span>
           </div>
-          <div className="text-xs text-muted-foreground mt-1">
-            圓桌 {summary?.roundtableRequests ?? 0} 次 / 對話 {summary?.chatRequests ?? 0} 次
+          <div className="text-xs text-muted-foreground mt-1 truncate" title={`特務 ${summary?.agentRequests ?? 0} 次 / 企劃 ${summary?.missionsRequests ?? 0} 次 / 對話 ${summary?.chatRequests ?? 0} 次 / 圓桌 ${summary?.roundtableRequests ?? 0} 次`}>
+            特務 {summary?.agentRequests ?? 0} 次 · 企劃 {summary?.missionsRequests ?? 0} 次 · 對話 {summary?.chatRequests ?? 0} 次 · 圓桌 {summary?.roundtableRequests ?? 0} 次
           </div>
         </div>
 
@@ -554,6 +592,99 @@ export function AdminUsageDashboard({ initialData }: { initialData?: AdminUsageD
           <div className="text-xs text-muted-foreground mt-1">
             約 NT$ {Math.round(summary?.totalSavedTwd ?? 0).toLocaleString()}（FreeLLM + CLIProxy）
           </div>
+        </div>
+      </div>
+
+      {/* ── 各功能模組用量與花費一覽（哪個功能在花錢？） ─────────────────────────── */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Layers className="w-4 h-4 text-indigo-500" />
+            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              各功能模組 Token 與花費透視（哪個功能在花錢？）
+            </h2>
+          </div>
+          <span className="text-[11px] text-muted-foreground">點擊卡片可快速切換篩選該功能之調用模型</span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {(data?.serviceBreakdown ?? []).map(svc => {
+            const isSelected = selectedService === svc.id
+            return (
+              <button
+                key={svc.id}
+                onClick={() => handleServiceChange(isSelected ? 'all' : (svc.id as ServiceModule))}
+                className={`text-left p-4 rounded-2xl border transition-all relative overflow-hidden ${
+                  isSelected
+                    ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/30 ring-2 ring-indigo-500/20 shadow-sm'
+                    : 'bg-white dark:bg-card hover:border-slate-300 dark:hover:border-slate-700 shadow-xs'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
+                    {svc.id === 'agent' && <Zap className="w-3.5 h-3.5 text-amber-500" />}
+                    {svc.id === 'missions' && <Flame className="w-3.5 h-3.5 text-rose-500" />}
+                    {svc.id === 'chat' && <MessageSquare className="w-3.5 h-3.5 text-blue-500" />}
+                    {svc.id === 'roundtable' && <Layers className="w-3.5 h-3.5 text-purple-500" />}
+                    {svc.id === 'meeting' && <Headphones className="w-3.5 h-3.5 text-indigo-500" />}
+                    {svc.id === 'store_coach' && <Sparkles className="w-3.5 h-3.5 text-emerald-500" />}
+                    {svc.id === 'marketing' && <Megaphone className="w-3.5 h-3.5 text-pink-500" />}
+                    {svc.id === 'audit' && <FileCheck className="w-3.5 h-3.5 text-teal-500" />}
+                    {svc.id === 'rd' && <FlaskConical className="w-3.5 h-3.5 text-violet-500" />}
+                    {svc.id === 'affairs' && <Globe className="w-3.5 h-3.5 text-cyan-500" />}
+                    {svc.id === 'skills' && <Wrench className="w-3.5 h-3.5 text-orange-500" />}
+                    {svc.id === 'autofix' && <Code2 className="w-3.5 h-3.5 text-fuchsia-500" />}
+                    {svc.id === 'email_sync' && <Mail className="w-3.5 h-3.5 text-sky-500" />}
+                    {!['agent', 'missions', 'chat', 'roundtable', 'meeting', 'store_coach', 'marketing', 'audit', 'rd', 'affairs', 'skills', 'autofix', 'email_sync'].includes(svc.id) && (
+                      <Sparkles className="w-3.5 h-3.5 text-slate-500" />
+                    )}
+                    {svc.label}
+                  </span>
+                  <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 dark:bg-muted text-muted-foreground">
+                    {svc.requests} 次
+                  </span>
+                </div>
+
+                <div className="flex items-baseline justify-between mt-1">
+                  <div className="text-lg font-bold text-gray-900 dark:text-foreground">
+                    ${svc.costUsd.toFixed(4)}
+                  </div>
+                  <div className="text-xs font-medium text-muted-foreground">
+                    {formatTokens(svc.tokens)}
+                  </div>
+                </div>
+
+                <div className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                  約 NT$ {Math.round(svc.costTwd).toLocaleString()} · 主力：{svc.topModel}
+                </div>
+
+                {/* Cost Share Progress Bar */}
+                <div className="mt-3 w-full bg-slate-100 dark:bg-muted h-1.5 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      svc.id === 'agent' ? 'bg-amber-500' :
+                      svc.id === 'missions' ? 'bg-rose-500' :
+                      svc.id === 'chat' ? 'bg-blue-500' :
+                      svc.id === 'roundtable' ? 'bg-purple-500' :
+                      svc.id === 'meeting' ? 'bg-indigo-500' :
+                      svc.id === 'store_coach' ? 'bg-emerald-500' :
+                      svc.id === 'marketing' ? 'bg-pink-500' :
+                      svc.id === 'audit' ? 'bg-teal-500' :
+                      svc.id === 'rd' ? 'bg-violet-500' :
+                      svc.id === 'affairs' ? 'bg-cyan-500' :
+                      svc.id === 'skills' ? 'bg-orange-500' :
+                      svc.id === 'autofix' ? 'bg-fuchsia-500' : 'bg-slate-500'
+                    }`}
+                    style={{ width: `${Math.max(svc.costSharePct, svc.costUsd > 0 ? 3 : 0)}%` }}
+                  />
+                </div>
+                <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
+                  <span>費用佔比</span>
+                  <span className="font-semibold">{svc.costSharePct}%</span>
+                </div>
+              </button>
+            )
+          })}
         </div>
       </div>
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import Link from 'next/link'
 import {
@@ -10,6 +10,8 @@ import {
   Settings, Save, Award, BarChart3, Printer, TrendingDown,
   Wrench, Bot, ScrollText, Gauge as GaugeIcon,
   Library, Plus, Trash2, MapPin, UserCircle,
+  History, Eye, Calendar, Building2, Store,
+  Rocket, Lightbulb, Zap,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -22,7 +24,45 @@ interface GeoQuestion {
   id: string; question: string; intent: Intent
   opportunity_score?: number; volume_source?: VolumeSource
 }
+interface SuggestedTopic {
+  title: string
+  tag: string
+  reason: string
+  exclusiveFacts: string
+}
 interface GeoArticle { articleId?: string; title: string; body_md: string; json_ld: unknown }
+interface HistoryProject {
+  id: string
+  seed_topic: string
+  target_domain?: string | null
+  author?: string | null
+  created_at: string
+  locale: string
+  auto_track?: boolean
+  articles: Array<{
+    id: string
+    title: string
+    status: string
+    published_url?: string | null
+    created_at: string
+  }>
+  questionsCount: number
+  writtenCount: number
+}
+interface CompanyStore {
+  id: string
+  name: string
+  address: string
+  openingHours: string
+  story: string
+  mapsUrl: string
+  features: string[]
+}
+interface CompanyFact {
+  label: string
+  text: string
+  source: 'brand' | 'product' | 'store'
+}
 interface GeoCluster { id: string; title: string; pillar: boolean; questionIds: string[] }
 interface TrackResult { id: string; cited: boolean; rank: number | null; sources: string[] }
 interface PassageScore { index: number; heading: string | null; excerpt: string; score: number; reasons: string[] }
@@ -81,12 +121,104 @@ export default function GeoWriterPage() {
   const [loadingP, setLoadingP] = useState(false)
   const [loadingTr, setLoadingTr] = useState(false)
 
-  // 三個輔助面板（素材庫 / GEO工具 / 發布設定）互斥，一次只開一個
-  const [panel, setPanel] = useState<'material' | 'tools' | 'settings' | null>(null)
-  const togglePanel = (p: 'material' | 'tools' | 'settings') => setPanel(cur => cur === p ? null : p)
+  // 輔助面板（歷史紀錄 / 素材庫 / GEO工具 / 發布設定）互斥，一次只開一個
+  const [panel, setPanel] = useState<'history' | 'material' | 'tools' | 'settings' | null>(null)
+  const togglePanel = (p: 'history' | 'material' | 'tools' | 'settings') => setPanel(cur => cur === p ? null : p)
+  const showHistory = panel === 'history'
   const showMaterial = panel === 'material'
   const showTools = panel === 'tools'
   const showSettings = panel === 'settings'
+
+  // 歷史專案
+  const [historyProjects, setHistoryProjects] = useState<HistoryProject[]>([])
+  const [loadingHistory, setLoadingHistory] = useState(false)
+  const [loadingProjectId, setLoadingProjectId] = useState<string | null>(null)
+
+  const fetchHistory = useCallback(async () => {
+    setLoadingHistory(true)
+    try {
+      const res = await fetch('/api/marketing/geo/history')
+      const data = await res.json()
+      if (res.ok && data.projects) {
+        setHistoryProjects(data.projects)
+      }
+    } catch {
+      // silent catch
+    } finally {
+      setLoadingHistory(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (showHistory) {
+      fetchHistory()
+    }
+  }, [showHistory, fetchHistory])
+
+  async function loadProject(pId: string) {
+    setLoadingProjectId(pId)
+    setError('')
+    try {
+      const res = await fetch(`/api/marketing/geo/history?projectId=${pId}`)
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'error')
+
+      const { project, questions: qs, clusters: cls, articles: arts, tracking: trs } = data
+      setProjectId(project.id)
+      setTopic(project.seed_topic || '')
+      setExclusiveFacts(project.exclusive_facts || '')
+      setAuthor(project.author || '')
+      setTargetDomain(project.target_domain || '')
+      setAutoTrack(!!project.auto_track)
+
+      setQuestions(qs || [])
+      setSelected(new Set((qs || []).map((_: unknown, i: number) => i)))
+      setClusters(cls || [])
+      setActiveCluster(null)
+
+      if (arts && arts.length > 0) {
+        const latestArt = arts[0]
+        setArticle({
+          articleId: latestArt.id,
+          title: latestArt.title,
+          body_md: latestArt.body_md,
+          json_ld: latestArt.json_ld,
+        })
+        setPublishedUrl(latestArt.published_url || null)
+      } else {
+        setArticle(null)
+        setPublishedUrl(null)
+      }
+
+      setTracking(trs || [])
+      setCitability(null)
+      setReport(null)
+      setScored(true)
+
+      setPanel(null)
+    } catch (e) {
+      setError(String(e instanceof Error ? e.message : e))
+    } finally {
+      setLoadingProjectId(null)
+    }
+  }
+
+  async function deleteProject(pId: string) {
+    if (!window.confirm(t('geo.confirmDelete'))) return
+    try {
+      const res = await fetch(`/api/marketing/geo/history?projectId=${pId}`, { method: 'DELETE' })
+      if (res.ok) {
+        setHistoryProjects(prev => prev.filter(p => p.id !== pId))
+        if (projectId === pId) {
+          setProjectId(null)
+          setArticle(null)
+          setQuestions([])
+        }
+      }
+    } catch (e) {
+      setError(String(e instanceof Error ? e.message : e))
+    }
+  }
 
   // 發佈設定（per-user）
   const [wpBaseUrl, setWpBaseUrl] = useState('')
@@ -99,24 +231,42 @@ export default function GeoWriterPage() {
   const [savingSettings, setSavingSettings] = useState(false)
   const [settingsSaved, setSettingsSaved] = useState(false)
 
-  // 素材庫
+  // 素材庫（已與公司資源庫全面合併）
   const [business, setBusiness] = useState<BusinessProfile>({})
   const [authors, setAuthors] = useState<AuthorProfile[]>([])
   const [facts, setFacts] = useState<FactItem[]>([])
+  const [companyFacts, setCompanyFacts] = useState<CompanyFact[]>([])
+  const [companyStores, setCompanyStores] = useState<CompanyStore[]>([])
+  const [companyName, setCompanyName] = useState('')
+  const [companyWebsite, setCompanyWebsite] = useState('')
+  const [loadingMat, setLoadingMat] = useState(false)
   const [savingMat, setSavingMat] = useState(false)
   const [matSaved, setMatSaved] = useState(false)
 
-  useEffect(() => {
-    fetch('/api/marketing/geo/material')
-      .then(r => r.ok ? r.json() : null)
-      .then(d => {
-        if (!d) return
-        setBusiness(d.business ?? {})
-        setAuthors(d.authors ?? [])
-        setFacts(d.facts ?? [])
-      })
-      .catch(() => {})
+  const fetchMaterial = useCallback(async () => {
+    setLoadingMat(true)
+    try {
+      const r = await fetch('/api/marketing/geo/material')
+      if (r.ok) {
+        const d = await r.json()
+        if (d.business) setBusiness(d.business)
+        if (d.authors) setAuthors(d.authors)
+        if (d.facts) setFacts(d.facts)
+        if (d.companyFacts) setCompanyFacts(d.companyFacts)
+        if (d.companyStores) setCompanyStores(d.companyStores)
+        if (d.companyName) setCompanyName(d.companyName)
+        if (d.companyWebsite) setCompanyWebsite(d.companyWebsite)
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLoadingMat(false)
+    }
   }, [])
+
+  useEffect(() => {
+    fetchMaterial()
+  }, [fetchMaterial])
 
   async function saveMaterial() {
     setSavingMat(true); setMatSaved(false); setError('')
@@ -136,6 +286,70 @@ export default function GeoWriterPage() {
     const line = f.text?.trim()
     if (!line) return
     setExclusiveFacts(prev => prev ? `${prev}\n${line}` : line)
+  }
+
+  // AI 主動推薦主題與 Auto-Pilot 巡航
+  const [suggestedTopics, setSuggestedTopics] = useState<SuggestedTopic[]>([])
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false)
+  const [runningAutoPilot, setRunningAutoPilot] = useState(false)
+
+  const fetchSuggestedTopics = useCallback(async () => {
+    setLoadingSuggestions(true)
+    try {
+      const res = await fetch('/api/marketing/geo/auto-pilot')
+      if (res.ok) {
+        const data = await res.json()
+        if (data.topics) setSuggestedTopics(data.topics)
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLoadingSuggestions(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchSuggestedTopics()
+  }, [fetchSuggestedTopics])
+
+  async function runAutoPilot(forcedTopic?: string) {
+    setError('')
+    setRunningAutoPilot(true)
+    try {
+      const targetTopic = forcedTopic || topic
+      const res = await fetch('/api/marketing/geo/auto-pilot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic: targetTopic, locale }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'error')
+
+      setProjectId(data.projectId)
+      setTopic(data.topic)
+      if (data.exclusiveFacts) setExclusiveFacts(data.exclusiveFacts)
+      if (data.author) setAuthor(data.author)
+      if (data.targetDomain) setTargetDomain(data.targetDomain)
+
+      const qs: GeoQuestion[] = data.questions ?? []
+      setQuestions(qs)
+      setSelected(new Set(qs.map((_, i) => i)))
+      setArticle(data.article)
+      setPublishedUrl(null)
+      setTracking([])
+      setCitability(null)
+      setReport(null)
+      setScored(true)
+
+      setTimeout(() => {
+        const el = document.getElementById('geo-article-result')
+        if (el) el.scrollIntoView({ behavior: 'smooth' })
+      }, 200)
+    } catch (e) {
+      setError(String(e instanceof Error ? e.message : e))
+    } finally {
+      setRunningAutoPilot(false)
+    }
   }
 
   const bz = (k: keyof BusinessProfile, v: string) => setBusiness(b => ({ ...b, [k]: v }))
@@ -461,6 +675,9 @@ export default function GeoWriterPage() {
             </h1>
             <p className="text-sm text-muted-foreground">{t('geo.subtitle')}</p>
           </div>
+          <Button variant={showHistory ? 'default' : 'outline'} size="sm" onClick={() => togglePanel('history')}>
+            <History className="h-3.5 w-3.5" /> {t('geo.history')}
+          </Button>
           <Button variant={showMaterial ? 'default' : 'outline'} size="sm" onClick={() => togglePanel('material')}>
             <Library className="h-3.5 w-3.5" /> {t('geo.material')}
           </Button>
@@ -472,17 +689,199 @@ export default function GeoWriterPage() {
           </Button>
         </div>
 
-        {/* 素材庫：商家檔案(LocalBusiness) / 作者(Person) / 獨家事實 */}
+        {/* 歷史紀錄面板 */}
+        {showHistory && (
+          <div className="bg-card rounded-xl border p-5 space-y-4 shadow-sm animate-in fade-in duration-200">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold flex items-center gap-2">
+                <History className="h-4 w-4 text-indigo-600" /> {t('geo.history')}
+              </h2>
+              <Button variant="ghost" size="sm" onClick={fetchHistory} disabled={loadingHistory} className="h-7 text-xs">
+                <RefreshCw className={cn("h-3 w-3 mr-1", loadingHistory && "animate-spin")} />
+                {t('geo.refresh')}
+              </Button>
+            </div>
+
+            {loadingHistory ? (
+              <div className="flex items-center justify-center py-8 text-muted-foreground text-sm">
+                <Loader2 className="h-4 w-4 animate-spin mr-2" /> 載入中...
+              </div>
+            ) : historyProjects.length === 0 ? (
+              <div className="text-center py-8 text-sm text-muted-foreground bg-muted/30 rounded-lg p-4">
+                {t('geo.noHistory')}
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-[460px] overflow-y-auto pr-1">
+                {historyProjects.map(p => (
+                  <div
+                    key={p.id}
+                    className={cn(
+                      "p-3.5 rounded-lg border text-sm transition-all bg-card/60 hover:bg-card hover:border-indigo-300 dark:hover:border-indigo-800 space-y-2.5",
+                      projectId === p.id && "border-indigo-500 bg-indigo-50/20 dark:bg-indigo-950/20"
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-foreground text-sm truncate">{p.seed_topic}</span>
+                          {p.target_domain && (
+                            <span className="text-[11px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                              {p.target_domain}
+                            </span>
+                          )}
+                          {projectId === p.id && (
+                            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+                              目前載入中
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 text-[11px] text-muted-foreground mt-1 flex-wrap">
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {new Date(p.created_at).toLocaleString(locale === 'zh-TW' ? 'zh-TW' : locale === 'vi' ? 'vi-VN' : 'en-US', {
+                              year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                            })}
+                          </span>
+                          <span>•</span>
+                          <span>{p.questionsCount} {t('geo.questionsCount')}</span>
+                          <span>•</span>
+                          <span>{p.articles.length} {t('geo.articlesCount')}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <Button
+                          size="sm"
+                          variant={projectId === p.id ? "secondary" : "default"}
+                          className="h-7 text-xs px-2.5"
+                          disabled={loadingProjectId === p.id}
+                          onClick={() => loadProject(p.id)}
+                        >
+                          {loadingProjectId === p.id ? (
+                            <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                          ) : (
+                            <FileText className="h-3 w-3 mr-1" />
+                          )}
+                          {t('geo.loadProject')}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 w-7 p-0 text-muted-foreground hover:text-red-600"
+                          onClick={() => deleteProject(p.id)}
+                          title={t('geo.deleteProject')}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* 若有產出文章列表 */}
+                    {p.articles.length > 0 && (
+                      <div className="pt-2 border-t space-y-1.5">
+                        {p.articles.map(art => (
+                          <div key={art.id} className="flex items-center justify-between text-xs bg-muted/40 rounded px-2.5 py-1.5">
+                            <span className="truncate flex-1 font-medium text-slate-700 dark:text-slate-300 mr-2">
+                              {art.title}
+                            </span>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className={cn(
+                                "text-[10px] px-1.5 py-0.5 rounded font-medium",
+                                art.status === 'published'
+                                  ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+                                  : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+                              )}>
+                                {art.status === 'published' ? t('geo.published') : t('geo.draft')}
+                              </span>
+                              {art.status === 'published' && (
+                                <a
+                                  href={art.published_url || `/geo/${art.id}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-indigo-600 hover:text-indigo-700 flex items-center gap-0.5 text-[11px]"
+                                >
+                                  <Eye className="h-3 w-3" />
+                                  {t('geo.viewArticle')}
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 素材庫：已與公司資源庫全面合併（LocalBusiness / Person / 獨家事實） */}
         {showMaterial && (
-          <div className="bg-card rounded-xl border p-5 space-y-5 shadow-sm">
-            <h2 className="text-sm font-semibold flex items-center gap-2">
-              <Library className="h-4 w-4 text-indigo-600" /> {t('geo.material')}
-            </h2>
+          <div className="bg-card rounded-xl border p-5 space-y-5 shadow-sm animate-in fade-in duration-200">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold flex items-center gap-2">
+                <Library className="h-4 w-4 text-indigo-600" /> {t('geo.material')}
+              </h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={fetchMaterial}
+                disabled={loadingMat}
+                className="h-7 text-xs text-indigo-600 hover:text-indigo-800"
+              >
+                <RefreshCw className={cn("h-3 w-3 mr-1", loadingMat && "animate-spin")} />
+                {t('geo.syncCompany')}
+              </Button>
+            </div>
             <p className="text-[11px] text-muted-foreground">{t('geo.materialHint')}</p>
 
+            {/* 公司資源庫連動橫幅 */}
+            <div className="bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded-lg p-3 text-xs flex items-center gap-2.5">
+              <Building2 className="h-4 w-4 text-indigo-600 shrink-0" />
+              <div className="flex-1">
+                <span className="font-semibold text-indigo-900 dark:text-indigo-200">
+                  {t('geo.companyAssetsLinked')}
+                </span>
+                <span className="text-indigo-700/80 dark:text-indigo-300/80 ml-1.5">
+                  {companyName ? `(${companyName})` : ''} — 品牌基本資料、門市地址與產品規格已由公司中樞自動同步
+                </span>
+              </div>
+            </div>
+
             {/* 商家檔案 */}
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{t('geo.bizSection')}</p>
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                  <MapPin className="h-3.5 w-3.5" />{t('geo.bizSection')}
+                </p>
+                {/* 門市快速選單 */}
+                {companyStores.length > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    <Store className="h-3.5 w-3.5 text-muted-foreground" />
+                    <select
+                      onChange={(e) => {
+                        const s = companyStores.find(st => st.id === e.target.value)
+                        if (!s) return
+                        setBusiness(b => ({
+                          ...b,
+                          name: s.name,
+                          streetAddress: s.address,
+                          openingHours: s.openingHours || b.openingHours,
+                        }))
+                      }}
+                      className="h-7 rounded border bg-background px-2 text-[11px]"
+                      defaultValue=""
+                    >
+                      <option value="" disabled>{t('geo.selectStoreToFill')}</option>
+                      {companyStores.map(st => (
+                        <option key={st.id} value={st.id}>{st.name} {st.address ? `(${st.address})` : ''}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
               <div className="grid grid-cols-2 gap-2">
                 <Input value={business.name ?? ''} onChange={e => bz('name', e.target.value)} placeholder={t('geo.bizName')} />
                 <select value={business.type ?? 'LocalBusiness'} onChange={e => bz('type', e.target.value)}
@@ -502,7 +901,38 @@ export default function GeoWriterPage() {
               </div>
             </div>
 
-            {/* 作者 */}
+            {/* 來自公司資源庫的事實（品牌、產品、門市） */}
+            {companyFacts.length > 0 && (
+              <div className="space-y-2 border-t pt-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <Sparkles className="h-3.5 w-3.5 text-indigo-500" />
+                    {t('geo.companyAssetsFacts')}
+                  </p>
+                  <span className="text-[11px] text-muted-foreground">{companyFacts.length} 項事實可供插入</span>
+                </div>
+                <div className="grid grid-cols-1 gap-1.5 max-h-48 overflow-y-auto pr-1">
+                  {companyFacts.map((cf, idx) => (
+                    <div key={idx} className="flex items-start justify-between gap-2 p-2 bg-muted/40 rounded border text-xs hover:border-indigo-300 transition-colors">
+                      <div className="min-w-0 flex-1">
+                        <span className="font-semibold text-indigo-700 dark:text-indigo-400 mr-1.5">[{cf.label}]</span>
+                        <span className="text-muted-foreground line-clamp-2">{cf.text}</span>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-6 text-[11px] px-2 shrink-0 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-300"
+                        onClick={() => insertFact({ label: cf.label, text: cf.text })}
+                      >
+                        <Plus className="h-3 w-3 mr-0.5" /> {t('geo.insertToTopic')}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 作者 (E-E-A-T) */}
             <div className="space-y-2 border-t pt-4">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-medium text-muted-foreground flex items-center gap-1"><UserCircle className="h-3.5 w-3.5" />{t('geo.authorSection')}</p>
@@ -519,7 +949,7 @@ export default function GeoWriterPage() {
               ))}
             </div>
 
-            {/* 獨家事實 */}
+            {/* 自訂事實片段 */}
             <div className="space-y-2 border-t pt-4">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-medium text-muted-foreground">{t('geo.factSection')}</p>
@@ -670,6 +1100,112 @@ export default function GeoWriterPage() {
           </div>
         )}
 
+        {/* 一鍵全自動巡航生成區塊 */}
+        <div className="rounded-xl border-2 border-indigo-500/40 bg-gradient-to-r from-indigo-50/80 via-purple-50/50 to-pink-50/30 dark:from-indigo-950/40 dark:via-purple-950/30 dark:to-pink-950/20 p-5 space-y-3.5 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 rounded-lg bg-indigo-600 text-white shadow-sm">
+                  <Rocket className="h-4 w-4" />
+                </span>
+                <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                  {t('geo.autoPilot')}
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-600 text-white tracking-wider">
+                    AUTO-PILOT
+                  </span>
+                </h2>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-400">
+                {t('geo.autoPilotHint')}
+              </p>
+            </div>
+
+            <Button
+              onClick={() => runAutoPilot()}
+              disabled={runningAutoPilot}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm shrink-0 h-9 px-4 font-semibold text-xs"
+            >
+              {runningAutoPilot ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                  {t('geo.autoPiloting')}
+                </>
+              ) : (
+                <>
+                  <Zap className="h-3.5 w-3.5 mr-1.5 fill-current" />
+                  {t('geo.autoPilot')}
+                </>
+              )}
+            </Button>
+          </div>
+
+          {/* AI 主動推薦主題群 */}
+          {suggestedTopics.length > 0 && (
+            <div className="pt-2 border-t border-indigo-200/50 dark:border-indigo-800/50 space-y-2">
+              <div className="flex items-center justify-between text-xs text-indigo-900 dark:text-indigo-200 font-medium">
+                <span className="flex items-center gap-1.5">
+                  <Lightbulb className="h-3.5 w-3.5 text-amber-500" />
+                  {t('geo.aiSuggestedTopics')}
+                </span>
+                <button
+                  onClick={fetchSuggestedTopics}
+                  disabled={loadingSuggestions}
+                  className="text-[11px] text-indigo-600 hover:underline flex items-center gap-1"
+                >
+                  <RefreshCw className={cn("h-3 w-3", loadingSuggestions && "animate-spin")} />
+                  {t('geo.refresh')}
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {suggestedTopics.map((st, i) => (
+                  <div
+                    key={i}
+                    className="p-2.5 rounded-lg border bg-card/80 hover:bg-card hover:border-indigo-400 dark:hover:border-indigo-700 transition-all text-xs flex flex-col justify-between gap-2 shadow-2xs group"
+                  >
+                    <div>
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+                          {st.tag}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground truncate">{st.reason}</span>
+                      </div>
+                      <p className="font-medium text-foreground group-hover:text-indigo-600 transition-colors">
+                        {st.title}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 pt-1 border-t border-border/50 justify-end">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 text-[11px] px-2"
+                        onClick={() => {
+                          setTopic(st.title)
+                          if (st.exclusiveFacts) {
+                            setExclusiveFacts(prev => prev ? `${prev}\n${st.exclusiveFacts}` : st.exclusiveFacts)
+                          }
+                        }}
+                      >
+                        帶入表單
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="h-6 text-[11px] px-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 dark:bg-indigo-950 dark:text-indigo-300 dark:border-indigo-800"
+                        disabled={runningAutoPilot}
+                        onClick={() => runAutoPilot(st.title)}
+                      >
+                        <Zap className="h-2.5 w-2.5 mr-1" />
+                        直接以此產出
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Step 1: input */}
         <div className="bg-card rounded-xl border p-5 space-y-4 shadow-sm">
           <h2 className="text-sm font-semibold">{t('geo.step1')}</h2>
@@ -780,7 +1316,7 @@ export default function GeoWriterPage() {
 
         {/* Step 3: article */}
         {article && (
-          <div className="bg-card rounded-xl border p-5 space-y-4 shadow-sm">
+          <div id="geo-article-result" className="bg-card rounded-xl border p-5 space-y-4 shadow-sm scroll-mt-6">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold flex items-center gap-2">
                 <FileText className="h-4 w-4 text-indigo-600" />

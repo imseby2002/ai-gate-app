@@ -2,6 +2,7 @@
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText, stepCountIs, type ModelMessage } from 'ai'
 import { cookies } from 'next/headers'
+import { trackAiUsage } from '@/lib/ai/universal-tracker'
 
 export const AFFAIRS_AI_MODEL = 'claude-sonnet-4-6'
 
@@ -33,6 +34,20 @@ export async function generateWithSearch(opts: {
     stopWhen: stepCountIs(8),
     maxOutputTokens: opts.maxOutputTokens ?? 4000,
   })
+
+  const usage = (res as any).usage ?? {}
+  const inTokens = Number(usage.inputTokens ?? usage.promptTokens ?? 0)
+  const outTokens = Number(usage.outputTokens ?? usage.completionTokens ?? 0)
+  if (inTokens > 0 || outTokens > 0) {
+    void trackAiUsage({
+      feature: 'affairs',
+      modelId: AFFAIRS_AI_MODEL,
+      inputTokens: inTokens,
+      outputTokens: outTokens,
+      sourceChannel: 'anthropic',
+    })
+  }
+
   const seen = new Set<string>()
   const sources: SearchResult['sources'] = []
   for (const s of res.sources ?? []) {

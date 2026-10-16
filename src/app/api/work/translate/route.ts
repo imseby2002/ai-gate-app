@@ -3,6 +3,7 @@ import { createHash } from 'crypto'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 import { createClient } from '@/lib/supabase/server'
+import { generateWithFreeFirst } from '@/lib/ai/free-first-caller'
 
 export const maxDuration = 60
 
@@ -51,10 +52,9 @@ export async function POST(req: NextRequest) {
   const missing = uniq.filter(t => !(t in result))
   if (missing.length) {
     try {
-      const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
-      const { text } = await generateText({
-        model: anthropic('claude-sonnet-4-6'),
-        system:
+      const text = await generateWithFreeFirst({
+        feature: 'other',
+        systemPrompt:
           `You are a translation engine. Translate each input string into ${langName}. ` +
           `If a string is already in the target language, return it unchanged. ` +
           `Preserve emojis, numbers and proper nouns. Keep it natural and concise. ` +

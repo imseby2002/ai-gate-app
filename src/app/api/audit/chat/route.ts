@@ -1,8 +1,9 @@
 import { getUnitContextAny } from '@/lib/auth/unit-access'
 import { NextRequest, NextResponse } from 'next/server'
-import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 import { summarizeAuditChat } from '@/lib/audit/summarize'
+import { getOfficeTieredModel } from '@/lib/office/tiered-chat-model'
+import { trackAiUsage } from '@/lib/ai/universal-tracker'
 
 export const maxDuration = 60
 
@@ -63,7 +64,6 @@ async function loadKnowledge(admin: any, ownerId: string): Promise<string> {
 export async function POST(req: NextRequest) {
   const c = await ctx()
   if (!c.ok) return NextResponse.json({ error: c.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: c.status })
-  if (!process.env.ANTHROPIC_API_KEY) return NextResponse.json({ error: 'ANTHROPIC_API_KEY 未設定' }, { status: 400 })
 
   const b = await req.json().catch(() => ({}))
   const message = s(b.message)
@@ -149,16 +149,40 @@ ${analysisText(b.analysis)}
     }
   })
 
+  // 檢查是否有包含照片
+  const hasImage = !!photoUrl || (hist ?? []).some((m: any) => !!m.photo_url)
+  const isComplexReasoning = !!b.analysis || mode === 'guide'
+
+  const tierDecision = getOfficeTieredModel({
+    hasImage,
+    message,
+    forceTier: hasImage ? 'vision' : (isComplexReasoning ? 'complex' : undefined),
+    additionalComplexKeywords: ['稽核', '損耗', '推算', '巡檢', '動線', '人體工學', '作廢', '私購'],
+  })
+
   let text = ''
   try {
-    const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
     const res = await generateText({
-      model: anthropic('claude-sonnet-4-5'),
+      model: tierDecision.model,
       system,
       maxOutputTokens: 2500,
       messages: formattedMessages,
     })
     text = res.text
+
+    const usage = (res as any).usage ?? {}
+    const inTokens = Number(usage.inputTokens ?? usage.promptTokens ?? 0)
+    const outTokens = Number(usage.outputTokens ?? usage.completionTokens ?? 0)
+    if (inTokens > 0 || outTokens > 0) {
+      void trackAiUsage({
+        feature: 'audit',
+        modelId: tierDecision.modelId,
+        inputTokens: inTokens,
+        outputTokens: outTokens,
+        sourceChannel: tierDecision.sourceChannel,
+        metadata: { tier: tierDecision.tier, reason: tierDecision.reason },
+      })
+    }
   } catch (e) {
     return NextResponse.json({ error: `AI 回覆失敗：${e instanceof Error ? e.message : e}` }, { status: 500 })
   }

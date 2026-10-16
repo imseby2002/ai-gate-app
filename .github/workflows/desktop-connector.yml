@@ -1,0 +1,40 @@
+# 在 Windows 打包 AI-GATE 桌面連接器成單一 .exe，發布到固定的 Release「connector-latest」
+# 網頁下載連結：https://github.com/<owner>/<repo>/releases/download/connector-latest/AI-GATE-Connector.exe
+name: Desktop Connector
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'desktop-connector/**'
+      - '.github/workflows/desktop-connector.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: desktop-connector
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - run: npm install --no-audit --no-fund
+
+      - run: npm run build:exe
+
+      - name: Publish release asset
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view connector-latest >/dev/null 2>&1 || \
+            gh release create connector-latest --title "AI-GATE 桌面連接器（最新版）" --notes "Windows 版 AI-GATE 桌面連接器，雙擊執行並輸入網頁上的配對碼。" --latest=false
+          gh release upload connector-latest dist/AI-GATE-Connector.exe --clobber

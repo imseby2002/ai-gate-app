@@ -7,6 +7,7 @@ import { createOpenAI } from '@ai-sdk/openai'
 import { generateText } from 'ai'
 import { PERPLEXITY_SONAR_REQUEST_COST } from '@/lib/marketing/billing'
 import { trackCost, trackLlm } from '@/lib/marketing/usage'
+import { trackAiUsage } from '@/lib/ai/universal-tracker'
 
 export interface TrackInput {
   id: string            // question id
@@ -51,6 +52,16 @@ async function checkOne(q: TrackInput, locale: string): Promise<TrackResult | nu
     // 手動觸發時依實際用量扣點（cron 不在 withUsage 範圍內，不記帳）
     trackLlm('sonar', usage)
     trackCost(PERPLEXITY_SONAR_REQUEST_COST)
+
+    const inTokens = Number((usage as any)?.inputTokens ?? (usage as any)?.promptTokens ?? 0)
+    const outTokens = Number((usage as any)?.outputTokens ?? (usage as any)?.completionTokens ?? 0)
+    void trackAiUsage({
+      feature: 'marketing',
+      modelId: 'perplexity-sonar-pro',
+      inputTokens: inTokens,
+      outputTokens: outTokens,
+      sourceChannel: 'direct',
+    })
     const m = text.match(/\{[\s\S]*"sources"[\s\S]*\}/)
     let sources: string[] = []
     if (m) {

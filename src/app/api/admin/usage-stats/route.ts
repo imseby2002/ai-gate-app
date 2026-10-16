@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const daysParam = searchParams.get('days') ?? 'all'
   const filterChannel = searchParams.get('channel') ?? 'all'
-  const filterService = searchParams.get('service') ?? 'all' // 'all' | 'roundtable' | 'chat'
+  const filterService = searchParams.get('service') ?? 'all' // 'all' | 'roundtable' | 'chat' | 'agent' | 'missions'
 
   let startDateStr: string | null = null
   let startTimestamp: number | null = null
@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
     display_name: string
     source_channel: SourceChannel
     channel_label: string
-    service_module: 'all' | 'roundtable' | 'chat'
+    service_module: 'all' | 'roundtable' | 'chat' | 'agent' | 'missions'
     is_free: boolean
     requests: number
     input_tokens: number
@@ -115,6 +115,12 @@ export async function GET(req: NextRequest) {
   let totalChatTokens = 0
   let totalChatCostUsd = 0
   let totalChatRequests = 0
+  let totalAgentTokens = 0
+  let totalAgentCostUsd = 0
+  let totalAgentRequests = 0
+  let totalMissionsTokens = 0
+  let totalMissionsCostUsd = 0
+  let totalMissionsRequests = 0
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 1. 處理「AI 智慧圓桌會議 (Roundtable)」所有會話與發言
@@ -373,6 +379,308 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 3. 處理「AI 自主特務引擎 (Agent Engine)」逐步稽核紀錄 (agent_run_steps)
+  // ─────────────────────────────────────────────────────────────────────────────
+  if (filterService === 'all' || filterService === 'agent') {
+    try {
+      let agentQuery = supabase!
+        .from('agent_run_steps')
+        .select('id, run_id, phase, model_id, input_tokens, output_tokens, credits_spent, created_at')
+        .order('created_at', { ascending: true })
+
+      if (startDateStr) {
+        agentQuery = agentQuery.gte('created_at', `${startDateStr}T00:00:00.000Z`)
+      }
+
+      const { data: agentSteps, error: agentErr } = await agentQuery
+      if (agentErr) {
+        console.warn('[usage-stats] agent_run_steps warning:', agentErr.message)
+      } else {
+        for (const step of agentSteps ?? []) {
+          const rawModel = step.model_id || 'claude-sonnet-4-6'
+          const channel = detectSourceChannel(rawModel)
+          const cleanId = cleanModelId(rawModel)
+          const key = `${channel}:${cleanId}`
+
+          const inTokens = step.input_tokens ?? 0
+          const outTokens = step.output_tokens ?? 0
+          const dateStr = step.created_at ? step.created_at.split('T')[0] : new Date().toISOString().split('T')[0]
+
+          const costs = calculateModelCosts(rawModel, inTokens, outTokens, channel)
+          const stepCredits = Number(step.credits_spent) || 0
+          const finalCostUsd = stepCredits > 0 ? stepCredits : costs.actualCostUsd
+          const finalCostTwd = finalCostUsd * 32.0
+
+          totalAgentTokens += (inTokens + outTokens)
+          totalAgentCostUsd += finalCostUsd
+          totalAgentRequests += 1
+
+          const entry = modelMap.get(key) ?? {
+            model_id: cleanId,
+            display_name: getModelDisplayName(rawModel, channel),
+            source_channel: channel,
+            channel_label: CHANNEL_CONFIG[channel]?.label ?? channel,
+            service_module: 'agent',
+            is_free: CHANNEL_CONFIG[channel]?.isFree ?? false,
+            requests: 0,
+            input_tokens: 0,
+            output_tokens: 0,
+            total_tokens: 0,
+            cost_usd: 0,
+            cost_twd: 0,
+            saved_usd: 0,
+            saved_twd: 0,
+          }
+
+          entry.requests += 1
+          entry.input_tokens += inTokens
+          entry.output_tokens += outTokens
+          entry.total_tokens += (inTokens + outTokens)
+          entry.cost_usd += finalCostUsd
+          entry.cost_twd += finalCostTwd
+          entry.saved_usd += costs.savedCostUsd
+          entry.saved_twd += costs.savedCostTwd
+          modelMap.set(key, entry)
+
+          if (channelTotals[channel]) {
+            channelTotals[channel].requests += 1
+            channelTotals[channel].input_tokens += inTokens
+            channelTotals[channel].output_tokens += outTokens
+            channelTotals[channel].total_tokens += (inTokens + outTokens)
+            channelTotals[channel].cost_usd += finalCostUsd
+            channelTotals[channel].cost_twd += finalCostTwd
+            channelTotals[channel].saved_usd += costs.savedCostUsd
+            channelTotals[channel].saved_twd += costs.savedCostTwd
+          }
+
+          const day = dayMap.get(dateStr) ?? {
+            date: dateStr,
+            cost_usd: 0,
+            cliproxy_tokens: 0,
+            cliproxy_requests: 0,
+            freellm_tokens: 0,
+            freellm_requests: 0,
+            groq_tokens: 0,
+            groq_requests: 0,
+            direct_tokens: 0,
+            direct_requests: 0,
+            total_tokens: 0,
+            requests: 0,
+          }
+
+          day.cost_usd += finalCostUsd
+          day.total_tokens += (inTokens + outTokens)
+          day.requests += 1
+          day.direct_tokens += (inTokens + outTokens)
+          day.direct_requests += 1
+
+          dayMap.set(dateStr, day)
+        }
+      }
+    } catch (e) {
+      console.warn('[usage-stats] agent_run_steps exception:', e)
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 4. 處理任務計畫書 (Missions) 與背景扣點記錄 (credit_transactions)
+  // ─────────────────────────────────────────────────────────────────────────────
+  if (filterService === 'all' || filterService === 'missions') {
+    try {
+      let creditQuery = supabase!
+        .from('credit_transactions')
+        .select('id, amount_usd, description, type, created_at')
+        .order('created_at', { ascending: true })
+
+      if (startDateStr) {
+        creditQuery = creditQuery.gte('created_at', `${startDateStr}T00:00:00.000Z`)
+      }
+
+      const { data: txRows, error: txErr } = await creditQuery
+      if (txErr) {
+        console.warn('[usage-stats] credit_transactions warning:', txErr.message)
+      } else {
+        for (const tx of txRows ?? []) {
+          const desc = tx.description || ''
+          if (!desc.startsWith('agent-mission-plan:')) continue
+
+          const rawModel = 'anthropic/claude-sonnet-4-6'
+          const channel: SourceChannel = 'anthropic'
+          const cleanId = cleanModelId(rawModel)
+          const key = `${channel}:${cleanId}`
+
+          const costUsd = Math.abs(Number(tx.amount_usd) || 0)
+          const costTwd = costUsd * 32.0
+          // Estimate tokens from average Claude 3.7 Sonnet rate
+          const estimatedTokens = Math.round((costUsd / 0.009) * 1000)
+          const dateStr = tx.created_at ? tx.created_at.split('T')[0] : new Date().toISOString().split('T')[0]
+
+          totalMissionsTokens += estimatedTokens
+          totalMissionsCostUsd += costUsd
+          totalMissionsRequests += 1
+
+          const entry = modelMap.get(key) ?? {
+            model_id: cleanId,
+            display_name: getModelDisplayName(rawModel, channel),
+            source_channel: channel,
+            channel_label: CHANNEL_CONFIG[channel]?.label ?? channel,
+            service_module: 'missions',
+            is_free: false,
+            requests: 0,
+            input_tokens: 0,
+            output_tokens: 0,
+            total_tokens: 0,
+            cost_usd: 0,
+            cost_twd: 0,
+            saved_usd: 0,
+            saved_twd: 0,
+          }
+
+          entry.requests += 1
+          entry.total_tokens += estimatedTokens
+          entry.cost_usd += costUsd
+          entry.cost_twd += costTwd
+          modelMap.set(key, entry)
+
+          if (channelTotals[channel]) {
+            channelTotals[channel].requests += 1
+            channelTotals[channel].total_tokens += estimatedTokens
+            channelTotals[channel].cost_usd += costUsd
+            channelTotals[channel].cost_twd += costTwd
+          }
+
+          const day = dayMap.get(dateStr) ?? {
+            date: dateStr,
+            cost_usd: 0,
+            cliproxy_tokens: 0,
+            cliproxy_requests: 0,
+            freellm_tokens: 0,
+            freellm_requests: 0,
+            groq_tokens: 0,
+            groq_requests: 0,
+            direct_tokens: 0,
+            direct_requests: 0,
+            total_tokens: 0,
+            requests: 0,
+          }
+
+          day.cost_usd += costUsd
+          day.total_tokens += estimatedTokens
+          day.requests += 1
+          day.direct_tokens += estimatedTokens
+          day.direct_requests += 1
+
+          dayMap.set(dateStr, day)
+        }
+      }
+    } catch (e) {
+      console.warn('[usage-stats] credit_transactions exception:', e)
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 5. 處理背景與外部獨立來源日統計 (ai_source_usage_daily，如 Email-Sync 等)
+  // ─────────────────────────────────────────────────────────────────────────────
+  try {
+    let sourceQuery = supabase!
+      .from('ai_source_usage_daily')
+      .select('date, source_channel, model_id, message_count, input_tokens, output_tokens, total_cost_usd')
+      .order('date', { ascending: true })
+
+    if (startDateStr) {
+      sourceQuery = sourceQuery.gte('date', startDateStr)
+    }
+
+    const { data: sourceRows, error: sourceErr } = await sourceQuery
+    if (!sourceErr && sourceRows) {
+      for (const row of sourceRows) {
+        const rawModel = row.model_id ?? ''
+        const channel = (row.source_channel === 'direct' ? detectSourceChannel(rawModel) : row.source_channel) as SourceChannel
+        const cleanId = cleanModelId(rawModel)
+        const key = `${channel}:${cleanId}`
+
+        const inTokens = Number(row.input_tokens) || 0
+        const outTokens = Number(row.output_tokens) || 0
+        const reqCount = row.message_count ?? 1
+        const finalCostUsd = Number(row.total_cost_usd) || 0
+        const finalCostTwd = finalCostUsd * 32.0
+
+        const entry = modelMap.get(key) ?? {
+          model_id: cleanId,
+          display_name: getModelDisplayName(rawModel, channel),
+          source_channel: channel,
+          channel_label: CHANNEL_CONFIG[channel]?.label ?? channel,
+          service_module: 'missions',
+          is_free: CHANNEL_CONFIG[channel]?.isFree ?? false,
+          requests: 0,
+          input_tokens: 0,
+          output_tokens: 0,
+          total_tokens: 0,
+          cost_usd: 0,
+          cost_twd: 0,
+          saved_usd: 0,
+          saved_twd: 0,
+        }
+
+        entry.requests += reqCount
+        entry.input_tokens += inTokens
+        entry.output_tokens += outTokens
+        entry.total_tokens += (inTokens + outTokens)
+        entry.cost_usd += finalCostUsd
+        entry.cost_twd += finalCostTwd
+        modelMap.set(key, entry)
+
+        if (channelTotals[channel]) {
+          channelTotals[channel].requests += reqCount
+          channelTotals[channel].input_tokens += inTokens
+          channelTotals[channel].output_tokens += outTokens
+          channelTotals[channel].total_tokens += (inTokens + outTokens)
+          channelTotals[channel].cost_usd += finalCostUsd
+          channelTotals[channel].cost_twd += finalCostTwd
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[usage-stats] ai_source_usage_daily error:', e)
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 6. 讀取各功能模組獨立日統計 (ai_feature_usage_daily，如 Meeting, Store Coach, Marketing 等)
+  // ─────────────────────────────────────────────────────────────────────────────
+  const featureTotals: Record<string, { tokens: number; costUsd: number; requests: number; topModel: string }> = {}
+
+  try {
+    let featureQuery = supabase!
+      .from('ai_feature_usage_daily')
+      .select('date, feature_module, model_id, source_channel, request_count, input_tokens, output_tokens, total_cost_usd, saved_cost_usd')
+
+    if (startDateStr) {
+      featureQuery = featureQuery.gte('date', startDateStr)
+    }
+
+    const { data: featureRows, error: featErr } = await featureQuery
+    if (!featErr && featureRows) {
+      for (const row of featureRows) {
+        const feat = row.feature_module || 'other'
+        const inTokens = Number(row.input_tokens) || 0
+        const outTokens = Number(row.output_tokens) || 0
+        const reqCount = Number(row.request_count) || 1
+        const costUsd = Number(row.total_cost_usd) || 0
+        const cleanName = getModelDisplayName(row.model_id ?? '', (row.source_channel as SourceChannel) || 'anthropic')
+
+        if (!featureTotals[feat]) {
+          featureTotals[feat] = { tokens: 0, costUsd: 0, requests: 0, topModel: cleanName }
+        }
+        featureTotals[feat].tokens += (inTokens + outTokens)
+        featureTotals[feat].costUsd += costUsd
+        featureTotals[feat].requests += reqCount
+      }
+    }
+  } catch (e) {
+    console.warn('[usage-stats] ai_feature_usage_daily query error:', e)
+  }
+
   // Prepopulate standard proxy models so the matrix displays them with $0.00 even if not yet triggered
   const standardShowcase: Array<{ model_id: string; channel: SourceChannel }> = [
     { model_id: 'gemini-3-flash', channel: 'cliproxy' },
@@ -443,6 +751,90 @@ export async function GET(req: NextRequest) {
 
   const dailyTrend = Array.from(dayMap.values()).sort((a, b) => a.date.localeCompare(b.date))
 
+  // Feature / Service module breakdown
+  const FEATURE_METADATA: Record<string, { label: string; icon: string; defaultModel: string; defaultChannel: string }> = {
+    meeting:     { label: '會議即時翻譯 (Meeting)', icon: 'Headphones', defaultModel: 'DeepSeek / Gemini Flash', defaultChannel: 'deepseek' },
+    store_coach: { label: '店長教練 (Store Coach)', icon: 'Sparkles', defaultModel: 'Claude 3.7 / Gemini', defaultChannel: 'anthropic' },
+    marketing:   { label: '行銷整套生成 (Marketing)', icon: 'Megaphone', defaultModel: 'Claude 3.7 Sonnet', defaultChannel: 'anthropic' },
+    audit:       { label: '稽核討論日誌 (Audit)', icon: 'FileCheck', defaultModel: 'Claude 3.7 Sonnet', defaultChannel: 'anthropic' },
+    rd:          { label: '研發日誌 (R&D)', icon: 'FlaskConical', defaultModel: 'Claude 3.7 Sonnet', defaultChannel: 'anthropic' },
+    affairs:     { label: '外務 AI 聯網 (Affairs)', icon: 'Globe', defaultModel: 'Claude 3.7 Sonnet', defaultChannel: 'anthropic' },
+    skills:      { label: '專家技能 (Skills)', icon: 'Wrench', defaultModel: 'Claude 3.7 Sonnet', defaultChannel: 'anthropic' },
+    autofix:     { label: '反饋自癒代碼 (Autofix)', icon: 'Code2', defaultModel: 'Claude 3.7 Sonnet', defaultChannel: 'anthropic' },
+    email_sync:  { label: '訂位信件同步 (Email)', icon: 'Mail', defaultModel: 'Claude Haiku / DeepSeek', defaultChannel: 'anthropic' },
+  }
+
+  const serviceBreakdown = [
+    {
+      id: 'agent',
+      label: '自主特務 (Agent)',
+      icon: 'Zap',
+      tokens: totalAgentTokens,
+      costUsd: Number(totalAgentCostUsd.toFixed(4)),
+      costTwd: Number((totalAgentCostUsd * 32).toFixed(2)),
+      requests: totalAgentRequests,
+      topModel: 'Claude 3.7 Sonnet',
+      channel: 'anthropic',
+      costSharePct: totalCostUsd > 0 ? Number(((totalAgentCostUsd / totalCostUsd) * 100).toFixed(1)) : 0,
+    },
+    {
+      id: 'missions',
+      label: '任務企劃 (Missions)',
+      icon: 'Flame',
+      tokens: totalMissionsTokens,
+      costUsd: Number(totalMissionsCostUsd.toFixed(4)),
+      costTwd: Number((totalMissionsCostUsd * 32).toFixed(2)),
+      requests: totalMissionsRequests,
+      topModel: 'Claude 3.7 Sonnet',
+      channel: 'anthropic',
+      costSharePct: totalCostUsd > 0 ? Number(((totalMissionsCostUsd / totalCostUsd) * 100).toFixed(1)) : 0,
+    },
+    {
+      id: 'chat',
+      label: '智慧對話 (Chat)',
+      icon: 'MessageSquare',
+      tokens: totalChatTokens,
+      costUsd: Number(totalChatCostUsd.toFixed(4)),
+      costTwd: Number((totalChatCostUsd * 32).toFixed(2)),
+      requests: totalChatRequests,
+      topModel: 'Groq / Gemini / DeepSeek',
+      channel: 'groq',
+      costSharePct: totalCostUsd > 0 ? Number(((totalChatCostUsd / totalCostUsd) * 100).toFixed(1)) : 0,
+    },
+    {
+      id: 'roundtable',
+      label: 'AI 圓桌會議',
+      icon: 'Layers',
+      tokens: totalRoundtableTokens,
+      costUsd: Number(totalRoundtableCostUsd.toFixed(4)),
+      costTwd: Number((totalRoundtableCostUsd * 32).toFixed(2)),
+      requests: totalRoundtableRequests,
+      topModel: 'Gemini / Claude / GPT',
+      channel: 'google',
+      costSharePct: totalCostUsd > 0 ? Number(((totalRoundtableCostUsd / totalCostUsd) * 100).toFixed(1)) : 0,
+    },
+    ...Object.entries(featureTotals).map(([featId, stat]) => {
+      const meta = FEATURE_METADATA[featId] || {
+        label: featId.toUpperCase(),
+        icon: 'Sparkles',
+        defaultModel: stat.topModel || 'AI Model',
+        defaultChannel: 'direct',
+      }
+      return {
+        id: featId,
+        label: meta.label,
+        icon: meta.icon,
+        tokens: stat.tokens,
+        costUsd: Number(stat.costUsd.toFixed(4)),
+        costTwd: Number((stat.costUsd * 32).toFixed(2)),
+        requests: stat.requests,
+        topModel: stat.topModel || meta.defaultModel,
+        channel: meta.defaultChannel,
+        costSharePct: totalCostUsd > 0 ? Number(((stat.costUsd / totalCostUsd) * 100).toFixed(1)) : 0,
+      }
+    }),
+  ]
+
   return NextResponse.json({
     summary: {
       totalCostUsd: Number(totalCostUsd.toFixed(4)),
@@ -461,7 +853,14 @@ export async function GET(req: NextRequest) {
       chatTokens: totalChatTokens,
       chatCostUsd: Number(totalChatCostUsd.toFixed(4)),
       chatRequests: totalChatRequests,
+      agentTokens: totalAgentTokens,
+      agentCostUsd: Number(totalAgentCostUsd.toFixed(4)),
+      agentRequests: totalAgentRequests,
+      missionsTokens: totalMissionsTokens,
+      missionsCostUsd: Number(totalMissionsCostUsd.toFixed(4)),
+      missionsRequests: totalMissionsRequests,
     },
+    serviceBreakdown,
     channels: channelTotals,
     byModelAndSource,
     dailyTrend,

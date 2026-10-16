@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAnthropic } from '@ai-sdk/anthropic'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createOpenAI } from '@ai-sdk/openai'
 import { generateText } from 'ai'
 import { createClient } from '@/lib/supabase/server'
+
+import { trackAiUsage } from '@/lib/ai/universal-tracker'
 
 export const maxDuration = 60
 
@@ -13,20 +14,96 @@ const LANG_NAMES: Record<string, string> = {
   'en': 'English',
 }
 
-function getModel() {
-  if (process.env.ANTHROPIC_API_KEY) {
-    const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-    return anthropic('claude-sonnet-4-6')
+interface ModelInstance {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  model: any
+  modelId: string
+  channel: 'deepseek' | 'openrouter' | 'google' | 'openai'
+}
+
+function getModel(): ModelInstance | null {
+  // 優先順位 1：DeepSeek (超低成本、高質量中文/越文翻譯)
+  const deepseekKey = process.env.DEEPSEEK_API_KEY?.trim()
+  if (deepseekKey) {
+    const deepseek = createOpenAI({
+      apiKey: deepseekKey,
+      baseURL: 'https://api.deepseek.com',
+    })
+    return { model: deepseek.chat('deepseek-chat'), modelId: 'deepseek-chat', channel: 'deepseek' }
   }
+
+  // DeepSeek 備援：OpenRouter DeepSeek
+  if (process.env.OPENROUTER_API_KEY) {
+    const openrouter = createOpenAI({
+      apiKey: process.env.OPENROUTER_API_KEY,
+      baseURL: 'https://openrouter.ai/api/v1',
+    })
+    return { model: openrouter.chat('deepseek/deepseek-chat'), modelId: 'deepseek/deepseek-chat', channel: 'openrouter' }
+  }
+
+  // 優先順位 2：Google Gemini 2.5 Flash (快速、低成本備援)
   if (process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
     const google = createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY })
-    return google('gemini-2.5-flash')
+    return { model: google('gemini-2.5-flash'), modelId: 'gemini-2.5-flash', channel: 'google' }
   }
+
+  // 優先順位 3：OpenAI gpt-4o-mini
   if (process.env.OPENAI_API_KEY) {
     const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY })
-    return openai('gpt-4o-mini')
+    return { model: openai('gpt-4o-mini'), modelId: 'gpt-4o-mini', channel: 'openai' }
   }
+
   return null
+}
+
+async function translateChunk(
+  chunk: string[],
+  modelInstance: ModelInstance,
+  systemPrompt: string
+): Promise<string[]> {
+  try {
+    const res = await generateText({
+      model: modelInstance.model,
+      system: systemPrompt,
+      prompt: JSON.stringify(chunk),
+      maxOutputTokens: 4000,
+    })
+
+    const { text } = res
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const usage = (res as any).usage ?? {}
+    const inTokens = Number(usage.inputTokens ?? usage.promptTokens ?? 0)
+    const outTokens = Number(usage.outputTokens ?? usage.completionTokens ?? 0)
+
+    if (inTokens > 0 || outTokens > 0) {
+      void trackAiUsage({
+        feature: 'meeting',
+        modelId: modelInstance.modelId,
+        inputTokens: inTokens,
+        outputTokens: outTokens,
+        sourceChannel: modelInstance.channel,
+      })
+    }
+
+    let arr: string[] = []
+    try {
+      const cleaned = text.trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim()
+      arr = JSON.parse(cleaned)
+    } catch {
+      // 容錯救援：若 JSON 因尾端逗號或引號未閉合導致解析失敗，嘗試正規匹配已完成的字串項目
+      const matches = Array.from(text.matchAll(/"((?:\\.|[^"\\])*)"/g)).map(m => m[1].replace(/\\"/g, '"'))
+      if (matches.length > 0) {
+        arr = matches
+      }
+    }
+
+    return chunk.map((original, i) =>
+      typeof arr[i] === 'string' && arr[i].trim() ? arr[i].trim() : original
+    )
+  } catch (err) {
+    console.error('[MeetingTranslate] chunk generation failed:', err)
+    return chunk
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -98,26 +175,16 @@ TRANSLATION GOAL & RULES:
 5. If a string is already in the target language (${langName}), return it unchanged.
 6. OUTPUT FORMAT: Return ONLY a valid JSON array of translated strings in the EXACT same order as the input array. No commentary or markdown formatting.`
 
-  try {
-    const { text } = await generateText({
-      model,
-      system: systemPrompt,
-      prompt: JSON.stringify(texts),
-      maxOutputTokens: 2000,
-    })
-
-    let arr: string[] = []
-    try {
-      const cleaned = text.trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim()
-      arr = JSON.parse(cleaned)
-    } catch {
-      arr = []
-    }
-
-    const translations = texts.map((original, i) => (typeof arr[i] === 'string' && arr[i].trim() ? arr[i].trim() : original))
-    return NextResponse.json({ translations })
-  } catch (err) {
-    console.error('[MeetingTranslate] generation failed:', err)
-    return NextResponse.json({ translations: texts })
+  // 分批併行處理，每批最多 8 句，徹底杜絕 Token 超限與截斷問題
+  const CHUNK_SIZE = 8
+  const chunks: string[][] = []
+  for (let i = 0; i < texts.length; i += CHUNK_SIZE) {
+    chunks.push(texts.slice(i, i + CHUNK_SIZE))
   }
+
+  const results = await Promise.all(
+    chunks.map(chunk => translateChunk(chunk, model, systemPrompt))
+  )
+  const translations = results.flat()
+  return NextResponse.json({ translations })
 }

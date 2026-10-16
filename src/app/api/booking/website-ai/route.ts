@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { generateText } from 'ai'
 import { createAnthropic } from '@ai-sdk/anthropic'
+import { trackAiUsage } from '@/lib/ai/universal-tracker'
 import { CUSTOM_HEADING_FONTS, sanitizeCustomDesign } from '@/lib/booking/templates'
 import { getUiStyle, uiStylesPromptList } from '@/lib/booking/uiStyles'
 
@@ -107,7 +108,7 @@ export async function POST(req: NextRequest) {
 民宿故事：${profile.about ? profile.about.slice(0, 300) + '...' : '（未填）'}
 SEO 標題：${profile.seo_title || '（未填）'}`
 
-  const { text: raw } = await generateText({
+  const res = await generateText({
     model: anthropic('claude-sonnet-4-6'),
     system: systemWithProfile,
     messages: (messages as { role: string; content: string; images?: unknown }[]).map(m => {
@@ -127,6 +128,16 @@ SEO 標題：${profile.seo_title || '（未填）'}`
     }),
     // 一次產出多個長文案欄位（故事、FAQ…）很容易超過 2500，被截斷後 </updates> 不見、整段 JSON 直接露在對話裡
     maxOutputTokens: 8000,
+  })
+
+  const raw = res.text
+  const usage = (res as any).usage ?? {}
+  void trackAiUsage({
+    feature: 'other',
+    modelId: 'claude-sonnet-4-6',
+    inputTokens: Number(usage.inputTokens ?? usage.promptTokens ?? 0),
+    outputTokens: Number(usage.outputTokens ?? usage.completionTokens ?? 0),
+    sourceChannel: 'anthropic',
   })
 
   // <updates> 之後的內容一律不顯示在對話裡；即使被截斷（沒有結尾標籤）或包了 ```json 也盡量解析

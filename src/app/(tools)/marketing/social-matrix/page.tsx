@@ -12,9 +12,11 @@ import {
 import {
   SocialProxy, SocialAccount, SocialLog, TargetGroup,
   MatrixCopy, ProxyType, ProxyProtocol, SocialPlatform,
-  OfficialRentableProxy, ProxyLease, OfficialProxyStatus
+  OfficialRentableProxy, ProxyLease, OfficialProxyStatus, ResiAccountSummary
 } from '@/lib/social-matrix/types'
+import { officialPriceUsd, resiPackUsd } from '@/lib/social-matrix/pricing'
 import { PlanGate } from '@/components/marketing/PlanGate'
+import { ConnectorPanel, queueConnectorTask } from '@/components/marketing/ConnectorPanel'
 
 export default function SocialMatrixPage() {
   return (
@@ -26,6 +28,7 @@ export default function SocialMatrixPage() {
 
 function SocialMatrixContent() {
   const t = useTranslations('SocialMatrix')
+  const tc = useTranslations('DesktopConnector')
   const [activeTab, setActiveTab] = useState<'proxies' | 'accounts' | 'campaign'>('proxies')
   const [isLoading, setIsLoading] = useState(false)
   const [copiedId, setCopiedId] = useState<string | null>(null)
@@ -78,10 +81,24 @@ function SocialMatrixContent() {
     city: '宜蘭',
     isp: '聯禾有線電視 (TBC 原生家用住宅寬頻)',
     latency_ms: 18,
-    monthly_price_twd: 299,
+    monthly_price_usd: 3,
+    price_per_gb_usd: 5.25,
+    is_shared: false,
     max_tenants: 1,
     notes: '家用原生固定 IP，純天然住宅寬頻，抗封號評級最高',
   })
+
+  // 管理者上架快速套用：ISP 獨享 $3／ISP 共享 $2.8（按 IP 月租）、住宅代理 $5.25/GB（每組 10 個子帳號名額）
+  const OFFICIAL_PRESETS = {
+    isp_dedicated: { proxy_type: 'home_static' as ProxyType, is_shared: false, monthly_price_usd: 3, max_tenants: 1 },
+    isp_shared: { proxy_type: 'home_static' as ProxyType, is_shared: true, monthly_price_usd: 2.8, max_tenants: 1 },
+    residential: { proxy_type: 'residential' as ProxyType, is_shared: false, price_per_gb_usd: 5.25, max_tenants: 1, protocol: 'http' as ProxyProtocol, host: 'geo.iproyal.com', port: 12321, username: '', password: '' },
+  }
+  const [resiGb, setResiGb] = useState<Record<string, number>>({})
+  // 使用者的住宅代理子帳號（所有國家連線共用流量）；已有子帳號時新增連線可不買 GB
+  const [resiAccounts, setResiAccounts] = useState<ResiAccountSummary[]>([])
+  const resiHasRoom = resiAccounts.length > 0
+  const [isToppingUpId, setIsToppingUpId] = useState<string | null>(null)
 
 
   // 2. Accounts & Warm-up State
@@ -118,16 +135,43 @@ function SocialMatrixContent() {
     setTimeout(() => setToastMsg(null), 4000)
   }
 
-  const PROXY_STORAGE_KEY = 'aigate_proxies_cache_v2'
+  const [copilotAccountId, setCopilotAccountId] = useState('')
 
-  const saveProxiesLocally = (list: SocialProxy[]) => {
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem(PROXY_STORAGE_KEY, JSON.stringify(list))
-      } catch (e) {
-        console.warn('Failed to save to localStorage:', e)
-      }
+  const handleCopilotOnPc = async (group: TargetGroup, copy: MatrixCopy) => {
+    if (!copilotAccountId) {
+      showToast(tc('copilotNeedAccount'), 'error')
+      return
     }
+    try {
+      await queueConnectorTask({
+        type: 'copilot_post',
+        account_id: copilotAccountId,
+        group_url: group.url,
+        group_name: group.name,
+        copy_title: copy.title,
+        text: `${copy.title}\n\n${copy.content}\n\n${copy.hashtags.join(' ')}`,
+      })
+      showToast(tc('copilotQueued', { name: group.name }), 'success')
+    } catch (e) {
+      showToast(`${tc('failed')}：${(e as Error).message}`, 'error')
+    }
+  }
+
+  const handleOpenOnPc = async (accountId: string) => {
+    try {
+      await queueConnectorTask({ type: 'open_profile', account_id: accountId })
+      showToast(tc('openQueued'), 'success')
+    } catch (e) {
+      showToast(`${tc('failed')}：${(e as Error).message}`, 'error')
+    }
+  }
+
+  // 代理池以伺服器資料庫為準；清掉舊版瀏覽器快取（曾含示範資料與代理密碼）
+  const PROXY_STORAGE_KEY = 'aigate_proxies_cache_v2'
+  const saveProxiesLocally = (list?: SocialProxy[]) => {
+    void list
+    if (typeof window === 'undefined') return
+    try { localStorage.removeItem(PROXY_STORAGE_KEY) } catch { /* ignore */ }
   }
 
   // Initial Data Fetching
@@ -141,35 +185,13 @@ function SocialMatrixContent() {
         fetch('/api/marketing/social-matrix/official-proxies').then(r => r.json()).catch(() => ({ official_proxies: [], leases: [] })),
       ])
 
-      let serverProxies: SocialProxy[] = pRes.proxies || []
+      const serverProxies: SocialProxy[] = pRes.proxies || []
       if (offRes.official_proxies) setOfficialProxies(offRes.official_proxies)
       if (offRes.leases) setLeases(offRes.leases)
+      if (offRes.resi_accounts) setResiAccounts(offRes.resi_accounts)
       setIsPlatformAdmin(offRes.is_admin === true)
       if (typeof offRes.lease_quota === 'number') setLeaseQuota({ quota: offRes.lease_quota, used: offRes.lease_used ?? 0 })
       if (typeof offRes.usd_twd_rate === 'number') setUsdTwdRate(offRes.usd_twd_rate)
-
-      // Merge with browser local storage backup so user configurations are never lost
-      if (typeof window !== 'undefined') {
-        const saved = localStorage.getItem(PROXY_STORAGE_KEY)
-        if (saved) {
-          try {
-            const localList: SocialProxy[] = JSON.parse(saved)
-            if (Array.isArray(localList) && localList.length > 0) {
-              const localMap = new Map(localList.map(p => [p.id, p]))
-              // Local updates/renames take precedence
-              serverProxies = serverProxies.map(p => localMap.get(p.id) || p)
-              // Any new proxies only in local storage
-              for (const lp of localList) {
-                if (!serverProxies.some(p => p.id === lp.id || (p.host === lp.host && p.port === lp.port))) {
-                  serverProxies.unshift(lp)
-                }
-              }
-            }
-          } catch (err) {
-            console.warn('Error reading local proxy backup:', err)
-          }
-        }
-      }
 
       setProxies(serverProxies)
       saveProxiesLocally(serverProxies)
@@ -301,13 +323,18 @@ function SocialMatrixContent() {
   }
 
   // 1.2 Official Proxies Actions (官方 IP 租用、退租與管理者維護)
-  // 附贈額度用完後，額外 IP 以點數購買（點數＝美金，依匯率換算 monthly_price_twd；與後端 twdToCredits 同算法）
+  // 附贈額度用完後，額外 IP 以點數購買（點數＝美金；與後端 officialProxyCredits 同算法）
   const hasFreeQuota = isPlatformAdmin || (leaseQuota != null && leaseQuota.used < leaseQuota.quota)
-  const creditsFor = (twd: number) => usdTwdRate ? Math.ceil((twd / usdTwdRate) * 100) / 100 : null
+  const priceFor = (p: OfficialRentableProxy) => officialPriceUsd(p, usdTwdRate)
+  const priceUnit = (p: OfficialRentableProxy) => p.proxy_type === 'residential' ? t('perGb') : t('perMonth')
+  const leaseById = (id?: string) => leases.find(l => l.id === id)
 
-  const handleLeaseOfficial = async (offProxy: OfficialRentableProxy) => {
-    if (!hasFreeQuota) {
-      const credits = creditsFor(offProxy.monthly_price_twd)
+  const handleLeaseOfficial = async (offProxy: OfficialRentableProxy, gb?: number) => {
+    if (offProxy.proxy_type === 'residential') {
+      const total = resiPackUsd(Number(offProxy.price_per_gb_usd ?? 0), gb ?? 0)
+      if (!confirm(gb ? t('confirmBuyResi', { gb: String(gb), credits: String(total) }) : t('confirmAddConn'))) return
+    } else if (!hasFreeQuota) {
+      const credits = priceFor(offProxy)
       if (!confirm(t('confirmBuy', { credits: String(credits ?? '—') }))) return
     }
     setIsLeasingId(offProxy.id)
@@ -315,7 +342,7 @@ function SocialMatrixContent() {
       const res = await fetch('/api/marketing/social-matrix/official-proxies', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'lease', official_proxy_id: offProxy.id }),
+        body: JSON.stringify({ action: 'lease', official_proxy_id: offProxy.id, gb }),
       })
       const data = await res.json()
       if (data.success) {
@@ -336,6 +363,32 @@ function SocialMatrixContent() {
       showToast(t('leaseFail', { error: String(err) }), 'error')
     } finally {
       setIsLeasingId(null)
+    }
+  }
+
+  const handleTopupResi = async (leaseId: string, pricePerGb: number) => {
+    const input = prompt(t('topupPrompt', { per: String(pricePerGb) }), '10')
+    const gb = Math.floor(Number(input))
+    if (!input || !(gb >= 1)) return
+    if (!confirm(t('confirmTopupResi', { gb: String(gb), credits: String(resiPackUsd(pricePerGb, gb)) }))) return
+    setIsToppingUpId(leaseId)
+    try {
+      const res = await fetch('/api/marketing/social-matrix/official-proxies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'topup', lease_id: leaseId, gb }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        showToast(data.message || t('topupOk'), 'success')
+        await fetchAllData()
+      } else {
+        showToast(data.error || t('topupFailed'), 'error')
+      }
+    } catch (err) {
+      showToast(t('topupFailed') + `：${String(err)}`, 'error')
+    } finally {
+      setIsToppingUpId(null)
     }
   }
 
@@ -869,6 +922,7 @@ function SocialMatrixContent() {
                     const isOfficial = proxy.source === 'official_leased'
                     const isHome = proxy.proxy_type === 'home_static'
                     const isMobile = proxy.proxy_type === 'mobile_4g'
+                    const resiLease = isOfficial && proxy.proxy_type === 'residential' ? leaseById(proxy.lease_id) : undefined
 
                     return (
                       <div
@@ -924,6 +978,17 @@ function SocialMatrixContent() {
                               <span>{t('location')}</span>
                               <span>{proxy.country} - {proxy.city || t('localNode')}</span>
                             </div>
+                            {isOfficial && (
+                              <div className="text-[11px] text-indigo-600 dark:text-indigo-400 pt-1 border-t border-slate-200 dark:border-slate-800">
+                                📊 {proxy.proxy_type === 'residential' ? t('resiBillingNote') : t('ispBillingNote')}
+                              </div>
+                            )}
+                            {resiLease && (
+                              <div className="flex justify-between text-indigo-600 dark:text-indigo-400 pt-1 border-t border-slate-200 dark:border-slate-800">
+                                <span>{t('resiTraffic')}</span>
+                                <span>{t('gbBought', { gb: String(resiLease.resi_account?.traffic_gb ?? 0) })}</span>
+                              </div>
+                            )}
                             {isOfficial && proxy.expires_at && (
                               <div className="flex justify-between text-indigo-600 dark:text-indigo-400 pt-1 border-t border-slate-200 dark:border-slate-800">
                                 <span>{t('leaseUntil')}</span>
@@ -967,6 +1032,15 @@ function SocialMatrixContent() {
                             >
                               <Activity className={`h-3.5 w-3.5 ${isTesting ? 'animate-spin text-amber-500' : ''}`} />
                             </button>
+                            {resiLease ? (
+                              <button
+                                onClick={() => handleTopupResi(resiLease.id, Number(resiLease.official_proxy?.price_per_gb_usd ?? 0))}
+                                disabled={isToppingUpId === resiLease.id || !resiLease.official_proxy?.price_per_gb_usd}
+                                className="px-2 py-1 text-[11px] font-semibold text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950 rounded-md transition-colors border border-indigo-200 dark:border-indigo-900"
+                              >
+                                {isToppingUpId === resiLease.id ? t('processing') : t('topup')}
+                              </button>
+                            ) : null}
                             {isOfficial ? (
                               <button
                                 onClick={() => handleReleaseLease(proxy.lease_id || proxy.id)}
@@ -1052,7 +1126,9 @@ function SocialMatrixContent() {
                     const isLeasedByMe = proxies.some(
                       p => p.official_proxy_id === offProxy.id || (p.host === offProxy.host && p.port === offProxy.port)
                     )
-                    const isAvailable = offProxy.status === 'available' && offProxy.current_tenants_count < offProxy.max_tenants
+                    const isResiOffer = offProxy.proxy_type === 'residential'
+                    // 住宅代理不限購買人數，同一使用者也可再買一組（每組 10 條固定 IP）
+                    const isAvailable = offProxy.status === 'available' && (isResiOffer || offProxy.current_tenants_count < offProxy.max_tenants)
                     const isLeasing = isLeasingId === offProxy.id
 
                     return (
@@ -1074,6 +1150,11 @@ function SocialMatrixContent() {
                                 }`}>
                                   {offProxy.proxy_type === 'home_static' ? t('kindHomeBb') : offProxy.proxy_type === 'mobile_4g' ? t('kindMobile5g') : t('kindBiz')}
                                 </span>
+                                {offProxy.proxy_type === 'home_static' && (
+                                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-muted-foreground">
+                                    {offProxy.is_shared ? t('tagShared') : t('tagDedicated')}
+                                  </span>
+                                )}
                                 <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-muted-foreground uppercase font-mono">
                                   {offProxy.protocol}
                                 </span>
@@ -1092,7 +1173,7 @@ function SocialMatrixContent() {
                                 : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
                             }`}>
                               <span className={`h-2 w-2 rounded-full ${isLeasedByMe ? 'bg-emerald-500' : isAvailable ? 'bg-indigo-500' : 'bg-slate-400'}`} />
-                              {isLeasedByMe ? t('leasedByMe') : isAvailable ? t('available') : t('leasedOut')}
+                              {isLeasedByMe ? (isResiOffer ? t('resiOwned') : t('leasedByMe')) : isAvailable ? t('available') : t('leasedOut')}
                             </span>
                           </div>
 
@@ -1112,11 +1193,14 @@ function SocialMatrixContent() {
                             </div>
                             <div>
                               <span className="text-muted-foreground block text-[10px]">{t('tenantQuota')}</span>
-                              <span className="font-bold text-foreground">{t('oneTenant', { cur: offProxy.current_tenants_count, max: offProxy.max_tenants })}</span>
+                              <span className="font-bold text-foreground">{offProxy.proxy_type === 'residential' ? t('resiConnHint') : t('oneTenant', { cur: offProxy.current_tenants_count, max: offProxy.max_tenants })}</span>
                             </div>
                           </div>
 
                           {/* Description */}
+                          <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 rounded-lg px-3 py-2">
+                            📊 {offProxy.proxy_type === 'residential' ? t('resiBillingNote') : t('ispBillingNote')}
+                          </p>
                           <p className="text-xs text-muted-foreground leading-relaxed">
                             💡 {offProxy.notes || t('offNoteDefault')}
                           </p>
@@ -1125,20 +1209,20 @@ function SocialMatrixContent() {
                         {/* Pricing & CTA */}
                         <div className="pt-4 mt-3 border-t border-border flex items-center justify-between gap-4">
                           <div>
-                            <span className="text-[10px] text-muted-foreground block">{t('leasePlan')}</span>
+                            <span className="text-[10px] text-muted-foreground block">{isResiOffer ? t('resiPlan') : t('leasePlan')}</span>
                             <div className="flex items-baseline gap-1">
                               <span className="text-xl font-extrabold text-indigo-600 dark:text-indigo-400">
-                                NT$ {offProxy.monthly_price_twd}
+                                US$ {priceFor(offProxy) ?? '—'}
                               </span>
-                              <span className="text-xs text-muted-foreground">{t('perMonth')}</span>
+                              <span className="text-xs text-muted-foreground">{priceUnit(offProxy)}</span>
                             </div>
-                            {creditsFor(offProxy.monthly_price_twd) != null && (
-                              <span className="text-[11px] font-semibold text-muted-foreground">≈ {t('creditsPer30', { n: String(creditsFor(offProxy.monthly_price_twd) ?? '—') })}</span>
+                            {priceFor(offProxy) != null && offProxy.proxy_type !== 'residential' && (
+                              <span className="text-[11px] font-semibold text-muted-foreground">{t('creditsPer30', { n: String(priceFor(offProxy)) })}</span>
                             )}
                           </div>
 
                           <div>
-                            {isLeasedByMe ? (
+                            {isLeasedByMe && !isResiOffer ? (
                               <button
                                 onClick={() => setProxySubTab('my_proxies')}
                                 className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 hover:bg-emerald-100 transition-colors"
@@ -1146,6 +1230,29 @@ function SocialMatrixContent() {
                                 <CheckCheck className="h-4 w-4" />
                                 <span>{t('inPool')}</span>
                               </button>
+                            ) : isAvailable && offProxy.proxy_type === 'residential' ? (
+                              <div className="flex items-center gap-2">
+                                <label className="flex items-center gap-1 px-2 py-1 rounded-lg border border-border bg-background">
+                                  <input
+                                    type="number"
+                                    min={resiHasRoom ? 0 : 1}
+                                    max={1000}
+                                    value={resiGb[offProxy.id] ?? (resiHasRoom ? 0 : 10)}
+                                    onChange={e => setResiGb(prev => ({ ...prev, [offProxy.id]: Number(e.target.value) }))}
+                                    className="w-12 py-1 bg-transparent text-xs font-bold outline-none"
+                                    aria-label="GB"
+                                  />
+                                  <span className="text-xs font-bold text-muted-foreground">GB</span>
+                                </label>
+                                <button
+                                  onClick={() => handleLeaseOfficial(offProxy, Math.floor(resiGb[offProxy.id] ?? (resiHasRoom ? 0 : 10)))}
+                                  disabled={isLeasing || !((resiGb[offProxy.id] ?? (resiHasRoom ? 0 : 10)) >= (resiHasRoom ? 0 : 1))}
+                                  className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-violet-700 hover:from-indigo-700 hover:to-violet-800 text-white shadow-md active:scale-95 transition-all disabled:opacity-50"
+                                >
+                                  <Zap className={`h-4 w-4 text-amber-300 ${isLeasing ? 'animate-spin' : ''}`} />
+                                  <span>{isLeasing ? t('activating') : (resiGb[offProxy.id] ?? (resiHasRoom ? 0 : 10)) > 0 ? t('buyGb', { n: String(resiPackUsd(Number(offProxy.price_per_gb_usd ?? 0), Math.floor(resiGb[offProxy.id] ?? (resiHasRoom ? 0 : 10)))) }) : t('addConn')}</span>
+                                </button>
+                              </div>
                             ) : isAvailable ? (
                               <button
                                 onClick={() => handleLeaseOfficial(offProxy)}
@@ -1153,7 +1260,7 @@ function SocialMatrixContent() {
                                 className="flex items-center gap-1.5 px-5 py-2.5 text-xs font-bold rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-violet-700 hover:from-indigo-700 hover:to-violet-800 text-white shadow-md hover:shadow-indigo-500/25 active:scale-95 transition-all disabled:opacity-50"
                               >
                                 <Zap className={`h-4 w-4 text-amber-300 ${isLeasing ? 'animate-spin' : ''}`} />
-                                <span>{isLeasing ? t('activating') : hasFreeQuota ? t('claimFree') : t('rentWithCredits', { n: String(creditsFor(offProxy.monthly_price_twd) ?? '—') })}</span>
+                                <span>{isLeasing ? t('activating') : hasFreeQuota ? t('claimFree') : t('rentWithCredits', { n: String(priceFor(offProxy) ?? '—') })}</span>
                               </button>
                             ) : (
                               <button
@@ -1233,6 +1340,7 @@ function SocialMatrixContent() {
                               <div className="font-bold text-foreground">{p.name}</div>
                               <span className="text-[10px] text-muted-foreground">
                                 {p.proxy_type === 'home_static' ? t('kHome') : p.proxy_type === 'mobile_4g' ? t('kMobile') : t('kBiz')}
+                                {p.proxy_type === 'home_static' && ` · ${p.is_shared ? t('tagShared') : t('tagDedicated')}`}
                               </span>
                             </td>
                             <td className="px-4 py-3 font-mono">
@@ -1248,11 +1356,17 @@ function SocialMatrixContent() {
                               <span className="text-[10px] text-muted-foreground">{p.country} - {p.city || t('local')}</span>
                             </td>
                             <td className="px-4 py-3 font-bold text-indigo-600 dark:text-indigo-400">
-                              NT$ {p.monthly_price_twd}
+                              {/* 住宅代理按買家總流量計費，不在庫存列顯示單筆售價／配額 */}
+                              {p.proxy_type === 'residential' ? '—' : (
+                                <>
+                                  US$ {priceFor(p) ?? '—'}
+                                  <span className="text-[10px] text-muted-foreground font-normal block">{priceUnit(p)}</span>
+                                </>
+                              )}
                             </td>
                             <td className="px-4 py-3">
                               <span className="font-mono font-semibold">
-                                {p.current_tenants_count} / {p.max_tenants}
+                                {p.proxy_type === 'residential' ? '—' : `${p.current_tenants_count} / ${p.max_tenants}`}
                               </span>
                             </td>
                             <td className="px-4 py-3">
@@ -1300,6 +1414,8 @@ function SocialMatrixContent() {
         {/* TAB 2: ACCOUNTS MATRIX & AUTO WARM-UP */}
         {activeTab === 'accounts' && (
           <div className="space-y-6">
+            <ConnectorPanel showToast={showToast} />
+
             {/* 14-Day Warm-up Workflow Banner */}
             <div className="bg-white dark:bg-card border border-border rounded-2xl p-5 shadow-sm">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
@@ -1441,7 +1557,7 @@ function SocialMatrixContent() {
                         </div>
                       </div>
 
-                      <div className="pt-2 border-t border-border flex items-center justify-between text-xs">
+                      <div className="pt-2 border-t border-border flex items-center gap-2 text-xs">
                         <button
                           onClick={() => handleRunWarmup(acc.id)}
                           disabled={isWarmingUp}
@@ -1451,8 +1567,15 @@ function SocialMatrixContent() {
                           <span>{t('runToday')}</span>
                         </button>
                         <button
+                          onClick={() => handleOpenOnPc(acc.id)}
+                          className="flex items-center gap-1 px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 font-medium transition-colors"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          <span>{tc('openOnPc')}</span>
+                        </button>
+                        <button
                           onClick={() => handleDeleteAccount(acc.id)}
-                          className="p-1 text-muted-foreground hover:text-rose-600 transition-colors"
+                          className="ml-auto p-1 text-muted-foreground hover:text-rose-600 transition-colors"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -1630,6 +1753,24 @@ function SocialMatrixContent() {
                       <span className="text-[10px] text-muted-foreground">{t('radarSub')}</span>
                     </div>
 
+                    <label className="block text-[11px] font-semibold mb-3">
+                      <span>{tc('copilotAccount')}</span>
+                      {accounts.some(a => a.adspower_profile_id) ? (
+                        <select
+                          value={copilotAccountId}
+                          onChange={e => setCopilotAccountId(e.target.value)}
+                          className="mt-1 w-full px-2 py-1.5 rounded-lg border border-border bg-background text-xs font-normal"
+                        >
+                          <option value="">{tc('copilotPick')}</option>
+                          {accounts.filter(a => a.adspower_profile_id).map(a => (
+                            <option key={a.id} value={a.id}>{a.platform} · {a.account_name}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className="block mt-1 font-normal text-muted-foreground">{tc('copilotNone')}</span>
+                      )}
+                    </label>
+
                     <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
                       {targetGroups.map((group, idx) => {
                         const selectedCopy = copies.find(c => c.id === selectedCopyId) || copies[0]
@@ -1669,6 +1810,15 @@ function SocialMatrixContent() {
                                 <ArrowUpRight className="h-3 w-3" />
                               </a>
 
+                              <div className="flex items-center gap-1.5">
+                              <button
+                                onClick={() => handleCopilotOnPc(group, selectedCopy)}
+                                disabled={!group.url}
+                                className="flex items-center gap-1 px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] shadow-sm transition-all disabled:opacity-50"
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                                <span>{tc('copilotOnPc')}</span>
+                              </button>
                               {/* Mode A Trigger Button */}
                               <button
                                 onClick={() => handleDispatchModeA(group, selectedCopy)}
@@ -1678,6 +1828,7 @@ function SocialMatrixContent() {
                                 <Send className="h-3 w-3" />
                                 <span>{t('planAPost')}</span>
                               </button>
+                              </div>
                             </div>
                           </div>
                         )
@@ -2208,7 +2359,8 @@ function SocialMatrixContent() {
                   <option value="">{t('pickNode')}</option>
                   {proxies.map(p => (
                     <option key={p.id} value={p.id}>
-                      {p.source === 'official_leased' ? t('srcOfficial') : t('srcOwn')}
+                      {/* 官方租用節點名稱已含「[官方租用]/[官方住宅]」前綴 */}
+                      {p.source === 'official_leased' ? '' : t('srcOwn')}
                       {p.name} ({p.host}:{p.port})
                     </option>
                   ))}
@@ -2253,7 +2405,7 @@ function SocialMatrixContent() {
       {/* MODAL: ADMIN ADD OFFICIAL PROXY (管理者新增供租用 IP) */}
       {isAddOfficialOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-card border border-border rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4">
+          <div className="bg-white dark:bg-card border border-border rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-2 border-b border-border">
               <div className="flex items-center gap-2">
                 <div className="p-2 bg-amber-500/10 text-amber-600 rounded-lg">
@@ -2277,6 +2429,26 @@ function SocialMatrixContent() {
             </div>
 
             <form onSubmit={handleAddOfficialProxy} className="space-y-3 text-xs">
+              <div>
+                <label className="font-bold text-foreground block mb-1">{t('fPlanPreset')}</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {(['isp_dedicated', 'isp_shared', 'residential'] as const).map(k => {
+                    const preset = OFFICIAL_PRESETS[k]
+                    const active = newOfficialForm.proxy_type === preset.proxy_type && newOfficialForm.is_shared === preset.is_shared
+                    return (
+                      <button
+                        key={k}
+                        type="button"
+                        onClick={() => setNewOfficialForm(p => ({ ...p, ...preset }))}
+                        className={`px-2 py-1.5 rounded-lg border font-bold ${active ? 'border-amber-500 bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300' : 'border-border bg-background text-muted-foreground hover:bg-slate-50 dark:hover:bg-slate-900'}`}
+                      >
+                        {k === 'isp_dedicated' ? t('presetIspDedicated') : k === 'isp_shared' ? t('presetIspShared') : t('presetResi')}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
               <div>
                 <label className="font-bold text-foreground block mb-1">
                   {t('fNodeLabel')}
@@ -2379,13 +2551,25 @@ function SocialMatrixContent() {
                 </div>
                 <div>
                   <label className="font-bold text-foreground block mb-1">{t('fCountryCity')}</label>
-                  <input
-                    type="text"
-                    value={newOfficialForm.city}
-                    onChange={e => setNewOfficialForm(p => ({ ...p, city: e.target.value }))}
-                    placeholder={t('cityPh3')}
-                    className="w-full px-3 py-1.5 rounded-lg border border-border bg-background"
-                  />
+                  <div className="flex gap-1.5">
+                    <input
+                      type="text"
+                      required
+                      maxLength={2}
+                      value={newOfficialForm.country}
+                      onChange={e => setNewOfficialForm(p => ({ ...p, country: e.target.value.toUpperCase() }))}
+                      placeholder="TW"
+                      aria-label="Country code"
+                      className="w-14 px-2 py-1.5 rounded-lg border border-border bg-background font-mono uppercase"
+                    />
+                    <input
+                      type="text"
+                      value={newOfficialForm.city}
+                      onChange={e => setNewOfficialForm(p => ({ ...p, city: e.target.value }))}
+                      placeholder={t('cityPh3')}
+                      className="w-full min-w-0 px-3 py-1.5 rounded-lg border border-border bg-background"
+                    />
+                  </div>
                 </div>
                 <div>
                   <label className="font-bold text-foreground block mb-1">{t('fLatency')}</label>
@@ -2400,21 +2584,47 @@ function SocialMatrixContent() {
               </div>
 
               <div className="grid grid-cols-2 gap-3 bg-amber-50/60 dark:bg-amber-950/20 p-3 rounded-xl border border-amber-200 dark:border-amber-900/50">
+                {newOfficialForm.proxy_type === 'residential' ? (
+                  <>
+                    <div>
+                      <label className="font-bold text-amber-900 dark:text-amber-300 block mb-1">
+                        💰 {t('fPricePerGb')}
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-2 text-muted-foreground font-bold">US$</span>
+                        <input
+                          type="number"
+                          required
+                          min={0.01}
+                          step={0.01}
+                          value={newOfficialForm.price_per_gb_usd}
+                          onChange={e => setNewOfficialForm(p => ({ ...p, price_per_gb_usd: Number(e.target.value) }))}
+                          className="w-full pl-11 pr-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-800 bg-background font-bold text-amber-700 dark:text-amber-300"
+                        />
+                      </div>
+                    </div>
+                    <p className="col-span-2 text-[11px] text-amber-900 dark:text-amber-300">{t('resiGroupHint')}</p>
+                  </>
+                ) : (
                 <div>
                   <label className="font-bold text-amber-900 dark:text-amber-300 block mb-1">
                     💰 {t('fPrice')}
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-2 text-muted-foreground font-bold">NT$</span>
+                    <span className="absolute left-3 top-2 text-muted-foreground font-bold">US$</span>
                     <input
                       type="number"
                       required
-                      value={newOfficialForm.monthly_price_twd}
-                      onChange={e => setNewOfficialForm(p => ({ ...p, monthly_price_twd: Number(e.target.value) }))}
-                      className="w-full pl-10 pr-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-800 bg-background font-bold text-amber-700 dark:text-amber-300"
+                      min={0.01}
+                      step={0.01}
+                      value={newOfficialForm.monthly_price_usd}
+                      onChange={e => setNewOfficialForm(p => ({ ...p, monthly_price_usd: Number(e.target.value) }))}
+                      className="w-full pl-11 pr-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-800 bg-background font-bold text-amber-700 dark:text-amber-300"
                     />
                   </div>
                 </div>
+                )}
+                {newOfficialForm.proxy_type !== 'residential' && (
                 <div>
                   <label className="font-bold text-amber-900 dark:text-amber-300 block mb-1">
                     🔒 {t('fMaxTenants')}
@@ -2428,6 +2638,7 @@ function SocialMatrixContent() {
                     className="w-full px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-800 bg-background font-bold"
                   />
                 </div>
+                )}
               </div>
 
               <div>
@@ -2464,7 +2675,7 @@ function SocialMatrixContent() {
       {/* MODAL: ADMIN EDIT OFFICIAL PROXY (管理者編輯供租用 IP) */}
       {isEditOfficialOpen && editingOfficial && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-card border border-border rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4">
+          <div className="bg-white dark:bg-card border border-border rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-2 border-b border-border">
               <h3 className="font-bold text-base flex items-center gap-2">
                 <Pencil className="h-5 w-5 text-amber-600" />
@@ -2514,16 +2725,43 @@ function SocialMatrixContent() {
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-bold text-foreground block mb-1">{t('fMonthly')}</label>
-                  <input
-                    type="number"
-                    required
-                    value={editingOfficial.monthly_price_twd}
-                    onChange={e => setEditingOfficial({ ...editingOfficial, monthly_price_twd: Number(e.target.value) })}
-                    className="w-full px-3 py-1.5 rounded-lg border border-border font-bold text-indigo-600 bg-background"
-                  />
-                </div>
+                {editingOfficial.proxy_type === 'residential' ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="font-bold text-foreground block mb-1">{t('fPricePerGb')}</label>
+                      <input
+                        type="number"
+                        required
+                        min={0.01}
+                        step={0.01}
+                        value={editingOfficial.price_per_gb_usd ?? ''}
+                        onChange={e => setEditingOfficial({ ...editingOfficial, price_per_gb_usd: Number(e.target.value) })}
+                        className="w-full px-3 py-1.5 rounded-lg border border-border font-bold text-indigo-600 bg-background"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="font-bold text-foreground block mb-1">{t('fMonthly')}</label>
+                    <input
+                      type="number"
+                      required
+                      min={0.01}
+                      step={0.01}
+                      value={editingOfficial.monthly_price_usd ?? ''}
+                      onChange={e => setEditingOfficial({ ...editingOfficial, monthly_price_usd: Number(e.target.value) })}
+                      className="w-full px-3 py-1.5 rounded-lg border border-border font-bold text-indigo-600 bg-background"
+                    />
+                    <label className="flex items-center gap-1.5 mt-1.5 text-[11px] text-muted-foreground">
+                      <input
+                        type="checkbox"
+                        checked={editingOfficial.is_shared === true}
+                        onChange={e => setEditingOfficial({ ...editingOfficial, is_shared: e.target.checked })}
+                      />
+                      {t('fShared')}
+                    </label>
+                  </div>
+                )}
                 <div>
                   <label className="font-bold text-foreground block mb-1">{t('fLeaseStatus')}</label>
                   <select
@@ -2549,13 +2787,25 @@ function SocialMatrixContent() {
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-foreground block mb-1">{t('fCity')}</label>
-                  <input
-                    type="text"
-                    value={editingOfficial.city || ''}
-                    onChange={e => setEditingOfficial({ ...editingOfficial, city: e.target.value })}
-                    className="w-full px-3 py-1.5 rounded-lg border border-border bg-background"
-                  />
+                  <label className="font-bold text-foreground block mb-1">{t('fCountryCity')}</label>
+                  <div className="flex gap-1.5">
+                    <input
+                      type="text"
+                      required
+                      maxLength={2}
+                      value={editingOfficial.country ?? ''}
+                      onChange={e => setEditingOfficial({ ...editingOfficial, country: e.target.value.toUpperCase() })}
+                      placeholder="TW"
+                      aria-label="Country code"
+                      className="w-14 px-2 py-1.5 rounded-lg border border-border bg-background font-mono uppercase"
+                    />
+                    <input
+                      type="text"
+                      value={editingOfficial.city || ''}
+                      onChange={e => setEditingOfficial({ ...editingOfficial, city: e.target.value })}
+                      className="w-full min-w-0 px-3 py-1.5 rounded-lg border border-border bg-background"
+                    />
+                  </div>
                 </div>
               </div>
 

@@ -11,5 +11,8 @@ const LANG_NAME: Record<string, string> = {
 
 export function outputLangInstruction(locale?: string): string {
   const name = LANG_NAME[locale ?? 'zh-TW'] ?? '繁體中文'
+  if (locale === 'vi') {
+    return `\n\n【輸出語言要求】所有人類可讀的文字內容（標題、文案、描述、說明等）一律使用「${name}」輸出。JSON 的 key 名稱維持英文不變。圖片生成提示詞（visual_prompt_en / image_prompts 等標明為提示詞者）一律使用越文輸出。`
+  }
   return `\n\n【輸出語言要求】所有人類可讀的文字內容（標題、文案、描述、說明等）一律使用「${name}」輸出。JSON 的 key 名稱與英文圖片生成提示詞（visual_prompt_en / image_prompts 等標明為英文者）維持英文不變。`
 }

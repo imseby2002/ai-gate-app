@@ -12,23 +12,27 @@ const BASE = 'https://api.twilio.com/2010-04-01'
  * 注意：兩種方式的 API 路徑都仍需 Account SID（AC 開頭），故 TWILIO_ACCOUNT_SID 為必填。
  */
 export function getTwilioAuth() {
-  const accountSid = process.env.TWILIO_ACCOUNT_SID
+  const accountSid = process.env.TWILIO_ACCOUNT_SID?.trim()
   if (!accountSid) return null
 
-  const apiKeySid = process.env.TWILIO_API_KEY_SID
-  const apiKeySecret = process.env.TWILIO_API_KEY_SECRET
-  if (apiKeySid && apiKeySecret) {
-    return {
-      accountSid,
-      authHeader: `Basic ${Buffer.from(`${apiKeySid}:${apiKeySecret}`).toString('base64')}`,
-    }
-  }
-
-  const authToken = process.env.TWILIO_AUTH_TOKEN
+  // 優先使用主金鑰 Auth Token（直接綁定 Account SID，完全避開 IAM assertion 範圍錯誤）
+  const authToken = process.env.TWILIO_AUTH_TOKEN?.trim()
   if (authToken) {
     return {
       accountSid,
       authHeader: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString('base64')}`,
+      authType: 'auth_token' as const,
+    }
+  }
+
+  // 次選 API Key (TWILIO_API_KEY_SID + TWILIO_API_KEY_SECRET)
+  const apiKeySid = process.env.TWILIO_API_KEY_SID?.trim()
+  const apiKeySecret = process.env.TWILIO_API_KEY_SECRET?.trim()
+  if (apiKeySid && apiKeySecret) {
+    return {
+      accountSid,
+      authHeader: `Basic ${Buffer.from(`${apiKeySid}:${apiKeySecret}`).toString('base64')}`,
+      authType: 'api_key' as const,
     }
   }
 
@@ -41,10 +45,16 @@ export function getTwilioAuth() {
 export function formatToE164(phone: string): string {
   const cleaned = phone.replace(/[^\d+]/g, '')
   if (cleaned.startsWith('+')) return cleaned
-  if (cleaned.startsWith('09') && cleaned.length === 10) return '+886' + cleaned.slice(1)
   if (cleaned.startsWith('886')) return '+' + cleaned
-  if (cleaned.startsWith('0') && /^0[35789]\d{8}$/.test(cleaned)) return '+84' + cleaned.slice(1)
   if (cleaned.startsWith('84')) return '+' + cleaned
+  // 台灣手機 09xx (10 碼)
+  if (cleaned.startsWith('09') && cleaned.length === 10) return '+886' + cleaned.slice(1)
+  // 台灣市話 02~08 (9~10 碼，如 02-xxxx-xxxx, 04-xxxx-xxxx)
+  if (/^0[2-8]\d{7,8}$/.test(cleaned)) return '+886' + cleaned.slice(1)
+  // 越南手機 (03,05,07,08,09) 10 碼
+  if (/^0[35789]\d{8}$/.test(cleaned)) return '+84' + cleaned.slice(1)
+  // 北美 1xxxxxxxxxx (11 碼)
+  if (cleaned.startsWith('1') && cleaned.length === 11) return '+' + cleaned
   return '+' + cleaned
 }
 
@@ -87,7 +97,7 @@ export const twilioProvider: TelephonyProvider = {
       params.set('StatusCallbackMethod', 'POST')
     }
 
-    const res = await fetch(`${BASE}/Accounts/${creds.accountSid}/Calls.json`, {
+    let res = await fetch(`${BASE}/Accounts/${creds.accountSid}/Calls.json`, {
       method: 'POST',
       headers: {
         Authorization: creds.authHeader,
@@ -96,10 +106,46 @@ export const twilioProvider: TelephonyProvider = {
       body: params.toString(),
     })
 
-    const data = await res.json().catch(() => ({}))
+    let data = await res.json().catch(() => ({}))
+    let activeAuthType: string = creds.authType
+
+    // 若認證失敗 (401)，自動以另一種憑證重試一次
+    if (!res.ok && res.status === 401) {
+      const isApiKey = creds.authType === 'api_key'
+      const otherHeader = isApiKey && process.env.TWILIO_AUTH_TOKEN?.trim()
+        ? `Basic ${Buffer.from(`${creds.accountSid}:${process.env.TWILIO_AUTH_TOKEN.trim()}`).toString('base64')}`
+        : !isApiKey && process.env.TWILIO_API_KEY_SID?.trim() && process.env.TWILIO_API_KEY_SECRET?.trim()
+          ? `Basic ${Buffer.from(`${process.env.TWILIO_API_KEY_SID.trim()}:${process.env.TWILIO_API_KEY_SECRET.trim()}`).toString('base64')}`
+          : null
+
+      if (otherHeader) {
+        const retryRes = await fetch(`${BASE}/Accounts/${creds.accountSid}/Calls.json`, {
+          method: 'POST',
+          headers: {
+            Authorization: otherHeader,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: params.toString(),
+        })
+        const retryData = await retryRes.json().catch(() => ({}))
+        if (retryRes.ok) {
+          res = retryRes
+          data = retryData
+          activeAuthType = isApiKey ? 'auth_token' : 'api_key'
+        } else {
+          res = retryRes
+          data = retryData
+          activeAuthType = isApiKey ? 'auth_token (備援重試)' : 'api_key (備援重試)'
+        }
+      }
+    }
+
     if (!res.ok) {
-      const errMsg = data?.message || data?.error_message || `Twilio 撥打失敗 (${res.status})`
-      throw new Error(errMsg)
+      const detail = [data?.code, data?.message || data?.error_message].filter(Boolean).join(' / ') || '未知錯誤'
+      const authInfo = activeAuthType === 'api_key' ? 'API Key (TWILIO_API_KEY_SID)'
+        : activeAuthType === 'auth_token' ? 'Auth Token (TWILIO_AUTH_TOKEN)'
+        : activeAuthType
+      throw new Error(`Twilio 撥打失敗 (HTTP ${res.status})：${detail} [認證方式: ${authInfo}]${data?.more_info ? `（${data.more_info}）` : ''}`)
     }
 
     return { callId: data?.sid ?? null }

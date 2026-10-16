@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { generateText } from 'ai'
-import { createAnthropic } from '@ai-sdk/anthropic'
-import { createGoogleGenerativeAI } from '@ai-sdk/google'
-import { createOpenAI } from '@ai-sdk/openai'
 import { getUnitContextAny } from '@/lib/auth/unit-access'
 import { searchRepairKnowledge } from '@/lib/repair-ai/engine'
 import type { RepairMode, RepairAIMessage, EquipmentCategory } from '@/lib/types/repair-ai'
+import { getOfficeTieredModel } from '@/lib/office/tiered-chat-model'
+import { trackAiUsage } from '@/lib/ai/universal-tracker'
 
 export const maxDuration = 60
 
@@ -94,11 +93,15 @@ ${retrieval.matched_cases.length > 0 ? `【歷史技師修復案例】：\n${ret
 
     let replyText = ''
     let aiModelUsed = 'Local Repair Diagnostic Engine'
-
-    // 嘗試調用 AI 模型
-    const hasAnthropic = !!process.env.ANTHROPIC_API_KEY
-    const hasGoogle = !!process.env.GOOGLE_GENERATIVE_AI_API_KEY
-    const hasOpenAI = !!process.env.OPENAI_API_KEY
+    // 依模式與內容決定階梯式模型：
+    // - 技師模式 (technician) 或包含機電深度關鍵字 -> 採用 Claude Sonnet
+    // - 門市常規 (store) 快速排查 -> 採用 DeepSeek-Chat
+    const isEngineer = mode === 'technician'
+    const tierDecision = getOfficeTieredModel({
+      message,
+      forceTier: isEngineer ? 'complex' : undefined,
+      additionalComplexKeywords: ['電阻', '電路', '電壓', '凸輪開關', '保險絲', '發熱棒', '電容', '主機板', '冷啟動'],
+    })
 
     const messages = [
       ...history.slice(-4).map(h => ({
@@ -108,49 +111,30 @@ ${retrieval.matched_cases.length > 0 ? `【歷史技師修復案例】：\n${ret
       { role: 'user' as const, content: message },
     ]
 
-    if (hasAnthropic) {
-      try {
-        const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-        const res = await generateText({
-          model: anthropic('claude-3-5-sonnet-latest'),
-          system: systemPrompt,
-          messages,
-        })
-        replyText = res.text
-        aiModelUsed = 'Claude 3.5 Sonnet'
-      } catch (err) {
-        console.warn('Anthropic failed, falling back...', err)
-      }
-    }
+    try {
+      const res = await generateText({
+        model: tierDecision.model,
+        system: systemPrompt,
+        messages,
+      })
+      replyText = res.text
+      aiModelUsed = `${tierDecision.modelId} (${tierDecision.reason})`
 
-    if (!replyText && hasGoogle) {
-      try {
-        const google = createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY })
-        const res = await generateText({
-          model: google('gemini-2.5-flash'),
-          system: systemPrompt,
-          messages,
+      const usage = (res as any).usage ?? {}
+      const inTokens = Number(usage.inputTokens ?? usage.promptTokens ?? 0)
+      const outTokens = Number(usage.outputTokens ?? usage.completionTokens ?? 0)
+      if (inTokens > 0 || outTokens > 0) {
+        void trackAiUsage({
+          feature: 'store_coach',
+          modelId: tierDecision.modelId,
+          inputTokens: inTokens,
+          outputTokens: outTokens,
+          sourceChannel: tierDecision.sourceChannel,
+          metadata: { module: 'repair_ai', tier: tierDecision.tier, mode },
         })
-        replyText = res.text
-        aiModelUsed = 'Gemini 2.5 Flash'
-      } catch (err) {
-        console.warn('Google AI failed, falling back...', err)
       }
-    }
-
-    if (!replyText && hasOpenAI) {
-      try {
-        const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY })
-        const res = await generateText({
-          model: openai('gpt-4o-mini'),
-          system: systemPrompt,
-          messages,
-        })
-        replyText = res.text
-        aiModelUsed = 'GPT-4o Mini'
-      } catch (err) {
-        console.warn('OpenAI failed, falling back to rule engine...', err)
-      }
+    } catch (err) {
+      console.warn('Repair AI tiered model failed, falling back to local rule engine...', err)
     }
 
     // 本地高品質備援合成器 (無 API Key 時保證 100% 正常運作)

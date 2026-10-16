@@ -17,6 +17,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { sendToCustomer } from '@/lib/cs/send'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
+import { generateWithFreeFirst } from '@/lib/ai/free-first-caller'
 
 const META_PLATFORMS = ['messenger', 'instagram', 'whatsapp']
 const WINDOW_MIN_H = 8   // 至少距上次訊息 8 小時
@@ -122,16 +123,15 @@ export async function GET(req: Request) {
       const convo = (msgs ?? []).reverse()
         .map(m => `客人：${m.message ?? ''}${m.reply ? `\n客服：${m.reply}` : ''}`).join('\n')
 
-      // 生成跟進訊息（Haiku，省成本）
+      // 生成跟進訊息（優先 CLIProxy/FreeLLM 零成本，底層 DeepSeek/Haiku）
       let text = ''
       try {
-        const { text: gen } = await generateText({
-          model: anthropic('claude-haiku-4-5'),
-          system: '你是店家的客服助理。客人先前私訊詢問後就沒有再回覆。請寫一則「主動跟進」訊息：溫暖、簡短（1–3 句、繁體中文），不用罐頭稱呼；依對話脈絡提供一個具體誘因，或問一個能推進決定的問題，最後用二選一或輕鬆的邀請收尾。不要提到「系統」「自動」，像真人客服關心即可。只輸出訊息本身。',
+        text = await generateWithFreeFirst({
+          feature: 'other',
+          systemPrompt: '你是店家的客服助理。客人先前私訊詢問後就沒有再回覆。請寫一則「主動跟進」訊息：溫暖、簡短（1–3 句、繁體中文），不用罐頭稱呼；依對話脈絡提供一個具體誘因，或問一個能推進決定的問題，最後用二選一或輕鬆的邀請收尾。不要提到「系統」「自動」，像真人客服關心即可。只輸出訊息本身。',
           prompt: `客戶稱呼：${c.name || '（未知，勿硬加稱呼）'}\n背景摘要：${c.summary || '（無）'}\n\n近期對話：\n${convo || '（無紀錄）'}\n\n請寫跟進訊息：`,
           maxOutputTokens: 300,
         })
-        text = gen.trim()
       } catch { continue }
       if (!text) continue
 

@@ -15,6 +15,8 @@
 
 > 例外：`worker/` 目錄為獨立自動化 worker（在另一台 VM 執行，非本 app 部署），允許使用 Playwright/瀏覽器自動化並於該目錄內安裝套件。此例外僅限 `worker/`，主 app（`src/`）仍不得引入瀏覽器自動化或新套件。
 >
+> 例外：`desktop-connector/` 目錄為 AI-GATE 桌面連接器（安裝在客人 Windows 電腦的端點程式），可透過 AdsPower Local API 建立／開啟設定檔並使用瀏覽器自動化帶入文案，允許於該目錄內安裝套件。發布動作一律由使用者自行按下，不做無人值守的自動發文、互動或養號。此例外僅限 `desktop-connector/`，主 app（`src/`）只提供 `/api/connector/*` 任務 API。
+>
 > 例外：主 app 已核准使用動畫套件 `motion`（Motion，MIT），用於公開官網進階動畫。除此之外主 app 仍不得引入新套件。
 
 ## 模型設定

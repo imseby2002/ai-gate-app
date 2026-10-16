@@ -6,6 +6,7 @@ import { generateText } from 'ai'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createOpenAI } from '@ai-sdk/openai'
+import { trackAiUsage } from '@/lib/ai/universal-tracker'
 
 export const maxDuration = 60
 
@@ -317,7 +318,13 @@ ${companyRegulationsContext}
 }`
 
         let text = ''
+        let usedModel = ''
+        let usedChannel: 'anthropic' | 'google' | 'openai' = 'anthropic'
+        let usageData: any = null
+
         if (hasAnthropic) {
+          usedModel = 'claude-sonnet-4-5'
+          usedChannel = 'anthropic'
           const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
           const res = await generateText({
             model: anthropic('claude-sonnet-4-5'),
@@ -325,7 +332,10 @@ ${companyRegulationsContext}
             maxOutputTokens: 3500,
           })
           text = res.text
+          usageData = (res as any).usage
         } else if (hasGoogle) {
+          usedModel = 'gemini-2.0-flash'
+          usedChannel = 'google'
           const google = createGoogleGenerativeAI({
             apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY,
           })
@@ -334,13 +344,31 @@ ${companyRegulationsContext}
             messages: [{ role: 'user', content: prompt }],
           })
           text = res.text
+          usageData = (res as any).usage
         } else if (hasOpenAI) {
+          usedModel = 'gpt-4o'
+          usedChannel = 'openai'
           const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY })
           const res = await generateText({
             model: openai('gpt-4o'),
             messages: [{ role: 'user', content: prompt }],
           })
           text = res.text
+          usageData = (res as any).usage
+        }
+
+        if (usedModel && usageData) {
+          const inTokens = Number(usageData.inputTokens ?? usageData.promptTokens ?? 0)
+          const outTokens = Number(usageData.outputTokens ?? usageData.completionTokens ?? 0)
+          if (inTokens > 0 || outTokens > 0) {
+            void trackAiUsage({
+              feature: 'store_coach',
+              modelId: usedModel,
+              inputTokens: inTokens,
+              outputTokens: outTokens,
+              sourceChannel: usedChannel,
+            })
+          }
         }
 
         const cleanJson = text.replace(/```json/gi, '').replace(/```/g, '').trim()

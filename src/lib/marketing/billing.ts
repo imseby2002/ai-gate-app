@@ -7,7 +7,7 @@
 // credits for external users」、lib/skills/billing.ts 的 skills/run route、
 // lib/resume/billing.ts）。這條規則晚於行銷模組原始設計，這裡補齊。
 import { getBalance, deductCredits as deductCreditsRaw } from '@/lib/skills/billing'
-import { getCompanyBillingContext } from '@/lib/company/entitlements'
+import { getCompanyBillingContext } from '@/lib/company/billing-context'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getMarketingEntitlements, type MarketingPlan } from './entitlements'
 
@@ -165,12 +165,12 @@ function isTwMobile(rawPhone: string): boolean {
 
 // 語音（每分鐘，未滿 1 分鐘以 1 分鐘計，與 Twilio 計費方式一致）
 // Twilio 台灣：手機 $0.1985、市話 $0.1196；美國 $0.013（Bird $0.0049）；越南手機 $0.1777
-// Stringee 越南境內：約 NT$0.8~1.2／分，取 $0.04；其他國家未逐一建表，保守取 $0.20
+// 其他國家未逐一建表，保守取 $0.20
 export function voiceCostPerMinute(phone: string, provider: string): number {
   const country = detectTelcoCountry(phone)
   if (country === 'TW') return isTwMobile(phone) ? 0.1985 : 0.1196
   if (country === 'US') return provider === 'bird' ? 0.0049 : 0.013
-  if (country === 'VN') return provider === 'stringee' ? 0.04 : 0.1777
+  if (country === 'VN') return 0.1777
   return 0.2
 }
 
@@ -180,8 +180,8 @@ export function callCost(phone: string, provider: string, durationSec: number): 
 }
 
 // 簡訊（每段）：台灣 sms-get NT$0.86 ≈ $0.027；美國 Bird $0.0035；
-// 越南 Stringee 約 NT$0.55~0.8 ≈ $0.025；其他國家（Twilio）未逐一建表，保守取 $0.10
-const SMS_SEGMENT_COSTS: Record<TelcoCountry, number> = { TW: 0.027, US: 0.0035, VN: 0.025, INTL: 0.1 }
+// 越南（Twilio / Zalo ZNS）取 $0.05；其他國家（Twilio）未逐一建表，保守取 $0.10
+const SMS_SEGMENT_COSTS: Record<TelcoCountry, number> = { TW: 0.027, US: 0.0035, VN: 0.05, INTL: 0.1 }
 
 // GSM-7 基本字元集（含常用符號）；出現其他字元（中文、emoji 等）即改 UCS-2
 const GSM7 = /^[@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !"#¤%&'()*+,\-./0-9:;<=>?¡A-ZÄÖÑÜ§¿a-zäöñüà^{}\\[~\]|€]*$/
@@ -215,16 +215,15 @@ export const AI_STUDIO_FAL_COSTS = {
 export const AI_STUDIO_SUGGEST_ESTIMATE = 0.01
 export const AI_STUDIO_NODE_ESTIMATE = 0.1
 
-// 自製專家：建立來源（訓練）與問答的計價
-// 建立來源：網址每則 0.02；檔案／文字每 1000 字 0.01（萃取＋儲存成本）
+// 自製專家：建立來源（訓練）固定計價——萃取不呼叫付費 API，屬儲存／處理費
+// 建立來源：網址每則 0.02；檔案／文字每 1000 字 0.01
 export const EXPERT_SOURCE_URL_COST = 0.02
 export const EXPERT_SOURCE_PER_1K_CHARS = 0.01
 export function expertSourceCost(type: 'url' | 'file' | 'text', charCount: number): number {
   const base = type === 'url' ? EXPERT_SOURCE_URL_COST : 0
   return Math.round((base + (charCount / 1000) * EXPERT_SOURCE_PER_1K_CHARS) * 1000) / 1000
 }
-// 問答：知識庫塞進 context，input token 偏高，每次固定 0.05
-export const EXPERT_QUERY_COST = 0.05
+// 問答：依實際 token 用量 × 方案倍率（見 api/marketing/experts/[id]/ask）
 
 // ── 每月贈點（當月用完即止、不累積；見 supabase/migrations/20261003_marketing_monthly_gift.sql）──
 // FREE 需完成 Email 驗證才發放；公司方案成員改用公司錢包，不另給個人贈點

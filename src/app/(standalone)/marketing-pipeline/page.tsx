@@ -431,8 +431,8 @@ function MarketingPipelineContent() {
         if (abortRef.current) return { ok: false, output: t('out.aborted') }
         await new Promise(r => setTimeout(r, 8000))
         const { data: poll } = await safeFetch(`/api/marketing/generate-video?requestId=${submit.requestId}&model=kling-standard`, {})
-        if (poll.status === 'completed' && poll.videoUrl) return { ok: true, output: t('out.videoDone'), data: { videos: [{ url: poll.videoUrl }] } }
-        if (poll.status === 'failed') return { ok: false, output: t('out.videoFailed') }
+        if (poll.status === 'completed' && (poll.url || poll.videoUrl)) return { ok: true, output: t('out.videoDone'), data: { videos: [{ url: poll.url || poll.videoUrl }] } }
+        if (poll.status === 'failed' || poll.status === 'error') return { ok: false, output: poll.error ?? t('out.videoFailed') }
       }
       return { ok: false, output: t('out.videoTimeout') }
     }

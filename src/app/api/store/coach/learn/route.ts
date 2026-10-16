@@ -5,6 +5,8 @@ import { generateText } from 'ai'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createOpenAI } from '@ai-sdk/openai'
+import { trackAiUsage } from '@/lib/ai/universal-tracker'
+import { getOfficeTieredModel } from '@/lib/office/tiered-chat-model'
 
 export const maxDuration = 60
 
@@ -149,10 +151,6 @@ export async function POST(req: NextRequest) {
 
     // 模式 1：向已學習的教練發問 (Ask the learned coach)
     if (query_prompt) {
-      const hasAnthropic = !!process.env.ANTHROPIC_API_KEY
-      const hasGoogle = !!(process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY)
-      const hasOpenAI = !!process.env.OPENAI_API_KEY
-
       let answer = ''
       const prompt = `你是 Feeling Tea (啡靈茶飲) 門市營運教練 AI。
 你已經深入學習了總部所有 SOP、督導稽核報告、打烊除垢指引、外送排班動線與客訴應對標準。
@@ -167,31 +165,34 @@ export async function POST(req: NextRequest) {
 4. 【店長現場教練話術建議】：
 繁體中文，溫暖且專業。`
 
-      if (hasAnthropic) {
-        const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+      // 門市標準查詢預設走日常檢索 (DeepSeek)，若涉及深度根因或配方改動則走 Claude Sonnet
+      const tierDecision = getOfficeTieredModel({
+        message: query_prompt,
+        additionalComplexKeywords: ['配方', '十層根因', '客訴賠償', '法規處罰', '合約'],
+      })
+      try {
         const res = await generateText({
-          model: anthropic('claude-sonnet-4-5'),
+          model: tierDecision.model,
           messages: [{ role: 'user', content: prompt }],
           maxOutputTokens: 2000,
         })
         answer = res.text
-      } else if (hasGoogle) {
-        const google = createGoogleGenerativeAI({
-          apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY,
-        })
-        const res = await generateText({
-          model: google('gemini-2.0-flash'),
-          messages: [{ role: 'user', content: prompt }],
-        })
-        answer = res.text
-      } else if (hasOpenAI) {
-        const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY })
-        const res = await generateText({
-          model: openai('gpt-4o'),
-          messages: [{ role: 'user', content: prompt }],
-        })
-        answer = res.text
-      } else {
+
+        const usage = (res as any).usage ?? {}
+        const inTokens = Number(usage.inputTokens ?? usage.promptTokens ?? 0)
+        const outTokens = Number(usage.outputTokens ?? usage.completionTokens ?? 0)
+        if (inTokens > 0 || outTokens > 0) {
+          void trackAiUsage({
+            feature: 'store_coach',
+            modelId: tierDecision.modelId,
+            inputTokens: inTokens,
+            outputTokens: outTokens,
+            sourceChannel: tierDecision.sourceChannel,
+            metadata: { module: 'store_coach_learn_query', tier: tierDecision.tier, reason: tierDecision.reason },
+          })
+        }
+      } catch (err) {
+        console.warn('Store coach query AI error, fallback to standard rule:', err)
         answer = `【核心標準原則】：依據 Feeling Tea 營運手冊，所有品質問題以「現做新鮮與標準校準」為第一原則。\n【具體操作步驟】：\n1. 檢視標準溫度與刻度（茶湯 85°C、果糖噴嘴無結晶）。\n2. 執行 90 秒快閃清潔程序並重新校準量杯。\n3. 對顧客採 30 秒免費現泡重調。\n【避免之致命錯誤】：嚴禁與顧客辯解或推卸原料問題。\n【店長話術建議】：「小林，我們先一起做一次量杯刻度平視，確認標準比例，客人一定會感受到你的用心！」`
       }
 
@@ -249,7 +250,13 @@ ${raw_content.slice(0, 4000)}
 }`
 
         let text = ''
+        let usedModel = ''
+        let usedChannel: 'anthropic' | 'google' | 'openai' = 'anthropic'
+        let usageData: any = null
+
         if (hasAnthropic) {
+          usedModel = 'claude-sonnet-4-5'
+          usedChannel = 'anthropic'
           const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
           const res = await generateText({
             model: anthropic('claude-sonnet-4-5'),
@@ -257,7 +264,10 @@ ${raw_content.slice(0, 4000)}
             maxOutputTokens: 2000,
           })
           text = res.text
+          usageData = (res as any).usage
         } else if (hasGoogle) {
+          usedModel = 'gemini-2.0-flash'
+          usedChannel = 'google'
           const google = createGoogleGenerativeAI({
             apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY,
           })
@@ -266,13 +276,31 @@ ${raw_content.slice(0, 4000)}
             messages: [{ role: 'user', content: extractionPrompt }],
           })
           text = res.text
+          usageData = (res as any).usage
         } else if (hasOpenAI) {
+          usedModel = 'gpt-4o'
+          usedChannel = 'openai'
           const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY })
           const res = await generateText({
             model: openai('gpt-4o'),
             messages: [{ role: 'user', content: extractionPrompt }],
           })
           text = res.text
+          usageData = (res as any).usage
+        }
+
+        if (usedModel && usageData) {
+          const inTokens = Number(usageData.inputTokens ?? usageData.promptTokens ?? 0)
+          const outTokens = Number(usageData.outputTokens ?? usageData.completionTokens ?? 0)
+          if (inTokens > 0 || outTokens > 0) {
+            void trackAiUsage({
+              feature: 'store_coach',
+              modelId: usedModel,
+              inputTokens: inTokens,
+              outputTokens: outTokens,
+              sourceChannel: usedChannel,
+            })
+          }
         }
 
         const cleanJson = text.replace(/```json/gi, '').replace(/```/g, '').trim()

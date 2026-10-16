@@ -4,6 +4,8 @@ import { generateText } from 'ai'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { assembleExpertKnowledge } from '@/lib/skills/expertKnowledge'
 
+import { trackAiUsage } from '@/lib/ai/universal-tracker'
+
 // 一鍵產出沿用的行銷專家（與行銷中心專家模式同源）：短影音爆款＋推廣文案＋社群人設
 const MKT_EXPERT_SKILLS = ['viral-video-copywriting', 'product-marketing-copywriter', 'kol-persona-writer']
 
@@ -71,6 +73,19 @@ ${shape}`
 
   const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
   const res = await generateText({ model: anthropic(MKT_MODEL), system, maxOutputTokens: 4000, messages: [{ role: 'user', content: user }] })
+
+  const usage = (res as any).usage ?? {}
+  const inTokens = Number(usage.inputTokens ?? usage.promptTokens ?? 0)
+  const outTokens = Number(usage.outputTokens ?? usage.completionTokens ?? 0)
+  if (inTokens > 0 || outTokens > 0) {
+    void trackAiUsage({
+      feature: 'marketing',
+      modelId: MKT_MODEL,
+      inputTokens: inTokens,
+      outputTokens: outTokens,
+      sourceChannel: 'anthropic',
+    })
+  }
 
   const outputs = parseJson(res.text)
   return { outputs, model: MKT_MODEL }

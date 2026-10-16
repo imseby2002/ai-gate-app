@@ -1,5 +1,5 @@
-import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
+import { generateWithFreeFirst } from '@/lib/ai/free-first-caller'
 
 // ── URL 類型判斷 ──────────────────────────────────────────────────────────────
 
@@ -132,14 +132,11 @@ async function fetchWebContent(url: string): Promise<string> {
 // ── Claude 合成（取代 NotebookLM 步驟）────────────────────────────────────────
 
 async function synthesizeKnowledge(raw: string, expertName: string): Promise<string> {
-  const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
-  const { text } = await generateText({
-    model: anthropic('claude-sonnet-4-6'),
-    system: `你是知識萃取專家，專門將創作者的內容整理成可供 AI 系統直接引用的結構化知識庫。
+  const text = await generateWithFreeFirst({
+    feature: 'skills',
+    systemPrompt: `你是知識萃取專家，專門將創作者的內容整理成可供 AI 系統直接引用的結構化知識庫。
 輸出格式為 Markdown，內容需具體可操作，避免空泛描述。請以繁體中文輸出。`,
-    messages: [{
-      role: 'user',
-      content: `以下是創作者「${expertName}」的內容。請萃取並整理成以下格式：
+    prompt: `以下是創作者「${expertName}」的內容。請萃取並整理成以下格式：
 
 ## 核心方法論
 （可操作的步驟與框架）
@@ -159,7 +156,6 @@ async function synthesizeKnowledge(raw: string, expertName: string): Promise<str
 ---
 原始內容：
 ${raw.slice(0, 80000)}`,
-    }],
     maxOutputTokens: 4000,
   })
   return text

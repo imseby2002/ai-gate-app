@@ -32,6 +32,7 @@ export function preloadAzureSpeechSdk(): Promise<typeof SpeechSDKType> {
 
 export interface AzureRecognitionController {
   stop: () => Promise<void>
+  setMaxSpeakers?: (max: number) => void
 }
 
 // Azure 授權 token 有效 10 分鐘，提前更新避免重連時以過期 token 失敗
@@ -41,6 +42,7 @@ export async function startAzureRecognition(options: {
   token: string
   region: string
   mode: 'online' | 'in_person'
+  maxSpeakers?: number
   /** 辨識語言（app 代碼 zh-TW / vi / en），第一個為主要語言；只有一個時不做自動偵測 */
   languages: string[]
   onRecognized: (text: string, speakerLabel?: string, detectedLang?: string) => void
@@ -50,6 +52,18 @@ export async function startAzureRecognition(options: {
   const SpeechSDK = await preloadAzureSpeechSdk()
 
   const speechConfig = SpeechSDK.SpeechConfig.fromAuthorizationToken(options.token, options.region)
+  speechConfig.enableDictation()
+
+  // 實體現場會議：強制開啟多人聲紋分離 (Diarization)
+  try {
+    speechConfig.setProperty('SpeechServiceConnection_EnableSpeakerDiarization', 'true')
+    speechConfig.setProperty('SpeechServiceResponse_DiarizeIntermediateResults', 'true')
+    if (options.maxSpeakers && options.maxSpeakers > 0) {
+      speechConfig.setPropertyByName('maxSpeakerCount', String(options.maxSpeakers))
+      speechConfig.setProperty('SpeechServiceConnection_DiarizationMaxSpeakers', String(options.maxSpeakers))
+    }
+  } catch {}
+
   const LOCALES: Record<string, string> = { 'zh-TW': 'zh-TW', vi: 'vi-VN', en: 'en-US' }
   const locales = options.languages.map(l => LOCALES[l]).filter(Boolean)
   if (!locales.length) locales.push('zh-TW')
@@ -67,8 +81,15 @@ export async function startAzureRecognition(options: {
 
   const audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput()
 
-  // 偵測不出語言時以主要語言為準
-  function resolveLanguage(result: SpeechSDKType.SpeechRecognitionResult): string {
+  const VI_CHAR_REGEX = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i
+  const ZH_CHAR_REGEX = /[\u4e00-\u9fa5]/
+
+  // 偵測不出語言時以主要語言為準；若辨識出的文字已有明確語種特徵則優先判定
+  function resolveLanguage(result: SpeechSDKType.SpeechRecognitionResult, text?: string): string {
+    if (text) {
+      if (VI_CHAR_REGEX.test(text)) return 'vi'
+      if (ZH_CHAR_REGEX.test(text)) return 'zh-TW'
+    }
     try {
       const autoRes = SpeechSDK.AutoDetectSourceLanguageResult.fromResult(result)
       if (autoRes?.language) {
@@ -102,18 +123,49 @@ export async function startAzureRecognition(options: {
       ? SpeechSDK.ConversationTranscriber.FromConfig(speechConfig, autoDetectConfig, audioConfig)
       : new SpeechSDK.ConversationTranscriber(speechConfig, audioConfig)
 
+    // 維護講者編號與多講者對映（受限於現場人數上限，防止過度分群）
+    let currentMaxSpeakers = options.maxSpeakers && options.maxSpeakers > 0 ? options.maxSpeakers : 3
+    let lastKnownSpeaker = '講者 1'
+    const speakerMap = new Map<string, string>()
+    let nextNum = 1
+
+    const resolveSpeaker = (rawId?: string | null): string => {
+      if (!rawId || rawId === 'Unknown') return lastKnownSpeaker
+      // 匹配 Guest-1, Guest_1, Guest 1, Speaker-1, Speaker_1, Speaker 1, 或純數字 1, 2, 3
+      const m = rawId.match(/(?:Guest|Speaker)[-_ ]?(\d+)/i) || rawId.match(/^(\d+)$/)
+      if (m) {
+        let num = parseInt(m[1], 10)
+        if (currentMaxSpeakers > 0) {
+          num = ((num - 1) % currentMaxSpeakers) + 1
+        }
+        const label = `講者 ${num}`
+        lastKnownSpeaker = label
+        return label
+      }
+      if (!speakerMap.has(rawId)) {
+        let num = nextNum++
+        if (currentMaxSpeakers > 0) {
+          num = ((num - 1) % currentMaxSpeakers) + 1
+        }
+        speakerMap.set(rawId, `講者 ${num}`)
+      }
+      const mapped = speakerMap.get(rawId)!
+      lastKnownSpeaker = mapped
+      return mapped
+    }
+
     transcriber.transcribing = (_s, e) => {
       if (e.result.text?.trim()) {
-        options.onInterim?.(e.result.text.trim(), e.result.speakerId ? formatSpeakerLabel(e.result.speakerId) : undefined)
+        const label = resolveSpeaker(e.result.speakerId)
+        options.onInterim?.(e.result.text.trim(), label)
       }
     }
 
     transcriber.transcribed = (_s, e) => {
       if (e.result.reason === SpeechSDK.ResultReason.RecognizedSpeech && e.result.text?.trim()) {
         const text = e.result.text.trim()
-        const speakerRaw = e.result.speakerId || 'Guest-1'
-        const speakerLabel = formatSpeakerLabel(speakerRaw)
-        const lang = resolveLanguage(e.result as unknown as SpeechSDKType.SpeechRecognitionResult)
+        const speakerLabel = resolveSpeaker(e.result.speakerId)
+        const lang = resolveLanguage(e.result as unknown as SpeechSDKType.SpeechRecognitionResult, text)
         options.onRecognized(text, speakerLabel, lang)
       }
     }
@@ -145,6 +197,9 @@ export async function startAzureRecognition(options: {
           console.warn('[AzureSpeech] Transcriber stop error:', e)
         }
       },
+      setMaxSpeakers: (max: number) => {
+        if (max > 0) currentMaxSpeakers = max
+      },
     }
   }
 
@@ -160,7 +215,7 @@ export async function startAzureRecognition(options: {
   recognizer.recognized = (_s, e) => {
     if (e.result.reason === SpeechSDK.ResultReason.RecognizedSpeech && e.result.text?.trim()) {
       const text = e.result.text.trim()
-      const lang = resolveLanguage(e.result)
+      const lang = resolveLanguage(e.result, text)
       options.onRecognized(text, undefined, lang)
     }
   }
@@ -196,8 +251,9 @@ export async function startAzureRecognition(options: {
 }
 
 function formatSpeakerLabel(rawId: string): string {
-  // Guest-1 -> 講者 1 / Speaker 1
-  const match = rawId.match(/Guest-(\d+)/i)
+  if (!rawId || rawId === 'Unknown') return '講者 1'
+  // Guest-1, Guest_1, Guest 1, Speaker-1, Speaker_1, Speaker 1, 或純數字 1, 2, 3
+  const match = rawId.match(/(?:Guest|Speaker)[-_ ]?(\d+)/i) || rawId.match(/^(\d+)$/)
   if (match) {
     return `講者 ${match[1]}`
   }

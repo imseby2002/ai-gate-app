@@ -3,6 +3,7 @@ import { createAnthropic } from '@ai-sdk/anthropic'
 import { createOpenAI } from '@ai-sdk/openai'
 import { generateText } from 'ai'
 import { notifyAdmin } from '@/lib/notify/adminAlert'
+import { trackAiUsage } from '@/lib/ai/universal-tracker'
 
 export const CODE_ENGINE_NAME = 'Claude 3.7 Sonnet'
 
@@ -147,7 +148,7 @@ async function classifyAndPlan(title: string, description: string, type: string,
 
   try {
     const model = getClaudeSonnetModel()
-    const { text } = await generateText({
+    const res = await generateText({
       model,
       messages: [{
         role: 'user',
@@ -182,6 +183,20 @@ ${contextStr.slice(0, 12000)}
       }],
     })
 
+    const text = res.text
+    const usage = (res as any).usage ?? {}
+    const inTokens = Number(usage.inputTokens ?? usage.promptTokens ?? 0)
+    const outTokens = Number(usage.outputTokens ?? usage.completionTokens ?? 0)
+    if (inTokens > 0 || outTokens > 0) {
+      void trackAiUsage({
+        feature: 'autofix',
+        modelId: 'claude-3-7-sonnet',
+        inputTokens: inTokens,
+        outputTokens: outTokens,
+        sourceChannel: 'anthropic',
+      })
+    }
+
     const m = text.match(/\{[\s\S]*\}/)
     if (m) return JSON.parse(m[0]) as AiPlan
   } catch (err) {
@@ -206,7 +221,7 @@ async function generateCodeChanges(
 
   for (const fileTask of plan.files) {
     const existing = context[fileTask.path] ?? ''
-    const { text } = await generateText({
+    const res = await generateText({
       model,
       maxOutputTokens: 8192,
       messages: [{
@@ -233,6 +248,20 @@ ${existing}
 直接輸出完整程式碼（不要加 \`\`\` 包裝）：`,
       }],
     })
+
+    const text = res.text
+    const usage = (res as any).usage ?? {}
+    const inTokens = Number(usage.inputTokens ?? usage.promptTokens ?? 0)
+    const outTokens = Number(usage.outputTokens ?? usage.completionTokens ?? 0)
+    if (inTokens > 0 || outTokens > 0) {
+      void trackAiUsage({
+        feature: 'autofix',
+        modelId: 'claude-3-7-sonnet',
+        inputTokens: inTokens,
+        outputTokens: outTokens,
+        sourceChannel: 'anthropic',
+      })
+    }
 
     // Strip possible code fences
     const code = text.replace(/^```[\w]*\n?/, '').replace(/\n?```$/, '')

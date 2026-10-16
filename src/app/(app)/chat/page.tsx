@@ -1,7 +1,7 @@
 ﻿import { redirect } from 'next/navigation'
 import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { isChatModelAllowed } from '@/lib/ai/chat-policy'
-import { getCompanyBillingContext } from '@/lib/company/entitlements'
+import { getCompanyBillingContext } from '@/lib/company/billing-context'
 import { ChatPageClient } from '@/components/chat/ChatPageClient'
 
 export default async function ChatPage({

@@ -3,6 +3,7 @@ import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 import { Resend } from 'resend'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { generateWithFreeFirst } from '@/lib/ai/free-first-caller'
 import { sendToCustomer } from '@/lib/cs/send'
 import { getAffairSettings, taipeiDate } from '@/lib/affairs/reminders'
 import { buildGmSnapshot, type GmSnapshot } from '@/lib/gm/snapshot'
@@ -38,10 +39,7 @@ export function snapshotToText(snap: GmSnapshot): string {
 
 async function summarize(snap: GmSnapshot, kind: string, dateLabel: string): Promise<string> {
   const body = snapshotToText(snap)
-  if (!process.env.ANTHROPIC_API_KEY) {
-    // 無 AI 金鑰時退回結構化文字，仍可推播
-    return `${KIND_LABEL[kind] ?? kind}（${dateLabel}）\n\n${body}`
-  }
+
   // 依報告類型調整深度：每日精簡、每週/月度較完整並含建議
   const depth = kind === 'daily'
     ? '請用繁體中文、條列、精煉，控制在 400 字內。'
@@ -51,12 +49,17 @@ async function summarize(snap: GmSnapshot, kind: string, dateLabel: string): Pro
   const system = `你是連鎖飲料公司的總經理特助，負責把各部門資料彙整成給總經理看的${KIND_LABEL[kind] ?? '經營'}。
 原則：exception-first——先講需要總經理注意/決策的異常（虧損門市、逾期工單、文件逾期等），再給關鍵數字重點；正常項目簡述即可。
 ${depth} 語氣務實，不要編造資料裡沒有的數字。`
-  const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-  const res = await generateText({
-    model: anthropic('claude-sonnet-4-5'), system, maxOutputTokens: kind === 'daily' ? 1200 : 2500,
-    messages: [{ role: 'user', content: `以下是 ${dateLabel} 的彙整資料，請產出${KIND_LABEL[kind] ?? '摘要'}：\n\n${body}` }],
-  })
-  return res.text.trim()
+
+  try {
+    return await generateWithFreeFirst({
+      feature: 'other',
+      systemPrompt: system,
+      prompt: `以下是 ${dateLabel} 的彙整資料，請產出${KIND_LABEL[kind] ?? '摘要'}：\n\n${body}`,
+      maxOutputTokens: kind === 'daily' ? 1200 : 2500,
+    })
+  } catch {
+    return `${KIND_LABEL[kind] ?? kind}（${dateLabel}）\n\n${body}`
+  }
 }
 
 // 產生並推播一份快報（kind: daily/weekly/monthly）。回傳存檔 id 與已推播管道。

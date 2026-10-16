@@ -1056,6 +1056,40 @@ export default function ProspectCallPage() {
     }
   }
 
+  // ── 測試撥號：撥給自己的號碼確認語音、按鍵與通話回報 ──────────────────────────
+  const [testPhone, setTestPhone] = useState('')
+  const [testCalling, setTestCalling] = useState(false)
+  const [testCallMsg, setTestCallMsg] = useState('')
+
+  const testCall = async () => {
+    const script = config.voiceScripts[0]
+    if (!script?.text.trim()) { setTestCallMsg(t('extra.testNeedScript')); return }
+    setTestCalling(true); setTestCallMsg('')
+    try {
+      const res = await fetch('/api/marketing/phone-call', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'batch',
+          script: script.text,
+          phones: [testPhone.trim()],
+          voiceId: script.voiceId,
+          callerId: config.birdCallerId,
+          birdCallerId: config.birdCallerId,
+          keyMappings: config.keyMappings,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      const r = Array.isArray(data.results) ? data.results[0] : null
+      setTestCallMsg(data.success ? t('extra.testOk', { provider: r?.provider ?? '' }) : t('extra.testFail', { error: r?.error ?? '' }))
+    } catch (e) {
+      setTestCallMsg(t('extra.testFail', { error: String(e) }))
+    } finally {
+      setTestCalling(false)
+    }
+  }
+
   // ── Batch call by rule ────────────────────────────────────────────────────
 
   const batchCall = async (ruleId: string, phones: string[], script: VoiceScript) => {
@@ -1489,6 +1523,25 @@ export default function ProspectCallPage() {
                   {!config.birdCallerId.trim() && (
                     <p className="text-[10px] text-amber-500 mt-1">{t('s6p.callerIdWarn')}</p>
                   )}
+                </div>
+
+                {/* 測試撥號 */}
+                <div>
+                  <label className="block text-xs font-medium mb-1">
+                    {t('extra.testCallLabel')}
+                    <span className="ml-1 text-[10px] text-gray-400 font-normal">{t('extra.testCallHint')}</span>
+                  </label>
+                  <div className="flex gap-2">
+                    <input value={testPhone} onChange={e => setTestPhone(e.target.value)}
+                      placeholder="+8869... / +84... / +1..."
+                      className="flex-1 h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2 font-mono" />
+                    <button onClick={testCall} disabled={testCalling || testPhone.trim().length < 8}
+                      className="h-9 px-3 rounded-lg bg-indigo-600 text-white text-xs font-semibold disabled:opacity-50 flex items-center gap-1">
+                      {testCalling ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Phone className="h-3.5 w-3.5" />}
+                      {t('extra.testCallBtn')}
+                    </button>
+                  </div>
+                  {testCallMsg && <p className="text-[11px] text-gray-600 mt-1">{testCallMsg}</p>}
                 </div>
 
                 {/* 待撥清單預覽 */}
