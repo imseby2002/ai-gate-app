@@ -12708,7 +12708,7 @@
   },
   "Knowledge": {
     "title": "公司知識庫",
-    "subtitle": "各部門上傳 SOP、教材、規範等知識檔案，全公司共用：可用來出考題，之後也會提供給專家、短影音自動化與 AI 對話使用。",
+    "subtitle": "各部門上傳 SOP、教材、規範等知識檔案，全公司共用：可用來出考題，也能提供給專家、AI 對話助理與短影音腳本使用。",
     "add": "上傳知識",
     "department": "部門",
     "docTitle": "標題",
@@ -12819,5 +12819,17 @@
     "needsGrading": "AI 未能評分，請人工評分",
     "feedbackPh": "評語（選填）",
     "saveReview": "儲存評分"
+  },
+  "KnowledgePicker": {
+    "tab": "公司知識庫",
+    "import": "從知識庫匯入",
+    "loading": "載入公司知識…",
+    "unavailable": "加入公司後才能使用公司知識庫。",
+    "empty": "公司知識庫還沒有文件。",
+    "manage": "前往上傳",
+    "all": "全部",
+    "selected": "已選 {n} 份",
+    "chars": "{n} 字",
+    "videoHint": "勾選產品、SOP 等資料，腳本會依據這些事實撰寫（選填）"
   }
 }

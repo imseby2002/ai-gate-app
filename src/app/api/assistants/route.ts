@@ -1,4 +1,5 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+﻿import { sanitizeDocIds } from '@/lib/knowledge/context'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getModuleEntitlements, planRequiredResponse } from '@/lib/module-plans/entitlements'
 import { minPlanLabel } from '@/lib/module-plans/definitions'
@@ -24,7 +25,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { name, description, system_prompt, default_model, avatar_emoji, expert_ids } = body
+  const { name, description, system_prompt, default_model, avatar_emoji, expert_ids, knowledge_doc_ids } = body
 
   if (!name?.trim()) {
     return NextResponse.json({ error: 'Name required' }, { status: 400 })
@@ -52,6 +53,7 @@ export async function POST(req: NextRequest) {
       default_model: default_model ?? null,
       avatar_emoji: avatar_emoji ?? '🤖',
       expert_ids: Array.isArray(expert_ids) ? expert_ids : [],
+      knowledge_doc_ids: sanitizeDocIds(knowledge_doc_ids),
     })
     .select()
     .single()

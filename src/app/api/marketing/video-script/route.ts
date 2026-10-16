@@ -15,6 +15,7 @@
  *   collectedSummary?: string
  *   feedback?: string
  *   referenceImage?: { base64: string; mimeType: string; name: string }
+ *   knowledgeDocIds?: string[]   // 公司知識庫（knowledge_docs）文件，例如短影音 SOP、產品知識
  * }
  */
 import { NextRequest, NextResponse } from 'next/server'
@@ -24,6 +25,7 @@ import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 import { langInstruction } from '@/lib/marketing/lang'
 import { getSkillKnowledge } from '@/lib/skills/knowledge'
+import { loadKnowledgeContext } from '@/lib/knowledge/context'
 
 export async function POST(req: NextRequest) {
   const authUser = await getCronOrUserAuth(req)
@@ -45,6 +47,7 @@ export async function POST(req: NextRequest) {
     feedback,
     referenceImage,
     language,
+    knowledgeDocIds,
   } = body
 
   const company = companyData ?? {}
@@ -187,9 +190,14 @@ ${feedbackSection}
       }
     }
   }
+  // 公司知識庫：使用者勾選的文件（cron 無登入身分，不載入）
+  const companyKnowledge = !authUser.isCron && Array.isArray(knowledgeDocIds) && knowledgeDocIds.length
+    ? await loadKnowledgeContext(knowledgeDocIds, 40000, '以下是公司知識庫資料（產品、流程、規範等），腳本內容須符合這些事實，不得杜撰：')
+    : ''
   const knowledgeSection = viralKnowledge
     ? `\n\n【短影音爆款方法論（來自「短影音爆款腳本」專家知識庫，撰寫腳本時務必套用）】\n${viralKnowledge}`
     : ''
+  const companyKnowledgeSection = companyKnowledge ? `\n\n【公司知識庫】\n${companyKnowledge}` : ''
 
   const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
 
@@ -198,7 +206,7 @@ ${feedbackSection}
     system: `你是一位頂尖的影片行銷導演，擅長為各社群平台撰寫高轉換率的影片分鏡腳本。
 你熟知短影音的黃金法則：前3秒必須抓住觀眾、節奏明快、視覺衝擊強、CTA清晰。
 輸出格式：每個影片腳本用「===【影片 N】===」作為分隔標題，直接輸出腳本，不需其他說明。
-${langInstruction(language)}（分隔標題「===【影片 N】===」維持原樣，腳本內容用該語言）${knowledgeSection}`,
+${langInstruction(language)}（分隔標題「===【影片 N】===」維持原樣，腳本內容用該語言）${knowledgeSection}${companyKnowledgeSection}`,
     messages: [{ role: 'user', content: userContent }],
     maxOutputTokens: 4000,
   })

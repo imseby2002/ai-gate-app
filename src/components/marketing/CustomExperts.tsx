@@ -5,8 +5,9 @@ import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import {
   Brain, Plus, Loader2, Link2, FileText, Type, Trash2, Send,
-  Crown, ArrowLeft, Upload, X,
+  Crown, ArrowLeft, Upload, X, BookOpen,
 } from 'lucide-react'
+import KnowledgePicker from '@/components/knowledge/KnowledgePicker'
 import { useMarketingPlan } from '@/components/marketing/PlanGate'
 
 interface ExpertListItem {
@@ -18,7 +19,7 @@ interface ExpertListItem {
 }
 interface ExpertSource {
   id: string
-  type: 'url' | 'file' | 'text'
+  type: 'url' | 'file' | 'text' | 'knowledge'
   name: string
   source_url: string | null
   char_count: number
@@ -203,7 +204,7 @@ function ExpertDetail({ id, canBuild, onBack }: { id: string; canBuild: boolean;
 function SourceRow({ expertId, source, canBuild, onDeleted }: { expertId: string; source: ExpertSource; canBuild: boolean; onDeleted: () => void }) {
   const t = useTranslations('CustomExperts')
   const [deleting, setDeleting] = useState(false)
-  const Icon = source.type === 'url' ? Link2 : source.type === 'file' ? FileText : Type
+  const Icon = source.type === 'url' ? Link2 : source.type === 'file' ? FileText : source.type === 'knowledge' ? BookOpen : Type
   const del = async () => {
     setDeleting(true)
     try {
@@ -227,7 +228,9 @@ function SourceRow({ expertId, source, canBuild, onDeleted }: { expertId: string
 
 function AddSource({ expertId, onAdded }: { expertId: string; onAdded: () => void }) {
   const t = useTranslations('CustomExperts')
-  const [tab, setTab] = useState<'url' | 'text' | 'file'>('url')
+  const tk = useTranslations('KnowledgePicker')
+  const [tab, setTab] = useState<'url' | 'text' | 'file' | 'knowledge'>('url')
+  const [docIds, setDocIds] = useState<string[]>([])
   const [url, setUrl] = useState('')
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
@@ -249,6 +252,7 @@ function AddSource({ expertId, onAdded }: { expertId: string; onAdded: () => voi
 
   const addUrl = async () => { if (url.trim() && await post({ type: 'url', url })) setUrl('') }
   const addText = async () => { if (text.trim() && await post({ type: 'text', text })) setText('') }
+  const addKnowledge = async () => { if (docIds[0] && await post({ type: 'knowledge', docId: docIds[0] })) setDocIds([]) }
 
   const addFile = async (file: File) => {
     setBusy(true)
@@ -266,7 +270,7 @@ function AddSource({ expertId, onAdded }: { expertId: string; onAdded: () => voi
   return (
     <div className="rounded-xl border bg-card p-4 space-y-3">
       <div className="flex gap-1 text-xs">
-        {([['url', t('tabUrl'), Link2], ['text', t('tabText'), Type], ['file', t('tabFile'), Upload]] as const).map(([k, label, Icon]) => (
+        {([['url', t('tabUrl'), Link2], ['text', t('tabText'), Type], ['file', t('tabFile'), Upload], ['knowledge', tk('tab'), BookOpen]] as const).map(([k, label, Icon]) => (
           <button key={k} onClick={() => setTab(k)}
             className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-medium ${tab === k ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
             <Icon className="h-3.5 w-3.5" />{label}
@@ -299,6 +303,15 @@ function AddSource({ expertId, onAdded }: { expertId: string; onAdded: () => voi
             onChange={e => { const f = e.target.files?.[0]; if (f) addFile(f) }}
             className="text-sm" disabled={busy} />
           <p className="text-[11px] text-muted-foreground mt-1">{t('fileHint')}</p>
+        </div>
+      )}
+      {tab === 'knowledge' && (
+        <div className="space-y-2">
+          <KnowledgePicker single value={docIds} onChange={setDocIds} />
+          <button onClick={addKnowledge} disabled={busy || !docIds[0]}
+            className="px-3 py-2 rounded-lg text-sm font-semibold text-primary-foreground bg-primary disabled:opacity-50">
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : tk('import')}
+          </button>
         </div>
       )}
       <p className="text-[11px] text-muted-foreground">{t('costHint')}</p>

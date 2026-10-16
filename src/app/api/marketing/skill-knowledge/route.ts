@@ -3,7 +3,7 @@
  * 執行時自動注入 system prompt（見 /api/skills/run）。
  *
  * GET    ?skillId=  → 列出自己對該專家的知識來源 + canBuild（是否 PRO+）
- * POST   { skillId, type:'url'|'file'|'text', url?, text?, name? }  → 新增（需 PRO+，依萃取字數扣點）
+ * POST   { skillId, type:'url'|'file'|'text'|'knowledge', url?, text?, name?, docId? }（knowledge：從公司知識庫匯入）  → 新增（需 PRO+，依萃取字數扣點）
  *   （檔案：前端先呼叫 /api/marketing/upload-file 取得 textContent，再以 type='file' + text 送入）
  * DELETE ?id=  → 刪除自己的一筆
  */
@@ -12,6 +12,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getSkill } from '@/lib/skills/registry'
 import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
 import { fetchUrlText } from '@/lib/marketing/fetch-url'
+import { loadKnowledgeDocs } from '@/lib/knowledge/context'
 import { expertSourceCost, checkCredits, deductCredits, isBillableUser } from '@/lib/marketing/billing'
 
 const MAX_SOURCES_PER_SKILL = 20
@@ -40,9 +41,9 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { skillId, type, url, text, name } = await req.json()
+  const { skillId, type, url, text, name, docId } = await req.json()
   if (!skillId || !getSkill(skillId)) return NextResponse.json({ error: '未知的專家' }, { status: 404 })
-  if (!['url', 'file', 'text'].includes(type)) {
+  if (!['url', 'file', 'text', 'knowledge'].includes(type)) {
     return NextResponse.json({ error: '不支援的來源類型' }, { status: 400 })
   }
 
@@ -69,6 +70,11 @@ export async function POST(req: NextRequest) {
       extracted = await fetchUrlText(u)
       sourceUrl = u.startsWith('http') ? u : `https://${u}`
       if (!nm) nm = sourceUrl
+    } else if (type === 'knowledge') {
+      const [doc] = await loadKnowledgeDocs([String(docId ?? '')])
+      if (!doc) return NextResponse.json({ error: '找不到知識文件' }, { status: 404 })
+      extracted = doc.content
+      if (!nm) nm = doc.title
     } else {
       extracted = String(text ?? '').trim()
       if (!nm) nm = type === 'file' ? '上傳檔案' : '文字內容'
@@ -81,7 +87,7 @@ export async function POST(req: NextRequest) {
   if (!extracted) return NextResponse.json({ error: '來源沒有可用的文字內容' }, { status: 422 })
 
   const charCount = extracted.length
-  const cost = expertSourceCost(type, charCount)
+  const cost = expertSourceCost(type === 'knowledge' ? 'text' : type, charCount)
   const billable = await isBillableUser(user.id)
   const check = await checkCredits(user.id, cost, billable)
   if (!check.ok) return NextResponse.json(check.payload, { status: 402 })

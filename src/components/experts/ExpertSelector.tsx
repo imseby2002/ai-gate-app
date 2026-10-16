@@ -1,12 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Plus, Trash2, Loader2, CheckCircle, XCircle, BookOpen, Search, Link2, FileText } from 'lucide-react'
+import { Plus, Trash2, Loader2, CheckCircle, XCircle, BookOpen, Search, Link2, FileText, Library } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils/cn'
+import KnowledgePicker from '@/components/knowledge/KnowledgePicker'
 
 interface ExpertKnowledgeStatus {
   id: string
@@ -25,12 +26,13 @@ interface Expert {
   expert_knowledge: ExpertKnowledgeStatus[]
 }
 
-type InputMode = 'search' | 'url' | 'manual'
+type InputMode = 'search' | 'url' | 'manual' | 'knowledge'
 
 const MODE_CONFIG: Record<InputMode, { icon: React.ElementType; label: string; hint: string }> = {
   search: { icon: Search, label: '搜尋', hint: '輸入名稱／主題，AI 自動搜尋相關分析並整理成知識庫' },
   url:    { icon: Link2,   label: 'URL',  hint: '貼上 YouTube 或 Blog 文章連結，自動抓取內容（逐字稿／全文）' },
   manual: { icon: FileText, label: '手動', hint: '自己整理的筆記、觀察或逐字稿，直接貼入' },
+  knowledge: { icon: Library, label: '公司知識', hint: '勾選公司知識庫的文件（SOP、教材、規範），AI 整理成這位專家的知識' },
 }
 
 interface ExpertSelectorProps {
@@ -50,6 +52,7 @@ export function ExpertSelector({ selectedIds, onChange, single, className }: Exp
   const [sourceUrl, setSourceUrl] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [manualContent, setManualContent] = useState('')
+  const [knowledgeDocIds, setKnowledgeDocIds] = useState<string[]>([])
   const [addError, setAddError] = useState('')
   const [addLoading, setAddLoading] = useState(false)
 
@@ -75,6 +78,7 @@ export function ExpertSelector({ selectedIds, onChange, single, className }: Exp
     setSourceUrl('')
     setSearchQuery('')
     setManualContent('')
+    setKnowledgeDocIds([])
     setAddError('')
   }
 
@@ -82,6 +86,7 @@ export function ExpertSelector({ selectedIds, onChange, single, className }: Exp
     if (!name.trim()) { setAddError('請輸入名稱'); return }
     if (mode === 'url' && !sourceUrl.trim()) { setAddError('請輸入 URL'); return }
     if (mode === 'manual' && !manualContent.trim()) { setAddError('請輸入內容'); return }
+    if (mode === 'knowledge' && !knowledgeDocIds.length) { setAddError('請選擇知識文件'); return }
 
     setAddLoading(true)
     setAddError('')
@@ -96,6 +101,7 @@ export function ExpertSelector({ selectedIds, onChange, single, className }: Exp
           source_url: mode === 'url' ? sourceUrl.trim() : undefined,
           search_query: mode === 'search' ? searchQuery.trim() : undefined,
           manual_content: mode === 'manual' ? manualContent.trim() : undefined,
+          knowledge_doc_ids: mode === 'knowledge' ? knowledgeDocIds : undefined,
         }),
       })
       const data = await res.json()
@@ -121,7 +127,7 @@ export function ExpertSelector({ selectedIds, onChange, single, className }: Exp
     onChange(selectedIds.filter(x => x !== id))
   }
 
-  const SOURCE_LABEL: Record<string, string> = { youtube: 'YT', tiktok: 'TK', instagram: 'IG', blog: 'Blog', search: '搜尋', manual: '手動' }
+  const SOURCE_LABEL: Record<string, string> = { youtube: 'YT', tiktok: 'TK', instagram: 'IG', blog: 'Blog', search: '搜尋', manual: '手動', knowledge: '知識庫' }
 
   const statusIcon = (expert: Expert) => {
     const k = expert.expert_knowledge[0]
@@ -195,6 +201,10 @@ export function ExpertSelector({ selectedIds, onChange, single, className }: Exp
                 rows={5}
                 className="text-sm resize-none"
               />
+            )}
+
+            {mode === 'knowledge' && (
+              <KnowledgePicker value={knowledgeDocIds} onChange={setKnowledgeDocIds} />
             )}
 
             {addError && <p className="text-xs text-rose-600">{addError}</p>}

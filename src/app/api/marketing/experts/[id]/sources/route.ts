@@ -1,6 +1,6 @@
 /**
  * POST /api/marketing/experts/[id]/sources — 新增知識來源並萃取文字（需 customExpertBuild）
- *   Body: { type: 'url' | 'text', name?, url?, text? }
+ *   Body: { type: 'url' | 'text' | 'knowledge', name?, url?, text?, docId? }（knowledge：從公司知識庫匯入）
  *   （檔案類型：前端先呼叫 /api/marketing/upload-file 取得 textContent，再以 type='text' 送入）
  * 依萃取字數＋來源類型扣點（訓練成本）。admin/employee 不計費。
  */
@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
 import { fetchUrlText } from '@/lib/marketing/fetch-url'
+import { loadKnowledgeDocs } from '@/lib/knowledge/context'
 import { expertSourceCost, checkCredits, deductCredits, isBillableUser } from '@/lib/marketing/billing'
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -27,8 +28,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!expert) return NextResponse.json({ error: '找不到專家' }, { status: 404 })
 
   const body = await req.json()
-  const type = body.type as 'url' | 'file' | 'text'
-  if (!['url', 'file', 'text'].includes(type)) {
+  const type = body.type as 'url' | 'file' | 'text' | 'knowledge'
+  if (!['url', 'file', 'text', 'knowledge'].includes(type)) {
     return NextResponse.json({ error: '不支援的來源類型' }, { status: 400 })
   }
 
@@ -43,6 +44,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       extracted = await fetchUrlText(url)
       sourceUrl = url.startsWith('http') ? url : `https://${url}`
       if (!name) name = sourceUrl
+    } else if (type === 'knowledge') {
+      const [doc] = await loadKnowledgeDocs([String(body.docId ?? '')])
+      if (!doc) return NextResponse.json({ error: '找不到知識文件' }, { status: 404 })
+      extracted = doc.content
+      if (!name) name = doc.title
     } else {
       // file（前端已萃取）或 text：都以純文字送入
       extracted = String(body.text ?? '').trim()
@@ -59,7 +65,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   const charCount = extracted.length
-  const cost = expertSourceCost(type, charCount)
+  const cost = expertSourceCost(type === 'knowledge' ? 'text' : type, charCount)
   const billable = await isBillableUser(user.id)
   const check = await checkCredits(user.id, cost, billable)
   if (!check.ok) return NextResponse.json(check.payload, { status: 402 })

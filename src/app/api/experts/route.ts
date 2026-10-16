@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { deductCredits, getBalance } from '@/lib/skills/billing'
+import { loadKnowledgeDocs, sanitizeDocIds } from '@/lib/knowledge/context'
 import { processExpertUrl, processExpertSearch, processExpertManual, detectSourceType } from '@/lib/experts/pipeline'
 
 export const maxDuration = 120
@@ -26,7 +27,7 @@ export async function GET() {
 }
 
 // POST /api/experts — 新增專家並觸發內容處理
-// input_mode: 'url' | 'search' | 'manual'
+// input_mode: 'url' | 'search' | 'manual' | 'knowledge'（knowledge：由公司知識庫文件合成）
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -52,18 +53,25 @@ export async function POST(req: NextRequest) {
   const body = await req.json() as {
     name: string
     domain?: string
-    input_mode: 'url' | 'search' | 'manual'
+    input_mode: 'url' | 'search' | 'manual' | 'knowledge'
     source_url?: string      // url 模式
     search_query?: string    // search 模式（選填，預設用 name）
     manual_content?: string  // manual 模式
+    knowledge_doc_ids?: string[] // knowledge 模式
   }
 
-  const { name, domain, input_mode, source_url, search_query, manual_content } = body
+  const { name, domain, input_mode, source_url, search_query } = body
+  let { manual_content } = body
   if (!name?.trim()) return NextResponse.json({ error: '請輸入專家名稱' }, { status: 400 })
   if (input_mode === 'url' && !source_url?.trim()) return NextResponse.json({ error: '請輸入來源 URL' }, { status: 400 })
   if (input_mode === 'manual' && !manual_content?.trim()) return NextResponse.json({ error: '請輸入內容' }, { status: 400 })
+  if (input_mode === 'knowledge') {
+    const docs = await loadKnowledgeDocs(sanitizeDocIds(body.knowledge_doc_ids))
+    if (!docs.length) return NextResponse.json({ error: '請選擇公司知識文件' }, { status: 400 })
+    manual_content = docs.map(d => `## ${d.title}\n${d.content}`).join('\n\n').slice(0, 120_000)
+  }
 
-  const source_type = input_mode === 'url' && source_url ? detectSourceType(source_url) : input_mode === 'search' ? 'search' : 'manual'
+  const source_type = input_mode === 'url' && source_url ? detectSourceType(source_url) : input_mode === 'search' ? 'search' : input_mode === 'knowledge' ? 'knowledge' : 'manual'
   const admin = createAdminClient()
 
   // 建立 expert 記錄

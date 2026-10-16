@@ -66,6 +66,7 @@ export interface Assistant {
   avatar_emoji: string
   is_public: boolean
   expert_ids: string[]
+  knowledge_doc_ids?: string[]
   created_at: string
   updated_at: string
 }

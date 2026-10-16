@@ -12708,7 +12708,7 @@
   },
   "Knowledge": {
     "title": "Kho tri thức công ty",
-    "subtitle": "Các phòng ban tải lên SOP, tài liệu đào tạo, quy định… dùng chung toàn công ty: dùng để ra đề kiểm tra, sau này cũng dùng cho chuyên gia, tự động hóa video ngắn và AI hội thoại.",
+    "subtitle": "Các phòng ban tải lên SOP, tài liệu đào tạo, quy định… dùng chung toàn công ty: dùng để ra đề kiểm tra, và cho chuyên gia, trợ lý AI hội thoại và kịch bản video ngắn.",
     "add": "Tải lên tri thức",
     "department": "Phòng ban",
     "docTitle": "Tiêu đề",
@@ -12819,5 +12819,17 @@
     "needsGrading": "AI không chấm được, vui lòng chấm tay",
     "feedbackPh": "Nhận xét (không bắt buộc)",
     "saveReview": "Lưu điểm"
+  },
+  "KnowledgePicker": {
+    "tab": "Kho kiến thức công ty",
+    "import": "Nhập từ kho kiến thức",
+    "loading": "Đang tải kiến thức công ty…",
+    "unavailable": "Hãy tham gia công ty để dùng kho kiến thức.",
+    "empty": "Kho kiến thức công ty chưa có tài liệu.",
+    "manage": "Tải lên",
+    "all": "Tất cả",
+    "selected": "Đã chọn {n}",
+    "chars": "{n} ký tự",
+    "videoHint": "Chọn thông tin sản phẩm, SOP… kịch bản sẽ bám sát các dữ kiện này (tùy chọn)"
   }
 }
