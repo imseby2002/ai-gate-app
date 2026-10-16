@@ -351,6 +351,8 @@ export const COMMON_PAGES: UnitPage[] = [
   { href: '/work', label: '任務' },
   { href: '/meeting', label: '會議紀錄' },
   { href: '/legal', label: '法律合規 AI' },
+  { href: '/knowledge', label: '📚 公司知識庫' },
+  { href: '/exams', label: '📝 考試中心' },
 ]
 
 export const COMMON_PAGES_VI: UnitPage[] = [
@@ -359,6 +361,8 @@ export const COMMON_PAGES_VI: UnitPage[] = [
   { href: '/work', label: 'Nhiệm vụ' },
   { href: '/meeting', label: 'Biên bản cuộc họp' },
   { href: '/legal', label: 'AI Pháp lý & Tuân thủ' },
+  { href: '/knowledge', label: '📚 Kho tri thức' },
+  { href: '/exams', label: '📝 Trung tâm kiểm tra' },
 ]
 
 export const COMMON_PAGES_EN: UnitPage[] = [
@@ -367,6 +371,8 @@ export const COMMON_PAGES_EN: UnitPage[] = [
   { href: '/work', label: 'Tasks' },
   { href: '/meeting', label: 'Meeting Minutes' },
   { href: '/legal', label: 'Legal Compliance AI' },
+  { href: '/knowledge', label: '📚 Knowledge Base' },
+  { href: '/exams', label: '📝 Exam Center' },
 ]
 
 // 多語系取得方法

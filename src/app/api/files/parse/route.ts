@@ -1,37 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
+import { extractPdf, extractDocx, extractXlsx } from '@/lib/knowledge/extract'
 
-// ─── Edge-compatible text extraction ─────────────────────────────────────────
-// Cloudflare Workers with nodejs_compat supports pure-JS packages.
-// mammoth and xlsx are pure JS (no native bindings) → work via nodejs_compat.
-// pdf-parse requires Buffer which is available via nodejs_compat.
-
-async function extractXlsx(arrayBuffer: ArrayBuffer): Promise<string> {
-  const XLSX = await import('xlsx')
-  const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' })
-  return workbook.SheetNames.map(name => {
-    const sheet = workbook.Sheets[name]
-    return `## Sheet: ${name}\n${XLSX.utils.sheet_to_csv(sheet)}`
-  }).join('\n\n')
-}
-
-async function extractDocx(arrayBuffer: ArrayBuffer): Promise<string> {
-  const mammoth = await import('mammoth')
-  const result = await mammoth.extractRawText({ arrayBuffer })
-  return result.value
-}
-
-async function extractPdf(arrayBuffer: ArrayBuffer): Promise<string> {
-  try {
-    // pdf-parse is pure JS and works with nodejs_compat on Cloudflare Workers
-    const pdfParse = await import('pdf-parse')
-    const parse = (pdfParse as unknown as { default: (b: Uint8Array) => Promise<{ text: string }> }).default ?? pdfParse
-    const result = await (parse as (b: Uint8Array) => Promise<{ text: string }>)(new Uint8Array(arrayBuffer))
-    return result.text
-  } catch {
-    return '[PDF 文字擷取失敗，請在對話中使用視覺模型分析此 PDF]'
-  }
-}
+// 文字擷取共用 src/lib/knowledge/extract.ts（mammoth、xlsx、pdf-parse 皆為純 JS）
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
