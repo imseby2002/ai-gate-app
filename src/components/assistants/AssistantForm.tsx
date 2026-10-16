@@ -6,6 +6,7 @@ import { useDropzone } from 'react-dropzone'
 import { Upload, X, FileText, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
 import { formatFileSize } from '@/lib/utils/format'
 import { ExpertSelector } from '@/components/experts/ExpertSelector'
+import KnowledgePicker from '@/components/knowledge/KnowledgePicker'
 import type { AIModel, Assistant, AssistantFile } from '@/types/database'
 
 interface AssistantFormProps {
@@ -26,6 +27,7 @@ export function AssistantForm({ models, assistant }: AssistantFormProps) {
   const [defaultModel, setDefaultModel] = useState(assistant?.default_model ?? '')
   const [avatarEmoji, setAvatarEmoji] = useState(assistant?.avatar_emoji ?? '🤖')
   const [expertIds, setExpertIds] = useState<string[]>(assistant?.expert_ids ?? [])
+  const [knowledgeDocIds, setKnowledgeDocIds] = useState<string[]>(assistant?.knowledge_doc_ids ?? [])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -92,7 +94,7 @@ export function AssistantForm({ models, assistant }: AssistantFormProps) {
     setSaving(true)
     setError('')
 
-    const payload = { name, description, system_prompt: systemPrompt, default_model: defaultModel || null, avatar_emoji: avatarEmoji, expert_ids: expertIds }
+    const payload = { name, description, system_prompt: systemPrompt, default_model: defaultModel || null, avatar_emoji: avatarEmoji, expert_ids: expertIds, knowledge_doc_ids: knowledgeDocIds }
 
     const res = await fetch(
       isEdit ? `/api/assistants/${assistant.id}` : '/api/assistants',
@@ -195,6 +197,15 @@ export function AssistantForm({ models, assistant }: AssistantFormProps) {
       {/* Expert Knowledge */}
       <div className="bg-card rounded-2xl border p-6 shadow-sm">
         <ExpertSelector selectedIds={expertIds} onChange={setExpertIds} />
+      </div>
+
+      {/* Company knowledge base */}
+      <div className="bg-card rounded-2xl border p-6 shadow-sm space-y-3">
+        <div>
+          <h2 className="font-semibold text-lg">公司知識庫</h2>
+          <p className="text-sm text-muted-foreground">勾選公司各部門上傳的知識，對話時助理會依據這些內容回答。</p>
+        </div>
+        <KnowledgePicker value={knowledgeDocIds} onChange={setKnowledgeDocIds} />
       </div>
 
       {/* Files */}

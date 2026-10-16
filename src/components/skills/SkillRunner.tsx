@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils/cn'
+import KnowledgePicker from '@/components/knowledge/KnowledgePicker'
 
 interface SkillField {
   name: string
@@ -45,6 +46,7 @@ interface KnowledgeSource {
 export function SkillRunner({ module, title }: { module: string; title: string }) {
   const t = useTranslations('SkillRunner')
   const ts = useTranslations('Skills')
+  const tk = useTranslations('KnowledgePicker')
   // skill 定義（label / 欄位）在 lib/skills/registry 以中文撰寫；有翻譯就套用，沒有就沿用原文
   const tr = (key: string, fallback: string) => (ts.has(key) ? ts(key) : fallback)
   const localize = (s: SkillInfo): SkillInfo => ({
@@ -71,7 +73,8 @@ export function SkillRunner({ module, title }: { module: string; title: string }
   // 內建專家「知識附掛」（PRO+）：對目前選中的專家上傳連結／文字／檔案作為專屬知識庫
   const [kSources, setKSources] = useState<KnowledgeSource[]>([])
   const [kCanBuild, setKCanBuild] = useState(false)
-  const [kTab, setKTab] = useState<'url' | 'text' | 'file'>('url')
+  const [kTab, setKTab] = useState<'url' | 'text' | 'file' | 'knowledge'>('url')
+  const [kDocIds, setKDocIds] = useState<string[]>([])
   const [kUrl, setKUrl] = useState('')
   const [kText, setKText] = useState('')
   const [kName, setKName] = useState('')
@@ -138,6 +141,7 @@ export function SkillRunner({ module, title }: { module: string; title: string }
       if (typeof data.balance === 'number') setBalance(data.balance)
       setKUrl('')
       setKText('')
+      setKDocIds([])
       setKName('')
     } catch {
       setKError(t('networkError'))
@@ -360,11 +364,11 @@ export function SkillRunner({ module, title }: { module: string; title: string }
                 )}
 
                 <div className="flex gap-1 text-xs">
-                  {(['url', 'text', 'file'] as const).map(k => (
+                  {(['url', 'text', 'file', 'knowledge'] as const).map(k => (
                     <button key={k} onClick={() => { setKTab(k); setKError('') }}
                       className={cn('px-3 py-1.5 rounded-full border',
                         kTab === k ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'bg-white text-gray-500 hover:text-gray-800')}>
-                      {t(`tab.${k}`)}
+                      {k === 'knowledge' ? tk('tab') : t(`tab.${k}`)}
                     </button>
                   ))}
                 </div>
@@ -401,6 +405,16 @@ export function SkillRunner({ module, title }: { module: string; title: string }
                       {kBusy ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> {t('processing')}</> : <><Upload className="h-4 w-4 mr-2" /> {t('chooseFile')}</>}
                     </Button>
                     <p className="text-[11px] text-gray-400 mt-1.5">{t('fileHint')}</p>
+                  </div>
+                )}
+
+                {kTab === 'knowledge' && (
+                  <div className="space-y-2">
+                    <KnowledgePicker single value={kDocIds} onChange={setKDocIds} />
+                    <Button variant="outline" disabled={kBusy || !kDocIds[0]}
+                      onClick={() => addKnowledge({ type: 'knowledge', docId: kDocIds[0] })}>
+                      {kBusy ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> {t('adding')}</> : <><BookOpen className="h-4 w-4 mr-2" /> {tk('import')}</>}
+                    </Button>
                   </div>
                 )}
 

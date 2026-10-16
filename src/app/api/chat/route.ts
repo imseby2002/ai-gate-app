@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { detectIntent, resolveModel, getProviderFromModel, calculateCost, isImageModel, isVideoModel, INTENT_CHAIN } from '@/lib/ai/router'
 import { buildSystemPrompt, formatMessagesForContext } from '@/lib/ai/context-builder'
 import { loadExpertContext } from '@/lib/experts/loader'
+import { loadKnowledgeContext } from '@/lib/knowledge/context'
 import { streamDeepSeek } from '@/lib/ai/providers/deepseek'
 import { streamGemini } from '@/lib/ai/providers/gemini'
 import { streamClaude } from '@/lib/ai/providers/claude'
@@ -103,6 +104,12 @@ export async function POST(req: NextRequest) {
 
     if (asst.expert_ids?.length) {
       expertContext = await loadExpertContext(asst.expert_ids)
+    }
+
+    // 公司知識庫（knowledge_docs，全公司共用）
+    if (asst.knowledge_doc_ids?.length) {
+      const knowledgeContext = await loadKnowledgeContext(asst.knowledge_doc_ids, 150_000)
+      if (knowledgeContext) expertContext = expertContext ? `${expertContext}\n\n${knowledgeContext}` : knowledgeContext
     }
   }
 

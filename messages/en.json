@@ -12708,7 +12708,7 @@
   },
   "Knowledge": {
     "title": "Company Knowledge Base",
-    "subtitle": "Departments upload SOPs, training materials and policies, shared across the whole company: used to create exams, and later by experts, short-video automation and AI chat.",
+    "subtitle": "Departments upload SOPs, training materials and policies, shared across the whole company: used to create exams, and by experts, AI chat assistants and short-video scripts.",
     "add": "Upload knowledge",
     "department": "Department",
     "docTitle": "Title",
@@ -12819,5 +12819,17 @@
     "needsGrading": "AI could not grade this; please grade manually",
     "feedbackPh": "Feedback (optional)",
     "saveReview": "Save grading"
+  },
+  "KnowledgePicker": {
+    "tab": "Company knowledge",
+    "import": "Import from knowledge base",
+    "loading": "Loading company knowledge…",
+    "unavailable": "Join a company to use its knowledge base.",
+    "empty": "The company knowledge base has no documents yet.",
+    "manage": "Upload",
+    "all": "All",
+    "selected": "{n} selected",
+    "chars": "{n} chars",
+    "videoHint": "Pick product info, SOPs, etc. — scripts will stick to these facts (optional)"
   }
 }

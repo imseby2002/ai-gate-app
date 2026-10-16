@@ -1,4 +1,5 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+﻿import { sanitizeDocIds } from '@/lib/knowledge/context'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -25,7 +26,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { name, description, system_prompt, default_model, avatar_emoji, expert_ids } = body
+  const { name, description, system_prompt, default_model, avatar_emoji, expert_ids, knowledge_doc_ids } = body
 
   const { data, error } = await supabase
     .from('assistants')
@@ -36,6 +37,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       default_model: default_model ?? null,
       avatar_emoji: avatar_emoji ?? '🤖',
       expert_ids: Array.isArray(expert_ids) ? expert_ids : [],
+      ...(knowledge_doc_ids !== undefined ? { knowledge_doc_ids: sanitizeDocIds(knowledge_doc_ids) } : {}),
     })
     .eq('id', id)
     .eq('user_id', user.id)

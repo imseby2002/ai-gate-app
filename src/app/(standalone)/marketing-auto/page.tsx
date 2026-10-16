@@ -17,6 +17,7 @@ import DriveImagePicker from '@/components/marketing/DriveImagePicker'
 import { SimulationPanel } from '@/components/marketing/SimulationPanel'
 import type { SimulationResult } from '@/app/api/marketing/simulate/route'
 import { useMarketingPlan } from '@/components/marketing/PlanGate'
+import KnowledgePicker from '@/components/knowledge/KnowledgePicker'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1850,6 +1851,7 @@ interface Unit7Data {
   platforms?: string[]
   scripts?: VideoScript[]
   userInstructions?: string
+  knowledgeDocIds?: string[]
 }
 
 const VIDEO_PLATFORMS: { id: string; label: string }[] = [
@@ -1908,6 +1910,8 @@ function Unit7VideoScript({
   const [videoTypes, setVideoTypes] = useState<string[]>(savedData?.videoTypes ?? ['short_video'])
   const [platforms, setPlatforms] = useState<string[]>(savedData?.platforms ?? ['instagram_reels', 'tiktok'])
   const [instructions, setInstructions] = useState(savedData?.userInstructions ?? '')
+  const [knowledgeDocIds, setKnowledgeDocIds] = useState<string[]>(savedData?.knowledgeDocIds ?? [])
+  const tk = useTranslations('KnowledgePicker')
   const [feedback, setFeedback] = useState('')
   const [running, setRunning] = useState(false)
   const [error, setError] = useState('')
@@ -1966,12 +1970,13 @@ function Unit7VideoScript({
           collectedSummary: unit1Data?.summary ?? '',
           feedback: fb ?? '',
           language,
+          knowledgeDocIds,
           ...(refImg ? { referenceImage: refImg } : {}),
         }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      const out: Unit7Data = { count, duration, videoTypes, platforms, scripts: data.scripts, userInstructions: instructions }
+      const out: Unit7Data = { count, duration, videoTypes, platforms, scripts: data.scripts, userInstructions: instructions, knowledgeDocIds }
       setResult(out)
       setActiveScript(1)
       setFeedback('')
@@ -2164,6 +2169,15 @@ function Unit7VideoScript({
         <textarea value={instructions} onChange={e => setInstructions(e.target.value)} rows={3}
           className="w-full px-3 py-2.5 rounded-lg border text-sm outline-none focus:ring-2 resize-none"
           placeholder={t('u7.rulesPlaceholder')} />
+      </div>
+
+      {/* Company knowledge */}
+      <div>
+        <label className="block text-sm font-semibold mb-1.5">
+          {tk('tab')}
+          <span className="ml-2 text-xs font-normal text-gray-400">{tk('videoHint')}</span>
+        </label>
+        <KnowledgePicker value={knowledgeDocIds} onChange={setKnowledgeDocIds} />
       </div>
 
       {error && (
