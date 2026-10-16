@@ -5217,7 +5217,9 @@
     "feature_pos_desc": "Counter ordering, drink customization, receipt printing and real-time sales checkout.",
     "feature_pos_tags": "Counter orders、Checkout printing、Real-time sales",
     "open": "Open {title}",
-    "enter": "Enter"
+    "enter": "Enter",
+    "manualDoc": "User manual",
+    "manualDownload": "Download user manual (PDF)"
   },
   "Shift": {
     "weekday_sun": "Sun",

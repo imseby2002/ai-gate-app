@@ -5217,7 +5217,9 @@
     "feature_pos_desc": "門市現場櫃台收銀點單、飲品客製加料、出單機列印與即時銷售結帳。",
     "feature_pos_tags": "前台點單、收銀出單、即時銷售",
     "open": "開啟{title}",
-    "enter": "進入"
+    "enter": "進入",
+    "manualDoc": "使用說明書",
+    "manualDownload": "下載使用說明書 (PDF)"
   },
   "Shift": {
     "weekday_sun": "日",
