@@ -7,7 +7,7 @@ import {
   FlaskConical, Upload, Loader2, AlertCircle, Building2, Store,
   Plus, Trash2, Edit3, Search, FileSpreadsheet, X, CheckCircle2,
   Package, BookOpen, Link2, Scale, TrendingUp, DollarSign, ChevronDown, ChevronUp, Info,
-  Wrench, Coffee, ShoppingBag, Layers, Rocket
+  Wrench, Coffee, ShoppingBag, Layers, Rocket, Download
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -348,6 +348,14 @@ export default function RdPage() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          <a href="/api/docs/rd-manual" target="_blank" rel="noreferrer">
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <BookOpen className="h-4 w-4" />{t('manualDoc')}
+            </Button>
+          </a>
+          <a href="/api/docs/rd-manual?download=1" title={t('manualDownload')}>
+            <Button variant="outline" size="sm" className="px-2"><Download className="h-4 w-4" /></Button>
+          </a>
           <Link href="/finance?tab=pricing">
             <Button variant="outline" size="sm" className="gap-1.5 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 font-medium">
               <DollarSign className="h-4 w-4" />{t('navFinancePricing')}

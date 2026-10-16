@@ -64,6 +64,7 @@ export default function RdAiPage() {
         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center"><FlaskConical className="h-5 w-5 text-white" /></div>
         <div><h1 className="text-xl font-bold">{t('title')}</h1></div>
         <div className="ml-auto flex items-center gap-2">
+          <a href="/api/docs/rd-manual" target="_blank" rel="noreferrer"><Button size="sm" variant="outline" className="gap-1.5"><BookOpen className="h-4 w-4" />{t('manualDoc')}</Button></a>
           <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowKnow(true)}><BookOpen className="h-4 w-4" />{t('knowledgeBase')}</Button>
           <Link href="/rd-lab"><Button size="sm" variant="outline" className="gap-1.5"><FlaskConical className="h-4 w-4 text-indigo-600" />{t('rdLab')}</Button></Link>
           <Link href="/rd"><Button size="sm" variant="outline" className="gap-1.5"><FlaskConical className="h-4 w-4 text-purple-600" />{t('recipes')}</Button></Link>

@@ -5025,7 +5025,8 @@
     "cancel": "Hủy",
     "save": "Lưu",
     "empty": "Chưa có nhật ký. Có thể thêm thủ công, tải lên Excel, hoặc tự động tóm tắt từ trò chuyện với AI thảo luận R&D.",
-    "untitled": "(Chưa đặt tên)"
+    "untitled": "(Chưa đặt tên)",
+    "manualDoc": "Hướng dẫn sử dụng"
   },
   "RdAi": {
     "adminOnly": "Chỉ bộ phận R&D được sử dụng AI thảo luận R&D",
@@ -5053,7 +5054,8 @@
     "knowledgeTitlePlaceholder": "Tiêu đề (có thể bỏ trống)",
     "knowledgeContentPlaceholder": "Nội dung…",
     "add": "Thêm",
-    "knowledgeEmpty": "Chưa có mục kiến thức nào"
+    "knowledgeEmpty": "Chưa có mục kiến thức nào",
+    "manualDoc": "Hướng dẫn sử dụng"
   },
   "AuditLogs": {
     "title": "Nhật ký kiểm toán",
@@ -6502,7 +6504,8 @@
     "runAgentAnalysis": "Chạy phân tích Agent",
     "agentReportTitle": "Báo cáo phân tích R&D của Agent",
     "agentError": "Lỗi: {msg}",
-    "agentErrorFallback": "Vui lòng kiểm tra API key"
+    "agentErrorFallback": "Vui lòng kiểm tra API key",
+    "manualDoc": "Hướng dẫn sử dụng"
   },
   "StoreBills": {
     "pageTitle": "Khai báo chi phí điện nước, gas và đá cửa hàng",
@@ -6761,7 +6764,9 @@
     "pushDone": "✅ Đã gửi \"{name}\" sang phòng marketing!\nNhân viên marketing có thể tiếp tục tại \"Hệ thống marketing → Tư liệu sản phẩm → Quy trình ra mắt sản phẩm mới\" để chuẩn bị giai đoạn ưu tiên VIP và lịch ra mắt.",
     "pushFailed": "Gửi thất bại",
     "pushTitle": "Gửi sang phòng marketing để ra mắt sản phẩm mới",
-    "pushBtn": "Gửi ra mắt"
+    "pushBtn": "Gửi ra mắt",
+    "manualDoc": "Hướng dẫn sử dụng",
+    "manualDownload": "Tải hướng dẫn sử dụng (PDF)"
   },
   "AuditPlatform": {
     "knowledgeCoreStatus": "COMPANY KNOWLEDGE CORE — lớp kiến thức chung của doanh nghiệp đang liên kết",

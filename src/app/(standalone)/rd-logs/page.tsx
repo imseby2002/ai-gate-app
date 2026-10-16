@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { FlaskConical, Loader2, AlertCircle, RefreshCw, ScrollText, FileSpreadsheet, Plus, X } from 'lucide-react'
+import { FlaskConical, Loader2, AlertCircle, RefreshCw, ScrollText, FileSpreadsheet, Plus, X, BookOpen } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -83,6 +83,7 @@ export default function RdLogsPage() {
             <Plus className="h-4 w-4" />{t('newLog')}
           </Button>
           <Link href="/rd"><Button size="sm" variant="outline" className="gap-1.5"><FlaskConical className="h-4 w-4 text-purple-600" />{t('recipes')}</Button></Link>
+          <a href="/api/docs/rd-manual" target="_blank" rel="noreferrer"><Button size="sm" variant="outline" className="gap-1.5"><BookOpen className="h-4 w-4" />{t('manualDoc')}</Button></a>
           <Link href="/rd-ai"><Button size="sm" variant="outline" className="gap-1.5"><FlaskConical className="h-4 w-4 text-indigo-600" />{t('discussAi')}</Button></Link>
         </div>
       </div>

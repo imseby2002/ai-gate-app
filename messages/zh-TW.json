@@ -5025,7 +5025,8 @@
     "cancel": "取消",
     "save": "儲存",
     "empty": "尚無日誌。可手動新增、上傳 Excel 或與研發討論AI 對話自動摘要。",
-    "untitled": "（未命名）"
+    "untitled": "（未命名）",
+    "manualDoc": "使用說明書"
   },
   "RdAi": {
     "adminOnly": "僅研發單位可使用研發討論AI",
@@ -5053,7 +5054,8 @@
     "knowledgeTitlePlaceholder": "標題（可空）",
     "knowledgeContentPlaceholder": "內容…",
     "add": "加入",
-    "knowledgeEmpty": "尚無知識條目"
+    "knowledgeEmpty": "尚無知識條目",
+    "manualDoc": "使用說明書"
   },
   "AuditLogs": {
     "title": "稽核日誌",
@@ -6502,7 +6504,8 @@
     "runAgentAnalysis": "執行 Agent 分析",
     "agentReportTitle": "Agent 研發分析報告",
     "agentError": "錯誤：{msg}",
-    "agentErrorFallback": "請確認 API 金鑰"
+    "agentErrorFallback": "請確認 API 金鑰",
+    "manualDoc": "使用說明書"
   },
   "StoreBills": {
     "pageTitle": "門市水電、瓦斯與冰塊費用填報",
@@ -6761,7 +6764,9 @@
     "pushDone": "✅ 已成功將【{name}】推送至行銷部門！\n行銷人員可在「行銷系統 → 產品圖文 → 新品上架流水線」接續籌備 VIP 優先專享期與上市排程。",
     "pushFailed": "推送失敗",
     "pushTitle": "推送至行銷部門發起新品上市",
-    "pushBtn": "推送上架"
+    "pushBtn": "推送上架",
+    "manualDoc": "使用說明書",
+    "manualDownload": "下載使用說明書 (PDF)"
   },
   "AuditPlatform": {
     "knowledgeCoreStatus": "COMPANY KNOWLEDGE CORE 共享企業知識底層連動中",
