@@ -4768,7 +4768,8 @@
       "saving": "儲存中...",
       "saved": "變更已儲存",
       "saveAll": "儲存權限設定",
-      "userCount": "共 {count} 位成員"
+      "userCount": "共 {count} 位成員",
+      "linkedEmployee": "人事資料：{name}（單位與門市同步）"
     },
     "proposals": {
       "title": "全體問題與想法提案中樞",
@@ -7564,7 +7565,16 @@
     "payrollF_pit_contract": "個人所得稅（勞動合約）",
     "payrollF_pit_casual": "個人所得稅（短期 10%）",
     "payrollF_employer_insurance": "公司負擔保險",
-    "payrollF_employer_union": "公司負擔工會費"
+    "payrollF_employer_union": "公司負擔工會費",
+    "unitsLabel": "所屬單位（可多選）",
+    "storeLockedLabel": "系統帳號只能看本店資料（店長、領班勾選；區督導不勾）",
+    "systemAccountLabel": "系統帳號",
+    "noSystemAccount": "— 不需要系統帳號 —",
+    "linkedToOther": "已綁定 {name}",
+    "systemAccountHint": "綁定後，帳號的單位權限與門市鎖定以這裡為準。店長、領班與辦公室人員才需要系統帳號；所有員工都能用打卡編號登入員工專區。",
+    "missingBirthday": "缺生日",
+    "missingBirthdayFilter": "缺生日（{n}）",
+    "missingBirthdayHint": "沒有生日的員工無法第一次登入員工專區，請補上。"
   },
   "FinancePage": {
     "accountBalancesTitle": "各帳戶結餘",

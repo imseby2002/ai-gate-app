@@ -4768,7 +4768,8 @@
       "saving": "Đang lưu...",
       "saved": "Đã lưu thay đổi",
       "saveAll": "Lưu thiết lập phân quyền",
-      "userCount": "Tổng cộng {count} thành viên"
+      "userCount": "Tổng cộng {count} thành viên",
+      "linkedEmployee": "Hồ sơ nhân sự: {name} (đơn vị và cửa hàng đồng bộ)"
     },
     "proposals": {
       "title": "Trung Tâm Đề Xuất Vấn Đề & Ý Tưởng",
@@ -7564,7 +7565,16 @@
     "payrollF_pit_contract": "Thuế TNCN (HĐLĐ)",
     "payrollF_pit_casual": "Thuế TNCN (vãng lai 10%)",
     "payrollF_employer_insurance": "BHXH doanh nghiệp",
-    "payrollF_employer_union": "KPCĐ doanh nghiệp"
+    "payrollF_employer_union": "KPCĐ doanh nghiệp",
+    "unitsLabel": "Đơn vị trực thuộc (chọn nhiều)",
+    "storeLockedLabel": "Tài khoản hệ thống chỉ xem dữ liệu cửa hàng này (tích cho cửa hàng trưởng, tổ trưởng; bỏ tích cho giám sát khu vực)",
+    "systemAccountLabel": "Tài khoản hệ thống",
+    "noSystemAccount": "— Không cần tài khoản hệ thống —",
+    "linkedToOther": "Đã liên kết {name}",
+    "systemAccountHint": "Sau khi liên kết, quyền đơn vị và khóa cửa hàng của tài khoản theo hồ sơ này. Chỉ cửa hàng trưởng, tổ trưởng và nhân viên văn phòng cần tài khoản hệ thống; mọi nhân viên đều đăng nhập Trang nhân viên bằng mã chấm công.",
+    "missingBirthday": "Thiếu ngày sinh",
+    "missingBirthdayFilter": "Thiếu ngày sinh ({n})",
+    "missingBirthdayHint": "Nhân viên chưa có ngày sinh không thể đăng nhập Trang nhân viên lần đầu. Vui lòng bổ sung."
   },
   "FinancePage": {
     "accountBalancesTitle": "Số dư theo tài khoản",

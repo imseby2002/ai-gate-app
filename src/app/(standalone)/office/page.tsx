@@ -28,7 +28,7 @@ interface Access {
   companyName?: string | null
   units: string[]
 }
-interface UserRow { id: string; full_name: string | null; email: string | null; user_type: string; units: string[] | null; store_code?: string | null }
+interface UserRow { id: string; full_name: string | null; email: string | null; user_type: string; units: string[] | null; store_code?: string | null; hr_employee_name?: string | null }
 
 // 各單位的圖示與主題色（class 為完整字串，讓 Tailwind 能靜態掃描）
 const UNIT_STYLE: Record<string, { icon: ComponentType<{ className?: string }>; chip: string; ring: string }> = {
@@ -443,6 +443,7 @@ function AssignPanel({
                       {saving === u.id && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
                     </div>
                     {u.email && <div className="text-[11px] text-muted-foreground">{u.email}</div>}
+                    {u.hr_employee_name && <div className="text-[11px] text-emerald-700">{t('linkedEmployee', { name: u.hr_employee_name })}</div>}
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap">
                     <select
