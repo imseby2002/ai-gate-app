@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslations, useLocale } from 'next-intl'
-import { Building2, ArrowLeft, Loader2, AlertCircle, Plus, Trash2, Save, Store, Search, FileSpreadsheet, Camera, ExternalLink } from 'lucide-react'
+import { Building2, ArrowLeft, Loader2, AlertCircle, Plus, Trash2, Save, Store, Search, FileSpreadsheet, Camera, ExternalLink, Smartphone, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -44,6 +44,7 @@ export default function UnitsPage() {
   const [q, setQ] = useState('')
   const [filterType, setFilterType] = useState('')
   const [showImport, setShowImport] = useState(false)
+  const [showAppImport, setShowAppImport] = useState(false)
   const [tick, setTick] = useState(0)
   const reload = () => setTick(t => t + 1)
 
@@ -99,6 +100,8 @@ export default function UnitsPage() {
         />
       )}
 
+      {showAppImport && <AppStoreImport onClose={() => setShowAppImport(false)} onDone={reload} />}
+
       {loading ? <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
         : selected ? <UnitDetail unit={selected} defaultRate={defaultRate} onBack={() => setSel(null)} onSaved={reload} />
         : (
@@ -115,6 +118,9 @@ export default function UnitsPage() {
               <div className="relative flex-1 min-w-[200px]"><Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><Input value={q} onChange={e => setQ(e.target.value)} placeholder={t('searchPlaceholder')} className="pl-9" /></div>
               <Button size="sm" variant="outline" className="gap-1.5 shrink-0" onClick={() => setShowImport(true)}>
                 <FileSpreadsheet className="h-4 w-4 text-emerald-600" />{t('bulkImport')}
+              </Button>
+              <Button size="sm" variant="outline" className="gap-1.5 shrink-0" onClick={() => setShowAppImport(true)}>
+                <Smartphone className="h-4 w-4 text-indigo-600" />{t('appImport')}
               </Button>
               <NewUnitButton onCreated={id => { reload(); setSel(id) }} />
             </div>
@@ -232,6 +238,97 @@ function UnitDetail({ unit, defaultRate, onBack, onSaved }: { unit: Unit; defaul
             </Link>
           </div>
         )}
+      </Card>
+    </div>
+  )
+}
+
+interface AppStore {
+  id: string; store_no: string; name: string; address: string; phone: string; active: boolean
+  linked: { id: string; code: string } | null; suggested_code: string
+}
+
+// 從會員 APP 後台（iPOS 門市）匯入門市：勾選、確認門市代碼後建立或更新
+function AppStoreImport({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+  const t = useTranslations('Units')
+  const [rows, setRows] = useState<(AppStore & { pick: boolean; code: string })[] | null>(null)
+  const [err, setErr] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [result, setResult] = useState('')
+
+  useEffect(() => {
+    fetch('/api/fin/stores/app-import').then(async r => {
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok) { setErr(d.error ?? t('appImportFailed')); return }
+      setRows((d.stores as AppStore[]).map(s => ({ ...s, pick: s.active && !s.linked, code: s.suggested_code })))
+    })
+  }, [t])
+
+  const set = (no: string, patch: Partial<{ pick: boolean; code: string }>) =>
+    setRows(prev => prev && prev.map(r => r.store_no === no ? { ...r, ...patch } : r))
+
+  async function submit() {
+    if (!rows) return
+    setBusy(true); setErr(''); setResult('')
+    const picked = rows.filter(r => r.pick).map(r => ({ app_store_no: r.store_no, app_store_id: r.id, code: r.code, name: r.name, address: r.address, phone: r.phone }))
+    const res = await fetch('/api/fin/stores/app-import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rows: picked }) })
+    const d = await res.json().catch(() => ({}))
+    setBusy(false)
+    if (!res.ok) { setErr(d.error ?? t('appImportFailed')); return }
+    setResult(t('appImportResult', { created: d.created ?? 0, updated: d.updated ?? 0 }) + ((d.errors ?? []).length ? ` · ${(d.errors as string[]).join('；')}` : ''))
+    onDone()
+  }
+
+  const picked = rows?.filter(r => r.pick).length ?? 0
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto" onClick={onClose}>
+      <Card className="w-full max-w-4xl my-4 p-5 space-y-3" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold flex items-center gap-2"><Smartphone className="h-4 w-4 text-indigo-600" />{t('appImportTitle')}</h3>
+          <button onClick={onClose}><X className="h-5 w-5 text-gray-400" /></button>
+        </div>
+        <p className="text-xs text-gray-500">{t('appImportDesc')}</p>
+        {err && <p className="text-sm text-red-600">{err}</p>}
+        {!rows && !err && <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-gray-400" /></div>}
+        {rows && (
+          <div className="overflow-x-auto max-h-[60vh] border rounded-lg">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 sticky top-0">
+                <tr className="text-left text-gray-500">
+                  <th className="p-2 w-8"><input type="checkbox" checked={picked === rows.length && rows.length > 0} onChange={e => setRows(rows.map(r => ({ ...r, pick: e.target.checked })))} /></th>
+                  <th className="p-2">{t('appColCode')}</th>
+                  <th className="p-2">{t('appColName')}</th>
+                  <th className="p-2">{t('appColAddress')}</th>
+                  <th className="p-2">{t('appColStoreNo')}</th>
+                  <th className="p-2">{t('appColStatus')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map(r => (
+                  <tr key={r.store_no || r.id} className="border-t">
+                    <td className="p-2"><input type="checkbox" checked={r.pick} onChange={e => set(r.store_no, { pick: e.target.checked })} /></td>
+                    <td className="p-2"><Input value={r.code} onChange={e => set(r.store_no, { code: e.target.value })} className="h-8 w-24" /></td>
+                    <td className="p-2">{r.name}{r.phone && <div className="text-xs text-gray-400">{r.phone}</div>}</td>
+                    <td className="p-2 text-xs text-gray-500">{r.address}</td>
+                    <td className="p-2 text-xs text-gray-500">{r.store_no}</td>
+                    <td className="p-2 text-xs">
+                      {r.linked ? <span className="text-emerald-700">{t('appLinked', { code: r.linked.code })}</span>
+                        : r.active ? <span className="text-gray-500">{t('appNew')}</span> : <span className="text-amber-700">{t('appInactive')}</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {result && <p className="text-sm text-emerald-700">{result}</p>}
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-gray-500">{rows ? t('appPicked', { n: picked, total: rows.length }) : ''}</span>
+          <div className="flex gap-2">
+            <Button variant="ghost" size="sm" onClick={onClose}>{t('appClose')}</Button>
+            <Button size="sm" onClick={submit} disabled={busy || !picked}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : t('appImportBtn', { n: picked })}</Button>
+          </div>
+        </div>
       </Card>
     </div>
   )

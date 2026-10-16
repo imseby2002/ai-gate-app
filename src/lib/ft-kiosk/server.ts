@@ -169,6 +169,39 @@ async function storeInfo(config: FtDeviceConfig) {
   return { id: config.storeId || info.id, name: config.storeName || info.name || config.storeNo }
 }
 
+export interface FtAppStore {
+  id: string
+  store_no: string
+  name: string
+  address: string
+  phone: string
+  latitude: number | null
+  longitude: number | null
+  active: boolean
+  raw_keys: string[]
+}
+
+/** 會員 APP 後端的門市清單（/app/api/v1/store 不需登入）。未設定 FT_API_BASE_URL 時回傳 null */
+export async function fetchAppStores(): Promise<FtAppStore[] | null> {
+  if (!baseUrl()) return null
+  const res = await callFt<unknown>('/app/api/v1/store')
+  const root = res as Raw | Raw[] | null
+  const data = Array.isArray(root) ? root : (root?.data as unknown)
+  const list = Array.isArray(data) ? data as Raw[] : arr((data as Raw | undefined)?.items ?? (data as Raw | undefined)?.stores)
+  const coord = (v: unknown) => (v == null || v === '' || !Number.isFinite(Number(v)) ? null : Number(v))
+  return list.map(s => ({
+    id: str(s.id),
+    store_no: str(s.store_no ?? s.pos_id),
+    name: str(s.store_name ?? s.name),
+    address: str(s.address ?? s.store_address ?? s.full_address),
+    phone: str(s.phone ?? s.hotline ?? s.phone_number),
+    latitude: coord(s.latitude ?? s.lat),
+    longitude: coord(s.longitude ?? s.lng ?? s.long),
+    active: !(s.status === 'DEACTIVE' || s.status === 'INACTIVE' || s.is_active === false || s.active === false),
+    raw_keys: Object.keys(s),
+  }))
+}
+
 // ── 菜單 ────────────────────────────────────────────────
 
 type Raw = Record<string, unknown>
