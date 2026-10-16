@@ -15,7 +15,7 @@ export async function portalEmployee(req: NextRequest, no: string) {
   if (!eid) return null
   const admin = createAdminClient()
   const { data: emp } = await admin.from('hr_employees')
-    .select('id, name, attendance_no, status, owner_id')
+    .select('id, name, attendance_no, status, owner_id, store, employment_type')
     .eq('id', eid).eq('owner_id', company.ownerId).maybeSingle()
   if (!emp || emp.status !== 'active' || emp.attendance_no !== no) return null
   return { admin, company, emp }

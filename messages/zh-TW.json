@@ -5234,7 +5234,7 @@
     "statusConfirmed": "已確認",
     "adminOnly": "僅門市單位可使用排班",
     "title": "門市排班",
-    "subtitle": "建立排班期 → 員工用專屬連結填可上班時段 → 彙整（自動建議與發送為下一步）",
+    "subtitle": "建立排班期 → 工讀生在員工專區（或專屬連結）填可上班時段 → 自動建議 → 確認並發送",
     "inventory": "盤點・訂貨",
     "store": "門市",
     "storePlaceholder": "門市（如 YL）",
