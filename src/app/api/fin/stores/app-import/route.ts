@@ -1,20 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCompanyContext } from '@/lib/auth/unit-access'
-import { FtError, fetchAppStores } from '@/lib/ft-kiosk/server'
+import { FtError, fetchAppStores, lastStoreListMeta } from '@/lib/ft-kiosk/server'
 
 export const maxDuration = 60
 
-// 門市名稱建議代碼：去掉門牌數字與越文聲調，取各字首（Giang Võ → GV），若與人事資料已用的門市代碼相符即採用
+const plain = (v: string) => v.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'D')
+const initialsOf = (seg: string) => plain(seg).replace(/[^A-Za-z0-9 ]/g, ' ').split(/\s+/)
+  .filter(w => w && !/^\d+$/.test(w) && !/^(P|Q|HN|HCM|TP)$/i.test(w)).map(w => w[0].toUpperCase()).join('')
+
+// 門市名稱建議代碼：APP 名稱如「Feeling Tea - 155 Giảng Võ」「…106 Phố Xốm, P. Phú Lâm - Q. Hà Đông - HN」。
+// 依逗號／連字號切段，任一段字首（去門牌、聲調）等於人事資料已用的門市代碼，或名稱有字以該代碼開頭（Royal → Roy）即採用；否則取第一段字首
 function suggestCode(name: string, used: Set<string>): string {
-  const plain = name.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'D')
-  const words = plain.replace(/[^A-Za-z0-9 ]/g, ' ').split(/\s+/).filter(w => w && !/^\d+$/.test(w))
-  const initials = words.map(w => w[0].toUpperCase()).join('')
-  if (!initials) return ''
-  for (const c of used) {
-    const cp = c.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'D').toUpperCase()
-    if (cp === initials) return c
+  const body = name.replace(/^\s*feeling\s*tea\s*[-–:]?\s*/i, '')
+  const segs = body.split(/[,\-–]/).map(x => x.trim()).filter(Boolean)
+  const usedList = [...used]
+  for (const seg of segs) {
+    const ini = initialsOf(seg)
+    const hit = usedList.find(c => plain(c).toUpperCase() === ini)
+    if (hit) return hit
   }
-  return initials
+  const words = plain(body).toUpperCase().split(/[^A-Z0-9]+/)
+  const prefixHit = usedList.find(c => c.length >= 3 && words.some(w => w.startsWith(plain(c).toUpperCase())))
+  if (prefixHit) return prefixHit
+  return segs.length ? initialsOf(segs[0]) : ''
 }
 
 // 列出會員 APP 後台的門市，標示是否已建立、建議門市代碼（門市清單本身公開，公司成員皆可查看；建立仍限管理者）
@@ -44,6 +52,7 @@ export async function GET() {
     }),
     hr_codes: [...hrCodes].sort(),
     can_import: ctx.isAdmin,
+    meta: lastStoreListMeta,
   })
 }
 

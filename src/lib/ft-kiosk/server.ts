@@ -181,11 +181,15 @@ export interface FtAppStore {
   raw_keys: string[]
 }
 
+/** 最近一次門市清單回應中 data 以外的欄位（分頁資訊等），供匯入畫面除錯 */
+export let lastStoreListMeta: Record<string, unknown> = {}
+
 /** 會員 APP 後端的門市清單（/app/api/v1/store 不需登入）。未設定 FT_API_BASE_URL 時回傳 null */
 export async function fetchAppStores(): Promise<FtAppStore[] | null> {
   if (!baseUrl()) return null
   const res = await callFt<unknown>('/app/api/v1/store')
   const root = res as Raw | Raw[] | null
+  if (root && !Array.isArray(root)) lastStoreListMeta = Object.fromEntries(Object.entries(root).filter(([k]) => k !== 'data'))
   const data = Array.isArray(root) ? root : (root?.data as unknown)
   const list = Array.isArray(data) ? data as Raw[] : arr((data as Raw | undefined)?.items ?? (data as Raw | undefined)?.stores)
   const coord = (v: unknown) => (v == null || v === '' || !Number.isFinite(Number(v)) ? null : Number(v))
@@ -196,8 +200,9 @@ export async function fetchAppStores(): Promise<FtAppStore[] | null> {
     address: str(s.address ?? s.store_address ?? s.full_address),
     phone: str(s.phone ?? s.hotline ?? s.phone_number),
     latitude: coord(s.latitude ?? s.lat),
-    longitude: coord(s.longitude ?? s.lng ?? s.long),
-    active: !(s.status === 'DEACTIVE' || s.status === 'INACTIVE' || s.is_active === false || s.active === false),
+    // 會員 APP 的經度欄位叫 log
+    longitude: coord(s.longitude ?? s.lng ?? s.long ?? s.log),
+    active: !(s.status === 'DEACTIVE' || s.status === 'INACTIVE' || s.is_active === false || s.active === false || s.deleted === true),
     raw_keys: Object.keys(s),
   }))
 }
