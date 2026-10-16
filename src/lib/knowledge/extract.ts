@@ -28,12 +28,19 @@ export async function extractPdf(arrayBuffer: ArrayBuffer): Promise<string> {
   }
 }
 
+const TEXT_EXTS = ['txt', 'md', 'markdown', 'json', 'html', 'htm']
+
+export function isSupportedKnowledgeFile(fileName: string): boolean {
+  const ext = fileName.toLowerCase().split('.').pop() ?? ''
+  return ['pdf', 'docx', 'xlsx', 'xls', 'csv', ...TEXT_EXTS].includes(ext)
+}
+
 /** 依副檔名擷取文字；不支援的格式回傳 null */
 export async function extractFileText(fileName: string, arrayBuffer: ArrayBuffer): Promise<string | null> {
   const ext = fileName.toLowerCase().split('.').pop() ?? ''
   if (ext === 'pdf') return extractPdf(arrayBuffer)
   if (ext === 'docx') return extractDocx(arrayBuffer)
   if (ext === 'xlsx' || ext === 'xls' || ext === 'csv') return ext === 'csv' ? new TextDecoder('utf-8').decode(new Uint8Array(arrayBuffer)) : extractXlsx(arrayBuffer)
-  if (['txt', 'md', 'markdown', 'json', 'html', 'htm'].includes(ext)) return new TextDecoder('utf-8').decode(new Uint8Array(arrayBuffer))
+  if (TEXT_EXTS.includes(ext)) return new TextDecoder('utf-8').decode(new Uint8Array(arrayBuffer))
   return null
 }
