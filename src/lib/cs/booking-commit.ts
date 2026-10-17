@@ -9,7 +9,33 @@ import { confirmPublicBooking } from '@/lib/booking/public-booking-confirm'
 import { BOOKING_HUMAN_CONFIRM_NOTICE } from '@/lib/cs/booking-prompt'
 
 // none＝未串接訂房系統（沒有建立任何房型，例如非住宿業）：不寫單、不附真人客服提示。
-export type CsBookingMode = 'manual' | 'ai' | 'none'
+// refer＝AI 不代訂：住宿訂房不寫單、不給付款資訊，告知客人預訂內容已轉達客服，或請客人至官網預訂。
+export type CsBookingMode = 'manual' | 'ai' | 'none' | 'refer'
+
+// 暫時：AI 代訂房問題未解決前，所有有房型的民宿一律改為 refer（忽略訂房系統頁的模式設定）。
+// 穩定後改回 false 即恢復依 cs_booking_mode 運作。
+const CS_ROOM_BOOKING_REFER_ONLY = true
+
+// 住宿訂房的確認清單／流程（有入住、退房），用來跟賞鯨等行程預訂區分
+export const ROOM_BOOKING_TEXT_RE = /入住|退房|check.?in|check.?out/i
+
+// 官網訂房頁：優先用民宿資料填的網站，沒有就用平台內建的 /book/{slug}
+export async function getOfficialBookingUrl(supabase: SupabaseClient, userId: string): Promise<string> {
+  const { data } = await supabase.from('bnb_profiles').select('website, slug').eq('user_id', userId).maybeSingle()
+  const website = (data?.website as string | null)?.trim()
+  if (website) return website
+  const base = (process.env.NEXT_PUBLIC_APP_URL || '').replace(/\/$/, '')
+  return data?.slug && base ? `${base}/book/${data.slug}` : ''
+}
+
+// 不論商家是否自訂了客服提示詞都會附上（自訂提示詞會取代預設的預訂流程規則）
+export function buildReferStandingRule(officialUrl: string): string {
+  return `\n\n【住宿訂房規則——最高優先】本店目前不由 AI 代為完成住宿預訂。客人想訂房時可以介紹房型、報價、收集入住/退房日期與人數等需求，但最後一律告知「已將您的預訂內容轉達客服，客服會盡快與您聯繫確認」${officialUrl ? `，或請客人直接至官網預訂：${officialUrl}` : ''}。禁止說訂房成功、已保留房間或已完成預訂，住宿訂房禁止提供付款帳號。（賞鯨等行程預訂不受此規則影響）`
+}
+
+export function buildReferInstruction(officialUrl: string): string {
+  return `\n\n【系統：本店目前不由 AI 代為完成住宿預訂】你這則回覆必須告知客人：已將您的預訂內容轉達客服，客服會盡快與您聯繫確認${officialUrl ? `；也可以直接至官網預訂：${officialUrl}` : ''}。禁止說訂房成功、已保留房間或已完成預訂，禁止提供付款帳號。`
+}
 
 export async function getCsBookingMode(supabase: SupabaseClient, userId: string): Promise<CsBookingMode> {
   const [{ count }, { data }] = await Promise.all([
@@ -17,6 +43,7 @@ export async function getCsBookingMode(supabase: SupabaseClient, userId: string)
     supabase.from('bnb_profiles').select('cs_booking_mode').eq('user_id', userId).maybeSingle(),
   ])
   if (!count) return 'none'
+  if (CS_ROOM_BOOKING_REFER_ONLY) return 'refer'
   return data?.cs_booking_mode === 'ai' ? 'ai' : 'manual'
 }
 
@@ -71,7 +98,7 @@ export async function commitCsRoomBooking(
   mode: CsBookingMode,
   sourceLabel: string,
 ): Promise<string> {
-  if (mode === 'none') return ''
+  if (mode !== 'manual' && mode !== 'ai') return ''
   const { data: properties } = await supabase.from('properties').select('id, name').eq('user_id', userId)
   const props = (properties ?? []).filter(p => p.name)
   if (!props.length) return ''

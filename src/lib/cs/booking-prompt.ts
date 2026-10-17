@@ -38,7 +38,7 @@ export function buildStepLabels(dataHint?: string): Record<string, string> {
   }
 }
 
-export function buildBookingSystemPrompt(_defaultPaymentInfo: string, flows: BookingFlowDef[], mode: 'manual' | 'ai' | 'none' = 'none'): string {
+export function buildBookingSystemPrompt(_defaultPaymentInfo: string, flows: BookingFlowDef[], mode: 'manual' | 'ai' | 'none' | 'refer' = 'none', officialUrl = ''): string {
   // Payment info is intentionally NOT embedded here — it is injected only via
   // detectBookingCompletion() / bookingCompletionInstruction after server-side
   // step completion is confirmed, so the AI cannot reveal account details early.
@@ -103,7 +103,7 @@ ${flowSection}
 
 情境5：所有欄位收集完畢
 正確做法：整理確認清單，計算總金額，告知付款方式
-${mode === 'manual' ? `客人確認預訂後（或預訂完成時），回覆最後必須加上一句：「${BOOKING_HUMAN_CONFIRM_NOTICE}」\n` : ''}
+${mode === 'refer' ? `【住宿訂房例外】若是住宿訂房（有入住/退房日期）：整理確認清單與總金額後，不告知付款方式；客人確認後告知「已將您的預訂內容轉達客服，客服會盡快與您聯繫確認」${officialUrl ? `，並附上官網預訂連結：${officialUrl}` : ''}。禁止說訂房成功或已完成預訂。\n` : ''}${mode === 'manual' ? `客人確認預訂後（或預訂完成時），回覆最後必須加上一句：「${BOOKING_HUMAN_CONFIRM_NOTICE}」\n` : ''}
 【回覆範例（情境1）】
 客人說：「請問你們有賞鯨行程」
 你的回覆：

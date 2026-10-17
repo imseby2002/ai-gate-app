@@ -9,7 +9,7 @@ import { buildBookingModuleQuote } from '@/lib/cs/booking-quote'
 import { formatPricingForAI, queryJsonPricing, type PricingConfig } from '@/lib/cs/pricing'
 import { queryGoogleSheet, type SheetConfig } from '@/lib/cs/sheet-lookup'
 import { buildBookingSystemPrompt, BOOKING_HUMAN_CONFIRM_NOTICE, type BookingFlowDef } from '@/lib/cs/booking-prompt'
-import { getCsBookingMode } from '@/lib/cs/booking-commit'
+import { getCsBookingMode, getOfficialBookingUrl, buildReferStandingRule } from '@/lib/cs/booking-commit'
 import { sendTicketNotification, type NotifyWebhook } from '@/lib/cs/ticket-notify'
 import { buildSellSection, type CsCustomerRow } from '@/lib/cs/sell-section'
 import { queryBnbCheckin, checkBeforeCheckin } from '@/lib/cs/checkin-lookup'
@@ -112,6 +112,7 @@ async function handlePost(req: NextRequest) {
 
   // 測試分頁不寫入訂房系統，只依客服訂房模式呈現對應話術
   const csBookingMode = bookingFlowEnabled ? await getCsBookingMode(supabase, user.id) : 'none'
+  const officialBookingUrl = csBookingMode === 'refer' ? await getOfficialBookingUrl(supabase, user.id) : ''
 
   // ── Server-side booking detection ────────────────────────────────────────
   let bookingCompletionInstruction = ''
@@ -201,6 +202,16 @@ async function handlePost(req: NextRequest) {
         return detector ? detector() : true
       })
 
+      if (allStepsDone && csBookingMode === 'refer' && flow.steps.some((s: string) => s === 'date_checkin' || s === 'date_checkout')) {
+        bookingCompletionInstruction = `\n\n【系統偵測：所有預訂步驟已完成——立即執行以下指令】
+你的下一則回覆必須且只包含以下內容：
+第一行：「好的！以下是您的預訂內容：」
+接著逐行列出所有已收集的資料（含入住、退房日期），並計算顯示總金額
+禁止提供任何付款帳號或付款方式
+最後一行：「以上資訊是否正確？」
+客人確認後告知：已將您的預訂內容轉達客服，客服會盡快與您聯繫確認${officialBookingUrl ? `；也可以直接至官網預訂：${officialBookingUrl}` : ''}。禁止說訂房成功。`
+        break
+      }
       if (allStepsDone) {
         const payment = (flow.paymentInfo || paymentInfo || '').trim()
         bookingCompletionInstruction = `\n\n【系統偵測：所有預訂步驟已完成——立即執行以下指令】
@@ -674,7 +685,7 @@ ${csBookingMode === 'manual' ? `接著一行：「以上資訊是否正確？」
   const baseInstructions = userSystemPrompt?.trim()
     ? userSystemPrompt.trim()
     : (bookingFlowEnabled
-        ? buildBookingSystemPrompt(paymentInfo, bookingFlows, csBookingMode)
+        ? buildBookingSystemPrompt(paymentInfo, bookingFlows, csBookingMode, officialBookingUrl)
         : `你是民宿的 AI 客服。直接回答客人問題，語氣親切自然。不確定的資訊請誠實說明，勿猜測。`)
 
   const taiwanTime = new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false })
@@ -729,7 +740,7 @@ const systemPrompt = `${baseInstructions}
 
 【資料安全鐵則——絕對不可違反】
 密碼、房號、訂單號等「訂單專屬查詢數值」，必須且只能來自下方【外部資料查詢結果】。若無該區塊或查詢失敗，請直接告知客戶「查無資料，請聯繫工作人員」，禁止使用任何自行推測或虛構的數字。
-注意：商家預設的【付款帳號】（寫在預訂流程的付款說明中）屬於固定公告資訊，不受此限制，必須在訂單完成時主動告知客人。${knowledgeBase ? `\n\n【知識庫參考資料——房型細節詢問時的唯一來源】\n以下是民宿完整介紹文件，包含每個房型的空間、設施、床型、衛浴、景觀、陽台、辦公設備等所有細節。\n\n資料使用時機（嚴格區分）：\n・客人「初次詢問」房型或方案 → 使用定價計算機的簡介列出方案與價格，不必展開細節\n・客人「進一步詢問」設施或特色（例：有浴缸嗎、陽台多大、有辦公桌嗎、哪間適合辦公、景觀如何、床型是什麼）→ 必須查閱本區塊給出具體描述，禁止再重複簡介\n・判斷原則：只要客人的問題是關於「有沒有」「多大」「哪間」「適不適合」等設施/空間/特色問題，就屬於細節詢問，應從本區塊回答\n・禁止對細節問題回答「請參考網站」或重複貼定價計算機的同一段簡介\n\n${knowledgeBase.slice(0, 20000)}` : ''}${customerSection}${campaignOffersSection}${propertyAvailSection}${closingToolkitSection}${reviewsSection}${faqSection}${externalDataSection}${deterministicQuoteSection}${breakfastSection}${langEnforcement}${bookingCompletionInstruction}`
+注意：商家預設的【付款帳號】（寫在預訂流程的付款說明中）屬於固定公告資訊，不受此限制，必須在訂單完成時主動告知客人。${knowledgeBase ? `\n\n【知識庫參考資料——房型細節詢問時的唯一來源】\n以下是民宿完整介紹文件，包含每個房型的空間、設施、床型、衛浴、景觀、陽台、辦公設備等所有細節。\n\n資料使用時機（嚴格區分）：\n・客人「初次詢問」房型或方案 → 使用定價計算機的簡介列出方案與價格，不必展開細節\n・客人「進一步詢問」設施或特色（例：有浴缸嗎、陽台多大、有辦公桌嗎、哪間適合辦公、景觀如何、床型是什麼）→ 必須查閱本區塊給出具體描述，禁止再重複簡介\n・判斷原則：只要客人的問題是關於「有沒有」「多大」「哪間」「適不適合」等設施/空間/特色問題，就屬於細節詢問，應從本區塊回答\n・禁止對細節問題回答「請參考網站」或重複貼定價計算機的同一段簡介\n\n${knowledgeBase.slice(0, 20000)}` : ''}${customerSection}${campaignOffersSection}${propertyAvailSection}${closingToolkitSection}${reviewsSection}${faqSection}${externalDataSection}${deterministicQuoteSection}${breakfastSection}${langEnforcement}${csBookingMode === 'refer' ? buildReferStandingRule(officialBookingUrl) : ''}${bookingCompletionInstruction}`
 
   // Build user turn — multimodal when image is provided
   type MsgContent = string | Array<{ type: 'text'; text: string } | { type: 'image'; image: Uint8Array; mimeType: string }>
