@@ -9,6 +9,9 @@
 import { loadChannelCredentials } from '@/lib/channels/resolve'
 import type { ChannelModuleId } from '@/lib/channels/platforms'
 
+// 收件匣真人回覆寫進 AI 對話紀錄時加的標記：AI 依此知道這句是員工說的，內容優先於知識庫
+export const HUMAN_AGENT_TAG = '【真人客服】'
+
 export interface SendResult {
   ok: boolean
   error?: string

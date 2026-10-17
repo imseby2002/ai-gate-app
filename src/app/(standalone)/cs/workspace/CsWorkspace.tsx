@@ -4967,24 +4967,17 @@ function Unit12CustomerService({
                   ) : (
                     <>
                       {/* 對話頭部 */}
-                      <div className="px-4 py-3 border-b bg-gray-50/70 shrink-0 flex items-center justify-between gap-3 flex-wrap">
+                      <div className="px-3 py-1.5 border-b bg-gray-50/70 shrink-0 flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2.5 min-w-0">
                           <button type="button" onClick={() => setActiveConvo(null)} className="md:hidden text-gray-500 shrink-0 -ml-1 p-1">
                             <ChevronLeft className="h-5 w-5" />
                           </button>
-                          <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
-                            {formatCustomerName(activeConvo.name, activeConvo.from_id, t).charAt(0)}
-                          </div>
-                          <div className="min-w-0">
-                            <div className="font-semibold text-sm text-gray-900 truncate flex items-center gap-1.5">
-                              {formatCustomerName(activeConvo.name, activeConvo.from_id, t)}
-                              <span className="text-[10px] font-normal px-1.5 py-0.5 rounded bg-gray-200/70 text-gray-600 font-mono">
-                                {platformEmoji(activeConvo.platform)} {activeConvo.platform.toUpperCase()}
-                              </span>
-                            </div>
-                            <div className="text-[10px] font-mono text-gray-400 truncate">
-                              {t('accountIdLabel')}: {activeConvo.from_id}
-                            </div>
+                          <div className="min-w-0 font-semibold text-xs text-gray-900 truncate flex items-center gap-1.5"
+                            title={`${t('accountIdLabel')}: ${activeConvo.from_id}`}>
+                            <span className="truncate">{formatCustomerName(activeConvo.name, activeConvo.from_id, t)}</span>
+                            <span className="text-[10px] font-normal px-1 rounded bg-gray-200/70 text-gray-600 font-mono shrink-0">
+                              {platformEmoji(activeConvo.platform)} {activeConvo.platform.toUpperCase()}
+                            </span>
                           </div>
                         </div>
 
@@ -4992,7 +4985,7 @@ function Unit12CustomerService({
                           <button
                             type="button"
                             onClick={toggleInboxTakeover}
-                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border shadow-xs transition-colors cursor-pointer ${
+                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium border shadow-xs transition-colors cursor-pointer ${
                               activeConvo.takeover
                                 ? 'bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200'
                                 : 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
@@ -5005,7 +4998,7 @@ function Unit12CustomerService({
                             type="button"
                             onClick={() => void loadThreadBubbles(activeConvo.platform, activeConvo.from_id)}
                             disabled={threadLoading}
-                            className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 transition-colors"
+                            className="p-1 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 transition-colors"
                             title={t('reloadThreadTitle')}
                           >
                             {threadLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}

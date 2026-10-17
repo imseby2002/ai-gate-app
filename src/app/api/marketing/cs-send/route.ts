@@ -10,7 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { getBnbContext } from '@/lib/bnb/context'
-import { sendToCustomer } from '@/lib/cs/send'
+import { sendToCustomer, HUMAN_AGENT_TAG } from '@/lib/cs/send'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
       .from('cs_conversations').select('history')
       .eq('user_id', ctx.ownerId).eq('customer_id', to).single()
     const history = Array.isArray(conv?.history) ? conv!.history : []
-    history.push({ role: 'assistant', content: message })
+    history.push({ role: 'assistant', content: `${HUMAN_AGENT_TAG}${message}` })
     await admin.from('cs_conversations').upsert(
       { user_id: ctx.ownerId, customer_id: to, history: history.slice(-60), updated_at: now },
       { onConflict: 'user_id,customer_id' }
