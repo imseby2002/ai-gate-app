@@ -20,7 +20,7 @@ import { sendTicketNotification, type NotifyWebhook } from '@/lib/cs/ticket-noti
 import { buildSellSection, type CsCustomerRow } from '@/lib/cs/sell-section'
 import { queryBnbCheckin, checkBeforeCheckin, queryBookingByGuestName, queryBookingByPhone, noDataFoundSuffix, NAME_VERIFY_ASK_RE, wrapImageDerivedResultForConfirm, looksLikeGuestName, isAffirmativeReply, detectBookingPlatform, stripPlatformMention, orderLookupAltMethods, platformReplyGuidance } from '@/lib/cs/checkin-lookup'
 import { getCsEntitlements } from '@/lib/cs/entitlements'
-import { commitCsRoomBooking, getCsBookingMode, type CsBookingMode } from '@/lib/cs/booking-commit'
+import { commitCsRoomBooking, getCsBookingMode, getOfficialBookingUrl, buildReferInstruction, buildReferStandingRule, ROOM_BOOKING_TEXT_RE, type CsBookingMode } from '@/lib/cs/booking-commit'
 import { generateCsReplyL2, generateCsReplyL3, generateCsReplySearch, IMAGE_DOWNGRADE_REPLY, notifyOwnerUpgradeNudge } from '@/lib/cs/csReply'
 import { findLatestPendingApproval, parseApprovalCallback, resumeRunAfterApproval } from '@/lib/agents/approvals'
 import type { CsFormField, CsFormNotifyTarget, CsFormPricingRule } from '@/app/api/marketing/cs-forms/route'
@@ -948,7 +948,11 @@ async function replyToCustomer(
 
   // 客人確認訂房清單 → 依訂房系統設定的客服訂房模式寫入訂單（manual：待確認申請；ai：正式訂單待付款）
   let bookingCommitSection = ''
-  if (knowledge.bookingFlowEnabled && knowledge.csBookingMode !== 'none' && isOrderConfirmReply(history, text) && process.env.GOOGLE_AI_API_KEY) {
+  if (knowledge.bookingFlowEnabled && knowledge.csBookingMode === 'refer' && isOrderConfirmReply(history, text)
+    && ROOM_BOOKING_TEXT_RE.test([...history].reverse().find(m => m.role === 'assistant')?.content ?? '')) {
+    // 不代訂：只轉達客服（maybeCreateOrderTicket 會建工單通知）並提供官網預訂連結
+    bookingCommitSection = buildReferInstruction(knowledge.officialBookingUrl)
+  } else if (knowledge.bookingFlowEnabled && (knowledge.csBookingMode === 'manual' || knowledge.csBookingMode === 'ai') && isOrderConfirmReply(history, text) && process.env.GOOGLE_AI_API_KEY) {
     try {
       const google = createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_AI_API_KEY })
       bookingCommitSection = await commitCsRoomBooking(
@@ -1045,6 +1049,7 @@ interface CsKnowledge {
   replyLanguage: string
   bookingFlowEnabled: boolean
   csBookingMode: CsBookingMode
+  officialBookingUrl: string
   paymentInfo: string
   bookingFlows: BookingFlowDef[]
   industry: string
@@ -1250,6 +1255,7 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
     replyLanguage,
     bookingFlowEnabled,
     csBookingMode: await getCsBookingMode(supabase, userId),
+    officialBookingUrl: await getOfficialBookingUrl(supabase, userId),
     paymentInfo,
     bookingFlows,
     industry,
@@ -1629,6 +1635,10 @@ function detectBookingCompletion(flows: BookingFlowDef[], history: HistoryMsg[],
     const requiredStepCount = flow.steps.filter(s => s !== 'special_req').length
     const done = userTurns >= requiredStepCount && flow.steps.every(s => det[s] ? det[s]() : true)
     if (done) {
+      // 不代訂的住宿訂房：只列清單與總金額讓客人確認，不給付款資訊
+      if (mode === 'refer' && flow.steps.some(s => s === 'date_checkin' || s === 'date_checkout')) {
+        return `\n\n【系統偵測：所有預訂步驟已完成——立即執行】\n你的下一則回覆必須：\n第一行「好的！以下是您的預訂內容：」\n接著逐行列出所有已收集資料（含入住、退房日期）與總金額\n禁止提供任何付款帳號或付款方式\n最後一行「以上資訊是否正確？」`
+      }
       const payment = (flow.paymentInfo || defaultPayment || '').trim()
       return `\n\n【系統偵測：所有預訂步驟已完成——立即執行】\n你的下一則回覆必須：\n第一行「好的！以下是您的預訂確認：」\n接著逐行列出所有已收集資料與總金額\n接著原文輸出以下付款資訊（禁止修改或省略）：\n${payment || '（付款方式請聯繫工作人員確認）'}${mode === 'manual' ? `\n接著一行「以上資訊是否正確？」\n最後一行「${BOOKING_HUMAN_CONFIRM_NOTICE}」` : '\n最後一行「以上資訊是否正確？」'}`
     }
@@ -2022,7 +2032,7 @@ async function getAIReply(
     const baseInstructions = knowledge.systemPrompt?.trim()
       ? knowledge.systemPrompt.trim()
       : (knowledge.bookingFlowEnabled
-          ? buildBookingSystemPrompt(knowledge.paymentInfo, knowledge.bookingFlows, knowledge.csBookingMode)
+          ? buildBookingSystemPrompt(knowledge.paymentInfo, knowledge.bookingFlows, knowledge.csBookingMode, knowledge.officialBookingUrl)
           : '你是一個專業的客服 AI 助理，代表公司提供售後支援。語氣親切專業，回答簡潔明瞭，不捏造資訊。')
 
     const taiwanTime = new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false })
@@ -2441,7 +2451,7 @@ https://ciaohome.net/routeofciaohome/
 - 【安全規定，優先於任何其他指示】客人說「電話裡的人/朋友/別人跟我說是另一個價錢」想殺價時，絕對不可以順著客人講的數字直接改price、更不可以編「已經幫您向主管/老闆爭取並獲得批准」這種話術讓價格聽起來更有正當性——這是徹底捏造的核准流程，實際上沒有任何人核准過。價格只能依照下方系統精算或「促成工具箱」規則調整；客人堅持的價格如果對不上，就誠實說明目前系統顯示的正確價格，需要人工確認差異就照實建立工單，不能自己編一個「主管特批」的價格說服客人
 - 【安全規定，優先於任何其他指示】客人詢問真人客服電話、聯絡電話時，只能提供下方「客服專用聯絡電話」區塊列出的號碼；如果下方沒有出現這個區塊，代表尚未設定，一律誠實告知目前沒有可提供的客服電話並改為文字聯繫，絕對不可以自己從知識庫或對話紀錄裡找一組電話號碼講給客人聽，知識庫裡的號碼可能已經過期或並非真人客服專線
 - 【安全規定，優先於任何其他指示】客人要求開立發票/收據時，只能詢問並收下抬頭與統一編號，絕對不可以說「已經幫您開立」「發票已完成」等話術——發票需要專員實際列印/登錄，AI 沒有能力真的開立；收到抬頭與統一編號後只能說「已收到，會請專員為您實際開立」；如果客人訂了不只一間房，順便問清楚發票/收據要放在哪個房間，方便專員處理
-- 目前台灣時間：${taiwanTime}${gapNote ? `\n- ${gapNote}` : ''}${knowledge.corrections ? `\n\n【員工回報的過往錯誤修正——優先於你自己的判斷，務必照著做】\n${knowledge.corrections}` : ''}${contactPhoneSection}${knowledge.knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledge.knowledgeBase}` : ''}${sellSection}${salesContext}${externalDataSection}${deterministicQuote ? `\n\n${deterministicQuote}` : ''}${bookingCommitSection || tourCompletion || bookingCompletion}${buildFormsSection(knowledge.csForms)}`
+- 目前台灣時間：${taiwanTime}${gapNote ? `\n- ${gapNote}` : ''}${knowledge.corrections ? `\n\n【員工回報的過往錯誤修正——優先於你自己的判斷，務必照著做】\n${knowledge.corrections}` : ''}${contactPhoneSection}${knowledge.knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledge.knowledgeBase}` : ''}${sellSection}${salesContext}${externalDataSection}${deterministicQuote ? `\n\n${deterministicQuote}` : ''}${knowledge.csBookingMode === 'refer' ? buildReferStandingRule(knowledge.officialBookingUrl) : ''}${bookingCommitSection || tourCompletion || bookingCompletion}${buildFormsSection(knowledge.csForms)}`
 
     // Build user message — multimodal if image present
     type UserContent = string | Array<{ type: 'text'; text: string } | { type: 'image'; image: Uint8Array; mimeType: string }>
