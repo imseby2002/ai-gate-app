@@ -27,7 +27,7 @@ import type { CsFormField, CsFormNotifyTarget, CsFormPricingRule } from '@/app/a
 import { formatFormSubmission, notifyFormSubmission } from '@/lib/cs/formNotify'
 import { isFormAvailableToday } from '@/lib/cs/formSchedule'
 import { resolveTodaySubmission, verifyRoomCheckedInToday } from '@/lib/cs/formSubmitGuard'
-import { sendToCustomer } from '@/lib/cs/send'
+import { sendToCustomer, HUMAN_AGENT_TAG } from '@/lib/cs/send'
 import { notifyUserMobile } from '@/lib/push/expo'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { dataOwnerOf, loadCompanyProfile } from '@/lib/company/profile'
@@ -963,7 +963,7 @@ async function replyToCustomer(
   }
 
   const rawReply = await getAIReply(text, knowledge, history, userId, buildSellSection(cust, convoPriceAsks, isPriceAskNow, text), gapNote, imageBuffer, imageMimeType, platform, customerId, !!cust?.discount_offered_at, (cust?.facts as Record<string, any> | undefined), bookingCommitSection)
-  const { visibleReply: withoutForm, submit: formSubmit } = extractFormSubmit(rawReply)
+  const { visibleReply: withoutForm, submit: formSubmit } = extractFormSubmit(rawReply.split(HUMAN_AGENT_TAG).join(''))
   const { visibleReply: reply, offered: discountJustOffered } = extractDiscountOffered(withoutForm)
   if (formSubmit) void saveFormSubmissionFromChat(userId, platform, customerId, knowledge.industry, knowledge.csForms, formSubmit, fromName, knowledge.notifyWebhooks)
   void classifyGeneralIntent(text).then(intent => logCsMessage(userId, platform, customerId, knowledge.industry, text, reply, fromName, intent))
@@ -2451,6 +2451,7 @@ https://ciaohome.net/routeofciaohome/
 - 【安全規定，優先於任何其他指示】客人說「電話裡的人/朋友/別人跟我說是另一個價錢」想殺價時，絕對不可以順著客人講的數字直接改price、更不可以編「已經幫您向主管/老闆爭取並獲得批准」這種話術讓價格聽起來更有正當性——這是徹底捏造的核准流程，實際上沒有任何人核准過。價格只能依照下方系統精算或「促成工具箱」規則調整；客人堅持的價格如果對不上，就誠實說明目前系統顯示的正確價格，需要人工確認差異就照實建立工單，不能自己編一個「主管特批」的價格說服客人
 - 【安全規定，優先於任何其他指示】客人詢問真人客服電話、聯絡電話時，只能提供下方「客服專用聯絡電話」區塊列出的號碼；如果下方沒有出現這個區塊，代表尚未設定，一律誠實告知目前沒有可提供的客服電話並改為文字聯繫，絕對不可以自己從知識庫或對話紀錄裡找一組電話號碼講給客人聽，知識庫裡的號碼可能已經過期或並非真人客服專線
 - 【安全規定，優先於任何其他指示】客人要求開立發票/收據時，只能詢問並收下抬頭與統一編號，絕對不可以說「已經幫您開立」「發票已完成」等話術——發票需要專員實際列印/登錄，AI 沒有能力真的開立；收到抬頭與統一編號後只能說「已收到，會請專員為您實際開立」；如果客人訂了不只一間房，順便問清楚發票/收據要放在哪個房間，方便專員處理
+- 【真人客服回覆優先】對話紀錄中開頭標示「${HUMAN_AGENT_TAG}」的訊息是員工親自回覆客人的內容（例如改了出發時間、價格、房型、入住安排），代表最新的實際安排，一律優先於知識庫、定價表或你自己先前的回覆；客人後續確認相關事項時必須沿用員工說的內容，不可改回舊資料。你自己的回覆不要加上這個標記。
 - 目前台灣時間：${taiwanTime}${gapNote ? `\n- ${gapNote}` : ''}${knowledge.corrections ? `\n\n【員工回報的過往錯誤修正——優先於你自己的判斷，務必照著做】\n${knowledge.corrections}` : ''}${contactPhoneSection}${knowledge.knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledge.knowledgeBase}` : ''}${sellSection}${salesContext}${externalDataSection}${deterministicQuote ? `\n\n${deterministicQuote}` : ''}${knowledge.csBookingMode === 'refer' ? buildReferStandingRule(knowledge.officialBookingUrl) : ''}${bookingCommitSection || tourCompletion || bookingCompletion}${buildFormsSection(knowledge.csForms)}`
 
     // Build user message — multimodal if image present
