@@ -9,6 +9,8 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { ExcelImportModal } from '@/components/common/ExcelImportModal'
 import type { ImportColumn } from '@/lib/excel/universal-import'
+import { StoreSelect, useStoreOptions } from '@/components/store/StoreSelect'
+import { EvaluationTab, type EvalEmployee } from '@/components/hr/EvaluationTab'
 
 const SHIFT_IMPORT_COLUMNS: ImportColumn[] = [
   { key: 'employee_name', label: '員工姓名', required: true, example: '王小明', aliases: ['employee_name', '姓名', '員工'] },
@@ -26,17 +28,13 @@ const WEEKDAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
 export default function ShiftPage() {
   const t = useTranslations('Shift')
   const STATUS_LABEL: Record<string, string> = { collecting: t('statusCollecting'), suggested: t('statusSuggested'), confirmed: t('statusConfirmed') }
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
-  const [stores, setStores] = useState<string[]>([])
-  const [store, setStore] = useState('')
+  const { status: storeStatus, options: storeOptions, store, setStore, locked: lockedStore } = useStoreOptions()
+  const [view, setView] = useState<'schedule' | 'evaluation'>('schedule')
   const [periods, setPeriods] = useState<Period[]>([])
   const [sel, setSel] = useState<string | null>(null)
   const [tick, setTick] = useState(0)
 
-  useEffect(() => {
-    fetch('/api/inv/stores').then(r => { if (r.status === 403) { setIsAdmin(false); return null } setIsAdmin(true); return r.json() })
-      .then(d => { if (d) { setStores(d.stores ?? []); setStore(s => s || (d.stores?.[0] ?? '')) } })
-  }, [])
+  const isAdmin = storeStatus === 'loading' ? null : storeStatus === 'ok'
 
   const loadPeriods = useCallback(() => {
     if (!store) return
@@ -62,15 +60,22 @@ export default function ShiftPage() {
         <div className="ml-auto"><Link href="/store-inventory"><Button variant="outline" size="sm" className="gap-1.5"><Store className="h-4 w-4" />{t('inventory')}</Button></Link></div>
       </div>
 
-      <Card className="p-3">
+      <Card className="p-3 flex flex-wrap items-end gap-3">
         <label className="space-y-1 inline-block">
-          <span className="block text-xs text-gray-500">{t('store')}</span>
-          <Input list="shift-store-list" value={store} onChange={e => { setStore(e.target.value); setSel(null) }} placeholder={t('storePlaceholder')} className="w-40" />
-          <datalist id="shift-store-list">{stores.map(s => <option key={s} value={s} />)}</datalist>
+          <span className="block text-xs text-gray-500">{t('store')}{lockedStore ? ` 🔒` : ''}</span>
+          <StoreSelect value={store} onChange={v => { setStore(v); setSel(null) }} options={storeOptions} locked={lockedStore} placeholder={t('storePlaceholder')} />
         </label>
+        <div className="ml-auto flex gap-1 rounded-lg bg-gray-100 p-1">
+          {(['schedule', 'evaluation'] as const).map(v => (
+            <button key={v} onClick={() => setView(v)} className={`px-3 py-1.5 rounded-md text-sm ${view === v ? 'bg-white shadow-sm font-medium' : 'text-gray-500'}`}>
+              {v === 'schedule' ? t('tabSchedule') : t('tabEvaluation')}
+            </button>
+          ))}
+        </div>
       </Card>
 
       {!store ? <div className="text-center py-10 text-gray-400 text-sm">{t('selectStoreFirst')}</div>
+        : view === 'evaluation' ? <StoreEvaluation store={store} />
         : <div className="grid md:grid-cols-[20rem_1fr] gap-4">
           <div className="space-y-3">
             <CreatePeriod store={store} onCreated={() => setTick(x => x + 1)} />
@@ -90,6 +95,17 @@ export default function ShiftPage() {
         </div>}
     </div>
   )
+}
+
+// 門市員工評分：只列該門市在職員工，評分資料與人事頁同一份
+function StoreEvaluation({ store }: { store: string }) {
+  const [data, setData] = useState<{ store: string; emps: EvalEmployee[] } | null>(null)
+  useEffect(() => {
+    fetch(`/api/shift/employees?store=${encodeURIComponent(store)}`).then(r => r.ok ? r.json() : { employees: [] })
+      .then(d => setData({ store, emps: d.employees ?? [] }))
+  }, [store])
+  const loading = data?.store !== store
+  return <Card className="p-4"><EvaluationTab employees={loading ? [] : data!.emps} loading={loading} store={store} allowImport={false} /></Card>
 }
 
 function CreatePeriod({ store, onCreated }: { store: string; onCreated: () => void }) {

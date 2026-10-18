@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isSuperAdminUser } from '@/lib/auth/admin-check'
 
-const ALL_UNITS = ['hr', 'finance', 'rd', 'store', 'affairs', 'audit', 'marketing', 'mkt', 'repair', 'gm']
+const ALL_UNITS = ['hr', 'finance', 'rd', 'store', 'store_leader', 'affairs', 'audit', 'marketing', 'mkt', 'repair', 'gm']
 
 // 目前登入者可存取的單位與管理權限（供 /office 入口與人員權限指派使用）。
 export async function GET() {
@@ -14,7 +14,7 @@ export async function GET() {
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('user_type, units, company_id, department')
+    .select('user_type, units, company_id, department, store_codes')
     .eq('id', user.id)
     .single()
 
@@ -45,6 +45,8 @@ export async function GET() {
 
   const canManage = isSuperAdmin || isCompanyAdmin
   const storeCode = canManage ? null : (profile?.department ? String(profile.department).trim() : null)
+  const storeCodes: string[] | null = canManage ? null
+    : ((profile?.store_codes as string[] | null)?.length ? (profile!.store_codes as string[]) : (storeCode ? [storeCode] : null))
   const effectiveUnits = isSuperAdmin ? ALL_UNITS : (profile?.units ?? [])
 
   return NextResponse.json({
@@ -55,5 +57,6 @@ export async function GET() {
     companyName: companyName || (isSuperAdmin ? '系統總管理' : null),
     units: effectiveUnits,
     store_code: storeCode,
+    store_codes: storeCodes,
   })
 }

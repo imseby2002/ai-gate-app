@@ -1,26 +1,32 @@
 import { getUnitContextAny } from '@/lib/auth/unit-access'
 import { NextResponse } from 'next/server'
 
-async function getAdminUser() {
-  const ctx = await getUnitContextAny(['store', 'audit'])
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin, storeCode: null as string | null , status: ctx.status }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin, storeCode: ctx.storeCode ?? null , status: ctx.status }
-}
-
-// 已匯入資料中出現過的門市清單
+// 門市清單：fin_stores 的門市（含名稱）＋已匯入資料出現過的門市代碼。
+// 綁定門市的帳號只回可操作的門市；只有一家時 locked_store 為該店。
 export async function GET() {
-  const { user, supabase, storeCode , status } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
+  const ctx = await getUnitContextAny(['store', 'store_leader', 'audit'])
+  if (!ctx.ok) return NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status })
+  const supabase = ctx.admin
+  const ownerId = ctx.ownerId
 
-  if (storeCode) {
-    return NextResponse.json({ stores: [storeCode], locked_store: storeCode })
+  const { data: fin } = await supabase.from('fin_stores').select('code, name, unit_type, active').eq('owner_id', ownerId).order('code')
+  const names = new Map<string, string>()
+  for (const r of fin ?? []) if (r.code) names.set(String(r.code).trim(), String(r.name ?? '').trim())
+
+  let codes: string[]
+  if (ctx.storeCodes) {
+    codes = ctx.storeCodes
+  } else {
+    const [{ data: a }, { data: b }] = await Promise.all([
+      supabase.from('inv_movements').select('store').eq('owner_id', ownerId),
+      supabase.from('inv_pos_sales').select('store').eq('owner_id', ownerId),
+    ])
+    const set = new Set<string>()
+    for (const r of fin ?? []) if (r.code && r.active !== false && (r.unit_type ?? 'store') === 'store') set.add(String(r.code).trim())
+    for (const r of [...(a ?? []), ...(b ?? [])]) if (r.store) set.add(String(r.store).trim())
+    codes = [...set].sort()
   }
-
-  const [{ data: a }, { data: b }] = await Promise.all([
-    supabase.from('inv_movements').select('store').eq('owner_id', user.id),
-    supabase.from('inv_pos_sales').select('store').eq('owner_id', user.id),
-  ])
-  const set = new Set<string>()
-  for (const r of [...(a ?? []), ...(b ?? [])]) if (r.store) set.add(r.store)
-  return NextResponse.json({ stores: [...set].sort(), locked_store: null })
+  const store_list = codes.map(code => ({ code, name: names.get(code) ?? '' }))
+  const locked = ctx.storeCodes && ctx.storeCodes.length === 1 ? ctx.storeCodes[0] : null
+  return NextResponse.json({ stores: codes, store_list, locked_store: locked, active_store: ctx.storeCode ?? null })
 }

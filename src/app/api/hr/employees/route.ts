@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getUnitContext } from '@/lib/auth/unit-access'
-import { adoptProfileAccess, cleanUnits, checkProfileLink, syncProfileFromEmployee } from '@/lib/hr/account-sync'
+import { adoptProfileAccess, cleanStores, cleanUnits, checkProfileLink, syncProfileFromEmployee } from '@/lib/hr/account-sync'
 
 async function getAdminUser() {
   const ctx = await getUnitContext('hr')
@@ -32,10 +32,10 @@ export async function POST(req: NextRequest) {
     bank_account, id_number, notes, status,
     staff_category, insurance_required, insurance_status, insurance_number, insurance_salary,
     hourly_rate, attendance_no, payroll_code, store, bank_name,
-    birthday, units, store_locked, profile_id,
+    birthday, units, store_locked, profile_id, managed_stores,
   } = body
   if (!name?.trim()) return NextResponse.json({ error: 'name required' }, { status: 400 })
-  let access: { units: string[]; store?: string; store_locked?: boolean } = { units: cleanUnits(units) }
+  let access: { units: string[]; store?: string; store_locked?: boolean; managed_stores?: string[] } = { units: cleanUnits(units) }
   if (profile_id) {
     const linkErr = await checkProfileLink(supabase, user.id, profile_id)
     if (linkErr) return NextResponse.json({ error: linkErr }, { status: 400 })
@@ -65,6 +65,7 @@ export async function POST(req: NextRequest) {
       birthday: birthday || null,
       units: access.units,
       store_locked: access.store_locked ?? store_locked !== false,
+      managed_stores: access.managed_stores ?? cleanStores(managed_stores),
       profile_id: profile_id || null,
     })
     .select('*').single()
@@ -83,6 +84,7 @@ export async function PATCH(req: NextRequest) {
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
   if (updates.units !== undefined) updates.units = cleanUnits(updates.units)
   if (updates.birthday !== undefined) updates.birthday = updates.birthday || null
+  if (updates.managed_stores !== undefined) updates.managed_stores = cleanStores(updates.managed_stores)
   if (updates.profile_id !== undefined) {
     updates.profile_id = updates.profile_id || null
     if (updates.profile_id) {

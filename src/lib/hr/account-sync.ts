@@ -4,23 +4,43 @@ import type { createAdminClient } from '@/lib/supabase/admin'
 
 type Admin = ReturnType<typeof createAdminClient>
 
-export const UNIT_KEYS = ['hr', 'finance', 'rd', 'store', 'affairs', 'audit', 'marketing', 'mkt', 'repair', 'gm']
+export const UNIT_KEYS = ['hr', 'finance', 'rd', 'store', 'store_leader', 'affairs', 'audit', 'marketing', 'mkt', 'repair', 'gm']
 
 export function cleanUnits(v: unknown): string[] {
   if (!Array.isArray(v)) return []
   return [...new Set(v.map(String).filter(u => UNIT_KEYS.includes(u)))]
 }
 
-// 帳號門市鎖定：屬門市單位、勾選只看本店、且有門市代碼時鎖定本店；其餘不鎖定
-export function lockedStore(emp: { units?: string[] | null; store?: string | null; store_locked?: boolean | null }): string | null {
-  const store = (emp.store ?? '').trim()
-  return (emp.units ?? []).includes('store') && emp.store_locked !== false && store ? store : null
+type EmpScope = { units?: string[] | null; store?: string | null; store_locked?: boolean | null; managed_stores?: string[] | null }
+
+export function cleanStores(v: unknown): string[] {
+  if (!Array.isArray(v)) return []
+  return [...new Set(v.map(x => String(x ?? '').trim()).filter(Boolean))]
 }
 
-export async function syncProfileFromEmployee(admin: Admin, emp: { profile_id?: string | null; units?: string[] | null; store?: string | null; store_locked?: boolean | null }) {
+// 帳號可操作的門市：屬門市單位或門市領班、且勾選限定門市時，限定為「管理門市」（未設定則為所屬門市）；其餘不限（空陣列）。
+// 門市領班一律限定門市。
+export function scopedStores(emp: EmpScope): string[] {
+  const units = emp.units ?? []
+  const isLeader = units.includes('store_leader')
+  if (!units.includes('store') && !isLeader) return []
+  if (!isLeader && emp.store_locked === false) return []
+  const managed = cleanStores(emp.managed_stores)
+  if (managed.length) return managed
+  const store = (emp.store ?? '').trim()
+  return store ? [store] : []
+}
+
+// 相容舊欄位：主要門市（profiles.department）
+export function lockedStore(emp: EmpScope): string | null {
+  return scopedStores(emp)[0] ?? null
+}
+
+export async function syncProfileFromEmployee(admin: Admin, emp: EmpScope & { profile_id?: string | null }) {
   if (!emp.profile_id) return
+  const codes = scopedStores(emp)
   await admin.from('profiles')
-    .update({ units: emp.units ?? [], department: lockedStore(emp) })
+    .update({ units: emp.units ?? [], department: codes[0] ?? null, store_codes: codes })
     .eq('id', emp.profile_id)
 }
 
@@ -29,8 +49,8 @@ export async function syncEmployeeFromProfile(admin: Admin, profileId: string, c
   const patch: Record<string, unknown> = {}
   if (change.units) patch.units = cleanUnits(change.units)
   if (change.storeCode !== undefined) {
-    if (change.storeCode) { patch.store = change.storeCode; patch.store_locked = true }
-    else patch.store_locked = false
+    if (change.storeCode) { patch.store = change.storeCode; patch.store_locked = true; patch.managed_stores = [change.storeCode] }
+    else { patch.store_locked = false; patch.managed_stores = [] }
   }
   if (Object.keys(patch).length === 0) return
   await admin.from('hr_employees').update({ ...patch, updated_at: new Date().toISOString() }).eq('profile_id', profileId)
@@ -61,12 +81,13 @@ export async function checkProfileLink(admin: Admin, ownerId: string, profileId:
 }
 
 // 新綁定帳號時，若人事資料尚未設定單位，先沿用帳號現有的單位與門市鎖定，避免綁定時清掉既有權限
-export async function adoptProfileAccess(admin: Admin, profileId: string, units: string[]): Promise<{ units: string[]; store?: string; store_locked?: boolean }> {
+export async function adoptProfileAccess(admin: Admin, profileId: string, units: string[]): Promise<{ units: string[]; store?: string; store_locked?: boolean; managed_stores?: string[] }> {
   if (units.length) return { units }
-  const { data: p } = await admin.from('profiles').select('units, department').eq('id', profileId).single()
-  const dept = (p?.department ? String(p.department).trim() : '')
+  const { data: p } = await admin.from('profiles').select('units, department, store_codes').eq('id', profileId).single()
+  const codes = cleanStores(p?.store_codes)
+  const dept = (p?.department ? String(p.department).trim() : '') || codes[0] || ''
   return {
     units: cleanUnits(p?.units),
-    ...(dept ? { store: dept, store_locked: true } : { store_locked: false }),
+    ...(dept ? { store: dept, store_locked: true, managed_stores: codes.length ? codes : [dept] } : { store_locked: false }),
   }
 }

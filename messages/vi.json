@@ -5255,12 +5255,12 @@
     "statusCollecting": "Đang thu thập",
     "statusSuggested": "Đã đề xuất",
     "statusConfirmed": "Đã xác nhận",
-    "adminOnly": "Chỉ đơn vị cửa hàng được sử dụng lịch làm việc",
+    "adminOnly": "Chỉ bộ phận cửa hàng hoặc trưởng ca (đã gán cửa hàng) được dùng xếp ca",
     "title": "Lịch làm việc cửa hàng",
     "subtitle": "Tạo kỳ lịch → nhân viên bán thời gian điền giờ có thể làm trong Trang nhân viên (hoặc qua liên kết riêng) → đề xuất tự động → xác nhận và gửi",
     "inventory": "Kiểm kê・Đặt hàng",
     "store": "Cửa hàng",
-    "storePlaceholder": "Cửa hàng (VD: YL)",
+    "storePlaceholder": "Chọn cửa hàng",
     "selectStoreFirst": "Vui lòng chọn cửa hàng trước.",
     "periods": "Kỳ lịch",
     "noPeriods": "Chưa có kỳ lịch",
@@ -5296,7 +5296,9 @@
     "confirmFailed": "Xác nhận thất bại",
     "confirmedSent": "Đã xác nhận, {employees} nhân viên, đã gửi {emailed} email",
     "adjustFailed": "Điều chỉnh thất bại",
-    "loadFailed": "Tải thất bại."
+    "loadFailed": "Tải thất bại.",
+    "tabSchedule": "Xếp ca",
+    "tabEvaluation": "Đánh giá nhân viên"
   },
   "Team": {
     "moduleBooking": "Đặt phòng",
@@ -7596,7 +7598,9 @@
     "systemAccountHint": "Sau khi liên kết, quyền đơn vị và khóa cửa hàng của tài khoản theo hồ sơ này. Chỉ cửa hàng trưởng, tổ trưởng và nhân viên văn phòng cần tài khoản hệ thống; mọi nhân viên đều đăng nhập Trang nhân viên bằng mã chấm công.",
     "missingBirthday": "Thiếu ngày sinh",
     "missingBirthdayFilter": "Thiếu ngày sinh ({n})",
-    "missingBirthdayHint": "Nhân viên chưa có ngày sinh không thể đăng nhập Trang nhân viên lần đầu. Vui lòng bổ sung."
+    "missingBirthdayHint": "Nhân viên chưa có ngày sinh không thể đăng nhập Trang nhân viên lần đầu. Vui lòng bổ sung.",
+    "managedStoresLabel": "Cửa hàng quản lý (chọn nhiều)",
+    "managedStoresHint": "Tài khoản chỉ thao tác các cửa hàng đã chọn (xếp ca, đánh giá, báo cáo); nếu không chọn thì là cửa hàng của mình {store}"
   },
   "FinancePage": {
     "accountBalancesTitle": "Số dư theo tài khoản",

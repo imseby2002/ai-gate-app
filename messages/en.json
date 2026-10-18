@@ -5255,12 +5255,12 @@
     "statusCollecting": "Collecting",
     "statusSuggested": "Suggested",
     "statusConfirmed": "Confirmed",
-    "adminOnly": "Only store units can use scheduling",
+    "adminOnly": "Only the store unit or store leaders (with an assigned store) can use shifts",
     "title": "Store Scheduling",
     "subtitle": "Create a period → part-time staff enter availability in the employee portal (or via their link) → auto-suggest → confirm & send",
     "inventory": "Inventory & Ordering",
     "store": "Store",
-    "storePlaceholder": "Store (e.g. YL)",
+    "storePlaceholder": "Select store",
     "selectStoreFirst": "Please select a store first.",
     "periods": "Periods",
     "noPeriods": "No periods yet",
@@ -5296,7 +5296,9 @@
     "confirmFailed": "Confirmation failed",
     "confirmedSent": "Confirmed, {employees} employees, {emailed} emails sent",
     "adjustFailed": "Adjustment failed",
-    "loadFailed": "Failed to load."
+    "loadFailed": "Failed to load.",
+    "tabSchedule": "Shifts",
+    "tabEvaluation": "Staff evaluation"
   },
   "Team": {
     "moduleBooking": "Booking",
@@ -7596,7 +7598,9 @@
     "systemAccountHint": "Once linked, the account's unit permissions and store lock follow this record. Only store managers, leaders and office staff need a system account; every employee can log in to the employee portal with their attendance number.",
     "missingBirthday": "No birthday",
     "missingBirthdayFilter": "No birthday ({n})",
-    "missingBirthdayHint": "Employees without a birthday can't log in to the employee portal for the first time. Please add it."
+    "missingBirthdayHint": "Employees without a birthday can't log in to the employee portal for the first time. Please add it.",
+    "managedStoresLabel": "Managed stores (multiple)",
+    "managedStoresHint": "The account can only work on the selected stores (shifts, evaluations, reports); if none selected, its own store {store}"
   },
   "FinancePage": {
     "accountBalancesTitle": "Balance by account",

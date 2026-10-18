@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef, type ChangeEvent, type ReactNode } from 'react'
 import Link from 'next/link'
 import { useTranslations, useLocale } from 'next-intl'
+import { StoreSelect, useStoreOptions } from '@/components/store/StoreSelect'
 import { Store, Upload, Loader2, AlertCircle, TrendingUp, Package, Building2, DollarSign, BookOpen, Link2, Scale, Plus, Trash2, X, FlaskConical, ClipboardList, Calendar, Wrench, Receipt } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -43,29 +44,12 @@ interface InvSettings { variance_threshold: number; cup_code: string; tea_code: 
 export default function StoreReportsPage() {
   const t = useTranslations('StoreReports')
   const now = new Date()
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
   const [tab, setTab] = useState<Tab>('report')
-  const [stores, setStores] = useState<string[]>([])
-  const [store, setStore] = useState('')
-  const [lockedStore, setLockedStore] = useState<string | null>(null)
+  const { status: storeStatus, options: storeOptions, store, setStore, locked: lockedStore, reload: reloadStores } = useStoreOptions()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
 
-  const loadStores = useCallback(async () => {
-    const res = await fetch('/api/inv/stores')
-    if (res.status === 403) { setIsAdmin(false); return }
-    setIsAdmin(true)
-    const d = await res.json()
-    if (d.locked_store) {
-      setLockedStore(d.locked_store)
-      setStores([d.locked_store])
-      setStore(d.locked_store)
-    } else {
-      setStores(d.stores ?? [])
-      setStore(s => s || (d.stores?.[0] ?? ''))
-    }
-  }, [])
-  useEffect(() => { loadStores() }, [loadStores])
+  const isAdmin = storeStatus === 'loading' ? null : storeStatus === 'ok'
 
   if (isAdmin === false) return (
     <div className="flex h-full items-center justify-center p-8">
@@ -130,15 +114,7 @@ export default function StoreReportsPage() {
                   </span>
                 )}
               </div>
-              <Input
-                list={lockedStore ? undefined : "store-list"}
-                value={store}
-                disabled={!!lockedStore}
-                onChange={e => setStore(e.target.value)}
-                placeholder={t('storePlaceholder')}
-                className="w-44 disabled:bg-muted/50 disabled:cursor-not-allowed font-semibold"
-              />
-              {!lockedStore && <datalist id="store-list">{stores.map(s => <option key={s} value={s} />)}</datalist>}
+              <StoreSelect value={store} onChange={setStore} options={storeOptions} locked={lockedStore} placeholder={t('storePlaceholder')} />
             </label>
             <label className="space-y-1"><span className="block text-xs text-gray-500">{t('year')}</span>
               <select value={year} onChange={e => setYear(Number(e.target.value))} className="h-9 rounded-md border px-2 text-sm">{[now.getFullYear(), now.getFullYear() - 1].map(y => <option key={y} value={y}>{y}</option>)}</select></label>
@@ -156,7 +132,7 @@ export default function StoreReportsPage() {
         ))}
       </div>
 
-      {tab === 'report' && <ReportTab store={store} year={year} month={month} onImported={loadStores} />}
+      {tab === 'report' && <ReportTab store={store} year={year} month={month} onImported={reloadStores} />}
       {tab === 'recipes' && <RecipesTab />}
       {tab === 'mapping' && <MappingTab />}
       {tab === 'variance' && <VarianceTab store={store} year={year} month={month} onGoToMapping={() => setTab('mapping')} />}

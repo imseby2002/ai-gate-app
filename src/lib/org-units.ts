@@ -71,6 +71,15 @@ export const UNIT_AREAS: UnitArea[] = [
     ],
   },
   {
+    key: 'store_leader',
+    label: '門市領班',
+    homeHref: '/shift',
+    description: '僅限所屬門市：排班與員工評分',
+    pages: [
+      { href: '/shift', label: '門市排班・員工評分', description: '所屬門市的排班表與本店員工月度評分' },
+    ],
+  },
+  {
     key: 'affairs',
     label: '外務・證照',
     homeHref: '/affairs',
@@ -180,6 +189,15 @@ export const UNIT_AREAS_VI: UnitArea[] = [
     ],
   },
   {
+    key: 'store_leader',
+    label: 'Trưởng ca cửa hàng',
+    homeHref: '/shift',
+    description: 'Chỉ cửa hàng được giao: xếp ca và đánh giá nhân viên',
+    pages: [
+      { href: '/shift', label: 'Xếp ca・Đánh giá nhân viên', description: 'Lịch ca và đánh giá tháng cho nhân viên của cửa hàng mình' },
+    ],
+  },
+  {
     key: 'affairs',
     label: 'Hành chính & Giấy phép',
     homeHref: '/affairs',
@@ -286,6 +304,15 @@ export const UNIT_AREAS_EN: UnitArea[] = [
       { href: '/repair?tab=ai&mode=store', label: 'Quick Diagnostic AI', description: 'No-disassembly safe troubleshooting for bar equipment & 1-click dispatch' },
       { href: '/shift', label: 'Shift Scheduling', description: 'Staff shift roster, shift planning, and monthly working hours' },
       { href: '/pos', label: 'Counter POS', description: 'Counter order taking, receipt printing, and real-time sales register' },
+    ],
+  },
+  {
+    key: 'store_leader',
+    label: 'Store Leader',
+    homeHref: '/shift',
+    description: 'Assigned stores only: shift scheduling and staff evaluation',
+    pages: [
+      { href: '/shift', label: 'Shifts・Staff Evaluation', description: 'Shift schedule and monthly evaluations for staff of own store' },
     ],
   },
   {
