@@ -295,6 +295,7 @@ interface InboxConvo {
   lastMessageAt?: string
   takeover?: boolean
   match?: string | null
+  matchAt?: string | null
 }
 
 // 把搜尋字詞在文字中標黃
@@ -867,6 +868,11 @@ function Unit12CustomerService({
   const [inboxSearchQ, setInboxSearchQ] = useState('')
   const inboxThreadRef = useRef<HTMLDivElement>(null)
   const inboxScrollToHit = useRef(false)
+  // 對話預設只載入最新 300 則；更早的用「載入更早的訊息」往前補
+  const [threadHasOlder, setThreadHasOlder] = useState(false)
+  const [threadHasNewer, setThreadHasNewer] = useState(false)
+  const [threadLoadingOlder, setThreadLoadingOlder] = useState(false)
+  const threadPrevScrollHeight = useRef<number | null>(null)
   const [inboxConvos, setInboxConvos] = useState<InboxConvo[]>([])
   const [activeConvo, setActiveConvo] = useState<InboxConvo | null>(null)
   const [threadBubbles, setThreadBubbles] = useState<Array<{ side: 'in' | 'out'; sender: 'customer' | 'ai' | 'agent'; text: string; at: string }>>([])
@@ -1643,12 +1649,17 @@ function Unit12CustomerService({
     }
   }
 
-  async function loadThreadBubbles(platform: string, to: string) {
+  // around：從搜尋結果開啟時，載入符合訊息的前後一段
+  async function loadThreadBubbles(platform: string, to: string, around?: string | null) {
     setThreadLoading(true)
     try {
-      const res = await fetch(`/api/marketing/cs-thread?to=${to}&platform=${platform}`)
+      const res = await fetch(`/api/marketing/cs-thread?to=${encodeURIComponent(to)}&platform=${encodeURIComponent(platform)}${around ? `&around=${encodeURIComponent(around)}` : ''}`)
       const d = await res.json()
-      if (d.bubbles) setThreadBubbles(d.bubbles)
+      if (d.bubbles) {
+        setThreadBubbles(d.bubbles)
+        setThreadHasOlder(!!d.hasOlder)
+        setThreadHasNewer(!!d.hasNewer)
+      }
       if (typeof d.takeover === 'boolean') {
         setActiveConvo(prev => prev && prev.from_id === to ? { ...prev, takeover: d.takeover } : prev)
       }
@@ -1673,7 +1684,30 @@ function Unit12CustomerService({
   }, [inboxSearch, inboxPlatformFilter, ind])
 
   // 從搜尋結果開啟對話：捲到最後一則符合的訊息
+  async function loadOlderThreadBubbles() {
+    if (!activeConvo || !threadBubbles.length || threadLoadingOlder) return
+    const { platform, from_id } = activeConvo
+    setThreadLoadingOlder(true)
+    try {
+      const res = await fetch(`/api/marketing/cs-thread?to=${encodeURIComponent(from_id)}&platform=${encodeURIComponent(platform)}&before=${encodeURIComponent(threadBubbles[0].at)}`)
+      const d = await res.json()
+      if (d.bubbles) {
+        threadPrevScrollHeight.current = inboxThreadRef.current?.scrollHeight ?? null
+        setThreadBubbles(prev => [...d.bubbles, ...prev])
+        setThreadHasOlder(!!d.hasOlder)
+      }
+    } catch { /* ignore */ }
+    finally { setThreadLoadingOlder(false) }
+  }
+
   useEffect(() => {
+    // 往前載入更早訊息後，維持原本看到的位置
+    if (threadPrevScrollHeight.current != null) {
+      const el = inboxThreadRef.current
+      if (el) el.scrollTop += el.scrollHeight - threadPrevScrollHeight.current
+      threadPrevScrollHeight.current = null
+      return
+    }
     if (!inboxScrollToHit.current || !threadBubbles.length) return
     inboxScrollToHit.current = false
     const hits = inboxThreadRef.current?.querySelectorAll('[data-hit="1"]')
@@ -5004,7 +5038,7 @@ function Unit12CustomerService({
                               setActiveConvo(convo)
                               setInboxThreadKey(`${convo.platform}:${convo.from_id}`)
                               inboxScrollToHit.current = !!searchQ
-                              void loadThreadBubbles(convo.platform, convo.from_id)
+                              void loadThreadBubbles(convo.platform, convo.from_id, searchQ ? convo.matchAt : null)
                             }}
                             className={`w-full text-left p-3 hover:bg-white transition-colors border-l-4 ${
                               active ? 'bg-white border-l-primary shadow-xs' : 'border-l-transparent bg-transparent'
@@ -5104,8 +5138,16 @@ function Unit12CustomerService({
                           <div className="flex items-center justify-center h-full text-gray-400 text-xs">
                             {t('noMessageHistory')}
                           </div>
-                        ) : (
-                          threadBubbles.map((bubble, idx) => {
+                        ) : (<>
+                          {threadHasOlder && (
+                            <div className="flex justify-center">
+                              <button type="button" onClick={() => void loadOlderThreadBubbles()} disabled={threadLoadingOlder}
+                                className="text-[11px] px-3 py-1 rounded-full border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 disabled:opacity-50">
+                                {threadLoadingOlder ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t('loadOlderMessages')}
+                              </button>
+                            </div>
+                          )}
+                          {threadBubbles.map((bubble, idx) => {
                             const isOut = bubble.side === 'out'
                             const isAgent = bubble.sender === 'agent'
                             return (
@@ -5148,8 +5190,16 @@ function Unit12CustomerService({
                                 </div>
                               </div>
                             )
-                          })
-                        )}
+                          })}
+                          {threadHasNewer && activeConvo && (
+                            <div className="flex justify-center">
+                              <button type="button" onClick={() => void loadThreadBubbles(activeConvo.platform, activeConvo.from_id)}
+                                className="text-[11px] px-3 py-1 rounded-full border border-gray-200 bg-white text-gray-500 hover:bg-gray-50">
+                                {t('jumpToLatestMessages')}
+                              </button>
+                            </div>
+                          )}
+                        </>)}
                       </div>
 
                       {/* 底部輸入框 */}

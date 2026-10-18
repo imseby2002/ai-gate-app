@@ -54,6 +54,7 @@ interface Conversation {
   lastMessageAt: string
   takeover: boolean
   match?: string | null
+  matchAt?: string | null
 }
 interface Bubble {
   side: 'in' | 'out'
@@ -91,6 +92,11 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
   const [searchInput, setSearchInput] = useState('')
   const [searchQ, setSearchQ] = useState('')
   const scrollToHit = useRef(false)
+  // 對話預設只載入最新 300 則；更早的用「載入更早的訊息」往前補
+  const [hasOlder, setHasOlder] = useState(false)
+  const [hasNewer, setHasNewer] = useState(false)
+  const [loadingOlder, setLoadingOlder] = useState(false)
+  const prevScrollHeight = useRef<number | null>(null)
   useEffect(() => {
     const id = setTimeout(() => setSearchQ(searchInput.trim()), 400)
     return () => clearTimeout(id)
@@ -116,17 +122,47 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
   }, [industry, searchQ])
 
   // ── 單一對話 thread ──────────────────────────────────────────────────────
-  const loadThread = useCallback(async (c: Conversation, silent = false) => {
+  const threadUrl = useCallback((c: Conversation) =>
+    `/api/marketing/cs-thread?industry=${encodeURIComponent(industry)}&platform=${encodeURIComponent(c.platform)}&to=${encodeURIComponent(c.from_id)}`, [industry])
+
+  // around：從搜尋結果開啟時，載入符合訊息的前後一段
+  const loadThread = useCallback(async (c: Conversation, silent = false, around?: string | null) => {
     if (!silent) setLoadingThread(true)
     try {
-      const res = await fetch(`/api/marketing/cs-thread?industry=${encodeURIComponent(industry)}&platform=${encodeURIComponent(c.platform)}&to=${encodeURIComponent(c.from_id)}`)
+      const res = await fetch(threadUrl(c) + (around ? `&around=${encodeURIComponent(around)}` : ''))
       const data = await res.json()
-      setBubbles(data.bubbles ?? [])
+      const fresh: Bubble[] = data.bubbles ?? []
+      if (silent) {
+        // 輪詢只更新最新那一段，保留已往前載入的更早訊息
+        setBubbles(prev => {
+          const first = fresh[0]?.at
+          return first ? [...prev.filter(b => b.at < first), ...fresh] : fresh
+        })
+      } else {
+        setBubbles(fresh)
+        setHasOlder(!!data.hasOlder)
+        setHasNewer(!!data.hasNewer)
+      }
       setTakeover(!!data.takeover)
       setCustomerSummary(data.summary ?? null)
     } catch { /* ignore */ }
     finally { if (!silent) setLoadingThread(false) }
-  }, [industry])
+  }, [threadUrl])
+
+  const loadOlder = async () => {
+    if (!active || !bubbles.length || loadingOlder) return
+    setLoadingOlder(true)
+    try {
+      const res = await fetch(threadUrl(active) + `&before=${encodeURIComponent(bubbles[0].at)}`)
+      const data = await res.json()
+      const older: Bubble[] = data.bubbles ?? []
+      nearBottomRef.current = false
+      prevScrollHeight.current = scrollRef.current?.scrollHeight ?? null
+      setBubbles(prev => [...older, ...prev])
+      setHasOlder(!!data.hasOlder)
+    } catch { /* ignore */ }
+    finally { setLoadingOlder(false) }
+  }
 
   useEffect(() => { loadList() }, [loadList])
 
@@ -137,15 +173,23 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
   }, [loadList])
 
   // 開啟中的對話輪詢（4 秒，靜默更新）
+  // 從搜尋結果開啟、畫面不在最新訊息時不輪詢，避免把畫面換回最新一段
   useEffect(() => {
-    if (!active) return
+    if (!active || hasNewer) return
     const t = setInterval(() => loadThread(active, true), 4000)
     return () => clearInterval(t)
-  }, [active, loadThread])
+  }, [active, hasNewer, loadThread])
 
   // 新訊息自動捲到底——只有客服本來就在底部附近（正在看最新訊息）才自動跟著捲，
   // 已經往上滑去看歷史訊息時，不能被輪詢硬拉回底部。
   useEffect(() => {
+    // 往前載入更早訊息後，維持原本看到的位置
+    if (prevScrollHeight.current != null) {
+      const el = scrollRef.current
+      if (el) el.scrollTop += el.scrollHeight - prevScrollHeight.current
+      prevScrollHeight.current = null
+      return
+    }
     // 從搜尋結果開啟：捲到最後一則符合的訊息
     if (scrollToHit.current && bubbles.length) {
       scrollToHit.current = false
@@ -175,7 +219,9 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
     setCustomerSummary(null)
     nearBottomRef.current = true
     scrollToHit.current = !!searchQ
-    loadThread(c)
+    setHasOlder(false)
+    setHasNewer(false)
+    loadThread(c, false, searchQ ? c.matchAt : null)
   }
 
   // 從工單通知（Telegram/LINE/Webhook）點連結進來時，直接開啟指定客人對話，
@@ -433,7 +479,16 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
                     <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
                   ) : bubbles.length === 0 ? (
                     <div className="text-center py-16 text-muted-foreground text-sm">{t('noMessages')}</div>
-                  ) : bubbles.map((b, i) => (
+                  ) : <>
+                  {hasOlder && (
+                    <div className="flex justify-center">
+                      <button type="button" onClick={loadOlder} disabled={loadingOlder}
+                        className="text-xs px-3 py-1 rounded-full border bg-card text-muted-foreground hover:text-foreground disabled:opacity-50">
+                        {loadingOlder ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t('loadOlder')}
+                      </button>
+                    </div>
+                  )}
+                  {bubbles.map((b, i) => (
                     <div key={i} data-hit={searchQ && b.text.toLowerCase().includes(searchQ.toLowerCase()) ? '1' : undefined}
                       className={`flex ${b.side === 'out' ? 'justify-end' : 'justify-start'}`}>
                       <div className="max-w-[78%]">
@@ -455,6 +510,15 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
                       </div>
                     </div>
                   ))}
+                  {hasNewer && (
+                    <div className="flex justify-center">
+                      <button type="button" onClick={() => { nearBottomRef.current = true; loadThread(active) }}
+                        className="text-xs px-3 py-1 rounded-full border bg-card text-muted-foreground hover:text-foreground">
+                        {t('jumpToLatest')}
+                      </button>
+                    </div>
+                  )}
+                  </>}
                 </div>
 
                 {/* 回覆框 */}
