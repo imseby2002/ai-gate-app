@@ -1,9 +1,9 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import Link from 'next/link'
-import { ArrowLeft, RefreshCw, Loader2, Send, Bot, UserRound, Inbox, ChevronLeft } from 'lucide-react'
+import { ArrowLeft, RefreshCw, Loader2, Send, Bot, UserRound, Inbox, ChevronLeft, Search, X } from 'lucide-react'
 import { InstallInboxButton } from './InstallInboxButton'
 
 const PLATFORM_LABELS: Record<string, { name: string; emoji: string }> = {
@@ -19,6 +19,23 @@ const PLATFORM_LABELS: Record<string, { name: string; emoji: string }> = {
   test:               { name: 'Test',    emoji: '🧪' },
 }
 const plat = (p: string) => PLATFORM_LABELS[p] ?? { name: p, emoji: '🔗' }
+
+// 把搜尋字詞在文字中標黃
+function highlight(text: string, q: string) {
+  if (!q) return text
+  const lower = text.toLowerCase()
+  const needle = q.toLowerCase()
+  const parts: ReactNode[] = []
+  let from = 0
+  for (let i = lower.indexOf(needle); i >= 0; i = lower.indexOf(needle, from)) {
+    if (i > from) parts.push(text.slice(from, i))
+    parts.push(<mark key={i} className="bg-yellow-200 text-gray-900 rounded-sm">{text.slice(i, i + q.length)}</mark>)
+    from = i + q.length
+  }
+  if (!parts.length) return text
+  parts.push(text.slice(from))
+  return parts
+}
 
 function formatCustomerName(name: string | null | undefined, fromId: string, t: (key: string, values?: Record<string, string>) => string): string {
   if (name && name.trim()) return name.trim()
@@ -36,6 +53,7 @@ interface Conversation {
   messageCount: number
   lastMessageAt: string
   takeover: boolean
+  match?: string | null
 }
 interface Bubble {
   side: 'in' | 'out'
@@ -68,6 +86,15 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
   const [sending, setSending] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
+  // 搜尋：客戶名稱／ID 或過往對話內容
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchInput, setSearchInput] = useState('')
+  const [searchQ, setSearchQ] = useState('')
+  const scrollToHit = useRef(false)
+  useEffect(() => {
+    const id = setTimeout(() => setSearchQ(searchInput.trim()), 400)
+    return () => clearTimeout(id)
+  }, [searchInput])
   // 員工在輸入框打字時節流通知後端（每 15 秒最多一次），讓 AI 在打字期間不插話；
   // 停止打字／回覆後閒置超過設定分鐘數，AI 自動接回（見 lib/cs/handoff.ts）。
   const lastTypingPing = useRef(0)
@@ -80,12 +107,13 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
   // ── 對話清單 ─────────────────────────────────────────────────────────────
   const loadList = useCallback(async () => {
     try {
-      const res = await fetch(`/api/marketing/cs-thread?industry=${encodeURIComponent(industry)}`)
+      const qs = searchQ ? `&q=${encodeURIComponent(searchQ)}` : ''
+      const res = await fetch(`/api/marketing/cs-thread?industry=${encodeURIComponent(industry)}${qs}`)
       const data = await res.json()
       setConvos(data.conversations ?? [])
     } catch { /* 保留現有清單 */ }
     finally { setLoadingList(false) }
-  }, [industry])
+  }, [industry, searchQ])
 
   // ── 單一對話 thread ──────────────────────────────────────────────────────
   const loadThread = useCallback(async (c: Conversation, silent = false) => {
@@ -118,6 +146,17 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
   // 新訊息自動捲到底——只有客服本來就在底部附近（正在看最新訊息）才自動跟著捲，
   // 已經往上滑去看歷史訊息時，不能被輪詢硬拉回底部。
   useEffect(() => {
+    // 從搜尋結果開啟：捲到最後一則符合的訊息
+    if (scrollToHit.current && bubbles.length) {
+      scrollToHit.current = false
+      const hits = scrollRef.current?.querySelectorAll('[data-hit="1"]')
+      const last = hits?.[hits.length - 1] as HTMLElement | undefined
+      if (last) {
+        nearBottomRef.current = false
+        requestAnimationFrame(() => last.scrollIntoView({ block: 'center' }))
+        return
+      }
+    }
     if (nearBottomRef.current) {
       scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
     }
@@ -135,6 +174,7 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
     setErr(null)
     setCustomerSummary(null)
     nearBottomRef.current = true
+    scrollToHit.current = !!searchQ
     loadThread(c)
   }
 
@@ -242,6 +282,11 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button type="button" onClick={() => setSearchOpen(o => { if (o) setSearchInput(''); return !o })}
+              title={t('searchTitle')} aria-label={t('searchTitle')}
+              className={`p-1.5 rounded-lg hover:bg-accent ${searchOpen ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
+              <Search className="h-5 w-5" />
+            </button>
             <InstallInboxButton label={t('installMobile')} iosHint={t('installIosHintInbox')} />
             <button onClick={() => { loadList(); if (active) loadThread(active) }}
               className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
@@ -254,9 +299,27 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
         <div className="flex-1 min-h-0 flex">
           {/* 左：對話清單 */}
           <aside className={`${active ? 'hidden md:flex' : 'flex'} flex-col w-full md:w-80 border-r bg-card/40 shrink-0`}>
+            {searchOpen && (
+              <div className="p-2 border-b bg-card shrink-0">
+                <div className="relative">
+                  <Search className="h-4 w-4 text-muted-foreground absolute left-2.5 top-1/2 -translate-y-1/2" />
+                  <input autoFocus type="search" value={searchInput} onChange={e => setSearchInput(e.target.value)}
+                    placeholder={t('searchPlaceholder')}
+                    className="w-full rounded-lg border bg-background pl-8 pr-8 py-2 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                  {searchInput && (
+                    <button type="button" onClick={() => setSearchInput('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground">
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+                {searchQ && <div className="text-[11px] text-muted-foreground mt-1 px-1">{t('searchResultCount', { n: convos.length })}</div>}
+              </div>
+            )}
             <div className="flex-1 overflow-y-auto">
               {loadingList && convos.length === 0 ? (
                 <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+              ) : convos.length === 0 && searchQ ? (
+                <div className="text-center py-16 px-6 text-muted-foreground text-sm">{t('searchNoResult')}</div>
               ) : convos.length === 0 ? (
                 <div className="text-center py-16 px-6 text-muted-foreground text-sm">
                   {t('emptyList1')}<br />
@@ -271,7 +334,7 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2 min-w-0">
                         <span className="text-base shrink-0">{p.emoji}</span>
-                        <span className="font-medium truncate">{formatCustomerName(c.name, c.from_id, t)}</span>
+                        <span className="font-medium truncate">{highlight(formatCustomerName(c.name, c.from_id, t), searchQ)}</span>
                       </div>
                       <span className="text-[10px] text-muted-foreground whitespace-nowrap shrink-0">{fmtTime(c.lastMessageAt)}</span>
                     </div>
@@ -290,6 +353,9 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
                         </span>
                       )}
                     </div>
+                    {searchQ && c.match && (
+                      <div className="mt-1 pl-6 text-[11px] text-muted-foreground line-clamp-2 break-all">{highlight(c.match, searchQ)}</div>
+                    )}
                   </button>
                 )
               })}
@@ -368,7 +434,8 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
                   ) : bubbles.length === 0 ? (
                     <div className="text-center py-16 text-muted-foreground text-sm">{t('noMessages')}</div>
                   ) : bubbles.map((b, i) => (
-                    <div key={i} className={`flex ${b.side === 'out' ? 'justify-end' : 'justify-start'}`}>
+                    <div key={i} data-hit={searchQ && b.text.toLowerCase().includes(searchQ.toLowerCase()) ? '1' : undefined}
+                      className={`flex ${b.side === 'out' ? 'justify-end' : 'justify-start'}`}>
                       <div className="max-w-[78%]">
                         {b.side === 'out' && (
                           <div className={`text-[10px] mb-0.5 text-right ${b.sender === 'agent' ? 'text-amber-600' : 'text-blue-500'}`}>
@@ -382,7 +449,7 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
                               ? 'bg-amber-500 text-white rounded-tr-sm'
                               : 'bg-blue-500 text-white rounded-tr-sm'
                         }`}>
-                          {b.text}
+                          {highlight(b.text, searchQ)}
                         </div>
                         <div className={`text-[10px] text-muted-foreground mt-0.5 ${b.side === 'out' ? 'text-right' : ''}`}>{fmtClock(b.at)}</div>
                       </div>

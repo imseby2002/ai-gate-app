@@ -19,6 +19,17 @@ interface Bubble {
   at: string
 }
 
+const CUSTOMER_COLS = 'platform, from_id, name, stage, message_count, last_message_at, facts'
+interface CustomerRow {
+  platform: string
+  from_id: string
+  name: string | null
+  stage: string | null
+  message_count: number | null
+  last_message_at: string | null
+  facts: unknown
+}
+
 export async function GET(req: NextRequest) {
   const supabase = await createClient()
   const ctx = await getBnbContext(supabase, 'cs')
@@ -83,15 +94,73 @@ export async function GET(req: NextRequest) {
   const limit = Math.min(parseInt(sp.get('limit') ?? '500'), 1000)
   let q = supabase
     .from('cs_customers')
-    .select('platform, from_id, name, stage, message_count, last_message_at, facts')
+    .select(CUSTOMER_COLS)
     .eq('user_id', ctx.ownerId)
     .order('last_message_at', { ascending: false })
     .limit(limit)
   if (industry) q = q.eq('industry', industry)
   if (platform && platform !== 'all') q = q.eq('platform', platform)
 
-  const { data: customers, error } = await q
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  // 搜尋：客戶名稱／ID，或過往對話內容（客人訊息、AI 與真人回覆）
+  const search = (sp.get('q') ?? '').trim().slice(0, 100)
+  const matchMap = new Map<string, string>()
+  let customers: CustomerRow[] | null
+  if (search) {
+    const pat = `%${search.replace(/[\\%_]/g, m => '\\' + m)}%`
+    const custBase = () => {
+      let cq = supabase.from('cs_customers').select(CUSTOMER_COLS).eq('user_id', ctx.ownerId)
+      if (industry) cq = cq.eq('industry', industry)
+      if (platform && platform !== 'all') cq = cq.eq('platform', platform)
+      return cq
+    }
+    const msgBase = () => supabase.from('cs_messages')
+      .select('platform, from_id, message, reply, created_at')
+      .eq('user_id', ctx.ownerId)
+      .order('created_at', { ascending: false }).limit(500)
+    const [byName, byId, byMsg, byReply] = await Promise.all([
+      custBase().ilike('name', pat).limit(200),
+      custBase().ilike('from_id', pat).limit(200),
+      msgBase().ilike('message', pat),
+      msgBase().ilike('reply', pat),
+    ])
+    const err = byName.error ?? byId.error ?? byMsg.error ?? byReply.error
+    if (err) return NextResponse.json({ error: err.message }, { status: 500 })
+
+    const lower = search.toLowerCase()
+    const snippet = (text: string) => {
+      const i = text.toLowerCase().indexOf(lower)
+      if (i < 0) return text.slice(0, 60)
+      const start = Math.max(0, i - 20)
+      const end = Math.min(text.length, i + search.length + 40)
+      return `${start > 0 ? '…' : ''}${text.slice(start, end).replace(/\s+/g, ' ')}${end < text.length ? '…' : ''}`
+    }
+    const latest = new Map<string, { at: string; text: string }>()
+    for (const r of [...(byMsg.data ?? []), ...(byReply.data ?? [])]) {
+      const key = `${r.platform}:${r.from_id}`
+      const text = [r.message, r.reply].find(t => t && String(t).toLowerCase().includes(lower)) as string | undefined
+      if (!text) continue
+      const prev = latest.get(key)
+      if (!prev || r.created_at > prev.at) latest.set(key, { at: r.created_at, text })
+    }
+    for (const [key, v] of latest) matchMap.set(key, snippet(v.text))
+
+    const rows = new Map<string, CustomerRow>()
+    for (const c of [...(byName.data ?? []), ...(byId.data ?? [])] as CustomerRow[]) rows.set(`${c.platform}:${c.from_id}`, c)
+    const msgIds = [...new Set([...latest.keys()].filter(k => !rows.has(k)).map(k => k.slice(k.indexOf(':') + 1)))].slice(0, 200)
+    if (msgIds.length) {
+      const { data: more, error: moreErr } = await custBase().in('from_id', msgIds)
+      if (moreErr) return NextResponse.json({ error: moreErr.message }, { status: 500 })
+      for (const c of (more ?? []) as CustomerRow[]) {
+        const key = `${c.platform}:${c.from_id}`
+        if (latest.has(key)) rows.set(key, c)
+      }
+    }
+    customers = [...rows.values()].sort((a, b) => String(b.last_message_at ?? '').localeCompare(String(a.last_message_at ?? '')))
+  } else {
+    const { data, error } = await q
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    customers = data as CustomerRow[] | null
+  }
 
   // 自動解析缺漏的客戶名稱（從歷史訊息、訂房確認姓名或 LINE Profile API）並非同步回填
   const missingList = (customers ?? []).filter(c => !c.name?.trim())
@@ -150,8 +219,8 @@ export async function GET(req: NextRequest) {
     const updates: Array<{ from_id: string; name: string }> = []
     for (const c of customers ?? []) {
       if (!c.name && nameMap.has(c.from_id)) {
-        c.name = nameMap.get(c.from_id)
-        updates.push({ from_id: c.from_id, name: c.name })
+        c.name = nameMap.get(c.from_id) ?? null
+        updates.push({ from_id: c.from_id, name: c.name ?? "" })
       }
     }
 
@@ -175,6 +244,7 @@ export async function GET(req: NextRequest) {
     messageCount: c.message_count,
     lastMessageAt: c.last_message_at,
     takeover: takeoverSet.has(c.from_id),
+    match: matchMap.get(`${c.platform}:${c.from_id}`) ?? null,
   }))
 
   return NextResponse.json({ conversations, convos: conversations })

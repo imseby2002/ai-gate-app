@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo, type ReactNode } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import {
   BarChart3, Upload, Headphones, Plus, Loader2, CheckCircle2, RefreshCw, Star,
@@ -294,6 +294,24 @@ interface InboxConvo {
   messageCount?: number
   lastMessageAt?: string
   takeover?: boolean
+  match?: string | null
+}
+
+// 把搜尋字詞在文字中標黃
+function highlightText(text: string, q: string): ReactNode {
+  if (!q) return text
+  const lower = text.toLowerCase()
+  const needle = q.toLowerCase()
+  const parts: ReactNode[] = []
+  let from = 0
+  for (let i = lower.indexOf(needle); i >= 0; i = lower.indexOf(needle, from)) {
+    if (i > from) parts.push(text.slice(from, i))
+    parts.push(<mark key={i} className="bg-yellow-200 text-gray-900 rounded-sm">{text.slice(i, i + q.length)}</mark>)
+    from = i + q.length
+  }
+  if (!parts.length) return text
+  parts.push(text.slice(from))
+  return parts
 }
 
 interface CsInboxMessage {
@@ -844,6 +862,11 @@ function Unit12CustomerService({
 
   // 統一收件匣
   const [inboxSearch, setInboxSearch] = useState('')
+  // 伺服器端搜尋結果（含過往對話內容）；null＝未搜尋或尚未回來，先用本機名稱／ID 篩選
+  const [inboxSearchResults, setInboxSearchResults] = useState<InboxConvo[] | null>(null)
+  const [inboxSearchQ, setInboxSearchQ] = useState('')
+  const inboxThreadRef = useRef<HTMLDivElement>(null)
+  const inboxScrollToHit = useRef(false)
   const [inboxConvos, setInboxConvos] = useState<InboxConvo[]>([])
   const [activeConvo, setActiveConvo] = useState<InboxConvo | null>(null)
   const [threadBubbles, setThreadBubbles] = useState<Array<{ side: 'in' | 'out'; sender: 'customer' | 'ai' | 'agent'; text: string; at: string }>>([])
@@ -1633,6 +1656,30 @@ function Unit12CustomerService({
       setThreadLoading(false)
     }
   }
+
+  useEffect(() => {
+    const q = inboxSearch.trim()
+    if (!q) { setInboxSearchQ(''); setInboxSearchResults(null); return }
+    let cancelled = false
+    const id = setTimeout(async () => {
+      try {
+        const plat = inboxPlatformFilter !== 'all' ? `&platform=${inboxPlatformFilter}` : ''
+        const res = await fetch(`/api/marketing/cs-thread?industry=${ind}${plat}&q=${encodeURIComponent(q)}`)
+        const d = await res.json()
+        if (!cancelled && res.ok) { setInboxSearchResults(d.conversations ?? []); setInboxSearchQ(q) }
+      } catch { /* 保留本機篩選結果 */ }
+    }, 400)
+    return () => { cancelled = true; clearTimeout(id) }
+  }, [inboxSearch, inboxPlatformFilter, ind])
+
+  // 從搜尋結果開啟對話：捲到最後一則符合的訊息
+  useEffect(() => {
+    if (!inboxScrollToHit.current || !threadBubbles.length) return
+    inboxScrollToHit.current = false
+    const hits = inboxThreadRef.current?.querySelectorAll('[data-hit="1"]')
+    const last = hits?.[hits.length - 1] as HTMLElement | undefined
+    if (last) requestAnimationFrame(() => last.scrollIntoView({ block: 'center' }))
+  }, [threadBubbles])
 
   function jumpToCustomerInbox(platform: string, fromId?: string, fromName?: string) {
     setTab('inbox')
@@ -4856,7 +4903,8 @@ function Unit12CustomerService({
 
       {/* ── Tab: Inbox ────────────────────────────────────────────────────────── */}
       {tab === 'inbox' && (csFeatures && !csFeatures.inbox ? renderLockedUpgrade(t('unifiedInbox')) : (() => {
-        const filteredConvos = inboxConvos.filter(c => {
+        const searchQ = inboxSearch.trim() && inboxSearchResults ? inboxSearchQ : ''
+        const filteredConvos = searchQ ? inboxSearchResults! : inboxConvos.filter(c => {
           if (!inboxSearch.trim()) return true
           const q = inboxSearch.toLowerCase().trim()
           const name = (c.name || '').toLowerCase()
@@ -4955,6 +5003,7 @@ function Unit12CustomerService({
                             onClick={() => {
                               setActiveConvo(convo)
                               setInboxThreadKey(`${convo.platform}:${convo.from_id}`)
+                              inboxScrollToHit.current = !!searchQ
                               void loadThreadBubbles(convo.platform, convo.from_id)
                             }}
                             className={`w-full text-left p-3 hover:bg-white transition-colors border-l-4 ${
@@ -4963,7 +5012,7 @@ function Unit12CustomerService({
                           >
                             <div className="flex items-center gap-1.5 mb-1">
                               <span className="text-xs font-semibold text-gray-900 truncate flex-1">
-                                {displayName}
+                                {highlightText(displayName, searchQ)}
                               </span>
                               {convo.takeover && (
                                 <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-medium shrink-0">
@@ -4986,6 +5035,9 @@ function Unit12CustomerService({
                                 </span>
                               )}
                             </div>
+                            {searchQ && convo.match && (
+                              <div className="mt-1 text-[11px] text-gray-500 line-clamp-2 break-all">{highlightText(convo.match, searchQ)}</div>
+                            )}
                           </button>
                         )
                       })
@@ -5043,7 +5095,7 @@ function Unit12CustomerService({
                       </div>
 
                       {/* 訊息對話區 */}
-                      <div className="flex-1 min-h-0 overflow-y-auto p-3 md:p-4 space-y-3 bg-gray-50/30">
+                      <div ref={inboxThreadRef} className="flex-1 min-h-0 overflow-y-auto p-3 md:p-4 space-y-3 bg-gray-50/30">
                         {threadLoading && threadBubbles.length === 0 ? (
                           <div className="flex items-center justify-center h-full text-gray-400 text-xs">
                             <Loader2 className="h-4 w-4 animate-spin mr-2" /> {t('loadingConvHistory')}
@@ -5057,7 +5109,8 @@ function Unit12CustomerService({
                             const isOut = bubble.side === 'out'
                             const isAgent = bubble.sender === 'agent'
                             return (
-                              <div key={idx} className={`flex ${isOut ? 'justify-end' : 'justify-start'}`}>
+                              <div key={idx} data-hit={searchQ && bubble.text.toLowerCase().includes(searchQ.toLowerCase()) ? '1' : undefined}
+                                className={`flex ${isOut ? 'justify-end' : 'justify-start'}`}>
                                 <div className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-xs shadow-xs ${
                                   isOut
                                     ? isAgent
@@ -5079,7 +5132,7 @@ function Unit12CustomerService({
                                       </span>
                                     )}
                                   </div>
-                                  <div className="whitespace-pre-wrap leading-relaxed break-words">{bubble.text}</div>
+                                  <div className="whitespace-pre-wrap leading-relaxed break-words">{highlightText(bubble.text, searchQ)}</div>
                                   {isOut && !isAgent && (
                                     <button
                                       type="button"
