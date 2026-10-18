@@ -4958,7 +4958,7 @@ function Unit12CustomerService({
                 </div>
 
                 {/* 右側：對話串 + 回覆框 */}
-                <div className={`${activeConvo ? 'flex' : 'hidden md:flex'} flex-1 flex-col min-w-0 bg-white`}>
+                <div className={`${activeConvo ? 'flex' : 'hidden md:flex'} flex-1 flex-col min-w-0 min-h-0 bg-white`}>
                   {!activeConvo ? (
                     <div className="flex-1 flex flex-col items-center justify-center text-gray-400 gap-2 p-6">
                       <Inbox className="h-10 w-10 text-gray-300" />
@@ -5007,7 +5007,7 @@ function Unit12CustomerService({
                       </div>
 
                       {/* 訊息對話區 */}
-                      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50/30">
+                      <div className="flex-1 min-h-0 overflow-y-auto p-3 md:p-4 space-y-3 bg-gray-50/30">
                         {threadLoading && threadBubbles.length === 0 ? (
                           <div className="flex items-center justify-center h-full text-gray-400 text-xs">
                             <Loader2 className="h-4 w-4 animate-spin mr-2" /> {t('loadingConvHistory')}
@@ -5064,7 +5064,7 @@ function Unit12CustomerService({
                       </div>
 
                       {/* 底部輸入框 */}
-                      <div className="border-t p-3 bg-white space-y-2 shrink-0">
+                      <div className="border-t p-2 md:p-3 bg-white space-y-2 shrink-0">
                         {inboxSendError && (
                           <div className="text-xs text-red-600 bg-red-50 border border-red-200 px-3 py-1.5 rounded-lg flex items-center gap-1">
                             <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
@@ -5096,7 +5096,7 @@ function Unit12CustomerService({
                             {t('inboxSend')}
                           </button>
                         </div>
-                        <div className="text-[10px] text-gray-400 flex items-center justify-between px-1">
+                        <div className="text-[10px] text-gray-400 hidden md:flex items-center justify-between px-1">
                           <span>{t('shiftEnterHint')}</span>
                           {!activeConvo.takeover && (
                             <span className="text-amber-600">※ {t('humanReplyAutoTakeoverHint')}</span>
