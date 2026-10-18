@@ -5325,7 +5325,7 @@
     "legendDraft": "Đã xếp (chưa gửi)",
     "legendPublished": "Đã gửi",
     "legendOutside": "Ngoài giờ có thể làm",
-    "dragHint": "Kéo trên hàng của nhân viên để xếp ca; bấm vào ca để sửa hoặc xóa",
+    "dragHint": "Kéo trên hàng của nhân viên để xếp ca; bấm vào ca để hiện thanh sửa / xóa phía trên, bấm lần nữa để đóng",
     "rowAvailable": "Số người rảnh",
     "rowCoverage": "Đã xếp / cần",
     "hideOthers": "Ẩn nhân viên khác",

@@ -5325,7 +5325,7 @@
     "legendDraft": "已排（未發布）",
     "legendPublished": "已發布",
     "legendOutside": "排在可上班時段外",
-    "dragHint": "在員工那一列拖曳即可排班；點已排的班可調整或刪除",
+    "dragHint": "在員工那一列拖曳即可排班；點已排的班，上方會出現調整／刪除列，再點一次收起",
     "rowAvailable": "可上班人數",
     "rowCoverage": "已排／需求",
     "hideOthers": "收合其他員工",
