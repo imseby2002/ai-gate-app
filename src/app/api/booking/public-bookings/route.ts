@@ -67,11 +67,25 @@ export async function PUT(req: NextRequest) {
   const ctx = await getBnbContext(supabase)
   if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { id, status } = await req.json()
+  const { id, status, payment_status } = await req.json()
+  const patch: Record<string, unknown> = {}
+  if (status) patch.status = status
+  // 民宿主核對轉帳後標記已收款（或改回未收款）
+  if (payment_status === 'paid' || payment_status === 'unpaid') {
+    patch.payment_status = payment_status
+    patch.paid_at = payment_status === 'paid' ? new Date().toISOString() : null
+  }
   const { data, error } = await supabase.from('public_bookings')
-    .update({ status }).eq('id', id).eq('host_user_id', ctx.ownerId).select().single()
+    .update(patch).eq('id', id).eq('host_user_id', ctx.ownerId).select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  // 已轉成正式訂單的話，同步訂單的「已付款」
+  if ('payment_status' in patch && data?.converted_booking_id) {
+    const isPaid = patch.payment_status === 'paid'
+    const { data: bk } = await supabase.from('bookings').update({ is_paid: isPaid })
+      .eq('id', data.converted_booking_id).eq('user_id', ctx.ownerId).select('order_id').maybeSingle()
+    if (bk?.order_id) await supabase.from('booking_orders').update({ is_paid: isPaid }).eq('id', bk.order_id).eq('user_id', ctx.ownerId)
+  }
   return NextResponse.json({ booking: data })
 }
 

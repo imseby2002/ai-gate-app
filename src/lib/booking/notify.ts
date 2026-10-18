@@ -1,5 +1,6 @@
 import { Resend } from 'resend'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { paymentBlockHtml } from './payment'
 
 export type NotificationType = 'confirmation' | 'reminder' | 'checkout' | 'cancellation'
 
@@ -30,6 +31,7 @@ const DEFAULT_BODY: Record<NotificationType, string> = {
   <tr><td style="padding:6px 12px;background:#f8fafc;font-weight:600">訂單金額</td><td style="padding:6px 12px">NT$ {{total_price}}</td></tr>
 </table>
 {{notes_block}}
+{{payment_block}}
 <p style="margin-top:24px">如有任何問題，歡迎聯絡我們：<br>📞 {{bnb_phone}}<br>📧 {{bnb_email}}</p>
 <p>期待您的到來！</p>`,
   reminder: `<p>親愛的 <strong>{{guest_name}}</strong> 您好，</p>
@@ -67,7 +69,7 @@ export async function sendBookingNotification(
 
   const [{ data: booking }, { data: profile }, { data: tpl }] = await Promise.all([
     supabase.from('bookings').select('*, properties(name)').eq('id', bookingId).eq('user_id', userId).single(),
-    supabase.from('bnb_profiles').select('name,email,phone,address,check_in_time,check_out_time').eq('user_id', userId).maybeSingle(),
+    supabase.from('bnb_profiles').select('name,email,phone,address,check_in_time,check_out_time,bank_transfer').eq('user_id', userId).maybeSingle(),
     supabase.from('email_templates').select('*').eq('user_id', userId).eq('type', type).maybeSingle(),
   ])
 
@@ -83,6 +85,14 @@ export async function sendBookingNotification(
     ? `<p style="background:#fffbeb;border-left:3px solid #f59e0b;padding:8px 12px;margin:12px 0">備註：${booking.notes}</p>`
     : ''
 
+  // 官網訂房轉來的訂單：帶出旅客選的付款方式（轉帳附匯款帳號）
+  let payment_block = ''
+  if (type === 'confirmation') {
+    const { data: pb } = await supabase.from('public_bookings')
+      .select('payment_method, confirmation_code').eq('converted_booking_id', bookingId).maybeSingle()
+    if (pb) payment_block = paymentBlockHtml(pb.payment_method, profile?.bank_transfer, booking.total_price, pb.confirmation_code)
+  }
+
   const vars: Record<string, string> = {
     guest_name:     booking.guest_name ?? '旅客',
     property_name:  (booking as Record<string, unknown> & { properties?: { name: string } }).properties?.name ?? '',
@@ -93,6 +103,7 @@ export async function sendBookingNotification(
     total_price:    booking.total_price ? Number(booking.total_price).toLocaleString() : '—',
     notes:          booking.notes ?? '',
     notes_block,
+    payment_block,
     bnb_name:       profile?.name ?? '民宿',
     bnb_phone:      profile?.phone ?? '',
     bnb_email:      profile?.email ?? '',
@@ -112,7 +123,8 @@ export async function sendBookingNotification(
       from: `${fromName} <${fromEmail}>`,
       to,
       subject: fillTemplate(subject, vars),
-      html: fillTemplate(bodyHtml, vars),
+      // 自訂範本沒放 {{payment_block}} 時，付款說明接在最後，避免旅客收不到匯款資訊
+      html: fillTemplate(bodyHtml, vars) + (payment_block && !bodyHtml.includes('{{payment_block}}') ? payment_block : ''),
     })
   } catch (e) {
     status = 'failed'

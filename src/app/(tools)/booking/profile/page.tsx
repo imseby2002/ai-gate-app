@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
+import { bankInfoComplete, type BankTransferInfo } from '@/lib/booking/payment'
 import {
   Save, Loader2, ImagePlus, X, Link2, Copy, Check,
   Download, FileText, CheckCircle, AlertCircle,
@@ -44,6 +45,8 @@ interface BnbProfile {
   contact_map_embed: string; contact_note: string
   latitude: number | null; longitude: number | null; country: string
   google_feed_enabled: boolean
+  payment_methods: string[]
+  bank_transfer: BankTransferInfo
 }
 
 const DEFAULT_BREAKFAST: BreakfastSettings = {
@@ -71,6 +74,8 @@ const DEFAULT: BnbProfile = {
   contact_map_embed: '', contact_note: '',
   latitude: null, longitude: null, country: 'TW',
   google_feed_enabled: false,
+  payment_methods: ['on_arrival'],
+  bank_transfer: { bank_name: '', bank_code: '', account_name: '', account_no: '', deadline_hours: 24, note: '' },
 }
 
 type ImportStep = 'input' | 'parsing' | 'preview' | 'done'
@@ -133,6 +138,8 @@ export default function BnbProfilePage() {
           theme_color: p.theme_color ?? '#4f46e5',
           seo_title: p.seo_title ?? '',
           seo_description: p.seo_description ?? '',
+          payment_methods: p.payment_methods?.length ? p.payment_methods : ['on_arrival'],
+          bank_transfer: { ...DEFAULT.bank_transfer, ...(p.bank_transfer ?? {}) },
         }
         setForm(merged)
         setInitialForm(merged)
@@ -724,6 +731,57 @@ export default function BnbProfilePage() {
         </div>
         <input ref={fileRef} type="file" accept="image/*" className="hidden"
           onChange={e => { const f = e.target.files?.[0]; if (f) uploadPhoto(f); e.target.value = '' }} />
+      </section>
+
+      {/* 官網訂房付款方式 */}
+      <section className="bg-white rounded-xl border p-4 sm:p-5 space-y-3">
+        <h2 className="text-sm font-semibold text-gray-700">官網訂房付款方式</h2>
+        <div className="flex flex-wrap gap-4 text-sm text-gray-700">
+          {([['on_arrival', '到店付款'], ['transfer', '銀行轉帳'], ['card', '信用卡（綠界，即將開放）']] as const).map(([m, label]) => (
+            <label key={m} className={`flex items-center gap-2 ${m === 'card' ? 'opacity-50' : ''}`}>
+              <input type="checkbox" disabled={m === 'card'}
+                checked={form.payment_methods.includes(m)}
+                onChange={e => set('payment_methods', e.target.checked
+                  ? [...form.payment_methods, m]
+                  : form.payment_methods.filter(x => x !== m))}
+                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-300" />
+              {label}
+            </label>
+          ))}
+        </div>
+        {form.payment_methods.length === 0 && <p className="text-xs text-amber-600">未勾選任何方式時，旅客一律到店付款。</p>}
+        {form.payment_methods.includes('transfer') && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            {([
+              ['bank_name', '銀行名稱', '例：國泰世華'],
+              ['bank_code', '銀行代碼', '例：013'],
+              ['account_no', '帳號', ''],
+              ['account_name', '戶名', ''],
+            ] as const).map(([k, label, ph]) => (
+              <div key={k} className="space-y-1">
+                <label className="text-xs font-medium text-gray-600">{label}</label>
+                <input value={form.bank_transfer[k] ?? ''} placeholder={ph}
+                  onChange={e => set('bank_transfer', { ...form.bank_transfer, [k]: e.target.value })}
+                  className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+              </div>
+            ))}
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-600">匯款期限（訂房後幾小時內）</label>
+              <input type="number" min={1} value={form.bank_transfer.deadline_hours ?? ''}
+                onChange={e => set('bank_transfer', { ...form.bank_transfer, deadline_hours: e.target.value === '' ? null : parseInt(e.target.value) })}
+                className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+            </div>
+            <div className="space-y-1 sm:col-span-2">
+              <label className="text-xs font-medium text-gray-600">匯款備註（顯示給旅客）</label>
+              <input value={form.bank_transfer.note ?? ''} placeholder="例：逾期未匯款將自動取消"
+                onChange={e => set('bank_transfer', { ...form.bank_transfer, note: e.target.value })}
+                className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+            </div>
+            {!bankInfoComplete(form.bank_transfer) && (
+              <p className="text-xs text-amber-600 sm:col-span-2">請填寫銀行與帳號，旅客才會看到「銀行轉帳」選項。</p>
+            )}
+          </div>
+        )}
       </section>
 
       {/* Google 訂房連結 (Free Booking Links) */}
