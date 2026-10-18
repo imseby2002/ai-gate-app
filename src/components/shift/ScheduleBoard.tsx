@@ -18,6 +18,8 @@ interface Emp { id: string; name: string; employment_type: string | null; positi
 interface Board { employees: Emp[]; rules: AvailRule[]; plans: PlanRow[]; needs: NeedRule[] }
 
 const WD_ORDER = [1, 2, 3, 4, 5, 6, 0]
+const DAY_START = 6 * 60 // 營業可能時段 06:00–24:00
+const DAY_END = 24 * 60
 const todayStr = () => new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10)
 const jsonPost = (url: string, method: string, body: unknown) =>
   fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
@@ -53,16 +55,16 @@ export function ScheduleBoard({ store }: { store: string }) {
   const selDate = date >= weekStart && date <= weekEnd ? date : weekStart
   const goWeek = (n: number) => { const ws = addDays(weekStart, n * 7); setWeekStart(ws); setDate(ws); setEditing(null) }
 
-  // 顯示的時間範圍：本週可上班／需求／班表的最早到最晚（整點），預設 08:00–22:00
+  // 顯示的時間範圍：固定 06:00–24:00；本週資料若早於 06:00 則往前延伸
   const [rangeStart, rangeEnd] = useMemo(() => {
     const all: Interval[] = [
       ...(data?.rules ?? []).map(r => ({ start: r.start_min, end: r.end_min })),
       ...(data?.needs ?? []).map(n => ({ start: n.start_min, end: n.end_min })),
       ...(data?.plans ?? []).map(p => ({ start: p.start_min, end: p.end_min })),
     ]
-    if (all.length === 0) return [8 * 60, 22 * 60]
+    if (all.length === 0) return [DAY_START, DAY_END]
     const s = Math.min(...all.map(x => x.start)), e = Math.max(...all.map(x => x.end))
-    return [Math.floor(s / 60) * 60, Math.ceil(e / 60) * 60]
+    return [Math.min(DAY_START, Math.floor(s / 60) * 60), Math.max(DAY_END, Math.ceil(e / 60) * 60)]
   }, [data])
   const slots = useMemo(() => { const o: number[] = []; for (let m = rangeStart; m < rangeEnd; m += SLOT_MIN) o.push(m); return o }, [rangeStart, rangeEnd])
 
