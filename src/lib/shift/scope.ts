@@ -12,9 +12,3 @@ export async function getShiftContext(): Promise<UnitContext> {
 
 export { storeAllowed }
 
-// 排班期所屬門市是否在帳號範圍內（不存在也回 false）
-export async function periodAllowed(ctx: UnitContext, periodId: string): Promise<boolean> {
-  if (!ctx.storeCodes) return true
-  const { data } = await ctx.admin.from('shift_periods').select('store').eq('id', periodId).eq('owner_id', ctx.ownerId).maybeSingle()
-  return !!data && storeAllowed(ctx, data.store as string)
-}

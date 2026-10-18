@@ -1,70 +1,48 @@
-import { randomBytes } from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { portalEmployee } from '../_auth'
-import { listDates } from '@/lib/shift/util'
-import { saveAvailability } from '@/lib/shift/availability'
+import { insertRule, todayVN } from '@/lib/shift/rules'
+import { addDays } from '@/lib/shift/time'
 
 type Ctx = { params: Promise<{ no: string }> }
-const today = () => new Date().toISOString().slice(0, 10)
 
-// 工讀生（part-time）在員工專區填可上班時段：列出本店尚未結束的排班期、自己的勾選與已排班別
+// 員工專區：自己的可上班時段規則（尚未結束的）與已發布的班表（今天起 60 天）
 export async function GET(req: NextRequest, { params }: Ctx) {
   const { no } = await params
   const ctx = await portalEmployee(req, decodeURIComponent(no))
   if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { admin, company, emp } = ctx
-  if (emp.employment_type !== 'part-time' || !emp.store) return NextResponse.json({ partTime: false, periods: [] })
-
-  const { data: periods } = await admin.from('shift_periods')
-    .select('id, title, start_date, end_date, slots, status')
-    .eq('owner_id', company.ownerId).eq('store', emp.store).gte('end_date', today())
-    .order('start_date')
-  const ids = (periods ?? []).map(p => p.id)
-  const [{ data: avail }, { data: assigns }] = ids.length
-    ? await Promise.all([
-      admin.from('shift_availability').select('period_id, work_date, slot_code').in('period_id', ids).eq('employee_id', emp.id),
-      admin.from('shift_assignments').select('period_id, work_date, slot_code').in('period_id', ids).eq('employee_id', emp.id),
-    ])
-    : [{ data: [] }, { data: [] }]
-
-  return NextResponse.json({
-    partTime: true,
-    store: emp.store,
-    periods: (periods ?? []).map(p => ({
-      ...p,
-      dates: listDates(p.start_date, p.end_date),
-      selected: (avail ?? []).filter(a => a.period_id === p.id).map(a => `${a.work_date}|${a.slot_code}`),
-      assigned: p.status === 'confirmed'
-        ? (assigns ?? []).filter(a => a.period_id === p.id).map(a => `${a.work_date}|${a.slot_code}`)
-        : [],
-    })),
-  })
+  if (!emp.store) return NextResponse.json({ store: null, rules: [], plans: [] })
+  const today = todayVN()
+  const [{ data: rules }, { data: plans }] = await Promise.all([
+    admin.from('shift_avail_rules').select('id, start_date, end_date, weekdays, start_min, end_min, note')
+      .eq('owner_id', company.ownerId).eq('employee_id', emp.id).gte('end_date', today).order('start_date'),
+    admin.from('shift_plans').select('id, store, work_date, start_min, end_min')
+      .eq('owner_id', company.ownerId).eq('employee_id', emp.id).eq('status', 'published')
+      .gte('work_date', today).lte('work_date', addDays(today, 60)).order('work_date').order('start_min'),
+  ])
+  return NextResponse.json({ store: emp.store, rules: rules ?? [], plans: plans ?? [] })
 }
 
-// 送出某排班期的可上班時段（整份覆寫）。body: { period_id, selected: ["YYYY-MM-DD|slot", ...] }
+// 新增一條可上班時段。body: { start_date, end_date, weekdays: number[]（空＝每天）, start: "HH:MM", end: "HH:MM", note? }
 export async function POST(req: NextRequest, { params }: Ctx) {
   const { no } = await params
   const ctx = await portalEmployee(req, decodeURIComponent(no))
   if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { admin, company, emp } = ctx
-  if (emp.employment_type !== 'part-time' || !emp.store) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!emp.store) return NextResponse.json({ error: 'Chưa có cửa hàng / 尚未設定門市，請聯絡人事' }, { status: 400 })
+  const r = await insertRule(admin, company.ownerId, emp.id, emp.store, await req.json().catch(() => ({})))
+  if ('error' in r) return NextResponse.json({ error: r.error }, { status: r.status })
+  return NextResponse.json({ rule: r.rule })
+}
 
-  const body = await req.json().catch(() => ({}))
-  const { data: period } = await admin.from('shift_periods')
-    .select('id, start_date, end_date, slots, status')
-    .eq('id', String(body.period_id ?? '')).eq('owner_id', company.ownerId).eq('store', emp.store).maybeSingle()
-  if (!period) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-
-  const res = await saveAvailability(admin, period, company.ownerId, emp.id, body.selected)
-  if ('error' in res) return NextResponse.json({ error: res.error }, { status: res.status })
-
-  // 排班期建立後才入職的工讀生沒有填報紀錄，補一筆讓店長看得到已交
-  const now = new Date().toISOString()
-  const { data: tok } = await admin.from('shift_tokens').select('id').eq('period_id', period.id).eq('employee_id', emp.id).limit(1).maybeSingle()
-  if (tok) await admin.from('shift_tokens').update({ submitted_at: now }).eq('id', tok.id)
-  else await admin.from('shift_tokens').insert({
-    owner_id: company.ownerId, period_id: period.id, employee_id: emp.id, employee_name: emp.name ?? '',
-    token: randomBytes(18).toString('base64url'), submitted_at: now,
-  })
-  return NextResponse.json({ ok: true, saved: res.saved })
+// 刪除自己的一條規則。body: { id }
+export async function DELETE(req: NextRequest, { params }: Ctx) {
+  const { no } = await params
+  const ctx = await portalEmployee(req, decodeURIComponent(no))
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { id } = await req.json().catch(() => ({}))
+  const { error } = await ctx.admin.from('shift_avail_rules').delete()
+    .eq('id', String(id ?? '')).eq('employee_id', ctx.emp.id).eq('owner_id', ctx.company.ownerId)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
 }
