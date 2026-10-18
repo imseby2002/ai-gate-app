@@ -30,3 +30,27 @@ export async function DELETE(req: NextRequest) {
   await ctx.admin.from('shift_needs').delete().eq('id', cur.id)
   return NextResponse.json({ ok: true })
 }
+
+// 整批取代門市人力需求（例：套用 AI 依業績建議的需求）。body: { store, items: [{ weekdays, start_min, end_min, headcount }] }
+export async function PUT(req: NextRequest) {
+  const ctx = await getShiftContext()
+  if (!ctx.ok) return NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status })
+  const b = await req.json().catch(() => ({}))
+  const store = String(b.store ?? '').trim()
+  if (!store || !storeAllowed(ctx, store)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const items: Record<string, unknown>[] = Array.isArray(b.items) ? b.items.slice(0, 100) : []
+  const rows = items.map(n => {
+    const raw: unknown[] = Array.isArray(n.weekdays) ? n.weekdays : []
+    return {
+      owner_id: ctx.ownerId, store,
+      weekdays: [...new Set(raw.map(Number).filter(x => Number.isInteger(x) && x >= 0 && x <= 6))].sort(),
+      start_min: Number(n.start_min), end_min: Number(n.end_min), headcount: Math.round(Number(n.headcount)),
+    }
+  }).filter(n => Number.isInteger(n.start_min) && Number.isInteger(n.end_min) && n.start_min >= 0 && n.end_min <= 1440 && n.end_min > n.start_min
+    && n.start_min % SLOT_MIN === 0 && n.end_min % SLOT_MIN === 0 && n.headcount >= 0 && n.headcount <= 50)
+  if (rows.length === 0) return NextResponse.json({ error: '沒有可套用的需求' }, { status: 400 })
+  await ctx.admin.from('shift_needs').delete().eq('owner_id', ctx.ownerId).eq('store', store)
+  const { error } = await ctx.admin.from('shift_needs').insert(rows)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ saved: rows.length })
+}
