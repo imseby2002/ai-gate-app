@@ -28,6 +28,7 @@ import { formatFormSubmission, notifyFormSubmission } from '@/lib/cs/formNotify'
 import { isFormAvailableToday } from '@/lib/cs/formSchedule'
 import { resolveTodaySubmission, verifyRoomCheckedInToday } from '@/lib/cs/formSubmitGuard'
 import { sendToCustomer, HUMAN_AGENT_TAG } from '@/lib/cs/send'
+import { isHandoffActive, getHumanIdleMinutes } from '@/lib/cs/handoff'
 import { notifyUserMobile } from '@/lib/push/expo'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { dataOwnerOf, loadCompanyProfile } from '@/lib/company/profile'
@@ -295,17 +296,14 @@ const COMPLAINT_RE = /投訴|抱怨|complaint/i
 // 伴手禮這類知識庫本來就不會有、但客人很常問的在地資訊。
 const SEARCH_RE = /天氣|氣溫|下雨|附近|景點|怎麼走|路況|交通|開了嗎|營業中嗎|特產|名產|伴手禮|美食|小吃|好吃|好玩|必吃|必買|必去|哪裡(買|吃|玩)|weather|nearby|traffic/i
 
-// 工單開超過這麼久還沒被員工處理（狀態一直沒變成 resolved/closed），視為員工可能
-// 離線或對話已結束。超過 2 小時讓 AI 自動恢復回覆接手，避免客人永遠卡住等候。
-// 工單本身仍然維持 open，員工若隨時上線還是可以再次手動接手。
-const HANDOFF_STALE_HOURS = 2
-
+// 接管窗口規則見 src/lib/cs/handoff.ts：員工回覆／打字後閒置超過設定分鐘數、或客人要求真人／
+// 手動暫停超過 2 小時，AI 自動恢復回覆。工單本身仍維持 open，員工隨時可再接手。
 // Is there an unresolved human-handoff ticket for this customer? (→ stop auto-replying)
 async function hasOpenHandoff(userId: string, customerId: string): Promise<boolean> {
   try {
     const { data } = await getServiceClient()
       .from('cs_tickets')
-      .select('id, created_at')
+      .select('id, subject, created_at')
       .eq('user_id', userId)
       .eq('from_id', customerId)
       .eq('intent', '人工客服請求')
@@ -314,8 +312,7 @@ async function hasOpenHandoff(userId: string, customerId: string): Promise<boole
       .limit(1)
     const ticket = data?.[0]
     if (!ticket) return false
-    const ageHours = (Date.now() - new Date(ticket.created_at as string).getTime()) / 3600_000
-    return ageHours < HANDOFF_STALE_HOURS
+    return isHandoffActive(ticket as { subject: string | null; created_at: string }, await getHumanIdleMinutes(getServiceClient(), userId))
   } catch {
     return false  // fail open — never let a check error mute the bot for everyone
   }

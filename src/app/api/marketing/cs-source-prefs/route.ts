@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getBnbContext } from '@/lib/bnb/context'
 
-const DEFAULTS = { priceSource: 'booking_system', passwordSource: 'booking_system', checkinTime: '' }
+const DEFAULTS = { priceSource: 'booking_system', passwordSource: 'booking_system', checkinTime: '', humanIdleMinutes: 1 }
 
 // AI 客服資料來源偏好（價格／密碼各自切換訂單系統或客服自建資料），存於 cs_data_sources type=source_prefs。
 export async function GET() {
@@ -31,6 +31,8 @@ export async function PUT(req: NextRequest) {
     priceSource: body.priceSource === 'pricing_calculator' ? 'pricing_calculator' : 'booking_system',
     passwordSource: body.passwordSource === 'datasource' ? 'datasource' : 'booking_system',
     checkinTime: /^\d{2}:\d{2}$/.test(rawTime) ? rawTime : '',
+    // 員工在收件匣回覆／打字後，閒置多少分鐘 AI 自動接回（1～120）
+    humanIdleMinutes: Math.min(120, Math.max(1, Math.round(Number(body.humanIdleMinutes) || 1))),
   }
 
   const { data: existing } = await supabase

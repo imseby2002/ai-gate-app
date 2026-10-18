@@ -10,6 +10,7 @@ import { loadChannelCredentials } from '@/lib/channels/resolve'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getBnbContext } from '@/lib/bnb/context'
+import { isHandoffActive, getHumanIdleMinutes } from '@/lib/cs/handoff'
 
 interface Bubble {
   side: 'in' | 'out'
@@ -28,17 +29,20 @@ export async function GET(req: NextRequest) {
   const to = sp.get('to')
   const platform = sp.get('platform')
 
-  // 目前真人接管中的客戶（open 人工客服工單）——超過 2 小時沒處理的工單，
-  // AI 那邊（cs-webhook 的 hasOpenHandoff）已經會自動恢復回覆，這裡的「接管中」
-  // 標示要跟著同步，不然會顯示已接管、實際上 AI 早就在回了，員工誤以為有人在處理。
-  const HANDOFF_STALE_HOURS = 2
-  const staleCutoff = new Date(Date.now() - HANDOFF_STALE_HOURS * 3600_000).toISOString()
-  const { data: openTickets } = await supabase
-    .from('cs_tickets').select('from_id')
-    .eq('user_id', ctx.ownerId).eq('intent', '人工客服請求')
-    .in('status', ['open', 'in_progress'])
-    .gte('created_at', staleCutoff)
-  const takeoverSet = new Set((openTickets ?? []).map(t => t.from_id))
+  // 目前真人接管中的客戶——與 cs-webhook 的 hasOpenHandoff 用同一套規則（src/lib/cs/handoff.ts），
+  // 不然會顯示已接管、實際上 AI 早就在回了，員工誤以為有人在處理。
+  const staleCutoff = new Date(Date.now() - 2 * 3600_000).toISOString()
+  const [{ data: openTickets }, idleMinutes] = await Promise.all([
+    supabase
+      .from('cs_tickets').select('from_id, subject, created_at')
+      .eq('user_id', ctx.ownerId).eq('intent', '人工客服請求')
+      .in('status', ['open', 'in_progress'])
+      .gte('created_at', staleCutoff),
+    getHumanIdleMinutes(supabase, ctx.ownerId),
+  ])
+  const takeoverSet = new Set((openTickets ?? [])
+    .filter(t => isHandoffActive(t as { subject: string | null; created_at: string }, idleMinutes))
+    .map(t => t.from_id))
 
   // ── 單一對話 thread ────────────────────────────────────────────────────────
   if (to && platform) {

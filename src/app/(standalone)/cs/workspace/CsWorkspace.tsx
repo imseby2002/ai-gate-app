@@ -891,7 +891,7 @@ function Unit12CustomerService({
     }).catch(() => {})
   }
 
-  const [sourcePrefs, setSourcePrefs] = useState<{ priceSource: string; passwordSource: string; checkinTime: string }>({ priceSource: 'booking_system', passwordSource: 'booking_system', checkinTime: '' })
+  const [sourcePrefs, setSourcePrefs] = useState<{ priceSource: string; passwordSource: string; checkinTime: string; humanIdleMinutes: number }>({ priceSource: 'booking_system', passwordSource: 'booking_system', checkinTime: '', humanIdleMinutes: 1 })
   const [savingPrefs, setSavingPrefs] = useState(false)
 
   const PRICING_TEMPLATES: Record<string, object> = {
@@ -979,7 +979,7 @@ function Unit12CustomerService({
     }).catch(() => {})
   }, [])
 
-  async function saveSourcePrefs(next: { priceSource: string; passwordSource: string; checkinTime: string }) {
+  async function saveSourcePrefs(next: { priceSource: string; passwordSource: string; checkinTime: string; humanIdleMinutes: number }) {
     setSourcePrefs(next)
     setSavingPrefs(true)
     try {
@@ -1647,6 +1647,21 @@ function Unit12CustomerService({
     } else {
       void loadInbox()
     }
+  }
+
+  // 員工在收件匣輸入框打字時節流通知後端（每 15 秒最多一次），AI 打字期間不插話（見 lib/cs/handoff.ts）
+  const lastInboxTypingPing = useRef(0)
+  function pingInboxTyping() {
+    if (!activeConvo) return
+    const now = Date.now()
+    if (now - lastInboxTypingPing.current < 15_000) return
+    lastInboxTypingPing.current = now
+    if (!activeConvo.takeover) setActiveConvo(prev => prev ? { ...prev, takeover: true } : null)
+    void fetch('/api/marketing/cs-takeover', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ platform: activeConvo.platform, to: activeConvo.from_id, industry: ind, takeover: true, typing: true }),
+    }).catch(() => {})
   }
 
   async function toggleInboxTakeover() {
@@ -4855,6 +4870,14 @@ function Unit12CustomerService({
               <HelpTip title={t('helpInboxTitle')} href="/cs/help#inbox">
                 {t('helpInboxBody')}
               </HelpTip>
+              <label className="flex items-center gap-1 text-[10px] text-gray-500" title={t('humanIdleMinutesHint')}>
+                {t('humanIdleMinutesLabel')}
+                <input type="number" min={1} max={120} value={sourcePrefs.humanIdleMinutes}
+                  onChange={e => setSourcePrefs({ ...sourcePrefs, humanIdleMinutes: Math.max(1, Math.min(120, Number(e.target.value) || 1)) })}
+                  onBlur={() => saveSourcePrefs(sourcePrefs)} disabled={savingPrefs}
+                  className="w-12 text-[11px] border rounded px-1 py-0.5" />
+                {t('minutesUnit')}
+              </label>
               <div className="flex gap-1.5 ml-auto flex-wrap">
                 {['all', 'line', 'whatsapp', 'telegram', 'test'].map(p => (
                   <button key={p} onClick={() => { setInboxPlatformFilter(p); }}
@@ -5088,7 +5111,7 @@ function Unit12CustomerService({
                           <textarea
                             rows={2}
                             value={inboxReplyText}
-                            onChange={e => setInboxReplyText(e.target.value)}
+                            onChange={e => { setInboxReplyText(e.target.value); if (e.target.value.trim()) pingInboxTyping() }}
                             onKeyDown={e => {
                               if (e.key === 'Enter' && !e.shiftKey) {
                                 e.preventDefault()
