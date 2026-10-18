@@ -4,7 +4,7 @@ import { ChannelAccountPicker } from '@/components/channels/ChannelAccountPicker
 import { useState, useEffect, useCallback, useRef, ReactNode, type ChangeEvent } from 'react'
 import Link from 'next/link'
 import { useTranslations, useLocale } from 'next-intl'
-import { Users, DollarSign, Calendar, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Loader2, AlertCircle, Building2, Phone, Mail, Briefcase, CreditCard, Zap, Wallet, Upload, Shield, Clock, Download, UserPlus, ArrowRight, ClipboardCheck, Store, Video, FileSpreadsheet, HeartHandshake, Send, FileText } from 'lucide-react'
+import { Users, DollarSign, Calendar, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Loader2, AlertCircle, Building2, Phone, Mail, Briefcase, CreditCard, Zap, Wallet, Upload, Shield, Clock, Download, UserPlus, ArrowRight, ClipboardCheck, Store, Video, FileSpreadsheet, HeartHandshake, Send, FileText, KeyRound, Copy } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -669,6 +669,19 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
     onRefresh()
   }
 
+  // 員工專區臨時密碼（沒有生日或忘記密碼時）
+  const [tempPin, setTempPin] = useState<{ name: string; pin: string; url: string | null; attendance_no: string } | null>(null)
+  const [copiedPin, setCopiedPin] = useState(false)
+  const issueTempPin = async (emp: Employee) => {
+    if (!emp.attendance_no) { alert(t('tempPinNeedAttendance')); return }
+    if (!confirm(t('tempPinConfirm', { name: emp.name }))) return
+    const res = await fetch('/api/hr/employees/portal-pin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ employee_id: emp.id }) })
+    const d = await res.json().catch(() => ({}))
+    if (!res.ok) { alert(d.error ?? t('saveFailed')); return }
+    setCopiedPin(false)
+    setTempPin({ name: d.name, pin: d.pin, url: d.url ?? null, attendance_no: d.attendance_no })
+  }
+
   const noBirthday = employees.filter(e => e.status === 'active' && !e.birthday)
   const filtered = statusFilter === 'all' ? employees
     : statusFilter === 'nobirthday' ? noBirthday
@@ -770,6 +783,11 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
                   <Button size="sm" variant="ghost" className="h-7 px-2 gap-1 text-xs text-gray-500" onClick={() => openEmpDocs(emp)}>
                     <FileText className="h-3.5 w-3.5" />{t('documents')}
                   </Button>
+                  {emp.status === 'active' && (
+                    <Button size="sm" variant="ghost" className={`h-7 px-2 gap-1 text-xs ${emp.birthday ? 'text-gray-500' : 'text-amber-700'}`} onClick={() => issueTempPin(emp)} title={t('tempPinHint')}>
+                      <KeyRound className="h-3.5 w-3.5" />{t('tempPin')}
+                    </Button>
+                  )}
                   <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { setEditing(emp); setShowForm(false) }}>
                     <Pencil className="h-3.5 w-3.5" />
                   </Button>
@@ -802,6 +820,29 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
           ))}
         </div>
       )}
+
+      {tempPin && (() => {
+        const text = t('tempPinMessage', { name: tempPin.name, url: tempPin.url ?? `/e/${tempPin.attendance_no}`, pin: tempPin.pin })
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setTempPin(null)}>
+            <div className="bg-white rounded-xl w-full max-w-md p-5 space-y-3" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold flex items-center gap-2"><KeyRound className="h-4 w-4 text-amber-600" />{t('tempPinTitle', { name: tempPin.name })}</h3>
+                <button onClick={() => setTempPin(null)}><X className="h-5 w-5 text-gray-400" /></button>
+              </div>
+              <div className="text-center text-3xl font-mono font-bold tracking-widest bg-amber-50 rounded-lg py-3">{tempPin.pin}</div>
+              <p className="text-xs text-gray-500 break-all">{tempPin.url ?? `/e/${tempPin.attendance_no}`}</p>
+              <p className="text-xs text-gray-500">{t('tempPinOnce')}</p>
+              <div className="flex justify-end gap-2">
+                <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { navigator.clipboard?.writeText(text).then(() => setCopiedPin(true)).catch(() => {}) }}>
+                  {copiedPin ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}{copiedPin ? t('tempPinCopied') : t('tempPinCopy')}
+                </Button>
+                <Button size="sm" onClick={() => setTempPin(null)}>{t('tempPinDone')}</Button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {docsEmp && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setDocsEmp(null)}>

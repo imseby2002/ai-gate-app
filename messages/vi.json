@@ -7600,7 +7600,17 @@
     "missingBirthdayFilter": "Thiếu ngày sinh ({n})",
     "missingBirthdayHint": "Nhân viên chưa có ngày sinh không thể đăng nhập Trang nhân viên lần đầu. Vui lòng bổ sung.",
     "managedStoresLabel": "Cửa hàng quản lý (chọn nhiều)",
-    "managedStoresHint": "Tài khoản chỉ thao tác các cửa hàng đã chọn (xếp ca, đánh giá, báo cáo); nếu không chọn thì là cửa hàng của mình {store}"
+    "managedStoresHint": "Tài khoản chỉ thao tác các cửa hàng đã chọn (xếp ca, đánh giá, báo cáo); nếu không chọn thì là cửa hàng của mình {store}",
+    "tempPin": "Mật khẩu tạm",
+    "tempPinHint": "Cấp mật khẩu tạm cho Trang nhân viên (chưa có ngày sinh hoặc quên mật khẩu)",
+    "tempPinConfirm": "Cấp mật khẩu tạm cho \"{name}\"? Mật khẩu hiện tại sẽ hết hiệu lực, nhân viên phải đặt mật khẩu riêng sau khi đăng nhập.",
+    "tempPinNeedAttendance": "Hãy đặt mã chấm công trước; Trang nhân viên đăng nhập bằng mã chấm công.",
+    "tempPinTitle": "Mật khẩu tạm của {name}",
+    "tempPinOnce": "Mật khẩu chỉ hiện một lần, hãy gửi ngay cho nhân viên. Sau khi đăng nhập, nhân viên sẽ được yêu cầu đặt mật khẩu riêng.",
+    "tempPinCopy": "Sao chép gửi nhân viên",
+    "tempPinCopied": "Đã sao chép",
+    "tempPinDone": "Xong",
+    "tempPinMessage": "Xin chào {name}\nTrang nhân viên: {url}\nMật khẩu tạm: {pin}\nSau khi đăng nhập, hãy đặt mật khẩu riêng."
   },
   "FinancePage": {
     "accountBalancesTitle": "Số dư theo tài khoản",

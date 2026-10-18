@@ -7600,7 +7600,17 @@
     "missingBirthdayFilter": "No birthday ({n})",
     "missingBirthdayHint": "Employees without a birthday can't log in to the employee portal for the first time. Please add it.",
     "managedStoresLabel": "Managed stores (multiple)",
-    "managedStoresHint": "The account can only work on the selected stores (shifts, evaluations, reports); if none selected, its own store {store}"
+    "managedStoresHint": "The account can only work on the selected stores (shifts, evaluations, reports); if none selected, its own store {store}",
+    "tempPin": "Temp password",
+    "tempPinHint": "Issue a temporary employee-portal password (no birthday on file or forgotten password)",
+    "tempPinConfirm": "Issue a temporary password to \"{name}\"? Their current password stops working, and they must set their own after logging in.",
+    "tempPinNeedAttendance": "Set an attendance number first; the employee portal logs in by attendance number.",
+    "tempPinTitle": "Temporary password for {name}",
+    "tempPinOnce": "The password is shown only once; send it to the employee now. They will be asked to set their own password after logging in.",
+    "tempPinCopy": "Copy for employee",
+    "tempPinCopied": "Copied",
+    "tempPinDone": "Done",
+    "tempPinMessage": "Hello {name} / Xin chào {name}\nEmployee portal / Trang nhân viên: {url}\nTemporary password / Mật khẩu tạm: {pin}\nPlease set your own password after logging in. / Sau khi đăng nhập, hãy đặt mật khẩu riêng."
   },
   "FinancePage": {
     "accountBalancesTitle": "Balance by account",

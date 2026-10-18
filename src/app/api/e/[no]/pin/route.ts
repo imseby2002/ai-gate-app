@@ -11,7 +11,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ no:
   const p = String(pin ?? '').trim()
   if (p.length < 6) return NextResponse.json({ error: 'Mật khẩu ít nhất 6 ký tự / 密碼至少 6 碼' }, { status: 400 })
   const { error } = await ctx.admin.from('hr_employee_portal').upsert({
-    employee_id: ctx.emp.id, pin_hash: hashPin(p), failed_count: 0, locked_until: null, updated_at: new Date().toISOString(),
+    employee_id: ctx.emp.id, pin_hash: hashPin(p), pin_temp: false, failed_count: 0, locked_until: null, updated_at: new Date().toISOString(),
   })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
