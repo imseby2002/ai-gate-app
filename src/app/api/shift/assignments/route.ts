@@ -1,10 +1,10 @@
-import { getUnitContext } from '@/lib/auth/unit-access'
+import { getShiftContext, periodAllowed } from '@/lib/shift/scope'
 import { NextRequest, NextResponse } from 'next/server'
 
 async function getAdminUser() {
-  const ctx = await getUnitContext('store')
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin , status: ctx.status }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin , status: ctx.status }
+  const ctx = await getShiftContext()
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin , status: ctx.status, ctx }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin , status: ctx.status, ctx }
 }
 
 const s = (v: unknown) => String(v ?? '').trim()
@@ -17,12 +17,13 @@ async function periodEditable(supabase: Awaited<ReturnType<typeof getAdminUser>>
 
 // 手動加一個指派。body: { period_id, employee_id, work_date, slot_code }
 export async function POST(req: NextRequest) {
-  const { user, supabase , status } = await getAdminUser()
+  const { user, supabase , status, ctx } = await getAdminUser()
   if (!user) return NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
   const b = await req.json().catch(() => ({}))
   const period_id = s(b.period_id), employee_id = s(b.employee_id), slot_code = s(b.slot_code)
   const work_date = dateOrNull(b.work_date)
   if (!period_id || !employee_id || !slot_code || !work_date) return NextResponse.json({ error: '參數不足' }, { status: 400 })
+  if (!(await periodAllowed(ctx, period_id))) return NextResponse.json({ error: 'not found' }, { status: 404 })
   if (!(await periodEditable(supabase, user.id, period_id))) return NextResponse.json({ error: '此排班已確認，無法調整' }, { status: 409 })
   const { error } = await supabase.from('shift_assignments')
     .upsert({ owner_id: user.id, period_id, employee_id, work_date, slot_code }, { onConflict: 'period_id,employee_id,work_date,slot_code' })
@@ -32,12 +33,13 @@ export async function POST(req: NextRequest) {
 
 // 移除一個指派。body: { period_id, employee_id, work_date, slot_code }
 export async function DELETE(req: NextRequest) {
-  const { user, supabase , status } = await getAdminUser()
+  const { user, supabase , status, ctx } = await getAdminUser()
   if (!user) return NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
   const b = await req.json().catch(() => ({}))
   const period_id = s(b.period_id), employee_id = s(b.employee_id), slot_code = s(b.slot_code)
   const work_date = dateOrNull(b.work_date)
   if (!period_id || !employee_id || !slot_code || !work_date) return NextResponse.json({ error: '參數不足' }, { status: 400 })
+  if (!(await periodAllowed(ctx, period_id))) return NextResponse.json({ error: 'not found' }, { status: 404 })
   if (!(await periodEditable(supabase, user.id, period_id))) return NextResponse.json({ error: '此排班已確認，無法調整' }, { status: 409 })
   const { error } = await supabase.from('shift_assignments').delete()
     .eq('owner_id', user.id).eq('period_id', period_id).eq('employee_id', employee_id).eq('work_date', work_date).eq('slot_code', slot_code)

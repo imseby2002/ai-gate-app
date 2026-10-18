@@ -143,6 +143,7 @@ export async function PATCH(req: NextRequest) {
   // 若更新 store_code，寫入 department 欄位保存
   if (updates.store_code !== undefined) {
     safeUpdates.department = updates.store_code ? String(updates.store_code).trim() : null
+    safeUpdates.store_codes = updates.store_code ? [String(updates.store_code).trim()] : []
   }
   delete safeUpdates.store_code
 

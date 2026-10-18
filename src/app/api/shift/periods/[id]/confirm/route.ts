@@ -1,4 +1,4 @@
-import { getUnitContext } from '@/lib/auth/unit-access'
+import { getShiftContext, storeAllowed } from '@/lib/shift/scope'
 import { NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { sanitizeSlots, weekday } from '@/lib/shift/util'
@@ -6,19 +6,19 @@ import { sanitizeSlots, weekday } from '@/lib/shift/util'
 type Ctx = { params: Promise<{ id: string }> }
 
 async function getAdminUser() {
-  const ctx = await getUnitContext('store')
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin , status: ctx.status }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin , status: ctx.status }
+  const ctx = await getShiftContext()
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin , status: ctx.status, ctx }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin , status: ctx.status, ctx }
 }
 
 // 確認排班：狀態設為 confirmed，並把各員工的班表寄送（Email）。
 export async function POST(_req: Request, { params }: Ctx) {
-  const { user, supabase , status } = await getAdminUser()
+  const { user, supabase , status, ctx } = await getAdminUser()
   if (!user) return NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
   const { id } = await params
   const { data: period } = await supabase.from('shift_periods')
     .select('store, title, start_date, end_date, slots').eq('id', id).eq('owner_id', user.id).single()
-  if (!period) return NextResponse.json({ error: 'not found' }, { status: 404 })
+  if (!period || !storeAllowed(ctx, period.store)) return NextResponse.json({ error: 'not found' }, { status: 404 })
 
   const slots = sanitizeSlots(period.slots)
   const slotLabel = new Map(slots.map(s => [s.code, s.label]))

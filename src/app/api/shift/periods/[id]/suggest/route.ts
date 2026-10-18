@@ -1,4 +1,4 @@
-import { getUnitContext } from '@/lib/auth/unit-access'
+import { getShiftContext, storeAllowed } from '@/lib/shift/scope'
 import { NextRequest, NextResponse } from 'next/server'
 import { listDates, sanitizeSlots } from '@/lib/shift/util'
 import { computeSuggestion, type AvailRow } from '@/lib/shift/suggest'
@@ -6,20 +6,20 @@ import { computeSuggestion, type AvailRow } from '@/lib/shift/suggest'
 type Ctx = { params: Promise<{ id: string }> }
 
 async function getAdminUser() {
-  const ctx = await getUnitContext('store')
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin , status: ctx.status }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin , status: ctx.status }
+  const ctx = await getShiftContext()
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin , status: ctx.status, ctx }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin , status: ctx.status, ctx }
 }
 
 // 產生自動排班建議：覆寫該期別的 shift_assignments，並將狀態設為 suggested。
 // body: { need?（每格需要人數，預設 1） }
 export async function POST(req: NextRequest, { params }: Ctx) {
-  const { user, supabase , status } = await getAdminUser()
+  const { user, supabase , status, ctx } = await getAdminUser()
   if (!user) return NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
   const { id } = await params
   const { data: period } = await supabase.from('shift_periods')
-    .select('start_date, end_date, slots, status').eq('id', id).eq('owner_id', user.id).single()
-  if (!period) return NextResponse.json({ error: 'not found' }, { status: 404 })
+    .select('store, start_date, end_date, slots, status').eq('id', id).eq('owner_id', user.id).single()
+  if (!period || !storeAllowed(ctx, period.store)) return NextResponse.json({ error: 'not found' }, { status: 404 })
   if (period.status === 'confirmed') return NextResponse.json({ error: '此排班已確認，無法重新建議' }, { status: 409 })
 
   const b = await req.json().catch(() => ({}))

@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getUnitContext } from '@/lib/auth/unit-access'
+import { getShiftContext, storeAllowed } from '@/lib/shift/scope'
 
 async function getStoreUser() {
-  const ctx = await getUnitContext('store')
-  if (!ctx.ok) return { user: null, supabase: ctx.admin , status: ctx.status }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin , status: ctx.status }
+  const ctx = await getShiftContext()
+  if (!ctx.ok) return { user: null, supabase: ctx.admin , status: ctx.status, ctx }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin , status: ctx.status, ctx }
 }
 
 export async function POST(req: NextRequest) {
-  const { user, supabase , status } = await getStoreUser()
+  const { user, supabase , status, ctx } = await getStoreUser()
   if (!user) return NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
 
   const { store, period_id, rows } = (await req.json()) as {
@@ -38,13 +38,16 @@ export async function POST(req: NextRequest) {
   if (activePeriodId) {
     const { data: p } = await supabase
       .from('shift_periods')
-      .select('id, slots')
+      .select('id, slots, store')
       .eq('id', activePeriodId)
-      .single()
+      .eq('owner_id', user.id)
+      .maybeSingle()
+    if (!p || !storeAllowed(ctx, p.store as string)) return NextResponse.json({ error: 'not found' }, { status: 404 })
     if (p && Array.isArray(p.slots)) {
       slots = p.slots as { code: string; label: string }[]
     }
   } else if (store) {
+    if (!storeAllowed(ctx, store)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     // 找該門市最近的排班期
     const { data: p } = await supabase
       .from('shift_periods')
