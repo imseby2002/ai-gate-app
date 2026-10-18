@@ -21,10 +21,10 @@ export function bankInfoComplete(b?: BankTransferInfo | null): boolean {
   return !!(b && (b.bank_code || b.bank_name) && b.account_no)
 }
 
-/** 民宿開放、且條件齊全的付款方式（轉帳需填好帳號才算開放） */
+/** 民宿開放、且條件齊全的付款方式（轉帳需填好帳號才算開放；信用卡走 AI-GATE 平台綠界） */
 export function availablePaymentMethods(methods: string[] | null | undefined, bank?: BankTransferInfo | null): PaymentMethod[] {
   const list = (methods?.length ? methods : ['on_arrival']).filter((m): m is PaymentMethod =>
-    m === 'on_arrival' || (m === 'transfer' && bankInfoComplete(bank)))
+    m === 'on_arrival' || m === 'card' || (m === 'transfer' && bankInfoComplete(bank)))
   return list.length ? list : ['on_arrival']
 }
 
@@ -33,7 +33,12 @@ function esc(s: string) {
 }
 
 /** 確認信用的付款說明區塊 */
-export function paymentBlockHtml(method: string | null | undefined, bank: BankTransferInfo | null | undefined, total: number | null, code?: string | null): string {
+export function paymentBlockHtml(method: string | null | undefined, bank: BankTransferInfo | null | undefined, total: number | null, code?: string | null, status?: string | null): string {
+  if (method === 'card') {
+    return status === 'paid'
+      ? `<p style="margin:16px 0">付款方式：<strong>信用卡</strong>（已付款${total != null ? ` NT$ ${Number(total).toLocaleString()}` : ''}）</p>`
+      : `<p style="margin:16px 0">付款方式：<strong>信用卡</strong>（尚未完成付款，請回到訂房頁面完成刷卡）</p>`
+  }
   if (method === 'transfer' && bankInfoComplete(bank)) {
     const rows: [string, string][] = [
       ['銀行', `${bank!.bank_name ?? ''}${bank!.bank_code ? `（${bank!.bank_code}）` : ''}`],

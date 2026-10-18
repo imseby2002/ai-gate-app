@@ -89,8 +89,8 @@ export async function sendBookingNotification(
   let payment_block = ''
   if (type === 'confirmation') {
     const { data: pb } = await supabase.from('public_bookings')
-      .select('payment_method, confirmation_code').eq('converted_booking_id', bookingId).maybeSingle()
-    if (pb) payment_block = paymentBlockHtml(pb.payment_method, profile?.bank_transfer, booking.total_price, pb.confirmation_code)
+      .select('payment_method, payment_status, confirmation_code').eq('converted_booking_id', bookingId).maybeSingle()
+    if (pb) payment_block = paymentBlockHtml(pb.payment_method, profile?.bank_transfer, booking.total_price, pb.confirmation_code, pb.payment_status)
   }
 
   const vars: Record<string, string> = {
