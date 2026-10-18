@@ -991,7 +991,9 @@ async function replyToCustomer(
       message_count: newMessageCount,
       summary: cust?.summary ?? null,
       discount_offered_at: cust?.discount_offered_at ?? (discountJustOffered ? new Date().toISOString() : null),
-      facts: cust?.facts ?? {},
+      // 不寫 facts：cust 是本輪開頭讀的舊快照，AI 回覆期間 saveConfirmedFacts 剛存進去的訂單號碼
+      // 會被這裡整筆蓋掉（真實案例：客人 14:23 用訂單號查到資料，14:51 再問房門密碼時系統只記得
+      // 手機、手機又查不到 Booking.com 訂單，AI 回「查不到密碼」）。新客人由欄位預設值 '{}' 建立。
       last_message_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id,platform,from_id,industry' })
