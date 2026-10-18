@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Loader2, LogOut, KeyRound, FileText, CheckCircle2, CalendarDays } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { SLOT_MIN } from '@/lib/shift/time'
 
 interface Me {
   name: string
@@ -139,121 +140,117 @@ export default function EmployeePortalPage({ params }: { params: Promise<{ no: s
   )
 }
 
-interface Period {
-  id: string; title: string; start_date: string; end_date: string; status: string
-  slots: { code: string; label: string }[]; dates: string[]; selected: string[]; assigned: string[]
-}
+interface AvailRuleRow { id: string; start_date: string; end_date: string; weekdays: number[]; start_min: number; end_min: number; note: string }
+interface MyPlan { id: string; store: string; work_date: string; start_min: number; end_min: number }
 
-// 預設時段代碼的越文名稱；自訂時段沿用店長設定的名稱
-const SLOT_VI: Record<string, string> = { am: 'Sáng', pm: 'Chiều', night: 'Tối' }
-const slotName = (s: { code: string; label: string }) => (SLOT_VI[s.code] ? `${SLOT_VI[s.code]} / ${s.label}` : s.label)
 const WD = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7']
+const WD_ZH = ['日', '一', '二', '三', '四', '五', '六']
+const WD_ORDER = [1, 2, 3, 4, 5, 6, 0]
 const wd = (d: string) => WD[new Date(d + 'T00:00:00Z').getUTCDay()] ?? ''
+const hhmm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
+const TIME_OPTS = Array.from({ length: 1440 / SLOT_MIN }, (_, i) => hhmm(i * SLOT_MIN))
+const today = () => new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10)
 
-// 工讀生：可上班時段與已確認班表
+// 員工：填可上班時段（日期區間＋星期＋時間）與查看已發布班表
 function ShiftCard({ api }: { api: string }) {
-  const [periods, setPeriods] = useState<Period[] | null>(null)
-  const [open, setOpen] = useState('')
-  const [sel, setSel] = useState<Set<string>>(new Set())
+  const [data, setData] = useState<{ store: string | null; rules: AvailRuleRow[]; plans: MyPlan[] } | null>(null)
+  const [adding, setAdding] = useState(false)
+  const [f, setF] = useState({ start_date: today(), end_date: today(), weekdays: [] as number[], start: '08:00', end: '12:00', note: '' })
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
-  const [msgOk, setMsgOk] = useState(true)
 
   const load = useCallback(async () => {
     const r = await fetch(`${api}/shifts`)
-    const d = r.ok ? await r.json() : null
-    setPeriods(d?.partTime ? d.periods : null)
+    setData(r.ok ? await r.json() : null)
   }, [api])
-
   useEffect(() => { load() }, [load])
 
-  if (!periods) return null
+  if (!data?.store) return null
 
-  const edit = (p: Period) => { setOpen(open === p.id ? '' : p.id); setSel(new Set(p.selected)); setMsg('') }
-  const toggle = (k: string) => setSel(prev => { const n = new Set(prev); if (n.has(k)) n.delete(k); else n.add(k); return n })
+  const toggleWd = (n: number) => setF(p => ({ ...p, weekdays: p.weekdays.includes(n) ? p.weekdays.filter(x => x !== n) : [...p.weekdays, n] }))
 
-  async function submit(p: Period) {
+  async function add() {
     setBusy(true); setMsg('')
-    const r = await fetch(`${api}/shifts`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ period_id: p.id, selected: [...sel] }) })
+    const r = await fetch(`${api}/shifts`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(f) })
     const d = await r.json().catch(() => ({}))
     setBusy(false)
-    setMsgOk(r.ok)
-    if (!r.ok) { setMsg(d.error ?? 'Gửi thất bại / 送出失敗'); return }
-    setMsg('Đã gửi / 已送出 ✓')
+    if (!r.ok) { setMsg(d.error ?? 'Lưu thất bại / 儲存失敗'); return }
+    setAdding(false)
     await load()
   }
+  async function remove(id: string) {
+    if (!confirm('Xóa? / 刪除這筆？')) return
+    await fetch(`${api}/shifts`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
+    await load()
+  }
+  const wdText = (w: number[]) => w.length === 0 || w.length === 7 ? 'Mỗi ngày / 每天' : WD_ORDER.filter(n => w.includes(n)).map(n => `${WD[n]}/${WD_ZH[n]}`).join(' ')
 
   return (
-    <Card className="p-5 space-y-3">
-      <h2 className="font-bold flex items-center gap-2"><CalendarDays className="h-4 w-4" /> Thời gian có thể làm / 可上班時段</h2>
-      {periods.length === 0 && <p className="text-sm text-slate-500">Chưa có kỳ xếp ca / 目前沒有排班期</p>}
-      {periods.map(p => {
-        const confirmed = p.status === 'confirmed'
-        return (
-          <div key={p.id} className="border rounded-xl p-3 space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <div className="font-medium text-sm">{p.title || `${p.start_date} ~ ${p.end_date}`}</div>
-                <div className="text-xs text-slate-500">{p.start_date} ~ {p.end_date}</div>
-              </div>
-              {confirmed
-                ? <span className="text-xs px-2 py-1 rounded-full bg-emerald-50 text-emerald-700">Đã chốt lịch / 已確認</span>
-                : <button onClick={() => edit(p)} className="text-sm px-3 py-1.5 rounded-lg border text-indigo-700">
-                  {p.selected.length ? `Sửa / 修改 (${p.selected.length})` : 'Điền / 填寫'}
-                </button>}
+    <>
+      <Card className="p-5 space-y-3">
+        <h2 className="font-bold flex items-center gap-2"><CalendarDays className="h-4 w-4" /> Lịch làm của tôi / 我的班表</h2>
+        {data.plans.length === 0 && <p className="text-sm text-slate-500">Chưa có lịch / 尚無已發布的班表</p>}
+        <div className="divide-y text-sm">
+          {data.plans.map(p => (
+            <div key={p.id} className="flex justify-between py-2">
+              <span>{p.work_date.slice(5)} ({wd(p.work_date)})</span>
+              <b>{hhmm(p.start_min)} – {hhmm(p.end_min)}</b>
             </div>
-            {confirmed && (
-              <div className="text-sm">
-                <div className="text-xs text-slate-500 mb-1">Lịch làm của tôi / 我的班表</div>
-                {p.assigned.length === 0 && <p className="text-slate-500">Không có ca / 未排班</p>}
-                {[...p.assigned].sort().map(k => {
-                  const [d, code] = k.split('|')
-                  const slot = p.slots.find(s => s.code === code)
-                  return <div key={k}>{d.slice(5)} ({wd(d)}) · {slot ? slotName(slot) : code}</div>
-                })}
+          ))}
+        </div>
+      </Card>
+      <Card className="p-5 space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="font-bold flex items-center gap-2"><CalendarDays className="h-4 w-4" /> Thời gian có thể làm / 可上班時段</h2>
+          {!adding && <button onClick={() => { setAdding(true); setMsg('') }} className="text-sm px-3 py-1.5 rounded-lg border text-indigo-700">+ Thêm / 新增</button>}
+        </div>
+        <p className="text-xs text-slate-500">Ví dụ: 01/11–30/11, T4 + T5, 15:30–19:30. 例：11/1–11/30 每週三、四 15:30–19:30。</p>
+        {data.rules.length === 0 && !adding && <p className="text-sm text-slate-500">Chưa điền / 尚未填寫</p>}
+        <div className="space-y-2">
+          {data.rules.map(r => (
+            <div key={r.id} className="border rounded-xl p-3 text-sm flex items-start justify-between gap-2">
+              <div>
+                <div className="font-medium">{r.start_date.slice(5)} ~ {r.end_date.slice(5)} · {hhmm(r.start_min)}–{hhmm(r.end_min)}</div>
+                <div className="text-xs text-slate-500">{wdText(r.weekdays)}{r.note ? ` · ${r.note}` : ''}</div>
               </div>
-            )}
-            {!confirmed && open === p.id && (
-              <div className="space-y-2">
-                <p className="text-xs text-slate-500">Chọn ngày và ca bạn có thể làm rồi bấm Gửi. 勾選可以上班的日期與時段後送出。</p>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr>
-                        <th className="text-left py-1 text-slate-500 font-normal">Ngày / 日期</th>
-                        {p.slots.map(s => <th key={s.code} className="py-1 text-slate-500 font-normal">{slotName(s)}</th>)}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {p.dates.map(d => (
-                        <tr key={d} className="border-t">
-                          <td className="py-1 whitespace-nowrap">{d.slice(5)} <span className="text-slate-400">({wd(d)})</span></td>
-                          {p.slots.map(s => {
-                            const k = `${d}|${s.code}`
-                            const on = sel.has(k)
-                            return (
-                              <td key={s.code} className="text-center py-1">
-                                <button onClick={() => toggle(k)} className={`w-9 h-9 rounded-lg border ${on ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white text-slate-300'}`}>{on ? '✓' : ''}</button>
-                              </td>
-                            )
-                          })}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600">Đã chọn / 已選 <b>{sel.size}</b></span>
-                  <Button onClick={() => submit(p)} disabled={busy} className="h-10 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl">
-                    {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Gửi / 送出'}
-                  </Button>
-                </div>
+              <button onClick={() => remove(r.id)} className="text-xs text-red-500 px-2 py-1">Xóa / 刪除</button>
+            </div>
+          ))}
+        </div>
+        {adding && (
+          <div className="border rounded-xl p-3 space-y-3 bg-slate-50">
+            <div className="grid grid-cols-2 gap-2">
+              <label className="text-xs text-slate-500 space-y-1">Từ ngày / 開始日<input type="date" className={input} value={f.start_date} min={today()} onChange={e => setF({ ...f, start_date: e.target.value, end_date: f.end_date < e.target.value ? e.target.value : f.end_date })} /></label>
+              <label className="text-xs text-slate-500 space-y-1">Đến ngày / 結束日<input type="date" className={input} value={f.end_date} min={f.start_date} onChange={e => setF({ ...f, end_date: e.target.value })} /></label>
+            </div>
+            <div className="space-y-1">
+              <div className="text-xs text-slate-500">Thứ (bỏ trống = mỗi ngày) / 星期（不選＝每天）</div>
+              <div className="flex flex-wrap gap-1.5">
+                {WD_ORDER.map(n => (
+                  <button key={n} type="button" onClick={() => toggleWd(n)}
+                    className={`w-11 h-10 rounded-lg border text-xs ${f.weekdays.includes(n) ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white'}`}>
+                    {WD[n]}<br />{WD_ZH[n]}
+                  </button>
+                ))}
               </div>
-            )}
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="text-xs text-slate-500 space-y-1">Từ / 從
+                <select className={input} value={f.start} onChange={e => setF({ ...f, start: e.target.value })}>{TIME_OPTS.map(t => <option key={t}>{t}</option>)}</select>
+              </label>
+              <label className="text-xs text-slate-500 space-y-1">Đến / 到
+                <select className={input} value={f.end} onChange={e => setF({ ...f, end: e.target.value })}>{[...TIME_OPTS.slice(1), '24:00'].map(t => <option key={t}>{t}</option>)}</select>
+              </label>
+            </div>
+            <input className={input} value={f.note} onChange={e => setF({ ...f, note: e.target.value })} placeholder="Ghi chú (không bắt buộc) / 備註（可空）" />
+            {msg && <p className="text-sm text-red-600">{msg}</p>}
+            <div className="flex gap-2">
+              <Button onClick={add} disabled={busy} className="flex-1 h-10 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Lưu / 儲存'}</Button>
+              <Button variant="outline" onClick={() => setAdding(false)} className="h-10 rounded-xl">Hủy / 取消</Button>
+            </div>
           </div>
-        )
-      })}
-      {msg && <p className={`text-sm ${msgOk ? 'text-emerald-700' : 'text-red-600'}`}>{msg}</p>}
-    </Card>
+        )}
+      </Card>
+    </>
   )
 }
