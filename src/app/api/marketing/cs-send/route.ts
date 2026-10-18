@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { getBnbContext } from '@/lib/bnb/context'
 import { sendToCustomer, HUMAN_AGENT_TAG } from '@/lib/cs/send'
+import { STAFF_ACTIVE_SUBJECT } from '@/lib/cs/handoff'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -109,12 +110,13 @@ export async function POST(req: NextRequest) {
     if (!open?.length) {
       await admin.from('cs_tickets').insert({
         user_id: ctx.ownerId, industry, platform, from_id: to,
-        from_name: fromName ?? null, subject: '真人接管中', description: '客服人員已於收件匣接手此對話',
+        from_name: fromName ?? null, subject: STAFF_ACTIVE_SUBJECT, description: '客服人員已於收件匣接手此對話',
         priority: 'high', intent: '人工客服請求', status: 'open',
       })
     } else {
-      // 專員回覆時刷新工單時間，確保進入新的 2 小時真人接管窗口
+      // 專員回覆時刷新工單時間並標為員工接管，閒置計時從現在重新開始（見 lib/cs/handoff.ts）
       await admin.from('cs_tickets').update({
+        subject: STAFF_ACTIVE_SUBJECT,
         created_at: now,
         updated_at: now,
         status: 'open',

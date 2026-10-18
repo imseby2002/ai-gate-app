@@ -68,6 +68,9 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
   const [sending, setSending] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
+  // 員工在輸入框打字時節流通知後端（每 15 秒最多一次），讓 AI 在打字期間不插話；
+  // 停止打字／回覆後閒置超過設定分鐘數，AI 自動接回（見 lib/cs/handoff.ts）。
+  const lastTypingPing = useRef(0)
   // 客服是否目前捲動在接近底部——只有在這裡才自動捲到底。沒有這個判斷，手機版每 4 秒
   // 的靜默輪詢（loadThread silent）都會產生一組新的 bubbles 陣列（即使內容沒變），
   // 觸發下面的自動捲動 effect，把正在往上滑看歷史訊息的客服硬拉回最底部，完全沒辦法
@@ -209,6 +212,19 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
           : c
       ))
     }
+  }
+
+  function pingTyping() {
+    if (!active) return
+    const now = Date.now()
+    if (now - lastTypingPing.current < 15_000) return
+    lastTypingPing.current = now
+    setTakeover(true)
+    void fetch('/api/marketing/cs-takeover', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ platform: active.platform, to: active.from_id, industry, takeover: true, typing: true }),
+    }).catch(() => {})
   }
 
   return (
@@ -395,7 +411,7 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
                   <div className="flex items-end gap-2">
                     <textarea
                       value={draft}
-                      onChange={e => setDraft(e.target.value)}
+                      onChange={e => { setDraft(e.target.value); if (e.target.value.trim()) pingTyping() }}
                       onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !window.matchMedia('(pointer: coarse)').matches) { e.preventDefault(); send() } }}
                       placeholder={t('replyPlaceholder', { name: formatCustomerName(active.name, active.from_id, t) })}
                       rows={1}

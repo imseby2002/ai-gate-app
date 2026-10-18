@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { getBnbContext } from '@/lib/bnb/context'
+import { STAFF_ACTIVE_SUBJECT } from '@/lib/cs/handoff'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -14,7 +15,10 @@ export async function POST(req: NextRequest) {
   if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { platform, industry = 'homestay', takeover } = body
+  const { platform, industry = 'homestay', takeover, typing } = body
+  // typing=true：員工正在收件匣輸入框打字（前端節流送出），視同員工接管並刷新閒置計時；
+  // 手動按「暫停 AI」則用手動接管主旨，維持 2 小時窗口（見 lib/cs/handoff.ts）。
+  const subject = typing ? STAFF_ACTIVE_SUBJECT : '手動接管中（AI 已暫停）'
   const to = body.to || body.from_id
   if (!to) return NextResponse.json({ error: '缺少 to' }, { status: 400 })
 
@@ -32,13 +36,14 @@ export async function POST(req: NextRequest) {
     if (!open?.length) {
       const { error } = await admin.from('cs_tickets').insert({
         user_id: ctx.ownerId, industry, platform: platform ?? 'test', from_id: to,
-        subject: '手動接管中（AI 已暫停）', description: '客服人員已於收件匣手動暫停 AI',
+        subject, description: typing ? '客服人員正在收件匣輸入回覆' : '客服人員已於收件匣手動暫停 AI',
         priority: 'high', intent: '人工客服請求', status: 'open',
       })
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     } else {
       // 確保工單時間刷新為當前時間，維持有效接管窗口 2 小時
       await admin.from('cs_tickets').update({
+        subject,
         created_at: now,
         updated_at: now,
         status: 'open',
