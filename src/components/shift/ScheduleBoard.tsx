@@ -144,7 +144,7 @@ export function ScheduleBoard({ store }: { store: string }) {
     const mine = info.plans.filter(p => p.employee_id === e.id)
     return (
       <tr key={e.id} className="border-t">
-        <td className="sticky left-0 z-10 bg-white dark:bg-gray-950 pr-2 py-1 whitespace-nowrap">
+        <td className="sticky left-0 z-10 bg-white dark:bg-gray-950 pr-2 py-1 whitespace-nowrap overflow-hidden">
           <div className="text-sm font-medium leading-tight">{e.name}</div>
           <div className="text-[10px] text-gray-400 flex items-center gap-1">
             {e.employment_type === 'part-time' ? t('partTime') : t('fullTime')} · {t('weekHours', { h: Math.round(weekHours(e.id) * 10) / 10 })}
@@ -162,8 +162,8 @@ export function ScheduleBoard({ store }: { store: string }) {
           const first = plan && plan.start_min === m
           return (
             <td key={m} data-slot={m} data-emp={e.id}
-              className={`h-9 min-w-[22px] border-l border-white dark:border-gray-950 cursor-pointer select-none ${m % 60 === 0 ? 'border-l-gray-200 dark:border-l-gray-800' : ''} ${cls}`}>
-              {first && <span className="block text-[9px] leading-none text-white pl-0.5 whitespace-nowrap overflow-visible">{fmtMin(plan.start_min)}–{fmtMin(plan.end_min)}</span>}
+              className={`relative h-9 w-[28px] min-w-[28px] max-w-[28px] border-l border-white dark:border-gray-950 cursor-pointer select-none ${m % 60 === 0 ? 'border-l-gray-200 dark:border-l-gray-800' : ''} ${cls}`}>
+              {first && <span className="absolute left-0.5 top-0.5 z-[1] text-[9px] leading-none text-white whitespace-nowrap pointer-events-none">{fmtMin(plan.start_min)}–{fmtMin(plan.end_min)}</span>}
             </td>
           )
         })}
@@ -221,17 +221,17 @@ export function ScheduleBoard({ store }: { store: string }) {
         {loading ? <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div> : (
           <div className="overflow-x-auto" style={{ touchAction: drag ? 'none' : 'pan-x pan-y' }}
             onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={() => setDrag(null)}>
-            <table className="border-collapse">
+            <table className="border-collapse table-fixed" style={{ width: 176 + slots.length * 28 }}>
               <thead>
                 <tr>
-                  <th className="sticky left-0 z-10 bg-white dark:bg-gray-950" />
-                  {slots.map(m => <th key={m} className="text-[10px] font-normal text-gray-400 text-left align-bottom h-5">{m % 60 === 0 ? fmtMin(m) : ''}</th>)}
+                  <th className="sticky left-0 z-10 bg-white dark:bg-gray-950 w-[176px]" />
+                  {slots.map(m => <th key={m} className="relative h-5 w-[28px] min-w-[28px] max-w-[28px]">{m % 60 === 0 && <span className="absolute left-0 bottom-0.5 text-[10px] font-normal text-gray-400 whitespace-nowrap">{fmtMin(m)}</span>}</th>)}
                 </tr>
                 <tr>
                   <th className="sticky left-0 z-10 bg-white dark:bg-gray-950 text-left text-[11px] font-normal text-gray-500 pr-2 whitespace-nowrap">{t('rowAvailable')}</th>
                   {slots.map(m => {
                     const n = emps.filter(e => (info.avail.get(e.id) ?? []).some(iv => covers(iv, m))).length
-                    return <th key={m} className="text-[10px] font-normal text-emerald-700 h-5">{n || ''}</th>
+                    return <th key={m} className="w-[28px] text-[10px] font-normal text-emerald-700 h-5">{n || ''}</th>
                   })}
                 </tr>
                 <tr>
@@ -240,7 +240,7 @@ export function ScheduleBoard({ store }: { store: string }) {
                     const n = info.plans.filter(p => covers({ start: p.start_min, end: p.end_min }, m)).length
                     const need = info.need.get(m)
                     const cls = need == null ? 'text-gray-500' : n < need ? 'bg-red-100 text-red-700' : 'bg-emerald-50 text-emerald-700'
-                    return <th key={m} className={`text-[10px] font-medium h-6 ${cls}`}>{need == null ? (n || '') : `${n}/${need}`}</th>
+                    return <th key={m} className={`w-[28px] text-[9px] font-medium h-6 whitespace-nowrap ${cls}`}>{need == null ? (n || '') : `${n}/${need}`}</th>
                   })}
                 </tr>
               </thead>
