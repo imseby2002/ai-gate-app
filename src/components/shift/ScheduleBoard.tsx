@@ -39,6 +39,7 @@ export function ScheduleBoard({ store }: { store: string }) {
   const [showAi, setShowAi] = useState(false)
   const [showOthers, setShowOthers] = useState(false)
   const [editing, setEditing] = useState<PlanRow | null>(null)
+  const [pending, setPending] = useState(false) // 新增班送出中，避免連點重複新增
   const weekEnd = addDays(weekStart, 6)
   const key = `${store}|${weekStart}|${tick}`
 
@@ -95,9 +96,9 @@ export function ScheduleBoard({ store }: { store: string }) {
   }
   const onPointerDown = (e: React.PointerEvent) => {
     const c = cellAt(e.clientX, e.clientY)
-    if (!c) return
+    if (!c || pending) return
     const hit = info.plans.find(p => p.employee_id === c.emp && covers({ start: p.start_min, end: p.end_min }, c.slot))
-    if (hit) { setEditing(hit); return }
+    if (hit) { setEditing(cur => cur?.id === hit.id ? null : hit); return }
     e.preventDefault()
     setEditing(null)
     setDrag({ emp: c.emp, a: c.slot, b: c.slot })
@@ -118,9 +119,11 @@ export function ScheduleBoard({ store }: { store: string }) {
 
   async function createPlan(emp: string, start: number, end: number) {
     setErr('')
+    setPending(true)
     const r = await jsonPost('/api/shift/plans', 'POST', { store, employee_id: emp, work_date: selDate, start_min: start, end_min: end })
     if (!r.ok) setErr((await r.json().catch(() => ({}))).error ?? t('saveFailed'))
     reload()
+    setPending(false)
   }
   async function fillFromAvail(emp: string) {
     for (const iv of info.avail.get(emp) ?? []) {
@@ -162,10 +165,11 @@ export function ScheduleBoard({ store }: { store: string }) {
             : inDrag ? 'bg-blue-200'
               : isAv ? 'bg-emerald-100 dark:bg-emerald-900/40' : 'bg-gray-50 dark:bg-gray-900'
           const first = plan && plan.start_min === m
+          const selected = plan && editing?.id === plan.id
           return (
             <td key={m} data-slot={m} data-emp={e.id}
-              className={`relative h-9 w-[28px] min-w-[28px] max-w-[28px] border-l border-white dark:border-gray-950 cursor-pointer select-none ${m % 60 === 0 ? 'border-l-gray-200 dark:border-l-gray-800' : ''} ${cls}`}>
-              {first && <span className="absolute left-0.5 top-0.5 z-[1] text-[9px] leading-none text-white whitespace-nowrap pointer-events-none">{fmtMin(plan.start_min)}–{fmtMin(plan.end_min)}</span>}
+              className={`relative h-9 w-[28px] min-w-[28px] max-w-[28px] border-l border-white dark:border-gray-950 cursor-pointer select-none ${m % 60 === 0 ? 'border-l-gray-200 dark:border-l-gray-800' : ''} ${cls} ${selected ? 'outline outline-2 -outline-offset-2 outline-amber-400' : ''}`}>
+              {first && <span className="absolute left-0.5 top-0.5 z-[5] rounded-sm bg-blue-800/90 px-0.5 py-px text-[9px] leading-none text-white whitespace-nowrap pointer-events-none">{fmtMin(plan.start_min)}–{fmtMin(plan.end_min)}</span>}
             </td>
           )
         })}
@@ -220,6 +224,7 @@ export function ScheduleBoard({ store }: { store: string }) {
           <span className="flex items-center gap-1"><i className="inline-block w-3 h-3 rounded-sm ring-1 ring-orange-400" />{t('legendOutside')}</span>
           <span className="ml-auto">{t('dragHint')}</span>
         </div>
+        {editing && <PlanEditor key={editing.id} plan={editing} name={nameOf(editing.employee_id)} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); reload() }} />}
         {loading ? <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div> : (
           <div className="overflow-x-auto" style={{ touchAction: drag ? 'none' : 'pan-x pan-y' }}
             onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={() => setDrag(null)}>
@@ -265,7 +270,6 @@ export function ScheduleBoard({ store }: { store: string }) {
         )}
       </Card>
 
-      {editing && <PlanEditor plan={editing} name={nameOf(editing.employee_id)} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); reload() }} />}
       {showNeeds && <NeedsModal store={store} needs={data?.needs ?? []} WD={WD} onClose={() => setShowNeeds(false)} onChanged={reload} />}
       {showAvail && <AvailModal store={store} emps={emps} rules={data?.rules ?? []} WD={WD} onClose={() => setShowAvail(false)} onChanged={reload} />}
       {showSales && <SalesModal store={store} WD={WD} onClose={() => setShowSales(false)} />}
@@ -321,7 +325,7 @@ function PlanEditor({ plan, name, onClose, onSaved }: { plan: PlanRow; name: str
     onSaved()
   }
   return (
-    <Card className="p-3 flex flex-wrap items-center gap-2">
+    <div className="rounded-lg border border-primary/40 bg-primary/5 p-2 flex flex-wrap items-center gap-2">
       <span className="text-sm font-medium">{name} · {plan.work_date}</span>
       <TimeSelect value={s} onChange={setS} /> – <TimeSelect value={e} onChange={setE} end />
       <Button size="sm" onClick={save}>{t('save')}</Button>
@@ -329,7 +333,7 @@ function PlanEditor({ plan, name, onClose, onSaved }: { plan: PlanRow; name: str
       <Button size="sm" variant="ghost" onClick={onClose}>{t('cancel')}</Button>
       {plan.status === 'published' && <span className="text-xs text-amber-600">{t('editPublishedHint')}</span>}
       {err && <span className="text-xs text-red-600">{err}</span>}
-    </Card>
+    </div>
   )
 }
 

@@ -5325,7 +5325,7 @@
     "legendDraft": "Scheduled (unpublished)",
     "legendPublished": "Published",
     "legendOutside": "Outside availability",
-    "dragHint": "Drag across a person's row to schedule; click a shift to adjust or delete",
+    "dragHint": "Drag across a person's row to schedule; click a shift to show the adjust / delete bar above, click again to close it",
     "rowAvailable": "Available",
     "rowCoverage": "Scheduled / needed",
     "hideOthers": "Hide other staff",
