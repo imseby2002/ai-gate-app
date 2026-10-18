@@ -7,7 +7,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ no: 
   const ctx = await portalEmployee(req, decodeURIComponent(no))
   if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const [{ data: portal }, { data: payslips }] = await Promise.all([
-    ctx.admin.from('hr_employee_portal').select('pin_hash').eq('employee_id', ctx.emp.id).maybeSingle(),
+    ctx.admin.from('hr_employee_portal').select('pin_hash, pin_temp').eq('employee_id', ctx.emp.id).maybeSingle(),
     ctx.admin.from('hr_payroll')
       .select('id, year, month, net_pay, payslip_confirmed')
       .eq('employee_id', ctx.emp.id).eq('owner_id', ctx.company.ownerId)
@@ -16,7 +16,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ no: 
   return NextResponse.json({
     name: ctx.emp.name,
     company: ctx.company.name,
-    hasPin: !!portal?.pin_hash,
+    hasPin: !!portal?.pin_hash && !portal?.pin_temp, // 臨時密碼登入後需先改密碼
     payslips: payslips ?? [],
   })
 }

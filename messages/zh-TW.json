@@ -7600,7 +7600,17 @@
     "missingBirthdayFilter": "缺生日（{n}）",
     "missingBirthdayHint": "沒有生日的員工無法第一次登入員工專區，請補上。",
     "managedStoresLabel": "管理門市（可多選）",
-    "managedStoresHint": "帳號只能操作勾選的門市（排班、評分、報表）；未勾選則為所屬門市 {store}"
+    "managedStoresHint": "帳號只能操作勾選的門市（排班、評分、報表）；未勾選則為所屬門市 {store}",
+    "tempPin": "臨時密碼",
+    "tempPinHint": "發臨時密碼給員工專區（沒有生日或忘記密碼時）",
+    "tempPinConfirm": "要發臨時密碼給「{name}」嗎？員工原本的密碼會失效，登入後必須改成自己的密碼。",
+    "tempPinNeedAttendance": "請先設定打卡編號，員工專區以打卡編號登入。",
+    "tempPinTitle": "{name} 的臨時密碼",
+    "tempPinOnce": "密碼只顯示這一次，請直接傳給員工。員工登入後會被要求設定自己的密碼。",
+    "tempPinCopy": "複製給員工",
+    "tempPinCopied": "已複製",
+    "tempPinDone": "完成",
+    "tempPinMessage": "{name} 您好 / Xin chào {name}\n員工專區 / Trang nhân viên：{url}\n臨時密碼 / Mật khẩu tạm：{pin}\n登入後請設定自己的密碼。/ Sau khi đăng nhập, hãy đặt mật khẩu riêng."
   },
   "FinancePage": {
     "accountBalancesTitle": "各帳戶結餘",

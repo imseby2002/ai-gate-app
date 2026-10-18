@@ -82,7 +82,7 @@ export default function EmployeePortalPage({ params }: { params: Promise<{ no: s
                 value={secret} onChange={e => setSecret(e.target.value)} onKeyDown={e => e.key === 'Enter' && login()}
                 placeholder="VD: 15081995"
               />
-              <p className="text-xs text-slate-500">Lần đầu dùng ngày sinh, ví dụ 15/08/1995 → 15081995. 第一次請用生日登入。</p>
+              <p className="text-xs text-slate-500">Lần đầu dùng ngày sinh, ví dụ 15/08/1995 → 15081995, hoặc mật khẩu tạm do nhân sự cấp. 第一次請用生日或人事給的臨時密碼登入。</p>
             </div>
             {err && <p className="text-sm text-red-600">{err}</p>}
             <Button onClick={login} disabled={busy || !secret} className="w-full h-11 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl">

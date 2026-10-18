@@ -94,7 +94,7 @@ export async function portalLogin(ownerId: string, attendanceNo: string, secretI
   for (const e of emps) {
     const p = pmap.get(e.id)
     if (p?.pin_hash) {
-      if (checkPin(input, p.pin_hash)) { matched = { id: e.id, hasPin: true }; break }
+      if (checkPin(input, p.pin_hash)) { matched = { id: e.id, hasPin: !p.pin_temp }; break }
     } else {
       const bd = birthdayDigits(e.birthday)
       if (!bd) { missingBirthday = true; continue }
@@ -117,7 +117,7 @@ export async function portalLogin(ownerId: string, attendanceNo: string, secretI
     })
   }
   if (missingBirthday && emps.length === 1) {
-    return { ok: false, status: 403, error: 'Chưa có ngày sinh, vui lòng liên hệ quản lý / 尚未登記生日，請聯絡管理者' }
+    return { ok: false, status: 403, error: 'Chưa có ngày sinh, vui lòng xin mật khẩu tạm từ bộ phận nhân sự / 尚未登記生日，請向人事索取臨時密碼' }
   }
   return { ok: false, status: 401, error: 'Sai ngày sinh hoặc mật khẩu / 生日或密碼錯誤' }
 }
