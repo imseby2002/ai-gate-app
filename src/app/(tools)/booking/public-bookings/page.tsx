@@ -334,7 +334,7 @@ export default function PublicBookingsPage() {
                     )}
                     {b.payment_method === 'card' && (
                       <span className={`px-2 py-0.5 rounded-full ${b.payment_status === 'paid' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
-                        {b.payment_status === 'paid' ? '已刷卡付款' : '尚未刷卡・不會自動取消，請手動確認或取消'}
+                        {b.payment_status === 'paid' ? '已刷卡付款' : '尚未刷卡'}
                       </span>
                     )}
                   </div>

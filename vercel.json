@@ -22,7 +22,7 @@
       "schedule": "0 23 * * *"
     },
     {
-      "path": "/api/cron/card-payment-reminders",
+      "path": "/api/cron/pending-booking-reminders",
       "schedule": "0 1 * * *"
     },
     {
