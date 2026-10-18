@@ -19,6 +19,9 @@ interface Bubble {
   at: string
 }
 
+const THREAD_PAGE = 300
+const AROUND_BEFORE = 50
+const AROUND_AFTER = 250
 const CUSTOMER_COLS = 'platform, from_id, name, stage, message_count, last_message_at, facts'
 interface CustomerRow {
   platform: string
@@ -57,15 +60,36 @@ export async function GET(req: NextRequest) {
 
   // ── 單一對話 thread ────────────────────────────────────────────────────────
   if (to && platform) {
-    const { data: rows, error } = await supabase
+    // 預設載入最新 300 則；before＝往前載入更早的訊息；around＝從搜尋結果開啟，載入該則訊息前後
+    const before = sp.get('before')
+    const around = sp.get('around')
+    const base = () => supabase
       .from('cs_messages')
       .select('message, reply, intent, created_at')
       .eq('user_id', ctx.ownerId)
       .eq('platform', platform)
       .eq('from_id', to)
-      .order('created_at', { ascending: true })
-      .limit(300)
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    let rows: { message: string | null; reply: string | null; intent: string | null; created_at: string }[] = []
+    let hasOlder = false
+    let hasNewer = false
+    if (around) {
+      const [older, newer] = await Promise.all([
+        base().lt('created_at', around).order('created_at', { ascending: false }).limit(AROUND_BEFORE + 1),
+        base().gte('created_at', around).order('created_at', { ascending: true }).limit(AROUND_AFTER + 1),
+      ])
+      const err = older.error ?? newer.error
+      if (err) return NextResponse.json({ error: err.message }, { status: 500 })
+      hasOlder = (older.data ?? []).length > AROUND_BEFORE
+      hasNewer = (newer.data ?? []).length > AROUND_AFTER
+      rows = [...(older.data ?? []).slice(0, AROUND_BEFORE).reverse(), ...(newer.data ?? []).slice(0, AROUND_AFTER)]
+    } else {
+      let rq = base()
+      if (before) rq = rq.lt('created_at', before)
+      const { data, error } = await rq.order('created_at', { ascending: false }).limit(THREAD_PAGE + 1)
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      hasOlder = (data ?? []).length > THREAD_PAGE
+      rows = (data ?? []).slice(0, THREAD_PAGE).reverse()
+    }
 
     const bubbles: Bubble[] = []
     for (const r of rows ?? []) {
@@ -87,7 +111,7 @@ export async function GET(req: NextRequest) {
       .eq('user_id', ctx.ownerId).eq('platform', platform).eq('from_id', to).eq('industry', industry)
       .maybeSingle()
 
-    return NextResponse.json({ bubbles, takeover: takeoverSet.has(to), summary: custRow?.summary ?? null })
+    return NextResponse.json({ bubbles, hasOlder, hasNewer, takeover: takeoverSet.has(to), summary: custRow?.summary ?? null })
   }
 
   // ── 對話清單 ────────────────────────────────────────────────────────────────
@@ -104,6 +128,7 @@ export async function GET(req: NextRequest) {
   // 搜尋：客戶名稱／ID，或過往對話內容（客人訊息、AI 與真人回覆）
   const search = (sp.get('q') ?? '').trim().slice(0, 100)
   const matchMap = new Map<string, string>()
+  const matchAtMap = new Map<string, string>()
   let customers: CustomerRow[] | null
   if (search) {
     const pat = `%${search.replace(/[\\%_]/g, m => '\\' + m)}%`
@@ -142,7 +167,7 @@ export async function GET(req: NextRequest) {
       const prev = latest.get(key)
       if (!prev || r.created_at > prev.at) latest.set(key, { at: r.created_at, text })
     }
-    for (const [key, v] of latest) matchMap.set(key, snippet(v.text))
+    for (const [key, v] of latest) { matchMap.set(key, snippet(v.text)); matchAtMap.set(key, v.at) }
 
     const rows = new Map<string, CustomerRow>()
     for (const c of [...(byName.data ?? []), ...(byId.data ?? [])] as CustomerRow[]) rows.set(`${c.platform}:${c.from_id}`, c)
@@ -245,6 +270,7 @@ export async function GET(req: NextRequest) {
     lastMessageAt: c.last_message_at,
     takeover: takeoverSet.has(c.from_id),
     match: matchMap.get(`${c.platform}:${c.from_id}`) ?? null,
+    matchAt: matchAtMap.get(`${c.platform}:${c.from_id}`) ?? null,
   }))
 
   return NextResponse.json({ conversations, convos: conversations })
