@@ -378,32 +378,18 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
                 <div className="border-t bg-card/60 px-3 py-3">
                   {err && <div className="text-xs text-rose-600 mb-2 px-1">{err}</div>}
                   {takeover ? (
-                    <div className="flex items-center justify-between text-[11px] bg-amber-50 dark:bg-amber-950/50 border border-amber-200/80 dark:border-amber-900 rounded-lg px-3 py-1.5 mb-2 text-amber-900 dark:text-amber-200">
+                    <div className="flex items-center text-[11px] bg-amber-50 dark:bg-amber-950/50 border border-amber-200/80 dark:border-amber-900 rounded-lg px-3 py-1.5 mb-2 text-amber-900 dark:text-amber-200">
                       <span className="flex items-center gap-1.5">
                         <UserRound className="h-3.5 w-3.5 text-amber-600 shrink-0" />
                         <span>{t.rich('takeoverActiveHint', { b: (chunks) => <strong>{chunks}</strong> })}</span>
                       </span>
-                      <button
-                        type="button"
-                        onClick={toggleTakeover}
-                        className="underline font-bold text-amber-700 hover:text-amber-900 dark:text-amber-300 shrink-0 ml-2 cursor-pointer"
-                      >
-                        {t('resumeAiTakeoverButton')}
-                      </button>
                     </div>
                   ) : (
-                    <div className="flex items-center justify-between text-[11px] bg-slate-50 dark:bg-slate-900/50 border border-slate-200/80 dark:border-slate-800 rounded-lg px-3 py-1.5 mb-2 text-muted-foreground">
+                    <div className="flex items-center text-[11px] bg-slate-50 dark:bg-slate-900/50 border border-slate-200/80 dark:border-slate-800 rounded-lg px-3 py-1.5 mb-2 text-muted-foreground">
                       <span className="flex items-center gap-1.5">
                         <Bot className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
                         <span>{t.rich('aiReplyingHint', { b: (chunks) => <strong>{chunks}</strong> })}</span>
                       </span>
-                      <button
-                        type="button"
-                        onClick={toggleTakeover}
-                        className="underline text-amber-600 dark:text-amber-400 font-bold hover:text-amber-800 shrink-0 ml-2 cursor-pointer"
-                      >
-                        {t('silenceAiButton')}
-                      </button>
                     </div>
                   )}
                   <div className="flex items-end gap-2">

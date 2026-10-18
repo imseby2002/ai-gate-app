@@ -408,9 +408,9 @@
     "resumeAiButton": "Resume AI 🤖",
     "aiAutoReplying": "AI auto-replying",
     "pauseAiButton": "Pause AI 🛑",
-    "takeoverActiveHint": "Currently in <b>human takeover</b>, AI is muted and won't auto-reply. Click the button in the top right anytime to resume AI after the conversation.",
+    "takeoverActiveHint": "Currently in <b>human takeover</b>",
     "resumeAiTakeoverButton": "Resume AI",
-    "aiReplyingHint": "AI is currently <b>auto-replying</b>. If you send a message here, the system will automatically pause the AI and switch to human takeover.",
+    "aiReplyingHint": "AI is currently <b>auto-replying</b>",
     "silenceAiButton": "Silence AI (manual takeover)"
   },
   "CsDashboard": {
