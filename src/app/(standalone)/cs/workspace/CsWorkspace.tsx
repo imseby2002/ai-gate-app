@@ -948,6 +948,19 @@ function Unit12CustomerService({
 
   const ind = industry ?? 'homestay'
 
+  // 手機直向空間不夠，工作台收件匣會被上方標題/篩選列擠小；手機一律改用全螢幕的 /cs/inbox
+  // （無頂部多餘區塊，與安裝到主畫面的 PWA 相同）。/cs/inbox 的返回鍵回 /cs/dashboard，不會循環。
+  useEffect(() => {
+    if (tab !== 'inbox' || !window.matchMedia('(max-width: 767px)').matches) return
+    const params = new URLSearchParams({ industry: ind })
+    if (inboxThreadKey) {
+      const i = inboxThreadKey.indexOf(':')
+      params.set('platform', inboxThreadKey.slice(0, i))
+      params.set('to', inboxThreadKey.slice(i + 1))
+    }
+    window.location.replace(`/cs/inbox?${params.toString()}`)
+  }, [tab, ind, inboxThreadKey])
+
   useEffect(() => {
     setDsFetchFailed(false)
     fetch(`/api/marketing/cs-datasource?industry=${ind}`).then(r => r.json()).then(d => {
