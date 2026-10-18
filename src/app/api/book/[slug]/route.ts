@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { computeStayPrice } from '@/lib/booking/pricing'
 import { confirmPublicBooking } from '@/lib/booking/public-booking-confirm'
+import { availablePaymentMethods } from '@/lib/booking/payment'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -48,12 +49,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     return NextResponse.json({ error: '請求過於頻繁，請稍後再試' }, { status: 429 })
   }
 
-  const { data: profile } = await admin.from('bnb_profiles').select('user_id, auto_confirm_bookings').eq('slug', slug).single()
+  const { data: profile } = await admin.from('bnb_profiles').select('user_id, auto_confirm_bookings, payment_methods, bank_transfer').eq('slug', slug).single()
   if (!profile) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   const body = await req.json()
   const { check_in, check_out, property_id, guest_name, guest_email, guest_phone,
-          num_guests, extra_beds, promo_code, notes } = body
+          num_guests, extra_beds, promo_code, notes, payment_method } = body
+
+  // 付款方式只接受民宿有開放的選項；沒傳或不合法就用第一個開放的方式
+  const allowedMethods: string[] = availablePaymentMethods(profile.payment_methods, profile.bank_transfer)
+  const payMethod = allowedMethods.includes(payment_method) ? payment_method : allowedMethods[0]
 
   if (!check_in || !check_out || !guest_name || !guest_email) {
     return NextResponse.json({ error: '請填寫必填欄位' }, { status: 400 })
@@ -125,6 +130,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
       return NextResponse.json({ error: '日期區間不正確' }, { status: 400 })
     }
     return NextResponse.json({ error: '訂房失敗，請稍後再試' }, { status: 500 })
+  }
+
+  // create_public_booking 固定寫入 on_arrival，這裡補上旅客選的付款方式
+  if (payMethod !== 'on_arrival') {
+    await admin.from('public_bookings').update({ payment_method: payMethod }).eq('id', booking.id)
+    booking.payment_method = payMethod
   }
 
   // 民宿主開啟「自動確認」時，旅客送出後立即轉正式訂單，不用等人工按確認

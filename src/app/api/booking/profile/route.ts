@@ -31,7 +31,7 @@ export async function PUT(req: NextRequest) {
     'contact_map_embed','contact_note','owner_intro',
     'competitor_watchlist',
     'latitude','longitude','country','google_feed_enabled','auto_confirm_bookings','cs_booking_mode','early_gate_access',
-    'weekend_days',
+    'weekend_days', 'payment_methods', 'bank_transfer',
   ]
   const updates: Record<string, unknown> = {}
   for (const f of fields) if (f in body) updates[f] = body[f]

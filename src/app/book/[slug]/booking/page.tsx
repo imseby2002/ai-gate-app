@@ -5,12 +5,14 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { Users, Tag, CheckCircle, BedDouble, ChevronLeft, Loader2 } from 'lucide-react'
 import { resolveDesign, headingCss } from '@/lib/booking/templates'
+import { availablePaymentMethods, PAYMENT_METHOD_LABEL, type BankTransferInfo, type PaymentMethod } from '@/lib/booking/payment'
 
 interface BnbProfile {
   name: string; theme_color?: string | null; template_id?: string | null
   check_in_time?: string | null; check_out_time?: string | null; min_nights?: number | null
   booking_instructions?: string | null; cancellation_policy?: string | null
   breakfast?: { type: string; price_per_person: number; description?: string } | null
+  payment_methods?: string[] | null; bank_transfer?: BankTransferInfo | null
 }
 interface Property {
   id: string; name: string; description?: string | null
@@ -22,6 +24,7 @@ interface Property {
 const EMPTY_FORM = {
   guest_name: '', guest_email: '', guest_phone: '',
   num_guests: 1, extra_beds: 0, check_in: '', check_out: '', notes: '', promo_code: '',
+  payment_method: '' as PaymentMethod | '',
 }
 
 function nights(ci: string, co: string) {
@@ -53,7 +56,10 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
   const [serverQuote, setServerQuote]   = useState<{ total: number } | null>(null)
   const [confirmation, setConfirmation] = useState<{
     code: string; total: number | null; roomName: string; checkIn: string; checkOut: string; guests: number; beds: number
+    status: string; paymentMethod: string
   } | null>(null)
+  const [last5, setLast5]         = useState('')
+  const [reportMsg, setReportMsg] = useState('')
 
   const todayStr = new Date().toISOString().slice(0, 10)
 
@@ -123,7 +129,7 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
     try {
       const res = await fetch(`/api/book/${slug}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, property_id: selectedProp?.id ?? null, promo_code: promoValid ? form.promo_code : null }),
+        body: JSON.stringify({ ...form, payment_method: form.payment_method || payMethods[0], property_id: selectedProp?.id ?? null, promo_code: promoValid ? form.promo_code : null }),
       })
       const d = await res.json()
       if (!res.ok) {
@@ -137,10 +143,24 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
         code: d.booking.confirmation_code, total: d.booking.total_price,
         roomName: selectedProp?.name ?? '不指定房型',
         checkIn: form.check_in, checkOut: form.check_out, guests: form.num_guests, beds,
+        status: d.booking.status, paymentMethod: d.booking.payment_method ?? 'on_arrival',
       })
       setStep('done')
     } catch { setSubmitError('網路錯誤，請稍後再試') }
     finally { setSubmitting(false) }
+  }
+
+  const payMethods = availablePaymentMethods(profile?.payment_methods, profile?.bank_transfer)
+  const bank = profile?.bank_transfer
+
+  async function reportTransfer() {
+    if (!confirmation || !/^\d{5}$/.test(last5)) { setReportMsg('請輸入帳號末五碼（5 位數字）'); return }
+    const res = await fetch(`/api/book/${slug}/transfer-report`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: confirmation.code, email: form.guest_email, last5 }),
+    })
+    const d = await res.json().catch(() => ({}))
+    setReportMsg(res.ok ? '已收到您的匯款回報，業者核對後會通知您' : (d.error ?? '回報失敗，請稍後再試'))
   }
 
   const n = nights(form.check_in, form.check_out)
@@ -194,7 +214,7 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
       {step === 'done' && confirmation && (
         <div className="bg-[var(--bnb-page)] rounded-2xl border p-8 text-center space-y-4">
           <CheckCircle className="h-14 w-14 mx-auto text-emerald-500" />
-          <h3 className="text-xl font-bold text-gray-900">訂房申請已送出！</h3>
+          <h3 className="text-xl font-bold text-gray-900">{confirmation.status === 'confirmed' ? '訂房已成立！' : '訂房申請已送出！'}</h3>
           <p className="text-sm text-gray-500">確認碼：<span className="font-mono font-bold text-gray-900 text-base">{confirmation.code}</span></p>
           <div className="text-left text-sm bg-gray-50 rounded-xl p-4 max-w-sm mx-auto space-y-1.5">
             {[
@@ -216,8 +236,40 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
               </div>
             )}
           </div>
+          {confirmation.paymentMethod === 'transfer' && bank ? (
+            <div className="text-left text-sm bg-blue-50 border border-blue-200 rounded-xl p-4 max-w-sm mx-auto space-y-1.5">
+              <div className="font-semibold text-blue-900">付款方式：銀行轉帳</div>
+              {([
+                ['銀行', `${bank.bank_name ?? ''}${bank.bank_code ? `（${bank.bank_code}）` : ''}`],
+                ['帳號', bank.account_no ?? ''],
+                ...(bank.account_name ? [['戶名', bank.account_name]] : []),
+                ...(confirmation.total != null ? [['匯款金額', `NT$ ${fmt(confirmation.total)}`]] : []),
+                ...(bank.deadline_hours ? [['匯款期限', `訂房後 ${bank.deadline_hours} 小時內`]] : []),
+              ] as [string, string][]).map(([k, v]) => (
+                <div key={k} className="flex justify-between gap-3">
+                  <span className="text-gray-500 shrink-0">{k}</span>
+                  <span className="text-gray-900 font-medium text-right break-all">{v}</span>
+                </div>
+              ))}
+              {bank.note && <p className="text-xs text-gray-600 pt-1">{bank.note}</p>}
+              <div className="pt-2 border-t border-blue-200 space-y-1.5">
+                <div className="text-xs text-gray-600">匯款後請回報您的帳號末五碼：</div>
+                <div className="flex gap-2">
+                  <input value={last5} onChange={e => setLast5(e.target.value.replace(/\D/g, '').slice(0, 5))}
+                    inputMode="numeric" placeholder="末五碼"
+                    className="flex-1 text-sm border rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                  <button onClick={reportTransfer} className="px-3 py-1.5 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">回報</button>
+                </div>
+                {reportMsg && <p className="text-xs text-blue-800">{reportMsg}</p>}
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-600">付款方式：<strong>到店付款</strong>（入住時付款）</p>
+          )}
           <p className="text-sm text-gray-500 max-w-sm mx-auto">
-            業者確認後會寄確認信至 <strong>{form.guest_email}</strong>
+            {confirmation.status === 'confirmed'
+              ? <>確認信已寄至 <strong>{form.guest_email}</strong></>
+              : <>業者確認後會寄確認信至 <strong>{form.guest_email}</strong></>}
           </p>
           <button onClick={() => { setStep('select'); setForm({ ...EMPTY_FORM }); setSelectedProp(null); setPromoValid(null) }}
             className="px-6 py-2 text-[var(--bnb-on-accent)] text-sm font-medium hover:opacity-90"
@@ -333,6 +385,20 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
             {promoError && <p className="text-xs text-rose-500">{promoError}</p>}
           </div>
 
+          {payMethods.length > 1 && (
+            <div className="bg-[var(--bnb-page)] rounded-2xl border p-5 space-y-2">
+              <h3 className="font-semibold text-gray-900">付款方式</h3>
+              {payMethods.map(m => (
+                <label key={m} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                  <input type="radio" name="payment_method" checked={(form.payment_method || payMethods[0]) === m}
+                    onChange={() => setForm(f => ({ ...f, payment_method: m }))} />
+                  {PAYMENT_METHOD_LABEL[m]}
+                  {m === 'transfer' && bank?.deadline_hours ? <span className="text-xs text-gray-400">（訂房後 {bank.deadline_hours} 小時內匯款）</span> : null}
+                </label>
+              ))}
+            </div>
+          )}
+
           {submitError && (
             <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 text-center">{submitError}</p>
           )}
@@ -343,7 +409,9 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
             style={{ ...aStyle, ...btnStyle }}>
             {submitting ? '送出中…' : '確認訂房申請'}
           </button>
-          <p className="text-center text-xs text-gray-400">送出後業者將與您確認，費用採現場付款</p>
+          <p className="text-center text-xs text-gray-400">
+            {(form.payment_method || payMethods[0]) === 'transfer' ? '送出後會顯示匯款帳號' : '費用採到店付款'}
+          </p>
 
           {profile?.cancellation_policy && (
             <div className="bg-gray-50 rounded-xl p-4 text-xs text-gray-600 space-y-1">

@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { CheckCircle, XCircle, Clock, Trash2, ExternalLink } from 'lucide-react'
+import { PAYMENT_METHOD_LABEL, type PaymentMethod } from '@/lib/booking/payment'
 
 interface PubBooking {
   id: string; confirmation_code: string; guest_name: string; guest_email: string
@@ -9,6 +10,7 @@ interface PubBooking {
   total_price: number | null; promo_code: string | null; promo_discount: number | null
   property_id: string | null; notes: string | null; status: 'pending' | 'confirmed' | 'cancelled'; created_at: string
   converted_booking_id?: string | null
+  payment_method?: string | null; payment_status?: string | null; transfer_last5?: string | null
   properties?: { name: string } | null
 }
 
@@ -145,6 +147,21 @@ export default function PublicBookingsPage() {
       const res = await fetch('/api/booking/public-bookings', {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: b.id, status }),
+      })
+      const d = await res.json()
+      if (!res.ok || !d.booking) { notify(false, d.error ?? t('public.actionFailed')); return }
+      setBookings(prev => prev.map(x => x.id === b.id ? d.booking : x))
+    } catch {
+      notify(false, t('bookings.toast.networkError'))
+    } finally { setBusy(null) }
+  }
+
+  async function setPaid(b: PubBooking, paid: boolean) {
+    setBusy(b.id)
+    try {
+      const res = await fetch('/api/booking/public-bookings', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: b.id, payment_status: paid ? 'paid' : 'unpaid' }),
       })
       const d = await res.json()
       if (!res.ok || !d.booking) { notify(false, d.error ?? t('public.actionFailed')); return }
@@ -299,6 +316,24 @@ export default function PublicBookingsPage() {
                   )}
                 </div>
 
+                {b.payment_method && (
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                      {PAYMENT_METHOD_LABEL[b.payment_method as PaymentMethod] ?? b.payment_method}
+                    </span>
+                    {b.payment_method === 'transfer' && (
+                      <>
+                        <span className={`px-2 py-0.5 rounded-full ${b.payment_status === 'paid' ? 'bg-emerald-50 text-emerald-700' : b.payment_status === 'reported' ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700'}`}>
+                          {b.payment_status === 'paid' ? '已收款' : b.payment_status === 'reported' ? `已回報匯款・末五碼 ${b.transfer_last5}` : '待匯款'}
+                        </span>
+                        <button disabled={isBusy} onClick={() => setPaid(b, b.payment_status !== 'paid')}
+                          className="px-2 py-0.5 rounded-full border text-gray-600 hover:bg-gray-50 disabled:opacity-50">
+                          {b.payment_status === 'paid' ? '改回未收款' : '標記已收款'}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
                 {b.notes && (
                   <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">{b.notes}</p>
                 )}
