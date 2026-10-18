@@ -106,6 +106,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     }
   }
 
+  if (payMethod === 'card' && !(Math.round(Number(totalPrice) || 0) >= 1)) {
+    return NextResponse.json({ error: '此房型目前無法線上刷卡，請選擇其他付款方式' }, { status: 400 })
+  }
+
   // Atomic availability-check + insert (advisory-locked per property → no double booking)
   const { data: booking, error } = await admin.rpc('create_public_booking', {
     p_host_user_id: profile.user_id,
@@ -139,7 +143,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   }
 
   // 民宿主開啟「自動確認」時，旅客送出後立即轉正式訂單，不用等人工按確認
-  if (profile.auto_confirm_bookings) {
+  // 信用卡要等綠界通知付款成功才自動確認（見 /api/book/ecpay-return）
+  if (profile.auto_confirm_bookings && payMethod !== 'card') {
     const result = await confirmPublicBooking(admin, profile.user_id, booking.id)
     if (result.ok) return NextResponse.json({ booking: { ...booking, status: 'confirmed', converted_booking_id: result.booking_id } })
     // 自動確認失敗（例如寄信服務異常）仍保留這筆 pending 申請，讓民宿主可以手動確認，不讓旅客的申請憑空消失

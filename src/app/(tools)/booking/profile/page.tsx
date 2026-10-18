@@ -737,9 +737,9 @@ export default function BnbProfilePage() {
       <section className="bg-white rounded-xl border p-4 sm:p-5 space-y-3">
         <h2 className="text-sm font-semibold text-gray-700">官網訂房付款方式</h2>
         <div className="flex flex-wrap gap-4 text-sm text-gray-700">
-          {([['on_arrival', '到店付款'], ['transfer', '銀行轉帳'], ['card', '信用卡（綠界，即將開放）']] as const).map(([m, label]) => (
-            <label key={m} className={`flex items-center gap-2 ${m === 'card' ? 'opacity-50' : ''}`}>
-              <input type="checkbox" disabled={m === 'card'}
+          {([['on_arrival', '到店付款'], ['transfer', '銀行轉帳'], ['card', '信用卡（綠界）']] as const).map(([m, label]) => (
+            <label key={m} className="flex items-center gap-2">
+              <input type="checkbox"
                 checked={form.payment_methods.includes(m)}
                 onChange={e => set('payment_methods', e.target.checked
                   ? [...form.payment_methods, m]
@@ -750,6 +750,7 @@ export default function BnbProfilePage() {
           ))}
         </div>
         {form.payment_methods.length === 0 && <p className="text-xs text-amber-600">未勾選任何方式時，旅客一律到店付款。</p>}
+        {form.payment_methods.includes('card') && <p className="text-xs text-gray-500">信用卡透過 AI-GATE 平台綠界收款，旅客刷卡成功後訂單自動標記已收款；開啟「自動確認」時付款成功才成立訂單。</p>}
         {form.payment_methods.includes('transfer') && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
             {([

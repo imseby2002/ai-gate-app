@@ -40,11 +40,15 @@ export async function confirmPublicBooking(
     num_guests: pb.num_guests ?? 1,
     total_price: pb.total_price ?? null,
     status: 'confirmed',
+    is_paid: pb.payment_status === 'paid',
     source: 'form',
     notes: pb.notes ?? null,
   }).select('id').single()
 
   if (insErr || !newBooking) return { ok: false, error: insErr?.message ?? '建立正式訂單失敗' }
+  if (pb.payment_status === 'paid' && orderId) {
+    await supabase.from('booking_orders').update({ is_paid: true }).eq('id', orderId).eq('user_id', hostUserId)
+  }
 
   await supabase.from('public_bookings')
     .update({ status: 'confirmed', converted_booking_id: newBooking.id })

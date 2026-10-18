@@ -60,6 +60,7 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
   } | null>(null)
   const [last5, setLast5]         = useState('')
   const [reportMsg, setReportMsg] = useState('')
+  const [cardMsg, setCardMsg] = useState('')
 
   const todayStr = new Date().toISOString().slice(0, 10)
 
@@ -146,12 +147,32 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
         status: d.booking.status, paymentMethod: d.booking.payment_method ?? 'on_arrival',
       })
       setStep('done')
+      if (d.booking.payment_method === 'card') await payByCard(d.booking.confirmation_code)
     } catch { setSubmitError('網路錯誤，請稍後再試') }
     finally { setSubmitting(false) }
   }
 
   const payMethods = availablePaymentMethods(profile?.payment_methods, profile?.bank_transfer)
   const bank = profile?.bank_transfer
+
+  // 信用卡：向後端取得綠界刷卡參數後，以表單 POST 導向綠界付款頁
+  async function payByCard(code: string) {
+    setCardMsg('前往刷卡頁面中…')
+    try {
+      const res = await fetch(`/api/book/${slug}/card-checkout`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, email: form.guest_email, return_url: window.location.href }),
+      })
+      const d = await res.json().catch(() => ({}))
+      if (!res.ok || !d.action) { setCardMsg(d.error ?? '無法前往刷卡，請稍後再試'); return }
+      const f = document.createElement('form')
+      f.method = 'POST'; f.action = d.action
+      for (const [k, v] of Object.entries(d.params as Record<string, string>)) {
+        const i = document.createElement('input'); i.type = 'hidden'; i.name = k; i.value = v; f.appendChild(i)
+      }
+      document.body.appendChild(f); f.submit()
+    } catch { setCardMsg('網路錯誤，請稍後再試') }
+  }
 
   async function reportTransfer() {
     if (!confirmation || !/^\d{5}$/.test(last5)) { setReportMsg('請輸入帳號末五碼（5 位數字）'); return }
@@ -262,6 +283,14 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
                 </div>
                 {reportMsg && <p className="text-xs text-blue-800">{reportMsg}</p>}
               </div>
+            </div>
+          ) : confirmation.paymentMethod === 'card' ? (
+            <div className="text-sm bg-blue-50 border border-blue-200 rounded-xl p-4 max-w-sm mx-auto space-y-2">
+              <div className="font-semibold text-blue-900">付款方式：信用卡</div>
+              <p className="text-xs text-gray-600">完成刷卡後訂房才會成立。若沒有自動跳轉，請按下方按鈕。</p>
+              <button onClick={() => payByCard(confirmation.code)}
+                className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">前往刷卡付款</button>
+              {cardMsg && <p className="text-xs text-blue-800">{cardMsg}</p>}
             </div>
           ) : (
             <p className="text-sm text-gray-600">付款方式：<strong>到店付款</strong>（入住時付款）</p>
@@ -410,7 +439,7 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
             {submitting ? '送出中…' : '確認訂房申請'}
           </button>
           <p className="text-center text-xs text-gray-400">
-            {(form.payment_method || payMethods[0]) === 'transfer' ? '送出後會顯示匯款帳號' : '費用採到店付款'}
+            {({ transfer: '送出後會顯示匯款帳號', card: '送出後前往綠界刷卡付款' } as Record<string, string>)[form.payment_method || payMethods[0]] ?? '費用採到店付款'}
           </p>
 
           {profile?.cancellation_policy && (
