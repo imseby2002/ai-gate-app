@@ -408,9 +408,9 @@
     "resumeAiButton": "Khôi phục AI 🤖",
     "aiAutoReplying": "AI đang tự động trả lời",
     "pauseAiButton": "Tạm dừng AI 🛑",
-    "takeoverActiveHint": "Hiện đang ở chế độ <b>người thật tiếp quản</b>, AI đã tắt tiếng và sẽ không tự động chen vào. Sau khi kết thúc trò chuyện, nhấn nút ở góc trên bên phải để khôi phục AI bất cứ lúc nào.",
+    "takeoverActiveHint": "Hiện đang <b>người thật tiếp quản</b>",
     "resumeAiTakeoverButton": "Khôi phục AI tiếp quản",
-    "aiReplyingHint": "Hiện tại <b>AI đang tự động trả lời</b>. Nếu bạn gửi tin nhắn tại đây, hệ thống sẽ tự động tạm dừng AI và chuyển sang người thật tiếp quản.",
+    "aiReplyingHint": "Hiện tại <b>AI đang tự động trả lời</b>",
     "silenceAiButton": "Tắt tiếng AI (tiếp quản thủ công)"
   },
   "CsDashboard": {

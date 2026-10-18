@@ -408,9 +408,9 @@
     "resumeAiButton": "恢復 AI 🤖",
     "aiAutoReplying": "AI 自動回覆中",
     "pauseAiButton": "暫停 AI 🛑",
-    "takeoverActiveHint": "目前為<b>真人接管</b>，AI 已靜音不會自動插嘴。談話結束後可點擊右上角隨時恢復 AI。",
+    "takeoverActiveHint": "目前<b>真人接管中</b>",
     "resumeAiTakeoverButton": "恢復 AI 接手",
-    "aiReplyingHint": "目前 <b>AI 自動回覆中</b>。若您在此發送訊息，系統將自動暫停 AI 並切換為真人接管。",
+    "aiReplyingHint": "目前<b>AI 自動回覆中</b>",
     "silenceAiButton": "讓 AI 閉嘴 (手動接手)"
   },
   "CsDashboard": {
