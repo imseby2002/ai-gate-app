@@ -16,7 +16,12 @@ export async function confirmPublicBooking(
     return { ok: true, booking_id: pb.converted_booking_id, emailed: false, alreadyConverted: true }
   }
 
-  const orderId = await findOrCreateOrder(supabase, hostUserId, 'direct', null, {
+  // bookings 唯一鍵 (user_id, platform, platform_booking_id, property_id) 是 NULLS NOT DISTINCT：
+  // 單號留空的直訂，同一房型只能有一筆，第二筆官網訂房就會撞鍵、轉單失敗（申請卡在待確認）。
+  // 用官網確認碼當訂單號碼，每筆官網訂房都有自己的單號。
+  const pbid = `WEB-${pb.confirmation_code ?? String(pb.id).slice(0, 8)}`
+
+  const orderId = await findOrCreateOrder(supabase, hostUserId, 'direct', pbid, {
     guest_name: pb.guest_name, guest_email: pb.guest_email, guest_phone: pb.guest_phone ?? null,
     notes: pb.notes ?? null, source: 'form',
   })
@@ -26,6 +31,7 @@ export async function confirmPublicBooking(
     order_id: orderId,
     property_id: pb.property_id ?? null,
     platform: 'direct',
+    platform_booking_id: pbid,
     guest_name: pb.guest_name,
     guest_email: pb.guest_email,
     guest_phone: pb.guest_phone ?? null,
