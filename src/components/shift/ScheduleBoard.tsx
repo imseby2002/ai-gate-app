@@ -4,7 +4,9 @@
 // 在員工那一列拖曳即可排班；點已排的班可調整或刪除。
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { ChevronLeft, ChevronRight, Loader2, Send, Users, CalendarPlus, Trash2, X, Wand2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Loader2, Send, Users, CalendarPlus, Trash2, X, Wand2, Sparkles, BarChart3 } from 'lucide-react'
+import { ExcelImportModal } from '@/components/common/ExcelImportModal'
+import type { ImportColumn } from '@/lib/excel/universal-import'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import {
@@ -31,6 +33,8 @@ export function ScheduleBoard({ store }: { store: string }) {
   const [busy, setBusy] = useState(false)
   const [showNeeds, setShowNeeds] = useState(false)
   const [showAvail, setShowAvail] = useState(false)
+  const [showSales, setShowSales] = useState(false)
+  const [showAi, setShowAi] = useState(false)
   const [showOthers, setShowOthers] = useState(false)
   const [editing, setEditing] = useState<PlanRow | null>(null)
   const weekEnd = addDays(weekStart, 6)
@@ -177,6 +181,8 @@ export function ScheduleBoard({ store }: { store: string }) {
         <div className="ml-auto flex flex-wrap gap-2">
           <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowNeeds(true)}><Users className="h-4 w-4" />{t('needs')}</Button>
           <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowAvail(true)}><CalendarPlus className="h-4 w-4" />{t('availForStaff')}</Button>
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowSales(true)}><BarChart3 className="h-4 w-4" />{t('hourlySales')}</Button>
+          <Button size="sm" variant="outline" className="gap-1.5 border-violet-300 text-violet-700" onClick={() => setShowAi(true)}><Sparkles className="h-4 w-4" />{t('aiSuggest')}</Button>
           <Button size="sm" className="gap-1.5" onClick={publish} disabled={busy || weekDrafts === 0}>
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}{t('publishWeek', { n: weekDrafts })}
           </Button>
@@ -260,6 +266,8 @@ export function ScheduleBoard({ store }: { store: string }) {
       {editing && <PlanEditor plan={editing} name={nameOf(editing.employee_id)} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); reload() }} />}
       {showNeeds && <NeedsModal store={store} needs={data?.needs ?? []} WD={WD} onClose={() => setShowNeeds(false)} onChanged={reload} />}
       {showAvail && <AvailModal store={store} emps={emps} rules={data?.rules ?? []} WD={WD} onClose={() => setShowAvail(false)} onChanged={reload} />}
+      {showSales && <SalesModal store={store} WD={WD} onClose={() => setShowSales(false)} />}
+      {showAi && <AiSuggestModal store={store} from={weekStart} to={weekEnd} WD={WD} onClose={() => setShowAi(false)} onApplied={reload} />}
     </div>
   )
 }
@@ -403,6 +411,164 @@ function AvailModal({ store, emps, rules, WD, onClose, onChanged }: { store: str
         </div>
         {err && <p className="text-xs text-red-600">{err}</p>}
       </div>
+    </Modal>
+  )
+}
+
+const SALES_COLUMNS: ImportColumn[] = [
+  { key: 'date', label: '日期', required: true, example: '2026-10-01', aliases: ['date', '日期', 'ngày', 'ngay'] },
+  { key: 'hour', label: '小時', required: true, example: '15:00', aliases: ['hour', '小時', '時段', 'time', 'giờ', 'gio'] },
+  { key: 'orders', label: '單數', example: 12, aliases: ['orders', '單數', '訂單數', 'số đơn', 'don'] },
+  { key: 'cups', label: '杯數', example: 30, aliases: ['cups', '杯數', 'qty', '數量', 'số ly', 'ly'] },
+  { key: 'revenue', label: '營收', example: 1500000, aliases: ['revenue', '營收', '金額', 'sales', 'doanh thu'] },
+]
+
+interface HourStat { weekday: number; hour: number; orders: number; cups: number; revenue: number }
+
+// 每小時業績：匯入與近 8 週「星期 × 小時」平均杯數熱度表
+function SalesModal({ store, WD, onClose }: { store: string; WD: string[]; onClose: () => void }) {
+  const t = useTranslations('Shift')
+  const [data, setData] = useState<{ days: number; firstDate: string | null; lastDate: string | null; stats: HourStat[] } | null>(null)
+  const [importing, setImporting] = useState(false)
+  const [tick, setTick] = useState(0)
+  useEffect(() => {
+    fetch(`/api/shift/sales?store=${encodeURIComponent(store)}`).then(r => r.ok ? r.json() : null).then(setData)
+  }, [store, tick])
+  const stats = data?.stats ?? []
+  const hours = [...new Set(stats.map(s => s.hour))].sort((a, b) => a - b)
+  const metric = (s?: HourStat) => s ? (s.cups || s.orders) : 0
+  const max = Math.max(1, ...stats.map(s => metric(s)))
+  return (
+    <Modal title={t('salesTitle', { store })} onClose={onClose}>
+      <p className="text-xs text-gray-500">{t('salesDesc')}</p>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs text-gray-500">{data?.days ? t('salesRange', { days: data.days, from: data.firstDate ?? '', to: data.lastDate ?? '' }) : t('salesNone')}</span>
+        <Button size="sm" variant="outline" onClick={() => setImporting(true)}>{t('salesImport')}</Button>
+      </div>
+      {hours.length > 0 && (
+        <div className="overflow-x-auto">
+          <table className="text-[10px] border-collapse">
+            <thead><tr><th />{hours.map(h => <th key={h} className="px-1 font-normal text-gray-400">{h}</th>)}</tr></thead>
+            <tbody>
+              {WD_ORDER.map(wd => (
+                <tr key={wd}>
+                  <td className="pr-1 text-gray-500">{WD[wd]}</td>
+                  {hours.map(h => {
+                    const s = stats.find(x => x.weekday === wd && x.hour === h)
+                    const v = metric(s)
+                    return <td key={h} title={s ? `${s.cups} / ${s.orders} / ${s.revenue}` : ''} className="w-7 h-6 text-center"
+                      style={{ background: v ? `rgba(124, 58, 237, ${0.12 + 0.75 * v / max})` : undefined, color: v / max > 0.55 ? 'white' : undefined }}>{v ? Math.round(v) : ''}</td>
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="text-[10px] text-gray-400 mt-1">{t('salesHeatHint')}</p>
+        </div>
+      )}
+      {importing && (
+        <ExcelImportModal
+          title={t('salesImportTitle', { store })}
+          description={t('salesImportDesc')}
+          columns={SALES_COLUMNS}
+          templateFilename="hourly-sales"
+          sheetName="hourly"
+          onClose={() => setImporting(false)}
+          onSuccess={() => setTick(x => x + 1)}
+          onSubmit={async rows => (await jsonPost('/api/shift/sales', 'POST', { store, rows })).json()}
+        />
+      )}
+    </Modal>
+  )
+}
+
+interface Proposal { employee_id: string; name: string; work_date: string; start_min: number; end_min: number; reason: string }
+interface SuggestedNeed { weekdays: number[]; start_min: number; end_min: number; headcount: number }
+
+// AI 排班建議：依可上班時段、人力需求、既有班表與每小時業績產生草稿，勾選後套用
+function AiSuggestModal({ store, from, to, WD, onClose, onApplied }: { store: string; from: string; to: string; WD: string[]; onClose: () => void; onApplied: () => void }) {
+  const t = useTranslations('Shift')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  const [res, setRes] = useState<{ summary: string; staffing_advice: string; suggested_needs: SuggestedNeed[]; proposals: Proposal[]; rejected: number; sales_days: number } | null>(null)
+  const [pick, setPick] = useState<Set<number>>(new Set())
+  const [done, setDone] = useState('')
+  const run = async () => {
+    setBusy(true); setErr(''); setDone('')
+    const r = await jsonPost('/api/shift/ai-suggest', 'POST', { store, from, to })
+    const d = await r.json().catch(() => ({}))
+    setBusy(false)
+    if (!r.ok) { setErr(d.error ?? t('saveFailed')); return }
+    setRes(d)
+    setPick(new Set((d.proposals ?? []).map((_: Proposal, i: number) => i)))
+  }
+  const apply = async () => {
+    if (!res) return
+    setBusy(true); setErr('')
+    const items = res.proposals.filter((_, i) => pick.has(i)).map(p => ({ employee_id: p.employee_id, work_date: p.work_date, start_min: p.start_min, end_min: p.end_min }))
+    const r = await jsonPost('/api/shift/plans', 'POST', { store, items })
+    const d = await r.json().catch(() => ({}))
+    setBusy(false)
+    if (!r.ok) { setErr(d.error ?? t('saveFailed')); return }
+    setDone(t('aiApplied', { n: d.created ?? 0, failed: (d.errors ?? []).length }))
+    onApplied()
+  }
+  const applyNeeds = async () => {
+    if (!res || !confirm(t('aiNeedsConfirm'))) return
+    const r = await jsonPost('/api/shift/needs', 'PUT', { store, items: res.suggested_needs })
+    const d = await r.json().catch(() => ({}))
+    if (!r.ok) { setErr(d.error ?? t('saveFailed')); return }
+    setDone(t('aiNeedsApplied', { n: d.saved ?? 0 }))
+    onApplied()
+  }
+  const wdText = (w: number[]) => w.length === 0 || w.length === 7 ? t('everyDay') : WD_ORDER.filter(n => w.includes(n)).map(n => WD[n]).join(' ')
+  const byDate = res ? [...new Set(res.proposals.map(p => p.work_date))].sort() : []
+  return (
+    <Modal title={t('aiTitle', { from, to })} onClose={onClose}>
+      <p className="text-xs text-gray-500">{t('aiDesc')}</p>
+      {!res && (
+        <Button onClick={run} disabled={busy} className="w-full gap-1.5">
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}{busy ? t('aiRunning') : t('aiRun')}
+        </Button>
+      )}
+      {err && <p className="text-sm text-red-600">{err}</p>}
+      {res && (
+        <div className="space-y-3">
+          {res.sales_days === 0 && <p className="text-xs text-amber-600">{t('aiNoSales')}</p>}
+          {res.summary && <p className="text-sm whitespace-pre-wrap">{res.summary}</p>}
+          {res.staffing_advice && <p className="text-sm text-violet-700 dark:text-violet-300 whitespace-pre-wrap">{res.staffing_advice}</p>}
+          {res.suggested_needs.length > 0 && (
+            <div className="rounded-lg border p-2 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium">{t('aiSuggestedNeeds')}</span>
+                <Button size="sm" variant="outline" onClick={applyNeeds}>{t('aiApplyNeeds')}</Button>
+              </div>
+              {res.suggested_needs.map((n, i) => <div key={i} className="text-xs text-gray-600">{wdText(n.weekdays)} · {fmtMin(n.start_min)}–{fmtMin(n.end_min)} · {t('people', { n: n.headcount })}</div>)}
+            </div>
+          )}
+          {res.proposals.length === 0 ? <p className="text-sm text-gray-400">{t('aiNoProposals')}</p> : (
+            <div className="space-y-2">
+              {byDate.map(d => (
+                <div key={d}>
+                  <div className="text-xs font-semibold text-gray-500">{d} ({WD[weekdayOf(d)]})</div>
+                  {res.proposals.map((p, i) => p.work_date !== d ? null : (
+                    <label key={i} className="flex items-start gap-2 text-sm py-0.5">
+                      <input type="checkbox" checked={pick.has(i)} onChange={() => setPick(s => { const n = new Set(s); if (n.has(i)) n.delete(i); else n.add(i); return n })} className="mt-1" />
+                      <span><b>{p.name}</b> {fmtMin(p.start_min)}–{fmtMin(p.end_min)}{p.reason && <span className="text-xs text-gray-500"> · {p.reason}</span>}</span>
+                    </label>
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
+          {res.rejected > 0 && <p className="text-[11px] text-gray-400">{t('aiRejected', { n: res.rejected })}</p>}
+          {done && <p className="text-sm text-emerald-700">{done}</p>}
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={run} disabled={busy}>{t('aiRerun')}</Button>
+            <Button size="sm" onClick={apply} disabled={busy || pick.size === 0}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : t('aiApply', { n: pick.size })}</Button>
+          </div>
+        </div>
+      )}
     </Modal>
   )
 }

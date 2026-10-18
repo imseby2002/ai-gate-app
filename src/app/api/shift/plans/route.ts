@@ -13,25 +13,40 @@ async function overlap(ctx: UnitContext, employeeId: string, date: string, start
   return (data ?? []).find(p => p.start_min < end && p.end_min > start) ?? null
 }
 
-// 新增班。body: { store, employee_id, work_date, start_min, end_min }
+async function createOne(ctx: UnitContext, store: string, b: Record<string, unknown>) {
+  const employee_id = String(b.employee_id ?? ''), work_date = String(b.work_date ?? '')
+  const start_min = Number(b.start_min), end_min = Number(b.end_min)
+  if (!employee_id || !isDate(work_date) || !validMin(start_min) || !validMin(end_min) || end_min <= start_min) return { error: '參數錯誤', status: 400 }
+  const { data: emp } = await ctx.admin.from('hr_employees').select('id').eq('id', employee_id).eq('owner_id', ctx.ownerId).maybeSingle()
+  if (!emp) return { error: '查無此員工', status: 404 }
+  const clash = await overlap(ctx, employee_id, work_date, start_min, end_min)
+  if (clash) return { error: clash.store === store ? '與此員工當天其他班重疊' : `此員工當天已排在 ${clash.store}`, status: 409 }
+  const { data, error } = await ctx.admin.from('shift_plans')
+    .insert({ owner_id: ctx.ownerId, store, employee_id, work_date, start_min, end_min, status: 'draft' }).select('*').single()
+  if (error) return { error: error.message, status: 500 }
+  return { plan: data }
+}
+
+// 新增班。body: { store, employee_id, work_date, start_min, end_min }，或批次 { store, items: [...] }（例：套用 AI 建議）
 export async function POST(req: NextRequest) {
   const ctx = await getShiftContext()
   if (!ctx.ok) return deny(ctx)
   const b = await req.json().catch(() => ({}))
-  const store = String(b.store ?? '').trim(), employee_id = String(b.employee_id ?? ''), work_date = String(b.work_date ?? '')
-  const start_min = Number(b.start_min), end_min = Number(b.end_min)
-  if (!store || !employee_id || !isDate(work_date) || !validMin(start_min) || !validMin(end_min) || end_min <= start_min) {
-    return NextResponse.json({ error: '參數錯誤' }, { status: 400 })
-  }
+  const store = String(b.store ?? '').trim()
+  if (!store) return NextResponse.json({ error: '參數錯誤' }, { status: 400 })
   if (!storeAllowed(ctx, store)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  const { data: emp } = await ctx.admin.from('hr_employees').select('id').eq('id', employee_id).eq('owner_id', ctx.ownerId).maybeSingle()
-  if (!emp) return NextResponse.json({ error: '查無此員工' }, { status: 404 })
-  const clash = await overlap(ctx, employee_id, work_date, start_min, end_min)
-  if (clash) return NextResponse.json({ error: clash.store === store ? '與此員工當天其他班重疊' : `此員工當天已排在 ${clash.store}` }, { status: 409 })
-  const { data, error } = await ctx.admin.from('shift_plans')
-    .insert({ owner_id: ctx.ownerId, store, employee_id, work_date, start_min, end_min, status: 'draft' }).select('*').single()
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ plan: data })
+  if (Array.isArray(b.items)) {
+    let created = 0
+    const errors: string[] = []
+    for (const it of b.items.slice(0, 300)) {
+      const r = await createOne(ctx, store, it ?? {})
+      if ('error' in r) errors.push(r.error as string); else created++
+    }
+    return NextResponse.json({ created, errors })
+  }
+  const r = await createOne(ctx, store, b)
+  if ('error' in r) return NextResponse.json({ error: r.error }, { status: r.status })
+  return NextResponse.json({ plan: r.plan })
 }
 
 // 調整班的時間（調整後變回草稿，需重新發布）。body: { id, start_min, end_min }
