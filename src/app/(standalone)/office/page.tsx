@@ -105,8 +105,16 @@ export default function OfficePage() {
     ? t('roles.itAdmin')
     : null
 
+  // 門市領班不另外顯示卡片，功能併入「門市營運」；只有領班權限的人，門市營運卡只含領班可用的頁面
+  const canStore = isSuperAdmin || hasUnit(canManage, access.units, 'store')
+  const canStoreLeader = isSuperAdmin || hasUnit(canManage, access.units, 'store_leader')
+  const leaderArea = unitAreas.find(a => a.key === 'store_leader')
   const visibleAreas = unitAreas
-    .filter(a => isSuperAdmin || hasUnit(canManage, access.units, a.key))
+    .filter(a => a.key !== 'store_leader')
+    .map(a => (a.key === 'store' && !canStore && canStoreLeader && leaderArea
+      ? { ...a, homeHref: leaderArea.homeHref, pages: leaderArea.pages }
+      : a))
+    .filter(a => isSuperAdmin || hasUnit(canManage, access.units, a.key) || (a.key === 'store' && canStoreLeader))
     .map(a => ({ ...a, pages: a.pages.filter(p => canManage || !p.adminOnly) }))
     .filter(a => a.pages.length > 0)
 
