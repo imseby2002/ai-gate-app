@@ -335,7 +335,13 @@
       "save": "儲存",
       "cancel": "取消",
       "editNote": "點擊修改備註",
-      "remove": "移除"
+      "remove": "移除",
+      "registered": "已註冊",
+      "notRegistered": "未註冊",
+      "unregisteredCount": "{n} 個 Email 尚未註冊帳號",
+      "provisionButton": "直接建立帳號",
+      "provisionPrompt": "為 {n} 個未註冊的 Email 直接建立帳號（免驗證）。請輸入初始密碼（至少 8 碼），員工登入後自行修改：",
+      "provisionDone": "已建立 {created} 個帳號，失敗 {failed} 個。"
     }
   },
   "Chat": {

@@ -33,8 +33,13 @@ export async function GET() {
 
   if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 })
 
+  // 是否已註冊（有系統帳號）
+  const emails = (data ?? []).map(d => String(d.email).toLowerCase())
+  const { data: profs } = emails.length ? await admin.from('profiles').select('email').in('email', emails) : { data: [] }
+  const reg = new Set((profs ?? []).map(p => String(p.email).toLowerCase()))
   const list = (data ?? []).map(d => ({
     ...d,
+    registered: reg.has(String(d.email).toLowerCase()),
     company: { id: company.companyId, name: company.name },
   }))
 

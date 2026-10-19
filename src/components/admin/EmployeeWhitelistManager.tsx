@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import {
-  Plus, Trash2, Mail, Loader2, Building2, Edit3, Check, X, ShieldCheck
+  Plus, Trash2, Mail, Loader2, Building2, Edit3, Check, X, ShieldCheck, UserPlus
 } from 'lucide-react'
 
 export interface WhitelistEntry {
@@ -15,6 +15,7 @@ export interface WhitelistEntry {
   companies?: any
   company?: any
   added_at: string
+  registered?: boolean
 }
 
 interface Props {
@@ -84,6 +85,21 @@ export function EmployeeWhitelistManager({
       loadCompanyData()
     }
   }, [isCompanyMode])
+
+  // 為未註冊者直接建立帳號（初始密碼由管理員輸入，員工登入後自行修改）
+  const [provisioning, setProvisioning] = useState(false)
+  const unregistered = entries.filter(e => e.registered === false)
+  const provision = async () => {
+    const pw = window.prompt(t('provisionPrompt', { n: unregistered.length }))
+    if (!pw) return
+    setProvisioning(true); setError('')
+    const res = await fetch('/api/company/employee-whitelist/provision', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pw }) })
+    const d = await res.json().catch(() => ({}))
+    setProvisioning(false)
+    if (!res.ok) { setError(d.error ?? 'error'); return }
+    alert(t('provisionDone', { created: d.created?.length ?? 0, failed: d.failed?.length ?? 0 }) + (d.failed?.length ? '\n' + d.failed.map((f: { email: string; error: string }) => `${f.email}: ${f.error}`).join('\n') : ''))
+    loadCompanyData()
+  }
 
   const apiEndpoint = isCompanyMode
     ? '/api/company/employee-whitelist'
@@ -229,6 +245,16 @@ export function EmployeeWhitelistManager({
         )}
       </div>
 
+      {isCompanyMode && unregistered.length > 0 && (
+        <div className="px-5 py-3 border-b flex flex-wrap items-center gap-2 bg-amber-50/60 text-sm">
+          <span className="text-amber-800">{t('unregisteredCount', { n: unregistered.length })}</span>
+          <button type="button" onClick={provision} disabled={provisioning}
+            className="ml-auto inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-indigo-600 text-white text-xs font-medium disabled:opacity-50">
+            {provisioning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <UserPlus className="h-3.5 w-3.5" />}{t('provisionButton')}
+          </button>
+        </div>
+      )}
+
       {/* 新增表單 */}
       <form onSubmit={handleAdd} className="p-5 border-b bg-gray-50/70 dark:bg-muted/30 flex flex-wrap gap-3 items-end">
         {/* Email 輸入框 */}
@@ -337,6 +363,11 @@ export function EmployeeWhitelistManager({
                     <tr key={entry.id} className="border-b last:border-0 hover:bg-gray-50/80 dark:hover:bg-muted/20 transition-colors">
                       <td className="px-5 py-3 font-medium text-gray-900 dark:text-gray-100">
                         {entry.email}
+                        {entry.registered !== undefined && (
+                          <span className={`ml-2 text-[10px] px-1.5 py-0.5 rounded border ${entry.registered ? 'text-emerald-700 border-emerald-200 bg-emerald-50' : 'text-amber-700 border-amber-200 bg-amber-50'}`}>
+                            {entry.registered ? t('registered') : t('notRegistered')}
+                          </span>
+                        )}
                       </td>
 
                       {!isCompanyMode && (
