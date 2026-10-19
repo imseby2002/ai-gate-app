@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getUnitContext } from '@/lib/auth/unit-access'
-import { openUntil } from '@/lib/hr/profile'
+import { openUntil, syncCandidateToEmployee } from '@/lib/hr/profile'
 
 async function getAdminUser() {
   const ctx = await getUnitContext('hr')
@@ -94,6 +94,7 @@ export async function PATCH(req: NextRequest) {
     .eq('id', id).eq('user_id', user.id)
     .select('*').single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  await syncCandidateToEmployee(supabase, user.id, id, updates)
   return NextResponse.json({ candidate: data })
 }
 

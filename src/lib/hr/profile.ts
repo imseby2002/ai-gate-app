@@ -45,3 +45,19 @@ export async function candidateForEmployee(
   }).select('id').single()
   return c?.id ?? null
 }
+
+// 人員資料（應徵者）變更後同步到已錄用員工：姓名、聯絡方式、生日、身分證
+const EMP_SYNC = ['name', 'phone', 'email', 'address', 'birthday', 'id_number'] as const
+export async function syncCandidateToEmployee(admin: Admin, ownerId: string, candidateId: string, updates: Record<string, unknown>) {
+  const empUp: Record<string, unknown> = {}
+  for (const f of EMP_SYNC) {
+    if (updates[f] === undefined) continue
+    if (f === 'birthday') empUp[f] = updates[f] || null
+    else if (f === 'name') { if (String(updates[f] ?? '').trim()) empUp[f] = String(updates[f]).trim() }
+    else empUp[f] = String(updates[f] ?? '')
+  }
+  if (!Object.keys(empUp).length) return
+  const { data: c } = await admin.from('agent_hr_candidates').select('hired_employee_id').eq('id', candidateId).eq('user_id', ownerId).maybeSingle()
+  if (!c?.hired_employee_id) return
+  await admin.from('hr_employees').update(empUp).eq('id', c.hired_employee_id).eq('owner_id', ownerId)
+}
