@@ -4,7 +4,7 @@ import { ChannelAccountPicker } from '@/components/channels/ChannelAccountPicker
 import { useState, useEffect, useCallback, useRef, ReactNode, type ChangeEvent } from 'react'
 import Link from 'next/link'
 import { useTranslations, useLocale } from 'next-intl'
-import { Users, DollarSign, Calendar, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Loader2, AlertCircle, Building2, Phone, Mail, Briefcase, CreditCard, Zap, Wallet, Upload, Shield, Clock, Download, UserPlus, ArrowRight, ClipboardCheck, Store, Video, FileSpreadsheet, HeartHandshake, Send, FileText, KeyRound, Copy, Link2, UserCheck } from 'lucide-react'
+import { Users, DollarSign, Calendar, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Loader2, AlertCircle, Building2, Phone, Mail, Briefcase, CreditCard, Zap, Wallet, Upload, Shield, Clock, Download, UserPlus, ArrowRight, ClipboardCheck, Store, Video, FileSpreadsheet, HeartHandshake, Send, FileText, KeyRound, Copy, Link2, UserCheck, BookOpen } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -2359,6 +2359,8 @@ export default function HRPage() {
               <Users className="h-4 w-4" />{t('personnelDataLink')}
             </Button>
           </Link>
+          <a href="/api/docs/hr-manual" target="_blank" rel="noreferrer"><Button variant="outline" size="sm" className="gap-1.5"><BookOpen className="h-4 w-4" />{t('manualDoc')}</Button></a>
+          <a href="/api/docs/hr-manual?download=1" title={t('manualDownload')}><Button variant="outline" size="sm" className="px-2"><Download className="h-4 w-4" /></Button></a>
         </div>
       </div>
 

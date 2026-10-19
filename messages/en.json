@@ -7707,7 +7707,9 @@
     "accountBadge": "Account",
     "accountBadgeHint": "Linked to system account {account}: logs in to the system for their units; payslips, availability and shifts are still in the employee portal",
     "portalHasAccount": "This employee also has a system account ({account}) for the store / office system; payslips, availability and shifts are still in the employee portal.",
-    "storeNone": "— No store —"
+    "storeNone": "— No store —",
+    "manualDoc": "User manual",
+    "manualDownload": "Download manual PDF"
   },
   "FinancePage": {
     "accountBalancesTitle": "Balance by account",

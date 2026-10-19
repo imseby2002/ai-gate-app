@@ -7707,7 +7707,9 @@
     "accountBadge": "系統帳號",
     "accountBadgeHint": "已綁定系統帳號 {account}：登入系統操作所屬單位；薪資條、可上班時段與班表仍在員工專區",
     "portalHasAccount": "此員工也有系統帳號（{account}），用來登入門市／辦公系統；薪資條、可上班時段與班表一樣在員工專區。",
-    "storeNone": "— 未設定門市 —"
+    "storeNone": "— 未設定門市 —",
+    "manualDoc": "使用說明書",
+    "manualDownload": "下載說明書 PDF"
   },
   "FinancePage": {
     "accountBalancesTitle": "各帳戶結餘",

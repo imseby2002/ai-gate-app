@@ -7707,7 +7707,9 @@
     "accountBadge": "Tài khoản",
     "accountBadgeHint": "Đã liên kết tài khoản {account}: đăng nhập hệ thống theo đơn vị; phiếu lương, giờ rảnh và lịch làm vẫn ở Trang nhân viên",
     "portalHasAccount": "Nhân viên này cũng có tài khoản hệ thống ({account}) để vào hệ thống cửa hàng / văn phòng; phiếu lương, giờ rảnh và lịch làm vẫn ở Trang nhân viên.",
-    "storeNone": "— Chưa có cửa hàng —"
+    "storeNone": "— Chưa có cửa hàng —",
+    "manualDoc": "Hướng dẫn sử dụng",
+    "manualDownload": "Tải hướng dẫn PDF"
   },
   "FinancePage": {
     "accountBalancesTitle": "Số dư theo tài khoản",
