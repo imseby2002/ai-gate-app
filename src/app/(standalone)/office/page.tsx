@@ -117,6 +117,11 @@ export default function OfficePage() {
     .filter(a => isSuperAdmin || hasUnit(canManage, access.units, a.key) || (a.key === 'store' && canStoreLeader))
     .map(a => ({ ...a, pages: a.pages.filter(p => canManage || !p.adminOnly) }))
     .filter(a => a.pages.length > 0)
+  // 門市點單 POS 是門市獨立使用的前台，門市營運管不到，只放在管理者（主帳號）的公司入口
+  if (canManage) {
+    const posLabel = locale === 'vi' ? 'POS Bán hàng tại quầy' : locale === 'en' ? 'Counter POS' : '門市點單 POS'
+    visibleAreas.push({ key: 'pos', label: posLabel, homeHref: '/pos', description: '', pages: [{ href: '/pos', label: posLabel }] })
+  }
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
