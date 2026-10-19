@@ -2,25 +2,28 @@ import { NextRequest, NextResponse } from 'next/server'
 import { portalEmployee } from '../_auth'
 import { insertRule, todayVN } from '@/lib/shift/rules'
 import { addDays } from '@/lib/shift/time'
+import { isFulltime } from '@/lib/shift/staff'
 
 type Ctx = { params: Promise<{ no: string }> }
 
-// 員工專區：自己的可上班時段規則（尚未結束的）與已發布的班表（今天起 60 天）
+// 員工專區：工讀生的可上班時段規則、正職的期待休假日（尚未過去的），以及已發布的班表（今天起 60 天）
 export async function GET(req: NextRequest, { params }: Ctx) {
   const { no } = await params
   const ctx = await portalEmployee(req, decodeURIComponent(no))
   if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { admin, company, emp } = ctx
-  if (!emp.store) return NextResponse.json({ store: null, rules: [], plans: [] })
+  const kind = isFulltime(emp) ? 'fulltime' : 'parttime'
   const today = todayVN()
-  const [{ data: rules }, { data: plans }] = await Promise.all([
+  const [{ data: rules }, { data: plans }, { data: dayoffs }] = await Promise.all([
     admin.from('shift_avail_rules').select('id, start_date, end_date, weekdays, start_min, end_min, note')
       .eq('owner_id', company.ownerId).eq('employee_id', emp.id).gte('end_date', today).order('start_date'),
     admin.from('shift_plans').select('id, store, work_date, start_min, end_min')
       .eq('owner_id', company.ownerId).eq('employee_id', emp.id).eq('status', 'published')
       .gte('work_date', today).lte('work_date', addDays(today, 60)).order('work_date').order('start_min'),
+    admin.from('shift_dayoff_requests').select('id, off_date, note')
+      .eq('owner_id', company.ownerId).eq('employee_id', emp.id).gte('off_date', today).order('off_date'),
   ])
-  return NextResponse.json({ store: emp.store, rules: rules ?? [], plans: plans ?? [] })
+  return NextResponse.json({ store: emp.store || null, kind, rules: rules ?? [], plans: plans ?? [], dayoffs: dayoffs ?? [] })
 }
 
 // 新增一條可上班時段。body: { start_date, end_date, weekdays: number[]（空＝每天）, start: "HH:MM", end: "HH:MM", note? }

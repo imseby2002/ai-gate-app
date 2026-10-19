@@ -303,7 +303,13 @@ function EmployeeForm({ initial, onSave, onCancel, saving, settings, accounts, s
         <Field label={t('hireDateLabel')}><InputEl value={d.hire_date ?? ''} onChange={v => set('hire_date', v || null)} type="date" disabled={saving} /></Field>
         <Field label={t('baseSalaryMonthlyLabel')}><InputEl value={d.base_salary} onChange={v => set('base_salary', Number(v) || 0)} type="number" placeholder="45000" disabled={saving} /></Field>
         <Field label={d.staff_category === 'hourly' ? t('hourlyRateStarLabel') : t('hourlyRateLabel')}><InputEl value={d.hourly_rate} onChange={v => set('hourly_rate', Number(v) || 0)} type="number" placeholder={t('hourlyRatePlaceholder')} disabled={saving} /></Field>
-        <Field label={t('storeLabel')}><InputEl value={d.store} onChange={v => set('store', v)} placeholder={t('storePlaceholder')} disabled={saving} /></Field>
+        <Field label={t('storeLabel')}>
+          <select value={d.store ?? ''} onChange={e => set('store', e.target.value)} disabled={saving} className="h-9 w-full rounded-md border px-2 text-sm bg-white dark:bg-gray-900">
+            <option value="">{t('storeNone')}</option>
+            {d.store && !(storeOptions ?? []).some(o => o.code === d.store) && <option value={d.store}>{d.store}</option>}
+            {(storeOptions ?? []).map(o => <option key={o.code} value={o.code}>{o.name && o.name !== o.code ? `${o.code}・${o.name}` : o.code}</option>)}
+          </select>
+        </Field>
         <Field label={t('attendanceNoLabel')}><InputEl value={d.attendance_no} onChange={v => set('attendance_no', v)} placeholder={t('attendanceNoPlaceholder')} disabled={saving} /></Field>
         <Field label={t('payrollCodeLabel')}><InputEl value={d.payroll_code ?? ''} onChange={v => set('payroll_code', v)} placeholder={t('payrollCodePlaceholder')} disabled={saving} /></Field>
         <Field label={t('bankAccountLabel')}><InputEl value={d.bank_account} onChange={v => set('bank_account', v)} placeholder={t('bankAccountPlaceholder')} disabled={saving} /></Field>

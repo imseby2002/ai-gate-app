@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
       hourly_rate: hourly_rate ?? 0,
       attendance_no: attendance_no ?? '',
       payroll_code: payroll_code ?? '',
-      store: access.store ?? store ?? '',
+      store: access.store ?? (String(store ?? '').trim() || cleanStores(managed_stores)[0] || ''),
       bank_name: bank_name ?? '',
       birthday: birthday || null,
       units: access.units,
@@ -88,6 +88,8 @@ export async function PATCH(req: NextRequest) {
   if (updates.units !== undefined) updates.units = cleanUnits(updates.units)
   if (updates.birthday !== undefined) updates.birthday = updates.birthday || null
   if (updates.managed_stores !== undefined) updates.managed_stores = cleanStores(updates.managed_stores)
+  // 所屬門市空白但有勾管理門市：以第一家為所屬門市（排班、員工專區以所屬門市為準）
+  if (updates.store !== undefined && !String(updates.store ?? '').trim() && Array.isArray(updates.managed_stores) && updates.managed_stores.length) updates.store = updates.managed_stores[0]
   if (updates.profile_id !== undefined) {
     updates.profile_id = updates.profile_id || null
     if (updates.profile_id) {

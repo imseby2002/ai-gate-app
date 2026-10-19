@@ -5367,7 +5367,11 @@
     "aiSuggestedNeeds": "Nhu cầu nhân sự AI đề xuất theo doanh số",
     "aiApplyNeeds": "Dùng làm nhu cầu nhân sự",
     "aiNeedsConfirm": "Thay nhu cầu nhân sự hiện tại bằng đề xuất của AI?",
-    "aiNeedsApplied": "Đã áp dụng {n} nhu cầu nhân sự"
+    "aiNeedsApplied": "Đã áp dụng {n} nhu cầu nhân sự",
+    "dayOffBadge": "Muốn nghỉ",
+    "dayOffCount": "{n} người muốn nghỉ",
+    "legendFulltime": "Toàn thời gian (xếp được)",
+    "legendDayOff": "Toàn thời gian muốn nghỉ"
   },
   "Team": {
     "moduleBooking": "Đặt phòng",
@@ -7702,7 +7706,8 @@
     "portalOnlyFilterHint": "Nhân viên đang làm không có tài khoản (bán thời gian, toàn thời gian thông thường), chỉ dùng liên kết Trang nhân viên",
     "accountBadge": "Tài khoản",
     "accountBadgeHint": "Đã liên kết tài khoản {account}: đăng nhập hệ thống theo đơn vị; phiếu lương, giờ rảnh và lịch làm vẫn ở Trang nhân viên",
-    "portalHasAccount": "Nhân viên này cũng có tài khoản hệ thống ({account}) để vào hệ thống cửa hàng / văn phòng; phiếu lương, giờ rảnh và lịch làm vẫn ở Trang nhân viên."
+    "portalHasAccount": "Nhân viên này cũng có tài khoản hệ thống ({account}) để vào hệ thống cửa hàng / văn phòng; phiếu lương, giờ rảnh và lịch làm vẫn ở Trang nhân viên.",
+    "storeNone": "— Chưa có cửa hàng —"
   },
   "FinancePage": {
     "accountBalancesTitle": "Số dư theo tài khoản",
