@@ -3,7 +3,7 @@
 // 員工專區：<公司子網域>/e/<打卡編號>。首次以生日（DDMMYYYY）登入並設定自己的密碼，之後用密碼登入。
 import { useCallback, useEffect, useRef, useState, use } from 'react'
 import Link from 'next/link'
-import { Loader2, LogOut, KeyRound, FileText, CheckCircle2, CalendarDays, Upload, Paperclip, Trash2, Clock, UserRound, Lock } from 'lucide-react'
+import { Loader2, LogOut, KeyRound, FileText, CheckCircle2, CalendarDays, Upload, Paperclip, Trash2, Clock, UserRound, Lock, Menu, ChevronDown, ChevronLeft } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { SLOT_MIN } from '@/lib/shift/time'
@@ -112,35 +112,25 @@ export default function EmployeePortalPage({ params }: { params: Promise<{ no: s
             {me.hasPin && <button onClick={() => { setChanging(false); setErr('') }} className="w-full text-sm text-slate-500">Hủy / 取消</button>}
           </Card>
         ) : (
-          <>
-            <Card className="p-5 flex items-center justify-between">
-              <div>
-                <div className="text-xs text-slate-500">{me.company}</div>
-                <div className="text-lg font-bold">{me.name}</div>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => setChanging(true)} className="p-2 rounded-lg border" title="Đổi mật khẩu / 變更密碼"><KeyRound className="h-4 w-4" /></button>
-                <button onClick={logout} className="p-2 rounded-lg border" title="Đăng xuất / 登出"><LogOut className="h-4 w-4" /></button>
-              </div>
-            </Card>
-            <PortalBody api={api}>
-                <Card className="p-5 space-y-2">
-                  <h2 className="font-bold flex items-center gap-2"><FileText className="h-4 w-4" /> Phiếu lương / 薪資條</h2>
-                  {me.payslips.length === 0 && <p className="text-sm text-slate-500">Chưa có phiếu lương / 尚無薪資條</p>}
-                  <div className="divide-y">
-                    {me.payslips.map(p => (
-                      <Link key={p.id} href={`/e/${encodeURIComponent(no)}/payslip/${p.id}`} className="flex items-center justify-between py-3 text-sm">
-                        <span>Tháng {p.month}/{p.year}</span>
-                        <span className="flex items-center gap-2">
-                          <b>{Math.round(Number(p.net_pay) || 0).toLocaleString('vi-VN')} VND</b>
-                          {p.payslip_confirmed && <CheckCircle2 className="h-4 w-4 text-emerald-600" />}
-                        </span>
-                      </Link>
-                    ))}
-                  </div>
-                </Card>
-            </PortalBody>
-          </>
+          <PortalBody api={api} company={me.company} name={me.name}
+            onChangePin={() => setChanging(true)} onLogout={logout}
+            payslips={
+              <Card className="p-5 space-y-2">
+                <h2 className="font-bold flex items-center gap-2"><FileText className="h-4 w-4" /> Phiếu lương / 薪資條</h2>
+                {me.payslips.length === 0 && <p className="text-sm text-slate-500">Chưa có phiếu lương / 尚無薪資條</p>}
+                <div className="divide-y">
+                  {me.payslips.map(p => (
+                    <Link key={p.id} href={`/e/${encodeURIComponent(no)}/payslip/${p.id}`} className="flex items-center justify-between py-3 text-sm">
+                      <span>Tháng {p.month}/{p.year}</span>
+                      <span className="flex items-center gap-2">
+                        <b>{Math.round(Number(p.net_pay) || 0).toLocaleString('vi-VN')} VND</b>
+                        {p.payslip_confirmed && <CheckCircle2 className="h-4 w-4 text-emerald-600" />}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              </Card>
+            } />
         )}
       </div>
     </div>
@@ -187,31 +177,109 @@ function merge(list: Range[]): Range[] {
 const rangesText = (rs: Range[]) => rs.map(r => `${hhmm(r.start)}–${hhmm(r.end)}`).join('、')
 
 // 登入後主體：手機單欄，電腦雙欄（左：薪資條、班表、文件；右：可上班時段／期待休假日）
-function PortalBody({ api, children }: { api: string; children: ReactNode }) {
+type View = 'shift' | 'pay' | 'profile' | 'docs'
+const VIEWS: View[] = ['shift', 'pay', 'profile', 'docs']
+
+// 登入後主體：常用「班表」（我的班表＋可上班時段／期待休假日）與「薪資條」放分頁；履歷、文件、密碼、登出收在右上選單
+function PortalBody({ api, company, name, payslips, onChangePin, onLogout }: {
+  api: string; company: string; name: string; payslips: ReactNode; onChangePin: () => void; onLogout: () => void
+}) {
   const [data, setData] = useState<ShiftData | null>(null)
+  const [view, setViewState] = useState<View>('shift')
+  const [menu, setMenu] = useState(false)
+  const [missingDocs, setMissingDocs] = useState(0)
   const load = useCallback(async () => {
     const r = await fetch(`${api}/shifts`)
     setData(r.ok ? await r.json() : null)
   }, [api])
   useEffect(() => { load() }, [load])
-  // 手機單欄（薪資條、班表 → 可上班時段 → 履歷、文件）；電腦雙欄（右欄為時段）。純 CSS，切換時不重新掛載
+  // 分頁記在網址 #hash，重新整理或返回時停在同一頁
+  useEffect(() => {
+    const h = window.location.hash.slice(1) as View
+    if (VIEWS.includes(h)) setViewState(h)
+  }, [])
+  // 缺件數（選單紅點提醒）
+  useEffect(() => {
+    fetch(`${api}/docs`).then(r => r.ok ? r.json() : null).then(d => {
+      const items: DocItem[] = d?.items ?? []
+      const done = (x: DocItem) => x.files.length > 0 || x.paper
+      const eduDone = items.filter(x => x.either).some(done)
+      setMissingDocs(items.filter(x => x.required && !done(x) && !(x.either && eduDone)).length)
+    }).catch(() => {})
+  }, [api, view])
+  const setView = (v: View) => { setViewState(v); setMenu(false); history.replaceState(null, '', `#${v}`); window.scrollTo({ top: 0 }) }
+
+  const tabs: [View, string, ReactNode][] = [
+    ['shift', 'Lịch làm / 班表', <CalendarDays key="i" className="h-4 w-4" />],
+    ['pay', 'Phiếu lương / 薪資條', <FileText key="i" className="h-4 w-4" />],
+  ]
+  const menuItems: [string, ReactNode, () => void, ReactNode?][] = [
+    ['Hồ sơ của tôi / 我的履歷', <UserRound key="i" className="h-4 w-4" />, () => setView('profile')],
+    ['Hồ sơ nhân sự / 人事文件', <Paperclip key="i" className="h-4 w-4" />, () => setView('docs'),
+      missingDocs > 0 ? <span key="b" className="ml-auto text-[11px] px-1.5 rounded-full bg-rose-500 text-white">{missingDocs}</span> : null],
+    ['Đổi mật khẩu / 變更密碼', <KeyRound key="i" className="h-4 w-4" />, () => { setMenu(false); onChangePin() }],
+    ['Đăng xuất / 登出', <LogOut key="i" className="h-4 w-4" />, () => { setMenu(false); onLogout() }],
+  ]
+
   return (
-    <div className="flex flex-col gap-4 md:grid md:grid-cols-2 md:grid-rows-[auto_1fr] md:items-start">
-      <div className="space-y-4 md:col-start-1 md:row-start-1">
-        {children}
-        {data && <ScheduleCard plans={data.plans} />}
-      </div>
-      <div className="space-y-4 md:col-start-2 md:row-start-1 md:row-span-2">
-        {data && !data.store && (
-          <Card className="p-5"><p className="text-sm text-amber-700">Chưa có cửa hàng, vui lòng liên hệ nhân sự để được xếp ca. / 尚未設定門市，請聯絡人事後才能排班。</p></Card>
-        )}
-        {data?.store && data.kind === 'fulltime' && <DayOffCard api={api} dayoffs={data.dayoffs} onChanged={load} />}
-        {data?.store && data.kind === 'parttime' && <AvailCard api={api} rules={data.rules} onChanged={load} />}
-      </div>
-      <div className="space-y-4 md:col-start-1 md:row-start-2">
-        <ProfileCard api={api} />
-        <DocsCard api={api} />
-      </div>
+    <div className="space-y-4">
+      <Card className="p-4 md:p-5 flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-xs text-slate-500">{company}</div>
+          <div className="text-lg font-bold truncate">{name}</div>
+        </div>
+        <div className="relative">
+          <button onClick={() => setMenu(m => !m)} className="relative flex items-center gap-1.5 h-10 px-3 rounded-xl border text-sm bg-white">
+            <Menu className="h-4 w-4" /><span className="hidden sm:inline">Thêm / 更多</span><ChevronDown className="h-3.5 w-3.5" />
+            {missingDocs > 0 && <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-rose-500 border-2 border-white" />}
+          </button>
+          {menu && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setMenu(false)} />
+              <div className="absolute right-0 mt-2 z-20 w-60 rounded-xl border bg-white shadow-lg py-1">
+                {menuItems.map(([label, icon, act, badge]) => (
+                  <button key={label} onClick={act} className="w-full flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-slate-50 text-left">
+                    {icon}<span>{label}</span>{badge}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </Card>
+
+      {(view === 'shift' || view === 'pay') ? (
+        <div className="flex rounded-xl bg-white border p-1 gap-1">
+          {tabs.map(([v, label, icon]) => (
+            <button key={v} onClick={() => setView(v)}
+              className={`flex-1 h-10 rounded-lg text-sm flex items-center justify-center gap-1.5 ${view === v ? 'bg-indigo-600 text-white font-semibold' : 'text-slate-600'}`}>
+              {icon}{label}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <button onClick={() => setView('shift')} className="flex items-center gap-1 text-sm text-indigo-700">
+          <ChevronLeft className="h-4 w-4" />Quay lại / 返回
+        </button>
+      )}
+
+      {view === 'shift' && (
+        <div className="flex flex-col gap-4 md:grid md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] md:items-start">
+          <div className="space-y-4">
+            {data ? <ScheduleCard plans={data.plans} /> : <Card className="p-5"><Loader2 className="h-5 w-5 animate-spin text-slate-400" /></Card>}
+          </div>
+          <div className="space-y-4">
+            {data && !data.store && (
+              <Card className="p-5"><p className="text-sm text-amber-700">Chưa có cửa hàng, vui lòng liên hệ nhân sự để được xếp ca. / 尚未設定門市，請聯絡人事後才能排班。</p></Card>
+            )}
+            {data?.store && data.kind === 'fulltime' && <DayOffCard api={api} dayoffs={data.dayoffs} onChanged={load} />}
+            {data?.store && data.kind === 'parttime' && <AvailCard api={api} rules={data.rules} onChanged={load} />}
+          </div>
+        </div>
+      )}
+      {view === 'pay' && <div className="max-w-2xl">{payslips}</div>}
+      {view === 'profile' && <div className="max-w-3xl"><ProfileCard api={api} /></div>}
+      {view === 'docs' && <div className="max-w-3xl"><DocsCard api={api} /></div>}
     </div>
   )
 }
