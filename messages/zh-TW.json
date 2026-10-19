@@ -104,7 +104,9 @@
     "userTypeExternal": "外部用戶",
     "userTypeAdmin": "管理員",
     "settings": "設定",
-    "signOut": "登出"
+    "signOut": "登出",
+    "unlimited": "不限",
+    "walletTitle": "點數錢包 · 儲值"
   },
   "Dashboard": {
     "welcome": "歡迎回來，{name} 👋",

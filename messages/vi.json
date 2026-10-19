@@ -104,7 +104,9 @@
     "userTypeExternal": "Bên ngoài",
     "userTypeAdmin": "Quản trị viên",
     "settings": "Cài đặt",
-    "signOut": "Đăng xuất"
+    "signOut": "Đăng xuất",
+    "unlimited": "Không giới hạn",
+    "walletTitle": "Ví điểm · Nạp thêm"
   },
   "Dashboard": {
     "welcome": "Chào mừng trở lại, {name} 👋",

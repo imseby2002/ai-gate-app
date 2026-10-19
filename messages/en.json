@@ -104,7 +104,9 @@
     "userTypeExternal": "External",
     "userTypeAdmin": "Admin",
     "settings": "Settings",
-    "signOut": "Sign Out"
+    "signOut": "Sign Out",
+    "unlimited": "Unlimited",
+    "walletTitle": "Credit wallet · Top up"
   },
   "Dashboard": {
     "welcome": "Welcome back, {name} 👋",
