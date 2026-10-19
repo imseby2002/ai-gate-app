@@ -8,6 +8,7 @@ import { formatFileSize } from '@/lib/utils/format'
 import { ExpertSelector } from '@/components/experts/ExpertSelector'
 import KnowledgePicker from '@/components/knowledge/KnowledgePicker'
 import type { AIModel, Assistant, AssistantFile } from '@/types/database'
+import { useTranslations } from 'next-intl'
 
 interface AssistantFormProps {
   models: AIModel[]
@@ -19,6 +20,7 @@ const ALLOWED_EXTENSIONS = ['.pdf', '.docx', '.xlsx', '.jpg', '.jpeg', '.png', '
 
 export function AssistantForm({ models, assistant }: AssistantFormProps) {
   const router = useRouter()
+  const t = useTranslations('Assistants')
   const isEdit = !!assistant
 
   const [name, setName] = useState(assistant?.name ?? '')
@@ -90,7 +92,7 @@ export function AssistantForm({ models, assistant }: AssistantFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!name.trim()) { setError('請輸入助理名稱'); return }
+    if (!name.trim()) { setError(t('nameRequired')); return }
     setSaving(true)
     setError('')
 
@@ -126,11 +128,11 @@ export function AssistantForm({ models, assistant }: AssistantFormProps) {
     <form onSubmit={handleSubmit} className="max-w-2xl mx-auto space-y-6">
       {/* Avatar + Name */}
       <div className="bg-card rounded-2xl border p-6 shadow-sm space-y-4">
-        <h2 className="font-semibold text-lg">基本設定</h2>
+        <h2 className="font-semibold text-lg">{t('basicSettings')}</h2>
 
         {/* Emoji picker */}
         <div>
-          <label className="block text-sm font-medium mb-2">助理圖示</label>
+          <label className="block text-sm font-medium mb-2">{t('icon')}</label>
           <div className="flex flex-wrap gap-2">
             {EMOJI_OPTIONS.map(emoji => (
               <button
@@ -147,35 +149,35 @@ export function AssistantForm({ models, assistant }: AssistantFormProps) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1.5">助理名稱 *</label>
+          <label className="block text-sm font-medium mb-1.5">{t('name')} *</label>
           <input
             type="text"
             value={name}
             onChange={e => setName(e.target.value)}
             className="w-full h-10 px-3 rounded-lg border text-sm outline-none focus:ring-2 bg-background"
-            placeholder="例如：財務分析助理、法務審查助理"
+            placeholder={t('namePlaceholder')}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1.5">描述</label>
+          <label className="block text-sm font-medium mb-1.5">{t('description')}</label>
           <input
             type="text"
             value={description}
             onChange={e => setDescription(e.target.value)}
             className="w-full h-10 px-3 rounded-lg border text-sm outline-none focus:ring-2 bg-background"
-            placeholder="簡短說明這個助理的用途"
+            placeholder={t('descriptionPlaceholder')}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1.5">預設模型</label>
+          <label className="block text-sm font-medium mb-1.5">{t('defaultModel')}</label>
           <select
             value={defaultModel}
             onChange={e => setDefaultModel(e.target.value)}
             className="w-full h-10 px-3 rounded-lg border text-sm outline-none focus:ring-2 bg-background"
           >
-            <option value="">自動路由（推薦）</option>
+            <option value="">{t('autoRoute')}</option>
             {textModels.map(m => (
               <option key={m.id} value={m.id}>{m.display_name}</option>
             ))}
@@ -185,12 +187,12 @@ export function AssistantForm({ models, assistant }: AssistantFormProps) {
 
       {/* System Prompt */}
       <div className="bg-card rounded-2xl border p-6 shadow-sm space-y-4">
-        <h2 className="font-semibold text-lg">系統提示詞</h2>
+        <h2 className="font-semibold text-lg">{t('systemPrompt')}</h2>
         <textarea
           value={systemPrompt}
           onChange={e => setSystemPrompt(e.target.value)}
           className="w-full min-h-32 px-3 py-2 rounded-lg border text-sm outline-none focus:ring-2 resize-none bg-background"
-          placeholder="設定助理的角色、行為與回答風格...&#10;例如：你是一位專業的財務分析師，專注於分析財務報表並提供投資建議。請使用繁體中文回答，並引用具體數據支持你的分析。"
+          placeholder={t('systemPromptPlaceholder')}
         />
       </div>
 
@@ -202,18 +204,18 @@ export function AssistantForm({ models, assistant }: AssistantFormProps) {
       {/* Company knowledge base */}
       <div className="bg-card rounded-2xl border p-6 shadow-sm space-y-3">
         <div>
-          <h2 className="font-semibold text-lg">公司知識庫</h2>
-          <p className="text-sm text-muted-foreground">勾選公司各部門上傳的知識，對話時助理會依據這些內容回答。</p>
+          <h2 className="font-semibold text-lg">{t('companyKnowledge')}</h2>
+          <p className="text-sm text-muted-foreground">{t('companyKnowledgeHint')}</p>
         </div>
         <KnowledgePicker value={knowledgeDocIds} onChange={setKnowledgeDocIds} />
       </div>
 
       {/* Files */}
       <div className="bg-card rounded-2xl border p-6 shadow-sm space-y-4">
-        <h2 className="font-semibold text-lg">知識庫文件</h2>
+        <h2 className="font-semibold text-lg">{t('files')}</h2>
         {!isEdit && (
           <p className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-lg p-3">
-            💡 請先儲存助理後，才能上傳文件
+            💡 {t('saveFirst')}
           </p>
         )}
 
@@ -227,10 +229,10 @@ export function AssistantForm({ models, assistant }: AssistantFormProps) {
             <input {...getInputProps()} />
             <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
             <p className="text-sm font-medium text-foreground/70">
-              {isDragActive ? '放開以上傳...' : '拖放或點擊上傳文件'}
+              {isDragActive ? t('dropHere') : t('dragOrClick')}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              支援 {ALLOWED_EXTENSIONS.join(', ')} · 最大 50MB
+              {t('supported', { types: ALLOWED_EXTENSIONS.join(', ') })}
             </p>
           </div>
         )}
@@ -244,7 +246,7 @@ export function AssistantForm({ models, assistant }: AssistantFormProps) {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{file.file_name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {file.file_size_bytes ? formatFileSize(file.file_size_bytes) : ''} · {file.processing_status === 'done' ? '已處理' : file.processing_status === 'failed' ? '處理失敗' : '處理中'}
+                    {file.file_size_bytes ? formatFileSize(file.file_size_bytes) : ''} · {file.processing_status === 'done' ? t('processed') : file.processing_status === 'failed' ? t('failed') : t('processing')}
                   </p>
                 </div>
                 {statusIcon(file.processing_status)}
@@ -262,7 +264,7 @@ export function AssistantForm({ models, assistant }: AssistantFormProps) {
                 <FileText className="h-4 w-4 text-blue-400 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{file.name}</p>
-                  <p className="text-xs text-blue-500">{file.error ?? '上傳中...'}</p>
+                  <p className="text-xs text-blue-500">{file.error ?? t('uploading')}</p>
                 </div>
                 {file.status === 'uploading' && <Loader2 className="h-4 w-4 animate-spin text-blue-500" />}
                 {file.status === 'error' && <AlertCircle className="h-4 w-4 text-red-500" />}
@@ -282,7 +284,7 @@ export function AssistantForm({ models, assistant }: AssistantFormProps) {
           onClick={() => router.back()}
           className="px-6 py-2.5 rounded-xl text-sm font-medium border hover:bg-accent transition-colors"
         >
-          取消
+          {t('cancel')}
         </button>
         <button
           type="submit"
@@ -290,7 +292,7 @@ export function AssistantForm({ models, assistant }: AssistantFormProps) {
           className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-60 transition-opacity"
         >
           {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-          {saving ? '儲存中...' : isEdit ? '更新助理' : '建立助理'}
+          {saving ? t('saving') : isEdit ? t('update') : t('create')}
         </button>
       </div>
     </form>

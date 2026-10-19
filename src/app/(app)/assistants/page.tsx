@@ -3,8 +3,10 @@ import Link from 'next/link'
 import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { Bot, Plus } from 'lucide-react'
 import { AssistantCard } from '@/components/assistants/AssistantCard'
+import { getTranslations } from 'next-intl/server'
 
 export default async function AssistantsPage() {
+  const t = await getTranslations('Assistants')
   const supabase = await createClient()
   const { data: { user } } = await getCachedUser()
   if (!user) redirect('/login')
@@ -19,29 +21,29 @@ export default async function AssistantsPage() {
     <div className="h-full overflow-y-auto bg-slate-50/50 dark:bg-background px-6 py-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold">AI 助理</h1>
-          <p className="text-muted-foreground text-sm mt-1">建立含有專屬知識庫的 AI 助理</p>
+          <h1 className="text-2xl font-bold">{t('title')}</h1>
+          <p className="text-muted-foreground text-sm mt-1">{t('subtitle')}</p>
         </div>
         <Link
           href="/assistants/new"
           className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
         >
           <Plus className="h-4 w-4" />
-          新建助理
+          {t('new')}
         </Link>
       </div>
 
       {(!assistants || assistants.length === 0) ? (
         <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
           <Bot className="h-16 w-16 mb-4 opacity-30" />
-          <h2 className="text-lg font-medium mb-2">尚未建立任何助理</h2>
-          <p className="text-sm mb-6">建立助理後，可上傳文件讓 AI 學習您的業務知識</p>
+          <h2 className="text-lg font-medium mb-2">{t('empty')}</h2>
+          <p className="text-sm mb-6">{t('emptyHint')}</p>
           <Link
             href="/assistants/new"
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
           >
             <Plus className="h-4 w-4" />
-            建立第一個助理
+            {t('createFirst')}
           </Link>
         </div>
       ) : (

@@ -37,7 +37,7 @@ type NavItem = {
 
 const MAIN_NAV: NavItem[] = [
   { labelKey: 'dashboard',   href: '/apps',           icon: LayoutDashboard, module: null },
-  { labelKey: 'roundtable',  label: '智慧圓桌',        href: '/roundtable',     icon: Users,           module: 'chat' },
+  { labelKey: 'roundtable',        href: '/roundtable',     icon: Users,           module: 'chat' },
   { labelKey: 'assistants',  href: '/assistants',     icon: Bot,             module: 'chat' },
   { labelKey: 'imageGen',    href: '/image-gen',      icon: Image,           module: 'chat', internalOnly: true },
   { labelKey: 'videoGen',    href: '/video-gen',      icon: Video,           module: 'chat', internalOnly: true },
@@ -49,14 +49,14 @@ const TOOL_NAV: NavItem[] = [
   { labelKey: 'marketing',     href: '/marketing-auto',   icon: Megaphone,    module: 'marketing' },
   { labelKey: 'cs',            href: '/cs',              icon: Headphones,   module: 'cs' },
   { labelKey: 'booking',       href: '/booking',         icon: CalendarDays, module: 'booking' },
-  { labelKey: 'legal',         label: '法律合規',         href: '/legal',     icon: Scale,        module: null },
+  { labelKey: 'legal',         href: '/legal',     icon: Scale,        module: null },
 ]
 
 // 僅總管理員可見的連結
 const ADMIN_NAV: NavItem[] = [
   { labelKey: 'llmProxy',  label: 'LLM Proxy',  href: '/cli-proxy',  icon: Terminal,         module: null, adminOnly: true },
-  { labelKey: 'programing', label: '網頁程式開發', href: '/programing', icon: Code2,        module: null, adminOnly: true },
-  { labelKey: 'feedback',  label: '意見回饋',    href: '/feedback',   icon: MessageSquarePlus, module: null },
+  { labelKey: 'programing', href: '/programing', icon: Code2,        module: null, adminOnly: true },
+  { labelKey: 'feedback',    href: '/feedback',   icon: MessageSquarePlus, module: null },
 ]
 
 

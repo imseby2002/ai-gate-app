@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils/cn'
 import KnowledgePicker from '@/components/knowledge/KnowledgePicker'
+import { useTranslations } from 'next-intl'
 
 interface ExpertKnowledgeStatus {
   id: string
@@ -29,10 +30,10 @@ interface Expert {
 type InputMode = 'search' | 'url' | 'manual' | 'knowledge'
 
 const MODE_CONFIG: Record<InputMode, { icon: React.ElementType; label: string; hint: string }> = {
-  search: { icon: Search, label: '搜尋', hint: '輸入名稱／主題，AI 自動搜尋相關分析並整理成知識庫' },
-  url:    { icon: Link2,   label: 'URL',  hint: '貼上 YouTube 或 Blog 文章連結，自動抓取內容（逐字稿／全文）' },
-  manual: { icon: FileText, label: '手動', hint: '自己整理的筆記、觀察或逐字稿，直接貼入' },
-  knowledge: { icon: Library, label: '公司知識', hint: '勾選公司知識庫的文件（SOP、教材、規範），AI 整理成這位專家的知識' },
+  search: { icon: Search, label: 'modeSearch', hint: 'hintSearch' },
+  url:    { icon: Link2,   label: 'modeUrl', hint: 'hintUrl' },
+  manual: { icon: FileText, label: 'modeManual', hint: 'hintManual' },
+  knowledge: { icon: Library, label: 'modeKnowledge', hint: 'hintKnowledge' },
 }
 
 interface ExpertSelectorProps {
@@ -43,6 +44,7 @@ interface ExpertSelectorProps {
 }
 
 export function ExpertSelector({ selectedIds, onChange, single, className }: ExpertSelectorProps) {
+  const t = useTranslations('Experts')
   const [experts, setExperts] = useState<Expert[]>([])
   const [loading, setLoading] = useState(true)
   const [adding, setAdding] = useState(false)
@@ -83,10 +85,10 @@ export function ExpertSelector({ selectedIds, onChange, single, className }: Exp
   }
 
   async function addExpert() {
-    if (!name.trim()) { setAddError('請輸入名稱'); return }
-    if (mode === 'url' && !sourceUrl.trim()) { setAddError('請輸入 URL'); return }
-    if (mode === 'manual' && !manualContent.trim()) { setAddError('請輸入內容'); return }
-    if (mode === 'knowledge' && !knowledgeDocIds.length) { setAddError('請選擇知識文件'); return }
+    if (!name.trim()) { setAddError(t('nameRequired')); return }
+    if (mode === 'url' && !sourceUrl.trim()) { setAddError(t('urlRequired')); return }
+    if (mode === 'manual' && !manualContent.trim()) { setAddError(t('contentRequired')); return }
+    if (mode === 'knowledge' && !knowledgeDocIds.length) { setAddError(t('docsRequired')); return }
 
     setAddLoading(true)
     setAddError('')
@@ -105,7 +107,7 @@ export function ExpertSelector({ selectedIds, onChange, single, className }: Exp
         }),
       })
       const data = await res.json()
-      if (!res.ok) { setAddError(data.error ?? '新增失敗'); return }
+      if (!res.ok) { setAddError(data.error ?? t('addFailed')); return }
 
       const listRes = await fetch('/api/experts')
       const listData = await listRes.json()
@@ -114,7 +116,7 @@ export function ExpertSelector({ selectedIds, onChange, single, className }: Exp
       resetForm()
       setAdding(false)
     } catch {
-      setAddError('連線失敗')
+      setAddError(t('networkError'))
     } finally {
       setAddLoading(false)
     }
@@ -127,7 +129,7 @@ export function ExpertSelector({ selectedIds, onChange, single, className }: Exp
     onChange(selectedIds.filter(x => x !== id))
   }
 
-  const SOURCE_LABEL: Record<string, string> = { youtube: 'YT', tiktok: 'TK', instagram: 'IG', blog: 'Blog', search: '搜尋', manual: '手動', knowledge: '知識庫' }
+  const SOURCE_LABEL: Record<string, string> = { youtube: 'YT', tiktok: 'TK', instagram: 'IG', blog: 'Blog', search: t('srcSearch'), manual: t('srcManual'), knowledge: t('srcKnowledge') }
 
   const statusIcon = (expert: Expert) => {
     const k = expert.expert_knowledge[0]
@@ -142,11 +144,11 @@ export function ExpertSelector({ selectedIds, onChange, single, className }: Exp
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
           <BookOpen className="h-4 w-4" />
-          引用專家知識
+          {t('title')}
         </div>
         <Button size="sm" variant="outline" className="h-7 text-xs gap-1"
           onClick={() => { setAdding(v => !v); resetForm() }}>
-          <Plus className="h-3.5 w-3.5" />新增
+          <Plus className="h-3.5 w-3.5" />{t('add')}
         </Button>
       </div>
 
@@ -166,18 +168,18 @@ export function ExpertSelector({ selectedIds, onChange, single, className }: Exp
                     mode === m ? 'border-b-2 border-primary text-primary bg-primary/5' : 'text-muted-foreground hover:text-foreground'
                   )}
                 >
-                  <Icon className="h-3.5 w-3.5" />{label}
+                  <Icon className="h-3.5 w-3.5" />{t(label)}
                 </button>
               )
             })}
           </div>
 
           <div className="p-3 space-y-2">
-            <p className="text-xs text-muted-foreground">{MODE_CONFIG[mode].hint}</p>
+            <p className="text-xs text-muted-foreground">{t(MODE_CONFIG[mode].hint)}</p>
 
             <div className="flex gap-2">
-              <Input placeholder="名稱" value={name} onChange={e => setName(e.target.value)} className="h-8 text-sm" />
-              <Input placeholder="領域（選填）" value={domain} onChange={e => setDomain(e.target.value)} className="h-8 text-sm w-28 shrink-0" />
+              <Input placeholder={t('namePh')} value={name} onChange={e => setName(e.target.value)} className="h-8 text-sm" />
+              <Input placeholder={t('domainPh')} value={domain} onChange={e => setDomain(e.target.value)} className="h-8 text-sm w-28 shrink-0" />
             </div>
 
             {mode === 'url' && (
@@ -186,7 +188,7 @@ export function ExpertSelector({ selectedIds, onChange, single, className }: Exp
 
             {mode === 'search' && (
               <Input
-                placeholder={`搜尋關鍵字（留空自動搜「${name || '名稱'} 方法論 技巧 分析」）`}
+                placeholder={t('searchPh', { name: name || t('namePh') })}
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 className="h-8 text-sm"
@@ -195,7 +197,7 @@ export function ExpertSelector({ selectedIds, onChange, single, className }: Exp
 
             {mode === 'manual' && (
               <Textarea
-                placeholder="貼上你觀察到的技巧、逐字稿、筆記…"
+                placeholder={t('manualPh')}
                 value={manualContent}
                 onChange={e => setManualContent(e.target.value)}
                 rows={5}
@@ -210,15 +212,15 @@ export function ExpertSelector({ selectedIds, onChange, single, className }: Exp
             {addError && <p className="text-xs text-rose-600">{addError}</p>}
             {addLoading && (
               <p className="text-xs text-muted-foreground">
-                {mode === 'search' ? 'AI 正在搜尋並整理知識，約需 20-40 秒…' : '處理中，約需 15-30 秒…'}
+                {mode === 'search' ? t('searching') : t('processingWait')}
               </p>
             )}
 
             <div className="flex gap-2 pt-1">
               <Button size="sm" className="h-7 text-xs" onClick={addExpert} disabled={addLoading}>
-                {addLoading ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />處理中…</> : '確認新增'}
+                {addLoading ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />{t('processing')}</> : t('confirmAdd')}
               </Button>
-              <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { setAdding(false); resetForm() }}>取消</Button>
+              <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { setAdding(false); resetForm() }}>{t('cancel')}</Button>
             </div>
           </div>
         </div>
@@ -226,10 +228,10 @@ export function ExpertSelector({ selectedIds, onChange, single, className }: Exp
 
       {loading ? (
         <div className="flex items-center gap-2 text-sm text-gray-400 py-2">
-          <Loader2 className="h-4 w-4 animate-spin" /> 載入中…
+          <Loader2 className="h-4 w-4 animate-spin" /> {t('loading')}
         </div>
       ) : experts.length === 0 ? (
-        <p className="text-xs text-gray-400 py-2">尚無專家，點擊「新增」加入第一位</p>
+        <p className="text-xs text-gray-400 py-2">{t('empty')}</p>
       ) : (
         <div className="grid gap-1.5">
           {experts.map(expert => {
@@ -245,7 +247,7 @@ export function ExpertSelector({ selectedIds, onChange, single, className }: Exp
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
                       <span className="text-sm font-medium truncate">{expert.name}</span>
-                      {expert.is_system && <Badge variant="outline" className="text-[10px] h-4 px-1">系統</Badge>}
+                      {expert.is_system && <Badge variant="outline" className="text-[10px] h-4 px-1">{t('system')}</Badge>}
                       {expert.source_type && SOURCE_LABEL[expert.source_type] && (
                         <Badge variant="secondary" className="text-[10px] h-4 px-1">{SOURCE_LABEL[expert.source_type]}</Badge>
                       )}
@@ -254,7 +256,7 @@ export function ExpertSelector({ selectedIds, onChange, single, className }: Exp
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  {selected && <Badge className="text-[10px] h-4 px-1.5">已選</Badge>}
+                  {selected && <Badge className="text-[10px] h-4 px-1.5">{t('selected')}</Badge>}
                   {!expert.is_system && (
                     <button type="button" onClick={e => deleteExpert(expert.id, e)} className="ml-1 text-gray-400 hover:text-rose-500">
                       <Trash2 className="h-3.5 w-3.5" />
