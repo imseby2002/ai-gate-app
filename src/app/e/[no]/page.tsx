@@ -189,32 +189,25 @@ function PortalBody({ api, children }: { api: string; children: ReactNode }) {
     setData(r.ok ? await r.json() : null)
   }, [api])
   useEffect(() => { load() }, [load])
-  // 電腦（≥768px）雙欄；手機單欄，可上班時段排在履歷與文件之前
-  const [wide, setWide] = useState(false)
-  useEffect(() => {
-    const mq = window.matchMedia('(min-width: 768px)')
-    const on = () => setWide(mq.matches)
-    on(); mq.addEventListener('change', on)
-    return () => mq.removeEventListener('change', on)
-  }, [])
-  const top = <>{children}{data && <ScheduleCard plans={data.plans} />}</>
-  const shift = <>
-    {data && !data.store && (
-      <Card className="p-5"><p className="text-sm text-amber-700">Chưa có cửa hàng, vui lòng liên hệ nhân sự để được xếp ca. / 尚未設定門市，請聯絡人事後才能排班。</p></Card>
-    )}
-    {data?.store && data.kind === 'fulltime' && <DayOffCard api={api} dayoffs={data.dayoffs} onChanged={load} />}
-    {data?.store && data.kind === 'parttime' && <AvailCard api={api} rules={data.rules} onChanged={load} />}
-  </>
-  const bottom = <><ProfileCard api={api} /><DocsCard api={api} /></>
+  // 手機單欄（薪資條、班表 → 可上班時段 → 履歷、文件）；電腦雙欄（右欄為時段）。純 CSS，切換時不重新掛載
   return (
-    wide ? (
-      <div className="grid grid-cols-2 gap-4 items-start">
-        <div className="space-y-4">{top}{bottom}</div>
-        <div className="space-y-4">{shift}</div>
+    <div className="flex flex-col gap-4 md:grid md:grid-cols-2 md:grid-rows-[auto_1fr] md:items-start">
+      <div className="space-y-4 md:col-start-1 md:row-start-1">
+        {children}
+        {data && <ScheduleCard plans={data.plans} />}
       </div>
-    ) : (
-      <div className="space-y-4">{top}{shift}{bottom}</div>
-    )
+      <div className="space-y-4 md:col-start-2 md:row-start-1 md:row-span-2">
+        {data && !data.store && (
+          <Card className="p-5"><p className="text-sm text-amber-700">Chưa có cửa hàng, vui lòng liên hệ nhân sự để được xếp ca. / 尚未設定門市，請聯絡人事後才能排班。</p></Card>
+        )}
+        {data?.store && data.kind === 'fulltime' && <DayOffCard api={api} dayoffs={data.dayoffs} onChanged={load} />}
+        {data?.store && data.kind === 'parttime' && <AvailCard api={api} rules={data.rules} onChanged={load} />}
+      </div>
+      <div className="space-y-4 md:col-start-1 md:row-start-2">
+        <ProfileCard api={api} />
+        <DocsCard api={api} />
+      </div>
+    </div>
   )
 }
 
