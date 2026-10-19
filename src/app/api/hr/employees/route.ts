@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getUnitContext } from '@/lib/auth/unit-access'
+import { companySlugForOwner } from '@/lib/company/fromHost'
 import { adoptProfileAccess, cleanStores, cleanUnits, checkProfileLink, syncProfileFromEmployee } from '@/lib/hr/account-sync'
 
 async function getAdminUser() {
@@ -19,7 +20,9 @@ export async function GET() {
     .order('created_at', { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ employees: data })
+  // 員工專區網址前綴（公司子網域），前端組合 /e/<打卡編號>
+  const slug = await companySlugForOwner(user.id)
+  return NextResponse.json({ employees: data, portal_base: slug ? `https://${slug}.im-tourist.com` : null })
 }
 
 export async function POST(req: NextRequest) {
