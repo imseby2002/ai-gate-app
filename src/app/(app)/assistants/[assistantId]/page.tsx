@@ -1,6 +1,7 @@
 ﻿import { redirect } from 'next/navigation'
 import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { AssistantForm } from '@/components/assistants/AssistantForm'
+import { getTranslations } from 'next-intl/server'
 
 export default async function EditAssistantPage({
   params,
@@ -8,6 +9,7 @@ export default async function EditAssistantPage({
   params: Promise<{ assistantId: string }>
 }) {
   const { assistantId } = await params
+  const t = await getTranslations('Assistants')
   const supabase = await createClient()
   const { data: { user } } = await getCachedUser()
   if (!user) redirect('/login')
@@ -31,9 +33,9 @@ export default async function EditAssistantPage({
     <div className="h-full overflow-y-auto bg-slate-50/50 dark:bg-background px-6 py-6">
       <div className="max-w-2xl mx-auto mb-6">
         <h1 className="text-2xl font-bold">
-          {assistant.avatar_emoji} 編輯助理：{assistant.name}
+          {assistant.avatar_emoji} {t('editTitle', { name: assistant.name })}
         </h1>
-        <p className="text-muted-foreground text-sm mt-1">更新助理設定與知識庫文件</p>
+        <p className="text-muted-foreground text-sm mt-1">{t('editSubtitle')}</p>
       </div>
       <AssistantForm models={models ?? []} assistant={assistant} />
     </div>

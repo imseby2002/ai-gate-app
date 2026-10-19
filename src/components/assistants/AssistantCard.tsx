@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { MessageSquare, FileText, Loader2, CheckCircle, AlertCircle, Clock, Trash2 } from 'lucide-react'
 import { formatDateTime } from '@/lib/utils/format'
 import type { Assistant, AssistantFile } from '@/types/database'
+import { useTranslations } from 'next-intl'
 
 interface Props {
   assistant: Assistant & { assistant_files: AssistantFile[] }
@@ -13,13 +14,14 @@ interface Props {
 
 export function AssistantCard({ assistant }: Props) {
   const router = useRouter()
+  const t = useTranslations('Assistants')
   const [deleting, setDeleting] = useState(false)
 
   const files = assistant.assistant_files ?? []
   const doneFiles = files.filter(f => f.processing_status === 'done')
 
   const handleDelete = async () => {
-    if (!confirm(`確定刪除助理「${assistant.name}」？此操作無法復原，相關文件也會一併刪除。`)) return
+    if (!confirm(t('confirmDelete', { name: assistant.name }))) return
     setDeleting(true)
     await fetch(`/api/assistants/${assistant.id}`, { method: 'DELETE' })
     router.refresh()
@@ -50,7 +52,7 @@ export function AssistantCard({ assistant }: Props) {
             onClick={handleDelete}
             disabled={deleting}
             className="flex-shrink-0 ml-2 p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-40"
-            title="刪除助理"
+            title={t('delete')}
           >
             {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
           </button>
@@ -60,10 +62,10 @@ export function AssistantCard({ assistant }: Props) {
         <div className="mb-4">
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
             <FileText className="h-3.5 w-3.5" />
-            <span>知識庫文件 ({doneFiles.length}/{files.length})</span>
+            <span>{t('files')} ({doneFiles.length}/{files.length})</span>
           </div>
           {files.length === 0 ? (
-            <p className="text-xs text-muted-foreground/60 italic pl-5">尚未上傳文件</p>
+            <p className="text-xs text-muted-foreground/60 italic pl-5">{t('noFiles')}</p>
           ) : (
             <div className="space-y-1">
               {files.map(f => (
@@ -76,7 +78,7 @@ export function AssistantCard({ assistant }: Props) {
           )}
         </div>
 
-        <p className="text-xs text-muted-foreground/60 mb-4">更新於 {formatDateTime(assistant.updated_at)}</p>
+        <p className="text-xs text-muted-foreground/60 mb-4">{t('updatedAt', { time: formatDateTime(assistant.updated_at) })}</p>
 
         {/* Actions */}
         <div className="flex gap-2">
@@ -85,13 +87,13 @@ export function AssistantCard({ assistant }: Props) {
             className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
           >
             <MessageSquare className="h-3.5 w-3.5" />
-            開始對話
+            {t('startChat')}
           </Link>
           <Link
             href={`/assistants/${assistant.id}`}
             className="flex items-center justify-center px-3 py-2 rounded-lg text-xs font-medium border hover:bg-accent"
           >
-            編輯
+            {t('edit')}
           </Link>
         </div>
       </div>

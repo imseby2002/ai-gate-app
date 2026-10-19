@@ -1,8 +1,10 @@
 ﻿import { redirect } from 'next/navigation'
 import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { AssistantForm } from '@/components/assistants/AssistantForm'
+import { getTranslations } from 'next-intl/server'
 
 export default async function NewAssistantPage() {
+  const t = await getTranslations('Assistants')
   const supabase = await createClient()
   const { data: { user } } = await getCachedUser()
   if (!user) redirect('/login')
@@ -16,8 +18,8 @@ export default async function NewAssistantPage() {
   return (
     <div className="h-full overflow-y-auto bg-slate-50/50 dark:bg-background px-6 py-6">
       <div className="max-w-2xl mx-auto mb-6">
-        <h1 className="text-2xl font-bold">建立 AI 助理</h1>
-        <p className="text-muted-foreground text-sm mt-1">設定助理的角色與知識庫</p>
+        <h1 className="text-2xl font-bold">{t('newTitle')}</h1>
+        <p className="text-muted-foreground text-sm mt-1">{t('newSubtitle')}</p>
       </div>
       <AssistantForm models={models ?? []} />
     </div>
