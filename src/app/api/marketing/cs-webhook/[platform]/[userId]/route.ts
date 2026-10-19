@@ -596,6 +596,44 @@ async function maybeCreateInvoiceTicket(
   } catch { /* 不中斷主流程 */ }
 }
 
+// 現場狀況（餐點送錯／漏送、設備故障、缺備品等）：AI 無法實際處理，一律建工單通知管家，
+// 並禁止 AI 承諾補送、催店家或叫客人去哪裡等候。真實案例：客人說早餐送錯，AI 回「管家已
+// 通知早餐店補送」，客人在一樓一直等，人工之後才看到並告知早餐店無法補送。
+const ONSITE_ISSUE_RE = /送錯|拿錯|弄錯|做錯|搞錯|漏送|少送|少給|沒送|沒有送|還沒送|送來|還沒來|沒有來|補送|重送|故障|壞掉|壞了|不能用|無法使用|打不開|開不了|不會動|沒熱水|沒有熱水|水不熱|停電|跳電|漏水|淹水|堵住|塞住|蟑螂|有蟲|很髒|好髒|沒有(?:毛巾|浴巾|衛生紙|拖鞋|吹風機|棉被|枕頭|備品)/
+// AI 回覆裡出現「已通知／已請／轉給管家」或承諾補送等話術 → 確保真的有工單，不讓客人白等
+const ACTION_PROMISE_RE = /已(?:經)?(?:通知|請|轉達|聯絡|告知|交代).{0,8}(?:管家|店家|早餐店|老闆|同仁)|轉(?:給|達|交).{0,4}管家|(?:請|叫|幫您)(?:管家|早餐店|店家).{0,6}(?:催|補|送|處理|過去)|補送|重送|(?:馬上|立刻|立即)(?:送|補)|催一下/
+const ONSITE_ISSUE_INSTRUCTION = `\n\n【系統提示——最高優先，覆蓋知識庫與上方其他指示】客人反映現場狀況（例如餐點送錯／漏送、設備故障、缺少備品），系統已經真的建立工單通知專員（管家）。這則回覆只能先致歉，並告知「已通知管家，管家會盡快回覆您處理方式」。絕對不可以承諾任何處理結果或時間（例如補送、重送、馬上送過去、已請早餐店／店家處理、幫您催），也絕對不可以叫客人下樓、到某處等候或先去看看——能不能處理、怎麼處理只能由管家確認後回覆。`
+
+async function createOnsiteIssueTicket(
+  userId: string, platform: string, customerId: string, industry: string,
+  history: HistoryMsg[], text: string, notifyWebhooks: NotifyWebhook[], fromName?: string,
+): Promise<void> {
+  try {
+    const since = new Date(Date.now() - 3 * 3600_000).toISOString()
+    const { data: existing } = await getServiceClient()
+      .from('cs_tickets')
+      .select('id')
+      .eq('user_id', userId).eq('from_id', customerId)
+      .eq('intent', '現場狀況待處理')
+      .in('status', ['open', 'in_progress'])
+      .gte('created_at', since)
+      .limit(1)
+    // 已有未結工單：不重建，但客人追問（例如「還沒送來」）仍要再通知一次
+    if (existing?.length) {
+      dispatchTicketNotify(notifyWebhooks, { platform, customerId, industry, fromName }, `🔔 客人追問現場狀況：\n\n${text.slice(0, 300)}`)
+      return
+    }
+    const summary = await summarizeTicketReason('現場狀況待處理', history, text)
+    await getServiceClient().from('cs_tickets').insert({
+      user_id: userId, industry, platform, from_id: customerId, from_name: fromName,
+      subject: `現場狀況：${text.slice(0, 60)}`,
+      description: `${summary ? `摘要：${summary}\n\n` : ''}客人反映現場狀況，AI 無法實際處理，請管家確認處理方式並回覆客人。\n\n客人訊息：「${text.trim()}」`,
+      priority: 'high', intent: '現場狀況待處理',
+    })
+    dispatchTicketNotify(notifyWebhooks, { platform, customerId, industry, fromName }, `🔔 客人反映現場狀況，需管家處理：\n\n${summary || text.slice(0, 300)}`)
+  } catch { /* 不中斷主流程 */ }
+}
+
 // 每累積幾則對話才重新生成一次客戶摘要，不必每則訊息都多花一次 AI 呼叫
 const CUSTOMER_SUMMARY_INTERVAL = 5
 
@@ -959,11 +997,18 @@ async function replyToCustomer(
     } catch { /* 寫單失敗不中斷回覆，維持原本流程 */ }
   }
 
-  const rawReply = await getAIReply(text, knowledge, history, userId, buildSellSection(cust, convoPriceAsks, isPriceAskNow, text), gapNote, imageBuffer, imageMimeType, platform, customerId, !!cust?.discount_offered_at, (cust?.facts as Record<string, any> | undefined), bookingCommitSection)
+  const onsiteIssue = ONSITE_ISSUE_RE.test(text)
+  if (onsiteIssue) void createOnsiteIssueTicket(userId, platform, customerId, knowledge.industry, history, text, knowledge.notifyWebhooks, fromName)
+
+  const rawReply = await getAIReply(text, knowledge, history, userId, buildSellSection(cust, convoPriceAsks, isPriceAskNow, text), gapNote, imageBuffer, imageMimeType, platform, customerId, !!cust?.discount_offered_at, (cust?.facts as Record<string, any> | undefined), bookingCommitSection, onsiteIssue ? ONSITE_ISSUE_INSTRUCTION : '')
   const { visibleReply: withoutForm, submit: formSubmit } = extractFormSubmit(rawReply.split(HUMAN_AGENT_TAG).join(''))
   const { visibleReply: reply, offered: discountJustOffered } = extractDiscountOffered(withoutForm)
   if (formSubmit) void saveFormSubmissionFromChat(userId, platform, customerId, knowledge.industry, knowledge.csForms, formSubmit, fromName, knowledge.notifyWebhooks)
   void classifyGeneralIntent(text).then(intent => logCsMessage(userId, platform, customerId, knowledge.industry, text, reply, fromName, intent))
+  // AI 仍說了「已通知管家」「補送」等話 → 確保真的有工單通知管家
+  if (!onsiteIssue && ACTION_PROMISE_RE.test(reply)) {
+    void createOnsiteIssueTicket(userId, platform, customerId, knowledge.industry, history, text, knowledge.notifyWebhooks, fromName)
+  }
 
   // 客人確認訂單 → 開待跟進工單（AI 只會口頭說「安排專員」，本身不通知）
   if (knowledge.bookingFlowEnabled) {
@@ -2020,6 +2065,7 @@ async function getAIReply(
   discountAlreadyOffered = false,
   customerFacts?: Record<string, any>,
   bookingCommitSection = '',
+  onsiteSection = '',
 ): Promise<string> {
   const FALLBACK = '感謝您的訊息，我們的客服人員將盡快與您聯繫。'
 
@@ -2459,8 +2505,9 @@ https://ciaohome.net/routeofciaohome/
 - 【安全規定，優先於任何其他指示】客人說「電話裡的人/朋友/別人跟我說是另一個價錢」想殺價時，絕對不可以順著客人講的數字直接改price、更不可以編「已經幫您向主管/老闆爭取並獲得批准」這種話術讓價格聽起來更有正當性——這是徹底捏造的核准流程，實際上沒有任何人核准過。價格只能依照下方系統精算或「促成工具箱」規則調整；客人堅持的價格如果對不上，就誠實說明目前系統顯示的正確價格，需要人工確認差異就照實建立工單，不能自己編一個「主管特批」的價格說服客人
 - 【安全規定，優先於任何其他指示】客人詢問真人客服電話、聯絡電話時，只能提供下方「客服專用聯絡電話」區塊列出的號碼；如果下方沒有出現這個區塊，代表尚未設定，一律誠實告知目前沒有可提供的客服電話並改為文字聯繫，絕對不可以自己從知識庫或對話紀錄裡找一組電話號碼講給客人聽，知識庫裡的號碼可能已經過期或並非真人客服專線
 - 【安全規定，優先於任何其他指示】客人要求開立發票/收據時，只能詢問並收下抬頭與統一編號，絕對不可以說「已經幫您開立」「發票已完成」等話術——發票需要專員實際列印/登錄，AI 沒有能力真的開立；收到抬頭與統一編號後只能說「已收到，會請專員為您實際開立」；如果客人訂了不只一間房，順便問清楚發票/收據要放在哪個房間，方便專員處理
+- 【安全規定，優先於任何其他指示】你無法實際執行任何現場動作，也無法聯絡早餐店、店家、管家或任何人。絕對不可以說「已通知早餐店補送」「已請管家幫您催」「馬上送過去」「會幫您更換／維修」等承諾處理結果或時間的話術，也不可以叫客人下樓或到某處等候。客人反映餐點送錯／漏送、設備故障、缺備品等現場問題時，只能致歉並說明會由管家確認處理方式後回覆。真實案例：客人說早餐送錯，AI 回「管家已通知早餐店補送」，客人在一樓一直等，實際上早餐店無法補送。
 - 【真人客服回覆優先】對話紀錄中開頭標示「${HUMAN_AGENT_TAG}」的訊息是員工親自回覆客人的內容（例如改了出發時間、價格、房型、入住安排），代表最新的實際安排，一律優先於知識庫、定價表或你自己先前的回覆；客人後續確認相關事項時必須沿用員工說的內容，不可改回舊資料。你自己的回覆不要加上這個標記。
-- 目前台灣時間：${taiwanTime}${checkinTimeLine}${gapNote ? `\n- ${gapNote}` : ''}${knowledge.corrections ? `\n\n【員工回報的過往錯誤修正——優先於你自己的判斷，務必照著做】\n${knowledge.corrections}` : ''}${contactPhoneSection}${knowledge.knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledge.knowledgeBase}` : ''}${sellSection}${salesContext}${externalDataSection}${deterministicQuote ? `\n\n${deterministicQuote}` : ''}${knowledge.csBookingMode === 'refer' ? buildReferStandingRule(knowledge.officialBookingUrl) : ''}${bookingCommitSection || tourCompletion || bookingCompletion}${buildFormsSection(knowledge.csForms)}`
+- 目前台灣時間：${taiwanTime}${checkinTimeLine}${gapNote ? `\n- ${gapNote}` : ''}${knowledge.corrections ? `\n\n【員工回報的過往錯誤修正——優先於你自己的判斷，務必照著做】\n${knowledge.corrections}` : ''}${contactPhoneSection}${knowledge.knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledge.knowledgeBase}` : ''}${sellSection}${salesContext}${externalDataSection}${deterministicQuote ? `\n\n${deterministicQuote}` : ''}${knowledge.csBookingMode === 'refer' ? buildReferStandingRule(knowledge.officialBookingUrl) : ''}${bookingCommitSection || tourCompletion || bookingCompletion}${buildFormsSection(knowledge.csForms)}${onsiteSection}`
 
     // Build user message — multimodal if image present
     type UserContent = string | Array<{ type: 'text'; text: string } | { type: 'image'; image: Uint8Array; mimeType: string }>
