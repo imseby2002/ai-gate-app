@@ -4,12 +4,13 @@
 import type { createAdminClient } from '@/lib/supabase/admin'
 import { DOC_CATALOG } from '@/lib/hr/apply'
 import { notifyApplicant, notifyHR } from '@/lib/hr/notify'
+import { companySlugForOwner } from '@/lib/company/fromHost'
 
 type Admin = ReturnType<typeof createAdminClient>
 
 const CORE = DOC_CATALOG.filter(d => d.type !== 'other' && !d.optional)
-const EDU = ['diploma', 'student_card']                              // 學歷／學生證：擇一即可
-const UPLOAD_REQ = CORE.filter(d => !EDU.includes(d.type))           // 需上傳（學歷組另計）
+export const EDU = ['diploma', 'student_card']                              // 學歷／學生證：擇一即可
+export const UPLOAD_REQ = CORE.filter(d => !EDU.includes(d.type))           // 需上傳（學歷組另計）
 const PAPER_REQ = CORE.filter(d => d.copy === 'original' || d.copy === 'both') // 需繳正本紙本
 const LABEL = Object.fromEntries(DOC_CATALOG.map(d => [d.type, d.label]))
 const WEEK_MS = 7 * 86400_000
@@ -17,11 +18,12 @@ const WEEK_MS = 7 * 86400_000
 interface Person {
   id: string; user_id: string; name: string; email: string | null
   notify_channel: string | null; zalo_user_id: string | null; stage: string; doc_reminder_at: string | null
+  hired_employee_id: string | null; apply_token: string | null
 }
 
 export async function runDocReminders(admin: Admin, ownerId?: string): Promise<{ notified: number; hr_pending: number }> {
   let q = admin.from('agent_hr_candidates')
-    .select('id, user_id, name, email, notify_channel, zalo_user_id, stage, doc_reminder_at')
+    .select('id, user_id, name, email, notify_channel, zalo_user_id, stage, doc_reminder_at, hired_employee_id, apply_token')
     .neq('stage', 'rejected')
   if (ownerId) q = q.eq('user_id', ownerId)
   const { data: people } = await q
@@ -39,6 +41,22 @@ export async function runDocReminders(admin: Admin, ownerId?: string): Promise<{
     if (c.original_received) (paperBy.get(c.candidate_id) ?? paperBy.set(c.candidate_id, new Set()).get(c.candidate_id)!).add(c.doc_key)
     // 人事已收到紙本（正本或影本）就不必再要求上傳
     if (c.original_received || c.copy_received) (haveBy.get(c.candidate_id) ?? haveBy.set(c.candidate_id, new Set()).get(c.candidate_id)!).add(c.doc_key)
+  }
+
+  // 補件連結：已錄用→員工專區；應徵中→應徵資料連結
+  const empIds = people.map(p => p.hired_employee_id).filter(Boolean) as string[]
+  const { data: emps } = empIds.length
+    ? await admin.from('hr_employees').select('id, attendance_no, status').in('id', empIds)
+    : { data: [] }
+  const empNo = new Map((emps ?? []).filter(e => e.status === 'active' && e.attendance_no).map(e => [e.id, String(e.attendance_no)]))
+  const slugs = new Map<string, string | null>()
+  const linkFor = async (p: Person) => {
+    if (!slugs.has(p.user_id)) slugs.set(p.user_id, await companySlugForOwner(p.user_id).catch(() => null))
+    const slug = slugs.get(p.user_id)
+    if (!slug) return ''
+    const no = p.hired_employee_id ? empNo.get(p.hired_employee_id) : undefined
+    if (no) return `https://${slug}.im-tourist.com/e/${encodeURIComponent(no)}`
+    return p.apply_token ? `https://${slug}.im-tourist.com/apply/edit/${p.apply_token}` : ''
   }
 
   const now = Date.now()
@@ -62,7 +80,8 @@ export async function runDocReminders(admin: Admin, ownerId?: string): Promise<{
     const parts: string[] = []
     if (missingUpload.length > 0) parts.push(`尚未上傳：${missingUpload.join('、')}`)
     if (missingPaper.length > 0) parts.push(`尚未繳交正本紙本給人事：${missingPaper.join('、')}`)
-    const msg = `${p.name || ''} 您好，您的人事文件尚未齊全：\n${parts.join('\n')}\n\n請儘速完成，以免影響勞動／保險／所得稅檔案建立。`
+    const link = await linkFor(p)
+    const msg = `${p.name || ''} 您好，您的人事文件尚未齊全：\n${parts.join('\n')}\n\n請儘速完成，以免影響勞動／保險／所得稅檔案建立。${link ? `\n上傳連結 / Link tải lên：${link}` : ''}`
     const r = await notifyApplicant(p.user_id, { email: p.email, notify_channel: p.notify_channel, zalo_user_id: p.zalo_user_id, name: p.name }, '人事文件補件提醒', msg)
     if (r.ok) {
       await admin.from('agent_hr_candidates').update({ doc_reminder_at: new Date().toISOString() }).eq('id', p.id)

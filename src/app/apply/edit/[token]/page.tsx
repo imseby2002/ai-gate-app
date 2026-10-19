@@ -5,22 +5,14 @@ import { useTranslations, useLocale } from 'next-intl'
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
 
 const COPY_KEY: Record<string, string> = { original: 'copyOriginal', copy: 'copyCopy', both: 'copyBoth' }
-const DOC_TYPE_KEYS = [
-  { type: 'resume', key: 'docResume', copyKind: 'copy' },
-  { type: 'id_card', key: 'docIdCard', copyKind: 'both' },
-  { type: 'application', key: 'docApplication', copyKind: 'original' },
-  { type: 'cv', key: 'docCv', copyKind: 'copy' },
-  { type: 'diploma', key: 'docDiploma', copyKind: 'copy' },
-  { type: 'health', key: 'docHealth', copyKind: 'original' },
-  { type: 'birth', key: 'docBirth', copyKind: 'copy' },
-  { type: 'residence', key: 'docResidence', copyKind: 'copy' },
-  { type: 'other', key: 'docOther', copyKind: 'copy' },
-] as const
+interface CatalogItem { type: string; label: string; copy: string; required: boolean; either: boolean }
 
 interface Cand {
   id: string; name: string; phone: string; email: string; position: string; store: string
   id_number: string; birthday: string | null; address: string; stage: string; hired_employee_id: string | null
   identity_locked: boolean; notify_channel: string
+  profile_open: boolean; profile_edit_until: string | null
+  gender: string; native_place: string; education: string; resume_text: string | null
 }
 interface Doc { id: string; doc_type: string; label: string; file_name: string; uploaded_at: string; url: string }
 
@@ -30,6 +22,7 @@ export default function ApplyEditPage({ params }: { params: Promise<{ token: str
   const locale = useLocale()
   const [cand, setCand] = useState<Cand | null>(null)
   const [docs, setDocs] = useState<Doc[]>([])
+  const [catalog, setCatalog] = useState<CatalogItem[]>([])
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -51,6 +44,7 @@ export default function ApplyEditPage({ params }: { params: Promise<{ token: str
     const d = await res.json()
     setCand({ ...d.candidate, birthday: d.candidate.birthday ?? '' })
     setDocs(d.documents ?? [])
+    setCatalog(d.catalog ?? [])
     setLoading(false)
   }, [token])
   useEffect(() => { load() }, [load])
@@ -60,7 +54,7 @@ export default function ApplyEditPage({ params }: { params: Promise<{ token: str
     const res = await fetch(`/api/hr/apply/${token}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cand),
     })
-    if (res.ok) { setSaved(true); setTimeout(() => setSaved(false), 2000) }
+    if (res.ok) { setSaved(true); setTimeout(() => setSaved(false), 2000); load() }
     else alert((await res.json().catch(() => ({}))).error ?? t('saveFailed'))
   }
 
@@ -91,7 +85,11 @@ export default function ApplyEditPage({ params }: { params: Promise<{ token: str
 
   const setF = (k: keyof Cand) => (e: React.ChangeEvent<HTMLInputElement>) => setCand({ ...cand, [k]: e.target.value })
   const docsOf = (type: string) => docs.filter(d => d.doc_type === type)
-  const locked = cand.identity_locked
+  const locked = !cand.profile_open
+  const hasDoc = (c: CatalogItem) => docsOf(c.type).length > 0
+  const eduDone = catalog.filter(c => c.either).some(hasDoc)
+  const missing = (c: CatalogItem) => c.required && !hasDoc(c) && !(c.either && eduDone)
+  const sortedCatalog = [...catalog].sort((a, b) => Number(missing(b)) - Number(missing(a)) || Number(b.required) - Number(a.required))
   const lockedInp: React.CSSProperties = locked ? { ...inp, background: '#f1f5f9', color: '#94a3b8' } : inp
 
   return (
@@ -123,11 +121,13 @@ export default function ApplyEditPage({ params }: { params: Promise<{ token: str
 
         <div style={card}>
           <h2 style={h2}>{t('basicInfo')}</h2>
-          {locked && (
+          {locked ? (
             <p style={{ fontSize: 12, color: '#b45309', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '8px 10px', marginBottom: 12 }}>
               {t('lockedNotice')}
             </p>
-          )}
+          ) : cand.profile_edit_until ? (
+            <p style={{ fontSize: 12, color: '#475569', marginBottom: 12 }}>{t('editOpenUntil', { date: cand.profile_edit_until.slice(0, 10) })}</p>
+          ) : null}
           <div style={{ display: 'grid', gap: 12 }}>
             <F label={t('name')}><input style={lockedInp} disabled={locked} value={cand.name} onChange={setF('name')} /></F>
             <F label={t('phone')}><input style={inp} value={cand.phone} onChange={setF('phone')} /></F>
@@ -137,6 +137,22 @@ export default function ApplyEditPage({ params }: { params: Promise<{ token: str
             <F label={t('idNumber')}><input style={lockedInp} disabled={locked} value={cand.id_number} onChange={setF('id_number')} /></F>
             <F label={t('birthday')}><input style={lockedInp} disabled={locked} type="date" value={cand.birthday ?? ''} onChange={setF('birthday')} /></F>
             <F label={t('address')}><input style={inp} value={cand.address} onChange={setF('address')} /></F>
+            <div style={{ fontSize: 14, fontWeight: 700, marginTop: 4 }}>{t('resumeTitle')}</div>
+            <F label={t('gender')}>
+              <select disabled={locked} value={normGender(cand.gender)} onChange={e => setCand({ ...cand, gender: e.target.value })}
+                style={{ ...lockedInp, appearance: 'auto' as React.CSSProperties['appearance'] }}>
+                <option value="">—</option>
+                <option value="Nam">{t('genderMale')}</option>
+                <option value="Nữ">{t('genderFemale')}</option>
+              </select>
+            </F>
+            <F label={t('nativePlace')}><input style={lockedInp} disabled={locked} value={cand.native_place ?? ''} onChange={setF('native_place')} /></F>
+            <F label={t('education')}><input style={lockedInp} disabled={locked} value={cand.education ?? ''} onChange={setF('education')} /></F>
+            <F label={t('resumeText')}>
+              <textarea disabled={locked} value={cand.resume_text ?? ''} onChange={e => setCand({ ...cand, resume_text: e.target.value })} rows={6}
+                style={{ ...lockedInp, height: 'auto', padding: '8px 12px', resize: 'vertical', fontFamily: 'inherit' }} />
+              <span style={{ display: 'block', fontSize: 11, color: '#94a3b8', marginTop: 4 }}>{t('resumeHint')}</span>
+            </F>
             <F label={t('notifyChannel')}>
               <select value={cand.notify_channel || 'email'} onChange={e => setCand({ ...cand, notify_channel: e.target.value })}
                 style={{ ...inp, appearance: 'auto' as React.CSSProperties['appearance'] }}>
@@ -158,19 +174,20 @@ export default function ApplyEditPage({ params }: { params: Promise<{ token: str
           <h2 style={h2}>{t('documents')}</h2>
           <p style={{ fontSize: 12, color: '#64748b', marginTop: -8, marginBottom: 12 }}>{t('documentsHint')}</p>
           <div style={{ display: 'grid', gap: 10 }}>
-            {DOC_TYPE_KEYS.map(dt => {
+            {sortedCatalog.map(dt => {
               const list = docsOf(dt.type)
               return (
                 <div key={dt.type} style={{ border: '1px solid #f1f5f9', borderRadius: 10, padding: 12 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                     <span style={{ fontSize: 14, fontWeight: 600 }}>
-                      {t(dt.key)}
-                      <span style={{ fontSize: 11, fontWeight: 400, color: dt.copyKind !== 'copy' ? '#b45309' : '#94a3b8', marginLeft: 6 }}>
-                        （{t('paper')}：{t(COPY_KEY[dt.copyKind])}）
+                      {dt.label}
+                      <span style={{ fontSize: 11, fontWeight: 400, color: dt.copy !== 'copy' ? '#b45309' : '#94a3b8', marginLeft: 6 }}>
+                        （{t('paper')}：{t(COPY_KEY[dt.copy] ?? 'copyCopy')}）
                       </span>
+                      {missing(dt) && <span style={{ fontSize: 11, fontWeight: 600, color: '#be123c', background: '#ffe4e6', borderRadius: 4, padding: '1px 6px', marginLeft: 6 }}>{t('docMissing')}</span>}
                     </span>
                     <button onClick={() => pickFile(dt.type)} disabled={uploading === dt.type}
-                      style={{ fontSize: 13, padding: '5px 10px', borderRadius: 8, border: '1px solid #cbd5e1', background: 'white', cursor: 'pointer' }}>
+                      style={{ fontSize: 13, padding: '5px 10px', borderRadius: 8, border: '1px solid #cbd5e1', background: 'white', cursor: 'pointer', flexShrink: 0 }}>
                       {uploading === dt.type ? t('uploading') : t('upload')}
                     </button>
                   </div>
@@ -192,6 +209,8 @@ export default function ApplyEditPage({ params }: { params: Promise<{ token: str
   )
 }
 
+// 既有資料可能是 NAM／NỮ／男／女
+const normGender = (g: string | null | undefined) => { const v = (g ?? '').trim().toLowerCase(); return v === 'nam' || v === '男' ? 'Nam' : v === 'nữ' || v === '女' ? 'Nữ' : '' }
 const card: React.CSSProperties = { background: 'white', borderRadius: 16, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }
 const h2: React.CSSProperties = { fontSize: 15, fontWeight: 700, marginBottom: 14 }
 const inp: React.CSSProperties = { width: '100%', height: 40, borderRadius: 8, border: '1px solid #e2e8f0', padding: '0 12px', fontSize: 14, boxSizing: 'border-box' }

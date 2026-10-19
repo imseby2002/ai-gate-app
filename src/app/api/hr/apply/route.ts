@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { genToken } from '@/lib/hr/apply'
 import { notifyHR } from '@/lib/hr/notify'
+import { openUntil } from '@/lib/hr/profile'
 
 // 公開應徵表單送出（無需登入）。body: { code, name, phone, email, position, store }
 export async function POST(req: NextRequest) {
@@ -32,6 +33,7 @@ export async function POST(req: NextRequest) {
       source: 'web',
       stage: 'new',
       apply_token,
+      profile_edit_until: await openUntil(admin, setting.owner_id),
     })
     .select('id, apply_token').single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

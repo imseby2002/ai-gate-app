@@ -4698,7 +4698,7 @@
     "editTitle": "我的應徵資料",
     "editSubtitle": "可隨時回到此連結修改資料與上傳文件。請保存好此網址。",
     "basicInfo": "基本資料",
-    "lockedNotice": "🔒 重要基本資料已鎖定，僅可修改電話與地址。如需更改其他欄位，請聯繫人事開放。",
+    "lockedNotice": "🔒 履歷修改已關閉，僅可修改電話、地址與通知方式；文件仍可上傳。如需修改，請聯繫人事開放。",
     "idNumber": "身分證字號",
     "birthday": "生日",
     "address": "地址",
@@ -4734,7 +4734,18 @@
     "notifyChannel": "接收通知方式",
     "notifyEmail": "Email（面試/錄取通知寄到信箱）",
     "notifyZalo": "ZALO（需先加入本公司官方帳號 OA）",
-    "zaloHint": "選 ZALO 者，請先搜尋並加入本公司 ZALO 官方帳號（OA），否則無法收到通知。"
+    "zaloHint": "選 ZALO 者，請先搜尋並加入本公司 ZALO 官方帳號（OA），否則無法收到通知。",
+    "editOpenUntil": "履歷可修改至 {date}",
+    "resumeTitle": "履歷",
+    "gender": "性別",
+    "genderMale": "男",
+    "genderFemale": "女",
+    "nativePlace": "籍貫",
+    "education": "學歷",
+    "resumeText": "工作經歷／自我介紹",
+    "resumeHint": "可日後再回來補充，例如：曾任職公司、職務、期間、專長。",
+    "docRequired": "必備",
+    "docMissing": "缺件"
   },
   "Office": {
     "title": "公司入口",
@@ -7709,7 +7720,13 @@
     "portalHasAccount": "此員工也有系統帳號（{account}），用來登入門市／辦公系統；薪資條、可上班時段與班表一樣在員工專區。",
     "storeNone": "— 未設定門市 —",
     "manualDoc": "使用說明書",
-    "manualDownload": "下載說明書 PDF"
+    "manualDownload": "下載說明書 PDF",
+    "editableUntil": "可修改至 {date}",
+    "profileEditLabel": "履歷修改",
+    "profileUpdatedAt": "最近更新 {date}",
+    "profileEditDaysLabel": "履歷開放修改後",
+    "profileEditDaysUnit": "天自動關閉",
+    "profileEditDaysHint": "0＝不自動關閉；文件上傳不受影響，缺件每週提醒"
   },
   "FinancePage": {
     "accountBalancesTitle": "各帳戶結餘",

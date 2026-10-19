@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { profileOpen } from '@/lib/hr/profile'
 import { getUnitContext } from '@/lib/auth/unit-access'
 import { companySlugForOwner } from '@/lib/company/fromHost'
 import { adoptProfileAccess, cleanStores, cleanUnits, checkProfileLink, syncProfileFromEmployee } from '@/lib/hr/account-sync'
@@ -22,7 +23,17 @@ export async function GET() {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   // 員工專區網址前綴（公司子網域），前端組合 /e/<打卡編號>
   const slug = await companySlugForOwner(user.id)
-  return NextResponse.json({ employees: data, portal_base: slug ? `https://${slug}.im-tourist.com` : null })
+  // 履歷修改狀態（人員資料掛在錄用時的應徵者資料上）
+  const { data: cands } = await supabase.from('agent_hr_candidates')
+    .select('hired_employee_id, identity_locked, profile_edit_until, resume_updated_at')
+    .eq('user_id', user.id).not('hired_employee_id', 'is', null)
+  const pe = new Map((cands ?? []).map(c => [c.hired_employee_id as string, c]))
+  const employees = (data ?? []).map(e => {
+    const c = pe.get(e.id)
+    const open = profileOpen(c ?? {})
+    return { ...e, profile_edit: { open, until: open ? c?.profile_edit_until ?? null : null, updated_at: c?.resume_updated_at ?? null } }
+  })
+  return NextResponse.json({ employees, portal_base: slug ? `https://${slug}.im-tourist.com` : null })
 }
 
 export async function POST(req: NextRequest) {
