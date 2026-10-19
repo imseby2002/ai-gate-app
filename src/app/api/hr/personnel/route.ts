@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { syncCandidateToEmployee } from '@/lib/hr/profile'
 import { getUnitContext } from '@/lib/auth/unit-access'
 import { DOC_CATALOG, APPLY_BUCKET } from '@/lib/hr/apply'
 
@@ -88,6 +89,7 @@ export async function PATCH(req: NextRequest) {
   for (const f of PERSON_FIELDS) if (b[f] !== undefined) upd[f] = b[f] === null ? null : s(b[f])
   const { error } = await ctx.admin.from('agent_hr_candidates').update(upd).eq('id', id).eq('user_id', ctx.ownerId)
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+  await syncCandidateToEmployee(ctx.admin, ctx.ownerId, id, upd)
   return NextResponse.json({ ok: true })
 }
 

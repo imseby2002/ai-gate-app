@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { FREE_FIELDS, IDENTITY_FIELDS, APPLY_BUCKET, DOC_CATALOG } from '@/lib/hr/apply'
 import { EDU, UPLOAD_REQ } from '@/lib/hr/doc-reminders'
-import { RESUME_FIELDS, profileOpen } from '@/lib/hr/profile'
+import { RESUME_FIELDS, profileOpen, syncCandidateToEmployee } from '@/lib/hr/profile'
 
 type Ctx = { params: Promise<{ token: string }> }
 
 async function findCandidate(admin: ReturnType<typeof createAdminClient>, token: string) {
   const { data } = await admin
     .from('agent_hr_candidates')
-    .select('id, user_id, identity_locked, profile_edit_until, name, email, position, store, id_number, birthday, gender, native_place, education, resume_text')
+    .select('id, user_id, hired_employee_id, identity_locked, profile_edit_until, name, email, position, store, id_number, birthday, gender, native_place, education, resume_text')
     .eq('apply_token', token).single()
   return data
 }
@@ -82,5 +82,8 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   const { error } = await admin
     .from('agent_hr_candidates').update(updates).eq('id', cand.id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // 已錄用：同步到員工資料
+  await syncCandidateToEmployee(admin, cand.user_id, cand.id, updates)
   return NextResponse.json({ ok: true })
 }
