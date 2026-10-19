@@ -22,7 +22,7 @@ interface StoreFeature {
   ring: string
 }
 
-// 順序：第一排 排班／評分、盤點・訂貨、門市報表；第二排 水電冰塊費用、門市報修、教練 AI（營運教練＋設備排查）。
+// 順序：第一排 排班／評分、盤點・訂貨、門市報表；第二排 水電冰塊費用、門市報修、門市教練 AI（營運教練＋設備排查）。
 // 門市點單 POS 是門市獨立使用的前台，不放在門市營運，改由辦公室管理者從公司入口進入。
 const STORE_FEATURES: StoreFeature[] = [
   {
@@ -148,62 +148,6 @@ export default function StoreDepartmentHubPage() {
           </div>
         </div>
       )}
-
-      {/* 門市營運教練 AI 旗艦 Banner */}
-      <div className="p-4 sm:p-5 rounded-2xl border-2 border-emerald-500/40 bg-gradient-to-r from-emerald-950 via-teal-950 to-slate-950 text-white shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center shrink-0 border border-emerald-400/30 shadow-xs">
-            <Compass className="h-6 w-6" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-base sm:text-lg font-black text-white">
-                {t('coachBannerTitle')}
-              </h2>
-              <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-400 text-emerald-950 font-black">
-                {t('coachBannerBadge')}
-              </span>
-            </div>
-            <p className="text-xs sm:text-sm text-emerald-200/90 mt-0.5">
-              {t('coachBannerDesc')}
-            </p>
-          </div>
-        </div>
-        <Link href="/store-coach" className="shrink-0 self-start md:self-auto">
-          <Button className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs sm:text-sm px-5 rounded-xl gap-1.5 shadow-md cursor-pointer">
-            {t('coachBannerCta')}
-            <ArrowRight className="h-4 w-4" />
-          </Button>
-        </Link>
-      </div>
-
-      {/* 門市設備快速排查 AI 快捷通道 */}
-      <div className="p-4 rounded-2xl border bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-transparent border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 border border-amber-500/30">
-            <Wrench className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold text-foreground">
-                ⚡ {t('repairAiBannerTitle')}
-              </h3>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-bold">
-                {t('repairAiBannerBadge')}
-              </span>
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {t('repairAiBannerDesc')}
-            </p>
-          </div>
-        </div>
-        <Link href="/repair?tab=ai&mode=store" className="shrink-0 self-start sm:self-auto">
-          <Button size="sm" className="bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold gap-1.5 rounded-xl shadow-xs">
-            {t('repairAiBannerCta')}
-            <ArrowRight className="h-3.5 w-3.5" />
-          </Button>
-        </Link>
-      </div>
 
       {/* 核心功能卡片網格 */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
