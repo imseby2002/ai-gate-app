@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { profileOpen } from '@/lib/hr/profile'
+import { ATTENDANCE_ERR, attendanceTaken, cleanAttendanceNo, validAttendanceNo } from '@/lib/hr/attendance'
 import { getUnitContext } from '@/lib/auth/unit-access'
 import { companySlugForOwner } from '@/lib/company/fromHost'
 import { adoptProfileAccess, cleanStores, cleanUnits, checkProfileLink, syncProfileFromEmployee } from '@/lib/hr/account-sync'
@@ -56,6 +57,10 @@ export async function POST(req: NextRequest) {
     access = await adoptProfileAccess(supabase, profile_id, access.units)
   }
 
+  const attNo = cleanAttendanceNo(attendance_no)
+  if (!validAttendanceNo(attNo)) return NextResponse.json({ error: ATTENDANCE_ERR }, { status: 400 })
+  const dupNew = await attendanceTaken(supabase, user.id, attNo)
+  if (dupNew) return NextResponse.json({ error: `打卡工號 ${attNo} 已被 ${dupNew.name} 使用` }, { status: 400 })
   const { data, error } = await supabase
     .from('hr_employees')
     .insert({
@@ -72,7 +77,7 @@ export async function POST(req: NextRequest) {
       insurance_number: insurance_number ?? '',
       insurance_salary: insurance_salary ?? 0,
       hourly_rate: hourly_rate ?? 0,
-      attendance_no: attendance_no ?? '',
+      attendance_no: cleanAttendanceNo(attendance_no),
       payroll_code: payroll_code ?? '',
       store: access.store ?? (String(store ?? '').trim() || cleanStores(managed_stores)[0] || ''),
       bank_name: bank_name ?? '',
@@ -96,7 +101,29 @@ export async function PATCH(req: NextRequest) {
   const body = await req.json()
   const { id, owner_id: _owner, created_at: _created, ...updates } = body
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+  // 只讀／衍生欄位不寫回（列表 API 附帶的 profile_edit、舊工號紀錄由下方計算）
+  delete updates.profile_edit
+  delete updates.prev_attendance_nos
+  delete updates.updated_at
   if (updates.units !== undefined) updates.units = cleanUnits(updates.units)
+  // 打卡工號：只能數字、不可重複；變更時保留舊號，舊的員工專區連結會導向新號
+  let attendanceChanged = false
+  if (updates.attendance_no !== undefined) {
+    const no = cleanAttendanceNo(updates.attendance_no)
+    if (!validAttendanceNo(no)) return NextResponse.json({ error: ATTENDANCE_ERR }, { status: 400 })
+    const dup = await attendanceTaken(supabase, user.id, no, id)
+    if (dup) return NextResponse.json({ error: `打卡工號 ${no} 已被 ${dup.name} 使用` }, { status: 400 })
+    updates.attendance_no = no
+    const { data: cur } = await supabase.from('hr_employees').select('attendance_no, prev_attendance_nos').eq('id', id).eq('owner_id', user.id).single()
+    const old = String(cur?.attendance_no ?? '').trim()
+    if (cur && old !== no) {
+      attendanceChanged = true
+      const prev = new Set<string>((cur.prev_attendance_nos as string[] | null) ?? [])
+      if (old) prev.add(old)
+      prev.delete(no)
+      updates.prev_attendance_nos = [...prev]
+    }
+  }
   if (updates.birthday !== undefined) updates.birthday = updates.birthday || null
   if (updates.managed_stores !== undefined) updates.managed_stores = cleanStores(updates.managed_stores)
   // 所屬門市空白但有勾管理門市：以第一家為所屬門市（排班、員工專區以所屬門市為準）
@@ -121,7 +148,7 @@ export async function PATCH(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   await syncProfileFromEmployee(supabase, data)
-  return NextResponse.json({ employee: data })
+  return NextResponse.json({ employee: data, attendance_changed: attendanceChanged })
 }
 
 export async function DELETE(req: NextRequest) {

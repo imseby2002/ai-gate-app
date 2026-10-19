@@ -32,6 +32,11 @@ export default function EmployeePortalPage({ params }: { params: Promise<{ no: s
 
   const load = useCallback(async () => {
     const r = await fetch(`${api}/me`)
+    if (!r.ok) {
+      // 工號已被人事更改：舊連結導向新工號
+      const m = await fetch(`${api}/resolve`).then(x => x.ok ? x.json() : null).catch(() => null)
+      if (m?.moved) { window.location.replace(`/e/${encodeURIComponent(m.moved)}`); return }
+    }
     setMe(r.ok ? await r.json() : null)
     setLoading(false)
   }, [api])
