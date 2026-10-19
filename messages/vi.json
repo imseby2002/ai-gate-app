@@ -7695,7 +7695,14 @@
     "portalSendAll": "Gửi email liên kết cho tất cả",
     "portalSendAllHint": "Gửi cho mọi nhân viên đang làm có mã chấm công và email",
     "portalSendAllConfirm": "Gửi email liên kết Trang nhân viên cho {n} nhân viên đang làm có email?",
-    "portalNoTargets": "Không có nhân viên đang làm nào có cả mã chấm công và email"
+    "portalNoTargets": "Không có nhân viên đang làm nào có cả mã chấm công và email",
+    "accountFilter": "Có tài khoản ({n})",
+    "accountFilterHint": "Nhân viên đang làm có tài khoản hệ thống (cửa hàng trưởng, trưởng ca, văn phòng…), đăng nhập hệ thống theo đơn vị",
+    "portalOnlyFilter": "Chỉ Trang nhân viên ({n})",
+    "portalOnlyFilterHint": "Nhân viên đang làm không có tài khoản (bán thời gian, toàn thời gian thông thường), chỉ dùng liên kết Trang nhân viên",
+    "accountBadge": "Tài khoản",
+    "accountBadgeHint": "Đã liên kết tài khoản {account}: đăng nhập hệ thống theo đơn vị; phiếu lương, giờ rảnh và lịch làm vẫn ở Trang nhân viên",
+    "portalHasAccount": "Nhân viên này cũng có tài khoản hệ thống ({account}) để vào hệ thống cửa hàng / văn phòng; phiếu lương, giờ rảnh và lịch làm vẫn ở Trang nhân viên."
   },
   "FinancePage": {
     "accountBalancesTitle": "Số dư theo tài khoản",

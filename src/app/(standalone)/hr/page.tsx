@@ -4,7 +4,7 @@ import { ChannelAccountPicker } from '@/components/channels/ChannelAccountPicker
 import { useState, useEffect, useCallback, useRef, ReactNode, type ChangeEvent } from 'react'
 import Link from 'next/link'
 import { useTranslations, useLocale } from 'next-intl'
-import { Users, DollarSign, Calendar, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Loader2, AlertCircle, Building2, Phone, Mail, Briefcase, CreditCard, Zap, Wallet, Upload, Shield, Clock, Download, UserPlus, ArrowRight, ClipboardCheck, Store, Video, FileSpreadsheet, HeartHandshake, Send, FileText, KeyRound, Copy, Link2 } from 'lucide-react'
+import { Users, DollarSign, Calendar, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Loader2, AlertCircle, Building2, Phone, Mail, Briefcase, CreditCard, Zap, Wallet, Upload, Shield, Clock, Download, UserPlus, ArrowRight, ClipboardCheck, Store, Video, FileSpreadsheet, HeartHandshake, Send, FileText, KeyRound, Copy, Link2, UserCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -703,8 +703,15 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
   }
 
   const noBirthday = employees.filter(e => e.status === 'active' && !e.birthday)
+  // 有系統帳號（店長、辦公室人員等）與只用員工專區（一般工讀生、正職）
+  const activeEmps = employees.filter(e => e.status === 'active')
+  const withAccount = activeEmps.filter(e => e.profile_id)
+  const portalOnly = activeEmps.filter(e => !e.profile_id)
+  const accountOf = (id: string | null) => id ? accounts.find(a => a.id === id) ?? null : null
   const filtered = statusFilter === 'all' ? employees
     : statusFilter === 'nobirthday' ? noBirthday
+    : statusFilter === 'account' ? withAccount
+    : statusFilter === 'portalonly' ? portalOnly
     : employees.filter(e => e.status === statusFilter)
 
   return (
@@ -715,6 +722,12 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
             {s === 'all' ? t('allWithCount', { n: employees.length }) : t('labelWithCount', { label: LABELS[s] ?? s, n: employees.filter(e => e.status === s).length })}
           </Button>
         ))}
+        <Button size="sm" variant={statusFilter === 'account' ? 'default' : 'ghost'} className="text-blue-700" title={t('accountFilterHint')} onClick={() => setStatusFilter('account')}>
+          {t('accountFilter', { n: withAccount.length })}
+        </Button>
+        <Button size="sm" variant={statusFilter === 'portalonly' ? 'default' : 'ghost'} title={t('portalOnlyFilterHint')} onClick={() => setStatusFilter('portalonly')}>
+          {t('portalOnlyFilter', { n: portalOnly.length })}
+        </Button>
         {noBirthday.length > 0 && (
           <Button size="sm" variant={statusFilter === 'nobirthday' ? 'default' : 'ghost'} className="text-amber-700" title={t('missingBirthdayHint')} onClick={() => setStatusFilter('nobirthday')}>
             {t('missingBirthdayFilter', { n: noBirthday.length })}
@@ -790,6 +803,7 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
                     {emp.department && <span className="text-xs text-gray-400">{emp.department}</span>}
                     {emp.position && <span className="text-xs text-gray-400">· {emp.position}</span>}
                     <StatusBadge value={emp.status} kind="emp" />
+                    {emp.profile_id && (() => { const a = accountOf(emp.profile_id); return <Badge variant="outline" className="gap-1 text-blue-700 border-blue-300" title={t('accountBadgeHint', { account: a?.email || a?.full_name || '' })}><UserCheck className="h-3 w-3" />{t('accountBadge')}</Badge> })()}
                     {emp.status === 'active' && !emp.birthday && <Badge variant="outline" className="text-amber-700 border-amber-300" title={t('missingBirthdayHint')}>{t('missingBirthday')}</Badge>}
                     <Badge variant={emp.staff_category === 'hourly' ? 'secondary' : 'default'}>{STAFF_LABEL[emp.staff_category] ?? emp.staff_category}</Badge>
                     {emp.insurance_required
@@ -876,6 +890,7 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
                   </div>
                   <p className="text-xs text-gray-500">{linkEmp.email ? t('portalEmailTo', { email: linkEmp.email }) : t('portalNoEmail')}{zalo ? ` · ${t('portalZaloHint')}` : ''}</p>
                   {!linkEmp.birthday && <p className="text-xs text-amber-700">{t('portalNeedPin')}</p>}
+                  {linkEmp.profile_id && <p className="text-xs text-blue-700">{t('portalHasAccount', { account: accountOf(linkEmp.profile_id)?.email || accountOf(linkEmp.profile_id)?.full_name || '' })}</p>}
                 </>
               )}
               {linkMsg && <p className="text-sm text-emerald-700">{linkMsg}</p>}

@@ -7695,7 +7695,14 @@
     "portalSendAll": "Email portal links to all",
     "portalSendAllHint": "Sends to every active employee with an attendance number and email",
     "portalSendAllConfirm": "Email the portal link to {n} active employees with an email?",
-    "portalNoTargets": "No active employees with both an attendance number and email"
+    "portalNoTargets": "No active employees with both an attendance number and email",
+    "accountFilter": "With system account ({n})",
+    "accountFilterHint": "Active staff linked to a system account (store managers, leaders, office staff…) who log in to the system for their units",
+    "portalOnlyFilter": "Portal only ({n})",
+    "portalOnlyFilterHint": "Active staff without a system account (regular part-time and full-time staff) who only use the employee portal link",
+    "accountBadge": "Account",
+    "accountBadgeHint": "Linked to system account {account}: logs in to the system for their units; payslips, availability and shifts are still in the employee portal",
+    "portalHasAccount": "This employee also has a system account ({account}) for the store / office system; payslips, availability and shifts are still in the employee portal."
   },
   "FinancePage": {
     "accountBalancesTitle": "Balance by account",

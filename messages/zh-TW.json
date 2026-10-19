@@ -7695,7 +7695,14 @@
     "portalSendAll": "Email 專區連結給全部",
     "portalSendAllHint": "寄給所有在職、有打卡編號且有 Email 的員工",
     "portalSendAllConfirm": "寄員工專區連結給 {n} 位在職且有 Email 的員工？",
-    "portalNoTargets": "沒有在職且有打卡編號與 Email 的員工"
+    "portalNoTargets": "沒有在職且有打卡編號與 Email 的員工",
+    "accountFilter": "有系統帳號 ({n})",
+    "accountFilterHint": "在職且綁定系統帳號的員工（店長、領班、辦公室人員等），可登入系統操作所屬單位",
+    "portalOnlyFilter": "僅員工專區 ({n})",
+    "portalOnlyFilterHint": "在職、沒有系統帳號的員工（一般工讀生、正職），只用員工專區連結",
+    "accountBadge": "系統帳號",
+    "accountBadgeHint": "已綁定系統帳號 {account}：登入系統操作所屬單位；薪資條、可上班時段與班表仍在員工專區",
+    "portalHasAccount": "此員工也有系統帳號（{account}），用來登入門市／辦公系統；薪資條、可上班時段與班表一樣在員工專區。"
   },
   "FinancePage": {
     "accountBalancesTitle": "各帳戶結餘",
