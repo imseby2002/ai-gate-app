@@ -426,13 +426,13 @@ ${csBookingMode === 'manual' ? `接著一行：「以上資訊是否正確？」
   if (sheetResults.length > 0) {
     const hasBnbCheckinResult = sheetResults.some(r => r.includes('【入住資訊查詢結果】'))
     const guard = (detectedOrderNum && checkin.before && !hasBnbCheckinResult)
-      ? `\n\n【系統強制指令——最高優先】目前台灣時間 ${checkin.nowHHMM} 尚未到入住時間（${checkin.checkinTime}）。即使下方資料含密碼或房號，也一律禁止提供；你只能告知客人：入住時間為今日 ${checkin.checkinTime}，請於該時間後再輸入訂單號碼查詢。`
+      ? `\n\n【系統強制指令——最高優先】目前台灣時間 ${checkin.nowHHMM} 尚未到密碼開放時間（${checkin.checkinTime}）。即使下方資料含密碼或房號，也一律禁止提供；你只能告知客人：密碼與房號於今日 ${checkin.checkinTime} 後開放查詢（入住時間為 ${checkin.stayTime}），請於 ${checkin.checkinTime} 後再輸入訂單號碼查詢。`
       : ''
     externalDataSection = guard + `\n\n【外部資料查詢結果】\n${sheetResults.join('\n\n')}\n${hasPricing ? '計算價格時請逐步列式，嚴格使用以上定價表數字，不得估算。' : '請根據以上資料回覆客戶，資料中沒有的欄位請勿捏造。'}`
   } else if (hasNumericSheetSources && hasSensitiveIntent && !detectedOrderNum) {
     externalDataSection = checkin.before
-      ? `\n\n【系統強制指令——立即執行】目前台灣時間 ${checkin.nowHHMM} 尚未到入住時間（${checkin.checkinTime}）。你的下一句話只能是：「您好，入住時間為今日 ${checkin.checkinTime}，目前尚未到入住時間，請於 ${checkin.checkinTime} 後輸入您的訂單號碼，我們將為您提供入住資訊。」禁止問其他問題。`
-      : `\n\n【系統強制指令——立即執行，不得有其他動作】目前已到入住時間（${checkin.checkinTime}）。你的下一句話只能是：「請提供您的訂單號碼或預訂時的行動電話號碼，我馬上為您查詢入住資訊。」禁止問時間、禁止問其他問題，直接問號碼。`
+      ? `\n\n【系統強制指令——立即執行】目前台灣時間 ${checkin.nowHHMM} 尚未到密碼開放時間（${checkin.checkinTime}）。你的下一句話只能是：「您好，入住時間為今日 ${checkin.stayTime}，密碼與房號於 ${checkin.checkinTime} 起開放查詢，請於 ${checkin.checkinTime} 後輸入您的訂單號碼，我們將為您提供入住資訊。」禁止問其他問題。`
+      : `\n\n【系統強制指令——立即執行，不得有其他動作】目前已到密碼開放時間（${checkin.checkinTime}）。你的下一句話只能是：「請提供您的訂單號碼或預訂時的行動電話號碼，我馬上為您查詢入住資訊。」禁止問時間、禁止問其他問題，直接問號碼。`
   } else if (detectedOrderNum && hasSheetSources && sheetResults.length === 0) {
     externalDataSection = `\n\n【系統指令】偵測到訂單號「${detectedOrderNum}」但外部資料表查無結果（API設定錯誤或號碼不存在）。請告知客戶查無此號碼，請確認號碼是否正確或聯繫工作人員，禁止捏造任何密碼或房號。`
   }

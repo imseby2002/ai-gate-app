@@ -155,10 +155,12 @@ export function wrapImageDerivedResultForConfirm(resultText: string): string {
   return buildNameVerifyPrompt(m[1].trim())
 }
 
-// 入住時間判斷（民宿資料 check_in_time 可設，預設 15:00）。
-// 訂單系統與訂單密碼表(資料來源)兩條路徑共用，未到入住時間一律不給密碼。
+// 密碼開放時間判斷：checkinTime＝密碼／房號開放時間（客服系統 source_prefs.checkinTime，留空則同入住時間）；
+// stayTime＝實際入住時間（訂房系統民宿資料 check_in_time，預設 15:00），回答客人「幾點入住」用這個。
+// 真實案例：喬民宿入住 15:00，但 14:50 起就可以取密碼。
+// 訂單系統與訂單密碼表(資料來源)兩條路徑共用，未到密碼開放時間一律不給密碼。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function checkBeforeCheckin(supabase: any, userId: string): Promise<{ before: boolean; checkinTime: string; nowHHMM: string }> {
+export async function checkBeforeCheckin(supabase: any, userId: string): Promise<{ before: boolean; checkinTime: string; stayTime: string; nowHHMM: string }> {
   let checkinTime = ''
 
   // 1. 客服系統設定優先（source_prefs.checkinTime）——只有客服系統的用戶在此設定
@@ -170,19 +172,17 @@ export async function checkBeforeCheckin(supabase: any, userId: string): Promise
     .maybeSingle()
   checkinTime = ((pref?.config as { checkinTime?: string } | null)?.checkinTime || '').slice(0, 5)
 
-  // 2. fallback 訂單系統/民宿資料的 check_in_time
-  if (!checkinTime) {
-    const { data: profile } = await supabase
-      .from('bnb_profiles')
-      .select('check_in_time')
-      .eq('user_id', userId)
-      .maybeSingle()
-    checkinTime = ((profile?.check_in_time as string) || '15:00').slice(0, 5)
-  }
-
-  if (!/^\d{2}:\d{2}$/.test(checkinTime)) checkinTime = '15:00'
+  // 2. 實際入住時間：訂單系統/民宿資料的 check_in_time；密碼開放時間沒設定就用它
+  const { data: profile } = await supabase
+    .from('bnb_profiles')
+    .select('check_in_time')
+    .eq('user_id', userId)
+    .maybeSingle()
+  let stayTime = ((profile?.check_in_time as string) || '').slice(0, 5)
+  if (!/^\d{2}:\d{2}$/.test(stayTime)) stayTime = /^\d{2}:\d{2}$/.test(checkinTime) ? checkinTime : '15:00'
+  if (!/^\d{2}:\d{2}$/.test(checkinTime)) checkinTime = stayTime
   const nowHHMM = new Date().toLocaleTimeString('en-GB', { timeZone: 'Asia/Taipei', hour: '2-digit', minute: '2-digit' })
-  return { before: nowHHMM < checkinTime, checkinTime, nowHHMM }
+  return { before: nowHHMM < checkinTime, checkinTime, stayTime, nowHHMM }
 }
 
 export type CheckinTimingEvaluation =
@@ -269,7 +269,7 @@ export function formatSameDayEarlyPrompt(
       roomDesc ? `・預訂房型：${roomDesc}` : null,
       ``,
       `【提前抵達・可先進大門】`,
-      `・目前台灣時間 ${nowHHMM}，房間尚在整理，入住時間為今日下午 ${checkinTime}。`,
+      `・目前台灣時間 ${nowHHMM}，房間尚在整理，房門密碼將於今日 ${checkinTime} 開放提供。`,
       `・大門密碼：${earlyGatePassword}`,
       `・可先進大門寄放行李或在公共區域休息。`,
       `（【系統指令】：客人為今日入住且身份已核對，民宿主允許提前提供大門密碼。請主動提供上方大門密碼，告知可先放行李或在公共區域休息；房門密碼與房號仍嚴禁提供，告知今日 ${checkinTime} 後再詢問即可取得房門密碼）`,
@@ -284,10 +284,10 @@ export function formatSameDayEarlyPrompt(
     roomDesc ? `・預訂房型：${roomDesc}` : null,
     ``,
     `【尚未到入住時間・密碼發放說明】`,
-    `・您好！您的入住日為今日（${checkIn}），目前台灣時間為 ${nowHHMM}，尚未到入住時間（下午 ${checkinTime}）。`,
+    `・您好！您的入住日為今日（${checkIn}），目前台灣時間為 ${nowHHMM}，尚未到密碼開放時間（${checkinTime}）。`,
     `・房務人員正在為您進行房間清潔與消毒整備，大門與房門密碼將於【今日下午 ${checkinTime}】準時開放提供。`,
     `・請您於今日下午 ${checkinTime} 後再次輸入訂單號碼或提出入住，系統將立即提供房門與大門密碼及詳細入住指引。若需提前寄放行李，請聯繫工作人員。`,
-    `（【系統最高安全指令】：今日為入住日，但目前時間 ${nowHHMM} 尚未到入住時間 ${checkinTime}，嚴禁提供任何房門或大門密碼。請告知客人於今日 ${checkinTime} 後再次輸入訂單號碼或詢問入住即可取得密碼）`,
+    `（【系統最高安全指令】：今日為入住日，但目前時間 ${nowHHMM} 尚未到密碼開放時間 ${checkinTime}，嚴禁提供任何房門或大門密碼。請告知客人於今日 ${checkinTime} 後再次輸入訂單號碼或詢問入住即可取得密碼）`,
   ].filter(line => line !== null)
   return lines.join('\n')
 }
