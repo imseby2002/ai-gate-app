@@ -7736,7 +7736,8 @@
     "profileUpdatedAt": "Last updated {date}",
     "profileEditDaysLabel": "Close profile editing",
     "profileEditDaysUnit": "days after opening",
-    "profileEditDaysHint": "0 = never; document uploads stay open with weekly reminders"
+    "profileEditDaysHint": "0 = never; document uploads stay open with weekly reminders",
+    "portalLinkChanged": "The attendance number changed, so the employee portal link changed. Please resend the new link (the old link redirects automatically)."
   },
   "FinancePage": {
     "accountBalancesTitle": "Balance by account",

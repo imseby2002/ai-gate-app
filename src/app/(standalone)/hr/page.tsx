@@ -704,8 +704,11 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
       const res = editing
         ? await fetch('/api/hr/employees', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: editing.id, ...data }) })
         : await fetch('/api/hr/employees', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
-      if (!res.ok) { setErr((await res.json().catch(() => ({}))).error ?? t('saveFailed')); return }
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok) { setErr(j.error ?? t('saveFailed')); return }
       setShowForm(false); setEditing(null); onRefresh(); loadAccounts()
+      // 打卡工號變更：員工專區連結也跟著變，提示重新傳送新連結
+      if (j.attendance_changed && j.employee?.attendance_no) { setLinkEmp(j.employee); setLinkMsg(t('portalLinkChanged')) }
     } catch { setErr(t('saveFailed')) } finally { setSaving(false) }
   }
 

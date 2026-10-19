@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { nextAttendanceNo } from '@/lib/hr/attendance'
 import { getUnitContext } from '@/lib/auth/unit-access'
 
 async function getAdminUser() {
@@ -23,20 +24,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '此應徵者已轉為員工' }, { status: 409 })
   }
 
-  // 1. 自動計算並生成工號 (Employee ID)
-  const { data: existingEmps } = await supabase
-    .from('hr_employees')
-    .select('attendance_no')
-    .eq('owner_id', user.id)
-
-  const storePrefix = (cand.store || 'EMP').toUpperCase()
-  let maxSeq = 0
-  for (const e of existingEmps ?? []) {
-    const num = parseInt(String(e.attendance_no || '').replace(/\D/g, ''))
-    if (!isNaN(num) && num > maxSeq) maxSeq = num
-  }
-  const nextNo = String(maxSeq + 1).padStart(3, '0')
-  const attendance_no = `${storePrefix}-${nextNo}`
+  // 1. 自動給打卡工號（純數字，接續現有最大號）
+  const attendance_no = await nextAttendanceNo(supabase, user.id)
 
   // 2. 建立正式員工檔案
   const staff_category = cand.staff_category === 'hourly' ? 'hourly' : 'fulltime'

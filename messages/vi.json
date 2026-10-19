@@ -7736,7 +7736,8 @@
     "profileUpdatedAt": "Cập nhật {date}",
     "profileEditDaysLabel": "Khóa sửa hồ sơ sau",
     "profileEditDaysUnit": "ngày kể từ khi mở",
-    "profileEditDaysHint": "0 = không tự khóa; tải tài liệu luôn mở, nhắc thiếu hồ sơ hằng tuần"
+    "profileEditDaysHint": "0 = không tự khóa; tải tài liệu luôn mở, nhắc thiếu hồ sơ hằng tuần",
+    "portalLinkChanged": "Mã chấm công đã đổi nên đường dẫn trang nhân viên cũng đổi. Vui lòng gửi lại đường dẫn mới (đường dẫn cũ sẽ tự chuyển hướng)."
   },
   "FinancePage": {
     "accountBalancesTitle": "Số dư theo tài khoản",

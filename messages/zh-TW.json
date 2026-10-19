@@ -7736,7 +7736,8 @@
     "profileUpdatedAt": "最近更新 {date}",
     "profileEditDaysLabel": "履歷開放修改後",
     "profileEditDaysUnit": "天自動關閉",
-    "profileEditDaysHint": "0＝不自動關閉；文件上傳不受影響，缺件每週提醒"
+    "profileEditDaysHint": "0＝不自動關閉；文件上傳不受影響，缺件每週提醒",
+    "portalLinkChanged": "打卡工號已變更，員工專區連結已改為新網址，請重新傳送給員工（舊連結會自動導向新網址）。"
   },
   "FinancePage": {
     "accountBalancesTitle": "各帳戶結餘",
