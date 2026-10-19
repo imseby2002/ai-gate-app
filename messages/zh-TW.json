@@ -5367,7 +5367,11 @@
     "aiSuggestedNeeds": "AI 依業績建議的人力需求",
     "aiApplyNeeds": "套用為人力需求",
     "aiNeedsConfirm": "用 AI 建議取代目前的人力需求設定？",
-    "aiNeedsApplied": "已套用 {n} 條人力需求"
+    "aiNeedsApplied": "已套用 {n} 條人力需求",
+    "dayOffBadge": "希望休",
+    "dayOffCount": "希望休 {n} 人",
+    "legendFulltime": "正職（可排）",
+    "legendDayOff": "正職期待休假"
   },
   "Team": {
     "moduleBooking": "訂房",
@@ -7702,7 +7706,8 @@
     "portalOnlyFilterHint": "在職、沒有系統帳號的員工（一般工讀生、正職），只用員工專區連結",
     "accountBadge": "系統帳號",
     "accountBadgeHint": "已綁定系統帳號 {account}：登入系統操作所屬單位；薪資條、可上班時段與班表仍在員工專區",
-    "portalHasAccount": "此員工也有系統帳號（{account}），用來登入門市／辦公系統；薪資條、可上班時段與班表一樣在員工專區。"
+    "portalHasAccount": "此員工也有系統帳號（{account}），用來登入門市／辦公系統；薪資條、可上班時段與班表一樣在員工專區。",
+    "storeNone": "— 未設定門市 —"
   },
   "FinancePage": {
     "accountBalancesTitle": "各帳戶結餘",

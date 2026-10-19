@@ -13,9 +13,11 @@ import {
   SLOT_MIN, addDays, availableOn, covers, fmtMin, mondayOf, needsOn, timeOptions, weekdayOf,
   type AvailRule, type NeedRule, type PlanRow, type Interval,
 } from '@/lib/shift/time'
+import { isFulltime } from '@/lib/shift/staff'
 
-interface Emp { id: string; name: string; employment_type: string | null; position: string | null }
-interface Board { employees: Emp[]; rules: AvailRule[]; plans: PlanRow[]; needs: NeedRule[] }
+interface Emp { id: string; name: string; employment_type: string | null; staff_category?: string | null; position: string | null }
+interface DayOff { employee_id: string; off_date: string; note: string }
+interface Board { employees: Emp[]; rules: AvailRule[]; plans: PlanRow[]; needs: NeedRule[]; dayoffs?: DayOff[] }
 
 const WD_ORDER = [1, 2, 3, 4, 5, 6, 0]
 const DAY_START = 6 * 60 // 營業可能時段 06:00–24:00
@@ -70,20 +72,22 @@ export function ScheduleBoard({ store }: { store: string }) {
   const slots = useMemo(() => { const o: number[] = []; for (let m = rangeStart; m < rangeEnd; m += SLOT_MIN) o.push(m); return o }, [rangeStart, rangeEnd])
 
   const dayInfo = useCallback((d: string) => {
-    if (!data) return { avail: new Map<string, Interval[]>(), plans: [] as PlanRow[], need: new Map<number, number>(), short: 0, drafts: 0 }
+    if (!data) return { avail: new Map<string, Interval[]>(), plans: [] as PlanRow[], need: new Map<number, number>(), short: 0, drafts: 0, off: new Set<string>() }
     const avail = new Map(data.employees.map(e => [e.id, availableOn(data.rules, e.id, d)]))
     const plans = data.plans.filter(p => p.work_date === d)
     const need = needsOn(data.needs, d)
     let short = 0
     for (const [m, n] of need) if (plans.filter(p => covers({ start: p.start_min, end: p.end_min }, m)).length < n) short++
-    return { avail, plans, need, short, drafts: plans.filter(p => p.status === 'draft').length }
+    const off = new Set((data.dayoffs ?? []).filter(o => o.off_date === d).map(o => o.employee_id))
+    return { avail, plans, need, short, drafts: plans.filter(p => p.status === 'draft').length, off }
   }, [data])
   const info = dayInfo(selDate)
   const weekDrafts = data ? data.plans.filter(p => p.status === 'draft').length : 0
 
   // 員工排序：今天可上班或有班的在上面，其餘收合
   const emps = data?.employees ?? []
-  const active = emps.filter(e => (info.avail.get(e.id)?.length ?? 0) > 0 || info.plans.some(p => p.employee_id === e.id))
+  // 正職預設可排（除非當天希望休假），永遠列在上面
+  const active = emps.filter(e => isFulltime(e) || (info.avail.get(e.id)?.length ?? 0) > 0 || info.plans.some(p => p.employee_id === e.id))
   const others = emps.filter(e => !active.includes(e))
   const weekHours = (id: string) => (data?.plans ?? []).filter(p => p.employee_id === id).reduce((s, p) => s + (p.end_min - p.start_min), 0) / 60
 
@@ -147,23 +151,25 @@ export function ScheduleBoard({ store }: { store: string }) {
   const row = (e: Emp) => {
     const av = info.avail.get(e.id) ?? []
     const mine = info.plans.filter(p => p.employee_id === e.id)
+    const ft = isFulltime(e), off = info.off.has(e.id)
     return (
       <tr key={e.id} className="border-t">
         <td className="sticky left-0 z-10 bg-white dark:bg-gray-950 pr-2 py-1 whitespace-nowrap overflow-hidden">
           <div className="text-sm font-medium leading-tight">{e.name}</div>
           <div className="text-[10px] text-gray-400 flex items-center gap-1">
-            {e.employment_type === 'part-time' ? t('partTime') : t('fullTime')} · {t('weekHours', { h: Math.round(weekHours(e.id) * 10) / 10 })}
+            {off && <span className="rounded bg-rose-100 px-1 text-rose-700">{t('dayOffBadge')}</span>}
+            {ft ? t('fullTime') : t('partTime')} · {t('weekHours', { h: Math.round(weekHours(e.id) * 10) / 10 })}
             {av.length > 0 && <button onClick={() => fillFromAvail(e.id)} className="text-primary hover:underline" title={t('fillFromAvailHint')}>{t('fillFromAvail')}</button>}
           </div>
         </td>
         {slots.map(m => {
-          const isAv = av.some(iv => covers(iv, m))
+          const isAv = ft ? !off : av.some(iv => covers(iv, m))
           const plan = mine.find(p => covers({ start: p.start_min, end: p.end_min }, m))
           const inDrag = drag && drag.emp === e.id && m >= Math.min(drag.a, drag.b) && m <= Math.max(drag.a, drag.b)
           const cls = plan
             ? (plan.status === 'published' ? 'bg-blue-600' : 'bg-blue-400') + (isAv ? '' : ' ring-1 ring-inset ring-orange-400')
             : inDrag ? 'bg-blue-200'
-              : isAv ? 'bg-emerald-100 dark:bg-emerald-900/40' : 'bg-gray-50 dark:bg-gray-900'
+              : off ? 'bg-rose-50 dark:bg-rose-950/40' : ft ? 'bg-sky-50 dark:bg-sky-950/30' : isAv ? 'bg-emerald-100 dark:bg-emerald-900/40' : 'bg-gray-50 dark:bg-gray-900'
           const first = plan && plan.start_min === m
           const selected = plan && editing?.id === plan.id
           return (
@@ -208,6 +214,7 @@ export function ScheduleBoard({ store }: { store: string }) {
                 {t('dayCount', { n: new Set(di.plans.map(p => p.employee_id)).size })}
                 {di.short > 0 && <span className="block text-red-500">{t('dayShort', { n: di.short })}</span>}
                 {di.drafts > 0 && <span className="block text-amber-600">{t('dayDrafts', { n: di.drafts })}</span>}
+                {di.off.size > 0 && <span className="block text-rose-600">{t('dayOffCount', { n: di.off.size })}</span>}
               </div>
             </button>
           )
@@ -222,6 +229,8 @@ export function ScheduleBoard({ store }: { store: string }) {
           <span className="flex items-center gap-1"><i className="inline-block w-3 h-3 rounded-sm bg-blue-400" />{t('legendDraft')}</span>
           <span className="flex items-center gap-1"><i className="inline-block w-3 h-3 rounded-sm bg-blue-600" />{t('legendPublished')}</span>
           <span className="flex items-center gap-1"><i className="inline-block w-3 h-3 rounded-sm ring-1 ring-orange-400" />{t('legendOutside')}</span>
+          <span className="flex items-center gap-1"><i className="inline-block w-3 h-3 rounded-sm bg-sky-50 ring-1 ring-sky-200" />{t('legendFulltime')}</span>
+          <span className="flex items-center gap-1"><i className="inline-block w-3 h-3 rounded-sm bg-rose-100" />{t('legendDayOff')}</span>
           <span className="ml-auto">{t('dragHint')}</span>
         </div>
         {editing && <PlanEditor key={editing.id} plan={editing} name={nameOf(editing.employee_id)} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); reload() }} />}

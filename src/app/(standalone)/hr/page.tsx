@@ -303,7 +303,13 @@ function EmployeeForm({ initial, onSave, onCancel, saving, settings, accounts, s
         <Field label={t('hireDateLabel')}><InputEl value={d.hire_date ?? ''} onChange={v => set('hire_date', v || null)} type="date" disabled={saving} /></Field>
         <Field label={t('baseSalaryMonthlyLabel')}><InputEl value={d.base_salary} onChange={v => set('base_salary', Number(v) || 0)} type="number" placeholder="45000" disabled={saving} /></Field>
         <Field label={d.staff_category === 'hourly' ? t('hourlyRateStarLabel') : t('hourlyRateLabel')}><InputEl value={d.hourly_rate} onChange={v => set('hourly_rate', Number(v) || 0)} type="number" placeholder={t('hourlyRatePlaceholder')} disabled={saving} /></Field>
-        <Field label={t('storeLabel')}><InputEl value={d.store} onChange={v => set('store', v)} placeholder={t('storePlaceholder')} disabled={saving} /></Field>
+        <Field label={t('storeLabel')}>
+          <select value={d.store ?? ''} onChange={e => set('store', e.target.value)} disabled={saving} className="h-9 w-full rounded-md border px-2 text-sm bg-white dark:bg-gray-900">
+            <option value="">{t('storeNone')}</option>
+            {d.store && !(storeOptions ?? []).some(o => o.code === d.store) && <option value={d.store}>{d.store}</option>}
+            {(storeOptions ?? []).map(o => <option key={o.code} value={o.code}>{o.name && o.name !== o.code ? `${o.code}・${o.name}` : o.code}</option>)}
+          </select>
+        </Field>
         <Field label={t('attendanceNoLabel')}><InputEl value={d.attendance_no} onChange={v => set('attendance_no', v)} placeholder={t('attendanceNoPlaceholder')} disabled={saving} /></Field>
         <Field label={t('payrollCodeLabel')}><InputEl value={d.payroll_code ?? ''} onChange={v => set('payroll_code', v)} placeholder={t('payrollCodePlaceholder')} disabled={saving} /></Field>
         <Field label={t('bankAccountLabel')}><InputEl value={d.bank_account} onChange={v => set('bank_account', v)} placeholder={t('bankAccountPlaceholder')} disabled={saving} /></Field>
@@ -485,7 +491,7 @@ function PayrollForm({ employees, initial, onSave, onCancel, saving, attHours, e
       </div>
       <div className="flex items-center justify-between rounded-lg bg-white border px-4 py-2.5">
         <span className="text-sm font-medium text-gray-600">{t('netPayAmountLabel')}</span>
-        <span className={`text-lg font-bold ${net < 0 ? 'text-red-600' : 'text-green-600'}`}>NT$ {fmt(net, locale)}</span>
+        <span className={`text-lg font-bold ${net < 0 ? 'text-red-600' : 'text-green-600'}`}>{fmt(net, locale)} VND</span>
       </div>
       <Field label={t('notesLabel')}>
         <textarea value={d.notes} onChange={e => set('notes', e.target.value)} disabled={saving} rows={2}
@@ -716,7 +722,7 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {['all', 'active', 'inactive', 'resigned'].map(s => (
           <Button key={s} size="sm" variant={statusFilter === s ? 'default' : 'ghost'} onClick={() => setStatusFilter(s)}>
             {s === 'all' ? t('allWithCount', { n: employees.length }) : t('labelWithCount', { label: LABELS[s] ?? s, n: employees.filter(e => e.status === s).length })}
@@ -733,7 +739,7 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
             {t('missingBirthdayFilter', { n: noBirthday.length })}
           </Button>
         )}
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex flex-wrap items-center gap-2">
           <Button size="sm" variant="outline" className="gap-1" onClick={() => setShowSettings(v => !v)}>
             <Shield className="h-4 w-4" />{t('insuranceSettings')}
           </Button>
@@ -813,7 +819,7 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
                   <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-400">
                     {emp.email && <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{emp.email}</span>}
                     {emp.hire_date && <span>{t('hireDatePrefix')}{fmtDate(emp.hire_date, locale)}</span>}
-                    <span className="flex items-center gap-1"><DollarSign className="h-3 w-3" />{t('baseSalaryPrefix')} NT$ {fmt(emp.base_salary, locale)}</span>
+                    <span className="flex items-center gap-1"><DollarSign className="h-3 w-3" />{t('baseSalaryPrefix')} {fmt(emp.base_salary, locale)} VND</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
@@ -1142,7 +1148,7 @@ function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: 
           </Card>
           <Card className="p-3">
             <p className="text-xs text-gray-500 mb-1">{t('totalPayrollLabel')}</p>
-            <p className="text-xl font-bold">NT$ {fmt(totalNet, locale)}</p>
+            <p className="text-xl font-bold">{fmt(totalNet, locale)} VND</p>
           </Card>
           <Card className="p-3">
             <p className="text-xs text-gray-500 mb-1">{t('paymentProgressLabel')}</p>

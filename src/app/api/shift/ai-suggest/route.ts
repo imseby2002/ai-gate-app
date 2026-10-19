@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { generateText } from 'ai'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { getShiftContext, storeAllowed } from '@/lib/shift/scope'
+import { isFulltime, pgQuote } from '@/lib/shift/staff'
 import { hourlyProfile } from '@/lib/shift/sales'
 import {
   SLOT_MIN, availableOn, fmtMin, isDate, listDates, needsOn, parseHHMM, weekdayOf,
@@ -31,7 +32,8 @@ export async function POST(req: NextRequest) {
   const db = ctx.admin, owner = ctx.ownerId
 
   const [{ data: emps }, { data: rules }, { data: plans }, { data: needs }, sales] = await Promise.all([
-    db.from('hr_employees').select('id, name, employment_type, position').eq('owner_id', owner).eq('store', store).eq('status', 'active').order('name'),
+    db.from('hr_employees').select('id, name, employment_type, staff_category, position').eq('owner_id', owner).eq('status', 'active')
+      .or(`store.eq.${pgQuote(store)},managed_stores.cs.{${pgQuote(store)}}`).order('name'),
     db.from('shift_avail_rules').select('id, employee_id, start_date, end_date, weekdays, start_min, end_min')
       .eq('owner_id', owner).eq('store', store).lte('start_date', to).gte('end_date', from),
     db.from('shift_plans').select('employee_id, work_date, start_min, end_min, store')
@@ -45,17 +47,24 @@ export async function POST(req: NextRequest) {
   const N = (needs ?? []) as NeedRule[]
   const P = plans ?? []
   const dates = listDates(from, to)
+  // 正職：06:00–24:00 皆可排，除了期待休假日；工讀：依可上班時段
+  const { data: offs } = await db.from('shift_dayoff_requests').select('employee_id, off_date')
+    .eq('owner_id', owner).in('employee_id', staff.map(e => e.id)).gte('off_date', from).lte('off_date', to)
+  const offSet = new Set((offs ?? []).map(o => `${o.employee_id}|${o.off_date}`))
+  const availFor = (e: { id: string; staff_category?: string | null; employment_type?: string | null }, d: string) =>
+    isFulltime(e) ? (offSet.has(`${e.id}|${d}`) ? [] : [{ start: 6 * 60, end: 24 * 60 }]) : availableOn(R, e.id, d)
   const idx = new Map(staff.map((e, i) => [e.id, i]))
 
   // 精簡資料給 AI（員工以編號表示，避免回傳不存在的 id）
   const input = {
     store, slot_minutes: SLOT_MIN,
-    staff: staff.map((e, i) => ({ e: i, name: e.name, type: e.employment_type === 'part-time' ? 'part-time' : 'full-time', position: e.position || undefined })),
+    staff: staff.map((e, i) => ({ e: i, name: e.name, type: isFulltime(e) ? 'full-time' : 'part-time', position: e.position || undefined })),
     days: dates.map(d => {
       const need = needsOn(N, d)
       return {
         date: d, weekday: WD[weekdayOf(d)],
-        available: staff.map((e, i) => ({ e: i, times: availableOn(R, e.id, d).map(iv => `${fmtMin(iv.start)}-${fmtMin(iv.end)}`) })).filter(x => x.times.length),
+        available: staff.map((e, i) => ({ e: i, times: availFor(e, d).map(iv => `${fmtMin(iv.start)}-${fmtMin(iv.end)}`) })).filter(x => x.times.length),
+        requested_day_off: staff.map((e, i) => offSet.has(`${e.id}|${d}`) ? i : -1).filter(i => i >= 0),
         already_scheduled: P.filter(p => p.work_date === d && idx.has(p.employee_id))
           .map(p => ({ e: idx.get(p.employee_id), time: `${fmtMin(p.start_min)}-${fmtMin(p.end_min)}`, store: p.store })),
         needs: [...need.entries()].map(([m, n]) => `${fmtMin(m)}:${n}`).join(' ') || undefined,
@@ -72,7 +81,7 @@ export async function POST(req: NextRequest) {
 Rules (must follow):
 1. Only schedule a person inside one of their "available" times for that date. Start and end must be on ${SLOT_MIN}-minute boundaries and within the available range.
 2. Never overlap with "already_scheduled" for the same person (any store); do not repeat existing shifts.
-3. Prefer one continuous shift per person per day, 3–8 hours; part-time usually 3–5 hours.
+3. Prefer one continuous shift per person per day, 3–8 hours; part-time usually 3–5 hours, full-time about 8 hours. Full-time staff appear available 06:00-24:00 except on their requested_day_off dates, where they must not be scheduled; give full-time staff roughly 5–6 working days per week.
 4. Meet "needs" (time:headcount per ${SLOT_MIN}-minute slot) when possible. If needs are missing, infer staffing from hourly sales (busier hours need more people; at least 1 person whenever someone is available during likely opening hours).
 5. Balance total hours fairly across staff.
 6. If sales data exists, propose "suggested_needs" (weekday groups, time ranges, headcount) derived from it; otherwise return an empty array.
@@ -112,7 +121,7 @@ weekdays use 0=Sun..6=Sat.${outputLangInstruction(locale)}`
     const emp = staff[Number(p.e)]
     const s = parseHHMM(p.start), e = parseHHMM(p.end)
     const ok = emp && dates.includes(p.date) && s != null && e != null && e > s && s % SLOT_MIN === 0 && e % SLOT_MIN === 0
-      && availableOn(R, emp.id, p.date).some(iv => iv.start <= s && iv.end >= e)
+      && availFor(emp, p.date).some(iv => iv.start <= s! && iv.end >= e!)
     const k = emp ? `${emp.id}|${p.date}` : ''
     if (!ok || (taken.get(k) ?? []).some(x => x.s < e! && x.e > s!)) { rejected++; continue }
     ;(taken.get(k) ?? taken.set(k, []).get(k)!).push({ s: s!, e: e! })

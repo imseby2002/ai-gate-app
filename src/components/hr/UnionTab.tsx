@@ -158,7 +158,7 @@ export function UnionTab() {
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-sm text-slate-900">{b.hr_union_members?.full_name || t('member')}</span>
                       <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-semibold">{BENEFIT_KEYS.includes(b.benefit_type) ? t(`benefit.${b.benefit_type}`) : b.benefit_type}</span>
-                      <span className="font-bold text-red-600">NT$ {Number(b.amount).toLocaleString()} VND</span>
+                      <span className="font-bold text-red-600">{Number(b.amount).toLocaleString()} VND</span>
                     </div>
                     <div className="text-slate-500 flex gap-3">
                       <span>{t('requestDate')} {b.request_date}</span>

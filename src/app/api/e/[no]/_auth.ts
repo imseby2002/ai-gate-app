@@ -15,8 +15,10 @@ export async function portalEmployee(req: NextRequest, no: string) {
   if (!eid) return null
   const admin = createAdminClient()
   const { data: emp } = await admin.from('hr_employees')
-    .select('id, name, attendance_no, status, owner_id, store, employment_type')
+    .select('id, name, attendance_no, status, owner_id, store, employment_type, staff_category, managed_stores')
     .eq('id', eid).eq('owner_id', company.ownerId).maybeSingle()
   if (!emp || emp.status !== 'active' || emp.attendance_no !== no) return null
+  // 所屬門市空白時以第一個管理門市為準
+  if (!String(emp.store ?? '').trim() && Array.isArray(emp.managed_stores) && emp.managed_stores.length) emp.store = String(emp.managed_stores[0])
   return { admin, company, emp }
 }

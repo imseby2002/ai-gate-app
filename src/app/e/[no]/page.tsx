@@ -153,7 +153,7 @@ const today = () => new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 1
 
 // 員工：填可上班時段（日期區間＋星期＋時間）與查看已發布班表
 function ShiftCard({ api }: { api: string }) {
-  const [data, setData] = useState<{ store: string | null; rules: AvailRuleRow[]; plans: MyPlan[] } | null>(null)
+  const [data, setData] = useState<{ store: string | null; kind: 'fulltime' | 'parttime'; rules: AvailRuleRow[]; plans: MyPlan[]; dayoffs: { id: string; off_date: string }[] } | null>(null)
   const [adding, setAdding] = useState(false)
   const [f, setF] = useState({ start_date: today(), end_date: today(), weekdays: [] as number[], start: '08:00', end: '12:00', note: '' })
   const [busy, setBusy] = useState(false)
@@ -165,7 +165,7 @@ function ShiftCard({ api }: { api: string }) {
   }, [api])
   useEffect(() => { load() }, [load])
 
-  if (!data?.store) return null
+  if (!data) return null
 
   const toggleWd = (n: number) => setF(p => ({ ...p, weekdays: p.weekdays.includes(n) ? p.weekdays.filter(x => x !== n) : [...p.weekdays, n] }))
 
@@ -199,7 +199,11 @@ function ShiftCard({ api }: { api: string }) {
           ))}
         </div>
       </Card>
-      <Card className="p-5 space-y-3">
+      {!data.store && (
+        <Card className="p-5"><p className="text-sm text-amber-700">Chưa có cửa hàng, vui lòng liên hệ nhân sự để được xếp ca. / 尚未設定門市，請聯絡人事後才能排班。</p></Card>
+      )}
+      {data.store && data.kind === 'fulltime' && <DayOffCard api={api} dayoffs={data.dayoffs} onChanged={load} />}
+      {data.store && data.kind === 'parttime' && <Card className="p-5 space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="font-bold flex items-center gap-2"><CalendarDays className="h-4 w-4" /> Thời gian có thể làm / 可上班時段</h2>
           {!adding && <button onClick={() => { setAdding(true); setMsg('') }} className="text-sm px-3 py-1.5 rounded-lg border text-indigo-700">+ Thêm / 新增</button>}
@@ -250,7 +254,57 @@ function ShiftCard({ api }: { api: string }) {
             </div>
           </div>
         )}
-      </Card>
+      </Card>}
     </>
+  )
+}
+
+// 正職：點日期選擇期待休假日（今天起約 3 個月），再點一次取消
+function DayOffCard({ api, dayoffs, onChanged }: { api: string; dayoffs: { id: string; off_date: string }[]; onChanged: () => void }) {
+  const [offset, setOffset] = useState(0)
+  const [busy, setBusy] = useState('')
+  const [err, setErr] = useState('')
+  const picked = new Set(dayoffs.map(d => d.off_date))
+  const t0 = today()
+  const base = new Date(t0 + 'T00:00:00Z')
+  const first = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth() + offset, 1))
+  const y = first.getUTCFullYear(), m = first.getUTCMonth()
+  const days = new Date(Date.UTC(y, m + 1, 0)).getUTCDate()
+  const lead = (first.getUTCDay() + 6) % 7
+  const cells: (string | null)[] = [...Array(lead).fill(null), ...Array.from({ length: days }, (_, i) => new Date(Date.UTC(y, m, i + 1)).toISOString().slice(0, 10))]
+  const limit = new Date(Date.parse(t0 + 'T00:00:00Z') + 92 * 86400000).toISOString().slice(0, 10)
+  async function toggle(d: string) {
+    setBusy(d); setErr('')
+    const r = await fetch(`${api}/dayoff`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date: d }) })
+    const j = await r.json().catch(() => ({}))
+    setBusy('')
+    if (!r.ok) { setErr(j.error ?? 'Lỗi / 錯誤'); return }
+    onChanged()
+  }
+  return (
+    <Card className="p-5 space-y-3">
+      <h2 className="font-bold flex items-center gap-2"><CalendarDays className="h-4 w-4" /> Ngày muốn nghỉ / 期待休假日</h2>
+      <p className="text-xs text-slate-500">Bấm vào ngày bạn muốn nghỉ, bấm lại để bỏ. Cửa hàng trưởng sẽ tham khảo khi xếp ca. 點選希望休假的日期，再點一次取消；店長排班時會參考。</p>
+      <div className="flex items-center justify-between">
+        <button onClick={() => setOffset(o => Math.max(0, o - 1))} disabled={offset === 0} className="px-3 py-1 rounded-lg border disabled:opacity-30">‹</button>
+        <b className="text-sm">{m + 1}/{y}</b>
+        <button onClick={() => setOffset(o => Math.min(3, o + 1))} disabled={offset === 3} className="px-3 py-1 rounded-lg border disabled:opacity-30">›</button>
+      </div>
+      <div className="grid grid-cols-7 gap-1 text-center">
+        {WD_ORDER.map(n => <div key={n} className="text-[11px] text-slate-400">{WD[n]}</div>)}
+        {cells.map((d, i) => {
+          if (!d) return <div key={i} />
+          const off = picked.has(d), disabled = d < t0 || d > limit
+          return (
+            <button key={d} disabled={disabled || busy === d} onClick={() => toggle(d)}
+              className={`h-10 rounded-lg text-sm ${off ? 'bg-rose-500 text-white font-bold' : disabled ? 'text-slate-300' : 'bg-white border'}`}>
+              {busy === d ? '…' : Number(d.slice(8))}
+            </button>
+          )
+        })}
+      </div>
+      {err && <p className="text-sm text-red-600">{err}</p>}
+      <p className="text-xs text-slate-500">Đã chọn / 已選：{dayoffs.length ? dayoffs.map(d => `${d.off_date.slice(5)} (${wd(d.off_date)})`).join('、') : '—'}</p>
+    </Card>
   )
 }

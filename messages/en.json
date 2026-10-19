@@ -5367,7 +5367,11 @@
     "aiSuggestedNeeds": "Staffing needs suggested from sales",
     "aiApplyNeeds": "Use as staffing needs",
     "aiNeedsConfirm": "Replace the current staffing needs with the AI suggestion?",
-    "aiNeedsApplied": "Applied {n} staffing needs"
+    "aiNeedsApplied": "Applied {n} staffing needs",
+    "dayOffBadge": "Day off req.",
+    "dayOffCount": "{n} want off",
+    "legendFulltime": "Full-time (schedulable)",
+    "legendDayOff": "Full-time day-off request"
   },
   "Team": {
     "moduleBooking": "Booking",
@@ -7702,7 +7706,8 @@
     "portalOnlyFilterHint": "Active staff without a system account (regular part-time and full-time staff) who only use the employee portal link",
     "accountBadge": "Account",
     "accountBadgeHint": "Linked to system account {account}: logs in to the system for their units; payslips, availability and shifts are still in the employee portal",
-    "portalHasAccount": "This employee also has a system account ({account}) for the store / office system; payslips, availability and shifts are still in the employee portal."
+    "portalHasAccount": "This employee also has a system account ({account}) for the store / office system; payslips, availability and shifts are still in the employee portal.",
+    "storeNone": "— No store —"
   },
   "FinancePage": {
     "accountBalancesTitle": "Balance by account",
