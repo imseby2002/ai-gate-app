@@ -335,7 +335,13 @@
       "save": "Save",
       "cancel": "Cancel",
       "editNote": "Click to edit note",
-      "remove": "Remove"
+      "remove": "Remove",
+      "registered": "Registered",
+      "notRegistered": "Not registered",
+      "unregisteredCount": "{n} emails have no account yet",
+      "provisionButton": "Create accounts",
+      "provisionPrompt": "Create accounts for {n} unregistered emails (no verification). Enter an initial password (at least 8 characters); staff change it after signing in:",
+      "provisionDone": "Created {created} accounts, {failed} failed."
     }
   },
   "Chat": {

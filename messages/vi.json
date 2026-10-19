@@ -335,7 +335,13 @@
       "save": "Lưu",
       "cancel": "Hủy",
       "editNote": "Nhấn để sửa ghi chú",
-      "remove": "Xóa"
+      "remove": "Xóa",
+      "registered": "Đã đăng ký",
+      "notRegistered": "Chưa đăng ký",
+      "unregisteredCount": "{n} email chưa có tài khoản",
+      "provisionButton": "Tạo tài khoản",
+      "provisionPrompt": "Tạo tài khoản cho {n} email chưa đăng ký (không cần xác minh). Nhập mật khẩu ban đầu (ít nhất 8 ký tự); nhân viên tự đổi sau khi đăng nhập:",
+      "provisionDone": "Đã tạo {created} tài khoản, lỗi {failed}."
     }
   },
   "Chat": {
