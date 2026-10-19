@@ -4745,7 +4745,17 @@
     "resumeText": "Kinh nghiệm làm việc / Giới thiệu bản thân",
     "resumeHint": "Có thể bổ sung sau, ví dụ: nơi làm cũ, vị trí, thời gian, kỹ năng.",
     "docRequired": "Bắt buộc",
-    "docMissing": "Còn thiếu"
+    "docMissing": "Còn thiếu",
+    "unit": "Đơn vị ứng tuyển",
+    "unitStores": "Cửa hàng",
+    "unitOffice": "Văn phòng",
+    "unitFactory": "Xưởng",
+    "selectPlaceholder": "Vui lòng chọn",
+    "selectUnitFirst": "Chọn đơn vị trước",
+    "positionOther": "Khác",
+    "positionOtherPlaceholder": "Nhập vị trí",
+    "unitRequired": "Vui lòng chọn đơn vị và vị trí",
+    "applyIntro": "Sau khi gửi, bạn sẽ có đường dẫn riêng để quay lại bổ sung hồ sơ và tải tài liệu bất cứ lúc nào."
   },
   "Office": {
     "title": "Cổng Thông Tin Công Ty",

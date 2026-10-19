@@ -4745,7 +4745,17 @@
     "resumeText": "Work experience / About me",
     "resumeHint": "You can come back later to add more, e.g. past employers, roles, dates, skills.",
     "docRequired": "Required",
-    "docMissing": "Missing"
+    "docMissing": "Missing",
+    "unit": "Applying to",
+    "unitStores": "Stores",
+    "unitOffice": "Office",
+    "unitFactory": "Factory",
+    "selectPlaceholder": "Please select",
+    "selectUnitFirst": "Select a unit first",
+    "positionOther": "Other",
+    "positionOtherPlaceholder": "Enter the position",
+    "unitRequired": "Please select a unit and position",
+    "applyIntro": "After submitting, you will get a personal link to come back anytime to complete your profile and upload documents."
   },
   "Office": {
     "title": "Company Portal",
