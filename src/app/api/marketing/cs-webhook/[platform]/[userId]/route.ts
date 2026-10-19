@@ -2087,7 +2087,9 @@ async function getAIReply(
     if (knowledge.csBookingMode !== 'none') {
       try {
         const ci = await checkBeforeCheckin(getServiceClient(), userId)
-        checkinTimeLine = `\n- 【入住時間——唯一依據，優先於知識庫與任何其他文字】入住時間為每日 ${ci.checkinTime}；目前台灣時間 ${ci.nowHHMM}，今日${ci.before ? '尚未到' : '已到'}入住時間。知識庫或提示詞中寫的其他入住時間一律以此為準，回答入住時間或判斷是否已到入住時間時只能用這個時間。`
+        checkinTimeLine = ci.checkinTime === ci.stayTime
+          ? `\n- 【入住時間——唯一依據，優先於知識庫與任何其他文字】入住時間為每日 ${ci.stayTime}，密碼／房號同一時間開放查詢；目前台灣時間 ${ci.nowHHMM}，今日${ci.before ? '尚未到' : '已到'}入住時間。知識庫或提示詞中寫的其他入住時間一律以此為準。`
+          : `\n- 【入住時間與密碼開放時間——唯一依據，優先於知識庫與任何其他文字】入住時間為每日 ${ci.stayTime}（客人問幾點入住、幾點可以進房，一律回答 ${ci.stayTime}）；大門／房門密碼與房號每日 ${ci.checkinTime} 起開放查詢（判斷能否提供密碼只看這個時間）。目前台灣時間 ${ci.nowHHMM}，今日${ci.before ? '尚未到' : '已到'}密碼開放時間。知識庫或提示詞中寫的其他時間一律以此為準。`
       } catch { /* 取不到設定就不加 */ }
     }
 
@@ -2195,8 +2197,8 @@ async function getAIReply(
             externalDataSection = `\n\n${bnb}${externalDataSection}`
           } else {
             // 資料來源密碼表路徑：未到入住時間加最高優先禁止指令
-            const { before, checkinTime, nowHHMM } = await checkBeforeCheckin(getServiceClient(), userId)
-            if (before) externalDataSection = `\n\n【系統強制指令——最高優先】目前台灣時間 ${nowHHMM} 尚未到入住時間（${checkinTime}）。即使下方資料含密碼或房號，也一律禁止提供；只能告知客人入住時間為今日 ${checkinTime}，請於該時間後再查詢。${externalDataSection}`
+            const { before, checkinTime, stayTime, nowHHMM } = await checkBeforeCheckin(getServiceClient(), userId)
+            if (before) externalDataSection = `\n\n【系統強制指令——最高優先】目前台灣時間 ${nowHHMM} 尚未到密碼開放時間（${checkinTime}）。即使下方資料含密碼或房號，也一律禁止提供；只能告知客人密碼與房號於今日 ${checkinTime} 後開放查詢（入住時間為 ${stayTime}），請於 ${checkinTime} 後再查詢。${externalDataSection}`
           }
         } catch { /* 不中斷主流程 */ }
       } else if (PHONE_RE.test(message) && !passwordFromDatasource) {
@@ -2234,8 +2236,8 @@ async function getAIReply(
             const bnb = bnbResult ?? `【入住資訊查詢結果】\n查無訂單「${altOrderNum}」的資料，系統中沒有這筆訂單（有些訂房平台顯示給客人的訂單號跟系統收到的不同）。\n${noDataFoundSuffix(orderLookupAltMethods(platformHint))}`
             externalDataSection = `\n\n${bnb}${externalDataSection}`
           } else {
-            const { before, checkinTime, nowHHMM } = await checkBeforeCheckin(getServiceClient(), userId)
-            if (before) externalDataSection = `\n\n【系統強制指令——最高優先】目前台灣時間 ${nowHHMM} 尚未到入住時間（${checkinTime}）。即使下方資料含密碼或房號，也一律禁止提供；只能告知客人入住時間為今日 ${checkinTime}，請於該時間後再查詢。${externalDataSection}`
+            const { before, checkinTime, stayTime, nowHHMM } = await checkBeforeCheckin(getServiceClient(), userId)
+            if (before) externalDataSection = `\n\n【系統強制指令——最高優先】目前台灣時間 ${nowHHMM} 尚未到密碼開放時間（${checkinTime}）。即使下方資料含密碼或房號，也一律禁止提供；只能告知客人密碼與房號於今日 ${checkinTime} 後開放查詢（入住時間為 ${stayTime}），請於 ${checkinTime} 後再查詢。${externalDataSection}`
           }
         } catch { /* 不中斷主流程 */ }
       } else {
