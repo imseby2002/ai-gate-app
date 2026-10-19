@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback, use, useRef } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
+import UnitPositionPicker from '@/components/hr/UnitPositionPicker'
+import type { UnitOption } from '@/lib/hr/apply-units'
 
 const COPY_KEY: Record<string, string> = { original: 'copyOriginal', copy: 'copyCopy', both: 'copyBoth' }
 interface CatalogItem { type: string; label: string; copy: string; required: boolean; either: boolean }
@@ -23,6 +25,10 @@ export default function ApplyEditPage({ params }: { params: Promise<{ token: str
   const [cand, setCand] = useState<Cand | null>(null)
   const [docs, setDocs] = useState<Doc[]>([])
   const [catalog, setCatalog] = useState<CatalogItem[]>([])
+  const [units, setUnits] = useState<UnitOption[]>([])
+  useEffect(() => {
+    fetch(`/api/hr/apply/options?token=${encodeURIComponent(token)}`).then(r => r.ok ? r.json() : { units: [] }).then(d => setUnits(d.units ?? [])).catch(() => {})
+  }, [token])
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -52,7 +58,7 @@ export default function ApplyEditPage({ params }: { params: Promise<{ token: str
   const save = async () => {
     if (!cand) return
     const res = await fetch(`/api/hr/apply/${token}`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cand),
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...cand, position: cand.position.trim() }),
     })
     if (res.ok) { setSaved(true); setTimeout(() => setSaved(false), 2000); load() }
     else alert((await res.json().catch(() => ({}))).error ?? t('saveFailed'))
@@ -96,11 +102,11 @@ export default function ApplyEditPage({ params }: { params: Promise<{ token: str
     <div style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex', justifyContent: 'center', padding: '24px 16px' }}>
       <input ref={fileRef} type="file" hidden onChange={onFile}
         accept="image/*,application/pdf,.doc,.docx" />
-      <div style={{ width: '100%', maxWidth: 520, display: 'grid', gap: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+      <div className="w-full max-w-[520px] md:max-w-5xl grid gap-4 md:grid-cols-2 md:items-start">
+        <div className="md:col-span-2" style={{ display: 'flex', justifyContent: 'flex-end' }}>
           <LanguageSwitcher currentLocale={locale} />
         </div>
-        <div style={card}>
+        <div className="md:col-span-2" style={card}>
           <h1 style={{ fontSize: 20, fontWeight: 700 }}>{t('editTitle')}</h1>
           <p style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>
             {t('editSubtitle')}
@@ -132,8 +138,8 @@ export default function ApplyEditPage({ params }: { params: Promise<{ token: str
             <F label={t('name')}><input style={lockedInp} disabled={locked} value={cand.name} onChange={setF('name')} /></F>
             <F label={t('phone')}><input style={inp} value={cand.phone} onChange={setF('phone')} /></F>
             <F label={t('email')}><input style={lockedInp} disabled={locked} value={cand.email} onChange={setF('email')} /></F>
-            <F label={t('position')}><input style={lockedInp} disabled={locked} value={cand.position} onChange={setF('position')} /></F>
-            <F label={t('store')}><input style={lockedInp} disabled={locked} value={cand.store} onChange={setF('store')} /></F>
+            <UnitPositionPicker units={units} store={cand.store} position={cand.position} disabled={locked}
+              onChange={(store, position) => setCand({ ...cand, store, position })} />
             <F label={t('idNumber')}><input style={lockedInp} disabled={locked} value={cand.id_number} onChange={setF('id_number')} /></F>
             <F label={t('birthday')}><input style={lockedInp} disabled={locked} type="date" value={cand.birthday ?? ''} onChange={setF('birthday')} /></F>
             <F label={t('address')}><input style={inp} value={cand.address} onChange={setF('address')} /></F>

@@ -4745,7 +4745,17 @@
     "resumeText": "工作經歷／自我介紹",
     "resumeHint": "可日後再回來補充，例如：曾任職公司、職務、期間、專長。",
     "docRequired": "必備",
-    "docMissing": "缺件"
+    "docMissing": "缺件",
+    "unit": "應徵單位",
+    "unitStores": "門市",
+    "unitOffice": "辦公室",
+    "unitFactory": "工廠",
+    "selectPlaceholder": "請選擇",
+    "selectUnitFirst": "請先選擇應徵單位",
+    "positionOther": "其他",
+    "positionOtherPlaceholder": "請填寫職位",
+    "unitRequired": "請選擇應徵單位與職位",
+    "applyIntro": "填寫基本資料送出後，會產生您的專屬連結，可隨時回來補充履歷與上傳文件。"
   },
   "Office": {
     "title": "公司入口",
