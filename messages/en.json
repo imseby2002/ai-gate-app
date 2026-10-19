@@ -4698,7 +4698,7 @@
     "editTitle": "My Application",
     "editSubtitle": "You can return to this link anytime to update your info and upload documents. Please save this URL.",
     "basicInfo": "Basic Information",
-    "lockedNotice": "🔒 Key details are locked. You can only edit phone and address. Contact HR to unlock other fields.",
+    "lockedNotice": "🔒 Profile editing is closed. You can still change phone, address and notification method, and upload documents. Contact HR to reopen.",
     "idNumber": "ID Number",
     "birthday": "Date of Birth",
     "address": "Address",
@@ -4734,7 +4734,18 @@
     "notifyChannel": "Notification method",
     "notifyEmail": "Email (interview/offer notices sent to your inbox)",
     "notifyZalo": "ZALO (must add our Official Account first)",
-    "zaloHint": "If you choose ZALO, please search for and add our company ZALO Official Account (OA) first, otherwise you will not receive notifications."
+    "zaloHint": "If you choose ZALO, please search for and add our company ZALO Official Account (OA) first, otherwise you will not receive notifications.",
+    "editOpenUntil": "You can edit your profile until {date}",
+    "resumeTitle": "Resume",
+    "gender": "Gender",
+    "genderMale": "Male",
+    "genderFemale": "Female",
+    "nativePlace": "Hometown",
+    "education": "Education",
+    "resumeText": "Work experience / About me",
+    "resumeHint": "You can come back later to add more, e.g. past employers, roles, dates, skills.",
+    "docRequired": "Required",
+    "docMissing": "Missing"
   },
   "Office": {
     "title": "Company Portal",
@@ -7709,7 +7720,13 @@
     "portalHasAccount": "This employee also has a system account ({account}) for the store / office system; payslips, availability and shifts are still in the employee portal.",
     "storeNone": "— No store —",
     "manualDoc": "User manual",
-    "manualDownload": "Download manual PDF"
+    "manualDownload": "Download manual PDF",
+    "editableUntil": "Editable until {date}",
+    "profileEditLabel": "Profile editing",
+    "profileUpdatedAt": "Last updated {date}",
+    "profileEditDaysLabel": "Close profile editing",
+    "profileEditDaysUnit": "days after opening",
+    "profileEditDaysHint": "0 = never; document uploads stay open with weekly reminders"
   },
   "FinancePage": {
     "accountBalancesTitle": "Balance by account",

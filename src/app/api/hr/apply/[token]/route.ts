@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { FREE_FIELDS, IDENTITY_FIELDS, APPLY_BUCKET } from '@/lib/hr/apply'
+import { FREE_FIELDS, IDENTITY_FIELDS, APPLY_BUCKET, DOC_CATALOG } from '@/lib/hr/apply'
+import { EDU, UPLOAD_REQ } from '@/lib/hr/doc-reminders'
+import { RESUME_FIELDS, profileOpen } from '@/lib/hr/profile'
 
 type Ctx = { params: Promise<{ token: string }> }
 
 async function findCandidate(admin: ReturnType<typeof createAdminClient>, token: string) {
   const { data } = await admin
     .from('agent_hr_candidates')
-    .select('id, user_id, identity_locked, name, email, position, store, id_number, birthday')
+    .select('id, user_id, identity_locked, profile_edit_until, name, email, position, store, id_number, birthday, gender, native_place, education, resume_text')
     .eq('apply_token', token).single()
   return data
 }
@@ -20,7 +22,7 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
   const admin = createAdminClient()
   const { data: cand } = await admin
     .from('agent_hr_candidates')
-    .select('id, user_id, name, phone, email, position, store, id_number, birthday, address, stage, hired_employee_id, identity_locked, notify_channel')
+    .select('id, user_id, name, phone, email, position, store, id_number, birthday, address, stage, hired_employee_id, identity_locked, profile_edit_until, notify_channel, gender, native_place, education, resume_text')
     .eq('apply_token', token).single()
   if (!cand) return NextResponse.json({ error: '連結無效' }, { status: 404 })
 
@@ -34,9 +36,11 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
     return { id: d.id, doc_type: d.doc_type, label: d.label, file_name: d.file_name, uploaded_at: d.uploaded_at, url: signed?.signedUrl ?? '' }
   }))
 
-  const safe = { ...cand } as Record<string, unknown>
+  const safe = { ...cand, profile_open: profileOpen(cand) } as Record<string, unknown>
   delete safe.user_id
-  return NextResponse.json({ candidate: safe, documents })
+  const required = new Set([...UPLOAD_REQ.map(d => d.type), ...EDU])
+  const catalog = DOC_CATALOG.map(d => ({ type: d.type, label: d.label, copy: d.copy, required: required.has(d.type), either: EDU.includes(d.type) }))
+  return NextResponse.json({ candidate: safe, documents, catalog })
 }
 
 // 應徵者以 token 更新自己的基本資料（僅限白名單欄位）
@@ -57,16 +61,19 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     }
     updates[f] = body[f]
   }
-  // 重要基本資料：鎖定時不得變更（值不同即擋下）
+  // 基本資料與履歷：人事關閉或超過開放期限後不得變更（值不同即擋下）
   const rec = cand as Record<string, unknown>
-  for (const f of IDENTITY_FIELDS) {
+  const open = profileOpen(cand)
+  let resumeChanged = false
+  for (const f of [...IDENTITY_FIELDS, ...RESUME_FIELDS]) {
     if (body[f] === undefined) continue
-    const next = f === 'birthday' ? (body[f] || null) : body[f]
-    if (cand.identity_locked && norm(next) !== norm(rec[f])) {
-      return NextResponse.json({ error: '基本資料已鎖定，請聯繫人事開放後再修改' }, { status: 403 })
-    }
+    const next = f === 'birthday' ? (body[f] || null) : (f === 'resume_text' ? String(body[f] ?? '').slice(0, 5000) : body[f])
+    if (norm(next) === norm(rec[f])) continue
+    if (!open) return NextResponse.json({ error: '履歷修改已關閉，請聯繫人事開放後再修改 / Đã khóa chỉnh sửa, vui lòng liên hệ nhân sự' }, { status: 403 })
     updates[f] = next
+    resumeChanged = true
   }
+  if (resumeChanged) updates.resume_updated_at = new Date().toISOString()
   if (updates.name !== undefined && !String(updates.name).trim()) {
     return NextResponse.json({ error: '姓名不可空白' }, { status: 400 })
   }

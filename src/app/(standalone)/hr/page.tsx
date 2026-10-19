@@ -50,6 +50,7 @@ interface Employee {
   managed_stores?: string[]
   profile_id: string | null
   created_at: string
+  profile_edit?: { open: boolean; until: string | null; updated_at: string | null }
 }
 
 interface SysAccount { id: string; full_name: string | null; email: string | null; employee: { id: string; name: string } | null }
@@ -609,6 +610,38 @@ function InsuranceSettingsPanel({ settings, onSaved, onClose }: {
   )
 }
 
+// 履歷開放修改後幾天自動關閉（全公司設定；0＝不自動關閉）。文件上傳不受影響。
+function ProfileEditDaysSetting() {
+  const t = useTranslations('HrPage')
+  const [days, setDays] = useState<number | null>(null)
+  const [val, setVal] = useState('')
+  const [saving, setSaving] = useState(false)
+  useEffect(() => {
+    fetch('/api/hr/settings').then(r => r.ok ? r.json() : null).then(j => {
+      const d = Number(j?.settings?.profile_edit_days ?? 0) || 0
+      setDays(d); setVal(String(d))
+    }).catch(() => {})
+  }, [])
+  if (days === null) return null
+  async function save() {
+    setSaving(true)
+    const r = await fetch('/api/hr/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ profile_edit_days: Number(val) || 0 }) })
+    const j = await r.json().catch(() => ({}))
+    setSaving(false)
+    if (r.ok) { const d = Number(j.settings?.profile_edit_days ?? 0) || 0; setDays(d); setVal(String(d)) }
+  }
+  return (
+    <div className="flex items-center gap-2 flex-wrap rounded-lg border bg-gray-50 px-3 py-2 text-xs text-gray-600">
+      <Pencil className="h-3.5 w-3.5" />
+      <span>{t('profileEditDaysLabel')}</span>
+      <input type="number" min={0} max={365} value={val} onChange={e => setVal(e.target.value)} className="w-16 h-7 rounded border px-2 text-xs bg-white" />
+      <span>{t('profileEditDaysUnit')}</span>
+      {String(days) !== val && <Button size="sm" className="h-7 text-xs" onClick={save} disabled={saving}>{saving ? <Loader2 className="h-3 w-3 animate-spin" /> : t('save')}</Button>}
+      <span className="text-gray-400">{t('profileEditDaysHint')}</span>
+    </div>
+  )
+}
+
 // ─── Employees Tab ────────────────────────────────────────────────
 function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChange, portalBase }: {
   employees: Employee[]; loading: boolean; onRefresh: () => void; portalBase: string | null
@@ -624,6 +657,12 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
   const [saving, setSaving] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [err, setErr] = useState('')
+  // 開放／關閉員工在員工專區修改履歷
+  async function toggleProfileEdit(emp: Employee) {
+    const r = await fetch('/api/hr/employees/profile-edit', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ employee_id: emp.id, open: !emp.profile_edit?.open }) })
+    if (!r.ok) { alert((await r.json().catch(() => ({}))).error ?? 'error'); return }
+    onRefresh()
+  }
   const [statusFilter, setStatusFilter] = useState<string>('active')
   const [showImport, setShowImport] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
@@ -722,6 +761,7 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
 
   return (
     <div className="space-y-4">
+      <ProfileEditDaysSetting />
       <div className="flex flex-wrap items-center gap-2">
         {['all', 'active', 'inactive', 'resigned'].map(s => (
           <Button key={s} size="sm" variant={statusFilter === s ? 'default' : 'ghost'} onClick={() => setStatusFilter(s)}>
@@ -861,6 +901,16 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
                   <span>{emp.insurance_required ? t('insuranceDetail', { status: INS_STATUS_LABEL[emp.insurance_status] ?? t('insPending'), number: emp.insurance_number ? t('insuranceNumberSuffix', { n: emp.insurance_number }) : '', salary: emp.insurance_salary ? t('insuranceSalarySuffix', { n: fmt(emp.insurance_salary, locale) }) : '' }) : t('insuranceExempt')}</span>
                   <span className="text-gray-400 flex items-center gap-1"><Link2 className="h-3 w-3" />{t('portalLink')}</span>
                   <span className="break-all">{(() => { const u = portalUrl(portalBase, emp.attendance_no); return u ? <a href={u} target="_blank" rel="noreferrer" className="text-primary hover:underline">{u}</a> : t('portalNoAttendance') })()}</span>
+                  <span className="text-gray-400 flex items-center gap-1"><Pencil className="h-3 w-3" />{t('profileEditLabel')}</span>
+                  <span className="flex items-center gap-2 flex-wrap">
+                    <span className={emp.profile_edit?.open ? 'text-emerald-700' : 'text-amber-700'}>
+                      {emp.profile_edit?.open ? (emp.profile_edit.until ? t('editableUntil', { date: emp.profile_edit.until.slice(0, 10) }) : t('editable')) : t('locked')}
+                    </span>
+                    <button onClick={() => toggleProfileEdit(emp)} className="px-1.5 py-0.5 rounded bg-white border hover:bg-gray-100 text-gray-600">
+                      {emp.profile_edit?.open ? t('lockData') : t('unlockEdit')}
+                    </button>
+                    {emp.profile_edit?.updated_at && <span className="text-gray-400">{t('profileUpdatedAt', { date: emp.profile_edit.updated_at.slice(0, 10) })}</span>}
+                  </span>
                   {emp.notes && <><span className="text-gray-400">{t('notesLabel')}</span><span className="whitespace-pre-wrap">{emp.notes}</span></>}
                 </div>
               )}
@@ -1583,6 +1633,7 @@ interface Candidate {
   hired_employee_id: string | null
   apply_token: string | null
   identity_locked: boolean
+  profile_edit_until?: string | null
   docs_submitted_complete: boolean
   notify_channel: string
   created_at: string
@@ -1717,7 +1768,7 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
   const toggleLock = async (c: Candidate) => {
     await fetch('/api/hr/candidates', {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: c.id, identity_locked: !c.identity_locked }),
+      body: JSON.stringify({ id: c.id, identity_locked: !(c.identity_locked || (!!c.profile_edit_until && new Date(c.profile_edit_until).getTime() <= Date.now())) }),
     })
     load()
   }
@@ -1885,6 +1936,7 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
             className="text-xs px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-700 whitespace-nowrap">{t('copy')}</button>
         </div>
       )}
+      <ProfileEditDaysSetting />
 
       {loading ? (
         <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
@@ -1918,9 +1970,14 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
                       {c.store && <div className="text-xs text-gray-500">{t('storeColonLabel')}{c.store}</div>}
                       <div className="flex items-center gap-1.5 flex-wrap">
                         {c.staff_category && <Badge variant="outline" className="text-[10px]">{STAFF_LABEL[c.staff_category]}</Badge>}
-                        <Badge variant="outline" className={`text-[10px] ${c.identity_locked ? 'text-amber-600 border-amber-300' : 'text-gray-400'}`}>
-                          {c.identity_locked ? t('locked') : t('editable')}
-                        </Badge>
+                        {(() => {
+                          const closed = c.identity_locked || (!!c.profile_edit_until && new Date(c.profile_edit_until).getTime() <= Date.now())
+                          return (
+                            <Badge variant="outline" className={`text-[10px] ${closed ? 'text-amber-600 border-amber-300' : 'text-gray-400'}`}>
+                              {closed ? t('locked') : c.profile_edit_until ? t('editableUntil', { date: c.profile_edit_until.slice(0, 10) }) : t('editable')}
+                            </Badge>
+                          )
+                        })()}
                       </div>
                       {c.phone && <div className="text-xs text-gray-400 flex items-center gap-1"><Phone className="h-3 w-3" />{c.phone}</div>}
 
@@ -1931,7 +1988,7 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
                         <button onClick={() => openDocs(c)} className="px-1.5 py-0.5 rounded bg-gray-100 hover:bg-gray-200 text-gray-600">{t('documents')}</button>
                         <button onClick={() => openNotify(c)} className="px-1.5 py-0.5 rounded bg-indigo-100 hover:bg-indigo-200 text-indigo-700">{t('notify')}</button>
                         <button onClick={() => toggleLock(c)} className="px-1.5 py-0.5 rounded bg-gray-100 hover:bg-gray-200 text-gray-600">
-                          {c.identity_locked ? t('unlockEdit') : t('lockData')}
+                          {c.identity_locked || (!!c.profile_edit_until && new Date(c.profile_edit_until).getTime() <= Date.now()) ? t('unlockEdit') : t('lockData')}
                         </button>
                         {c.apply_token && (
                           <button onClick={() => copy(`${origin}/apply/edit/${c.apply_token}`, t('candidateLinkCopied'))}

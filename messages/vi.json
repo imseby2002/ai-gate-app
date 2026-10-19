@@ -4698,7 +4698,7 @@
     "editTitle": "Hồ sơ ứng tuyển của tôi",
     "editSubtitle": "Bạn có thể quay lại liên kết này bất cứ lúc nào để cập nhật thông tin và tải lên tài liệu. Vui lòng lưu lại địa chỉ này.",
     "basicInfo": "Thông tin cơ bản",
-    "lockedNotice": "🔒 Thông tin quan trọng đã bị khóa, chỉ có thể sửa số điện thoại và địa chỉ. Vui lòng liên hệ nhân sự để mở khóa các mục khác.",
+    "lockedNotice": "🔒 Đã khóa chỉnh sửa hồ sơ. Vẫn có thể sửa điện thoại, địa chỉ, cách nhận thông báo và tải tài liệu. Liên hệ nhân sự để mở lại.",
     "idNumber": "Số CMND/CCCD",
     "birthday": "Ngày sinh",
     "address": "Địa chỉ",
@@ -4734,7 +4734,18 @@
     "notifyChannel": "Phương thức nhận thông báo",
     "notifyEmail": "Email (thông báo phỏng vấn/trúng tuyển gửi tới hộp thư)",
     "notifyZalo": "ZALO (cần thêm OA của công ty trước)",
-    "zaloHint": "Nếu chọn ZALO, vui lòng tìm và thêm Official Account (OA) ZALO của công ty trước, nếu không sẽ không nhận được thông báo."
+    "zaloHint": "Nếu chọn ZALO, vui lòng tìm và thêm Official Account (OA) ZALO của công ty trước, nếu không sẽ không nhận được thông báo.",
+    "editOpenUntil": "Có thể chỉnh sửa hồ sơ đến {date}",
+    "resumeTitle": "Sơ yếu lý lịch",
+    "gender": "Giới tính",
+    "genderMale": "Nam",
+    "genderFemale": "Nữ",
+    "nativePlace": "Quê quán",
+    "education": "Trình độ học vấn",
+    "resumeText": "Kinh nghiệm làm việc / Giới thiệu bản thân",
+    "resumeHint": "Có thể bổ sung sau, ví dụ: nơi làm cũ, vị trí, thời gian, kỹ năng.",
+    "docRequired": "Bắt buộc",
+    "docMissing": "Còn thiếu"
   },
   "Office": {
     "title": "Cổng Thông Tin Công Ty",
@@ -7709,7 +7720,13 @@
     "portalHasAccount": "Nhân viên này cũng có tài khoản hệ thống ({account}) để vào hệ thống cửa hàng / văn phòng; phiếu lương, giờ rảnh và lịch làm vẫn ở Trang nhân viên.",
     "storeNone": "— Chưa có cửa hàng —",
     "manualDoc": "Hướng dẫn sử dụng",
-    "manualDownload": "Tải hướng dẫn PDF"
+    "manualDownload": "Tải hướng dẫn PDF",
+    "editableUntil": "Sửa được đến {date}",
+    "profileEditLabel": "Sửa hồ sơ",
+    "profileUpdatedAt": "Cập nhật {date}",
+    "profileEditDaysLabel": "Khóa sửa hồ sơ sau",
+    "profileEditDaysUnit": "ngày kể từ khi mở",
+    "profileEditDaysHint": "0 = không tự khóa; tải tài liệu luôn mở, nhắc thiếu hồ sơ hằng tuần"
   },
   "FinancePage": {
     "accountBalancesTitle": "Số dư theo tài khoản",

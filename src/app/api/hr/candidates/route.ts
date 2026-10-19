@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getUnitContext } from '@/lib/auth/unit-access'
+import { openUntil } from '@/lib/hr/profile'
 
 async function getAdminUser() {
   const ctx = await getUnitContext('hr')
@@ -83,6 +84,9 @@ export async function PATCH(req: NextRequest) {
       updates[f] = (f === 'birthday' || f === 'interview_at') ? (body[f] || null) : body[f]
     }
   }
+
+  // 重新開放履歷修改時，依公司設定重算自動關閉時間
+  if (body.identity_locked === false) updates.profile_edit_until = await openUntil(supabase, user.id)
 
   const { data, error } = await supabase
     .from('agent_hr_candidates')

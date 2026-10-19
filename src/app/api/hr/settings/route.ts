@@ -29,6 +29,7 @@ export async function PUT(req: NextRequest) {
   if (body.insurance_currency !== undefined) patch.insurance_currency = String(body.insurance_currency ?? 'VND').trim() || 'VND'
   if (body.notify_telegram !== undefined) patch.notify_telegram = !!body.notify_telegram
   if (body.notify_email !== undefined) patch.notify_email = !!body.notify_email
+  if (body.profile_edit_days !== undefined) patch.profile_edit_days = Math.max(0, Math.min(365, Math.round(Number(body.profile_edit_days) || 0)))
 
   const { data, error } = await supabase
     .from('hr_settings')
