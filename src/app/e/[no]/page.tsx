@@ -189,22 +189,32 @@ function PortalBody({ api, children }: { api: string; children: ReactNode }) {
     setData(r.ok ? await r.json() : null)
   }, [api])
   useEffect(() => { load() }, [load])
+  // 電腦（≥768px）雙欄；手機單欄，可上班時段排在履歷與文件之前
+  const [wide, setWide] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)')
+    const on = () => setWide(mq.matches)
+    on(); mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [])
+  const top = <>{children}{data && <ScheduleCard plans={data.plans} />}</>
+  const shift = <>
+    {data && !data.store && (
+      <Card className="p-5"><p className="text-sm text-amber-700">Chưa có cửa hàng, vui lòng liên hệ nhân sự để được xếp ca. / 尚未設定門市，請聯絡人事後才能排班。</p></Card>
+    )}
+    {data?.store && data.kind === 'fulltime' && <DayOffCard api={api} dayoffs={data.dayoffs} onChanged={load} />}
+    {data?.store && data.kind === 'parttime' && <AvailCard api={api} rules={data.rules} onChanged={load} />}
+  </>
+  const bottom = <><ProfileCard api={api} /><DocsCard api={api} /></>
   return (
-    <div className="grid gap-4 md:grid-cols-2 md:items-start">
-      <div className="space-y-4">
-        {children}
-        {data && <ScheduleCard plans={data.plans} />}
-        <ProfileCard api={api} />
-        <DocsCard api={api} />
+    wide ? (
+      <div className="grid grid-cols-2 gap-4 items-start">
+        <div className="space-y-4">{top}{bottom}</div>
+        <div className="space-y-4">{shift}</div>
       </div>
-      <div className="space-y-4">
-        {data && !data.store && (
-          <Card className="p-5"><p className="text-sm text-amber-700">Chưa có cửa hàng, vui lòng liên hệ nhân sự để được xếp ca. / 尚未設定門市，請聯絡人事後才能排班。</p></Card>
-        )}
-        {data?.store && data.kind === 'fulltime' && <DayOffCard api={api} dayoffs={data.dayoffs} onChanged={load} />}
-        {data?.store && data.kind === 'parttime' && <AvailCard api={api} rules={data.rules} onChanged={load} />}
-      </div>
-    </div>
+    ) : (
+      <div className="space-y-4">{top}{shift}{bottom}</div>
+    )
   )
 }
 
@@ -381,7 +391,7 @@ function AvailCard({ api, rules, onChanged }: { api: string; rules: AvailRuleRow
         <div className="border rounded-xl p-3 space-y-4 bg-slate-50">
           <div className="flex rounded-lg border bg-white p-0.5 text-sm">
             {(['dates', 'weekly'] as const).map(m => (
-              <button key={m} onClick={() => setMode(m)} className={`flex-1 h-9 rounded-md ${mode === m ? 'bg-indigo-600 text-white font-semibold' : 'text-slate-600'}`}>
+              <button key={m} onClick={() => setMode(m)} className={`flex-1 min-h-9 py-1 rounded-md text-xs sm:text-sm ${mode === m ? 'bg-indigo-600 text-white font-semibold' : 'text-slate-600'}`}>
                 {m === 'dates' ? 'Chọn ngày / 指定日期' : 'Hằng tuần / 每週固定'}
               </button>
             ))}
