@@ -4,7 +4,7 @@ import { ChannelAccountPicker } from '@/components/channels/ChannelAccountPicker
 import { useState, useEffect, useCallback, useRef, ReactNode, type ChangeEvent } from 'react'
 import Link from 'next/link'
 import { useTranslations, useLocale } from 'next-intl'
-import { Users, DollarSign, Calendar, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Loader2, AlertCircle, Building2, Phone, Mail, Briefcase, CreditCard, Zap, Wallet, Upload, Shield, Clock, Download, UserPlus, ArrowRight, ClipboardCheck, Store, Video, FileSpreadsheet, HeartHandshake, Send, FileText, KeyRound, Copy } from 'lucide-react'
+import { Users, DollarSign, Calendar, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Loader2, AlertCircle, Building2, Phone, Mail, Briefcase, CreditCard, Zap, Wallet, Upload, Shield, Clock, Download, UserPlus, ArrowRight, ClipboardCheck, Store, Video, FileSpreadsheet, HeartHandshake, Send, FileText, KeyRound, Copy, Link2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -15,6 +15,7 @@ import { ContractsTab } from '@/components/hr/ContractsTab'
 import { UnionTab } from '@/components/hr/UnionTab'
 import { EvaluationTab } from '@/components/hr/EvaluationTab'
 import { getLocalizedUnitAreas } from '@/lib/org-units'
+import { portalMessage, portalUrl, zaloUrl } from '@/lib/hr/portal-link'
 
 // ─── Types ───────────────────────────────────────────────────────
 type Tab = 'recruitment' | 'attendance' | 'payroll' | 'evaluation' | 'contracts' | 'insurance' | 'union' | 'employees' | 'leave'
@@ -603,8 +604,8 @@ function InsuranceSettingsPanel({ settings, onSaved, onClose }: {
 }
 
 // ─── Employees Tab ────────────────────────────────────────────────
-function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChange }: {
-  employees: Employee[]; loading: boolean; onRefresh: () => void
+function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChange, portalBase }: {
+  employees: Employee[]; loading: boolean; onRefresh: () => void; portalBase: string | null
   settings: InsSettings; onSettingsChange: (s: InsSettings) => void
 }) {
   const t = useTranslations('HrPage')
@@ -682,6 +683,25 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
     setTempPin({ name: d.name, pin: d.pin, url: d.url ?? null, attendance_no: d.attendance_no })
   }
 
+  // 員工專區連結：檢視、複製訊息、Zalo、Email
+  const [linkEmp, setLinkEmp] = useState<Employee | null>(null)
+  const [linkMsg, setLinkMsg] = useState('')
+  const [sendingLinks, setSendingLinks] = useState(false)
+  const sendLinks = async (ids: string[]) => {
+    setSendingLinks(true)
+    const res = await fetch('/api/hr/employees/portal-link', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ employee_ids: ids }) })
+    const d = await res.json().catch(() => ({}))
+    setSendingLinks(false)
+    if (!res.ok) return d.error ?? t('saveFailed')
+    return t('portalSent', { sent: d.sent ?? 0, noEmail: (d.no_email ?? []).length, noAttendance: (d.no_attendance ?? []).length, failed: (d.failed ?? []).length })
+  }
+  const sendAllLinks = async () => {
+    const targets = employees.filter(e => e.status === 'active' && e.attendance_no && e.email)
+    if (targets.length === 0) { alert(t('portalNoTargets')); return }
+    if (!confirm(t('portalSendAllConfirm', { n: targets.length }))) return
+    alert(await sendLinks(targets.map(e => e.id)))
+  }
+
   const noBirthday = employees.filter(e => e.status === 'active' && !e.birthday)
   const filtered = statusFilter === 'all' ? employees
     : statusFilter === 'nobirthday' ? noBirthday
@@ -709,6 +729,9 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
           </Button>
           <Button size="sm" variant="outline" className="gap-1" onClick={() => setShowImport(v => !v)}>
             <FileSpreadsheet className="h-4 w-4 text-emerald-600" />{t('batchImport')}
+          </Button>
+          <Button size="sm" variant="outline" className="gap-1" onClick={sendAllLinks} disabled={sendingLinks} title={t('portalSendAllHint')}>
+            {sendingLinks ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}{t('portalSendAll')}
           </Button>
           <Button size="sm" className="gap-1" onClick={() => { setShowForm(true); setEditing(null) }}>
             <Plus className="h-4 w-4" />{t('addEmployee')}
@@ -783,11 +806,14 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
                   <Button size="sm" variant="ghost" className="h-7 px-2 gap-1 text-xs text-gray-500" onClick={() => openEmpDocs(emp)}>
                     <FileText className="h-3.5 w-3.5" />{t('documents')}
                   </Button>
-                  {emp.status === 'active' && (
+                  {emp.status === 'active' && (<>
+                    <Button size="sm" variant="ghost" className="h-7 px-2 gap-1 text-xs text-gray-500" onClick={() => { setLinkEmp(emp); setLinkMsg('') }} title={t('portalLinkHint')}>
+                      <Link2 className="h-3.5 w-3.5" />{t('portalLink')}
+                    </Button>
                     <Button size="sm" variant="ghost" className={`h-7 px-2 gap-1 text-xs ${emp.birthday ? 'text-gray-500' : 'text-amber-700'}`} onClick={() => issueTempPin(emp)} title={t('tempPinHint')}>
                       <KeyRound className="h-3.5 w-3.5" />{t('tempPin')}
                     </Button>
-                  )}
+                  </>)}
                   <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { setEditing(emp); setShowForm(false) }}>
                     <Pencil className="h-3.5 w-3.5" />
                   </Button>
@@ -813,6 +839,8 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
                   <span>{emp.id_number || '—'}</span>
                   <span className="text-gray-400 flex items-center gap-1"><Shield className="h-3 w-3" />{t('insuranceLabel')}</span>
                   <span>{emp.insurance_required ? t('insuranceDetail', { status: INS_STATUS_LABEL[emp.insurance_status] ?? t('insPending'), number: emp.insurance_number ? t('insuranceNumberSuffix', { n: emp.insurance_number }) : '', salary: emp.insurance_salary ? t('insuranceSalarySuffix', { n: fmt(emp.insurance_salary, locale) }) : '' }) : t('insuranceExempt')}</span>
+                  <span className="text-gray-400 flex items-center gap-1"><Link2 className="h-3 w-3" />{t('portalLink')}</span>
+                  <span className="break-all">{(() => { const u = portalUrl(portalBase, emp.attendance_no); return u ? <a href={u} target="_blank" rel="noreferrer" className="text-primary hover:underline">{u}</a> : t('portalNoAttendance') })()}</span>
                   {emp.notes && <><span className="text-gray-400">{t('notesLabel')}</span><span className="whitespace-pre-wrap">{emp.notes}</span></>}
                 </div>
               )}
@@ -820,6 +848,41 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
           ))}
         </div>
       )}
+
+      {linkEmp && (() => {
+        const url = portalUrl(portalBase, linkEmp.attendance_no)
+        const msg = url ? portalMessage(linkEmp.name, url) : ''
+        const zalo = zaloUrl(linkEmp.phone)
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setLinkEmp(null)}>
+            <div className="bg-white dark:bg-gray-950 rounded-xl w-full max-w-md p-5 space-y-3" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold flex items-center gap-2"><Link2 className="h-4 w-4 text-primary" />{t('portalTitle', { name: linkEmp.name })}</h3>
+                <button onClick={() => setLinkEmp(null)}><X className="h-5 w-5 text-gray-400" /></button>
+              </div>
+              {!url ? <p className="text-sm text-amber-700">{t('portalNoAttendance')}</p> : (
+                <>
+                  <a href={url} target="_blank" rel="noreferrer" className="block text-sm text-primary break-all hover:underline">{url}</a>
+                  <textarea readOnly value={msg} rows={6} className="w-full rounded-md border px-2 py-1.5 text-xs bg-gray-50 dark:bg-gray-900" />
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" variant="outline" className="gap-1.5" onClick={() => navigator.clipboard?.writeText(msg).then(() => setLinkMsg(t('tempPinCopied'))).catch(() => {})}>
+                      <Copy className="h-4 w-4" />{t('portalCopy')}
+                    </Button>
+                    {zalo && <a href={zalo} target="_blank" rel="noreferrer"><Button size="sm" variant="outline">{t('portalZalo')}</Button></a>}
+                    <Button size="sm" className="gap-1.5" disabled={!linkEmp.email || sendingLinks} title={linkEmp.email || t('portalNoEmail')}
+                      onClick={async () => setLinkMsg(await sendLinks([linkEmp.id]))}>
+                      {sendingLinks ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}{t('portalEmail')}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-gray-500">{linkEmp.email ? t('portalEmailTo', { email: linkEmp.email }) : t('portalNoEmail')}{zalo ? ` · ${t('portalZaloHint')}` : ''}</p>
+                  {!linkEmp.birthday && <p className="text-xs text-amber-700">{t('portalNeedPin')}</p>}
+                </>
+              )}
+              {linkMsg && <p className="text-sm text-emerald-700">{linkMsg}</p>}
+            </div>
+          </div>
+        )
+      })()}
 
       {tempPin && (() => {
         const text = t('tempPinMessage', { name: tempPin.name, url: tempPin.url ?? `/e/${tempPin.attendance_no}`, pin: tempPin.pin })
@@ -2202,6 +2265,7 @@ export default function HRPage() {
   const t = useTranslations('HrPage')
   const [tab, setTab] = useState<Tab>('recruitment')
   const [employees, setEmployees] = useState<Employee[]>([])
+  const [portalBase, setPortalBase] = useState<string | null>(null)
   const [empLoading, setEmpLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
   const [settings, setSettings] = useState<InsSettings>(DEFAULT_INS_SETTINGS)
@@ -2225,6 +2289,7 @@ export default function HRPage() {
     setIsAdmin(true)
     const d = await res.json()
     setEmployees(d.employees ?? [])
+    setPortalBase(d.portal_base ?? null)
     setEmpLoading(false)
   }, [])
 
@@ -2296,7 +2361,7 @@ export default function HRPage() {
         {tab === 'contracts' && <ContractsTab employees={employees} />}
         {tab === 'insurance' && <InsuranceTab onRefresh={loadEmployees} />}
         {tab === 'union'     && <UnionTab />}
-        {tab === 'employees' && <EmployeesTab employees={employees} loading={empLoading} onRefresh={loadEmployees} settings={settings} onSettingsChange={setSettings} />}
+        {tab === 'employees' && <EmployeesTab employees={employees} loading={empLoading} onRefresh={loadEmployees} settings={settings} onSettingsChange={setSettings} portalBase={portalBase} />}
         {tab === 'leave'     && <LeaveTab employees={employees} loading={empLoading} />}
       </Card>
     </div>
