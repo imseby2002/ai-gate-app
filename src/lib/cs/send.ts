@@ -174,3 +174,85 @@ export async function sendToCustomer(
     return { ok: false, error: e instanceof Error ? e.message : '送訊發生未知錯誤' }
   }
 }
+
+/**
+ * 把一張圖片主動推給客戶。imageUrl 必須是平台伺服器抓得到的 https 網址（例如 Supabase 簽名網址）。
+ */
+export async function sendImageToCustomer(
+  userId: string,
+  platform: string,
+  to: string,
+  imageUrl: string,
+  opts: SendOptions = {},
+): Promise<SendResult> {
+  if (!to) return { ok: false, error: '缺少收件人 id' }
+  const loadCredentials = (u: string, p: string) => loadChannelCredentials(u, p, opts.module ?? 'cs')
+  try {
+    if (platform === 'line' || platform === 'line-oa') {
+      const token = (await loadCredentials(userId, platform)).line_channel_access_token ?? ''
+      if (!token) return { ok: false, error: '尚未設定 LINE Channel Access Token' }
+      const lineMsg: Record<string, unknown> = { type: 'image', originalContentUrl: imageUrl, previewImageUrl: imageUrl }
+      if (opts.sender?.name || opts.sender?.iconUrl) {
+        lineMsg.sender = {
+          ...(opts.sender.name ? { name: opts.sender.name.slice(0, 20) } : {}),
+          ...(opts.sender.iconUrl ? { iconUrl: opts.sender.iconUrl } : {}),
+        }
+      }
+      if (opts.lineReplyToken) {
+        const r = await fetch('https://api.line.me/v2/bot/message/reply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ replyToken: opts.lineReplyToken, messages: [lineMsg] }),
+        })
+        if (r.ok) return { ok: true }
+      }
+      const res = await fetch('https://api.line.me/v2/bot/message/push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ to, messages: [lineMsg] }),
+      })
+      return res.ok ? { ok: true } : { ok: false, error: `LINE 傳圖失敗（${res.status}）` }
+    }
+    if (platform === 'whatsapp' || platform === 'whatsapp-biz') {
+      const creds = await loadCredentials(userId, platform)
+      const phoneId = creds.whatsapp_phone_number_id ?? ''
+      const token = creds.whatsapp_access_token ?? ''
+      if (!phoneId || !token) return { ok: false, error: '尚未設定 WhatsApp 憑證' }
+      const res = await fetch(`https://graph.facebook.com/v19.0/${phoneId}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ messaging_product: 'whatsapp', to, type: 'image', image: { link: imageUrl } }),
+      })
+      return res.ok ? { ok: true } : { ok: false, error: `WhatsApp 傳圖失敗（${res.status}）` }
+    }
+    if (platform === 'messenger' || platform === 'instagram') {
+      const isIG = platform === 'instagram'
+      const creds = await loadCredentials(userId, platform)
+      const token = (isIG ? creds.ig_access_token : creds.fb_page_access_token) ?? ''
+      if (!token) return { ok: false, error: `尚未設定 ${isIG ? 'Instagram' : 'Messenger'} 憑證` }
+      const res = await fetch('https://graph.facebook.com/v19.0/me/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          recipient: { id: to },
+          ...(isIG ? {} : { messaging_type: 'RESPONSE' }),
+          message: { attachment: { type: 'image', payload: { url: imageUrl, is_reusable: false } } },
+        }),
+      })
+      return res.ok ? { ok: true } : { ok: false, error: `${isIG ? 'Instagram' : 'Messenger'} 傳圖失敗（${res.status}）` }
+    }
+    if (platform === 'telegram') {
+      const botToken = (await loadCredentials(userId, 'telegram')).telegram_bot_token ?? ''
+      if (!botToken) return { ok: false, error: '尚未設定 Telegram Bot Token' }
+      const res = await fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: to, photo: imageUrl }),
+      })
+      return res.ok ? { ok: true } : { ok: false, error: `Telegram 傳圖失敗（${res.status}）` }
+    }
+    return { ok: false, error: `此平台目前不支援從收件匣傳圖片：${platform}` }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : '傳圖發生未知錯誤' }
+  }
+}

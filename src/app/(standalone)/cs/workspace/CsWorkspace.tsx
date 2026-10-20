@@ -7,9 +7,10 @@ import {
   FileText, X, Sparkles, Wand2, Zap, TrendingUp, Check, AlertTriangle,
   ClipboardList, PieChart, Clock as ClockIcon, ThumbsUp, Lock,
   MessageSquare, BookOpen, Database, Calculator, FlaskConical, Ticket, Inbox, Send, ShieldCheck, Phone,
-  PanelLeftClose, PanelLeftOpen, UserRound, Image as ImageIcon, Tag, Gift, LayoutDashboard, Info, Menu, ChevronLeft,
+  PanelLeftClose, PanelLeftOpen, UserRound, Image as ImageIcon, Tag, Gift, LayoutDashboard, Info, Menu, ChevronLeft, ImagePlus,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import { uploadInboxImage } from '@/lib/cs/resize-image'
 import { HelpTip } from '@/components/cs/HelpTip'
 import { CsSupportPanel } from './CsSupportPanel'
 import { CsFormsPanel } from './CsFormsPanel'
@@ -1773,6 +1774,34 @@ function Unit12CustomerService({
           ? { ...c, takeover: !next }
           : c
       ))
+    }
+  }
+
+  // 真人傳圖片給客人：瀏覽器縮圖 → 上傳 → 推到客人的平台
+  const inboxImageInputRef = useRef<HTMLInputElement>(null)
+  async function sendInboxImage(file: File) {
+    if (!activeConvo || inboxSending) return
+    const convo = activeConvo
+    setInboxSending(true)
+    setInboxSendError('')
+    const optimisticBubble = { side: 'out' as const, sender: 'agent' as const, text: '', image: URL.createObjectURL(file), at: new Date().toISOString() }
+    setThreadBubbles(prev => [...prev, optimisticBubble])
+    try {
+      const imagePath = await uploadInboxImage(file, convo.from_id)
+      const res = await fetch('/api/marketing/cs-send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ platform: convo.platform, to: convo.from_id, industry: ind, fromName: convo.name, imagePath }),
+      })
+      const d = await res.json()
+      if (!res.ok) throw new Error(d.error ?? t('unknownError'))
+      setActiveConvo(prev => prev ? { ...prev, takeover: true } : null)
+      void loadThreadBubbles(convo.platform, convo.from_id)
+    } catch (e) {
+      setInboxSendError(e instanceof Error ? e.message : String(e))
+      setThreadBubbles(prev => prev.filter(b => b !== optimisticBubble))
+    } finally {
+      setInboxSending(false)
     }
   }
 
@@ -5218,6 +5247,13 @@ function Unit12CustomerService({
                           </div>
                         )}
                         <div className="flex items-end gap-2">
+                          <input ref={inboxImageInputRef} type="file" accept="image/*" className="hidden"
+                            onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void sendInboxImage(f) }} />
+                          <button type="button" onClick={() => inboxImageInputRef.current?.click()} disabled={inboxSending}
+                            title={t('inboxSendImage')} aria-label={t('inboxSendImage')}
+                            className="p-2.5 rounded-xl border border-gray-300 text-gray-500 hover:bg-gray-50 disabled:opacity-50 shrink-0">
+                            <ImagePlus className="h-4 w-4" />
+                          </button>
                           <textarea
                             rows={2}
                             value={inboxReplyText}

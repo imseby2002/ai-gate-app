@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import Link from 'next/link'
-import { ArrowLeft, RefreshCw, Loader2, Send, Bot, UserRound, Inbox, ChevronLeft, Search, X } from 'lucide-react'
+import { ArrowLeft, RefreshCw, Loader2, Send, Bot, UserRound, Inbox, ChevronLeft, Search, X, ImagePlus } from 'lucide-react'
+import { uploadInboxImage } from '@/lib/cs/resize-image'
 import { InstallInboxButton } from './InstallInboxButton'
 
 const PLATFORM_LABELS: Record<string, { name: string; emoji: string }> = {
@@ -86,6 +87,7 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
   const [loadingThread, setLoadingThread] = useState(false)
   const [draft, setDraft] = useState('')
   const [sending, setSending] = useState(false)
+  const imageInputRef = useRef<HTMLInputElement>(null)
   const [err, setErr] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   // 搜尋：客戶名稱／ID 或過往對話內容
@@ -298,6 +300,34 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
           ? { ...c, takeover: !next }
           : c
       ))
+    }
+  }
+
+  // 真人傳圖片給客人：瀏覽器縮圖 → 上傳 → 推到客人的平台
+  const sendImage = async (file: File) => {
+    if (!active || sending) return
+    setSending(true)
+    setErr(null)
+    const localUrl = URL.createObjectURL(file)
+    const optimistic: Bubble = { side: 'out', sender: 'agent', text: '', image: localUrl, at: new Date().toISOString() }
+    setBubbles(prev => [...prev, optimistic])
+    nearBottomRef.current = true
+    try {
+      const imagePath = await uploadInboxImage(file, active.from_id)
+      const res = await fetch('/api/marketing/cs-send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ platform: active.platform, to: active.from_id, industry, imagePath }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? t('sendFailed'))
+      setTakeover(true)
+      loadThread(active, true)
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : t('sendFailed'))
+      setBubbles(prev => prev.filter(b => b !== optimistic))
+    } finally {
+      setSending(false)
     }
   }
 
@@ -546,6 +576,13 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
                     </div>
                   )}
                   <div className="flex items-end gap-2">
+                    <input ref={imageInputRef} type="file" accept="image/*" className="hidden"
+                      onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void sendImage(f) }} />
+                    <button type="button" onClick={() => imageInputRef.current?.click()} disabled={sending}
+                      title={t('sendImage')} aria-label={t('sendImage')}
+                      className="flex items-center justify-center h-10 w-10 rounded-xl border text-muted-foreground hover:text-foreground hover:bg-accent disabled:opacity-40 shrink-0">
+                      <ImagePlus className="h-5 w-5" />
+                    </button>
                     <textarea
                       value={draft}
                       onChange={e => { setDraft(e.target.value); if (e.target.value.trim()) pingTyping() }}

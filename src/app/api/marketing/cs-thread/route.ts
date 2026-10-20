@@ -105,7 +105,11 @@ export async function GET(req: NextRequest) {
     const bubbles: Bubble[] = []
     for (const r of rows ?? []) {
       if (r.image_path) {
-        bubbles.push({ side: 'in', sender: 'customer', text: signed.has(r.image_path) ? '' : '【圖片】', image: signed.get(r.image_path), at: r.created_at })
+        const fromAgent = r.intent === 'agent'
+        bubbles.push({
+          side: fromAgent ? 'out' : 'in', sender: fromAgent ? 'agent' : 'customer',
+          text: signed.has(r.image_path) ? '' : '【圖片】', image: signed.get(r.image_path), at: r.created_at,
+        })
         continue
       }
       if (r.message && String(r.message).trim()) {
