@@ -28,7 +28,7 @@ import { formatFormSubmission, notifyFormSubmission } from '@/lib/cs/formNotify'
 import { isFormAvailableToday } from '@/lib/cs/formSchedule'
 import { resolveTodaySubmission, verifyRoomCheckedInToday } from '@/lib/cs/formSubmitGuard'
 import { sendToCustomer, HUMAN_AGENT_TAG } from '@/lib/cs/send'
-import { isHandoffActive, getHumanIdleMinutes } from '@/lib/cs/handoff'
+import { isHandoffActive, getHumanIdleMinutes, getOnsiteOpenCustomers } from '@/lib/cs/handoff'
 import { notifyUserMobile } from '@/lib/push/expo'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { dataOwnerOf, loadCompanyProfile } from '@/lib/company/profile'
@@ -339,7 +339,11 @@ async function hasOpenHandoff(userId: string, customerId: string): Promise<boole
       .limit(1)
     const ticket = data?.[0]
     if (!ticket) return false
-    return isHandoffActive(ticket as { subject: string | null; created_at: string }, await getHumanIdleMinutes(getServiceClient(), userId))
+    const [idle, onsite] = await Promise.all([
+      getHumanIdleMinutes(getServiceClient(), userId),
+      getOnsiteOpenCustomers(getServiceClient(), userId, customerId),
+    ])
+    return isHandoffActive(ticket as { subject: string | null; created_at: string }, idle, Date.now(), onsite.has(customerId))
   } catch {
     return false  // fail open — never let a check error mute the bot for everyone
   }
