@@ -28,7 +28,7 @@ import { formatFormSubmission, notifyFormSubmission } from '@/lib/cs/formNotify'
 import { isFormAvailableToday } from '@/lib/cs/formSchedule'
 import { resolveTodaySubmission, verifyRoomCheckedInToday } from '@/lib/cs/formSubmitGuard'
 import { sendToCustomer, HUMAN_AGENT_TAG } from '@/lib/cs/send'
-import { isHandoffActive, getHumanIdleMinutes, getOnsiteOpenCustomers } from '@/lib/cs/handoff'
+import { isHandoffActive, getHumanIdleMinutes, getOpenOnsiteIssues } from '@/lib/cs/handoff'
 import { notifyUserMobile } from '@/lib/push/expo'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { dataOwnerOf, loadCompanyProfile } from '@/lib/company/profile'
@@ -339,11 +339,7 @@ async function hasOpenHandoff(userId: string, customerId: string): Promise<boole
       .limit(1)
     const ticket = data?.[0]
     if (!ticket) return false
-    const [idle, onsite] = await Promise.all([
-      getHumanIdleMinutes(getServiceClient(), userId),
-      getOnsiteOpenCustomers(getServiceClient(), userId, customerId),
-    ])
-    return isHandoffActive(ticket as { subject: string | null; created_at: string }, idle, Date.now(), onsite.has(customerId))
+    return isHandoffActive(ticket as { subject: string | null; created_at: string }, await getHumanIdleMinutes(getServiceClient(), userId))
   } catch {
     return false  // fail open — never let a check error mute the bot for everyone
   }
@@ -637,6 +633,12 @@ const ACTION_PROMISE_RE = /已(?:經)?(?:通知|請|轉達|聯絡|告知|交代)
 // 自己承諾「會退您一半的房費作為補償」——知識庫與任何設定都沒有這項規定（知識庫的 50% 是取消訂房規定）。
 const COMPENSATION_PROMISE_RE = /(?:退(?!房)|退還|補償|賠償).{0,10}(?:房費|房價|住宿費|費用|款項|金額|元|%|成|一半|半價)|(?:一半|半價|全額).{0,6}(?:房費|房價).{0,4}(?:退|還)/
 const COMPENSATION_FALLBACK = '非常抱歉造成您的不便！補償方式需要由管家確認，已通知管家，管家會盡快與您聯繫說明。'
+// 管家還在處理客人先前反映的現場狀況：AI 照常回答其他問題，但這件事只能說「管家處理中」。
+// 真實案例：客人沒熱水，員工處理中閒置 1 分鐘，AI 接回自己承諾「退一半房費」。
+function buildOnsiteInProgressInstruction(issues: string[]): string {
+  return `\n\n【系統提示——最高優先，覆蓋知識庫與上方其他指示】管家正在處理這位客人先前反映的現場狀況：\n${issues.map(i => `- ${i}`).join('\n')}\n客人這則訊息如果是在問、催或抱怨這件事（例如進度、好了沒、什麼時候來），只能回覆「管家正在處理中，會盡快回覆您」並致歉，不可以說明處理方式、承諾時間、提出任何補償或退款。客人問的是其他無關的事（例如 WiFi、停車、早餐、退房時間），照常正常回答，不用提這件事。`
+}
+
 const ONSITE_ISSUE_INSTRUCTION = `\n\n【系統提示——最高優先，覆蓋知識庫與上方其他指示】客人反映現場狀況（例如餐點送錯／漏送、設備故障、缺少備品），系統已經真的建立工單通知專員（管家）。這則回覆只能先致歉，並告知「已通知管家，管家會盡快回覆您處理方式」。絕對不可以承諾任何處理結果或時間（例如補送、重送、馬上送過去、已請早餐店／店家處理、幫您催），也絕對不可以叫客人下樓、到某處等候或先去看看——能不能處理、怎麼處理只能由管家確認後回覆。`
 
 async function createOnsiteIssueTicket(
@@ -1034,8 +1036,15 @@ async function replyToCustomer(
 
   const onsiteIssue = ONSITE_ISSUE_RE.test(text)
   if (onsiteIssue) void createOnsiteIssueTicket(userId, platform, customerId, knowledge.industry, history, text, knowledge.notifyWebhooks, fromName)
+  let onsiteSection = onsiteIssue ? ONSITE_ISSUE_INSTRUCTION : ''
+  if (!onsiteIssue) {
+    try {
+      const openIssues = await getOpenOnsiteIssues(getServiceClient(), userId, customerId)
+      if (openIssues.length) onsiteSection = buildOnsiteInProgressInstruction(openIssues)
+    } catch { /* 查不到就照常回覆 */ }
+  }
 
-  const rawReply = await getAIReply(text, knowledge, history, userId, buildSellSection(cust, convoPriceAsks, isPriceAskNow, text), gapNote, imageBuffer, imageMimeType, platform, customerId, !!cust?.discount_offered_at, (cust?.facts as Record<string, any> | undefined), bookingCommitSection, onsiteIssue ? ONSITE_ISSUE_INSTRUCTION : '')
+  const rawReply = await getAIReply(text, knowledge, history, userId, buildSellSection(cust, convoPriceAsks, isPriceAskNow, text), gapNote, imageBuffer, imageMimeType, platform, customerId, !!cust?.discount_offered_at, (cust?.facts as Record<string, any> | undefined), bookingCommitSection, onsiteSection)
   const { visibleReply: withoutForm, submit: formSubmit } = extractFormSubmit(rawReply.split(HUMAN_AGENT_TAG).join(''))
   const { visibleReply: aiReply, offered: discountJustOffered } = extractDiscountOffered(withoutForm)
   // AI 自己承諾退款／退房費／金額補償 → 換成安全回覆並建工單通知管家（促成工具箱正式給的折扣除外）
