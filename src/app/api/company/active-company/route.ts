@@ -37,6 +37,8 @@ export async function POST(req: NextRequest) {
     cookieStore.set(ACTIVE_COMPANY_COOKIE, '', clearOpts)
     cookieStore.set(activeBnbCookieName('booking'), user.id, opts)
     cookieStore.set(activeBnbCookieName('cs'), user.id, opts)
+    const admin = createAdminClient()
+    await admin.from('profiles').update({ company_id: null }).eq('id', user.id)
     return NextResponse.json({ companyId: null })
   }
 
@@ -57,36 +59,12 @@ export async function POST(req: NextRequest) {
     admin.from('company_members').select('member_id').eq('company_id', companyId).eq('role', 'owner').eq('status', 'active').maybeSingle(),
   ])
 
+  // 取得公司的業務主帳號：優先以公司負責人（owner）、建立者或當前操作者為準
   let bnbDefault = company?.bnb_owner_id
 
+  // 若尚未設定或設定的帳號並非本公司成員，更新為公司負責人
   if (!bnbDefault) {
-    // 自動修復：優先找負責人（非當前登入者優先）
-    if (companyOwnerMember?.member_id && companyOwnerMember.member_id !== user.id) {
-      bnbDefault = companyOwnerMember.member_id
-    } else {
-      // 查詢公司成員中，是否有已設定客服憑證（如 LINE OA）的帳號（例：已轉移後的 admin@ciaohome.net）
-      const { data: members } = await admin.from('company_members')
-        .select('member_id').eq('company_id', companyId).eq('status', 'active')
-      const memberIds = (members ?? []).map(m => m.member_id).filter(Boolean) as string[]
-
-      if (memberIds.length > 0) {
-        const { data: credRow } = await admin.from('social_platform_credentials')
-          .select('user_id')
-          .in('user_id', memberIds)
-          .eq('platform', 'line')
-          .eq('is_connected', true)
-          .maybeSingle()
-        if (credRow?.user_id) {
-          bnbDefault = credRow.user_id
-        }
-      }
-    }
-
-    if (!bnbDefault) {
-      bnbDefault = companyOwnerMember?.member_id || company?.created_by || user.id
-    }
-
-    // 自動補齊回寫 companies.bnb_owner_id，一勞永逸，從此再也不用開 SQL Editor！
+    bnbDefault = companyOwnerMember?.member_id || company?.created_by || user.id
     if (bnbDefault && company?.id) {
       await admin.from('companies').update({ bnb_owner_id: bnbDefault }).eq('id', company.id)
     }
@@ -95,6 +73,9 @@ export async function POST(req: NextRequest) {
   cookieStore.set(ACTIVE_COMPANY_COOKIE, companyId, opts)
   cookieStore.set(activeBnbCookieName('booking'), bnbDefault, opts)
   cookieStore.set(activeBnbCookieName('cs'), bnbDefault, opts)
+
+  // 同步更新 profiles.company_id，讓所有讀取 profiles.company_id 的地方一致
+  await admin.from('profiles').update({ company_id: companyId }).eq('id', user.id)
 
   return NextResponse.json({ companyId, role })
 }

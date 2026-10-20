@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { createClient, getCachedUser } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { resolveActiveCompanyId } from '@/lib/company/activeCompany'
 import { SettingsForm } from '@/components/settings/SettingsForm'
 import Link from 'next/link'
 import { Building2, ArrowRight, MessageCircle } from 'lucide-react'
@@ -16,6 +18,13 @@ export default async function SettingsPage() {
 
   const t = await getTranslations('Settings')
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+  const admin = createAdminClient()
+  const isSuperAdmin = profile?.user_type === 'admin'
+  const activeCompanyId = await resolveActiveCompanyId(admin, user.id, isSuperAdmin, profile?.company_id ?? null)
+  const effectiveProfile = activeCompanyId && activeCompanyId !== profile?.company_id
+    ? { ...profile, company_id: activeCompanyId }
+    : profile
+
   // 餘額真相來源是 credit_transactions 加總（get_credit_balance RPC）。
   // profiles 沒有 credit_balance 欄位，直接讀 profile.credit_balance 永遠是 0。
   const { data: creditBalance } = await supabase.rpc('get_credit_balance', { p_user_id: user.id })
@@ -27,7 +36,7 @@ export default async function SettingsPage() {
           <h1 className="text-2xl font-bold">{t('title')}</h1>
           <p className="text-muted-foreground text-sm mt-1">{t('subtitle')}</p>
         </div>
-        <SettingsForm profile={profile} creditBalance={creditBalance ?? 0} />
+        <SettingsForm profile={effectiveProfile} creditBalance={creditBalance ?? 0} />
 
         {/* Company & Team Membership Section */}
         <div>

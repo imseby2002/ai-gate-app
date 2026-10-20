@@ -32,8 +32,13 @@ export async function resolveActiveCompanyId(
   isSuperAdmin: boolean,
   fallbackCompanyId: string | null,
 ): Promise<string | null> {
-  const cookieStore = await cookies()
-  const requested = cookieStore.get(ACTIVE_COMPANY_COOKIE)?.value
+  let requested: string | undefined
+  try {
+    const cookieStore = await cookies()
+    requested = cookieStore.get(ACTIVE_COMPANY_COOKIE)?.value
+  } catch {
+    return fallbackCompanyId
+  }
 
   if (requested) {
     if (isSuperAdmin) return requested

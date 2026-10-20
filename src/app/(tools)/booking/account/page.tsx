@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { createClient, getCachedUser } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { resolveActiveCompanyId } from '@/lib/company/activeCompany'
 import { SettingsForm } from '@/components/settings/SettingsForm'
 import { CompanyMembershipSection } from '@/components/settings/CompanyMembershipSection'
 import CsBookingModeCard from './CsBookingModeCard'
@@ -16,6 +18,13 @@ export default async function BookingAccountPage() {
 
   const t = await getTranslations('Settings')
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+  const admin = createAdminClient()
+  const isSuperAdmin = profile?.user_type === 'admin'
+  const activeCompanyId = await resolveActiveCompanyId(admin, user.id, isSuperAdmin, profile?.company_id ?? null)
+  const effectiveProfile = activeCompanyId && activeCompanyId !== profile?.company_id
+    ? { ...profile, company_id: activeCompanyId }
+    : profile
+
   const { data: creditBalance } = await supabase.rpc('get_credit_balance', { p_user_id: user.id })
 
   return (
@@ -25,7 +34,7 @@ export default async function BookingAccountPage() {
         <p className="text-muted-foreground text-sm mt-1">{t('subtitle')}</p>
       </div>
       <CsBookingModeCard />
-      <SettingsForm profile={profile} creditBalance={creditBalance ?? 0} variant="basic" />
+      <SettingsForm profile={effectiveProfile} creditBalance={creditBalance ?? 0} variant="basic" />
 
       <div>
         <div className="mb-6">

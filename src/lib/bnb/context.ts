@@ -70,22 +70,12 @@ export async function getBnbContext(
   // 若目前正處於某間公司身分，且該公司有其專屬業務主帳號（非自己），以公司業務為準
   if (requested === user.id) {
     if (activeCompId) {
-      let { data: comp } = await admin.from('companies').select('id, bnb_owner_id').eq('id', activeCompId).maybeSingle()
+      let { data: comp } = await admin.from('companies').select('id, bnb_owner_id, created_by').eq('id', activeCompId).maybeSingle()
       let companyOwnerId = comp?.bnb_owner_id
       if (!companyOwnerId) {
-        const { data: members } = await admin.from('company_members')
-          .select('member_id, role').eq('company_id', activeCompId).eq('status', 'active')
-        const otherOwner = members?.find(m => m.role === 'owner' && m.member_id !== user.id)
-        if (otherOwner?.member_id) {
-          companyOwnerId = otherOwner.member_id
-        } else {
-          const memberIds = (members ?? []).map(m => m.member_id).filter(Boolean) as string[]
-          if (memberIds.length > 0) {
-            const { data: credRow } = await admin.from('social_platform_credentials')
-              .select('user_id').in('user_id', memberIds).eq('platform', 'line').eq('is_connected', true).maybeSingle()
-            if (credRow?.user_id) companyOwnerId = credRow.user_id
-          }
-        }
+        const { data: ownerMember } = await admin.from('company_members')
+          .select('member_id').eq('company_id', activeCompId).eq('role', 'owner').eq('status', 'active').maybeSingle()
+        companyOwnerId = ownerMember?.member_id || comp?.created_by || user.id
         if (companyOwnerId && comp?.id) {
           await admin.from('companies').update({ bnb_owner_id: companyOwnerId }).eq('id', comp.id)
         }
