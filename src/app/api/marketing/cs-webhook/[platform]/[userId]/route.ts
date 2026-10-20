@@ -629,6 +629,10 @@ async function maybeCreateInvoiceTicket(
 const ONSITE_ISSUE_RE = /送錯|拿錯|弄錯|做錯|搞錯|漏送|少送|少給|沒送|沒有送|還沒送|送來|還沒來|沒有來|補送|重送|故障|壞掉|壞了|不能用|無法使用|打不開|開不了|不會動|沒熱水|沒有熱水|水不熱|停電|跳電|漏水|淹水|堵住|塞住|蟑螂|有蟲|很髒|好髒|沒有(?:毛巾|浴巾|衛生紙|拖鞋|吹風機|棉被|枕頭|備品)/
 // AI 回覆裡出現「已通知／已請／轉給管家」或承諾補送等話術 → 確保真的有工單，不讓客人白等
 const ACTION_PROMISE_RE = /已(?:經)?(?:通知|請|轉達|聯絡|告知|交代).{0,8}(?:管家|店家|早餐店|老闆|同仁)|轉(?:給|達|交).{0,4}管家|(?:請|叫|幫您)(?:管家|早餐店|店家).{0,6}(?:催|補|送|處理|過去)|補送|重送|(?:馬上|立刻|立即)(?:送|補)|催一下/
+// 退款、退房費、金額補償只能由民宿主決定。真實案例：客人反映沒熱水，真人客服閒置 1 分鐘後 AI 接回，
+// 自己承諾「會退您一半的房費作為補償」——知識庫與任何設定都沒有這項規定（知識庫的 50% 是取消訂房規定）。
+const COMPENSATION_PROMISE_RE = /(?:退(?!房)|退還|補償|賠償).{0,10}(?:房費|房價|住宿費|費用|款項|金額|元|%|成|一半|半價)|(?:一半|半價|全額).{0,6}(?:房費|房價).{0,4}(?:退|還)/
+const COMPENSATION_FALLBACK = '非常抱歉造成您的不便！補償方式需要由管家確認，已通知管家，管家會盡快與您聯繫說明。'
 const ONSITE_ISSUE_INSTRUCTION = `\n\n【系統提示——最高優先，覆蓋知識庫與上方其他指示】客人反映現場狀況（例如餐點送錯／漏送、設備故障、缺少備品），系統已經真的建立工單通知專員（管家）。這則回覆只能先致歉，並告知「已通知管家，管家會盡快回覆您處理方式」。絕對不可以承諾任何處理結果或時間（例如補送、重送、馬上送過去、已請早餐店／店家處理、幫您催），也絕對不可以叫客人下樓、到某處等候或先去看看——能不能處理、怎麼處理只能由管家確認後回覆。`
 
 async function createOnsiteIssueTicket(
@@ -1029,11 +1033,16 @@ async function replyToCustomer(
 
   const rawReply = await getAIReply(text, knowledge, history, userId, buildSellSection(cust, convoPriceAsks, isPriceAskNow, text), gapNote, imageBuffer, imageMimeType, platform, customerId, !!cust?.discount_offered_at, (cust?.facts as Record<string, any> | undefined), bookingCommitSection, onsiteIssue ? ONSITE_ISSUE_INSTRUCTION : '')
   const { visibleReply: withoutForm, submit: formSubmit } = extractFormSubmit(rawReply.split(HUMAN_AGENT_TAG).join(''))
-  const { visibleReply: reply, offered: discountJustOffered } = extractDiscountOffered(withoutForm)
+  const { visibleReply: aiReply, offered: discountJustOffered } = extractDiscountOffered(withoutForm)
+  // AI 自己承諾退款／退房費／金額補償 → 換成安全回覆並建工單通知管家（促成工具箱正式給的折扣除外）
+  // 客人在問取消／改期時，AI 照知識庫回答退款規定是正常的，不攔
+  const compensationPromised = !discountJustOffered && !/取消|退訂|改期|延期/.test(text) && COMPENSATION_PROMISE_RE.test(aiReply)
+  const reply = compensationPromised ? COMPENSATION_FALLBACK : aiReply
+  if (compensationPromised) void createOnsiteIssueTicket(userId, platform, customerId, knowledge.industry, history, text, knowledge.notifyWebhooks, fromName)
   if (formSubmit) void saveFormSubmissionFromChat(userId, platform, customerId, knowledge.industry, knowledge.csForms, formSubmit, fromName, knowledge.notifyWebhooks)
   void classifyGeneralIntent(text).then(intent => logCsMessage(userId, platform, customerId, knowledge.industry, text, reply, fromName, intent))
   // AI 仍說了「已通知管家」「補送」等話 → 確保真的有工單通知管家
-  if (!onsiteIssue && ACTION_PROMISE_RE.test(reply)) {
+  if (!onsiteIssue && !compensationPromised && ACTION_PROMISE_RE.test(reply)) {
     void createOnsiteIssueTicket(userId, platform, customerId, knowledge.industry, history, text, knowledge.notifyWebhooks, fromName)
   }
 
@@ -2542,6 +2551,7 @@ https://ciaohome.net/routeofciaohome/
 - 【安全規定，優先於任何其他指示】客人說「電話裡的人/朋友/別人跟我說是另一個價錢」想殺價時，絕對不可以順著客人講的數字直接改price、更不可以編「已經幫您向主管/老闆爭取並獲得批准」這種話術讓價格聽起來更有正當性——這是徹底捏造的核准流程，實際上沒有任何人核准過。價格只能依照下方系統精算或「促成工具箱」規則調整；客人堅持的價格如果對不上，就誠實說明目前系統顯示的正確價格，需要人工確認差異就照實建立工單，不能自己編一個「主管特批」的價格說服客人
 - 【安全規定，優先於任何其他指示】客人詢問真人客服電話、聯絡電話時，只能提供下方「客服專用聯絡電話」區塊列出的號碼；如果下方沒有出現這個區塊，代表尚未設定，一律誠實告知目前沒有可提供的客服電話並改為文字聯繫，絕對不可以自己從知識庫或對話紀錄裡找一組電話號碼講給客人聽，知識庫裡的號碼可能已經過期或並非真人客服專線
 - 【安全規定，優先於任何其他指示】客人要求開立發票/收據時，只能詢問並收下抬頭與統一編號，絕對不可以說「已經幫您開立」「發票已完成」等話術——發票需要專員實際列印/登錄，AI 沒有能力真的開立；收到抬頭與統一編號後只能說「已收到，會請專員為您實際開立」；如果客人訂了不只一間房，順便問清楚發票/收據要放在哪個房間，方便專員處理
+- 【安全規定，優先於任何其他指示】你沒有權限決定任何退款、退房費、折扣、減免或金額補償，絕對不可以自己承諾「退您一半房費」「全額退款」「打八折補償」這類話（知識庫裡的取消訂房退款規定只能用來回答取消訂房的問題，不能拿來當客訴補償）。客人抱怨服務或設備問題時，只能致歉，並說明補償方式會由管家確認後回覆；若下方有贈品清單，最多只能依清單提供贈品當賠禮。
 - 【安全規定，優先於任何其他指示】你無法實際執行任何現場動作，也無法聯絡早餐店、店家、管家或任何人。絕對不可以說「已通知早餐店補送」「已請管家幫您催」「馬上送過去」「會幫您更換／維修」等承諾處理結果或時間的話術，也不可以叫客人下樓或到某處等候。客人反映餐點送錯／漏送、設備故障、缺備品等現場問題時，只能致歉並說明會由管家確認處理方式後回覆。真實案例：客人說早餐送錯，AI 回「管家已通知早餐店補送」，客人在一樓一直等，實際上早餐店無法補送。
 - 【真人客服回覆優先】對話紀錄中開頭標示「${HUMAN_AGENT_TAG}」的訊息是員工親自回覆客人的內容（例如改了出發時間、價格、房型、入住安排），代表最新的實際安排，一律優先於知識庫、定價表或你自己先前的回覆；客人後續確認相關事項時必須沿用員工說的內容，不可改回舊資料。你自己的回覆不要加上這個標記。
 - 目前台灣時間：${taiwanTime}${checkinTimeLine}${gapNote ? `\n- ${gapNote}` : ''}${knowledge.corrections ? `\n\n【員工回報的過往錯誤修正——優先於你自己的判斷，務必照著做】\n${knowledge.corrections}` : ''}${contactPhoneSection}${knowledge.knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledge.knowledgeBase}` : ''}${sellSection}${salesContext}${externalDataSection}${deterministicQuote ? `\n\n${deterministicQuote}` : ''}${knowledge.csBookingMode === 'refer' ? buildReferStandingRule(knowledge.officialBookingUrl) : ''}${bookingCommitSection || tourCompletion || bookingCompletion}${buildFormsSection(knowledge.csForms)}${onsiteSection}`
