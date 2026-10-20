@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { resolveUserCompanyId } from '@/lib/company/activeCompany'
+import { companyMemberIds } from '@/lib/connector/company-resources'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,7 +20,6 @@ export async function GET(req: NextRequest) {
       .from('geo_projects')
       .select('id, seed_topic, locale, exclusive_facts, author, target_domain, auto_track, created_at')
       .eq('id', projectId)
-      .eq('user_id', user.id)
       .single()
 
     if (projErr || !project) {
@@ -84,11 +86,18 @@ export async function GET(req: NextRequest) {
     })
   }
 
-  // 沒有 projectId 則列出使用者所有歷史專案列表
+  // 沒有 projectId 則列出歷史專案：目前公司所有成員的專案（RLS 亦限制同公司）；無公司則只看自己
+  const admin = createAdminClient()
+  const { data: me } = await admin.from('profiles').select('company_id').eq('id', user.id).maybeSingle()
+  const companyId = await resolveUserCompanyId(admin, user.id, (me?.company_id as string | null) ?? null)
+  const ownerIds = companyId ? await companyMemberIds(companyId) : []
+  if (!ownerIds.includes(user.id)) ownerIds.push(user.id)
+
   const { data: projects, error } = await supabase
     .from('geo_projects')
     .select(`
       id,
+      user_id,
       seed_topic,
       target_domain,
       author,
@@ -107,17 +116,26 @@ export async function GET(req: NextRequest) {
         status
       )
     `)
-    .eq('user_id', user.id)
+    .in('user_id', ownerIds)
     .order('created_at', { ascending: false })
-    .limit(50)
+    .limit(100)
 
   if (error) {
     console.error('[geo/history] fetch error', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
+  const creatorIds = [...new Set((projects ?? []).map(p => p.user_id as string))]
+  const names = new Map<string, string>()
+  if (creatorIds.length) {
+    const { data: ps } = await admin.from('profiles').select('id, full_name, email').in('id', creatorIds)
+    for (const pr of ps ?? []) names.set(pr.id, (pr.full_name as string) || (pr.email as string) || '')
+  }
+
   const list = (projects ?? []).map(p => ({
     id: p.id,
+    creator: names.get(p.user_id as string) ?? '',
+    mine: p.user_id === user.id,
     seed_topic: p.seed_topic,
     target_domain: p.target_domain,
     author: p.author,
@@ -141,15 +159,18 @@ export async function DELETE(req: NextRequest) {
   const projectId = searchParams.get('projectId')
   if (!projectId) return NextResponse.json({ error: '缺少 projectId' }, { status: 400 })
 
-  const { error } = await supabase
+  // 刪除只限建立者
+  const { data: deleted, error } = await supabase
     .from('geo_projects')
     .delete()
     .eq('id', projectId)
     .eq('user_id', user.id)
+    .select('id')
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
+  if (!deleted?.length) return NextResponse.json({ error: '只有建立者可以刪除' }, { status: 403 })
 
   return NextResponse.json({ success: true })
 }

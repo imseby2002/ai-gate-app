@@ -33,6 +33,8 @@ interface SuggestedTopic {
 interface GeoArticle { articleId?: string; title: string; body_md: string; json_ld: unknown }
 interface HistoryProject {
   id: string
+  creator?: string
+  mine?: boolean
   seed_topic: string
   target_domain?: string | null
   author?: string | null
@@ -742,6 +744,7 @@ export default function GeoWriterPage() {
                               year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit'
                             })}
                           </span>
+                          {p.creator && (<><span>•</span><span className="flex items-center gap-1"><UserCircle className="h-3 w-3" />{p.creator}</span></>)}
                           <span>•</span>
                           <span>{p.questionsCount} {t('geo.questionsCount')}</span>
                           <span>•</span>
@@ -764,6 +767,7 @@ export default function GeoWriterPage() {
                           )}
                           {t('geo.loadProject')}
                         </Button>
+                        {p.mine !== false && (
                         <Button
                           size="sm"
                           variant="ghost"
@@ -773,6 +777,7 @@ export default function GeoWriterPage() {
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
+                        )}
                       </div>
                     </div>
 
