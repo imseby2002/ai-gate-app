@@ -1964,7 +1964,7 @@ function cleanReply(raw: string): string {
 // 上限從 10 拉到 32：門鎖/WiFi 密碼偶爾比 10 碼長（例如知識庫常見的英數混合密碼），
 // 上限太短會讓超長的捏造值完全落在偵測範圍外、悄悄放行。
 // 用捕獲群組留住標籤（密碼/房號/門鎖代碼），房號的「有憑有據」判斷比密碼更嚴格——見下方。
-const SENSITIVE_REVEAL_RE = /(密碼|房號|門鎖代碼)[：:是為]?\s*([A-Za-z0-9#]{3,32})/g
+const SENSITIVE_REVEAL_RE = /((?:房門|房間)?密碼|房號|門鎖代碼)[：:是為]?\s*([A-Za-z0-9#]{3,32})/g
 // 真實案例：客人說「已付訂金1000元，想確認餘款」，系統其實從未查詢、也查不到任何訂金／
 // 餘額資料（check-in 查詢流程只回房號密碼，不含金流明細），AI 卻直接編了一個「剩餘款項
 // 為1200元」給客人——3132-1000 根本不等於1200，純屬憑空捏造。餘款/尾款這類金額跟房號
@@ -2033,7 +2033,16 @@ async function enforceNoFabricatedReveal(
   // 不能只因為知識庫的房型列表剛好提到同一個數字就當作有根據；密碼/門鎖代碼則維持原本
   // 允許知識庫背書（全館通用的 WiFi 密碼、公共門鎖代碼本來就白紙黑字寫在知識庫裡，不是
   // 客人專屬資料，不需要走查詢流程）。
+  // 真實案例：客人下午要房門密碼，這輪沒有查到訂單，AI 把早上給過的大門密碼 102212 當成房門密碼
+  // 回給客人（大門密碼出現在先前回覆裡，舊邏輯就當作有根據）。房門密碼只認本輪查詢結果，
+  // 或先前回覆中同樣標示為「房門密碼」的同一組數字。
   const hasUnbackedId = idMatches.some(([, label, value]) => {
+    if (/^(房門|房間)/.test(label)) {
+      const sameLabel = new RegExp(`(房門|房間)密碼[：:是為]?\\s*${value.replace(/[^A-Za-z0-9]/g, '')}`)
+      if (sameLabel.test(externalDataSection) || sameLabel.test(priorAssistantText)) return false
+      // 密碼表（Google Sheets 等）欄位名稱不一定叫「房門密碼」：資料裡完全沒有這個標籤時才退回只比對數字
+      return /房門密碼/.test(externalDataSection) || !externalDataSection.includes(value)
+    }
     if (backedByQuery(value)) return false
     if (label === '房號') return true
     return !knowledgeBase.includes(value)
@@ -2200,7 +2209,7 @@ async function getAIReply(
           const byName = await queryBookingByGuestName(getServiceClient(), userId, confirmedName, google('gemini-3.1-flash-lite'), confirmedName, platformHint)
           if (byName) {
             currentLookupFailed = byName.includes('查無')
-            if (!currentLookupFailed) void saveConfirmedFacts(userId, platform, customerId, knowledge.industry, { confirmedName })
+            if (!currentLookupFailed) await saveConfirmedFacts(userId, platform, customerId, knowledge.industry, { confirmedName })
             externalDataSection = `\n\n${byName}${externalDataSection}`
           }
         } catch { /* 不中斷主流程 */ }
@@ -2218,7 +2227,7 @@ async function getAIReply(
             // 無論查無資料的原因是什麼（沒開訂房整合方案／訂單真的不存在），一律要明講
             // 「查無資料、禁止捏造」，絕對不能讓 AI 在沒有任何資料時自己編一組密碼給客人。
             const bnbResult = await queryBnbCheckin(getServiceClient(), userId, orderNum)
-            currentLookupFailed = !bnbResult
+            currentLookupFailed = !bnbResult || bnbResult.includes('查無')
             if (!currentLookupFailed) void saveConfirmedFacts(userId, platform, customerId, knowledge.industry, { orderNumber: orderNum })
             const bnb = bnbResult ?? `【入住資訊查詢結果】\n查無訂單「${orderNum}」的資料。\n${noDataFoundSuffix(orderLookupAltMethods(platformHint))}`
             externalDataSection = `\n\n${bnb}${externalDataSection}`
@@ -2258,7 +2267,7 @@ async function getAIReply(
           const altOrderNum = message.match(ALPHANUMERIC_ORDER_RE)?.[0] ?? ''
           if (!passwordFromDatasource) {
             const bnbResult = await queryBnbCheckin(getServiceClient(), userId, altOrderNum)
-            currentLookupFailed = !bnbResult
+            currentLookupFailed = !bnbResult || bnbResult.includes('查無')
             if (!currentLookupFailed) void saveConfirmedFacts(userId, platform, customerId, knowledge.industry, { orderNumber: altOrderNum })
             const bnb = bnbResult ?? `【入住資訊查詢結果】\n查無訂單「${altOrderNum}」的資料，系統中沒有這筆訂單（有些訂房平台顯示給客人的訂單號跟系統收到的不同）。\n${noDataFoundSuffix(orderLookupAltMethods(platformHint))}`
             externalDataSection = `\n\n${bnb}${externalDataSection}`
@@ -2302,7 +2311,7 @@ async function getAIReply(
               const byName = await queryBookingByGuestName(getServiceClient(), userId, nameCandidate, google('gemini-3.1-flash-lite'), undefined, platformHint)
               if (byName) {
                 currentLookupFailed = byName.includes('查無')
-                if (!currentLookupFailed) void saveConfirmedFacts(userId, platform, customerId, knowledge.industry, { confirmedName: nameCandidate })
+                if (!currentLookupFailed) await saveConfirmedFacts(userId, platform, customerId, knowledge.industry, { confirmedName: nameCandidate })
                 externalDataSection = `\n\n${byName}${externalDataSection}`
               }
             } catch { /* 不中斷主流程 */ }
@@ -2315,28 +2324,27 @@ async function getAIReply(
       if (!orderLookupDone && !passwordFromDatasource && customerFacts) {
         const hasCheckinIntent = /入住|密碼|房號|開門|check\s*in|鑰匙|門鎖|進房|辦理入住|到(了|門口|現場)|行李|寄放|提早|提前到|先進去|休息/i.test(message)
         if (hasCheckinIntent) {
-          if (customerFacts.orderNumber) {
+          // 依序用記住的訂單號碼、手機、核對過的姓名重查，前一種查無就換下一種。
+          // 真實案例：客人早上用姓名核對身分拿到大門密碼，記住的手機查不到訂單，下午要房門密碼時
+          // 系統只試了手機就放棄，AI 沒有資料，把大門密碼當房門密碼回給客人。
+          const tries: Array<{ kind: LookupKind; run: () => Promise<string | null> }> = []
+          if (customerFacts.orderNumber) tries.push({ kind: 'order', run: () => queryBnbCheckin(getServiceClient(), userId, String(customerFacts.orderNumber)) })
+          if (customerFacts.phone) tries.push({ kind: 'phone', run: () => queryBookingByPhone(getServiceClient(), userId, String(customerFacts.phone)) })
+          if (customerFacts.confirmedName) {
+            const savedName = String(customerFacts.confirmedName)
+            tries.push({ kind: 'name', run: () => queryBookingByGuestName(getServiceClient(), userId, savedName, google('gemini-3.1-flash-lite'), savedName, platformHint) })
+          }
+          for (const t of tries) {
             try {
-              const savedOrderNum = customerFacts.orderNumber
-              const bnbResult = await queryBnbCheckin(getServiceClient(), userId, savedOrderNum)
-              if (bnbResult && !bnbResult.includes('查無')) {
+              const result = await t.run()
+              if (result && !result.includes('查無')) {
                 orderLookupDone = true
-                currentLookupKind = 'order'
+                currentLookupKind = t.kind
                 currentLookupFailed = false
-                externalDataSection = `\n\n${bnbResult}${externalDataSection}`
+                externalDataSection = `\n\n${result}${externalDataSection}`
+                break
               }
-            } catch { /* 不中斷主流程 */ }
-          } else if (customerFacts.phone) {
-            try {
-              const savedPhone = customerFacts.phone
-              const byPhone = await queryBookingByPhone(getServiceClient(), userId, savedPhone)
-              if (byPhone && !byPhone.includes('查無')) {
-                orderLookupDone = true
-                currentLookupKind = 'phone'
-                currentLookupFailed = false
-                externalDataSection = `\n\n${byPhone}${externalDataSection}`
-              }
-            } catch { /* 不中斷主流程 */ }
+            } catch { /* 換下一種 */ }
           }
         }
       }
