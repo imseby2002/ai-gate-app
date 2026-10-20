@@ -47,6 +47,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { STORE_COACH_KNOWLEDGE } from '@/lib/store-coach/knowledge-base'
+import { FEELING_TEA_STORES } from '@/lib/constants/feeling-tea-stores'
 import type { DiagnosisOutput, VisionAnalysisResult, StoreLearningMaterial, CompanyRegulation } from '@/lib/types/store-coach'
 
 type TabType = 'diagnose' | 'workstations' | 'hygiene' | 'coaching' | 'vision' | 'marketing' | 'principles' | 'learning'
@@ -64,7 +65,7 @@ export default function StoreCoachPage() {
   const [problemDesc, setProblemDesc] = useState(t('sample.sweetDesc'))
   const [selectedProduct, setSelectedProduct] = useState(t('sample.sweetProduct'))
   const [selectedCategory, setSelectedCategory] = useState('quality')
-  const [selectedStore, setSelectedStore] = useState(t('sample.storeTnn'))
+  const [selectedStore, setSelectedStore] = useState(FEELING_TEA_STORES[0].name)
   const [diagnosing, setDiagnosing] = useState(false)
   const [diagnosisResult, setDiagnosisResult] = useState<DiagnosisOutput | null>(null)
   const [expandedLayer, setExpandedLayer] = useState<number | string | null>(1)
@@ -320,7 +321,7 @@ export default function StoreCoachPage() {
           problem_description: problemDesc,
           product_name: selectedProduct,
           category: selectedCategory,
-          store_code: selectedStore.split(' ')[0],
+          store_code: selectedStore,
         }),
       })
       if (res.ok) {
@@ -350,7 +351,7 @@ export default function StoreCoachPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           scene_type: visionScene,
-          store_code: selectedStore.split(' ')[0],
+          store_code: selectedStore,
           image_base64: customImageBase64 || '',
         }),
       })
@@ -675,10 +676,9 @@ export default function StoreCoachPage() {
                     onChange={e => setSelectedStore(e.target.value)}
                     className="w-full text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-200"
                   >
-                    <option>{t('sample.storeTnn')}</option>
-                    <option>{t('sample.storeTpe')}</option>
-                    <option>{t('sample.storeKhh')}</option>
-                    <option>{t('sample.storeSgn')}</option>
+                    {FEELING_TEA_STORES.map(s => (
+                      <option key={s.code} value={s.name}>{s.name}</option>
+                    ))}
                   </select>
                 </div>
 
@@ -833,7 +833,7 @@ export default function StoreCoachPage() {
                         {t('preventiveActionsTitle')}
                       </h4>
                       <ul className="space-y-1.5 text-xs text-slate-700 dark:text-slate-300">
-                        {diagnosisResult.preventive_actions.map((act, i) => (
+                        {diagnosisResult.preventive_actions?.map((act, i) => (
                           <li key={i} className="flex items-start gap-1.5">
                             <span className="text-emerald-600 font-bold shrink-0">{i + 1}.</span>
                             <span>{act}</span>
@@ -945,42 +945,46 @@ export default function StoreCoachPage() {
                       </p>
                     </div>
 
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        const d = diagnosisResult.coaching_dialogue
-                        const fullText = t('coachingScriptTemplate', { empathy: d.step_1_empathy, factual: d.step_2_factual_observation, question: d.step_3_guiding_question, agreement: d.step_4_action_agreement, empowerment: d.step_5_empowerment })
-                        handleCopy(fullText, 'dialogue')
-                      }}
-                      className="bg-white/20 hover:bg-white/30 text-white text-xs gap-1.5 self-start sm:self-auto shrink-0 cursor-pointer"
-                    >
-                      {copiedKey === 'dialogue' ? <Check className="h-3.5 w-3.5 text-emerald-300" /> : <Copy className="h-3.5 w-3.5" />}
-                      {copiedKey === 'dialogue' ? t('copiedScript') : t('copyFullScript')}
-                    </Button>
+                    {diagnosisResult.coaching_dialogue && (
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          const d = diagnosisResult.coaching_dialogue!
+                          const fullText = t('coachingScriptTemplate', { empathy: d.step_1_empathy, factual: d.step_2_factual_observation, question: d.step_3_guiding_question, agreement: d.step_4_action_agreement, empowerment: d.step_5_empowerment })
+                          handleCopy(fullText, 'dialogue')
+                        }}
+                        className="bg-white/20 hover:bg-white/30 text-white text-xs gap-1.5 self-start sm:self-auto shrink-0 cursor-pointer"
+                      >
+                        {copiedKey === 'dialogue' ? <Check className="h-3.5 w-3.5 text-emerald-300" /> : <Copy className="h-3.5 w-3.5" />}
+                        {copiedKey === 'dialogue' ? t('copiedScript') : t('copyFullScript')}
+                      </Button>
+                    )}
                   </div>
 
-                  <div className="space-y-2.5">
-                    <div className="bg-black/25 rounded-xl p-3 border border-white/10 text-xs">
-                      <span className="font-bold text-emerald-300 block mb-0.5">{t('step1Label')}</span>
-                      <p className="text-slate-200 pl-3 border-l-2 border-emerald-400">{diagnosisResult.coaching_dialogue.step_1_empathy}</p>
+                  {diagnosisResult.coaching_dialogue && (
+                    <div className="space-y-2.5">
+                      <div className="bg-black/25 rounded-xl p-3 border border-white/10 text-xs">
+                        <span className="font-bold text-emerald-300 block mb-0.5">{t('step1Label')}</span>
+                        <p className="text-slate-200 pl-3 border-l-2 border-emerald-400">{diagnosisResult.coaching_dialogue.step_1_empathy}</p>
+                      </div>
+                      <div className="bg-black/25 rounded-xl p-3 border border-white/10 text-xs">
+                        <span className="font-bold text-teal-300 block mb-0.5">{t('step2Label')}</span>
+                        <p className="text-slate-200 pl-3 border-l-2 border-teal-400">{diagnosisResult.coaching_dialogue.step_2_factual_observation}</p>
+                      </div>
+                      <div className="bg-black/25 rounded-xl p-3 border border-white/10 text-xs">
+                        <span className="font-bold text-amber-300 block mb-0.5">{t('step3Label')}</span>
+                        <p className="text-slate-200 pl-3 border-l-2 border-amber-400">{diagnosisResult.coaching_dialogue.step_3_guiding_question}</p>
+                      </div>
+                      <div className="bg-black/25 rounded-xl p-3 border border-white/10 text-xs">
+                        <span className="font-bold text-sky-300 block mb-0.5">{t('step4Label')}</span>
+                        <p className="text-slate-200 pl-3 border-l-2 border-sky-400">{diagnosisResult.coaching_dialogue.step_4_action_agreement}</p>
+                      </div>
+                      <div className="bg-black/25 rounded-xl p-3 border border-white/10 text-xs">
+                        <span className="font-bold text-purple-300 block mb-0.5">{t('step5Label')}</span>
+                        <p className="text-slate-200 pl-3 border-l-2 border-purple-400">{diagnosisResult.coaching_dialogue.step_5_empowerment}</p>
+                      </div>
                     </div>
-                    <div className="bg-black/25 rounded-xl p-3 border border-white/10 text-xs">
-                      <span className="font-bold text-teal-300 block mb-0.5">{t('step2Label')}</span>
-                      <p className="text-slate-200 pl-3 border-l-2 border-teal-400">{diagnosisResult.coaching_dialogue.step_2_factual_observation}</p>
-                    </div>
-                    <div className="bg-black/25 rounded-xl p-3 border border-white/10 text-xs">
-                      <span className="font-bold text-amber-300 block mb-0.5">{t('step3Label')}</span>
-                      <p className="text-slate-200 pl-3 border-l-2 border-amber-400">{diagnosisResult.coaching_dialogue.step_3_guiding_question}</p>
-                    </div>
-                    <div className="bg-black/25 rounded-xl p-3 border border-white/10 text-xs">
-                      <span className="font-bold text-sky-300 block mb-0.5">{t('step4Label')}</span>
-                      <p className="text-slate-200 pl-3 border-l-2 border-sky-400">{diagnosisResult.coaching_dialogue.step_4_action_agreement}</p>
-                    </div>
-                    <div className="bg-black/25 rounded-xl p-3 border border-white/10 text-xs">
-                      <span className="font-bold text-purple-300 block mb-0.5">{t('step5Label')}</span>
-                      <p className="text-slate-200 pl-3 border-l-2 border-purple-400">{diagnosisResult.coaching_dialogue.step_5_empowerment}</p>
-                    </div>
-                  </div>
+                  )}
                 </div>
 
                 {/* 企業歷次記憶庫比對 */}
@@ -1487,14 +1491,14 @@ export default function StoreCoachPage() {
                     <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800">
                       <span className="text-[11px] text-slate-500 dark:text-slate-400 block font-medium">{t('score5sLabel')}</span>
                       <strong className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
-                        {visionResult.score_5s.total} / 100
+                        {visionResult.score_5s?.total ?? 0} / 100
                       </strong>
                     </div>
 
                     <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800">
                       <span className="text-[11px] text-slate-500 dark:text-slate-400 block font-medium">{t('hygieneComplianceLabel')}</span>
                       <strong className="text-2xl font-black text-blue-600 dark:text-blue-400">
-                        {visionResult.hygiene_compliance.score}%
+                        {visionResult.hygiene_compliance?.score ?? 0}%
                       </strong>
                     </div>
 
@@ -1510,7 +1514,7 @@ export default function StoreCoachPage() {
                     <div className="p-3 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800">
                       <span className="text-[11px] text-slate-500 dark:text-slate-400 block font-medium">{t('defectsFoundLabel')}</span>
                       <strong className="text-2xl font-black text-purple-600 dark:text-purple-400">
-                        {t('itemsCount', { n: visionResult.defects.length })}
+                        {t('itemsCount', { n: visionResult.defects?.length ?? 0 })}
                       </strong>
                     </div>
                   </div>
@@ -1520,7 +1524,7 @@ export default function StoreCoachPage() {
                     <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">
                       {t('defectLocationTitle')}
                     </h4>
-                    {visionResult.defects.map((df, i) => (
+                    {visionResult.defects?.map((df, i) => (
                       <div key={i} className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div>
                           <div className="flex items-center gap-2">
@@ -2092,9 +2096,9 @@ export default function StoreCoachPage() {
                       className="w-full text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-200"
                     >
                       <option value="ALL">{t('storeAllGlobal')}</option>
-                      <option value="TNN-01">{t('storeTnn01')}</option>
-                      <option value="TPE-02">{t('storeTpe02')}</option>
-                      <option value="KHH-03">{t('storeKhh03')}</option>
+                      {FEELING_TEA_STORES.map(s => (
+                        <option key={s.code} value={s.code}>{s.name}</option>
+                      ))}
                     </select>
                   </div>
 

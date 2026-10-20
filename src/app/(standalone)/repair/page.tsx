@@ -6,6 +6,7 @@ import { useTranslations, useLocale } from 'next-intl'
 import { Loader2, AlertCircle, Plus, Trash2, X, Wrench, Pencil, ClipboardList, Boxes } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { FEELING_TEA_STORES, getFeelingTeaStoreName } from '@/lib/constants/feeling-tea-stores'
 
 // ─────────────────────────── 共用 ───────────────────────────
 const selCls = 'h-9 rounded-md border border-input bg-transparent px-3 text-sm'
@@ -191,9 +192,10 @@ function OrdersTab() {
   }
 
   const stores = Array.from(new Set([
-    ...storeOptions.map(s => s.code),
-    ...equip.map(e => e.store)
-  ].filter(Boolean))).sort()
+    ...FEELING_TEA_STORES.map(s => s.name),
+    ...storeOptions.map(s => getFeelingTeaStoreName(s.name || s.code)),
+    ...equip.map(e => getFeelingTeaStoreName(e.store))
+  ].filter(Boolean)))
 
   return (
     <div className="space-y-4">
@@ -261,16 +263,16 @@ function OrdersTab() {
             >
               <option value="">{t('selectStore')}</option>
               {stores.map(s => {
-                const opt = storeOptions.find(o => o.code === s)
-                return <option key={s} value={s}>[{s}] {opt?.name || s}{lockedStore === s ? t('storeOnlyBadge') : ''}</option>
+                const label = getFeelingTeaStoreName(s)
+                return <option key={s} value={label}>{label}{lockedStore === s ? t('storeOnlyBadge') : ''}</option>
               })}
             </select>
           </label>
           <label className="text-sm">{t('relatedEquipment')}
             <select value={creating.equipment_id} onChange={e => setCreating({ ...creating, equipment_id: e.target.value })} className={`mt-1 w-full ${selCls}`}>
               <option value="">{t('noneOrDescribe')}</option>
-              {equip.filter(e => !creating.store || e.store === creating.store || !e.store).map(e => (
-                <option key={e.id} value={e.id}>{e.name} {e.brand_model ? `(${e.brand_model})` : ''} {e.store ? `[${e.store}]` : ''}</option>
+              {equip.filter(e => !creating.store || getFeelingTeaStoreName(e.store) === getFeelingTeaStoreName(creating.store) || !e.store).map(e => (
+                <option key={e.id} value={e.id}>{e.name} {e.brand_model ? `(${e.brand_model})` : ''} {e.store ? `[${getFeelingTeaStoreName(e.store)}]` : ''}</option>
               ))}
             </select>
           </label>
@@ -407,7 +409,7 @@ function EquipmentTab() {
           className={`${selCls} disabled:opacity-85 disabled:cursor-not-allowed`}
         >
           {!lockedStore && <option value="">{t('allStores')}</option>}
-          {stores.map(s => <option key={s} value={s}>{s}{lockedStore === s ? t('storeOnlyBadge') : ''}</option>)}
+          {stores.map(s => <option key={s} value={s}>{getFeelingTeaStoreName(s)}{lockedStore === s ? t('storeOnlyBadge') : ''}</option>)}
         </select>
         <select value={status} onChange={e => setStatus(e.target.value)} className={selCls}>
           <option value="">{t('allStatus')}</option>
@@ -440,7 +442,7 @@ function EquipmentTab() {
                 {items.map(i => (
                   <tr key={i.id} className="border-b last:border-0 hover:bg-muted/30">
                     <td className="px-3 py-2 font-medium">{i.name}{i.location && <span className="ml-1 text-xs text-muted-foreground">@{i.location}</span>}</td>
-                    <td className="px-3 py-2">{i.store || '—'}</td>
+                    <td className="px-3 py-2">{i.store ? getFeelingTeaStoreName(i.store) : '—'}</td>
                     <td className="px-3 py-2">{i.category || '—'}</td>
                     <td className="px-3 py-2">{i.brand_model || '—'}</td>
                     <td className="px-3 py-2">{i.serial_no || '—'}</td>
@@ -462,7 +464,19 @@ function EquipmentTab() {
       {editing && (
         <Modal title={editing.id ? t('editEquipment') : t('newEquipment')} onClose={() => setEditing(null)} err={err} saving={saving} onSave={save}>
           <label className="col-span-2 text-sm">{t('equipNameLabel')}<Input value={editing.name ?? ''} onChange={e => setEditing({ ...editing, name: e.target.value })} className="mt-1" /></label>
-          <label className="text-sm">{t('storeCol')}<Input value={editing.store ?? ''} disabled={!!lockedStore} onChange={e => setEditing({ ...editing, store: e.target.value })} className="mt-1 disabled:opacity-85 disabled:cursor-not-allowed" /></label>
+          <label className="text-sm">{t('storeCol')}
+            <select
+              value={editing.store ?? ''}
+              disabled={!!lockedStore}
+              onChange={e => setEditing({ ...editing, store: e.target.value })}
+              className={`mt-1 w-full ${selCls} disabled:opacity-85 disabled:cursor-not-allowed`}
+            >
+              <option value="">{t('selectStore')}</option>
+              {FEELING_TEA_STORES.map(s => (
+                <option key={s.code} value={s.name}>{s.name}</option>
+              ))}
+            </select>
+          </label>
           <label className="text-sm">{t('category')}<Input value={editing.category ?? ''} onChange={e => setEditing({ ...editing, category: e.target.value })} className="mt-1" placeholder={t('categoryPlaceholder')} /></label>
           <label className="text-sm">{t('brandModel')}<Input value={editing.brand_model ?? ''} onChange={e => setEditing({ ...editing, brand_model: e.target.value })} className="mt-1" /></label>
           <label className="text-sm">{t('serialNoLabel')}<Input value={editing.serial_no ?? ''} onChange={e => setEditing({ ...editing, serial_no: e.target.value })} className="mt-1" /></label>

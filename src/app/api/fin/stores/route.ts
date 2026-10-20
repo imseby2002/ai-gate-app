@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCompanyContext } from '@/lib/auth/unit-access'
+import { getFeelingTeaStoreName, FEELING_TEA_STORES } from '@/lib/constants/feeling-tea-stores'
 
 async function getAdminUser() {
   const ctx = await getCompanyContext()
@@ -20,7 +21,12 @@ export async function GET() {
   }
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ stores: data ?? [], locked_store: storeCode ?? null })
+  const stores = (data ?? []).map(s => ({
+    ...s,
+    name: getFeelingTeaStoreName(s.name || s.code),
+    short_name: s.short_name ? getFeelingTeaStoreName(s.short_name) : getFeelingTeaStoreName(s.name || s.code),
+  }))
+  return NextResponse.json({ stores, locked_store: storeCode ?? null })
 }
 
 export async function POST(req: NextRequest) {
@@ -33,8 +39,10 @@ export async function POST(req: NextRequest) {
   const extra: Record<string, unknown> = {}
   for (const f of UNIT_FIELDS) if (body[f] !== undefined) extra[f] = String(body[f] ?? '').trim()
   if (body.base_hourly_rate !== undefined) extra.base_hourly_rate = Math.max(0, Number(body.base_hourly_rate) || 0)
+  const rawName = String(body.name ?? '').trim()
+  const storeName = rawName ? getFeelingTeaStoreName(rawName) : getFeelingTeaStoreName(code)
   const { data, error } = await supabase.from('fin_stores').insert({
-    owner_id: user.id, code, name: String(body.name ?? ''), region: String(body.region ?? ''),
+    owner_id: user.id, code, name: storeName, region: String(body.region ?? ''),
     active: body.active !== false, ...extra,
   }).select('id').single()
   if (error) return NextResponse.json({ error: error.code === '23505' ? '門市編碼重複' : error.message }, { status: 400 })
@@ -49,7 +57,12 @@ export async function PATCH(req: NextRequest) {
   const id = String(body.id ?? '')
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
   const upd: Record<string, unknown> = {}
-  for (const f of ['code', 'name', 'region', ...UNIT_FIELDS] as const) if (body[f] !== undefined) upd[f] = String(body[f]).trim()
+  for (const f of ['code', 'name', 'region', ...UNIT_FIELDS] as const) {
+    if (body[f] !== undefined) {
+      const val = String(body[f]).trim()
+      upd[f] = f === 'name' ? getFeelingTeaStoreName(val) : val
+    }
+  }
   if (body.base_hourly_rate !== undefined) upd.base_hourly_rate = Math.max(0, Number(body.base_hourly_rate) || 0)
   if (body.active !== undefined) upd.active = !!body.active
   const { error } = await supabase.from('fin_stores').update(upd).eq('id', id).eq('owner_id', user.id)

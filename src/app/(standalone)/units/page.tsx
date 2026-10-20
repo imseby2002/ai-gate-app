@@ -15,14 +15,14 @@ const UNIT_TYPE_VALUES = ['store', 'office', 'factory', 'kitchen', 'gm', 'rd', '
 
 const UNIT_IMPORT_COLUMNS: ImportColumn[] = [
   { key: 'code', label: '單位編號', required: true, example: 'YL', aliases: ['code', '編號', '代碼', '門市代碼'] },
-  { key: 'name', label: '單位名稱', required: true, example: '怡朗店', aliases: ['name', '名稱', '門市名稱'] },
+  { key: 'name', label: '單位名稱', required: true, example: '61 Yên Lãng', aliases: ['name', '名稱', '門市名稱', '門市地址', '地址'] },
   { key: 'unit_type', label: '類型', example: '門市', aliases: ['unit_type', '類型', '單位類型'] },
-  { key: 'short_name', label: '簡稱', example: '怡朗', aliases: ['short_name', '簡稱'] },
-  { key: 'region', label: '區域', example: '胡志明', aliases: ['region', '區域', '地區'] },
+  { key: 'short_name', label: '簡稱', example: '61 Yên Lãng', aliases: ['short_name', '簡稱'] },
+  { key: 'region', label: '區域', example: 'Hà Nội', aliases: ['region', '區域', '地區'] },
   { key: 'base_hourly_rate', label: '基本時薪', example: 25000, aliases: ['base_hourly_rate', '基本時薪', '時薪'] },
   { key: 'electricity_no', label: '電號', example: 'PE01234567', aliases: ['electricity_no', '電號', '電費編號'] },
   { key: 'water_no', label: '水號', example: 'PW01234567', aliases: ['water_no', '水號', '水費編號'] },
-  { key: 'address', label: '地址', example: '胡志明市第一郡...', aliases: ['address', '地址'] },
+  { key: 'address', label: '地址', example: '61 Yên Lãng, Đống Đa, Hà Nội', aliases: ['address', '地址'] },
   { key: 'active', label: '啟用狀態', example: '是', aliases: ['active', '啟用', '狀態'] },
 ]
 

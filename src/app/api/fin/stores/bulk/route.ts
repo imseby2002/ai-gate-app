@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCompanyContext } from '@/lib/auth/unit-access'
+import { getFeelingTeaStoreName } from '@/lib/constants/feeling-tea-stores'
 
 async function getCompanyUser() {
   const ctx = await getCompanyContext()
@@ -31,7 +32,8 @@ export async function POST(req: NextRequest) {
     const r = rows[i]
     const line = i + 2
     const code = String(r.code ?? '').trim().toUpperCase()
-    const name = String(r.name ?? code).trim()
+    const rawName = String(r.name ?? code).trim()
+    const name = getFeelingTeaStoreName(rawName || code)
 
     if (!code) {
       errors.push({ line, reason: '缺少編碼 (code)' })

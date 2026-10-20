@@ -156,7 +156,7 @@ export async function POST(req: NextRequest) {
 MEETING BACKGROUND:
 - Meeting Topic: ${title || '門市營運與跨部門會議 (Store Operations & Business Meeting)'}
 - Department: ${department || 'General'}
-- Key Stores & Branches: ${stores.length ? stores.join(', ') : 'Royal, Hồ Tùng Mậu, FEELING TEA stores'}
+- Key Stores & Branches: ${stores.length ? stores.join(', ') : '61 Yên Lãng, 20 Đội Cấn, 162 Ngọc Lâm, 53C Hai Bà Trưng, 406 Minh Khai, Royal Nguyễn Trãi, 4 Trần Thái Tông, 169 Quang Trung, 22 Khương Hạ, 217 Hồ Tùng Mậu, 155 Giảng Võ, 219C Khâm Thiên, 163 Chùa Láng, 422 Trần Khát Chân, 137 Ngọc Hồi, 128 Tân Mai, 11 Thanh Niên, 45 Cầu Gỗ, 307C Bạch Mai, 100 Phạm Ngọc Thạch'}
 - Participant Names: ${participants.length ? participants.join(', ') : 'N/A'}
 - Keywords & Technical Terms: ${keywords || 'None'}
 
@@ -170,7 +170,7 @@ TRANSLATION GOAL & RULES:
    - Spoken Vietnamese contains heavy filler particles (e.g. "ở chứ", "thế xong rồi", "ừ đấy", "mà thế có", "nhá thế nên là", "bảo không em cứ thấy...", "thôi ư đấy", "ạ").
    - Strip out colloquial redundancy and translate into coherent, natural, and professional business language.
 4. PROTECT PROPER NOUNS:
-   - Keep store names (e.g. "Royal", "Hồ Tùng Mậu") and person names (e.g. "chị Hà" -> "Hà 姐", "anh Tuấn", "Linh") accurate.
+   - Keep store names (e.g. "61 Yên Lãng", "Royal Nguyễn Trãi", "217 Hồ Tùng Mậu") and person names (e.g. "chị Hà" -> "Hà 姐", "anh Tuấn", "Linh") accurate.
    - Keep brand and equipment terms precise (e.g. "FEELING TEA", "POS", "tủ đông" -> "冷凍設備/冷凍櫃", "thùng đông" -> "冷凍箱/槽").
 5. If a string is already in the target language (${langName}), return it unchanged.
 6. OUTPUT FORMAT: Return ONLY a valid JSON array of translated strings in the EXACT same order as the input array. No commentary or markdown formatting.`

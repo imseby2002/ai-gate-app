@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPosOwner } from '@/lib/pos/auth'
+import { getFeelingTeaStoreName } from '@/lib/constants/feeling-tea-stores'
 
 export async function GET() {
   const ctx = await getPosOwner()
@@ -12,7 +13,11 @@ export async function GET() {
     .order('created_at')
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ stores: data ?? [] })
+  const stores = (data ?? []).map(s => ({
+    ...s,
+    name: getFeelingTeaStoreName(s.name),
+  }))
+  return NextResponse.json({ stores })
 }
 
 export async function POST(req: NextRequest) {
@@ -22,11 +27,12 @@ export async function POST(req: NextRequest) {
   const { name, slug } = await req.json()
   if (!name?.trim()) return NextResponse.json({ error: 'name 必填' }, { status: 400 })
 
-  const storeSlug = (slug || name).trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+  const normalizedName = getFeelingTeaStoreName(name.trim())
+  const storeSlug = (slug || normalizedName).trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
 
   const { data: store, error } = await ctx.supabase
     .from('pos_stores')
-    .insert({ owner_id: ctx.userId, name: name.trim(), slug: storeSlug || 'store' })
+    .insert({ owner_id: ctx.userId, name: normalizedName, slug: storeSlug || 'store' })
     .select()
     .single()
 

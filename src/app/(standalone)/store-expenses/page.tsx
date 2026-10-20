@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { ExcelImportModal } from '@/components/common/ExcelImportModal'
 import type { ImportColumn } from '@/lib/excel/universal-import'
+import { getFeelingTeaStoreName } from '@/lib/constants/feeling-tea-stores'
 
 const fmt = (n: number, locale: string) => Math.round(n).toLocaleString(locale === 'vi' ? 'vi-VN' : locale === 'en' ? 'en-US' : 'zh-TW')
 type Tab = 'stores' | 'categories' | 'bills' | 'vendors' | 'report'
@@ -17,8 +18,8 @@ interface CatRow { id: string; code: string; name: string; entry_method: string;
 
 const STORE_IMPORT_COLUMNS: ImportColumn[] = [
   { key: 'code', label: '門市編碼', required: true, example: 'YL', aliases: ['code', '編碼', '門市代碼'] },
-  { key: 'name', label: '門市名稱', required: true, example: '怡朗店', aliases: ['name', '名稱', '門市名稱'] },
-  { key: 'region', label: '區域', example: '胡志明', aliases: ['region', '區域'] },
+  { key: 'name', label: '門市名稱', required: true, example: '61 Yên Lãng', aliases: ['name', '名稱', '門市名稱', '門市地址', '地址'] },
+  { key: 'region', label: '區域', example: 'Hà Nội', aliases: ['region', '區域'] },
   { key: 'active', label: '啟用狀態', example: '是', aliases: ['active', '啟用', '狀態'] },
 ]
 
@@ -396,7 +397,7 @@ function BillsTab() {
           </tr></thead>
           <tbody>{stores.map(st => (
             <tr key={st.code} className="border-b last:border-0">
-              <td className="py-1 pr-3 sticky left-0 bg-card"><span className="font-medium">{st.code}</span>{st.region && <span className="text-gray-400 text-xs ml-1">{st.region}</span>}</td>
+              <td className="py-1 pr-3 sticky left-0 bg-card"><span className="font-medium">{getFeelingTeaStoreName(st.name || st.code)}</span>{st.region && <span className="text-gray-400 text-xs ml-1">{st.region}</span>}</td>
               {cats.map(c => {
                 const k = billKey(st.code, c.code)
                 const bill = billDetails[k]
@@ -501,7 +502,7 @@ function ReportTab() {
       <div className="flex items-center gap-2 flex-wrap">
         <select value={store} onChange={e => setStore(e.target.value)} className="h-9 rounded-md border px-2 text-sm">
           <option value="">{t('allStores')}</option>
-          {stores.map(s => <option key={s.code} value={s.code}>{s.code}{s.name ? ` ${s.name}` : ''}</option>)}
+          {stores.map(s => <option key={s.code} value={s.code}>{s.name || getFeelingTeaStoreName(s.code)}</option>)}
         </select>
         <select value={year} onChange={e => setYear(Number(e.target.value))} className="h-9 rounded-md border px-2 text-sm">{[now.getFullYear(), now.getFullYear() - 1].map(y => <option key={y} value={y}>{t('yearSuffix', { y })}</option>)}</select>
         <select value={month} onChange={e => setMonth(Number(e.target.value))} className="h-9 rounded-md border px-2 text-sm">{Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>{t('monthSuffix', { m })}</option>)}</select>
@@ -600,7 +601,7 @@ function StoresTab() {
           <tbody>{rows.map(r => (
             <tr key={r.id} className="border-b last:border-0">
               <td className="py-2 pr-2 font-medium">{r.code}</td>
-              <td className="pr-2">{r.name}</td>
+              <td className="pr-2">{getFeelingTeaStoreName(r.name || r.code)}</td>
               <td className="pr-2 text-gray-500">{r.region || '—'}</td>
               <td className="pr-2">{r.active ? <span className="text-emerald-600 text-xs">{t('active')}</span> : <span className="text-gray-400 text-xs">{t('inactive')}</span>}</td>
               <td className="text-right whitespace-nowrap">

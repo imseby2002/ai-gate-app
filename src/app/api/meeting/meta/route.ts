@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getLocalizedDepartments } from '@/lib/org-units'
+import { FEELING_TEA_STORES, getFeelingTeaStoreName } from '@/lib/constants/feeling-tea-stores'
 
 export async function GET(req: NextRequest) {
   try {
@@ -31,9 +32,22 @@ export async function GET(req: NextRequest) {
         .select('id, code, name, short_name, active')
         .eq('active', true)
         .order('code')
-      stores = res.data || []
+      stores = (res.data || []).map(s => ({
+        ...s,
+        name: getFeelingTeaStoreName(s.name || s.code),
+      }))
     } catch (e) {
       console.warn('[Meeting Meta] Failed to get stores:', e)
+    }
+
+    if (stores.length === 0) {
+      stores = FEELING_TEA_STORES.map(s => ({
+        id: s.code,
+        code: s.code,
+        name: s.name,
+        short_name: s.name,
+        active: true
+      }))
     }
 
     const departments = getLocalizedDepartments(locale)

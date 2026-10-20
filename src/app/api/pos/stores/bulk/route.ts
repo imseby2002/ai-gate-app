@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPosOwner } from '@/lib/pos/auth'
+import { getFeelingTeaStoreName } from '@/lib/constants/feeling-tea-stores'
 import crypto from 'crypto'
 
 export async function POST(req: NextRequest) {
@@ -25,7 +26,8 @@ export async function POST(req: NextRequest) {
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i]
     const line = i + 2
-    const name = String(r.name ?? '').trim()
+    const rawName = String(r.name ?? '').trim()
+    const name = getFeelingTeaStoreName(rawName)
     if (!name) {
       errors.push({ line, reason: '缺少門市名稱' })
       continue

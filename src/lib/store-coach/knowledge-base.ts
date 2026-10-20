@@ -230,7 +230,7 @@ export const STORE_PROBLEM_MEMORIES: StoreProblemMemory[] = [
     proven_solution: '1. 立即使用量杯校準果糖機（10ml/20ml 精確度）。2. 嚴格執行煮珠後蜜糖 25 分鐘標準定時，超時未售完重新加溫水稀釋或報銷。3. 呼叫 R&D 配方標準糖度（18° Brix）現場以折光儀抽驗。',
     success_metrics: '當日客訴歸零，出糖一致性回復 99.5%，糖漿耗損下降 8.3%。',
     applied_count: 5,
-    source_store_name: 'Feeling Tea 峴港店'
+    source_store_name: 'Feeling Tea 20 Đội Cấn'
   },
   {
     id: 'mem-rush-bottleneck',
@@ -240,7 +240,7 @@ export const STORE_PROBLEM_MEMORIES: StoreProblemMemory[] = [
     proven_solution: '實施「尖峰前後雙人單向流水線」+「鮮奶小冷藏小車預置法」，調飲員站定不動，前台人員負責配料與出單。',
     success_metrics: '平均等候時間由 6.5 分鐘降至 4.1 分鐘（下降 37%），外送出單準時率提升至 96.8%。',
     applied_count: 8,
-    source_store_name: 'Feeling Tea 怡朗示範店'
+    source_store_name: 'Feeling Tea 61 Yên Lãng'
   }
 ]
 
@@ -504,25 +504,39 @@ export const STORE_COACH_KNOWLEDGE = {
   ],
   zaloAccounts: [
     {
-      store_code: 'TNN-01',
-      oa_name: 'Feeling Tea 台南旗艦熟客俱樂部',
+      store_code: 'YL',
+      oa_name: 'Feeling Tea 61 Yên Lãng 熟客俱樂部',
       status: '運營中 (Official Certified)',
-      follower_count: 3840,
+      follower_count: 4820,
       auto_broadcast_rules: '氣溫超過 32°C 自動推播消暑鮮檸綠券；週三下午 15:00 推播辦公室團購優惠。',
     },
     {
-      store_code: 'TPE-02',
-      oa_name: 'Feeling Tea 台北信義尊榮會',
+      store_code: 'DC',
+      oa_name: 'Feeling Tea 20 Đội Cấn 熟客會',
       status: '運營中 (Official Certified)',
-      follower_count: 4210,
+      follower_count: 4150,
       auto_broadcast_rules: '下雨天推播暖心熱飲折扣碼；每月會員日發送新品搶先試飲兌換券。',
     },
     {
-      store_code: 'KHH-03',
-      oa_name: 'Feeling Tea 高雄巨蛋在地生活圈',
+      store_code: 'NL',
+      oa_name: 'Feeling Tea 162 Ngọc Lâm 在地生活圈',
       status: '運營中 (Official Certified)',
-      follower_count: 2980,
-      auto_broadcast_rules: '演唱會與活動日發送快速取餐通告；週五歡聚夜買一送一限時活動。',
+      follower_count: 3680,
+      auto_broadcast_rules: '尖峰下午茶發送快速取餐通告；週五歡聚夜限時活動。',
+    },
+    {
+      store_code: 'HBT',
+      oa_name: 'Feeling Tea 53C Hai Bà Trưng 尊榮會',
+      status: '運營中 (Official Certified)',
+      follower_count: 5210,
+      auto_broadcast_rules: '推播週末專屬優惠；節慶限定飲品搶先預訂。',
+    },
+    {
+      store_code: 'RNT',
+      oa_name: 'Feeling Tea Royal Nguyễn Trãi 熟客生活圈',
+      status: '運營中 (Official Certified)',
+      follower_count: 6120,
+      auto_broadcast_rules: '商場活動日推播快取折扣；會員點數雙倍送。',
     },
   ],
   companyRegulations: [

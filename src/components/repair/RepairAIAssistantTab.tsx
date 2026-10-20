@@ -20,6 +20,7 @@ import type {
   RepairCaseFeedback,
 } from '@/lib/types/repair-ai'
 import { INITIAL_EQUIPMENT_MODELS } from '@/lib/repair-ai/knowledge-base'
+import { getFeelingTeaStoreName } from '@/lib/constants/feeling-tea-stores'
 
 interface MessageItem {
   id: string
@@ -170,7 +171,7 @@ export default function RepairAIAssistantTab({
     try {
       const payload = {
         title: `[AI排查轉報修] ${draft.equipment_name} ${draft.error_code ? `(${draft.error_code})` : ''}`,
-        store: draft.store || 'FEELING TEA 門市',
+        store: draft.store ? getFeelingTeaStoreName(draft.store) : '61 Yên Lãng',
         equipment_name: draft.equipment_name,
         description: `${draft.symptom_summary}\n\n已嘗試免拆機排查：\n${draft.steps_already_tried.map(s => `- ${s}`).join('\n')}\n\n建議攜帶料件：\n${draft.suggested_parts_for_tech.map(p => `- ${p}`).join('\n')}`,
         priority: draft.urgency || 'high',
