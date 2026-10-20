@@ -10,7 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { getBnbContext } from '@/lib/bnb/context'
-import { sendToCustomer, HUMAN_AGENT_TAG } from '@/lib/cs/send'
+import { sendToCustomer, sendImageToCustomer, HUMAN_AGENT_TAG } from '@/lib/cs/send'
 import { STAFF_ACTIVE_SUBJECT } from '@/lib/cs/handoff'
 
 export async function POST(req: NextRequest) {
@@ -18,10 +18,12 @@ export async function POST(req: NextRequest) {
   const ctx = await getBnbContext(supabase, 'cs')
   if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { platform, to, text, industry = 'homestay', fromName } = await req.json()
+  const { platform, to, text, industry = 'homestay', fromName, imagePath } = await req.json()
   const message = String(text ?? '').trim()
+  // 圖片：先由 /api/marketing/cs-upload 存到 cs-media，這裡只收路徑；只能送自己商家資料夾裡的圖
+  const image = typeof imagePath === 'string' && imagePath.startsWith(`${ctx.ownerId}/`) ? imagePath : null
   if (!platform || !to) return NextResponse.json({ error: '缺少 platform 或 to' }, { status: 400 })
-  if (!message) return NextResponse.json({ error: '訊息不可為空' }, { status: 400 })
+  if (!message && !image) return NextResponse.json({ error: '訊息不可為空' }, { status: 400 })
 
   const admin = await createAdminClient()
   const now = new Date().toISOString()
@@ -67,11 +69,21 @@ export async function POST(req: NextRequest) {
   }
 
   // 1. 推回原平台（LINE 有 token 則優先 Reply API，失敗自動 fallback Push）
-  const result = await sendToCustomer(ctx.ownerId, platform, to, message, {
-    lineReplyToken,
-    sender: senderProfile,
-  })
-  if (!result.ok) return NextResponse.json({ error: result.error ?? '送訊失敗' }, { status: 502 })
+  if (image) {
+    // 平台伺服器要能抓到圖：給 30 天有效的簽名網址
+    const { data: signed } = await admin.storage.from('cs-media').createSignedUrl(image, 30 * 86400)
+    if (!signed?.signedUrl) return NextResponse.json({ error: '圖片不存在或已失效' }, { status: 400 })
+    const imgResult = await sendImageToCustomer(ctx.ownerId, platform, to, signed.signedUrl, { lineReplyToken, sender: senderProfile })
+    if (!imgResult.ok) return NextResponse.json({ error: imgResult.error ?? '傳圖失敗' }, { status: 502 })
+    lineReplyToken = undefined  // reply token 一次性，已用在圖片
+  }
+  if (message) {
+    const result = await sendToCustomer(ctx.ownerId, platform, to, message, {
+      lineReplyToken,
+      sender: senderProfile,
+    })
+    if (!result.ok) return NextResponse.json({ error: result.error ?? '送訊失敗' }, { status: 502 })
+  }
 
   // reply token 一次性，無論結果如何用完即刪
   if (isLine) {
@@ -81,10 +93,18 @@ export async function POST(req: NextRequest) {
   }
 
   // 2. 記錄 agent 回覆（供收件匣 thread 顯示，並計入指標）
-  await admin.from('cs_messages').insert({
-    user_id: ctx.ownerId, industry, platform, from_id: to,
-    from_name: fromName ?? null, message: '', reply: message, intent: 'agent',
-  }).then(() => {}, () => {})
+  if (image) {
+    await admin.from('cs_messages').insert({
+      user_id: ctx.ownerId, industry, platform, from_id: to,
+      from_name: fromName ?? null, message: '', reply: '【圖片】', intent: 'agent', image_path: image,
+    }).then(() => {}, () => {})
+  }
+  if (message) {
+    await admin.from('cs_messages').insert({
+      user_id: ctx.ownerId, industry, platform, from_id: to,
+      from_name: fromName ?? null, message: '', reply: message, intent: 'agent',
+    }).then(() => {}, () => {})
+  }
 
   // 3. 接到對話歷史（AI 之後若恢復，能看見人工說過的話）
   try {
@@ -92,7 +112,8 @@ export async function POST(req: NextRequest) {
       .from('cs_conversations').select('history')
       .eq('user_id', ctx.ownerId).eq('customer_id', to).single()
     const history = Array.isArray(conv?.history) ? conv!.history : []
-    history.push({ role: 'assistant', content: `${HUMAN_AGENT_TAG}${message}` })
+    if (image) history.push({ role: 'assistant', content: `${HUMAN_AGENT_TAG}【傳送了一張圖片】` })
+    if (message) history.push({ role: 'assistant', content: `${HUMAN_AGENT_TAG}${message}` })
     await admin.from('cs_conversations').upsert(
       { user_id: ctx.ownerId, customer_id: to, history: history.slice(-60), updated_at: now },
       { onConflict: 'user_id,customer_id' }
