@@ -61,6 +61,7 @@ interface Bubble {
   sender: 'customer' | 'ai' | 'agent'
   text: string
   at: string
+  image?: string
 }
 
 export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: string; initialTarget?: { platform: string; from_id: string } | null }) {
@@ -504,7 +505,12 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
                               ? 'bg-amber-500 text-white rounded-tr-sm'
                               : 'bg-blue-500 text-white rounded-tr-sm'
                         }`}>
-                          {highlight(b.text, searchQ)}
+                          {b.image ? (
+                            <a href={b.image} target="_blank" rel="noreferrer">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={b.image} alt="" className="max-w-full max-h-72 rounded-lg" />
+                            </a>
+                          ) : highlight(b.text, searchQ)}
                         </div>
                         <div className={`text-[10px] text-muted-foreground mt-0.5 ${b.side === 'out' ? 'text-right' : ''}`}>{fmtClock(b.at)}</div>
                       </div>
