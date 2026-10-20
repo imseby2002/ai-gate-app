@@ -11,7 +11,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getBnbContext } from '@/lib/bnb/context'
-import { isHandoffActive, getHumanIdleMinutes } from '@/lib/cs/handoff'
+import { isHandoffActive, getHumanIdleMinutes, getOnsiteOpenCustomers } from '@/lib/cs/handoff'
 
 interface Bubble {
   side: 'in' | 'out'
@@ -48,16 +48,17 @@ export async function GET(req: NextRequest) {
   // 目前真人接管中的客戶——與 cs-webhook 的 hasOpenHandoff 用同一套規則（src/lib/cs/handoff.ts），
   // 不然會顯示已接管、實際上 AI 早就在回了，員工誤以為有人在處理。
   const staleCutoff = new Date(Date.now() - 2 * 3600_000).toISOString()
-  const [{ data: openTickets }, idleMinutes] = await Promise.all([
+  const [{ data: openTickets }, idleMinutes, onsiteOpen] = await Promise.all([
     supabase
       .from('cs_tickets').select('from_id, subject, created_at')
       .eq('user_id', ctx.ownerId).eq('intent', '人工客服請求')
       .in('status', ['open', 'in_progress'])
       .gte('created_at', staleCutoff),
     getHumanIdleMinutes(supabase, ctx.ownerId),
+    getOnsiteOpenCustomers(supabase, ctx.ownerId),
   ])
   const takeoverSet = new Set((openTickets ?? [])
-    .filter(t => isHandoffActive(t as { subject: string | null; created_at: string }, idleMinutes))
+    .filter(t => isHandoffActive(t as { subject: string | null; created_at: string }, idleMinutes, Date.now(), onsiteOpen.has(t.from_id)))
     .map(t => t.from_id))
 
   // ── 單一對話 thread ────────────────────────────────────────────────────────
