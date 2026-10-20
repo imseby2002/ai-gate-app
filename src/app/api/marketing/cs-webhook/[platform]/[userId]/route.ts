@@ -223,6 +223,33 @@ async function logCsMessage(userId: string, platform: string, customerId: string
   } catch { /* metrics logging must never break the reply flow */ }
 }
 
+// 客人傳的圖片：存到私有 bucket，另寫一列 cs_messages（intent='image'、image_path），收件匣據此顯示圖片。
+// 過去只把圖片丟給 AI 辨識、訊息存空字串，收件匣完全看不到客人傳了什麼，員工得回 LINE 才看得到。
+const CS_MEDIA_BUCKET = 'cs-media'
+function saveInboundImage(
+  userId: string, platform: string, customerId: string, industry: string,
+  buf: Buffer, mime: string, fromName?: string,
+): void {
+  const at = new Date().toISOString()  // 早於 AI 回覆那一列，收件匣排序在回覆之前
+  void (async () => {
+    try {
+      const sb = getServiceClient()
+      const ext = mime.includes('png') ? 'png' : mime.includes('webp') ? 'webp' : mime.includes('gif') ? 'gif' : 'jpg'
+      const path = `${userId}/${customerId.replace(/[^\w-]/g, '_')}/${Date.now()}-${crypto.randomUUID()}.${ext}`
+      let { error } = await sb.storage.from(CS_MEDIA_BUCKET).upload(path, buf, { contentType: mime })
+      if (error && /not found/i.test(error.message)) {
+        await sb.storage.createBucket(CS_MEDIA_BUCKET, { public: false })
+        ;({ error } = await sb.storage.from(CS_MEDIA_BUCKET).upload(path, buf, { contentType: mime }))
+      }
+      if (error) return
+      await sb.from('cs_messages').insert({
+        user_id: userId, industry, platform, from_id: customerId, from_name: fromName ?? null,
+        message: '【圖片】', reply: '', intent: 'image', image_path: path, created_at: at,
+      })
+    } catch { /* 存圖失敗不影響回覆 */ }
+  })()
+}
+
 // LINE 的 userId（U + 32 hex）在畫面上完全看不出是誰，call 一次 Profile API 換顯示名稱。
 // 先查 cs_customers 與 cs_messages 有沒有存過這個客人的名字，省下重複呼叫 LINE API。
 async function resolveLineDisplayName(userId: string, customerId: string, token: string): Promise<string | undefined> {
@@ -2876,6 +2903,7 @@ export async function POST(
         }
 
         const fromName = token ? await resolveLineDisplayName(userId, customerId, token) : undefined
+        if (imgBuf && imgMime) saveInboundImage(userId, platform, customerId, knowledge.industry, imgBuf, imgMime, fromName)
         const reply = await replyToCustomer(userId, platform, customerId, knowledge, history, text, gapNote, fromName, imgBuf, imgMime)
         if (reply && token && replyToken) {
           await replyLine(replyToken, reply, token, {
@@ -2929,6 +2957,7 @@ export async function POST(
         if (img) { imgBuf = img.buffer; imgMime = img.mimeType }
         else text = '（客人傳送了一張圖片，但無法讀取）'
       }
+      if (imgBuf && imgMime) saveInboundImage(userId, platform, to, knowledge.industry, imgBuf, imgMime, fromName)
 
       const reply = await replyToCustomer(userId, platform, to, knowledge, history, text, gapNote, fromName, imgBuf, imgMime)
       if (reply && token && phoneId && to) await replyWhatsApp(to, reply, phoneId, token)
@@ -3143,6 +3172,7 @@ export async function POST(
           const img = await fetchTelegramImage(photo.file_id, botToken)
           if (img) { imgBuf = img.buffer; imgMime = img.mimeType }
         }
+        if (imgBuf && imgMime) saveInboundImage(userId, 'telegram', customerId, knowledge.industry, imgBuf, imgMime, fromName)
 
         // 1. AI auto-reply to customer
         const reply = await replyToCustomer(userId, 'telegram', customerId, knowledge, history, text, gapNote, fromName, imgBuf, imgMime)

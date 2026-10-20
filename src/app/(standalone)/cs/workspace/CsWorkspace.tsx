@@ -875,7 +875,7 @@ function Unit12CustomerService({
   const threadPrevScrollHeight = useRef<number | null>(null)
   const [inboxConvos, setInboxConvos] = useState<InboxConvo[]>([])
   const [activeConvo, setActiveConvo] = useState<InboxConvo | null>(null)
-  const [threadBubbles, setThreadBubbles] = useState<Array<{ side: 'in' | 'out'; sender: 'customer' | 'ai' | 'agent'; text: string; at: string }>>([])
+  const [threadBubbles, setThreadBubbles] = useState<Array<{ side: 'in' | 'out'; sender: 'customer' | 'ai' | 'agent'; text: string; at: string; image?: string }>>([])
   const [threadLoading, setThreadLoading] = useState(false)
   const [inboxMessages, setInboxMessages] = useState<CsInboxMessage[]>([])
   const [inboxLoading, setInboxLoading] = useState(false)
@@ -5174,7 +5174,14 @@ function Unit12CustomerService({
                                       </span>
                                     )}
                                   </div>
-                                  <div className="whitespace-pre-wrap leading-relaxed break-words">{highlightText(bubble.text, searchQ)}</div>
+                                  {bubble.image ? (
+                                    <a href={bubble.image} target="_blank" rel="noreferrer">
+                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                      <img src={bubble.image} alt="" className="max-w-full max-h-72 rounded-lg" />
+                                    </a>
+                                  ) : (
+                                    <div className="whitespace-pre-wrap leading-relaxed break-words">{highlightText(bubble.text, searchQ)}</div>
+                                  )}
                                   {isOut && !isAgent && (
                                     <button
                                       type="button"

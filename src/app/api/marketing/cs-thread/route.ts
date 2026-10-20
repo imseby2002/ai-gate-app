@@ -9,6 +9,7 @@
 import { loadChannelCredentials } from '@/lib/channels/resolve'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getBnbContext } from '@/lib/bnb/context'
 import { isHandoffActive, getHumanIdleMinutes } from '@/lib/cs/handoff'
 
@@ -17,6 +18,7 @@ interface Bubble {
   sender: 'customer' | 'ai' | 'agent'
   text: string
   at: string
+  image?: string
 }
 
 const THREAD_PAGE = 300
@@ -65,11 +67,11 @@ export async function GET(req: NextRequest) {
     const around = sp.get('around')
     const base = () => supabase
       .from('cs_messages')
-      .select('message, reply, intent, created_at')
+      .select('*')
       .eq('user_id', ctx.ownerId)
       .eq('platform', platform)
       .eq('from_id', to)
-    let rows: { message: string | null; reply: string | null; intent: string | null; created_at: string }[] = []
+    let rows: { message: string | null; reply: string | null; intent: string | null; created_at: string; image_path?: string | null }[] = []
     let hasOlder = false
     let hasNewer = false
     if (around) {
@@ -91,8 +93,20 @@ export async function GET(req: NextRequest) {
       rows = (data ?? []).slice(0, THREAD_PAGE).reverse()
     }
 
+    // 客人傳的圖片（私有 bucket）→ 換成 1 小時有效的簽名網址
+    const imagePaths = rows.map(r => r.image_path).filter((p): p is string => !!p)
+    const signed = new Map<string, string>()
+    if (imagePaths.length) {
+      const { data: urls } = await createAdminClient().storage.from('cs-media').createSignedUrls(imagePaths, 3600)
+      for (const u of urls ?? []) if (u.path && u.signedUrl) signed.set(u.path, u.signedUrl)
+    }
+
     const bubbles: Bubble[] = []
     for (const r of rows ?? []) {
+      if (r.image_path) {
+        bubbles.push({ side: 'in', sender: 'customer', text: signed.has(r.image_path) ? '' : '【圖片】', image: signed.get(r.image_path), at: r.created_at })
+        continue
+      }
       if (r.message && String(r.message).trim()) {
         bubbles.push({ side: 'in', sender: 'customer', text: r.message, at: r.created_at })
       }
