@@ -180,42 +180,72 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // 每日入住的訂單欄位（單號/姓名/房價/平台）只該反映「目前仍有效」的訂單。
-  // 有 booking_id（跟訂單直接連結過）時直接檢查那筆訂單是否還存在、仍涵蓋今天、
-  // 沒被取消，精準不會猜錯；沒有 booking_id 的舊資料才退回原本「單號+房型」軟比對。
-  // 只要判定對不到任何一筆目前有效訂單，一律清掉（含 booking_id）；若清掉後同房型
-  // 當天還有其他有效訂單，下方「補填」步驟會自動帶回正確資料。
-  const activeBookingIds = new Set(bookingList.filter(b => b.status !== 'cancelled').map(b => b.id))
-  const validOrderNumsByProp: Record<string, Set<string>> = {}
-  const validPropIds = new Set<string>()
-  for (const b of bookingList) {
-    if (b.status === 'cancelled') continue
-    validPropIds.add(b.property_id)
-    if (b.platform_booking_id) {
-      if (!validOrderNumsByProp[b.property_id]) validOrderNumsByProp[b.property_id] = new Set()
-      validOrderNumsByProp[b.property_id].add(b.platform_booking_id)
-    }
-  }
+  // 每日入住記錄與系統最新有效訂單雙向同步校正：
+  // 1. 若該房型當天有未取消的系統訂單，且 daily 記錄與該訂單不一致（舊人殘留、單號不同、金額不同等），
+  //    強制以最新訂單資料取代覆蓋，確保日曆/訂單與每日入住 100% 同步！
+  // 2. 若該房型當天沒有有效訂單，但 daily 記錄曾連結過已取消的訂單或來自系統 booking，清空訂單欄位。
   for (const rec of cleanList) {
-    if (!rec.booking_id && rec.source !== 'booking') continue
-    let stillValid: boolean
-    if (rec.booking_id) {
-      stillValid = activeBookingIds.has(rec.booking_id)
+    const prop = propList.find(p => p.name === rec.room_name)
+    if (!prop) continue
+    const booking = bookingByPropId[prop.id]
+
+    if (booking) {
+      const isOutdated =
+        rec.booking_id !== booking.id ||
+        rec.order_number !== (booking.platform_booking_id ?? null) ||
+        rec.guest_name !== (booking.guest_name ?? null) ||
+        rec.price_total !== (booking.total_price ?? null) ||
+        rec.platform !== (booking.platform ?? null) ||
+        rec.deposit !== (booking.deposit_amount ?? null) ||
+        rec.paid !== booking.is_paid ||
+        rec.source !== 'booking'
+
+      if (isOutdated) {
+        await writer.from('bnb_daily_records').update({
+          order_number: booking.platform_booking_id ?? null,
+          guest_name: booking.guest_name ?? null,
+          price_total: booking.total_price ?? null,
+          platform: booking.platform ?? null,
+          deposit: booking.deposit_amount ?? null,
+          paid: booking.is_paid,
+          booking_id: booking.id,
+          source: 'booking',
+          updated_at: new Date().toISOString(),
+        }).eq('id', rec.id)
+
+        rec.order_number = booking.platform_booking_id ?? null
+        rec.guest_name = booking.guest_name ?? null
+        rec.price_total = booking.total_price ?? null
+        rec.platform = booking.platform ?? null
+        rec.deposit = booking.deposit_amount ?? null
+        rec.paid = booking.is_paid
+        rec.booking_id = booking.id
+        rec.source = 'booking'
+      }
     } else {
-      const prop = propList.find(p => p.name === rec.room_name)
-      if (!prop) continue
-      stillValid = rec.order_number
-        ? !!validOrderNumsByProp[prop.id]?.has(rec.order_number)
-        : validPropIds.has(prop.id)
+      if (rec.booking_id || rec.source === 'booking') {
+        await writer.from('bnb_daily_records').update({
+          order_number: null,
+          guest_name: null,
+          price_total: null,
+          platform: null,
+          deposit: null,
+          paid: false,
+          booking_id: null,
+          source: 'manual',
+          updated_at: new Date().toISOString(),
+        }).eq('id', rec.id)
+
+        rec.order_number = null
+        rec.guest_name = null
+        rec.price_total = null
+        rec.platform = null
+        rec.deposit = null
+        rec.paid = false
+        rec.booking_id = null
+        rec.source = 'manual'
+      }
     }
-    if (stillValid) continue
-    await writer.from('bnb_daily_records').update({
-      order_number: null, guest_name: null, price_total: null, platform: null,
-      deposit: null, paid: false, booking_id: null,
-      source: 'manual', updated_at: new Date().toISOString(),
-    }).eq('id', rec.id)
-    rec.order_number = null; rec.guest_name = null; rec.price_total = null; rec.platform = null
-    rec.deposit = null; rec.paid = false; rec.source = 'manual'; rec.booking_id = null
   }
 
   // 新增缺少的房型記錄
@@ -252,33 +282,6 @@ export async function GET(req: NextRequest) {
     created = data ?? []
   }
 
-  // 補填現有記錄中空白的訂單欄位
-  for (const rec of cleanList) {
-    const prop = propList.find(p => p.name === rec.room_name)
-    if (!prop) continue
-    const booking = bookingByPropId[prop.id]
-    if (booking && !rec.order_number && !rec.guest_name) {
-      await writer.from('bnb_daily_records').update({
-        order_number: booking.platform_booking_id ?? null,
-        guest_name: booking.guest_name ?? null,
-        price_total: rec.price_total ?? booking.total_price ?? null,
-        platform: rec.platform ?? booking.platform ?? null,
-        deposit: rec.deposit ?? booking.deposit_amount ?? null,
-        paid: rec.paid || booking.is_paid,
-        booking_id: booking.id,
-        source: 'booking',
-        updated_at: new Date().toISOString(),
-      }).eq('id', rec.id)
-      rec.order_number = booking.platform_booking_id ?? null
-      rec.guest_name = booking.guest_name ?? null
-      if (rec.price_total == null) rec.price_total = booking.total_price ?? null
-      if (rec.platform == null) rec.platform = booking.platform ?? null
-      if (rec.deposit == null) rec.deposit = booking.deposit_amount ?? null
-      rec.paid = rec.paid || booking.is_paid
-      rec.booking_id = booking.id
-    }
-  }
-
   // 依房型管理順序排序
   const nameOrder: Record<string, number> = {}
   propList.forEach((p, i) => { nameOrder[p.name] = i })
@@ -311,10 +314,14 @@ export async function GET(req: NextRequest) {
     }
   })
 
-  // 找出有訂單但 property_id 為 null 或不在現有房型的訂單（已取消的訂單不算未對應，不該再顯示）
-  const matchedOrderNums = new Set(all.map((r: { order_number: string | null }) => r.order_number).filter(Boolean))
+  // 找出有訂單但尚未對應到任何房間的訂單（已取消的訂單不算未對應，不該再顯示）
+  const matchedBookingIds = new Set(allWithId.map((r: { booking_id: string | null }) => r.booking_id).filter(Boolean))
+  const matchedOrderNums = new Set(allWithId.map((r: { order_number: string | null }) => r.order_number).filter(Boolean))
   const unmatched = bookingList.filter(b =>
-    b.status !== 'cancelled' && !matchedOrderNums.has(b.platform_booking_id) && (b.guest_name || b.platform_booking_id)
+    b.status !== 'cancelled' &&
+    !matchedBookingIds.has(b.id) &&
+    (!b.platform_booking_id || !matchedOrderNums.has(b.platform_booking_id)) &&
+    (b.guest_name || b.platform_booking_id)
   ).map(b => ({
     guest_name: b.guest_name ?? '',
     order_number: b.platform_booking_id ?? '',

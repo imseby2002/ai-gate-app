@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getBnbContext } from '@/lib/bnb/context'
-import { clearDailyRecordForDeletedBooking } from '@/lib/booking/daily-sync'
+import { clearDailyRecordForDeletedBooking, syncDailyRecordForBooking } from '@/lib/booking/daily-sync'
 
 // 訂單資料結構重整第三階段：訂單詳情頁改成「一張訂單、可整單處理」，旅客資訊、
 // 付款方式等訂單層級欄位在這裡統一編輯。這些欄位在 bookings（房型明細）也各自
@@ -47,6 +47,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       // 用了這個號碼）——訂單本身的變更不回滾，只回報同步失敗，使用者才知道要
       // 手動確認房型明細那邊的單號有沒有跟著改對。
       return NextResponse.json({ order, warning: `訂單資訊已更新，但同步到房型明細時發生錯誤：${mirrorErr.message}` })
+    }
+
+    // 房型明細同步更新後，也同步更新每日入住（bnb_daily_records），確保兩邊完全一致
+    const { data: updatedBookings } = await supabase
+      .from('bookings')
+      .select('id, property_id, guest_name, platform_booking_id, total_price, platform, check_in, check_out, status, deposit_amount, is_paid')
+      .eq('order_id', id)
+      .eq('user_id', ctx.ownerId)
+    for (const b of updatedBookings ?? []) {
+      await syncDailyRecordForBooking(supabase, ctx.ownerId, b)
     }
   }
 
