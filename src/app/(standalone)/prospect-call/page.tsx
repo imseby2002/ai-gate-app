@@ -7,7 +7,7 @@ import {
   Search, Building2, MapPin, Phone, Play, Loader2,
   CheckCircle2, AlertCircle, XCircle, Plus, Trash2, ChevronDown, ChevronUp,
   Filter, Users, Map, Globe, Mic, Settings2, PhoneCall, GripVertical, Mail,
-  Clock, Save, CalendarClock, MessageSquare,
+  Clock, Save, CalendarClock, MessageSquare, Sparkles, Wand2,
 } from 'lucide-react'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -500,6 +500,113 @@ export default function ProspectCallPage() {
   // SMS-specific state
   const [sendingSms, setSendingSms] = useState<string | null>(null)  // ruleId being sent
   const [smsResults, setSmsResults] = useState<Record<string, { ok: number; fail: number }>>({})
+
+  // AI 腳本生成 Modal 狀態
+  const [aiGenOpen, setAiGenOpen] = useState(false)
+  const [aiGenChannel, setAiGenChannel] = useState<'phone' | 'email' | 'sms'>('phone')
+  const [aiGenTargetId, setAiGenTargetId] = useState<string | null>(null) // target template/script id
+  const [aiGenTopic, setAiGenTopic] = useState('')
+  const [aiGenAudience, setAiGenAudience] = useState('')
+  const [aiGenTone, setAiGenTone] = useState('')
+  const [aiGenLoading, setAiGenLoading] = useState(false)
+  const [aiGenError, setAiGenError] = useState('')
+
+  const handleOpenAiGen = (channel: 'phone' | 'email' | 'sms', targetId?: string) => {
+    setAiGenChannel(channel)
+    setAiGenTargetId(targetId || null)
+    setAiGenTopic('')
+    setAiGenAudience('')
+    setAiGenTone('')
+    setAiGenError('')
+    setAiGenOpen(true)
+  }
+
+  const handleRunAiGen = async () => {
+    setAiGenLoading(true)
+    setAiGenError('')
+    try {
+      // 取得既有內容供參考優化
+      let existing = ''
+      if (aiGenTargetId) {
+        if (aiGenChannel === 'phone') {
+          existing = config.voiceScripts.find(s => s.id === aiGenTargetId)?.text || ''
+        } else if (aiGenChannel === 'email') {
+          const tpl = config.emailTemplates.find(t => t.id === aiGenTargetId)
+          existing = tpl ? `主旨: ${tpl.subject}\n內文: ${tpl.body}` : ''
+        } else if (aiGenChannel === 'sms') {
+          existing = (config.smsTemplates ?? []).find(s => s.id === aiGenTargetId)?.body || ''
+        }
+      }
+
+      const res = await fetch('/api/marketing/prospect-script-generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          channel: aiGenChannel,
+          topic: aiGenTopic,
+          targetAudience: aiGenAudience,
+          tone: aiGenTone,
+          language: locale === 'vi' ? 'vi' : locale === 'en' ? 'en' : 'zh-TW',
+          existingScript: existing,
+        }),
+      })
+
+      const d = await res.json()
+      if (!res.ok) throw new Error(d.error || 'AI 生成失敗')
+
+      const generated = d.data
+      if (aiGenChannel === 'phone') {
+        if (aiGenTargetId) {
+          updateScript(aiGenTargetId, {
+            name: generated.name || undefined,
+            text: generated.text || '',
+          })
+        } else {
+          // 新增一個
+          setC('voiceScripts', [...config.voiceScripts, {
+            id: `script-${Date.now()}`,
+            name: generated.name || t('def.scriptN', { n: config.voiceScripts.length + 1 }),
+            text: generated.text || '',
+            voiceId: 'EXAVITQu4vr4xnSDxMaL',
+          }])
+        }
+      } else if (aiGenChannel === 'email') {
+        if (aiGenTargetId) {
+          updateEmailTemplate(aiGenTargetId, {
+            name: generated.name || undefined,
+            subject: generated.subject || '',
+            body: generated.body || '',
+          })
+        } else {
+          setC('emailTemplates', [...config.emailTemplates, {
+            id: `email-${Date.now()}`,
+            name: generated.name || t('def.templateN', { n: config.emailTemplates.length + 1 }),
+            subject: generated.subject || '',
+            body: generated.body || '',
+          }])
+        }
+      } else if (aiGenChannel === 'sms') {
+        if (aiGenTargetId) {
+          updateSmsTemplate(aiGenTargetId, {
+            name: generated.name || undefined,
+            body: generated.body || '',
+          })
+        } else {
+          setC('smsTemplates', [...(config.smsTemplates ?? []), {
+            id: `sms-${Date.now()}`,
+            name: generated.name || t('def.templateN', { n: (config.smsTemplates ?? []).length + 1 }),
+            body: generated.body || '',
+          }])
+        }
+      }
+
+      setAiGenOpen(false)
+    } catch (e: unknown) {
+      setAiGenError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setAiGenLoading(false)
+    }
+  }
 
   // 寄件設定測試：直接寄一封測試信到指定信箱，驗證 Resend 網域／金鑰是否正常（僅管理員可用）
   const [isAdmin, setIsAdmin] = useState(false)
@@ -1449,6 +1556,15 @@ export default function ProspectCallPage() {
                       <input value={s.name} onChange={e => updateScript(s.id, { name: e.target.value })}
                         className="flex-1 h-8 px-2 rounded-lg border text-xs outline-none focus:ring-2 bg-white"
                         placeholder={t('s4p.scriptName')} />
+                      <button
+                        type="button"
+                        onClick={() => handleOpenAiGen('phone', s.id)}
+                        className="px-2 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-[11px] font-medium flex items-center gap-1 transition-colors"
+                        title={t('s4p.aiGenerate')}
+                      >
+                        <Sparkles className="h-3 w-3 text-indigo-500" />
+                        <span>AI 優化</span>
+                      </button>
                       {config.voiceScripts.length > 1 && (
                         <button type="button" onClick={() => removeScript(s.id)}
                           className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors">
@@ -1465,10 +1581,16 @@ export default function ProspectCallPage() {
                     </select>
                   </div>
                 ))}
-                <button type="button" onClick={addScript}
-                  className="flex items-center gap-1.5 w-full py-2 rounded-lg border-2 border-dashed text-xs text-gray-500 hover:bg-gray-50 transition-colors justify-center">
-                  <Plus className="h-3.5 w-3.5" />{t('s4p.addScript')}
-                </button>
+                <div className="flex gap-2">
+                  <button type="button" onClick={addScript}
+                    className="flex-1 flex items-center gap-1.5 py-2 rounded-lg border-2 border-dashed text-xs text-gray-500 hover:bg-gray-50 transition-colors justify-center">
+                    <Plus className="h-3.5 w-3.5" />{t('s4p.addScript')}
+                  </button>
+                  <button type="button" onClick={() => handleOpenAiGen('phone')}
+                    className="flex-1 flex items-center gap-1.5 py-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-xs text-indigo-700 font-medium transition-colors justify-center">
+                    <Sparkles className="h-3.5 w-3.5 text-indigo-600" />{t('s4p.aiGenerate')}
+                  </button>
+                </div>
               </div>
             </Section>
 
@@ -1659,6 +1781,15 @@ export default function ProspectCallPage() {
                       <input value={tpl.name} onChange={e => updateEmailTemplate(tpl.id, { name: e.target.value })}
                         className="flex-1 h-8 px-2 rounded-lg border text-xs outline-none focus:ring-2 bg-white font-semibold"
                         placeholder={t('s4e.templateName')} />
+                      <button
+                        type="button"
+                        onClick={() => handleOpenAiGen('email', tpl.id)}
+                        className="px-2 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-[11px] font-medium flex items-center gap-1 transition-colors"
+                        title={t('s4e.aiGenerate')}
+                      >
+                        <Sparkles className="h-3 w-3 text-indigo-500" />
+                        <span>AI 優化</span>
+                      </button>
                       {config.emailTemplates.length > 1 && (
                         <button type="button" onClick={() => removeEmailTemplate(tpl.id)}
                           className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500">
@@ -1674,10 +1805,16 @@ export default function ProspectCallPage() {
                       className="w-full px-2 py-1.5 rounded-lg border text-xs outline-none focus:ring-2 resize-none bg-white" />
                   </div>
                 ))}
-                <button type="button" onClick={addEmailTemplate}
-                  className="flex items-center gap-1.5 w-full py-2 rounded-lg border-2 border-dashed text-xs text-gray-500 hover:bg-gray-50 justify-center">
-                  <Plus className="h-3.5 w-3.5" />{t('s4e.addTemplate')}
-                </button>
+                <div className="flex gap-2">
+                  <button type="button" onClick={addEmailTemplate}
+                    className="flex-1 flex items-center gap-1.5 py-2 rounded-lg border-2 border-dashed text-xs text-gray-500 hover:bg-gray-50 justify-center">
+                    <Plus className="h-3.5 w-3.5" />{t('s4e.addTemplate')}
+                  </button>
+                  <button type="button" onClick={() => handleOpenAiGen('email')}
+                    className="flex-1 flex items-center gap-1.5 py-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-xs text-indigo-700 font-medium transition-colors justify-center">
+                    <Sparkles className="h-3.5 w-3.5 text-indigo-600" />{t('s4e.aiGenerate')}
+                  </button>
+                </div>
               </div>
             </Section>
 
@@ -1785,6 +1922,15 @@ export default function ProspectCallPage() {
                       <input value={tpl.name} onChange={e => updateSmsTemplate(tpl.id, { name: e.target.value })}
                         className="flex-1 h-8 px-2 rounded-lg border text-xs outline-none focus:ring-2 bg-white font-semibold"
                         placeholder={t('sms.templateName')} />
+                      <button
+                        type="button"
+                        onClick={() => handleOpenAiGen('sms', tpl.id)}
+                        className="px-2 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-[11px] font-medium flex items-center gap-1 transition-colors"
+                        title={t('sms.aiGenerate')}
+                      >
+                        <Sparkles className="h-3 w-3 text-indigo-500" />
+                        <span>AI 優化</span>
+                      </button>
                       {(config.smsTemplates ?? []).length > 1 && (
                         <button type="button" onClick={() => removeSmsTemplate(tpl.id)}
                           className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500">
@@ -1798,10 +1944,16 @@ export default function ProspectCallPage() {
                     <div className="text-[10px] text-gray-400 text-right">{t('extra.chars', { n: tpl.body.length })}</div>
                   </div>
                 ))}
-                <button type="button" onClick={addSmsTemplate}
-                  className="flex items-center gap-1.5 w-full py-2 rounded-lg border-2 border-dashed text-xs text-gray-500 hover:bg-gray-50 justify-center">
-                  <Plus className="h-3.5 w-3.5" />{t('sms.addTemplate')}
-                </button>
+                <div className="flex gap-2">
+                  <button type="button" onClick={addSmsTemplate}
+                    className="flex-1 flex items-center gap-1.5 py-2 rounded-lg border-2 border-dashed text-xs text-gray-500 hover:bg-gray-50 justify-center">
+                    <Plus className="h-3.5 w-3.5" />{t('sms.addTemplate')}
+                  </button>
+                  <button type="button" onClick={() => handleOpenAiGen('sms')}
+                    className="flex-1 flex items-center gap-1.5 py-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-xs text-indigo-700 font-medium transition-colors justify-center">
+                    <Sparkles className="h-3.5 w-3.5 text-indigo-600" />{t('sms.aiGenerate')}
+                  </button>
+                </div>
               </div>
             </Section>
 
@@ -2257,6 +2409,124 @@ export default function ProspectCallPage() {
             )}
           </div>
         </div>}
+
+        {/* ── AI 腳本生成 Modal ── */}
+        {aiGenOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
+            <div className="bg-white rounded-2xl shadow-2xl border w-full max-w-md overflow-hidden animate-in zoom-in-95">
+              <div className="px-5 py-4 border-b flex items-center justify-between bg-gradient-to-r from-indigo-50 to-purple-50">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center">
+                    <Sparkles className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-900">
+                      {aiGenChannel === 'phone' && 'AI 撰寫電話語音腳本'}
+                      {aiGenChannel === 'email' && 'AI 撰寫 Email 開發信'}
+                      {aiGenChannel === 'sms' && 'AI 撰寫行銷簡訊'}
+                    </h3>
+                    <p className="text-[11px] text-gray-500">
+                      自動結合公司品牌資料與核心價值，打造高轉換腳本
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAiGenOpen(false)}
+                  className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                >
+                  <XCircle className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="p-5 space-y-3.5">
+                {aiGenError && (
+                  <div className="p-2.5 rounded-lg bg-red-50 border border-red-200 text-red-600 text-xs flex items-center gap-1.5">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    <span>{aiGenError}</span>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    本次行銷主題 / 優惠訴求
+                    <span className="text-[10px] text-gray-400 font-normal ml-1">（選填，留空將以品牌特色全自動發揮）</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={aiGenTopic}
+                    onChange={e => setAiGenTopic(e.target.value)}
+                    placeholder="例如：秋季新品特惠、企業專屬特約折扣、預約體驗禮..."
+                    className="w-full h-9 px-3 rounded-lg border text-xs outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    目標受眾 / 產業類別
+                    <span className="text-[10px] text-gray-400 font-normal ml-1">（選填）</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={aiGenAudience}
+                    onChange={e => setAiGenAudience(e.target.value)}
+                    placeholder="例如：周邊辦公大樓員工、餐飲同業、園區企業採購..."
+                    className="w-full h-9 px-3 rounded-lg border text-xs outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    語調風格
+                    <span className="text-[10px] text-gray-400 font-normal ml-1">（選填）</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={aiGenTone}
+                    onChange={e => setAiGenTone(e.target.value)}
+                    placeholder="例如：熱情親切、商務專業、限時急迫..."
+                    className="w-full h-9 px-3 rounded-lg border text-xs outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                  />
+                </div>
+
+                {aiGenTargetId && (
+                  <p className="text-[11px] text-indigo-600 bg-indigo-50/60 rounded-lg p-2 border border-indigo-100">
+                    💡 將基於目前選取的模板內容進行 AI 優化重寫，產出後直接替換。
+                  </p>
+                )}
+              </div>
+
+              <div className="px-5 py-3.5 bg-gray-50 border-t flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  disabled={aiGenLoading}
+                  onClick={() => setAiGenOpen(false)}
+                  className="px-3.5 py-2 rounded-lg border bg-white hover:bg-gray-50 text-xs font-medium text-gray-700 transition-colors"
+                >
+                  取消
+                </button>
+                <button
+                  type="button"
+                  disabled={aiGenLoading}
+                  onClick={handleRunAiGen}
+                  className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-colors disabled:opacity-50"
+                >
+                  {aiGenLoading ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <span>AI 生成中...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-3.5 w-3.5" />
+                      <span>{aiGenTargetId ? '立即優化' : '立即生成'}</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

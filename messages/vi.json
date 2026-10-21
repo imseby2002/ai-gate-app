@@ -2920,6 +2920,7 @@
       "templateName": "Tên mẫu",
       "body": "Nội dung SMS",
       "addTemplate": "Thêm mẫu",
+      "aiGenerate": "AI Viết SMS",
       "rulesTitle": "Bước 5 — Quy tắc gửi SMS",
       "rulesHint": "Áp dụng mẫu SMS khác nhau cho từng nhóm khách hàng.",
       "sendTitle": "Gửi SMS",
@@ -3073,7 +3074,8 @@
       "title": "Bước 4 — Kịch bản giọng nói",
       "scriptName": "Tên kịch bản",
       "scriptTextPlaceholder": "Nhập nội dung kịch bản giọng nói...",
-      "addScript": "Thêm kịch bản"
+      "addScript": "Thêm kịch bản",
+      "aiGenerate": "AI Viết kịch bản"
     },
     "s5p": {
       "title": "Bước 5 — Quy tắc gọi",
@@ -3103,7 +3105,8 @@
       "templateName": "Tên mẫu",
       "subject": "Tiêu đề Email",
       "body": "Nội dung Email (hỗ trợ xuống dòng)",
-      "addTemplate": "Thêm mẫu"
+      "addTemplate": "Thêm mẫu",
+      "aiGenerate": "AI Viết Email"
     },
     "s5e": {
       "title": "Bước 5 — Quy tắc gửi",

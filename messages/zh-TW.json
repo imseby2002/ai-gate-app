@@ -2920,6 +2920,7 @@
       "templateName": "模板名稱",
       "body": "簡訊內容",
       "addTemplate": "新增模板",
+      "aiGenerate": "AI 撰寫簡訊",
       "rulesTitle": "Step 5 — 簡訊發送規則",
       "rulesHint": "依分類把不同客戶套用不同簡訊模板。",
       "sendTitle": "發送簡訊",
@@ -3073,7 +3074,8 @@
       "title": "Step 4 — 語音腳本",
       "scriptName": "腳本名稱",
       "scriptTextPlaceholder": "輸入語音腳本內容...",
-      "addScript": "新增腳本"
+      "addScript": "新增腳本",
+      "aiGenerate": "AI 撰寫腳本"
     },
     "s5p": {
       "title": "Step 5 — 撥打規則",
@@ -3103,7 +3105,8 @@
       "templateName": "模板名稱",
       "subject": "Email 主旨",
       "body": "Email 內文（支援換行）",
-      "addTemplate": "新增模板"
+      "addTemplate": "新增模板",
+      "aiGenerate": "AI 撰寫開發信"
     },
     "s5e": {
       "title": "Step 5 — 發送規則",

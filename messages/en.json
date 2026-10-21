@@ -2920,6 +2920,7 @@
       "templateName": "Template name",
       "body": "SMS body",
       "addTemplate": "Add template",
+      "aiGenerate": "AI Write SMS",
       "rulesTitle": "Step 5 — SMS sending rules",
       "rulesHint": "Apply different SMS templates to different customer categories.",
       "sendTitle": "Send SMS",
@@ -3073,7 +3074,8 @@
       "title": "Step 4 — Voice Scripts",
       "scriptName": "Script name",
       "scriptTextPlaceholder": "Enter voice script content...",
-      "addScript": "Add Script"
+      "addScript": "Add Script",
+      "aiGenerate": "AI Write Script"
     },
     "s5p": {
       "title": "Step 5 — Routing Rules",
@@ -3103,7 +3105,8 @@
       "templateName": "Template name",
       "subject": "Email Subject",
       "body": "Email Body (newlines supported)",
-      "addTemplate": "Add Template"
+      "addTemplate": "Add Template",
+      "aiGenerate": "AI Write Email"
     },
     "s5e": {
       "title": "Step 5 — Sending Rules",
