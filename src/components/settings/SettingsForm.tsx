@@ -5,7 +5,7 @@ import { Loader2, User, Wallet, Shield, CheckCircle2, MessageSquare, Eye, EyeOff
 import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import type { Profile } from '@/types/database'
-import { SocialPlatformSettings } from './SocialPlatformSettings'
+import Link from 'next/link'
 import { PasswordSettings } from './PasswordSettings'
 
 interface SettingsFormProps {
@@ -266,16 +266,45 @@ export function SettingsForm({ profile, creditBalance, variant = 'full' }: Setti
         </form>
       </div>
 
-      {/* Social Platform Connections */}
+      {/* Social Platform Connections — 已升級為官方帳號與行銷平台統一管理 */}
       <div className="bg-card rounded-2xl border p-6 shadow-sm">
         <div className="flex items-center gap-2 mb-2">
-          <Share2 className="h-5 w-5 text-gray-400" />
+          <Share2 className="h-5 w-5 text-primary" />
           <h2 className="font-semibold">{t('tg.socialTitle')}</h2>
         </div>
-        <p className="text-xs text-muted-foreground mb-5">
-          {t('tg.socialDesc')}
+        <p className="text-xs text-muted-foreground mb-4">
+          為避免多處重複填寫，社群與通訊平台已全面升級為「全公司統一管理中心」：
         </p>
-        <SocialPlatformSettings />
+        <div className="grid sm:grid-cols-2 gap-3">
+          <Link
+            href="/company/channels"
+            className="flex items-center justify-between p-4 rounded-xl border border-border/80 bg-muted/20 hover:bg-muted/60 hover:border-primary/40 transition-colors group"
+          >
+            <div>
+              <div className="text-sm font-semibold flex items-center gap-1.5">
+                <span>🏢 官方帳號統一管理</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                FB 粉專、LINE、WhatsApp、Zalo 跨客服與行銷共用
+              </p>
+            </div>
+            <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
+          </Link>
+          <Link
+            href="/marketing-auto/platforms"
+            className="flex items-center justify-between p-4 rounded-xl border border-border/80 bg-muted/20 hover:bg-muted/60 hover:border-primary/40 transition-colors group"
+          >
+            <div>
+              <div className="text-sm font-semibold flex items-center gap-1.5">
+                <span>📊 行銷與廣告數據平台</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Meta 廣告連線、GA4 網站流量與跨平台發布
+              </p>
+            </div>
+            <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
+          </Link>
+        </div>
       </div>
       </>)}
 

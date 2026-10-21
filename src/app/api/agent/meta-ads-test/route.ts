@@ -6,6 +6,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getBnbContext } from '@/lib/bnb/context'
 import { getAdAccount, getInsights, metaAdsCredsFrom } from '@/lib/marketing/meta-ads'
+import { loadMarketingPublishAccounts } from '@/lib/channels/resolve'
 
 // https://developers.facebook.com/docs/marketing-api/reference/ad-account/ account_status
 const ACCOUNT_STATUS: Record<number, string> = {
@@ -17,14 +18,21 @@ export async function GET() {
   const ctx = await getBnbContext(supabase, 'cs')
   if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: row } = await supabase
-    .from('social_platform_credentials')
-    .select('credentials, is_connected')
-    .eq('user_id', ctx.ownerId)
-    .eq('platform', 'Facebook')
-    .maybeSingle()
+  // 1. 優先由公司官方帳號（統一管理中心）取得 Facebook 憑證
+  const publishAccounts = await loadMarketingPublishAccounts(ctx.ownerId)
+  let creds = metaAdsCredsFrom(publishAccounts.Facebook?.credentials)
 
-  const creds = metaAdsCredsFrom(row?.credentials as Record<string, string> | null)
+  // 2. 若官方帳號未設定廣告帳戶，退回讀取行銷平台個別設定
+  if (!creds) {
+    const { data: row } = await supabase
+      .from('social_platform_credentials')
+      .select('credentials, is_connected')
+      .eq('user_id', ctx.ownerId)
+      .eq('platform', 'Facebook')
+      .maybeSingle()
+    creds = metaAdsCredsFrom(row?.credentials as Record<string, string> | null)
+  }
+
   if (!creds) {
     return NextResponse.json({ ok: false, error: 'Facebook 的 Page Access Token、Page ID、廣告帳戶 ID 需全部填寫' }, { status: 400 })
   }

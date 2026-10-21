@@ -1,6 +1,6 @@
 // 目標任務（Mission）執行工具：操作 marketing.im-tourist.com 內部資源、回報 KPI、外部採購申請、排定下次檢查。
 // 行銷資料一律寫入 mission.owner_id（公司 owner）名下，與行銷中心頁面看到的是同一份資料。
-import { loadMarketingPublishOverrides } from '@/lib/channels/resolve'
+import { loadMarketingPublishAccounts, loadMarketingPublishOverrides } from '@/lib/channels/resolve'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { buildMarketingInventory, loadMission, type MissionRow } from '../missions'
 import { generateContentSet } from '@/lib/mkt/generate'
@@ -48,10 +48,16 @@ async function loadCredentialRows(ctx: AgentRunContext): Promise<CredentialRow[]
 }
 
 async function loadMetaAdsCreds(ctx: AgentRunContext): Promise<MetaAdsCreds> {
+  const ownerId = await ownerForRun(ctx).catch(() => ctx.userId)
+  if (ownerId) {
+    const publishAccounts = await loadMarketingPublishAccounts(ownerId).catch(() => ({} as Record<string, { name: string; credentials: Record<string, string> }>))
+    const officialCreds = metaAdsCredsFrom(publishAccounts.Facebook?.credentials)
+    if (officialCreds) return officialCreds
+  }
   const rows = await loadCredentialRows(ctx)
   const fb = rows.find(r => r.platform === 'Facebook' && r.is_connected)
   const creds = metaAdsCredsFrom(fb?.credentials)
-  if (!creds) throw new Error('行銷自動化「平台設定」的 Facebook 尚未填 Page Access Token／Page ID／廣告帳戶 ID，請用 request_human_approval 請真人補上')
+  if (!creds) throw new Error('尚未設定 Facebook 官方帳號或平台設定中的 Page Access Token／Page ID／廣告帳戶 ID，請用 request_human_approval 請真人補上')
   return creds
 }
 

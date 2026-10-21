@@ -60,6 +60,7 @@ export const CHANNEL_PLATFORMS: ChannelPlatform[] = [
     fields: [
       { key: 'fb_page_access_token', label: 'Page Access Token', secret: true },
       { key: 'fb_page_id', label: 'Page ID', secret: false, optional: true },
+      { key: 'ad_account_id', label: '廣告帳戶 ID（Agent 投放 Meta 廣告用）', secret: false, optional: true },
       { key: 'fb_verify_token', label: 'Verify Token', secret: false, optional: true },
       { key: 'fb_app_secret', label: 'App Secret', secret: true, optional: true },
     ],

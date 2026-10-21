@@ -129,7 +129,16 @@ export async function loadMarketingPublishAccounts(ownerId: string): Promise<Rec
     findModuleChannelAccount(ownerId, 'zalo', 'marketing'),
   ])
   const f = fb?.credentials, i = ig?.credentials, l = line?.credentials, z = zalo?.credentials
-  if (f?.fb_page_access_token && f.fb_page_id) out.Facebook = { name: fb!.name, credentials: { page_access_token: f.fb_page_access_token, page_id: f.fb_page_id } }
+  if (f?.fb_page_access_token && f.fb_page_id) {
+    out.Facebook = {
+      name: fb!.name,
+      credentials: {
+        page_access_token: f.fb_page_access_token,
+        page_id: f.fb_page_id,
+        ...(f.ad_account_id ? { ad_account_id: f.ad_account_id } : {}),
+      },
+    }
+  }
   if (i?.ig_access_token && i.ig_user_id) out.Instagram = { name: ig!.name, credentials: { access_token: i.ig_access_token, ig_user_id: i.ig_user_id } }
   if (l?.line_channel_access_token) out['LINE VOOM'] = { name: line!.name, credentials: { line_channel_access_token: l.line_channel_access_token } }
   if (z?.zalo_oa_access_token && z.zalo_oa_id) out.Zalo = { name: zalo!.name, credentials: { access_token: z.zalo_oa_access_token, oa_id: z.zalo_oa_id } }
