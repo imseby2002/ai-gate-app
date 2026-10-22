@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import Link from 'next/link'
 import { ArrowLeft, RefreshCw, Loader2, Send, Bot, UserRound, Inbox, ChevronLeft, Search, X, ImagePlus } from 'lucide-react'
-import { uploadInboxImage } from '@/lib/cs/resize-image'
+import { uploadInboxImage, formatBubbleTime } from '@/lib/cs/resize-image'
 import { InstallInboxButton } from './InstallInboxButton'
 
 const PLATFORM_LABELS: Record<string, { name: string; emoji: string }> = {
@@ -73,10 +73,7 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
     try { return new Date(ts).toLocaleString(locale, { timeZone: 'Asia/Taipei', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) }
     catch { return ts }
   }
-  const fmtClock = (ts: string) => {
-    try { return new Date(ts).toLocaleString(locale, { timeZone: 'Asia/Taipei', hour: '2-digit', minute: '2-digit', hour12: false }) }
-    catch { return '' }
-  }
+  const fmtClock = (ts: string) => formatBubbleTime(ts, locale)
   const industry = initialIndustry
   const [convos, setConvos] = useState<Conversation[]>([])
   const [loadingList, setLoadingList] = useState(true)
