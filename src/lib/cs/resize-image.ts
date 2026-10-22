@@ -1,3 +1,16 @@
+// 收件匣訊息時間：今天只顯示時:分，其他日期加上月/日（台灣時間）
+export function formatBubbleTime(ts: string, locale: string): string {
+  try {
+    const d = new Date(ts)
+    const day = (x: Date) => x.toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' })
+    const sameDay = day(d) === day(new Date())
+    return d.toLocaleString(locale, {
+      timeZone: 'Asia/Taipei', hour: '2-digit', minute: '2-digit', hour12: false,
+      ...(sameDay ? {} : { month: '2-digit', day: '2-digit' }),
+    })
+  } catch { return '' }
+}
+
 // 收件匣真人傳圖：送出前在瀏覽器縮圖並轉 JPEG（LINE 預覽圖上限 1MB，原圖常常 3–8MB）
 export async function resizeImageForSend(file: File, maxSide = 1600, quality = 0.85): Promise<Blob> {
   const url = URL.createObjectURL(file)

@@ -10,7 +10,7 @@ import {
   PanelLeftClose, PanelLeftOpen, UserRound, Image as ImageIcon, Tag, Gift, LayoutDashboard, Info, Menu, ChevronLeft, ImagePlus,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { uploadInboxImage } from '@/lib/cs/resize-image'
+import { uploadInboxImage, formatBubbleTime } from '@/lib/cs/resize-image'
 import { HelpTip } from '@/components/cs/HelpTip'
 import { CsSupportPanel } from './CsSupportPanel'
 import { CsFormsPanel } from './CsFormsPanel'
@@ -5199,7 +5199,7 @@ function Unit12CustomerService({
                                     </span>
                                     {bubble.at && (
                                       <span className="font-normal opacity-75">
-                                        {new Date(bubble.at).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
+                                        {formatBubbleTime(bubble.at, locale)}
                                       </span>
                                     )}
                                   </div>
