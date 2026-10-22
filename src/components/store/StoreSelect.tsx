@@ -3,6 +3,7 @@
 // 門市下拉選單：選項來自 /api/inv/stores（門市資料＋已匯入資料出現過的門市）。
 // 綁定單一門市的帳號鎖定不可切換；管理多家門市的帳號只列所管門市，切換時寫入 active_store cookie 讓 API 以該店為準。
 import { useEffect, useState, useCallback } from 'react'
+import { getFeelingTeaStoreName } from '@/lib/constants/feeling-tea-stores'
 
 export interface StoreOption { code: string; name: string }
 
@@ -36,7 +37,9 @@ export function useStoreOptions() {
 }
 
 export function storeLabel(o: StoreOption) {
-  return o.name && o.name !== o.code ? `${o.code}・${o.name}` : o.code
+  // 優先取得標準地址名稱，避免使用代碼或簡寫
+  const resolved = getFeelingTeaStoreName(o.name || o.code)
+  return resolved || o.name || o.code
 }
 
 export function StoreSelect({ value, onChange, options, locked, placeholder, className }: {

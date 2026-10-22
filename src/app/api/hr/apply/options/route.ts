@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { OFFICE_VALUE, type UnitOption } from '@/lib/hr/apply-units'
+import { getFeelingTeaStoreName } from '@/lib/constants/feeling-tea-stores'
 
 // 公開應徵表單的單位選項：門市、辦公室、工廠。?code=<應徵代碼> 或 ?token=<應徵者連結>
 export async function GET(req: NextRequest) {
@@ -20,7 +21,8 @@ export async function GET(req: NextRequest) {
   const active = (rows ?? []).filter(r => r.code && r.active !== false)
   const opt = (r: { code: string; name: string | null }, kind: UnitOption['kind']): UnitOption => {
     const c = String(r.code).trim(), n = String(r.name ?? '').trim()
-    return { kind, value: c, name: n && n !== c ? `${n}（${c}）` : c }
+    const cleanName = getFeelingTeaStoreName(n || c)
+    return { kind, value: c, name: cleanName || n || c }
   }
   const stores = active.filter(r => (r.unit_type ?? 'store') === 'store').map(r => opt(r, 'store'))
   const factories = active.filter(r => r.unit_type === 'factory').map(r => opt(r, 'factory'))

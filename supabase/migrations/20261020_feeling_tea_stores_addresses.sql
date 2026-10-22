@@ -29,7 +29,11 @@ from (values
   ('TN', '11 Thanh Niên'),
   ('CG', '45 Cầu Gỗ'),
   ('BM', '307C Bạch Mai'),
-  ('PNT', '100 Phạm Ngọc Thạch')
+  ('PNT', '100 Phạm Ngọc Thạch'),
+  ('HĐ', '106 Phố Xốm (Hà Đông)'),
+  ('KN', '491 Kim Ngưu'),
+  ('NPS', '8 Nguyễn Phong Sắc'),
+  ('NH CH', '137 Ngọc Hồi (CH)')
 ) as v(code, address_name)
 where upper(public.fin_stores.code) = upper(v.code)
    or public.fin_stores.name ilike '%' || v.code || '%'
@@ -58,7 +62,11 @@ from (values
   ('TN', '11 Thanh Niên'),
   ('CG', '45 Cầu Gỗ'),
   ('BM', '307C Bạch Mai'),
-  ('PNT', '100 Phạm Ngọc Thạch')
+  ('PNT', '100 Phạm Ngọc Thạch'),
+  ('HĐ', '106 Phố Xốm (Hà Đông)'),
+  ('KN', '491 Kim Ngưu'),
+  ('NPS', '8 Nguyễn Phong Sắc'),
+  ('NH CH', '137 Ngọc Hồi (CH)')
 ) as v(code, address_name)
 where upper(public.pos_stores.slug) = lower(v.code)
    or upper(public.pos_stores.name) = upper(v.code);

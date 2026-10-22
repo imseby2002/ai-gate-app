@@ -1,5 +1,6 @@
 import { getUnitContextAny } from '@/lib/auth/unit-access'
 import { NextResponse } from 'next/server'
+import { getFeelingTeaStoreName } from '@/lib/constants/feeling-tea-stores'
 
 // 門市清單：fin_stores 的門市（含名稱）＋已匯入資料出現過的門市代碼。
 // 綁定門市的帳號只回可操作的門市；只有一家時 locked_store 為該店。
@@ -11,7 +12,11 @@ export async function GET() {
 
   const { data: fin } = await supabase.from('fin_stores').select('code, name, unit_type, active').eq('owner_id', ownerId).order('code')
   const names = new Map<string, string>()
-  for (const r of fin ?? []) if (r.code) names.set(String(r.code).trim(), String(r.name ?? '').trim())
+  for (const r of fin ?? []) if (r.code) {
+    const rawName = String(r.name ?? '').trim()
+    const cleanName = getFeelingTeaStoreName(rawName || r.code)
+    names.set(String(r.code).trim(), cleanName)
+  }
 
   let codes: string[]
   if (ctx.storeCodes) {
@@ -26,7 +31,7 @@ export async function GET() {
     for (const r of [...(a ?? []), ...(b ?? [])]) if (r.store) set.add(String(r.store).trim())
     codes = [...set].sort()
   }
-  const store_list = codes.map(code => ({ code, name: names.get(code) ?? '' }))
+  const store_list = codes.map(code => ({ code, name: names.get(code) || getFeelingTeaStoreName(code) }))
   const locked = ctx.storeCodes && ctx.storeCodes.length === 1 ? ctx.storeCodes[0] : null
   return NextResponse.json({ stores: codes, store_list, locked_store: locked, active_store: ctx.storeCode ?? null })
 }
