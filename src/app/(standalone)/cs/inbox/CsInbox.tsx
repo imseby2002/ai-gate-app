@@ -212,7 +212,18 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
     nearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120
   }
 
+  // 開啟中的對話記在網址上：手機下拉重新整理（或 App 被系統重載）後回到同一個對話，不會跳回名單
+  const syncUrl = (c: Conversation | null) => {
+    try {
+      const url = new URL(window.location.href)
+      if (c) { url.searchParams.set('platform', c.platform); url.searchParams.set('to', c.from_id) }
+      else { url.searchParams.delete('platform'); url.searchParams.delete('to') }
+      window.history.replaceState(null, '', url.toString())
+    } catch { /* ignore */ }
+  }
+
   const openConvo = (c: Conversation) => {
+    syncUrl(c)
     setActive(c)
     setBubbles([])
     setErr(null)
@@ -342,7 +353,7 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
   }
 
   return (
-    <div className="h-[100dvh] min-h-[100dvh] bg-slate-50/50 dark:bg-background">
+    <div className="h-[100dvh] min-h-[100dvh] overscroll-none bg-slate-50/50 dark:bg-background">
       <div className="max-w-6xl mx-auto h-full flex flex-col">
         {/* Header：手機版開啟對話時隱藏，下面對話本身的 header 已有返回鍵，
             兩層 header 疊在一起在小螢幕上太佔空間 */}
@@ -389,7 +400,7 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
                 {searchQ && <div className="text-[11px] text-muted-foreground mt-1 px-1">{t('searchResultCount', { n: convos.length })}</div>}
               </div>
             )}
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto overscroll-contain">
               {loadingList && convos.length === 0 ? (
                 <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
               ) : convos.length === 0 && searchQ ? (
@@ -448,7 +459,7 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
                 {/* 對話 header */}
                 <div className="flex items-center justify-between gap-3 px-4 py-3 border-b bg-card/60">
                   <div className="flex items-center gap-2 min-w-0">
-                    <button onClick={() => setActive(null)} className="md:hidden text-muted-foreground"><ChevronLeft className="h-5 w-5" /></button>
+                    <button onClick={() => { syncUrl(null); setActive(null) }} className="md:hidden text-muted-foreground"><ChevronLeft className="h-5 w-5" /></button>
                     <span className="text-base">{plat(active.platform).emoji}</span>
                     <div className="min-w-0">
                       <div className="font-semibold truncate">{formatCustomerName(active.name, active.from_id, t)}</div>
@@ -502,7 +513,7 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
                 )}
 
                 {/* 訊息串 */}
-                <div ref={scrollRef} onScroll={handleThreadScroll} className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+                <div ref={scrollRef} onScroll={handleThreadScroll} className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 space-y-3">
                   {loadingThread ? (
                     <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
                   ) : bubbles.length === 0 ? (
