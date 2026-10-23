@@ -287,3 +287,34 @@ export async function PATCH(req: NextRequest) {
 
   return NextResponse.json({ ok: true, ai_plan: aiPlan })
 }
+
+// 刪除提案：提案人本人或公司負責人／管理者。body: { id }
+export async function DELETE(req: NextRequest) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const b = await req.json().catch(() => ({}))
+  const id = String(b.id || '').trim()
+  if (!id) return NextResponse.json({ error: 'id 必填' }, { status: 400 })
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin.from('profiles').select('id, user_type, company_id').eq('id', user.id).single()
+  const { data: existing } = await admin.from('user_feedback').select('id, user_id, company_id').eq('id', id).maybeSingle()
+  const isSuperAdmin = isSuperAdminUser(user, profile)
+  if (!existing || (!isSuperAdmin && existing.company_id !== profile?.company_id)) {
+    return NextResponse.json({ error: '找不到該筆提案' }, { status: 404 })
+  }
+
+  let canDelete = isSuperAdmin || existing.user_id === user.id
+  if (!canDelete && profile?.company_id) {
+    const { data: m } = await admin.from('company_members').select('role')
+      .eq('company_id', profile.company_id).eq('member_id', user.id).eq('status', 'active').maybeSingle()
+    canDelete = m?.role === 'owner' || m?.role === 'admin'
+  }
+  if (!canDelete) return NextResponse.json({ error: '只有提案人或管理者可以刪除' }, { status: 403 })
+
+  const { error } = await admin.from('user_feedback').delete().eq('id', id)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}

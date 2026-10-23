@@ -4915,7 +4915,10 @@
       "msgSuccessSubmit": "✅ Đề xuất của bạn đã được gửi thành công! Sau khi phê duyệt, hệ thống sẽ tiến hành nâng cấp mã nguồn ngay lập tức.",
       "msgApprovedAuto": "🚀 Đã phê duyệt đề xuất! Đặc tả nhiệm vụ lập trình AI đã được tạo tự động, sẵn sàng triển khai mã nguồn.",
       "msgCompletedAuto": "🎉 Đã đánh dấu tính năng này hoàn thành và đưa lên hệ thống hoạt động!",
-      "msgStatusUpdated": "Đã cập nhật trạng thái xét duyệt đề xuất."
+      "msgStatusUpdated": "Đã cập nhật trạng thái xét duyệt đề xuất.",
+      "deleteProposal": "Xóa đề xuất",
+      "confirmDelete": "Xác nhận xóa đề xuất này? Không thể khôi phục.",
+      "msgDeleted": "Đã xóa đề xuất"
     }
   },
   "SystemAuth": {

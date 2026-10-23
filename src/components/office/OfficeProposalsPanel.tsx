@@ -5,7 +5,7 @@ import {
   Lightbulb, AlertCircle, Plus, CheckCircle2, Clock, Check, X,
   Loader2, Filter, Sparkles, MessageSquare, ChevronDown, ChevronUp,
   Image as ImageIcon, Upload, Copy, ArrowRight, ShieldCheck, Tag,
-  ExternalLink, User, Store, Building2, RefreshCw, Layers
+  ExternalLink, User, Store, Building2, RefreshCw, Layers, Trash2
 } from 'lucide-react'
 import { useTranslations, useLocale } from 'next-intl'
 import { Button } from '@/components/ui/button'
@@ -168,6 +168,28 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
       alert(t('alertSubmitFail'))
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  // 刪除提案（提案人本人或管理者）
+  const handleDelete = async (id: string) => {
+    if (!confirm(t('confirmDelete'))) return
+    setUpdatingId(id)
+    try {
+      const res = await fetch('/api/office/proposals', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { alert(data.error || t('alertOpFail')); return }
+      setMsg({ type: 'success', text: t('msgDeleted') })
+      setTimeout(() => setMsg(null), 4000)
+      loadData()
+    } catch {
+      alert(t('alertOpFail'))
+    } finally {
+      setUpdatingId(null)
     }
   }
 
@@ -479,6 +501,17 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
                         month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
                       })}
                     </span>
+                    {(isMine || isManager) && (
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(p.id)}
+                        disabled={updatingId === p.id}
+                        title={t('deleteProposal')}
+                        className="ml-1 p-1 rounded text-muted-foreground hover:text-red-600 hover:bg-red-50 disabled:opacity-50"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                   </div>
                 </div>
 

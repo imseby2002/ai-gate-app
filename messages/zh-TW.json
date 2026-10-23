@@ -4915,7 +4915,10 @@
       "msgSuccessSubmit": "✅ 您的提案已成功送出！老闆審批後將即刻啟動程式改寫。",
       "msgApprovedAuto": "🚀 已批准該提案！AI 程式重寫任務規格書已自動生成，可即刻啟動程式改寫。",
       "msgCompletedAuto": "🎉 已標記該功能程式改寫完成並上線！",
-      "msgStatusUpdated": "已更新提案審核狀態。"
+      "msgStatusUpdated": "已更新提案審核狀態。",
+      "deleteProposal": "刪除提案",
+      "confirmDelete": "確定刪除這筆提案？刪除後無法復原。",
+      "msgDeleted": "提案已刪除"
     }
   },
   "SystemAuth": {
