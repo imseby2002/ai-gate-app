@@ -62,6 +62,68 @@ interface Doc {
   url: string
   note: string
   confirmed: boolean
+  images?: { path: string; name: string; url: string; download_url: string }[]
+}
+
+const IMAGE_DOC_TYPES = new Set(['company_license', 'sanitary_cert', 'license'])
+
+// 證件圖片存檔：縮圖、補傳、刪除
+function DocImagesStrip({ doc, onChanged }: { doc: Doc; onChanged: () => void }) {
+  const t = useTranslations('Affairs')
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [busy, setBusy] = useState(false)
+  const images = doc.images ?? []
+
+  async function upload(e: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? [])
+    e.target.value = ''
+    if (!files.length) return
+    setBusy(true)
+    const fd = new FormData()
+    fd.append('id', doc.id)
+    files.forEach(f => fd.append('files', f))
+    const res = await fetch('/api/affairs/documents/images', { method: 'POST', body: fd })
+    const d = await res.json().catch(() => ({}))
+    setBusy(false)
+    if (!res.ok) { alert(d.error || t('imageUploadFailed')); return }
+    onChanged()
+  }
+
+  async function remove(path: string) {
+    if (!confirm(t('confirmDeleteImage'))) return
+    setBusy(true)
+    const res = await fetch('/api/affairs/documents/images', {
+      method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: doc.id, path }),
+    })
+    setBusy(false)
+    if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.error || t('imageDeleteFailed')); return }
+    onChanged()
+  }
+
+  return (
+    <div className="flex items-center gap-2 flex-wrap pt-2">
+      <span className="text-[11px] text-slate-500 font-medium">{t('certImages', { n: images.length })}</span>
+      {images.map(img => (
+        <div key={img.path} className="relative group">
+          <a href={img.url} target="_blank" rel="noreferrer" title={img.name}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={img.url} alt={img.name} className="h-14 w-14 object-cover rounded border bg-slate-50" />
+          </a>
+          <button type="button" onClick={() => remove(img.path)} disabled={busy}
+            className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-white border shadow text-slate-500 hover:text-red-600 flex items-center justify-center"
+            title={t('deleteImage')}>
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+      ))}
+      <button type="button" onClick={() => inputRef.current?.click()} disabled={busy}
+        className="h-14 px-3 rounded border-2 border-dashed text-xs text-slate-500 hover:border-indigo-400 hover:text-indigo-600 flex items-center gap-1">
+        {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+        {t('uploadCertImages')}
+      </button>
+      <input ref={inputRef} type="file" accept="image/*" multiple className="hidden" onChange={upload} />
+    </div>
+  )
 }
 
 interface AffairSettings {
@@ -357,6 +419,7 @@ function DocsTab() {
                     </div>
 
                     {d.note && <div className="text-xs text-slate-400 mt-0.5">{t('noteLabel')}{d.note}</div>}
+                    {IMAGE_DOC_TYPES.has(d.doc_type) && <DocImagesStrip doc={d} onChanged={reload} />}
                   </div>
 
                   <div className="flex items-center gap-1.5 shrink-0">

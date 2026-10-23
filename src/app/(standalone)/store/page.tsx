@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl'
 import {
   Store, BarChart3, Boxes, Receipt, Wrench, Calendar,
   ArrowRight, ArrowLeft, ShieldCheck, CheckCircle2, Building2,
-  Sparkles, ExternalLink, RefreshCw, Loader2, Compass, BookOpen, Download
+  Sparkles, ExternalLink, RefreshCw, Loader2, Compass, BookOpen, Download, FileBadge
 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -69,6 +69,15 @@ const STORE_FEATURES: StoreFeature[] = [
     color: 'text-orange-600 dark:text-orange-400',
     chip: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
     ring: 'hover:border-orange-500/60',
+  },
+  {
+    key: 'licenses',
+    href: '/store-licenses',
+    subtitle: 'Business License & Hygiene Certificate',
+    icon: FileBadge,
+    color: 'text-teal-600 dark:text-teal-400',
+    chip: 'bg-teal-500/10 text-teal-600 dark:text-teal-400',
+    ring: 'hover:border-teal-500/60',
   },
 ]
 
