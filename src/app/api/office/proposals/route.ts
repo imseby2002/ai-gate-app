@@ -78,14 +78,22 @@ export async function GET(req: NextRequest) {
 
   const canManage = isSuperAdmin || isCompanyAdmin
 
-  // 取得全部相關提案（依更新與建立時間排序）
-  const { data: rows, error } = await admin
+  // 取得本公司相關提案（依建立時間排序）；無公司的平台總管理者看全部
+  if (!profile?.company_id && !isSuperAdmin) {
+    return NextResponse.json({ proposals: [], canManage, currentUser: { id: user.id, name: user.email?.split('@')[0] || '我', email: user.email || '', store_code: '', canManage } })
+  }
+  let q = admin
     .from('user_feedback')
     .select('*, profiles(id, full_name, email, department)')
     .in('type', ['problem', 'idea', 'bug', 'feature'])
     .order('created_at', { ascending: false })
+  if (profile?.company_id) q = q.eq('company_id', profile.company_id)
+  const { data: rows, error } = await q
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    console.error('[office/proposals] GET failed', error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
   const proposals = (rows ?? []).map(r => {
     const parsed = parsePayload(r.description || '')
@@ -149,7 +157,7 @@ export async function POST(req: NextRequest) {
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('full_name, email, department')
+    .select('full_name, email, department, company_id')
     .eq('id', user.id)
     .single()
 
@@ -172,6 +180,7 @@ export async function POST(req: NextRequest) {
     .from('user_feedback')
     .insert({
       user_id: user.id,
+      company_id: profile?.company_id ?? null,
       title,
       description: JSON.stringify(payload),
       type,
@@ -231,6 +240,9 @@ export async function PATCH(req: NextRequest) {
   // 取得原有資料
   const { data: existing } = await admin.from('user_feedback').select('*').eq('id', id).single()
   if (!existing) return NextResponse.json({ error: '找不到該筆提案' }, { status: 404 })
+  if (!isSuperAdmin && existing.company_id !== profile?.company_id) {
+    return NextResponse.json({ error: '找不到該筆提案' }, { status: 404 })
+  }
 
   const parsed = parsePayload(existing.description || '')
   if (status === 'approved') {
