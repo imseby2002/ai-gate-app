@@ -4915,7 +4915,10 @@
       "msgSuccessSubmit": "✅ Your proposal has been submitted! AI coding will begin once approved.",
       "msgApprovedAuto": "🚀 Proposal approved! AI coding task specification generated, ready to start coding.",
       "msgCompletedAuto": "🎉 Marked as completed and deployed live!",
-      "msgStatusUpdated": "Proposal review status updated."
+      "msgStatusUpdated": "Proposal review status updated.",
+      "deleteProposal": "Delete proposal",
+      "confirmDelete": "Delete this proposal? This cannot be undone.",
+      "msgDeleted": "Proposal deleted"
     }
   },
   "SystemAuth": {
