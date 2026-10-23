@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { randomUUID } from 'crypto'
 import { getUnitContext } from '@/lib/auth/unit-access'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { docImages, signDocImages } from '@/lib/affairs/doc-images'
 
 const BUCKET = 'affair-docs'
 const MAX_SIZE = 20 * 1024 * 1024
@@ -65,6 +66,7 @@ export async function GET(req: NextRequest) {
       payment_cycle_months: Number(d.payment_cycle_months ?? extra.payment_cycle_months) || 1,
       currency: currencyOrEmpty(extra.currency),
       url,
+      images: await signDocImages(docImages(extra)),
     }
   }))
   return NextResponse.json({ documents })
@@ -195,9 +197,10 @@ export async function DELETE(req: NextRequest) {
   if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
   const { id } = await req.json().catch(() => ({}))
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
-  const { data: doc } = await supabase.from('affair_documents').select('storage_path').eq('id', id).eq('owner_id', user.id).single()
+  const { data: doc } = await supabase.from('affair_documents').select('storage_path, ai_extracted').eq('id', id).eq('owner_id', user.id).single()
   const { error } = await supabase.from('affair_documents').delete().eq('id', id).eq('owner_id', user.id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  if (doc?.storage_path) await createAdminClient().storage.from(BUCKET).remove([doc.storage_path]).catch(() => {})
+  const paths = [doc?.storage_path, ...docImages(doc?.ai_extracted).map(i => i.path)].filter(Boolean) as string[]
+  if (paths.length) await createAdminClient().storage.from(BUCKET).remove(paths).catch(() => {})
   return NextResponse.json({ ok: true })
 }

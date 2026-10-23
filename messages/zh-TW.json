@@ -5279,7 +5279,10 @@
     "open": "開啟{title}",
     "enter": "進入",
     "manualDoc": "使用說明書",
-    "manualDownload": "下載使用說明書 (PDF)"
+    "manualDownload": "下載使用說明書 (PDF)",
+    "feature_licenses_title": "營業執照・衛生證",
+    "feature_licenses_desc": "查看並下載本店的公司營業執照與衛生許可證圖片，檢查或稽查時可直接出示。",
+    "feature_licenses_tags": "營業執照、衛生證、圖片下載"
   },
   "Shift": {
     "weekday_sun": "日",
@@ -6498,7 +6501,13 @@
     "runFailed": "執行失敗",
     "checkAndSendNow": "立即檢查並發送提醒",
     "currencyField": "合約幣別",
-    "currencyNotSet": "未設定幣別"
+    "currencyNotSet": "未設定幣別",
+    "certImages": "證件圖片（{n}）",
+    "uploadCertImages": "補傳圖片",
+    "deleteImage": "刪除圖片",
+    "confirmDeleteImage": "確定刪除這張圖片？",
+    "imageUploadFailed": "圖片上傳失敗",
+    "imageDeleteFailed": "圖片刪除失敗"
   },
   "RdLab": {
     "forbidden": "需具備研發單位權限才能使用 Feeling Tea AI R&D Lab",
@@ -13111,5 +13120,22 @@
     "hintUrl": "貼上 YouTube 或 Blog 文章連結，自動抓取內容（逐字稿／全文）",
     "hintManual": "自己整理的筆記、觀察或逐字稿，直接貼入",
     "hintKnowledge": "勾選公司知識庫的文件（SOP、教材、規範），AI 整理成這位專家的知識"
+  },
+  "StoreLicenses": {
+    "title": "營業執照・衛生證",
+    "subtitle": "只顯示本店的證照，可檢視及下載圖片",
+    "back": "返回門市",
+    "type_all": "全部",
+    "type_company_license": "公司營業執照",
+    "type_sanitary_cert": "衛生許可證",
+    "unbound": "此帳號尚未綁定門市，請聯絡總務或管理者設定所屬門市後再查看。",
+    "empty": "目前沒有本店的證照資料",
+    "noStore": "未指定門市",
+    "issuer": "核發機關",
+    "effective": "生效日",
+    "expiry": "到期日",
+    "viewOriginal": "檢視原檔",
+    "download": "下載",
+    "noImages": "尚未上傳證件圖片"
   }
 }

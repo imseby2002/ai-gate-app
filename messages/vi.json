@@ -5279,7 +5279,10 @@
     "open": "Mở {title}",
     "enter": "Vào",
     "manualDoc": "Hướng dẫn sử dụng",
-    "manualDownload": "Tải hướng dẫn sử dụng (PDF)"
+    "manualDownload": "Tải hướng dẫn sử dụng (PDF)",
+    "feature_licenses_title": "Giấy phép & Giấy CN vệ sinh",
+    "feature_licenses_desc": "Xem và tải ảnh giấy phép kinh doanh và giấy CN vệ sinh của cửa hàng để xuất trình khi kiểm tra.",
+    "feature_licenses_tags": "Giấy phép KD、Giấy CN vệ sinh、Tải ảnh"
   },
   "Shift": {
     "weekday_sun": "CN",
@@ -6498,7 +6501,13 @@
     "runFailed": "Chạy thất bại",
     "checkAndSendNow": "Kiểm tra và gửi nhắc nhở ngay",
     "currencyField": "Tiền tệ hợp đồng",
-    "currencyNotSet": "Chưa chọn tiền tệ"
+    "currencyNotSet": "Chưa chọn tiền tệ",
+    "certImages": "Ảnh giấy tờ ({n})",
+    "uploadCertImages": "Tải thêm ảnh",
+    "deleteImage": "Xóa ảnh",
+    "confirmDeleteImage": "Xác nhận xóa ảnh này?",
+    "imageUploadFailed": "Tải ảnh thất bại",
+    "imageDeleteFailed": "Xóa ảnh thất bại"
   },
   "RdLab": {
     "forbidden": "Cần quyền đơn vị R&D để sử dụng Feeling Tea AI R&D Lab",
@@ -13111,5 +13120,22 @@
     "hintUrl": "Dán liên kết YouTube hoặc blog để tự lấy nội dung (bản ghi/toàn văn)",
     "hintManual": "Dán ghi chú, quan sát hoặc bản ghi của bạn",
     "hintKnowledge": "Chọn tài liệu kho kiến thức công ty (SOP, giáo trình, quy định), AI biến thành kiến thức của chuyên gia này"
+  },
+  "StoreLicenses": {
+    "title": "Giấy phép & Giấy CN vệ sinh",
+    "subtitle": "Chỉ hiển thị giấy tờ của cửa hàng bạn; có thể xem và tải ảnh",
+    "back": "Quay lại cửa hàng",
+    "type_all": "Tất cả",
+    "type_company_license": "Giấy phép công ty",
+    "type_sanitary_cert": "Giấy CN vệ sinh",
+    "unbound": "Tài khoản chưa được gắn với cửa hàng. Vui lòng liên hệ Tổng vụ／quản lý để thiết lập.",
+    "empty": "Chưa có giấy tờ của cửa hàng",
+    "noStore": "Chưa gắn cửa hàng",
+    "issuer": "Cơ quan cấp",
+    "effective": "Ngày hiệu lực",
+    "expiry": "Ngày hết hạn",
+    "viewOriginal": "Xem bản gốc",
+    "download": "Tải về",
+    "noImages": "Chưa tải ảnh giấy tờ"
   }
 }

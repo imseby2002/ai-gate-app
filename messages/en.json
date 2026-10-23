@@ -5279,7 +5279,10 @@
     "open": "Open {title}",
     "enter": "Enter",
     "manualDoc": "User manual",
-    "manualDownload": "Download user manual (PDF)"
+    "manualDownload": "Download user manual (PDF)",
+    "feature_licenses_title": "Licenses & Certificates",
+    "feature_licenses_desc": "View and download your store's business license and hygiene certificate images for inspections.",
+    "feature_licenses_tags": "Business license、Hygiene certificate、Download"
   },
   "Shift": {
     "weekday_sun": "Sun",
@@ -6498,7 +6501,13 @@
     "runFailed": "Run failed",
     "checkAndSendNow": "Check & Send Reminders Now",
     "currencyField": "Contract currency",
-    "currencyNotSet": "Currency not set"
+    "currencyNotSet": "Currency not set",
+    "certImages": "Certificate images ({n})",
+    "uploadCertImages": "Add images",
+    "deleteImage": "Delete image",
+    "confirmDeleteImage": "Delete this image?",
+    "imageUploadFailed": "Image upload failed",
+    "imageDeleteFailed": "Image delete failed"
   },
   "RdLab": {
     "forbidden": "R&D unit permission is required to use Feeling Tea AI R&D Lab",
@@ -13111,5 +13120,22 @@
     "hintUrl": "Paste a YouTube or blog link to fetch its content (transcript / full text)",
     "hintManual": "Paste your own notes, observations or transcripts",
     "hintKnowledge": "Select company knowledge documents (SOPs, training, rules); AI turns them into this expert’s knowledge"
+  },
+  "StoreLicenses": {
+    "title": "Licenses & Certificates",
+    "subtitle": "Only your store's documents are shown; view and download images",
+    "back": "Back to store",
+    "type_all": "All",
+    "type_company_license": "Business license",
+    "type_sanitary_cert": "Hygiene certificate",
+    "unbound": "This account is not linked to a store yet. Ask the admin to assign your store.",
+    "empty": "No documents for your store yet",
+    "noStore": "No store assigned",
+    "issuer": "Issued by",
+    "effective": "Effective",
+    "expiry": "Expiry",
+    "viewOriginal": "View original",
+    "download": "Download",
+    "noImages": "No certificate images uploaded yet"
   }
 }
