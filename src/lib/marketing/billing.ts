@@ -102,6 +102,7 @@ export function videoCost(model: string, durationSeconds: number, multiplier = D
 const LLM_PRICES: Record<string, { input: number; output: number }> = {
   'claude-sonnet-4-6': { input: 3, output: 15 },
   'claude-haiku-4-5': { input: 1, output: 5 },
+  'claude-haiku-5-5': { input: 0.1, output: 0.5 },
   'gemini-2.5-flash': { input: 0.3, output: 2.5 },
   // DeepSeek 各來源報價不一，取較高者 $0.27／$1.10
   'deepseek-chat': { input: 0.27, output: 1.1 },

@@ -15,7 +15,7 @@ import { llmCost } from '@/lib/marketing/billing'
 type Admin = ReturnType<typeof createAdminClient>
 type Intent = 'info' | 'local' | 'compare' | 'transact'
 
-export const AUTOPILOT_FAST_MODEL = 'claude-haiku-4-5'
+export const AUTOPILOT_FAST_MODEL = 'claude-haiku-5-5'
 export const AUTOPILOT_ARTICLE_MODEL = 'claude-sonnet-4-6'
 
 export interface SuggestedTopic {
