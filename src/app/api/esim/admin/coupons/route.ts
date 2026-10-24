@@ -1,7 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCoupons, saveCoupons, EsimCoupon } from '@/lib/esim/coupons'
+import { createClient } from '@/lib/supabase/server'
+
+async function requireAdmin() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+  const { data: profile } = await supabase
+    .from('profiles').select('user_type').eq('id', user.id).single()
+  if (profile?.user_type !== 'admin') return null
+  return supabase
+}
 
 export async function GET() {
+  if (!(await requireAdmin())) {
+    return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
+  }
   try {
     const coupons = await getCoupons()
     return NextResponse.json({
@@ -14,6 +28,9 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  if (!(await requireAdmin())) {
+    return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
+  }
   try {
     const body = await req.json()
     const { action, coupon, coupons } = body
