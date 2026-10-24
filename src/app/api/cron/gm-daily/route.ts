@@ -1,22 +1,15 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { generateGmReport } from '@/lib/gm/report'
+import { verifyCronAuth } from '@/lib/cron/auth'
 
 export const maxDuration = 300
 
 // Vercel Cron：每日產生總經理室經營快報，站內＋Telegram＋Email 推播。
 // 收件對象＝有設定 gm 管道（affair_settings.gm_telegram/gm_email）的 owner。
 export async function GET(req: Request) {
-  const cronSecret = process.env.CRON_SECRET
-  if (cronSecret) {
-    if (req.headers.get('authorization') !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-  } else {
-    const isVercelCron = req.headers.get('x-vercel-cron') === '1'
-    const isLocalhost = req.headers.get('host')?.startsWith('localhost')
-    if (!isVercelCron && !isLocalhost) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const authError = verifyCronAuth(req)
+  if (authError) return authError
 
   const admin = createAdminClient()
   const { data: settings } = await admin.from('affair_settings').select('owner_id, gm_telegram, gm_email')

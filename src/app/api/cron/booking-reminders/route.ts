@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendBookingNotification, type NotificationType } from '@/lib/booking/notify'
+import { verifyCronAuth } from '@/lib/cron/auth'
 
 // Vercel Cron: 每日寄送入住提醒（明日入住）與退房提醒（今日退房）
 // 以台灣時區判定日期；已寄過的同類型通知不重寄。
@@ -10,18 +11,8 @@ function taipeiDate(offsetDays = 0): string {
 }
 
 export async function GET(req: Request) {
-  const cronSecret = process.env.CRON_SECRET
-  if (cronSecret) {
-    if (req.headers.get('authorization') !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-  } else {
-    const isVercelCron = req.headers.get('x-vercel-cron') === '1'
-    const isLocalhost = req.headers.get('host')?.startsWith('localhost')
-    if (!isVercelCron && !isLocalhost) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-  }
+  const authError = verifyCronAuth(req)
+  if (authError) return authError
 
   const supabase = createAdminClient()
   const today = taipeiDate(0)

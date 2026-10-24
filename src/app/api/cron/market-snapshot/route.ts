@@ -3,21 +3,11 @@ export const maxDuration = 300
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { runMarketForUser } from '@/lib/booking/market-run'
+import { verifyCronAuth } from '@/lib/cron/auth'
 
 export async function GET(req: Request) {
-  const cronSecret = process.env.CRON_SECRET
-  if (cronSecret) {
-    const authHeader = req.headers.get('authorization')
-    if (authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-  } else {
-    const isVercelCron = req.headers.get('x-vercel-cron') === '1'
-    const isLocalhost = req.headers.get('host')?.startsWith('localhost')
-    if (!isVercelCron && !isLocalhost) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-  }
+  const authError = verifyCronAuth(req)
+  if (authError) return authError
 
   const admin = createAdminClient()
 

@@ -3,22 +3,11 @@ export const maxDuration = 300
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { syncEmailForSetting } from '@/lib/booking/email-sync'
+import { verifyCronAuth } from '@/lib/cron/auth'
 
 export async function GET(req: Request) {
-  const cronSecret = process.env.CRON_SECRET
-  if (cronSecret) {
-    const authHeader = req.headers.get('authorization')
-    if (authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-  } else {
-    // CRON_SECRET not configured — accept Vercel-internal cron calls only
-    const isVercelCron = req.headers.get('x-vercel-cron') === '1'
-    const isLocalhost = req.headers.get('host')?.startsWith('localhost')
-    if (!isVercelCron && !isLocalhost) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-  }
+  const authError = verifyCronAuth(req)
+  if (authError) return authError
 
   const supabase = createAdminClient()
 

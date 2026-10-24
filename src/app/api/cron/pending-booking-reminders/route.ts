@@ -2,22 +2,13 @@ import { NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { PAYMENT_METHOD_LABEL, type PaymentMethod } from '@/lib/booking/payment'
+import { verifyCronAuth } from '@/lib/cron/auth'
 
 // Vercel Cron（每日）：仍待確認的官網訂房申請（到店付款／轉帳／信用卡）每天寄信通知民宿主，
 // 直到手動確認、取消，或未收款超過 48 小時被 release-stale-bookings 自動取消為止。
 export async function GET(req: Request) {
-  const cronSecret = process.env.CRON_SECRET
-  if (cronSecret) {
-    if (req.headers.get('authorization') !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-  } else {
-    const isVercelCron = req.headers.get('x-vercel-cron') === '1'
-    const isLocalhost = req.headers.get('host')?.startsWith('localhost')
-    if (!isVercelCron && !isLocalhost) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-  }
+  const authError = verifyCronAuth(req)
+  if (authError) return authError
   if (!process.env.RESEND_API_KEY) return NextResponse.json({ error: '未設定 RESEND_API_KEY' }, { status: 500 })
 
   const admin = createAdminClient()

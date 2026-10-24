@@ -13,6 +13,7 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { notifyFormSubmission, formatFormSubmission, formatFormSubmissionBatch } from '@/lib/cs/formNotify'
 import type { CsFormField, CsFormNotifyTarget } from '@/app/api/marketing/cs-forms/route'
+import { verifyCronAuth } from '@/lib/cron/auth'
 
 // batchTime（HH:MM）與現在台灣時間的差距落在這個範圍內（分鐘）才觸發，
 // 對齊 15 分鐘的執行頻率，同一天內不會重複觸發（見下方 notified_at 去重）。
@@ -25,18 +26,8 @@ function minutesSinceMidnight(hhmm: string): number | null {
 }
 
 export async function GET(req: Request) {
-  const cronSecret = process.env.CRON_SECRET
-  if (cronSecret) {
-    if (req.headers.get('authorization') !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-  } else {
-    const isVercelCron = req.headers.get('x-vercel-cron') === '1'
-    const isLocalhost = req.headers.get('host')?.startsWith('localhost')
-    if (!isVercelCron && !isLocalhost) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-  }
+  const authError = verifyCronAuth(req)
+  if (authError) return authError
 
   const supabase = createAdminClient()
   const nowHHMM = new Date().toLocaleTimeString('en-GB', { timeZone: 'Asia/Taipei', hour: '2-digit', minute: '2-digit' })

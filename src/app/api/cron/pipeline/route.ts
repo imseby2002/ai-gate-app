@@ -13,6 +13,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { verifyCronAuth } from '@/lib/cron/auth'
 
 // ── Supabase service role (no cookie needed) ──────────────────────────────────
 function getServiceClient() {
@@ -91,12 +92,10 @@ async function callUnitApi(
 // ── Main Cron Handler ─────────────────────────────────────────────────────────
 export async function GET(req: NextRequest) {
   // Verify Vercel cron secret
-  const authHeader = req.headers.get('Authorization')
-  const cronSecret = process.env.CRON_SECRET
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const authError = verifyCronAuth(req)
+  if (authError) return authError
 
+  const cronSecret = process.env.CRON_SECRET
   const supabase = getServiceClient()
   const baseUrl  = process.env.NEXT_PUBLIC_APP_URL ?? `https://${req.headers.get('host')}`
   const now      = new Date()
