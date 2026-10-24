@@ -36,8 +36,14 @@ export async function DELETE(req: NextRequest) {
   const match = url.match(/booking-photos\/(.+)$/)
   if (!match) return Response.json({ error: 'Invalid URL' }, { status: 400 })
 
+  // 僅能刪除自己命名空間下的檔案（上傳路徑為 `${user.id}/...`），避免跨用戶刪除
+  const objectPath = match[1]
+  if (!objectPath.startsWith(`${user.id}/`)) {
+    return Response.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
   const admin = createAdminClient()
-  const { error } = await admin.storage.from(BUCKET).remove([match[1]])
+  const { error } = await admin.storage.from(BUCKET).remove([objectPath])
   if (error) return Response.json({ error: error.message }, { status: 500 })
 
   return Response.json({ ok: true })

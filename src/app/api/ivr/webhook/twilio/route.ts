@@ -9,7 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { generateShortToken, buildShortUrl, dispatchJoinLink, type DispatchChannel } from '@/lib/ivr/dispatch'
-import { getTwilioAuth } from '@/lib/telephony/twilio'
+import { getTwilioAuth, validateTwilioSignature } from '@/lib/telephony/twilio'
 import { callCost, chargeUsage } from '@/lib/marketing/billing'
 
 const FINAL_STATUSES = ['completed', 'busy', 'no-answer', 'canceled', 'failed']
@@ -59,22 +59,38 @@ export async function POST(req: NextRequest) {
   let digits = ''
   let callStatus = ''
 
+  // 驗證 Twilio 簽章：真實 Twilio webhook 為 form-encoded 並帶 X-Twilio-Signature。
+  // 簽章驗證需要與撥號時相同的 webhook URL（NEXT_PUBLIC_APP_URL + 路徑）。
   const contentType = req.headers.get('content-type') || ''
-  if (contentType.includes('application/x-www-form-urlencoded') || contentType.includes('multipart/form-data')) {
-    const formData = await req.formData()
-    callSid = String(formData.get('CallSid') || '')
-    digits = String(formData.get('Digits') || '')
-    callStatus = String(formData.get('CallStatus') || '')
-  } else {
-    try {
-      const json = await req.json()
-      callSid = json.CallSid || json.callSid || ''
-      digits = json.Digits || json.digits || ''
-      callStatus = json.CallStatus || json.callStatus || ''
-    } catch {
-      // ignore
-    }
+  const isForm = contentType.includes('application/x-www-form-urlencoded') || contentType.includes('multipart/form-data')
+  if (!isForm) {
+    // 非 form-encoded 無法驗證 Twilio 簽章，一律拒絕（防止偽造的 JSON 請求觸發派送/扣點）
+    return new NextResponse('<Response><Hangup/></Response>', {
+      status: 403,
+      headers: { 'Content-Type': 'text/xml' },
+    })
   }
+
+  const formData = await req.formData()
+  const params: Record<string, string> = {}
+  for (const [k, v] of formData.entries()) {
+    if (typeof v === 'string') params[k] = v
+  }
+
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || '').replace(/\/$/, '')
+  const webhookUrl = `${appUrl}/api/ivr/webhook/twilio`
+  const signature = req.headers.get('x-twilio-signature')
+  if (!validateTwilioSignature(webhookUrl, params, signature)) {
+    console.error('[IVR Twilio] 簽章驗證失敗，拒絕請求')
+    return new NextResponse('<Response><Hangup/></Response>', {
+      status: 403,
+      headers: { 'Content-Type': 'text/xml' },
+    })
+  }
+
+  callSid = params.CallSid || ''
+  digits = params.Digits || ''
+  callStatus = params.CallStatus || ''
 
   if (!callSid) {
     return new NextResponse('<Response><Hangup/></Response>', {
