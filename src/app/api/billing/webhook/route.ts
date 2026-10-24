@@ -17,6 +17,18 @@ export async function POST(req: NextRequest) {
 
   const supabase = await createAdminClient()
 
+  // 去重：先嘗試記錄此 event.id，重送（unique violation 23505）則直接略過，避免重複入帳。
+  // 若 table 尚未建立（部署競態），記 log 後照常處理，不中斷帳務。
+  const { error: dedupErr } = await supabase
+    .from('stripe_processed_events')
+    .insert({ id: event.id })
+  if (dedupErr?.code === '23505') {
+    return NextResponse.json({ received: true, duplicate: true })
+  }
+  if (dedupErr) {
+    console.error('[Stripe] idempotency 記錄失敗（照常處理）', dedupErr.message)
+  }
+
   switch (event.type) {
     case 'checkout.session.completed': {
       const session = event.data.object as Stripe.Checkout.Session

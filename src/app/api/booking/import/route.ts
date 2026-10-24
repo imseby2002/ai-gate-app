@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { generateText } from 'ai'
 import { createAnthropic } from '@ai-sdk/anthropic'
+import { safeFetch } from '@/lib/ssrf'
 
 export const maxDuration = 60 // seconds (Vercel Hobby max)
 
@@ -89,7 +90,7 @@ async function fetchBasic(url: string, platform?: string): Promise<string | null
     if (platform === 'booking_com') headers['Referer'] = 'https://www.booking.com/'
     if (platform === 'agoda') headers['Referer'] = 'https://www.agoda.com/'
 
-    const res = await fetch(url, { headers, signal: AbortSignal.timeout(12000) })
+    const res = await safeFetch(url, { headers, signal: AbortSignal.timeout(12000) })
     if (!res.ok) return null
     return await res.text()
   } catch {

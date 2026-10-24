@@ -16,24 +16,15 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { generateWithFreeFirst } from '@/lib/ai/free-first-caller'
+import { verifyCronAuth } from '@/lib/cron/auth'
 
 const IDLE_MIN = 10      // 距最後一則訊息至少 10 分鐘，避免對話進行中被打斷重新彙整
 const LOOKBACK_DAYS = 14 // 太久沒互動的客人不用再花錢彙整
 const MAX_PER_RUN = 40
 
 export async function GET(req: Request) {
-  const cronSecret = process.env.CRON_SECRET
-  if (cronSecret) {
-    if (req.headers.get('authorization') !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-  } else {
-    const isVercelCron = req.headers.get('x-vercel-cron') === '1'
-    const isLocalhost = req.headers.get('host')?.startsWith('localhost')
-    if (!isVercelCron && !isLocalhost) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-  }
+  const authError = verifyCronAuth(req)
+  if (authError) return authError
 
   const supabase = createAdminClient()
   const now = Date.now()

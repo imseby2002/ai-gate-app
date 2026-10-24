@@ -13,9 +13,11 @@ function stripHtml(html: string): string {
     .trim()
 }
 
+import { safeFetch } from '@/lib/ssrf'
+
 export async function fetchUrlText(url: string, maxChars = 50000): Promise<string> {
   const full = url.startsWith('http') ? url : `https://${url}`
-  const res = await fetch(full, {
+  const res = await safeFetch(full, {
     headers: { 'User-Agent': 'Mozilla/5.0 (AI-GATE expert ingest)' },
     signal: AbortSignal.timeout(15000),
   })

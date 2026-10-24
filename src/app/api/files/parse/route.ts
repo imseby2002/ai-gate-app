@@ -22,6 +22,7 @@ export async function POST(req: NextRequest) {
     .from('assistant_files')
     .select('*')
     .eq('id', fileId)
+    .eq('user_id', user.id)
     .single()
 
   if (!file) return NextResponse.json({ error: 'File not found' }, { status: 404 })

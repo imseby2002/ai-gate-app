@@ -18,6 +18,7 @@ import { sendToCustomer } from '@/lib/cs/send'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 import { generateWithFreeFirst } from '@/lib/ai/free-first-caller'
+import { verifyCronAuth } from '@/lib/cron/auth'
 
 const META_PLATFORMS = ['messenger', 'instagram', 'whatsapp']
 const WINDOW_MIN_H = 8   // 至少距上次訊息 8 小時
@@ -28,18 +29,8 @@ type RunResult = { userId: string; platform: string; fromId: string; ok: boolean
 
 export async function GET(req: Request) {
   // 與其他 cron 一致的驗證
-  const cronSecret = process.env.CRON_SECRET
-  if (cronSecret) {
-    if (req.headers.get('authorization') !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-  } else {
-    const isVercelCron = req.headers.get('x-vercel-cron') === '1'
-    const isLocalhost = req.headers.get('host')?.startsWith('localhost')
-    if (!isVercelCron && !isLocalhost) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-  }
+  const authError = verifyCronAuth(req)
+  if (authError) return authError
 
   const supabase = createAdminClient()
   const now = Date.now()

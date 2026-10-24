@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { tickRun, type AgentRunRow } from '@/lib/agents/engine'
 import { sendPendingApprovalReminders } from '@/lib/agents/approvals'
+import { verifyCronAuth } from '@/lib/cron/auth'
 
 // 單一 tick 可能包含長時間的 LLM 生成（例如一次產出兩週內容），60 秒會被 Vercel 砍掉、run 永遠卡在同一步。
 // 須小於 claim_due_agent_runs 的鎖逾時（5 分鐘），避免同一個 run 還在跑就被下一次 cron 重複搶走。
@@ -19,11 +20,8 @@ export const maxDuration = 280
 const CLAIM_BATCH_SIZE = 5
 
 export async function GET(req: NextRequest) {
-  const authHeader = req.headers.get('Authorization')
-  const cronSecret = process.env.CRON_SECRET
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const authError = verifyCronAuth(req)
+  if (authError) return authError
 
   const admin = createAdminClient()
   const workerId = `tick-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`

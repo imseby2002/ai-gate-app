@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { chargeBoundCardBackground, generateTradeNo } from '@/lib/ecpay/client'
 import { usdToTwdInteger } from '@/lib/fx'
+import { verifyCronAuth } from '@/lib/cron/auth'
 
 // Vercel Cron：找出「低於門檻自動儲值」已啟用、已綁卡、餘額低於門檻的用戶，觸發背景扣款。
 // ECPAY_BACKGROUND_CHARGE_ENABLED 預設關閉（見 lib/ecpay/client.ts 的說明：幕後交易端點尚待
@@ -9,18 +10,8 @@ import { usdToTwdInteger } from '@/lib/fx'
 const RETRY_COOLDOWN_MS = 60 * 60 * 1000 // 同一用戶 1 小時內最多觸發一次，避免重複扣款
 
 export async function GET(req: Request) {
-  const cronSecret = process.env.CRON_SECRET
-  if (cronSecret) {
-    if (req.headers.get('authorization') !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-  } else {
-    const isVercelCron = req.headers.get('x-vercel-cron') === '1'
-    const isLocalhost = req.headers.get('host')?.startsWith('localhost')
-    if (!isVercelCron && !isLocalhost) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-  }
+  const authError = verifyCronAuth(req)
+  if (authError) return authError
 
   const admin = createAdminClient()
   const backgroundChargeEnabled = process.env.ECPAY_BACKGROUND_CHARGE_ENABLED === 'true'

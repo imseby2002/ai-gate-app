@@ -1,3 +1,4 @@
+import { safeFetch } from '@/lib/ssrf'
 /**
  * GEO Score 落地頁審計 — 抓取已發佈 URL，算 0–100 綜合分。
  * 維度（無外部品牌掃描，權重重分配）：
@@ -49,7 +50,7 @@ export async function auditUrl(url: string): Promise<AuditResult> {
   const full = url.startsWith('http') ? url : `https://${url}`
   let html = ''
   try {
-    const res = await fetch(full, {
+    const res = await safeFetch(full, {
       headers: { 'User-Agent': 'Mozilla/5.0 (GEO-Writer audit)' },
       signal: AbortSignal.timeout(12000),
     })

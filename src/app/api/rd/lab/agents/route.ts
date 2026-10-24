@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { runRdAgent, type RdAgentType } from '@/lib/rd/agents'
+import { getUnitContext } from '@/lib/auth/unit-access'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 export async function POST(req: NextRequest) {
+  const ctx = await getUnitContext('rd')
+  if (!ctx.ok) {
+    return NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status })
+  }
   try {
     const body = await req.json()
     const { agent, prompt, context } = body as {

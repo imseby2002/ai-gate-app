@@ -9,20 +9,11 @@ export const maxDuration = 300
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { trackQuestions, deriveTarget, type TrackInput } from '@/lib/geo/track'
+import { verifyCronAuth } from '@/lib/cron/auth'
 
 export async function GET(req: Request) {
-  const cronSecret = process.env.CRON_SECRET
-  if (cronSecret) {
-    if (req.headers.get('authorization') !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-  } else {
-    const isVercelCron = req.headers.get('x-vercel-cron') === '1'
-    const isLocalhost = req.headers.get('host')?.startsWith('localhost')
-    if (!isVercelCron && !isLocalhost) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-  }
+  const authError = verifyCronAuth(req)
+  if (authError) return authError
 
   if (!process.env.PERPLEXITY_API_KEY) {
     return NextResponse.json({ skipped: 'no PERPLEXITY_API_KEY' })

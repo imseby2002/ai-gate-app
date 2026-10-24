@@ -291,12 +291,6 @@ export async function POST(req: NextRequest) {
 
     // 推薦碼核銷：僅限被介紹人「第一次付費」使用，已經是付費客戶不能事後補用推薦碼賺天數
     if (bookingPurchase.referral_code_used) {
-      const { data: alreadyRedeemed } = await supabase
-        .from('booking_referral_redemptions')
-        .select('id')
-        .eq('referee_id', bookingPurchase.user_id)
-        .maybeSingle()
-
       const { data: priorPaid } = await supabase
         .from('booking_plan_purchases')
         .select('id')
@@ -305,7 +299,7 @@ export async function POST(req: NextRequest) {
         .limit(1)
         .maybeSingle()
 
-      if (!alreadyRedeemed && !priorPaid) {
+      if (!priorPaid) {
         const { data: referrerSub } = await supabase
           .from('booking_subscriptions')
           .select('user_id, status, current_period_end, bonus_days')
@@ -313,30 +307,38 @@ export async function POST(req: NextRequest) {
           .maybeSingle()
 
         if (referrerSub && referrerSub.user_id !== bookingPurchase.user_id) {
-          bonusDays += 30 // 被介紹人贈送 30 天
+          // 原子式 claim：以 referee_id 唯一鍵插入核銷紀錄。並發/重送時重複插入會回
+          // 23505，代表已核銷，直接略過，避免重複發放推薦獎勵。
+          const { error: redeemErr } = await supabase
+            .from('booking_referral_redemptions')
+            .insert({
+              purchase_id: bookingPurchase.id,
+              referrer_id: referrerSub.user_id,
+              referee_id: bookingPurchase.user_id,
+            })
 
-          await supabase.from('booking_referral_redemptions').insert({
-            purchase_id: bookingPurchase.id,
-            referrer_id: referrerSub.user_id,
-            referee_id: bookingPurchase.user_id,
-          })
+          if (!redeemErr) {
+            bonusDays += 30 // 被介紹人贈送 30 天（僅在成功 claim 後）
 
-          const referrerActive = referrerSub.status === 'active'
-            && !!referrerSub.current_period_end
-            && new Date(referrerSub.current_period_end) > new Date()
+            const referrerActive = referrerSub.status === 'active'
+              && !!referrerSub.current_period_end
+              && new Date(referrerSub.current_period_end) > new Date()
 
-          if (referrerActive) {
-            const newEnd = new Date(new Date(referrerSub.current_period_end!).getTime() + 30 * 86400000).toISOString()
-            await supabase.from('booking_subscriptions')
-              .update({ current_period_end: newEnd })
-              .eq('user_id', referrerSub.user_id)
-          } else {
-            await supabase.from('booking_subscriptions')
-              .update({ bonus_days: (referrerSub.bonus_days ?? 0) + 30 })
-              .eq('user_id', referrerSub.user_id)
+            if (referrerActive) {
+              const newEnd = new Date(new Date(referrerSub.current_period_end!).getTime() + 30 * 86400000).toISOString()
+              await supabase.from('booking_subscriptions')
+                .update({ current_period_end: newEnd })
+                .eq('user_id', referrerSub.user_id)
+            } else {
+              await supabase.from('booking_subscriptions')
+                .update({ bonus_days: (referrerSub.bonus_days ?? 0) + 30 })
+                .eq('user_id', referrerSub.user_id)
+            }
+
+            console.log('[ECPay] 推薦碼核銷成功', { referrerId: referrerSub.user_id, refereeId: bookingPurchase.user_id })
+          } else if (redeemErr.code !== '23505') {
+            console.error('[ECPay] 推薦核銷插入失敗', redeemErr.message)
           }
-
-          console.log('[ECPay] 推薦碼核銷成功', { referrerId: referrerSub.user_id, refereeId: bookingPurchase.user_id })
         }
       }
     }

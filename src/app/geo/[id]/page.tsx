@@ -6,7 +6,7 @@
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { mdToHtml } from '@/lib/geo/md'
+import { mdToHtml, escapeJsonLd } from '@/lib/geo/md'
 
 export const dynamic = 'force-dynamic'
 
@@ -46,7 +46,7 @@ export default async function GeoLandingPage({ params }: { params: Promise<{ id:
   return (
     <main style={{ maxWidth: 760, margin: '0 auto', padding: '32px 20px', lineHeight: 1.7 }}>
       {jsonLd && (
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: escapeJsonLd(jsonLd) }} />
       )}
       <article
         className="geo-article"

@@ -12,7 +12,8 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { mdToHtml, buildStandaloneHtml } from '@/lib/geo/md'
+import { mdToHtml, buildStandaloneHtml, escapeJsonLd } from '@/lib/geo/md'
+import { safeFetch } from '@/lib/ssrf'
 
 export const maxDuration = 60
 
@@ -64,7 +65,7 @@ export async function POST(req: NextRequest) {
       )
     }
     const content = jsonLdStr
-      ? `${bodyHtml}\n<script type="application/ld+json">${jsonLdStr}</script>`
+      ? `${bodyHtml}\n<script type="application/ld+json">${escapeJsonLd(jsonLdStr)}</script>`
       : bodyHtml
     let link = ''
     try {
@@ -96,7 +97,7 @@ export async function POST(req: NextRequest) {
     if (!hook) return NextResponse.json({ error: '尚未設定 Webhook：請在「發佈設定」填入 Webhook 網址' }, { status: 400 })
     let publishedUrl = ''
     try {
-      const res = await fetch(hook, {
+      const res = await safeFetch(hook, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

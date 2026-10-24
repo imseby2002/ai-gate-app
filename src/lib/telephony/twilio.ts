@@ -2,9 +2,29 @@
  * Twilio (twilio.com) provider：語音外撥 + SMS。
  * Docs: https://www.twilio.com/docs/voice/api/call-resource
  */
+import { createHmac, timingSafeEqual } from 'crypto'
 import type { TelephonyProvider, VoiceCallParams, SmsParams } from './types'
 
 const BASE = 'https://api.twilio.com/2010-04-01'
+
+/**
+ * 驗證 Twilio webhook 的 X-Twilio-Signature。
+ * Twilio 一律以帳號 Auth Token 簽章：base64(HMAC-SHA1(authToken, url + 依 key 排序後的 key+value 串接))。
+ * 未設定 TWILIO_AUTH_TOKEN 或簽章不符一律回 false（fail-closed）。
+ */
+export function validateTwilioSignature(
+  url: string,
+  params: Record<string, string>,
+  signature: string | null,
+): boolean {
+  const authToken = process.env.TWILIO_AUTH_TOKEN?.trim()
+  if (!authToken || !signature) return false
+  const data = Object.keys(params).sort().reduce((acc, k) => acc + k + params[k], url)
+  const expected = createHmac('sha1', authToken).update(Buffer.from(data, 'utf-8')).digest('base64')
+  const a = Buffer.from(expected)
+  const b = Buffer.from(signature)
+  return a.length === b.length && timingSafeEqual(a, b)
+}
 
 /**
  * 取得 Twilio 認證。優先使用 API Key（TWILIO_API_KEY_SID / TWILIO_API_KEY_SECRET），

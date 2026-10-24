@@ -3,14 +3,34 @@
  * 支援：H1–H3、無序/有序清單、表格、段落、粗體、連結。已對文字做 HTML escape。
  */
 function esc(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+/** 只允許 http/https/mailto 與相對連結；其餘（javascript:、data: 等）一律改為 '#'。 */
+function safeUrl(raw: string): string {
+  const url = raw.trim()
+  if (/^(https?:|mailto:)/i.test(url)) return url
+  // 有 scheme 但非允許清單（javascript:、data:、vbscript: …）→ 阻擋
+  if (/^[a-z][a-z0-9+.-]*:/i.test(url)) return '#'
+  // 無 scheme（相對路徑、#錨點）→ 放行
+  return url
+}
+
+/** 將字串安全地放入 <script type="application/ld+json"> 內，避免 </script> 突破。 */
+export function escapeJsonLd(s: string): string {
+  return s.replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026')
 }
 
 function inline(s: string): string {
   let out = esc(s)
   out = out.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
   out = out.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_m, t, href) =>
-    `<a href="${esc(href)}" rel="noopener">${t}</a>`)
+    `<a href="${esc(safeUrl(href))}" rel="noopener">${t}</a>`)
   return out
 }
 
@@ -23,7 +43,7 @@ export function buildStandaloneHtml(title: string, bodyHtml: string, jsonLd: str
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="index,follow">
 <title>${title.replace(/</g, '&lt;')}</title>
-${jsonLd ? `<script type="application/ld+json">${jsonLd}</script>` : ''}
+${jsonLd ? `<script type="application/ld+json">${escapeJsonLd(jsonLd)}</script>` : ''}
 <style>
 body{max-width:760px;margin:0 auto;padding:32px 20px;line-height:1.7;font-family:system-ui,-apple-system,"Noto Sans TC",sans-serif;color:#1e293b}
 h1{font-size:1.9rem;font-weight:800;margin:0 0 1rem}
