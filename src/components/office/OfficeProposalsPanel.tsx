@@ -5,7 +5,7 @@ import {
   Lightbulb, AlertCircle, Plus, CheckCircle2, Clock, Check, X,
   Loader2, Filter, Sparkles, MessageSquare, ChevronDown, ChevronUp,
   Image as ImageIcon, Upload, Copy, ArrowRight, ShieldCheck, Tag,
-  ExternalLink, User, Store, Building2, RefreshCw, Layers
+  ExternalLink, User, Store, Building2, RefreshCw, Layers, Trash2
 } from 'lucide-react'
 import { useTranslations, useLocale } from 'next-intl'
 import { Button } from '@/components/ui/button'
@@ -202,6 +202,22 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
       }
     } catch {
       alert(t('alertUpdateFail'))
+    } finally {
+      setUpdatingId(null)
+    }
+  }
+
+  // 刪除提案（管理者或提案人本人）
+  const handleDelete = async (p: Proposal) => {
+    if (!confirm(t('confirmDelete', { title: p.title }))) return
+    setUpdatingId(p.id)
+    try {
+      const res = await fetch(`/api/office/proposals?id=${encodeURIComponent(p.id)}`, { method: 'DELETE' })
+      const data = await res.json().catch(() => ({}))
+      if (res.ok) loadData()
+      else alert(data.error || t('alertDeleteFail'))
+    } catch {
+      alert(t('alertDeleteFail'))
     } finally {
       setUpdatingId(null)
     }
@@ -479,6 +495,18 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
                         month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
                       })}
                     </span>
+                    {(isManager || isMine) && (
+                      <button
+                        type="button"
+                        title={t('deleteBtn')}
+                        aria-label={t('deleteBtn')}
+                        disabled={updatingId === p.id}
+                        onClick={() => handleDelete(p)}
+                        className="ml-1 p-1 rounded text-muted-foreground hover:text-rose-600 hover:bg-rose-50 disabled:opacity-50"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                   </div>
                 </div>
 

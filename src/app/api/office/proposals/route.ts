@@ -287,3 +287,54 @@ export async function PATCH(req: NextRequest) {
 
   return NextResponse.json({ ok: true, ai_plan: aiPlan })
 }
+
+// 刪除提案：公司負責人／管理者（同公司）、平台總管理者，或提案人本人
+export async function DELETE(req: NextRequest) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const id = req.nextUrl.searchParams.get('id')?.trim()
+  if (!id) return NextResponse.json({ error: 'id 必填' }, { status: 400 })
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('id, user_type, company_id')
+    .eq('id', user.id)
+    .single()
+
+  const { data: existing } = await admin
+    .from('user_feedback')
+    .select('id, user_id, company_id')
+    .eq('id', id)
+    .in('type', ['problem', 'idea', 'bug', 'feature'])
+    .maybeSingle()
+  if (!existing) return NextResponse.json({ error: '找不到該筆提案' }, { status: 404 })
+
+  const isSuperAdmin = isSuperAdminUser(user, profile)
+  const sameCompany = !!profile?.company_id && existing.company_id === profile.company_id
+  if (!isSuperAdmin && !sameCompany && existing.user_id !== user.id) {
+    return NextResponse.json({ error: '找不到該筆提案' }, { status: 404 })
+  }
+
+  let allowed = isSuperAdmin || existing.user_id === user.id
+  if (!allowed && sameCompany) {
+    const { data: m } = await admin
+      .from('company_members')
+      .select('role')
+      .eq('company_id', profile!.company_id)
+      .eq('member_id', user.id)
+      .eq('status', 'active')
+      .maybeSingle()
+    allowed = m?.role === 'owner' || m?.role === 'admin'
+  }
+  if (!allowed) return NextResponse.json({ error: '僅提案人或公司負責人／管理者可刪除提案' }, { status: 403 })
+
+  const { error } = await admin.from('user_feedback').delete().eq('id', id)
+  if (error) {
+    console.error('[office/proposals] DELETE failed', error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+  return NextResponse.json({ ok: true })
+}
