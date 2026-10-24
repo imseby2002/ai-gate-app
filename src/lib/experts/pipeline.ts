@@ -1,3 +1,4 @@
+import { safeFetch } from '@/lib/ssrf'
 import { generateText } from 'ai'
 import { generateWithFreeFirst } from '@/lib/ai/free-first-caller'
 
@@ -107,7 +108,7 @@ async function fetchViaTavily(url: string): Promise<string> {
 
 async function fetchWebContent(url: string): Promise<string> {
   try {
-    const res = await fetch(url, {
+    const res = await safeFetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
         'Accept': 'text/html,application/xhtml+xml',

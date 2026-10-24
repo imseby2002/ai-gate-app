@@ -1,3 +1,4 @@
+import { safeFetch } from '@/lib/ssrf'
 /**
  * AI 爬蟲放行檢查 — 解析目標網域 robots.txt，判斷各大 AI 引擎爬蟲是否被允許。
  * 被引用 6 要素之一：放行 AI 爬蟲。被擋＝AI 永遠看不到你的內容。
@@ -81,7 +82,7 @@ export async function checkCrawlers(domain: string): Promise<CrawlerReport> {
   let txt = ''
   let robotsFound = false
   try {
-    const res = await fetch(`https://${d}/robots.txt`, {
+    const res = await safeFetch(`https://${d}/robots.txt`, {
       headers: { 'User-Agent': 'Mozilla/5.0 (GEO-Writer crawler-check)' },
       signal: AbortSignal.timeout(8000),
     })

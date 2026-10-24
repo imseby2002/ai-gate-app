@@ -14,6 +14,7 @@
  *   language?: string
  * }
  */
+import { safeFetch } from '@/lib/ssrf'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getCronOrUserAuth } from '@/lib/cron-auth'
@@ -419,7 +420,7 @@ async function googleAlertsRss(rssUrls: string[]): Promise<string> {
   const results: string[] = []
   for (const url of rssUrls.slice(0, 5)) {
     try {
-      const res = await fetch(url.trim(), { headers: { 'User-Agent': 'Mozilla/5.0' } })
+      const res = await safeFetch(url.trim(), { headers: { 'User-Agent': 'Mozilla/5.0' } })
       if (!res.ok) { results.push(`⚠️ 無法取得 ${url}`); continue }
       const xml = await res.text()
       const entries = [...xml.matchAll(/<entry>([\s\S]*?)<\/entry>/g)]

@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { findOrCreateOrder } from './orders'
+import { safeFetch } from '@/lib/ssrf'
 
 export const ICAL_PLATFORMS: Record<string, { name: string; color: string }> = {
   booking_com:  { name: 'Booking.com',  color: '#003580' },
@@ -55,7 +56,7 @@ export async function syncICalForSetting(settingId: string): Promise<SyncResult>
 
   let rawIcal: string
   try {
-    const res = await fetch(setting.ical_url, {
+    const res = await safeFetch(setting.ical_url, {
       headers: { 'User-Agent': 'AI-GATE/1.0 iCal Sync' },
       signal: AbortSignal.timeout(15000),
     })
