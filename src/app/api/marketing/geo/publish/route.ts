@@ -12,7 +12,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { mdToHtml, buildStandaloneHtml } from '@/lib/geo/md'
+import { mdToHtml, buildStandaloneHtml, escapeJsonLd } from '@/lib/geo/md'
 
 export const maxDuration = 60
 
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
       )
     }
     const content = jsonLdStr
-      ? `${bodyHtml}\n<script type="application/ld+json">${jsonLdStr}</script>`
+      ? `${bodyHtml}\n<script type="application/ld+json">${escapeJsonLd(jsonLdStr)}</script>`
       : bodyHtml
     let link = ''
     try {
