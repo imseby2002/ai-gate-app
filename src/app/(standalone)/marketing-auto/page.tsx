@@ -11,7 +11,7 @@ import {
   Bell, ShoppingBag, Smartphone, TrendingUp,
   MoreHorizontal, Pencil, Trash2, Check, AlertTriangle, ClipboardList,
   PieChart, Clock as ClockIcon, ThumbsUp, MessageSquare as MessageSquareIcon,
-  Lock, Send,
+  Lock, Send, Users,
 } from 'lucide-react'
 import DriveImagePicker from '@/components/marketing/DriveImagePicker'
 import { SimulationPanel } from '@/components/marketing/SimulationPanel'
@@ -62,7 +62,9 @@ const UNITS: UnitDef[] = [
   { id: 11, icon: Mic,        implemented: true  },
 ]
 
-const SIDE_TOOLS: (UnitDef & { href: string | null })[] = []
+const SIDE_TOOLS: (UnitDef & { href: string | null })[] = [
+  { id: 12, icon: Users, implemented: true, href: null },
+]
 
 interface CollectTypeDef {
   id: CollectType
@@ -486,10 +488,6 @@ function Unit3Analyze({
   const [uploadedFiles, setUploadedFiles] = useState<{ name: string; textContent: string }[]>([])
   const [uploadingFile, setUploadingFile] = useState(false)
 
-  // Simulation state
-  const [simRunning, setSimRunning] = useState(false)
-  const [simError, setSimError] = useState('')
-  const [simResult, setSimResult] = useState<SimulationResult | null>(savedData?.simulation ?? null)
   const t = useTranslations('MA')
 
   useEffect(() => {
@@ -539,7 +537,7 @@ function Unit3Analyze({
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      const out: Unit3Data = { types: selectedTypes, results: data.results, metrics: data.metrics, simulation: simResult ?? undefined }
+      const out: Unit3Data = { types: selectedTypes, results: data.results, metrics: data.metrics, simulation: savedData?.simulation }
       setResult(out)
       setActiveTab(selectedTypes[0])
       onDone(out)
@@ -547,37 +545,6 @@ function Unit3Analyze({
       setError(String(e))
     } finally {
       setRunning(false)
-    }
-  }
-
-  const runSimulation = async (scenario?: string) => {
-    setSimRunning(true); setSimError('')
-    try {
-      const res = await fetch('/api/marketing/simulate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          companyData: unit2Data ?? {},
-          collectedData: unit1Data?.summary ?? '',
-          analysisData: result ?? {},
-          personaCount: 10,
-          scenario: scenario ?? '',
-          language,
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
-      const sim = data as SimulationResult
-      setSimResult(sim)
-      // Persist simulation result alongside analysis data
-      if (result) {
-        const updated: Unit3Data = { ...result, simulation: sim }
-        onDone(updated)
-      }
-    } catch (e) {
-      setSimError(String(e))
-    } finally {
-      setSimRunning(false)
     }
   }
 
@@ -720,8 +687,61 @@ function Unit3Analyze({
         </div>
       )}
 
+    </div>
+  )
+}
+
+// ─── 側邊工具：目標客群模擬（獨立工具，使用目前專案的蒐集／公司／分析資料） ───────────
+
+function UnitSimulate({
+  unit1Data,
+  unit2Data,
+  unit3Data,
+  onDone,
+}: {
+  unit1Data?: { summary?: string; language?: string }
+  unit2Data?: Unit2Data
+  unit3Data?: Unit3Data
+  onDone: (sim: SimulationResult) => void
+}) {
+  const t = useTranslations('MA')
+  const language = unit1Data?.language ?? 'zh-TW'
+  const result = unit3Data ?? null
+  const [simRunning, setSimRunning] = useState(false)
+  const [simError, setSimError] = useState('')
+  const [simResult, setSimResult] = useState<SimulationResult | null>(unit3Data?.simulation ?? null)
+
+  const runSimulation = async (scenario?: string) => {
+    setSimRunning(true); setSimError('')
+    try {
+      const res = await fetch('/api/marketing/simulate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          companyData: unit2Data ?? {},
+          collectedData: unit1Data?.summary ?? '',
+          analysisData: result ?? {},
+          personaCount: 10,
+          scenario: scenario ?? '',
+          language,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      const sim = data as SimulationResult
+      setSimResult(sim)
+      onDone(sim)
+    } catch (e) {
+      setSimError(String(e))
+    } finally {
+      setSimRunning(false)
+    }
+  }
+
+  return (
+    <div className="space-y-6">
       {/* ── 消費者模擬 ── */}
-      <div className="border-t pt-6 space-y-4">
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
@@ -4876,6 +4896,13 @@ export default function MarketingAutoPage() {
     if (cid) saveUnitResult(3, data, cid)
   }, [ensureCampaign, saveUnitResult])
 
+  // 目標客群模擬結果存在分析資料（unit 3）的 simulation 欄位
+  const handleSimDone = useCallback(async (sim: SimulationResult) => {
+    const cid = await ensureCampaign()
+    const prev = (unitData[3] as Unit3Data | undefined) ?? {}
+    if (cid) saveUnitResult(3, { ...prev, simulation: sim }, cid)
+  }, [ensureCampaign, saveUnitResult, unitData])
+
   const handleUnit4Done = useCallback(async (data: Unit4Data) => {
     const cid = await ensureCampaign()
     if (cid) saveUnitResult(4, data, cid)
@@ -5151,6 +5178,14 @@ export default function MarketingAutoPage() {
               onDone={handleUnit3Done}
             />
           )}
+          {activeUnit === 12 && (
+            <UnitSimulate
+              unit1Data={unitData[1] as { summary?: string; language?: string } | undefined}
+              unit2Data={companyData}
+              unit3Data={unitData[3] as Unit3Data | undefined}
+              onDone={handleSimDone}
+            />
+          )}
           {activeUnit === 4 && (
             <Unit4Copy
               campaignId={campaignId}
@@ -5261,7 +5296,7 @@ export default function MarketingAutoPage() {
               onDone={handleUnit11Done}
             />
           )}
-          {activeUnit !== 1 && activeUnit !== 3 && activeUnit !== 4 && activeUnit !== 5 && activeUnit !== 6 && activeUnit !== 7 && activeUnit !== 8 && activeUnit !== 9 && activeUnit !== 10 && activeUnit !== 11 && <ComingSoon unit={currentUnit} />}
+          {activeUnit !== 1 && activeUnit !== 3 && activeUnit !== 4 && activeUnit !== 5 && activeUnit !== 6 && activeUnit !== 7 && activeUnit !== 8 && activeUnit !== 9 && activeUnit !== 10 && activeUnit !== 11 && activeUnit !== 12 && <ComingSoon unit={currentUnit} />}
         </div>
       </main>
     </div>

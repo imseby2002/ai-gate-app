@@ -4380,6 +4380,10 @@
       "11": {
         "name": "Anchor Marketing",
         "desc": "HeyGen virtual anchor videos"
+      },
+      "12": {
+        "name": "Audience simulation",
+        "desc": "Simulate how audience segments react to the campaign (uses this project's collected and analysis data)"
       }
     },
     "mp": {
