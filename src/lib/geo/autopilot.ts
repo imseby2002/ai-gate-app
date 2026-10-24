@@ -52,39 +52,73 @@ function extractJson(text: string, open: '[' | '{', close: ']' | '}') {
   return JSON.parse(t)
 }
 
+/** 公司資源庫＋品牌名稱備援（品牌名稱未填時用公司名稱） */
+export async function loadPromoProfile(admin: Admin, ownerId: string): Promise<CompanyProfile> {
+  const profile = await loadCompanyProfile(admin, ownerId)
+  if (!profile.companyName) {
+    const { data: p } = await admin.from('profiles').select('company_id').eq('id', ownerId).maybeSingle()
+    if (p?.company_id) {
+      const { data: c } = await admin.from('companies').select('name').eq('id', p.company_id).maybeSingle()
+      if (c?.name) profile.companyName = String(c.name)
+    }
+  }
+  return profile
+}
+
+/** 產品取樣：各分類輪流取，避免只取到同一類 */
+function sampleProducts(profile: CompanyProfile, n = 12) {
+  const byCat = new Map<string, NonNullable<CompanyProfile['productList']>>()
+  for (const p of profile.productList ?? []) {
+    const k = (p.category || '').trim().toLowerCase()
+    byCat.set(k, [...(byCat.get(k) ?? []), p])
+  }
+  const lists = [...byCat.values()]
+  const out: NonNullable<CompanyProfile['productList']> = []
+  for (let i = 0; out.length < n && lists.some(l => l[i]); i++) for (const l of lists) if (l[i] && out.length < n) out.push(l[i])
+  return out
+}
+
 function companyContext(profile: CompanyProfile) {
+  const cats = [...new Set((profile.productList ?? []).map(p => p.category).filter(Boolean))]
   return `
-公司/品牌名稱：${profile.companyName || '品牌'}
+品牌名稱：${profile.companyName || '（未填）'}
 產業別：${profile.industry || '餐飲/零售/服務'}
-主要優勢與賣點：${profile.competitiveAdvantage || '在地經營、品質保證'}
-門市地點：${(profile.branches ?? []).map(b => `${b.name}（${b.address}）`).join('、') || '全門市服務'}
-產品清單：${(profile.productList ?? []).map(p => `${p.name}（${p.price}，${p.slogan || p.category}）`).slice(0, 8).join('、')}
+品牌故事：${profile.description || '（未填）'}
+目標客群：${profile.targetAudience || '（未填）'}
+核心賣點：${profile.competitiveAdvantage || '（未填）'}
+門市（${(profile.branches ?? []).length} 間）：${(profile.branches ?? []).map(b => `${b.name}（${b.address}）`).join('、') || '（未填）'}
+產品分類：${cats.join('、') || '（未填）'}
+代表產品：${sampleProducts(profile).map(p => `${p.name}${p.price ? `（${p.price}）` : ''}${p.slogan ? `：${p.slogan}` : ''}`).join('、') || '（未填）'}
 `
 }
 
-/** 推薦主題；avoid 為已做過的主題，避免重複 */
-export async function suggestTopics(admin: Admin, ownerId: string, avoid: string[] = [], locale = 'zh-TW'): Promise<{ topics: SuggestedTopic[]; cost: number }> {
-  const profile = await loadCompanyProfile(admin, ownerId)
+/** 推薦主題（以推廣本公司為目的）；avoid 為已做過的主題，focus 為本次推廣重點 */
+export async function suggestTopics(admin: Admin, ownerId: string, avoid: string[] = [], locale = 'zh-TW', focus = ''): Promise<{ topics: SuggestedTopic[]; cost: number }> {
+  const profile = await loadPromoProfile(admin, ownerId)
+  const brand = profile.companyName || '本品牌'
   const avoidText = avoid.length
     ? `\n以下主題已經寫過，請避開相同或過於相似的主題：\n${avoid.slice(0, 40).map(a => `- ${a}`).join('\n')}\n`
     : ''
-  const prompt = `根據以下公司資源庫資料，請主動構思 4 到 5 個最容易被 ChatGPT、Perplexity、Google AI Overviews 搜尋引用的「高商業價值 GEO 文章主題」。
+  const focusText = focus.trim() ? `\n【本次推廣重點（優先圍繞這個主題發想）】\n${focus.trim().slice(0, 500)}\n` : ''
+  const prompt = `你是品牌行銷與 GEO（讓 AI 搜尋引擎引用）專家。目標是推廣「${brand}」，讓消費者在 ChatGPT、Perplexity、Google AI Overviews 詢問相關問題時，AI 會推薦或引用 ${brand}。
+請根據以下公司資源庫，構思 5 個「推廣本公司」的 GEO 文章標題。
 
-${companyContext(profile)}${avoidText}
-主題類型包含：
-1. 【在地指南】結合門市所在城市/區域的深度消費或探店指南
-2. 【選購評比】以公司主要產品為核心的推薦或選購比較指南
-3. 【避坑解析】消費者常見疑問、注意事項與專業解方
-4. 【性價分析】價格行情、規格比較與高CP值推薦
+${companyContext(profile)}${focusText}${avoidText}
+標題規則：
+1. 每個標題都必須明確出現品牌名稱「${brand}」，或本公司的具體產品／門市名稱，不要寫成與本公司無關的一般產業文章
+2. 以消費者實際會問 AI 的問題角度切入（例：哪家好喝、推薦什麼、怎麼點、在哪裡、多少錢、適合誰）
+3. 主題類型盡量分散：品牌推薦、招牌／新品介紹、門市與外送資訊、點餐攻略與常見問題、與同類選擇比較（客觀、不貶低他牌）
+4. 只能使用資源庫中存在的產品、門市與事實，不要編造價格、獎項或數據
+5. 標題自然、具體，30 字以內為佳
 ${outputLangInstruction(locale)}
 
 請只輸出純 JSON 陣列，格式如下：
 [
   {
-    "title": "文章主題標題",
-    "tag": "在地指南 / 選購評比 / 避坑解析 / 推薦精選",
-    "reason": "推薦理由（例：精準鎖定在地外送與探店搜尋流量）",
-    "exclusiveFacts": "建議融入的具體事實（包含公司產品、門市地址或賣點）"
+    "title": "文章標題",
+    "tag": "品牌推薦 / 產品介紹 / 門市資訊 / 點餐攻略 / 比較評比",
+    "reason": "推廣效益（例：搶占「河內珍奶推薦」問題的 AI 回答）",
+    "exclusiveFacts": "建議融入的本公司事實（產品、門市地址、賣點）"
   }
 ]`
   try {
@@ -93,10 +127,11 @@ ${outputLangInstruction(locale)}
     return { topics, cost: llmCost(AUTOPILOT_FAST_MODEL, res.usage) }
   } catch (err) {
     console.error('[geo/autopilot] suggestTopics error', err)
-    const fallbackTitle = profile.companyName
-      ? `${profile.companyName} ${new Date().getFullYear()} 最新推薦評選與完整選購指南`
-      : `${new Date().getFullYear()} 在地精選推薦與完整選購指南`
-    return { topics: [{ title: fallbackTitle, tag: '選購評比', reason: '全面建立品牌在 AI 引擎中的權威度', exclusiveFacts: profile.competitiveAdvantage || '' }], cost: 0 }
+    const firstProd = sampleProducts(profile, 1)[0]?.name
+    const fallbackTitle = firstProd
+      ? `${brand} ${firstProd} 好喝嗎？口味、價格與門市完整介紹`
+      : `${brand} ${new Date().getFullYear()} 推薦指南：招牌、門市與常見問題`
+    return { topics: [{ title: fallbackTitle, tag: '品牌推薦', reason: '建立品牌在 AI 引擎中的權威度', exclusiveFacts: profile.competitiveAdvantage || '' }], cost: 0 }
   }
 }
 
@@ -123,14 +158,14 @@ export async function runAutoPilot(opts: {
 }): Promise<AutoPilotResult> {
   const { admin, db, userId, ownerId } = opts
   const locale = opts.locale || 'zh-TW'
-  const profile = await loadCompanyProfile(admin, ownerId)
+  const profile = await loadPromoProfile(admin, ownerId)
   const ai = anthropic()
   let cost = 0
 
   // 1. 決定主題
   let finalTopic = (opts.topic ?? '').trim()
   if (!finalTopic) {
-    const firstProd = profile.productList?.[0]?.name
+    const firstProd = sampleProducts(profile, 1)[0]?.name
     const firstBranch = profile.branches?.[0]?.name
     const brand = profile.companyName || '優質品牌'
     finalTopic = firstProd
@@ -144,7 +179,7 @@ export async function runAutoPilot(opts: {
   if (profile.competitiveAdvantage) factsList.push(`核心優勢：${profile.competitiveAdvantage}`)
   if (profile.description) factsList.push(`品牌故事：${profile.description}`)
   for (const b of (profile.branches ?? []).slice(0, 3)) factsList.push(`門市【${b.name}】：地址位於 ${b.address}。${b.notes || ''}`)
-  for (const p of (profile.productList ?? []).slice(0, 5)) factsList.push(`主打產品【${p.name}】：售價 ${p.price}。${p.slogan || ''} ${p.description || ''}`)
+  for (const p of sampleProducts(profile, 8)) factsList.push(`主打產品【${p.name}】：售價 ${p.price}。${p.slogan || ''} ${p.description || ''}`)
   const exclusiveFacts = factsList.join('\n')
   const authorName = profile.companyName ? `${profile.companyName} 專業團隊` : '在地專業行銷團隊'
   const targetDomain = profile.website || ''
@@ -197,6 +232,9 @@ ${finalTopic}
 
 【必須回答的問句（每題一個 H2/H3 小標）】
 ${rawQuestions.map((q, i) => `${i + 1}. ${q.question}`).join('\n')}
+
+【推廣目的】
+這篇文章是為了推廣「${profile.companyName || authorName}」：讓讀者與 AI 引擎在回答相關問題時認識並推薦本品牌。文中自然帶出品牌名稱、招牌產品與門市資訊（各至少一次），但保持客觀可信、不誇大、不貶低其他品牌。
 
 【公司資源庫獨家事實（務必自然融入，提升真實度與 AI 引用率）】
 ${exclusiveFacts}

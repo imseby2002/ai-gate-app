@@ -1987,7 +1987,7 @@
       "scheduleTopics": "Titles to write (one per line, used in order, removed after use)",
       "scheduleTopicsPlaceholder": "e.g. Best bubble tea in Hanoi",
       "scheduleAddSuggested": "Add AI suggestions",
-      "scheduleAutoTopics": "When the list is empty, let AI create new titles from company data (avoids past topics)",
+      "scheduleAutoTopics": "When the list is empty, let AI create new titles promoting the company (uses company data and promotion focus, avoids past topics)",
       "scheduleLastRun": "Last run: {time} ({status})",
       "scheduleNeverRun": "Not run yet",
       "scheduleSave": "Save schedule",
@@ -2000,7 +2000,11 @@
       "weekday3": "Wed",
       "weekday4": "Thu",
       "weekday5": "Fri",
-      "weekday6": "Sat"
+      "weekday6": "Sat",
+      "aiGenerateTitle": "AI title",
+      "promoFocus": "Promotion focus (optional)",
+      "promoFocusPh": "e.g. new brown sugar boba, new store opening",
+      "generateTitles": "Generate titles"
     },
     "features": {
       "templates": {

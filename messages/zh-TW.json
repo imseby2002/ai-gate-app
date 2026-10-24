@@ -1987,7 +1987,7 @@
       "scheduleTopics": "指定標題（一行一個，依序使用，用過自動移除）",
       "scheduleTopicsPlaceholder": "例：河內最好喝的手搖飲推薦\n例：珍珠奶茶熱量與健康喝法",
       "scheduleAddSuggested": "加入 AI 推薦主題",
-      "scheduleAutoTopics": "清單用完時，由 AI 依公司資源庫自動產生新標題（避開寫過的主題）",
+      "scheduleAutoTopics": "清單用完時，由 AI 依公司資源庫與推廣重點自動產生推廣本公司的新標題（避開寫過的主題）",
       "scheduleLastRun": "上次執行：{time}（{status}）",
       "scheduleNeverRun": "尚未執行過",
       "scheduleSave": "儲存排程",
@@ -2000,7 +2000,11 @@
       "weekday3": "三",
       "weekday4": "四",
       "weekday5": "五",
-      "weekday6": "六"
+      "weekday6": "六",
+      "aiGenerateTitle": "AI 產生標題",
+      "promoFocus": "推廣重點（選填）",
+      "promoFocusPh": "例：新品黑糖珍珠、Royal 新門市開幕、外送優惠",
+      "generateTitles": "產生推廣標題"
     },
     "features": {
       "templates": {

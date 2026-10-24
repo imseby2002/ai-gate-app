@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import Link from 'next/link'
 import {
@@ -296,20 +296,27 @@ export default function GeoWriterPage() {
   const [loadingSuggestions, setLoadingSuggestions] = useState(false)
   const [runningAutoPilot, setRunningAutoPilot] = useState(false)
 
-  const fetchSuggestedTopics = useCallback(async () => {
+  const [promoFocus, setPromoFocus] = useState('')
+  const promoFocusRef = useRef('')
+  promoFocusRef.current = promoFocus
+
+  // 依公司資源庫（與選填的推廣重點）產生推廣本公司的標題；回傳第一個標題
+  const fetchSuggestedTopics = useCallback(async (): Promise<string> => {
     setLoadingSuggestions(true)
     try {
-      const res = await fetch('/api/marketing/geo/auto-pilot')
+      const qs = new URLSearchParams({ locale, focus: promoFocusRef.current })
+      const res = await fetch(`/api/marketing/geo/auto-pilot?${qs}`)
       if (res.ok) {
         const data = await res.json()
-        if (data.topics) setSuggestedTopics(data.topics)
+        if (data.topics) { setSuggestedTopics(data.topics); return data.topics[0]?.title ?? '' }
       }
     } catch {
       // ignore
     } finally {
       setLoadingSuggestions(false)
     }
-  }, [])
+    return ''
+  }, [locale])
 
   useEffect(() => {
     fetchSuggestedTopics()
@@ -1147,6 +1154,20 @@ export default function GeoWriterPage() {
             </Button>
           </div>
 
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 pt-2 border-t border-indigo-200/50 dark:border-indigo-800/50">
+            <span className="text-xs font-medium text-indigo-900 dark:text-indigo-200 shrink-0">{t('geo.promoFocus')}</span>
+            <Input
+              value={promoFocus}
+              onChange={e => setPromoFocus(e.target.value)}
+              placeholder={t('geo.promoFocusPh')}
+              className="h-8 text-xs flex-1"
+            />
+            <Button size="sm" variant="outline" className="h-8 text-xs shrink-0" disabled={loadingSuggestions} onClick={() => fetchSuggestedTopics()}>
+              {loadingSuggestions ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Sparkles className="h-3 w-3 mr-1" />}
+              {t('geo.generateTitles')}
+            </Button>
+          </div>
+
           <AutoPilotSchedule suggested={suggestedTopics.map(st => st.title)} />
 
           {/* AI 主動推薦主題群 */}
@@ -1158,7 +1179,7 @@ export default function GeoWriterPage() {
                   {t('geo.aiSuggestedTopics')}
                 </span>
                 <button
-                  onClick={fetchSuggestedTopics}
+                  onClick={() => fetchSuggestedTopics()}
                   disabled={loadingSuggestions}
                   className="text-[11px] text-indigo-600 hover:underline flex items-center gap-1"
                 >
@@ -1220,7 +1241,18 @@ export default function GeoWriterPage() {
         <div className="bg-card rounded-xl border p-5 space-y-4 shadow-sm">
           <h2 className="text-sm font-semibold">{t('geo.step1')}</h2>
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">{t('geo.topic')}</label>
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-xs font-medium text-muted-foreground">{t('geo.topic')}</label>
+              <button
+                type="button"
+                disabled={loadingSuggestions}
+                onClick={async () => { const first = await fetchSuggestedTopics(); if (first) setTopic(first) }}
+                className="text-[11px] text-indigo-600 hover:underline flex items-center gap-1 disabled:opacity-50"
+              >
+                {loadingSuggestions ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                {t('geo.aiGenerateTitle')}
+              </button>
+            </div>
             <Input value={topic} onChange={e => setTopic(e.target.value)} placeholder={t('geo.topicPh')} />
           </div>
           <div className="space-y-1.5">

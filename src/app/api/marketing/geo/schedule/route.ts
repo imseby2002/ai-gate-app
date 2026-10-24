@@ -41,6 +41,7 @@ export async function PUT(req: NextRequest) {
     locale: LOCALES.has(b.locale) ? b.locale : SCHEDULE_DEFAULTS.locale,
     topics,
     auto_topics: b.auto_topics !== false,
+    promo_focus: String(b.promo_focus ?? '').trim().slice(0, 500),
     updated_at: new Date().toISOString(),
   }
   const { data, error } = await c.admin.from('geo_autopilot_schedules').upsert(row, { onConflict: 'owner_id' }).select('*').single()

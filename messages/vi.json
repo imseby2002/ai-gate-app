@@ -1987,7 +1987,7 @@
       "scheduleTopics": "Tiêu đề chỉ định (mỗi dòng một tiêu đề, dùng lần lượt, tự xóa sau khi dùng)",
       "scheduleTopicsPlaceholder": "VD: Trà sữa ngon nhất Hà Nội",
       "scheduleAddSuggested": "Thêm chủ đề AI gợi ý",
-      "scheduleAutoTopics": "Khi hết danh sách, AI tự tạo tiêu đề mới từ dữ liệu công ty (tránh chủ đề đã viết)",
+      "scheduleAutoTopics": "Khi hết danh sách, AI tự tạo tiêu đề quảng bá công ty từ dữ liệu công ty và trọng tâm quảng bá (tránh chủ đề đã viết)",
       "scheduleLastRun": "Lần chạy gần nhất: {time} ({status})",
       "scheduleNeverRun": "Chưa chạy lần nào",
       "scheduleSave": "Lưu lịch",
@@ -2000,7 +2000,11 @@
       "weekday3": "T4",
       "weekday4": "T5",
       "weekday5": "T6",
-      "weekday6": "T7"
+      "weekday6": "T7",
+      "aiGenerateTitle": "AI tạo tiêu đề",
+      "promoFocus": "Trọng tâm quảng bá (tùy chọn)",
+      "promoFocusPh": "VD: Trân châu đường đen mới, khai trương cửa hàng mới",
+      "generateTitles": "Tạo tiêu đề quảng bá"
     },
     "features": {
       "templates": {

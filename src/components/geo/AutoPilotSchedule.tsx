@@ -13,6 +13,7 @@ interface Schedule {
   locale: string
   topics: string[]
   auto_topics: boolean
+  promo_focus?: string
   last_run_at: string | null
   last_status: string | null
 }
@@ -109,6 +110,12 @@ export function AutoPilotSchedule({ suggested = [] }: { suggested?: string[] }) 
               <option value="vi">Tiếng Việt</option>
               <option value="en">English</option>
             </select>
+          </div>
+
+          <div className="space-y-1">
+            <span className="font-medium">{t('promoFocus')}</span>
+            <input value={s.promo_focus ?? ''} onChange={e => set({ promo_focus: e.target.value })}
+              placeholder={t('promoFocusPh')} className="w-full h-8 rounded border px-2 bg-background text-xs" />
           </div>
 
           <div className="space-y-1">
