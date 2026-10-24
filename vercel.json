@@ -34,6 +34,10 @@
       "schedule": "0 6 * * 1"
     },
     {
+      "path": "/api/cron/geo-autopilot",
+      "schedule": "*/15 * * * *"
+    },
+    {
       "path": "/api/cron/cleanup-stale-orders",
       "schedule": "30 4 * * *"
     },

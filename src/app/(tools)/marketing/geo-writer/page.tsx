@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils/cn'
+import { AutoPilotSchedule } from '@/components/geo/AutoPilotSchedule'
 
 type Intent = 'info' | 'local' | 'compare' | 'transact'
 type VolumeSource = 'measured' | 'estimated' | 'unknown'
@@ -324,7 +325,9 @@ export default function GeoWriterPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ topic: targetTopic, locale }),
       })
-      const data = await res.json()
+      const raw = await res.text()
+      let data: Record<string, any> = {} // eslint-disable-line @typescript-eslint/no-explicit-any
+      try { data = JSON.parse(raw) } catch { throw new Error(res.status === 504 || /timed out|An error occurred/i.test(raw) ? t('geo.autoPilotTimeout') : raw.slice(0, 200)) }
       if (!res.ok) throw new Error(data.error || 'error')
 
       setProjectId(data.projectId)
@@ -1143,6 +1146,8 @@ export default function GeoWriterPage() {
               )}
             </Button>
           </div>
+
+          <AutoPilotSchedule suggested={suggestedTopics.map(st => st.title)} />
 
           {/* AI 主動推薦主題群 */}
           {suggestedTopics.length > 0 && (
