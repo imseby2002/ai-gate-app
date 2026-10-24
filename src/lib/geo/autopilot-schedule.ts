@@ -15,6 +15,7 @@ export interface AutoPilotSchedule {
   locale: string
   topics: string[]
   auto_topics: boolean
+  promo_focus: string
   last_run_date: string | null
   last_run_at: string | null
   last_status: string | null
@@ -23,7 +24,7 @@ export interface AutoPilotSchedule {
 
 export const SCHEDULE_DEFAULTS = {
   enabled: false, frequency: 'weekly' as const, weekdays: [1], run_hour: 9,
-  timezone: 'Asia/Ho_Chi_Minh', locale: 'zh-TW', topics: [] as string[], auto_topics: true,
+  timezone: 'Asia/Ho_Chi_Minh', locale: 'zh-TW', topics: [] as string[], auto_topics: true, promo_focus: '',
 }
 
 /** 指定時區的當地日期（YYYY-MM-DD）、星期（0=日）與小時 */
@@ -63,7 +64,7 @@ export async function pickTopic(admin: Admin, s: AutoPilotSchedule): Promise<{ t
   if (idx >= 0) return { topic: queue[idx], remaining: queue.filter((t, i) => i !== idx && !used.has(t.toLowerCase())), cost: 0 }
   if (!s.auto_topics) return null
 
-  const { topics, cost } = await suggestTopics(admin, s.owner_id, [...used].slice(0, 40), s.locale)
+  const { topics, cost } = await suggestTopics(admin, s.owner_id, [...used].slice(0, 40), s.locale, s.promo_focus || '')
   const fresh = topics.find(t => !used.has(t.title.trim().toLowerCase()))
   return fresh ? { topic: fresh.title, remaining: [], cost } : null
 }

@@ -17,3 +17,4 @@ create table if not exists public.geo_autopilot_schedules (
   updated_at timestamptz not null default now()
 );
 alter table public.geo_autopilot_schedules enable row level security;
+alter table public.geo_autopilot_schedules add column if not exists promo_focus text not null default '';

@@ -8,14 +8,23 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { currentDataOwner } from '@/lib/company/profile'
 import { suggestTopics, runAutoPilot } from '@/lib/geo/autopilot'
+import { ownerMemberIds } from '@/lib/geo/autopilot-schedule'
 
 export const maxDuration = 300
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const c = await currentDataOwner()
   if (!c) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   if (!process.env.ANTHROPIC_API_KEY) return NextResponse.json({ error: 'ANTHROPIC_API_KEY 未設定' }, { status: 500 })
-  const { topics } = await suggestTopics(c.admin, c.ownerId)
+  const sp = new URL(req.url).searchParams
+  const locale = ['zh-TW', 'en', 'vi'].includes(sp.get('locale') ?? '') ? sp.get('locale')! : 'zh-TW'
+  const focus = (sp.get('focus') ?? '').slice(0, 500)
+  // 避開公司已寫過的主題
+  const members = await ownerMemberIds(c.admin, c.ownerId)
+  const { data: done } = await c.admin.from('geo_projects').select('seed_topic').in('user_id', members)
+    .order('created_at', { ascending: false }).limit(40)
+  const avoid = (done ?? []).map(d => String(d.seed_topic ?? '')).filter(Boolean)
+  const { topics } = await suggestTopics(c.admin, c.ownerId, avoid, locale, focus)
   return NextResponse.json({ topics })
 }
 
