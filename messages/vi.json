@@ -4380,6 +4380,10 @@
       "11": {
         "name": "Tiếp thị MC",
         "desc": "Video MC ảo HeyGen"
+      },
+      "12": {
+        "name": "Mô phỏng khách hàng mục tiêu",
+        "desc": "Mô phỏng phản ứng của các nhóm khách hàng với chiến dịch (dùng dữ liệu thu thập và phân tích của dự án)"
       }
     },
     "mp": {
