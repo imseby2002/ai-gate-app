@@ -17,6 +17,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { SocialPublishModal } from '@/components/marketing/SocialPublishModal'
+import { PrintHdButton } from '@/components/marketing/PrintHdButton'
 import { MarketingAssetArchiveModal } from '@/components/marketing/MarketingAssetArchiveModal'
 import {
   VISUAL_TEMPLATES,
@@ -939,6 +940,8 @@ ${selectedVideoTemplate.rawScript}
                         {t('downloadHd')}
                       </Button>
                     </a>
+
+                    <PrintHdButton imageUrl={generatedImgResult.url} className="w-auto" />
 
                     <Button
                       size="sm"

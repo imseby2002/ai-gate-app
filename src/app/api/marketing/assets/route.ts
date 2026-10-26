@@ -31,6 +31,7 @@ function parseAssetType(name: string): { type: UserAssetItem['type']; typeKey: s
       'bg-remove': '智慧去背',
       'style': '風格轉換',
       'enhance': '超高解析度放大',
+      'print': '列印高解析',
       'video': '視覺工坊影片',
     }
     const keyMap: Record<string, string> = {
@@ -40,6 +41,7 @@ function parseAssetType(name: string): { type: UserAssetItem['type']; typeKey: s
       'bg-remove': 'bgRemove',
       'style': 'style',
       'enhance': 'enhance',
+      'print': 'printHd',
       'video': 'video',
     }
     return {

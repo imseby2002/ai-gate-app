@@ -2284,8 +2284,17 @@
         "outpaint": "畫布擴展",
         "bgRemove": "智慧去背",
         "style": "風格轉換",
-        "enhance": "超高解析度放大"
+        "enhance": "超高解析度放大",
+        "printHd": "列印高解析"
       }
+    },
+    "printHd": {
+      "button": "列印高解析",
+      "processing": "放大中（約 1 分鐘）…",
+      "download": "下載列印檔",
+      "hint": "以 AI 放大 4 倍，產生可列印的高解析檔（會扣點並存入雲端封存區）",
+      "size": "{w}×{h} px · 300 DPI 可印約 {cw}×{ch} cm",
+      "failed": "放大失敗，請再試一次"
     }
   },
   "Resume": {

@@ -3,7 +3,7 @@
  * ComfyUI-inspired pipeline node executor
  *
  * Body: {
- *   type: 'edit' | 'style' | 'enhance' | 'bg-remove' | 'inpaint'
+ *   type: 'edit' | 'style' | 'enhance' | 'print-hd' | 'bg-remove' | 'inpaint'
  *   imageUrl: string
  *   prompt?: string
  *   strength?: number
@@ -21,6 +21,9 @@ import zlib from 'node:zlib'
 import { AI_STUDIO_SUGGEST_ESTIMATE, AI_STUDIO_NODE_ESTIMATE, AI_STUDIO_FAL_COSTS, precheckUsage } from '@/lib/marketing/billing'
 import { setUsageUser, trackCost, trackLlm, withUsage } from '@/lib/marketing/usage'
 import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
+
+// 列印用高解析放大需較長時間
+export const maxDuration = 300
 
 const FAL_BASE = 'https://fal.run'
 const CLAUDE_MODEL = 'claude-sonnet-4-6'
@@ -248,6 +251,9 @@ async function handlePost(req: NextRequest) {
   }
 
   let tempUrl = ''
+  // 列印高解析：保留 fal 回傳的格式與尺寸
+  let outMime = ''
+  let outW = 0, outH = 0
 
   try {
     if (type === 'inpaint') {
@@ -445,6 +451,19 @@ async function handlePost(req: NextRequest) {
       tempUrl = data?.image?.url ?? data?.url ?? ''
       if (tempUrl) trackCost(AI_STUDIO_FAL_COSTS.auraSr)
 
+    } else if (type === 'print-hd') {
+      // 列印用：Aura SR 放大 4 倍（1024px → 4096px，約可印 34×34 cm @300 DPI）
+      const data = await falPost('fal-ai/aura-sr', {
+        image_url: imageUrl,
+        upscale_factor: 4,
+        overlapping_tiles: true,
+      }, apiKey)
+      tempUrl = data?.image?.url ?? ''
+      outMime = data?.image?.content_type ?? ''
+      outW = Number(data?.image?.width) || 0
+      outH = Number(data?.image?.height) || 0
+      if (tempUrl) trackCost(AI_STUDIO_FAL_COSTS.auraSr)
+
     } else if (type === 'bg-remove') {
       // BiRefNet background removal
       const data = await falPost('fal-ai/birefnet', {
@@ -470,13 +489,20 @@ async function handlePost(req: NextRequest) {
   if (!imgRes.ok) return NextResponse.json({ error: '無法下載生成圖片' }, { status: 500 })
 
   const imgBuffer = await imgRes.arrayBuffer()
-  const ext = type === 'bg-remove' ? 'png' : 'jpg'
+  const contentType = type === 'print-hd'
+    ? ((outMime || imgRes.headers.get('content-type') || 'image/png').split(';')[0])
+    : type === 'bg-remove' ? 'image/png' : 'image/jpeg'
+  const ext = contentType === 'image/png' ? 'png' : contentType === 'image/webp' ? 'webp' : 'jpg'
+  // marketing-assets 單檔上限 50MB
+  if (imgBuffer.byteLength > 50 * 1024 * 1024) {
+    return NextResponse.json({ error: `放大後檔案 ${(imgBuffer.byteLength / 1048576).toFixed(0)}MB 超過 50MB 上限，請改用較小的原圖` }, { status: 413 })
+  }
   const fileName = `${user.id}/studio-${type}-${Date.now()}.${ext}`
 
   const { error: uploadError } = await supabase.storage
     .from('marketing-assets')
     .upload(fileName, imgBuffer, {
-      contentType: type === 'bg-remove' ? 'image/png' : 'image/jpeg',
+      contentType,
       upsert: false,
     })
 
@@ -486,7 +512,10 @@ async function handlePost(req: NextRequest) {
 
   const { data: { publicUrl } } = supabase.storage.from('marketing-assets').getPublicUrl(fileName)
 
-  return NextResponse.json({ url: publicUrl, type, generatedAt: new Date().toISOString() })
+  return NextResponse.json({
+    url: publicUrl, type, generatedAt: new Date().toISOString(),
+    ...(type === 'print-hd' ? { width: outW, height: outH, bytes: imgBuffer.byteLength } : {}),
+  })
 }
 
 export const POST = withUsage('[marketing] 視覺工坊', handlePost)
