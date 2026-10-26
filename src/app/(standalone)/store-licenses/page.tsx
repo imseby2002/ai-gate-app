@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { ArrowLeft, Download, ExternalLink, FileBadge, Loader2, AlertCircle, Image as ImageIcon } from 'lucide-react'
+import { ArrowLeft, Download, ExternalLink, FileBadge, FileText, Loader2, AlertCircle, Image as ImageIcon } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 
@@ -17,7 +17,7 @@ interface LicenseDoc {
   effective_date: string | null
   expiry_date: string | null
   file: FileLink | null
-  images: (FileLink & { path: string })[]
+  images: (FileLink & { path: string; mime?: string })[]
 }
 
 const TYPE_BADGE: Record<string, string> = {
@@ -121,8 +121,14 @@ export default function StoreLicensesPage() {
                       {d.images.map(img => (
                         <div key={img.path} className="w-24 space-y-1">
                           <a href={img.url} target="_blank" rel="noreferrer">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={img.url} alt={img.name} className="h-24 w-24 object-cover rounded border bg-muted" />
+                            {img.mime === 'application/pdf' ? (
+                              <span className="h-24 w-24 rounded border bg-red-50 text-red-600 flex flex-col items-center justify-center text-xs font-bold">
+                                <FileText className="h-7 w-7" />PDF
+                              </span>
+                            ) : (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={img.url} alt={img.name} className="h-24 w-24 object-cover rounded border bg-muted" />
+                            )}
                           </a>
                           <a href={img.download_url} className="flex items-center justify-center gap-1 text-[11px] text-teal-700 hover:underline">
                             <Download className="h-3 w-3" />{t('download')}
