@@ -300,3 +300,8 @@ values
   ('三氯蔗糖 (Sucralose)', 'INS 955', '甜味劑 (高倍甜味無熱量)', '300 mg/kg', '低卡茶飲、代糖配方', '限制用量使用', '限制用量使用', 'Approved (E955)', 'Approved', 'Thông tư 24/2019/TT-BYT'),
   ('山梨酸鉀 (Potassium Sorbate)', 'INS 202', '防腐劑 / 延長糖漿與果醬效期', '1000 mg/kg', '常溫糖漿、果泥', '嚴格限量使用', '限制用量使用', 'Approved (E202)', 'GRAS', 'Thông tư 24/2019/TT-BYT')
 on conflict do nothing;
+
+-- 添加物參考表也啟用 RLS（API 以 service role 讀取；登入者僅可讀）
+alter table public.rd_food_additives enable row level security;
+drop policy if exists "rd_food_additives_read" on public.rd_food_additives;
+create policy "rd_food_additives_read" on public.rd_food_additives for select to authenticated using (true);
