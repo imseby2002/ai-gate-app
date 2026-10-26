@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
 
   const added: DocImage[] = []
   for (const file of files) {
-    if (!file.type.startsWith('image/')) return NextResponse.json({ error: `${file.name} 不是圖片` }, { status: 400 })
+    if (!file.type.startsWith('image/') && file.type !== 'application/pdf') return NextResponse.json({ error: `${file.name} 不是圖片或 PDF` }, { status: 400 })
     if (file.size > MAX_SIZE) return NextResponse.json({ error: `${file.name} 超過 20MB` }, { status: 400 })
     const ext = (file.name.split('.').pop() ?? '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8)
     const path = `${ctx.ownerId}/img-${doc.id}-${randomUUID()}${ext ? '.' + ext : ''}`

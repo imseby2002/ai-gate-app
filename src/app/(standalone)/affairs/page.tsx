@@ -62,7 +62,7 @@ interface Doc {
   url: string
   note: string
   confirmed: boolean
-  images?: { path: string; name: string; url: string; download_url: string }[]
+  images?: { path: string; name: string; mime?: string; url: string; download_url: string }[]
 }
 
 const IMAGE_DOC_TYPES = new Set(['company_license', 'sanitary_cert', 'license'])
@@ -106,8 +106,14 @@ function DocImagesStrip({ doc, onChanged }: { doc: Doc; onChanged: () => void })
       {images.map(img => (
         <div key={img.path} className="relative group">
           <a href={img.url} target="_blank" rel="noreferrer" title={img.name}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={img.url} alt={img.name} className="h-14 w-14 object-cover rounded border bg-slate-50" />
+            {img.mime === 'application/pdf' ? (
+              <span className="h-14 w-14 rounded border bg-red-50 text-red-600 flex flex-col items-center justify-center text-[10px] font-bold">
+                <FileText className="h-5 w-5" />PDF
+              </span>
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={img.url} alt={img.name} className="h-14 w-14 object-cover rounded border bg-slate-50" />
+            )}
           </a>
           <button type="button" onClick={() => remove(img.path)} disabled={busy}
             className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-white border shadow text-slate-500 hover:text-red-600 flex items-center justify-center"
@@ -121,7 +127,7 @@ function DocImagesStrip({ doc, onChanged }: { doc: Doc; onChanged: () => void })
         {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
         {t('uploadCertImages')}
       </button>
-      <input ref={inputRef} type="file" accept="image/*" multiple className="hidden" onChange={upload} />
+      <input ref={inputRef} type="file" accept="image/*,application/pdf" multiple className="hidden" onChange={upload} />
     </div>
   )
 }
