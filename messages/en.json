@@ -2284,8 +2284,17 @@
         "outpaint": "Canvas Outpaint",
         "bgRemove": "Background Removal",
         "style": "Style Transfer",
-        "enhance": "Super-Resolution Upscale"
+        "enhance": "Super-Resolution Upscale",
+        "printHd": "Print HD"
       }
+    },
+    "printHd": {
+      "button": "Print HD",
+      "processing": "Upscaling (about 1 min)…",
+      "download": "Download print file",
+      "hint": "AI-upscales 4× into a print-ready high-resolution file (uses credits; saved to the cloud archive)",
+      "size": "{w}×{h} px · prints about {cw}×{ch} cm at 300 DPI",
+      "failed": "Upscaling failed, please try again"
     }
   },
   "Resume": {
@@ -6577,7 +6586,7 @@
     "recipeSearchPlaceholder": "Search product name...",
     "recipeEmpty": "No structured recipes yet. Try the calculator and save.",
     "recipeInUse": "In Use",
-    "recipeCostPerCup": "Cost/cup NT$ {n}",
+    "recipeCostPerCup": "Cost/cup {n} VND",
     "recipeMargin": "Margin {n}%",
     "recipeProduction": "Current production version storewide",
     "recipeMeta": "Standard size: {size} ml | Category: {category}",

@@ -2284,8 +2284,17 @@
         "outpaint": "畫布擴展",
         "bgRemove": "智慧去背",
         "style": "風格轉換",
-        "enhance": "超高解析度放大"
+        "enhance": "超高解析度放大",
+        "printHd": "列印高解析"
       }
+    },
+    "printHd": {
+      "button": "列印高解析",
+      "processing": "放大中（約 1 分鐘）…",
+      "download": "下載列印檔",
+      "hint": "以 AI 放大 4 倍，產生可列印的高解析檔（會扣點並存入雲端封存區）",
+      "size": "{w}×{h} px · 300 DPI 可印約 {cw}×{ch} cm",
+      "failed": "放大失敗，請再試一次"
     }
   },
   "Resume": {
@@ -6577,7 +6586,7 @@
     "recipeSearchPlaceholder": "搜尋產品名稱...",
     "recipeEmpty": "尚未建立結構化配方。可至配方計算器試算並儲存。",
     "recipeInUse": "門市現行",
-    "recipeCostPerCup": "每杯成本 NT$ {n}",
+    "recipeCostPerCup": "每杯成本 {n} VND",
     "recipeMargin": "毛利 {n}%",
     "recipeProduction": "目前全門市正式使用版本 (Production)",
     "recipeMeta": "標準容量：{size} ml | 分類：{category}",

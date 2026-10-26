@@ -2284,8 +2284,17 @@
         "outpaint": "Mở rộng khung hình",
         "bgRemove": "Xóa nền thông minh",
         "style": "Chuyển đổi phong cách",
-        "enhance": "Phóng to siêu phân giải"
+        "enhance": "Phóng to siêu phân giải",
+        "printHd": "In ấn HD"
       }
+    },
+    "printHd": {
+      "button": "In ấn HD",
+      "processing": "Đang phóng to (khoảng 1 phút)…",
+      "download": "Tải tệp in",
+      "hint": "Phóng to 4× bằng AI thành tệp độ phân giải cao để in (trừ điểm, lưu vào kho lưu trữ đám mây)",
+      "size": "{w}×{h} px · in được khoảng {cw}×{ch} cm ở 300 DPI",
+      "failed": "Phóng to thất bại, vui lòng thử lại"
     }
   },
   "Resume": {
@@ -6577,7 +6586,7 @@
     "recipeSearchPlaceholder": "Tìm tên sản phẩm...",
     "recipeEmpty": "Chưa có công thức có cấu trúc. Có thể thử tính và lưu ở Máy tính công thức.",
     "recipeInUse": "Đang dùng",
-    "recipeCostPerCup": "Chi phí/ly NT$ {n}",
+    "recipeCostPerCup": "Chi phí/ly {n} VND",
     "recipeMargin": "Lợi nhuận {n}%",
     "recipeProduction": "Phiên bản sản xuất chính thức toàn hệ thống hiện tại",
     "recipeMeta": "Dung tích chuẩn: {size} ml | Phân loại: {category}",

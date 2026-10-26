@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils/cn'
 import { PlanGate } from '@/components/marketing/PlanGate'
 import { SocialPublishModal } from '@/components/marketing/SocialPublishModal'
+import { PrintHdButton } from '@/components/marketing/PrintHdButton'
 import { MarketingAssetArchiveModal } from '@/components/marketing/MarketingAssetArchiveModal'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -1207,6 +1208,9 @@ function NodeCard({ node, index, canRemove, onUpdate, onRun, onRemove, onUpload,
             <Share2 className="h-3 w-3" />
             {t('studioX.publishAll')}
           </Button>
+        )}
+        {node.status === 'done' && node.outputUrl && (
+          <PrintHdButton imageUrl={node.outputUrl} compact className="mt-1.5" />
         )}
       </div>
     </div>
