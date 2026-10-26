@@ -512,7 +512,7 @@ export async function GET(req: NextRequest) {
 
           const costUsd = Math.abs(Number(tx.amount_usd) || 0)
           const costTwd = costUsd * 32.0
-          // Estimate tokens from average Claude 3.7 Sonnet rate
+          // Estimate tokens from average Claude Sonnet 4.6 rate
           const estimatedTokens = Math.round((costUsd / 0.009) * 1000)
           const dateStr = tx.created_at ? tx.created_at.split('T')[0] : new Date().toISOString().split('T')[0]
 
@@ -754,13 +754,13 @@ export async function GET(req: NextRequest) {
   // Feature / Service module breakdown
   const FEATURE_METADATA: Record<string, { label: string; icon: string; defaultModel: string; defaultChannel: string }> = {
     meeting:     { label: '會議即時翻譯 (Meeting)', icon: 'Headphones', defaultModel: 'DeepSeek / Gemini Flash', defaultChannel: 'deepseek' },
-    store_coach: { label: '店長教練 (Store Coach)', icon: 'Sparkles', defaultModel: 'Claude 3.7 / Gemini', defaultChannel: 'anthropic' },
-    marketing:   { label: '行銷整套生成 (Marketing)', icon: 'Megaphone', defaultModel: 'Claude 3.7 Sonnet', defaultChannel: 'anthropic' },
-    audit:       { label: '稽核討論日誌 (Audit)', icon: 'FileCheck', defaultModel: 'Claude 3.7 Sonnet', defaultChannel: 'anthropic' },
-    rd:          { label: '研發日誌 (R&D)', icon: 'FlaskConical', defaultModel: 'Claude 3.7 Sonnet', defaultChannel: 'anthropic' },
-    affairs:     { label: '外務 AI 聯網 (Affairs)', icon: 'Globe', defaultModel: 'Claude 3.7 Sonnet', defaultChannel: 'anthropic' },
-    skills:      { label: '專家技能 (Skills)', icon: 'Wrench', defaultModel: 'Claude 3.7 Sonnet', defaultChannel: 'anthropic' },
-    autofix:     { label: '反饋自癒代碼 (Autofix)', icon: 'Code2', defaultModel: 'Claude 3.7 Sonnet', defaultChannel: 'anthropic' },
+    store_coach: { label: '店長教練 (Store Coach)', icon: 'Sparkles', defaultModel: 'Claude Sonnet 4.6 / Gemini', defaultChannel: 'anthropic' },
+    marketing:   { label: '行銷整套生成 (Marketing)', icon: 'Megaphone', defaultModel: 'Claude Sonnet 4.6', defaultChannel: 'anthropic' },
+    audit:       { label: '稽核討論日誌 (Audit)', icon: 'FileCheck', defaultModel: 'Claude Sonnet 4.6', defaultChannel: 'anthropic' },
+    rd:          { label: '研發日誌 (R&D)', icon: 'FlaskConical', defaultModel: 'Claude Sonnet 4.6', defaultChannel: 'anthropic' },
+    affairs:     { label: '外務 AI 聯網 (Affairs)', icon: 'Globe', defaultModel: 'Claude Sonnet 4.6', defaultChannel: 'anthropic' },
+    skills:      { label: '專家技能 (Skills)', icon: 'Wrench', defaultModel: 'Claude Sonnet 4.6', defaultChannel: 'anthropic' },
+    autofix:     { label: '反饋自癒代碼 (Autofix)', icon: 'Code2', defaultModel: 'Claude Sonnet 4.6', defaultChannel: 'anthropic' },
     email_sync:  { label: '訂位信件同步 (Email)', icon: 'Mail', defaultModel: 'Claude Haiku / DeepSeek', defaultChannel: 'anthropic' },
   }
 
@@ -773,7 +773,7 @@ export async function GET(req: NextRequest) {
       costUsd: Number(totalAgentCostUsd.toFixed(4)),
       costTwd: Number((totalAgentCostUsd * 32).toFixed(2)),
       requests: totalAgentRequests,
-      topModel: 'Claude 3.7 Sonnet',
+      topModel: 'Claude Sonnet 4.6',
       channel: 'anthropic',
       costSharePct: totalCostUsd > 0 ? Number(((totalAgentCostUsd / totalCostUsd) * 100).toFixed(1)) : 0,
     },
@@ -785,7 +785,7 @@ export async function GET(req: NextRequest) {
       costUsd: Number(totalMissionsCostUsd.toFixed(4)),
       costTwd: Number((totalMissionsCostUsd * 32).toFixed(2)),
       requests: totalMissionsRequests,
-      topModel: 'Claude 3.7 Sonnet',
+      topModel: 'Claude Sonnet 4.6',
       channel: 'anthropic',
       costSharePct: totalCostUsd > 0 ? Number(((totalMissionsCostUsd / totalCostUsd) * 100).toFixed(1)) : 0,
     },

@@ -89,12 +89,12 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // 2. 備援使用 Anthropic Claude 3.5 Sonnet
+  // 2. 備援使用 Anthropic Claude Sonnet 4.6（Claude 3.5 Sonnet 已下架）
   if (!jsonText && process.env.ANTHROPIC_API_KEY) {
     try {
       const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
       const res = await generateText({
-        model: anthropic('claude-3-5-sonnet-20241022'),
+        model: anthropic('claude-sonnet-4-6'),
         maxOutputTokens: 4000,
         messages: [
           {
@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
       const usage = (res as any).usage ?? {}
       void trackAiUsage({
         feature: 'affairs',
-        modelId: 'claude-3-5-sonnet-20241022',
+        modelId: 'claude-sonnet-4-6',
         inputTokens: Number(usage.inputTokens ?? usage.promptTokens ?? 0),
         outputTokens: Number(usage.outputTokens ?? usage.completionTokens ?? 0),
         sourceChannel: 'anthropic',

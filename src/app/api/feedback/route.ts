@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
   )
 
   if (!isPaid && initialStatus === 'pending') {
-    // 免費/錯誤回報（直接施作等我合併）：由 Claude 3.7 Sonnet 在背景自動分析修改並建 PR
+    // 免費/錯誤回報（直接施作等我合併）：由 Claude Sonnet 4.6 在背景自動分析修改並建 PR
     after(() => runFeedbackAutoFix(data.id).catch(() => {}))
   }
 

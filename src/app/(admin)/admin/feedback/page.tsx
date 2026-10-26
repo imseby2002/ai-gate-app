@@ -80,14 +80,14 @@ export default function AdminFeedbackPage() {
     }
   }
 
-  // 手動觸發 Claude 3.7 Sonnet 施作代碼
+  // 手動觸發 Claude Sonnet 4.6 施作代碼
   async function processAutoFix(id: string) {
     setProcessing(id)
     try {
       const r = await fetch(`/api/feedback/${id}`, { method: 'POST' })
       const d = await r.json()
       if (!r.ok) {
-        alert(d.error ?? 'Claude 3.7 Sonnet 施作失敗，請查看錯誤紀錄')
+        alert(d.error ?? 'Claude Sonnet 4.6 施作失敗，請查看錯誤紀錄')
       }
       await load()
     } finally {
@@ -115,7 +115,7 @@ export default function AdminFeedbackPage() {
     setFeedbacks(prev => prev.map(f => f.id === id ? { ...f, admin_notes: notes[id] ?? '' } : f))
   }
 
-  // 核准「等我確認施作」的項目：可修正標題、限縮需求範圍、填報價，核准後即刻啟動 Claude 3.7 Sonnet 改 code 建 PR
+  // 核准「等我確認施作」的項目：可修正標題、限縮需求範圍、填報價，核准後即刻啟動 Claude Sonnet 4.6 改 code 建 PR
   async function approveAndExecute(fb: Feedback) {
     setApproving(fb.id)
     try {
@@ -142,7 +142,7 @@ export default function AdminFeedbackPage() {
 
   // 一鍵確認 Squash Merge GitHub PR
   async function confirmMerge(id: string) {
-    if (!confirm('確定要將 Claude 3.7 Sonnet 產生的修改一鍵 Squash Merge 到 GitHub main 分支嗎？')) {
+    if (!confirm('確定要將 Claude Sonnet 4.6 產生的修改一鍵 Squash Merge 到 GitHub main 分支嗎？')) {
       return
     }
     setMerging(id)
@@ -184,7 +184,7 @@ export default function AdminFeedbackPage() {
               <div>
                 <h1 className="text-xl font-bold text-slate-900 tracking-tight">使用者回饋與自動修復管理</h1>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  彙整各模組與網頁／APP 的問題回報，由 Claude 3.7 Sonnet 全自動精準分析與編寫程式碼
+                  彙整各模組與網頁／APP 的問題回報，由 Claude Sonnet 4.6 全自動精準分析與編寫程式碼
                 </p>
               </div>
             </div>
@@ -194,7 +194,7 @@ export default function AdminFeedbackPage() {
             {/* 核心程式碼模型 Badge */}
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-purple-50 border border-purple-200/90 text-purple-900 text-xs font-semibold shadow-2xs">
               <Sparkles className="h-3.5 w-3.5 text-purple-600 animate-pulse" />
-              <span>程式碼修改核心：<strong className="text-purple-700">Claude 3.7 Sonnet</strong> (Anthropic 官方)</span>
+              <span>程式碼修改核心：<strong className="text-purple-700">Claude Sonnet 4.6</strong> (Anthropic 官方)</span>
             </div>
 
             <button
@@ -215,7 +215,7 @@ export default function AdminFeedbackPage() {
             <div>
               <div className="font-bold text-emerald-900">模式一：直接施作，等我合併（全自動）</div>
               <div className="text-emerald-700/90 mt-0.5 leading-relaxed">
-                適用於 <strong>Bug 錯誤、AI 回應異常、免費用戶調整</strong>。系統收到後自動調用 Claude 3.7 Sonnet 開分支寫代碼並提交 PR，您只需在後台預覽測試與一鍵確認合併。
+                適用於 <strong>Bug 錯誤、AI 回應異常、免費用戶調整</strong>。系統收到後自動調用 Claude Sonnet 4.6 開分支寫代碼並提交 PR，您只需在後台預覽測試與一鍵確認合併。
               </div>
             </div>
           </div>
@@ -479,7 +479,7 @@ export default function AdminFeedbackPage() {
                       <div className="flex items-center gap-2">
                         <span className="h-2 w-2 rounded-full bg-amber-500 animate-ping" />
                         <span className="text-xs font-bold text-amber-900">
-                          審核控制面板（確認後才會開始調用 Claude 3.7 Sonnet 施作）
+                          審核控制面板（確認後才會開始調用 Claude Sonnet 4.6 施作）
                         </span>
                       </div>
                       <span className="text-[11px] text-amber-700 font-medium">
@@ -541,12 +541,12 @@ export default function AdminFeedbackPage() {
                         {approving === fb.id ? (
                           <>
                             <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            <span>Claude 3.7 Sonnet 正在讀取程式碼並施作中...</span>
+                            <span>Claude Sonnet 4.6 正在讀取程式碼並施作中...</span>
                           </>
                         ) : (
                           <>
                             <Play className="h-3.5 w-3.5 fill-current" />
-                            <span>核准並立即由 Claude 3.7 Sonnet 施作</span>
+                            <span>核准並立即由 Claude Sonnet 4.6 施作</span>
                           </>
                         )}
                       </button>
@@ -564,7 +564,7 @@ export default function AdminFeedbackPage() {
                       <div className="flex items-center gap-2">
                         <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                         <span className="text-xs font-bold text-emerald-950">
-                          Claude 3.7 Sonnet 已完成代碼修復，PR 已就緒！
+                          Claude Sonnet 4.6 已完成代碼修復，PR 已就緒！
                         </span>
                       </div>
                       {fb.branch_name && (
@@ -628,7 +628,7 @@ export default function AdminFeedbackPage() {
                   <div className="text-xs text-indigo-950 bg-indigo-50/70 border border-indigo-200/80 rounded-xl p-3 space-y-1">
                     <div className="font-bold text-indigo-900 flex items-center gap-1.5">
                       <Code2 className="h-3.5 w-3.5 text-indigo-600" />
-                      <span>Claude 3.7 Sonnet 分析計畫：</span>
+                      <span>Claude Sonnet 4.6 分析計畫：</span>
                     </div>
                     <p className="text-indigo-800 leading-relaxed pl-5">{fb.ai_plan}</p>
                   </div>
@@ -663,7 +663,7 @@ export default function AdminFeedbackPage() {
                 {/* 底部輔助控制按鈕 */}
                 <div className="flex items-center justify-between flex-wrap gap-2 pt-2 border-t border-slate-100 text-xs">
                   <div className="flex items-center gap-2">
-                    {/* 若非 awaiting_approval 且尚未 merged，允許手動強制呼叫 Claude 3.7 Sonnet 重新施作 */}
+                    {/* 若非 awaiting_approval 且尚未 merged，允許手動強制呼叫 Claude Sonnet 4.6 重新施作 */}
                     {!isAwaiting && fb.status !== 'merged' && (
                       <button
                         onClick={() => processAutoFix(fb.id)}
@@ -678,7 +678,7 @@ export default function AdminFeedbackPage() {
                         ) : (
                           <>
                             <Zap className="h-3.5 w-3.5 text-indigo-600" />
-                            <span>{fb.status === 'pr_ready' ? '重新由 Claude 修改' : '立即由 Claude 3.7 Sonnet 施作'}</span>
+                            <span>{fb.status === 'pr_ready' ? '重新由 Claude 修改' : '立即由 Claude Sonnet 4.6 施作'}</span>
                           </>
                         )}
                       </button>
