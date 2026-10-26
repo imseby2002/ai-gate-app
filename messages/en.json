@@ -6700,7 +6700,9 @@
     "agentReportTitle": "Agent R&D Analysis Report",
     "agentError": "Error: {msg}",
     "agentErrorFallback": "Please check your API key",
-    "manualDoc": "User manual"
+    "manualDoc": "User manual",
+    "fromRecipeTable": "Recipe table",
+    "fromRecipeTableHint": "Pulled in automatically from the R&D recipe table; cost = qty per cup × Finance-approved store price. Edit it in"
   },
   "StoreBills": {
     "pageTitle": "Store Utilities, Gas & Ice Bill Reporting",

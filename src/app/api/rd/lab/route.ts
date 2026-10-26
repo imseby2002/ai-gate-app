@@ -2,6 +2,7 @@
 // 串接原料庫、結構化配方與版本、實驗管理、感官評估、添加物與競品資料
 import { getUnitContext } from '@/lib/auth/unit-access'
 import { NextRequest, NextResponse } from 'next/server'
+import { loadInvRecipesForLab } from '@/lib/rd/inv-recipes'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -73,9 +74,17 @@ export async function GET(req: NextRequest) {
         .order('name'),
     ])
 
+    // 自動帶入 /rd 配方表（直接讀取，/rd 改了這裡就同步）；失敗時仍回傳 Lab 自有資料
+    let inv: Awaited<ReturnType<typeof loadInvRecipesForLab>> = { recipes: [], ingredients: [] }
+    try {
+      inv = await loadInvRecipesForLab(supabase, ownerId)
+    } catch (e) {
+      console.error('[rd/lab] 讀取 /rd 配方表失敗', e)
+    }
+
     return NextResponse.json({
-      ingredients: ingredientsRes.data ?? [],
-      recipes: recipesRes.data ?? [],
+      ingredients: [...(ingredientsRes.data ?? []), ...inv.ingredients],
+      recipes: [...(recipesRes.data ?? []), ...inv.recipes],
       experiments: experimentsRes.data ?? [],
       sensoryEvaluations: sensoryRes.data ?? [],
       additives: additivesRes.data ?? [],
