@@ -17,6 +17,11 @@ const fmt = (n: number, locale: string) => Math.round(Number(n) || 0).toLocaleSt
 
 export default function RdLabPage() {
   const t = useTranslations('RdLab')
+  const tRd = useTranslations('RdPage')
+  // /rd 配方表帶入的分類與品項種類（原料／半成品…、drink／coffee…）沿用 RdPage 的翻譯
+  const catLabel = (c: string) => ({ '原料': tRd('catMaterial'), '半成品': tRd('catSemi'), '設備': tRd('catEquipment'), '道具': tRd('catTool'), '耗材': tRd('catConsumable') } as Record<string, string>)[c] ?? c
+  const kindLabel = (k: string) => ({ drink: tRd('kindDrink'), coffee: tRd('kindCoffee'), food: tRd('kindFood'), base: tRd('kindBase') } as Record<string, string>)[k] ?? k
+  const dash = (v: unknown, suffix = '') => (v == null || v === 0 || v === '' ? '—' : `${v}${suffix}`)
   const locale = useLocale()
   const [tab, setTab] = useState<'recipes' | 'ingredients' | 'calculator' | 'experiments' | 'competitors' | 'knowledge' | 'agents'>('recipes')
   const [loading, setLoading] = useState(true)
@@ -387,9 +392,15 @@ export default function RdLabPage() {
                           <div className="flex items-center justify-between">
                             <span className="font-bold text-sm text-gray-900">{r.name}</span>
                             <div className="flex items-center gap-1.5">
-                              <span className="text-[10px] px-1.5 py-0.2 rounded bg-indigo-100 text-indigo-700 font-semibold">
-                                {r.version || 'V1'}
-                              </span>
+                              {r.source === 'inv' ? (
+                                <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-100 text-amber-700 font-semibold">
+                                  {t('fromRecipeTable')}
+                                </span>
+                              ) : (
+                                <span className="text-[10px] px-1.5 py-0.2 rounded bg-indigo-100 text-indigo-700 font-semibold">
+                                  {r.version || 'V1'}
+                                </span>
+                              )}
                               {r.is_current_active && (
                                 <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-700 font-semibold flex items-center gap-0.5">
                                   <Check className="h-2.5 w-2.5" /> {t('recipeInUse')}
@@ -398,9 +409,9 @@ export default function RdLabPage() {
                             </div>
                           </div>
                           <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
-                            <span>{r.cup_size_ml} ml</span>
+                            <span>{r.cup_size_ml ? `${r.cup_size_ml} ml` : (r.source === 'inv' ? kindLabel(r.category) : '—')}</span>
                             <span>{t('recipeCostPerCup', { n: fmt(r.cogs_amount, locale) })}</span>
-                            <span>{t('recipeMargin', { n: r.gross_margin_pct })}</span>
+                            {r.gross_margin_pct ? <span>{t('recipeMargin', { n: r.gross_margin_pct })}</span> : null}
                           </div>
                         </div>
                       ))
@@ -415,9 +426,15 @@ export default function RdLabPage() {
                       <div>
                         <div className="flex items-center gap-2">
                           <h2 className="text-xl font-bold text-gray-900">{selectedRecipe.name}</h2>
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-bold">
-                            {selectedRecipe.version || 'V1'}
-                          </span>
+                          {selectedRecipe.source === 'inv' ? (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-bold">
+                              {t('fromRecipeTable')}
+                            </span>
+                          ) : (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-bold">
+                              {selectedRecipe.version || 'V1'}
+                            </span>
+                          )}
                           {selectedRecipe.is_current_active && (
                             <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium">
                               {t('recipeProduction')}
@@ -425,12 +442,19 @@ export default function RdLabPage() {
                           )}
                         </div>
                         <p className="text-xs text-gray-500 mt-1">
-                          {t('recipeMeta', { size: selectedRecipe.cup_size_ml, category: selectedRecipe.category })}
+                          {selectedRecipe.source === 'inv'
+                            ? [selectedRecipe.cup_size_label, kindLabel(selectedRecipe.category), selectedRecipe.note].filter(Boolean).join(' · ')
+                            : t('recipeMeta', { size: selectedRecipe.cup_size_ml, category: selectedRecipe.category })}
                         </p>
+                        {selectedRecipe.source === 'inv' && (
+                          <p className="text-[11px] text-amber-700 mt-1">
+                            {t('fromRecipeTableHint')} <Link href="/rd" className="underline">/rd</Link>
+                          </p>
+                        )}
                       </div>
 
                       <div>
-                        {selectedRecipe.sugar_per_100ml > 5.0 ? (
+                        {selectedRecipe.sugar_per_100ml == null ? null : selectedRecipe.sugar_per_100ml > 5.0 ? (
                           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-red-50 text-red-700 text-xs font-semibold border border-red-200">
                             <AlertTriangle className="h-3.5 w-3.5" />
                             {t('sugarTaxApplies', { n: selectedRecipe.sugar_per_100ml })}
@@ -447,11 +471,11 @@ export default function RdLabPage() {
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
                         <span className="text-xs text-gray-500">{t('totalWeight')}</span>
-                        <div className="text-lg font-bold text-gray-900 mt-0.5">{selectedRecipe.total_weight_g || 500} g</div>
+                        <div className="text-lg font-bold text-gray-900 mt-0.5">{dash(selectedRecipe.total_weight_g, ' g')}</div>
                       </div>
                       <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
                         <span className="text-xs text-gray-500">{t('weightedBrix')}</span>
-                        <div className="text-lg font-bold text-gray-900 mt-0.5">{selectedRecipe.estimated_brix || 6.5} °Bx</div>
+                        <div className="text-lg font-bold text-gray-900 mt-0.5">{dash(selectedRecipe.estimated_brix, ' °Bx')}</div>
                       </div>
                       <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
                         <span className="text-xs text-gray-500">{t('cogsPerCup')}</span>
@@ -459,7 +483,7 @@ export default function RdLabPage() {
                       </div>
                       <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
                         <span className="text-xs text-gray-500">{t('grossMargin')}</span>
-                        <div className="text-lg font-bold text-emerald-600 mt-0.5">{selectedRecipe.gross_margin_pct || 68.5}%</div>
+                        <div className="text-lg font-bold text-emerald-600 mt-0.5">{dash(selectedRecipe.gross_margin_pct, '%')}</div>
                       </div>
                     </div>
 
@@ -490,10 +514,10 @@ export default function RdLabPage() {
                               selectedRecipe.rd_recipe_ingredients.map((it: any) => (
                                 <tr key={it.id} className="hover:bg-gray-50/50">
                                   <td className="p-2.5 font-medium text-gray-900">{it.name}</td>
-                                  <td className="p-2.5 text-gray-500">{it.category}</td>
-                                  <td className="p-2.5 text-right font-bold text-gray-800">{it.qty_g} g</td>
-                                  <td className="p-2.5 text-right text-gray-600">{it.ratio_pct}%</td>
-                                  <td className="p-2.5 text-right text-gray-600">{it.brix}°Bx</td>
+                                  <td className="p-2.5 text-gray-500">{catLabel(it.category)}</td>
+                                  <td className="p-2.5 text-right font-bold text-gray-800">{it.qty_g} {it.unit || 'g'}</td>
+                                  <td className="p-2.5 text-right text-gray-600">{it.ratio_pct == null ? '—' : `${it.ratio_pct}%`}</td>
+                                  <td className="p-2.5 text-right text-gray-600">{it.brix == null ? '—' : `${it.brix}°Bx`}</td>
                                   <td className="p-2.5 text-right text-indigo-600 font-medium">{fmt(it.cost_amount, locale)}</td>
                                 </tr>
                               ))
@@ -538,6 +562,7 @@ export default function RdLabPage() {
                   <option value="juice">{t('catJuice')}</option>
                   <option value="topping">{t('catTopping')}</option>
                   <option value="additive">{t('catAdditive')}</option>
+                  {['原料', '半成品', '設備', '道具', '耗材'].map(c => <option key={c} value={c}>{catLabel(c)}</option>)}
                 </select>
               </div>
 
@@ -565,30 +590,30 @@ export default function RdLabPage() {
                             <span className="text-xs text-purple-600 font-medium">{ing.supplier_name || t('defaultSupplier')}</span>
                           </div>
                           <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 font-medium">
-                            {ing.category}
+                            {catLabel(ing.category)}
                           </span>
                         </div>
 
                         <div className="grid grid-cols-4 gap-2 text-center text-[11px] bg-gray-50 p-2.5 rounded-xl">
                           <div>
                             <span className="text-gray-400">Brix</span>
-                            <div className="font-bold text-gray-800">{ing.brix || 0}°</div>
+                            <div className="font-bold text-gray-800">{ing.brix == null ? '—' : `${ing.brix}°`}</div>
                           </div>
                           <div>
                             <span className="text-gray-400">pH</span>
-                            <div className="font-bold text-gray-800">{ing.ph || 7.0}</div>
+                            <div className="font-bold text-gray-800">{ing.ph ?? '—'}</div>
                           </div>
                           <div>
                             <span className="text-gray-400">{t('cost')}</span>
-                            <div className="font-bold text-indigo-600">{fmt(ing.cost_per_kg, locale)}</div>
+                            <div className="font-bold text-indigo-600">{fmt(ing.cost_per_kg, locale)}{ing.unit ? <span className="font-normal text-gray-400">/{ing.unit}</span> : null}</div>
                           </div>
                           <div>
                             <span className="text-gray-400">{t('shelfLife')}</span>
-                            <div className="font-bold text-gray-800">{t('shelfLifeDays', { n: ing.shelf_life_days })}</div>
+                            <div className="font-bold text-gray-800">{ing.shelf_life_days == null ? '—' : t('shelfLifeDays', { n: ing.shelf_life_days })}</div>
                           </div>
                         </div>
 
-                        <div className="space-y-1 text-xs">
+                        {ing.source !== 'inv' && <div className="space-y-1 text-xs">
                           <div className="text-[11px] font-semibold text-gray-500 mb-1">{t('sensoryScore')}</div>
                           <div className="flex items-center justify-between text-[11px] text-gray-600">
                             <span>{t('aroma')}: <b>{ing.aroma || 5}</b></span>
@@ -597,7 +622,7 @@ export default function RdLabPage() {
                             <span>{t('astringency')}: <b>{ing.astringency || 5}</b></span>
                             <span>{t('bitterness')}: <b>{ing.bitterness || 5}</b></span>
                           </div>
-                        </div>
+                        </div>}
 
                         {ing.sensory_notes && (
                           <p className="text-xs text-gray-500 line-clamp-2 bg-purple-50/40 p-2 rounded-lg">

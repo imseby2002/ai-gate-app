@@ -6700,7 +6700,9 @@
     "agentReportTitle": "Báo cáo phân tích R&D của Agent",
     "agentError": "Lỗi: {msg}",
     "agentErrorFallback": "Vui lòng kiểm tra API key",
-    "manualDoc": "Hướng dẫn sử dụng"
+    "manualDoc": "Hướng dẫn sử dụng",
+    "fromRecipeTable": "Bảng công thức",
+    "fromRecipeTableHint": "Tự động lấy từ bảng công thức R&D; chi phí = lượng dùng mỗi ly × giá cửa hàng do Tài vụ duyệt. Chỉnh sửa tại"
   },
   "StoreBills": {
     "pageTitle": "Khai báo chi phí điện nước, gas và đá cửa hàng",

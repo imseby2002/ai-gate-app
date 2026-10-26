@@ -6700,7 +6700,9 @@
     "agentReportTitle": "Agent 研發分析報告",
     "agentError": "錯誤：{msg}",
     "agentErrorFallback": "請確認 API 金鑰",
-    "manualDoc": "使用說明書"
+    "manualDoc": "使用說明書",
+    "fromRecipeTable": "配方表",
+    "fromRecipeTableHint": "自動帶入 R&D 配方表，成本＝每杯用量 × 財務核定的直營門市價；修改請到"
   },
   "StoreBills": {
     "pageTitle": "門市水電、瓦斯與冰塊費用填報",
