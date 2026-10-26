@@ -13,6 +13,9 @@ import { fal } from '@fal-ai/client'
 import { videoCost, checkCredits, deductCredits, isBillableUser, getCostMultiplier } from '@/lib/marketing/billing'
 import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
 
+// 完成時需下載影片並轉存封存區
+export const maxDuration = 120
+
 const FAL_ENDPOINTS: Record<string, string> = {
   'kling-standard':  'fal-ai/kling-video/v1.6/standard/text-to-video',
   'kling-pro':       'fal-ai/kling-video/v1.6/pro/text-to-video',
@@ -27,6 +30,29 @@ const SORA_SECONDS = [4, 8, 12] as const
 /** Sora 2 只接受 4／8／12 秒：取不超過 12 的最接近值 */
 function soraSeconds(duration: number): (typeof SORA_SECONDS)[number] {
   return SORA_SECONDS.reduce((best, s) => (Math.abs(s - duration) < Math.abs(best - duration) ? s : best), 12)
+}
+
+type Supa = Awaited<ReturnType<typeof createClient>>
+
+/** 完成的影片轉存到 marketing-assets（雲端封存區），回傳公開網址；轉存失敗回 null（呼叫端改用原網址） */
+async function archiveVideo(supabase: Supa, userId: string, requestId: string, download: () => Promise<Response>): Promise<string | null> {
+  const key = (requestId.split('/').pop() ?? requestId).replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 80)
+  if (!key) return null
+  const fileName = `${userId}/video-${key}.mp4`
+  try {
+    const { data: existing } = await supabase.storage.from('marketing-assets').list(userId, { search: `video-${key}` })
+    if (!existing?.length) {
+      const res = await download()
+      if (!res.ok) { console.error('[generate-video archive] 下載失敗', res.status); return null }
+      const { error } = await supabase.storage.from('marketing-assets')
+        .upload(fileName, await res.arrayBuffer(), { contentType: 'video/mp4', upsert: true })
+      if (error) { console.error('[generate-video archive] 上傳失敗', error.message); return null }
+    }
+    return supabase.storage.from('marketing-assets').getPublicUrl(fileName).data.publicUrl
+  } catch (e) {
+    console.error('[generate-video archive]', e)
+    return null
+  }
 }
 
 function getProvider(model: string): 'fal' | 'google' | 'openai' {
@@ -220,10 +246,11 @@ export async function GET(req: NextRequest) {
         if (!url) {
           return NextResponse.json({ status: 'failed', error: '未收到影片 URL' }, { status: 200 })
         }
+        const saved = (await archiveVideo(supabase, user.id, requestId, () => fetch(url))) ?? url
         return NextResponse.json({
           status: 'completed',
-          url,
-          videoUrl: url,
+          url: saved,
+          videoUrl: saved,
           requestId,
           model,
           scriptId,
@@ -249,10 +276,15 @@ export async function GET(req: NextRequest) {
       const url: string =
         data.response?.generateVideoResponse?.generatedSamples?.[0]?.video?.uri ?? ''
       if (!url) return NextResponse.json({ status: 'failed', error: '未收到影片 URL' }, { status: 200 })
+      // VEO 影片網址需帶金鑰下載：先轉存封存區，失敗才回原網址
+      const saved = await archiveVideo(supabase, user.id, requestId, async () => {
+        const r = await fetch(url, { headers: { 'Authorization': `Bearer ${apiKey}` } })
+        return r.ok ? r : fetch(url, { headers: { 'x-goog-api-key': apiKey } })
+      }) ?? url
       return NextResponse.json({
         status: 'completed',
-        url,
-        videoUrl: url,
+        url: saved,
+        videoUrl: saved,
         requestId,
         model,
         scriptId,

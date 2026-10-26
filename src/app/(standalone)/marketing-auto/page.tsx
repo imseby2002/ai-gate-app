@@ -1937,6 +1937,15 @@ function Unit7VideoScript({
   const [error, setError] = useState('')
   const [result, setResult] = useState<Unit7Data | null>(savedData?.scripts?.length ? savedData : null)
   const [activeScript, setActiveScript] = useState(1)
+  const [editingScript, setEditingScript] = useState<number | null>(null)
+  const [scriptDraft, setScriptDraft] = useState('')
+  const saveScriptEdit = () => {
+    if (!result?.scripts || editingScript == null) return
+    const out: Unit7Data = { ...result, scripts: result.scripts.map(s => s.id === editingScript ? { ...s, content: scriptDraft } : s) }
+    setResult(out)
+    setEditingScript(null)
+    onDone(out)
+  }
   const [useRefImage, setUseRefImage] = useState(false)
   const [refImageSource, setRefImageSource] = useState<'drive' | 'unit6'>('drive')
   const [selectedUnit6ImageUrl, setSelectedUnit6ImageUrl] = useState('')
@@ -2248,13 +2257,41 @@ function Unit7VideoScript({
                 <span className="text-xs font-semibold text-gray-500">
                   {t('u7.scriptTitle', { n: activeScript, dur: result.duration ?? '' })}
                 </span>
-                <span className="text-[10px] text-gray-400 bg-white border rounded-full px-2 py-0.5">
-                  {t('u7.totalVideos', { n: result.scripts.length })}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-gray-400 bg-white border rounded-full px-2 py-0.5">
+                    {t('u7.totalVideos', { n: result.scripts.length })}
+                  </span>
+                  {editingScript === activeScript ? (
+                    <>
+                      <button onClick={() => setEditingScript(null)}
+                        className="px-2.5 py-1 rounded-lg border bg-white text-[11px] text-gray-600 hover:bg-gray-100">
+                        {t('u7.cancelEdit')}
+                      </button>
+                      <button onClick={saveScriptEdit}
+                        className="px-2.5 py-1 rounded-lg text-[11px] font-semibold text-white"
+                        style={{ background: 'var(--primary)' }}>
+                        {t('u7.saveEdit')}
+                      </button>
+                    </>
+                  ) : (
+                    <button onClick={() => { setEditingScript(activeScript); setScriptDraft(result.scripts?.find(s => s.id === activeScript)?.content ?? '') }}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg border bg-white text-[11px] text-gray-600 hover:bg-gray-100">
+                      <Pencil className="h-3 w-3" />{t('u7.editScript')}
+                    </button>
+                  )}
+                </div>
               </div>
-              <pre className="text-xs text-gray-700 whitespace-pre-wrap font-sans leading-relaxed max-h-[600px] overflow-y-auto">
-                {result.scripts.find(s => s.id === activeScript)?.content}
-              </pre>
+              {editingScript === activeScript ? (
+                <>
+                  <textarea value={scriptDraft} onChange={e => setScriptDraft(e.target.value)} rows={22}
+                    className="w-full px-3 py-2 rounded-lg border text-xs leading-relaxed outline-none focus:ring-2 bg-white font-sans" />
+                  <p className="mt-1.5 text-[11px] text-gray-500">{t('u7.editHint')}</p>
+                </>
+              ) : (
+                <pre className="text-xs text-gray-700 whitespace-pre-wrap font-sans leading-relaxed max-h-[600px] overflow-y-auto">
+                  {result.scripts.find(s => s.id === activeScript)?.content}
+                </pre>
+              )}
             </div>
           )}
 

@@ -3728,7 +3728,11 @@
       "scriptTitle": "影片 {n} 分鏡腳本 — Claude Sonnet · {dur}秒",
       "totalVideos": "共 {n} 支",
       "feedbackPlaceholder": "例如：節奏太慢；開頭不夠吸引人；加入更多產品細節…",
-      "tipBody": "腳本完成後，前往步驟 <b>7. 影片產出</b> 使用 KLING（5/10秒）、Google VEO3（25秒）或 SORA（60秒）將腳本轉換為實際影片。"
+      "tipBody": "腳本完成後，前往步驟 <b>7. 影片產出</b> 使用 KLING（5/10秒）、Google VEO3（25秒）或 SORA（60秒）將腳本轉換為實際影片。",
+      "editScript": "編輯腳本",
+      "saveEdit": "儲存",
+      "cancelEdit": "取消",
+      "editHint": "可直接修改畫面、旁白/字幕文字與描述；儲存後「影片產出」的影片 Prompt 會依新腳本更新（已手動改過的 Prompt 不會被覆蓋）。"
     },
     "u8": {
       "model": {
@@ -9747,7 +9751,10 @@
       "social": "社群互動",
       "trust": "信任證言",
       "business": "商業公告"
-    }
+    },
+    "videoPromptLabel": "影片 Prompt（可編輯）",
+    "resetPrompt": "還原自動產生",
+    "videoPromptHint": "生成影片時使用此段文字；可改畫面內容與風格。AI 影片產生的畫面文字可能不準確，字幕建議後製加入。"
   },
   "MktPlatforms": {
     "ga4Hosts": "｜各網站 sessions：{hosts}",

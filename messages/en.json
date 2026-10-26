@@ -3728,7 +3728,11 @@
       "scriptTitle": "Video {n} Storyboard — Claude Sonnet · {dur}s",
       "totalVideos": "{n} total",
       "feedbackPlaceholder": "e.g. pacing too slow; opening not engaging enough; add more product detail…",
-      "tipBody": "Once scripts are done, go to <b>Unit 8 Video Generation</b> and use KLING (5/10s), Google VEO3 (25s), or SORA (60s) to turn scripts into actual videos."
+      "tipBody": "Once scripts are done, go to <b>Unit 8 Video Generation</b> and use KLING (5/10s), Google VEO3 (25s), or SORA (60s) to turn scripts into actual videos.",
+      "editScript": "Edit script",
+      "saveEdit": "Save",
+      "cancelEdit": "Cancel",
+      "editHint": "Edit scenes, voice-over/caption text and descriptions directly. After saving, the video prompts in Video Production update from the new script (prompts you edited by hand are kept)."
     },
     "u8": {
       "model": {
@@ -9747,7 +9751,10 @@
       "social": "Social engagement",
       "trust": "Trust & reviews",
       "business": "Business notices"
-    }
+    },
+    "videoPromptLabel": "Video prompt (editable)",
+    "resetPrompt": "Reset to auto",
+    "videoPromptHint": "This text is used to generate the video; edit scene content and style here. On-screen text in AI video may come out wrong, so captions are best added in post-production."
   },
   "MktPlatforms": {
     "ga4Hosts": " | sessions by site: {hosts}",
