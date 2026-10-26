@@ -6577,7 +6577,7 @@
     "recipeSearchPlaceholder": "搜尋產品名稱...",
     "recipeEmpty": "尚未建立結構化配方。可至配方計算器試算並儲存。",
     "recipeInUse": "門市現行",
-    "recipeCostPerCup": "每杯成本 NT$ {n}",
+    "recipeCostPerCup": "每杯成本 {n} VND",
     "recipeMargin": "毛利 {n}%",
     "recipeProduction": "目前全門市正式使用版本 (Production)",
     "recipeMeta": "標準容量：{size} ml | 分類：{category}",

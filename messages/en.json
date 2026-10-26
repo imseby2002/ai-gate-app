@@ -6577,7 +6577,7 @@
     "recipeSearchPlaceholder": "Search product name...",
     "recipeEmpty": "No structured recipes yet. Try the calculator and save.",
     "recipeInUse": "In Use",
-    "recipeCostPerCup": "Cost/cup NT$ {n}",
+    "recipeCostPerCup": "Cost/cup {n} VND",
     "recipeMargin": "Margin {n}%",
     "recipeProduction": "Current production version storewide",
     "recipeMeta": "Standard size: {size} ml | Category: {category}",

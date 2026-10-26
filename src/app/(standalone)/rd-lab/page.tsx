@@ -82,13 +82,14 @@ export default function RdLabPage() {
       setKnowledge(data.externalKnowledge || [])
       setExperts(data.experts || [])
 
-      if (data.recipes?.length > 0 && !selectedRecipeId) {
-        setSelectedRecipeId(data.recipes[0].id)
+      // 用函式型更新，避免 loadData 依賴 selectedRecipeId 而在選定後又重抓一次
+      if (data.recipes?.length > 0) {
+        setSelectedRecipeId(prev => prev || data.recipes[0].id)
       }
     } finally {
       setLoading(false)
     }
-  }, [selectedRecipeId])
+  }, [])
 
   useEffect(() => {
     loadData()

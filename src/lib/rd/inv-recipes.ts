@@ -11,14 +11,22 @@ interface InvRecipe { id: string; name: string; note: string | null; kind: strin
 interface InvItem { recipe_id: string; material_code: string; material_name: string; qty_per_cup: number; qty_display: number | null; unit_display: string | null; sort: number | null }
 interface InvPrice { material_code: string; material_name: string; unit: string | null; export_price: number | null; category: string | null; updated_at: string | null }
 
+// PostgREST 單次上限 1000 筆：先取總數，再平行抓各頁（配方明細上萬筆，逐頁抓太慢）
 async function fetchAll<T>(admin: Admin, table: string, cols: string, ownerId: string, order: string): Promise<T[]> {
+  const { count, error: countErr } = await admin.from(table).select('id', { count: 'exact', head: true }).eq('owner_id', ownerId)
+  if (countErr) throw new Error(`${table}: ${countErr.message}`)
+  const pages = Math.ceil((count ?? 0) / 1000)
+  const results = await Promise.all(Array.from({ length: pages }, (_, i) => {
+    let q = admin.from(table).select(cols).eq('owner_id', ownerId).order(order)
+    if (order !== 'id') q = q.order('id') // 排序需唯一，分頁才不會重複或漏筆
+    return q.range(i * 1000, i * 1000 + 999)
+  }))
   const out: T[] = []
-  for (let from = 0; ; from += 1000) {
-    const { data, error } = await admin.from(table).select(cols).eq('owner_id', ownerId).order(order).range(from, from + 999)
+  for (const { data, error } of results) {
     if (error) throw new Error(`${table}: ${error.message}`)
     out.push(...((data ?? []) as T[]))
-    if (!data || data.length < 1000) return out
   }
+  return out
 }
 
 /** 「Cốc 700cc」「cốc 450cc」→ 700／450；無法解析回 null */

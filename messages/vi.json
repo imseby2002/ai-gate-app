@@ -6577,7 +6577,7 @@
     "recipeSearchPlaceholder": "Tìm tên sản phẩm...",
     "recipeEmpty": "Chưa có công thức có cấu trúc. Có thể thử tính và lưu ở Máy tính công thức.",
     "recipeInUse": "Đang dùng",
-    "recipeCostPerCup": "Chi phí/ly NT$ {n}",
+    "recipeCostPerCup": "Chi phí/ly {n} VND",
     "recipeMargin": "Lợi nhuận {n}%",
     "recipeProduction": "Phiên bản sản xuất chính thức toàn hệ thống hiện tại",
     "recipeMeta": "Dung tích chuẩn: {size} ml | Phân loại: {category}",
