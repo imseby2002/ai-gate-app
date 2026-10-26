@@ -32,22 +32,32 @@ export async function resolveActiveCompanyId(
   isSuperAdmin: boolean,
   fallbackCompanyId: string | null,
 ): Promise<string | null> {
+  // profiles.company_id 沒填、但只隸屬一家公司（active）時，以那家公司為預設，
+  // 避免員工只讀到自己名下的空資料
+  const fallback = async (): Promise<string | null> => {
+    if (fallbackCompanyId) return fallbackCompanyId
+    const { data, error } = await admin.from('company_members')
+      .select('company_id').eq('member_id', userId).eq('status', 'active').limit(2)
+    if (error) console.error('[active-company] company_members(member) 查詢失敗', { userId, error })
+    return data?.length === 1 ? data[0].company_id : null
+  }
+
   let requested: string | undefined
   try {
     const cookieStore = await cookies()
     requested = cookieStore.get(ACTIVE_COMPANY_COOKIE)?.value
   } catch {
-    return fallbackCompanyId
+    return fallback()
   }
 
   if (requested) {
     if (isSuperAdmin) return requested
     const { data } = await admin.from('company_members')
       .select('id').eq('company_id', requested).eq('member_id', userId).eq('status', 'active').maybeSingle()
-    return data ? requested : fallbackCompanyId
+    return data ? requested : fallback()
   }
 
-  return fallbackCompanyId
+  return fallback()
 }
 
 // 以「使用者 id」計算公司的共用層（扣點、公司方案、社群矩陣資源）用：
