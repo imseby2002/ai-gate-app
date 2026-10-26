@@ -7822,7 +7822,8 @@
     "profileEditDaysLabel": "Close profile editing",
     "profileEditDaysUnit": "days after opening",
     "profileEditDaysHint": "0 = never; document uploads stay open with weekly reminders",
-    "portalLinkChanged": "The attendance number changed, so the employee portal link changed. Please resend the new link (the old link redirects automatically)."
+    "portalLinkChanged": "The attendance number changed, so the employee portal link changed. Please resend the new link (the old link redirects automatically).",
+    "payrollVnHelp": "You can also upload the Vietnamese accounting payroll workbook (bảng lương, e.g. \"092026 bang luong.xls\") directly: the month sheet and header row are detected automatically, year/month come from the MMYYYY in the file name, and employees are matched by Mã NV and name with all detail columns imported."
   },
   "FinancePage": {
     "accountBalancesTitle": "Balance by account",
