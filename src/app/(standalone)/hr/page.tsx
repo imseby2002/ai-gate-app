@@ -10,6 +10,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { ExcelImportModal } from '@/components/common/ExcelImportModal'
+import { parseVnPayrollFile } from '@/lib/hr/payroll-vn'
 import type { ImportColumn } from '@/lib/excel/universal-import'
 import { ContractsTab } from '@/components/hr/ContractsTab'
 import { UnionTab } from '@/components/hr/UnionTab'
@@ -1177,6 +1178,8 @@ function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: 
           description="支援 .xlsx, .xls 與 .csv 檔案。若名單中已有該員工當月薪資將自動覆蓋更新，未建立之員工將自動建立。"
           columns={PAYROLL_IMPORT_COLUMNS}
           columnsNs="HrImport.payroll"
+          customParse={parseVnPayrollFile}
+          extraHelp={[t('payrollVnHelp')]}
           templateFilename="薪資資料範本"
           sheetName="月薪資表"
           onClose={() => setShowImport(false)}

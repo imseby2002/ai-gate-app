@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import {
   type ImportColumn,
+  type ParseResult,
   parseSpreadsheetFile,
   downloadExcelTemplate,
   downloadCsvTemplate,
@@ -44,6 +45,8 @@ export interface ExcelImportModalProps {
   extraHelp?: string[]
   // 翻譯命名空間（例："WorkImport"）：有 `${ns}.${key}.label|example|description`、`${ns}._meta.title|description|template|sheet` 就套用，沒有沿用原值
   columnsNs?: string
+  // 特殊格式解析（例：越南會計薪資表）；回傳 null 表示不是該格式，改用一般欄位對應
+  customParse?: (file: File) => Promise<ParseResult | null>
 }
 
 export function ExcelImportModal({
@@ -57,6 +60,7 @@ export function ExcelImportModal({
   onSubmit,
   extraHelp,
   columnsNs,
+  customParse,
 }: ExcelImportModalProps) {
   const t = useTranslations('ExcelImport')
   const tAll = useTranslations()
@@ -105,7 +109,7 @@ export function ExcelImportModal({
     setServerError('')
     setResult(null)
     try {
-      const res = await parseSpreadsheetFile(selectedFile, columns)
+      const res = (customParse ? await customParse(selectedFile) : null) ?? await parseSpreadsheetFile(selectedFile, columns)
       setParsedRows(res.rows)
       setValidationErrors(res.errors)
       if (res.rows.length > 0) {
