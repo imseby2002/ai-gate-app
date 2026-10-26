@@ -61,7 +61,7 @@ export interface CustomSeatConfig {
 }
 
 export const AVAILABLE_SEAT_MODELS = [
-  { id: 'anthropic/claude-sonnet-4-6', label: 'Claude 3.7 Sonnet (Anthropic 原廠)' },
+  { id: 'anthropic/claude-sonnet-4-6', label: 'Claude Sonnet 4.6 (Anthropic 原廠)' },
   { id: 'openai/gpt-4o', label: 'GPT-4o (OpenAI 原廠)' },
   { id: 'google/gemini-2.5-pro', label: 'Gemini 2.5 Pro (Google 原廠)' },
   { id: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash (Google 原廠)' },

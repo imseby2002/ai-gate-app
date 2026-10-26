@@ -329,7 +329,7 @@ export const SYNTHESIS_STYLES: SynthesisStyleOption[] = [
 ]
 
 export const MODERATOR_MODELS = [
-  { id: 'anthropic/claude-opus-4-8', name: 'Claude 3.7 Opus (Anthropic)', shortName: 'Claude 3.7 Opus', badge: '頂級旗艦 · 商業白皮書首選 (預設)' },
+  { id: 'anthropic/claude-opus-4-8', name: 'Claude Opus 4.8 (Anthropic)', shortName: 'Claude Opus 4.8', badge: '頂級旗艦 · 商業白皮書首選 (預設)' },
   { id: 'anthropic/claude-fable-5-1', name: 'Claude Fable 5.1 (Anthropic)', shortName: 'Claude Fable 5.1', badge: '全新世代 · 深度研究與高階裁斷' },
   { id: 'openai/gpt-6-astra', name: 'OpenAI Astra (GPT-6)', shortName: 'OpenAI Astra', badge: '遞歸深度推理 · 數理精算與博弈' },
   { id: 'google/gemini-2.5-pro', name: 'Gemini 2.5 Pro (Google)', shortName: 'Gemini 2.5 Pro', badge: '百萬超長上下文 · 跨文檔精確對齊' },
@@ -417,8 +417,8 @@ export function formatModelDisplayName(model?: string): string {
   }
   if (m.includes('fable')) return 'Claude Fable 5.1'
   if (m.includes('astra')) return 'OpenAI Astra (GPT-6)'
-  if (m.includes('claude-opus') || m.includes('claude-3-opus') || m.includes('claude-3.7-opus')) return 'Claude 3.7 Opus'
-  if (m.includes('claude-sonnet-4-6') || m.includes('claude-3-7-sonnet') || m.includes('claude-3.7-sonnet')) return 'Claude 3.7 Sonnet'
+  if (m.includes('claude-opus') || m.includes('claude-3-opus') || m.includes('claude-3.7-opus')) return 'Claude Opus 4.8'
+  if (m.includes('claude-sonnet-4-6') || m.includes('claude-3-7-sonnet') || m.includes('claude-3.7-sonnet')) return 'Claude Sonnet 4.6'
   if (m.includes('claude-3-5-sonnet') || m.includes('claude-3.5-sonnet')) return 'Claude 3.5 Sonnet'
   if (m.includes('gpt-5') || m.includes('gpt-4o')) return 'GPT-4o (OpenAI)'
   if (m.includes('o1')) return 'o1 (OpenAI)'
@@ -492,14 +492,8 @@ function resolveModel(id: string): LanguageModel | string {
     // 優先策略 2：直連 Anthropic API
     const key = process.env.ANTHROPIC_API_KEY?.trim()
     if (key && !anthropicDisabled) {
-      const model =
-        rawModel === 'claude-sonnet-4-6'
-          ? 'claude-3-7-sonnet-20250219'
-          : rawModel === 'claude-opus-4-8'
-            ? 'claude-3-opus-20240229'
-            : rawModel.includes('fable')
-              ? 'claude-fable-5-1'
-              : rawModel
+      // 直接使用現行模型代號（舊的 claude-3-7-sonnet／claude-3-opus 已下架，不可再轉換過去）
+      const model = rawModel.includes('fable') ? 'claude-fable-5-1' : rawModel
       return createAnthropic({ apiKey: key })(model)
     }
 

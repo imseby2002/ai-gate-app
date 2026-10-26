@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
   const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
 
   const { text } = await generateText({
-    model: anthropic('claude-3-5-haiku-20241022'),
+    model: anthropic('claude-haiku-4-5'),
     maxOutputTokens: 300,
     messages: [{
       role: 'user',

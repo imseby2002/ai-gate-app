@@ -5,18 +5,18 @@ import { generateText } from 'ai'
 import { notifyAdmin } from '@/lib/notify/adminAlert'
 import { trackAiUsage } from '@/lib/ai/universal-tracker'
 
-export const CODE_ENGINE_NAME = 'Claude 3.7 Sonnet'
+export const CODE_ENGINE_NAME = 'Claude Sonnet 4.6'
 
 /**
- * 取得官方 Claude 3.7 Sonnet 程式碼修復引擎實例
- * 優先使用 ANTHROPIC_API_KEY 直連官方 claude-3-7-sonnet-20250219
- * 備用支援 OPENROUTER_API_KEY (anthropic/claude-3.7-sonnet)
+ * 取得 Claude Sonnet 4.6 程式碼修復引擎實例（Claude Sonnet 4.6 已下架）
+ * 優先使用 ANTHROPIC_API_KEY 直連官方 claude-sonnet-4-6
+ * 備用支援 OPENROUTER_API_KEY (anthropic/claude-sonnet-4.6)
  */
 export function getClaudeSonnetModel() {
   const anthropicKey = process.env.ANTHROPIC_API_KEY?.trim()
   if (anthropicKey) {
     const anthropic = createAnthropic({ apiKey: anthropicKey })
-    return anthropic('claude-3-7-sonnet-20250219')
+    return anthropic('claude-sonnet-4-6')
   }
 
   const openrouterKey = process.env.OPENROUTER_API_KEY?.trim()
@@ -25,7 +25,7 @@ export function getClaudeSonnetModel() {
       apiKey: openrouterKey,
       baseURL: 'https://openrouter.ai/api/v1',
     })
-    return openrouter.chat('anthropic/claude-3.7-sonnet')
+    return openrouter.chat('anthropic/claude-sonnet-4.6')
   }
 
   throw new Error('未設定 ANTHROPIC_API_KEY 或 OPENROUTER_API_KEY，無法啟動 Claude Sonnet')
@@ -152,7 +152,7 @@ async function classifyAndPlan(title: string, description: string, type: string,
       model,
       messages: [{
         role: 'user',
-        content: `你是一個由 Claude 3.7 Sonnet 驅動的 Next.js/TypeScript 高級架構分析師。根據以下使用者回饋，判斷是否可以「自動修改代碼」。
+        content: `你是 Next.js/TypeScript 高級架構分析師。根據以下使用者回饋，判斷是否可以「自動修改代碼」。
 
 回饋類型：${type}
 標題：${title}
@@ -226,7 +226,7 @@ async function generateCodeChanges(
       maxOutputTokens: 8192,
       messages: [{
         role: 'user',
-        content: `你是一個由 Claude 3.7 Sonnet 驅動的 Next.js/TypeScript 專業工程師。根據使用者需求修改以下檔案。
+        content: `你是 Next.js/TypeScript 專業工程師。根據使用者需求修改以下檔案。
 
 需求類型：${type}
 標題：${title}
