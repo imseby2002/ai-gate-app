@@ -5885,7 +5885,12 @@
     "recipeCount": "目前 {n} 筆配方（於研發單位維護）。",
     "tableEmpty": "此條件下尚無資料，請先於上方上傳匯出檔。",
     "saved": "已儲存",
-    "saveFailed": "儲存失敗"
+    "saveFailed": "儲存失敗",
+    "anomalyListTitle": "異常貨物（{n} 項，超過誤差門檻）",
+    "anomalyOverUsed": "用量超出應有用量（可能短少、浪費或未登記報廢）",
+    "anomalyUnderUsed": "用量少於應有用量（可能漏記銷售或盤點數量多算）",
+    "anomalyNone": "所有貨物誤差都在 {pct}% 以內，沒有異常",
+    "onlyAnomalies": "只顯示異常貨物"
   },
   "Repair": {
     "adminOnly": "僅維修／門市單位可使用",

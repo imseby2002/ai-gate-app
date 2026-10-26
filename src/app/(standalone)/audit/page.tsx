@@ -142,6 +142,7 @@ function AnalysisTab({ store, year, month }: { store: string; year: number; mont
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState('')
   const [showCfg, setShowCfg] = useState(false)
+  const [onlyOver, setOnlyOver] = useState(false)
   const load = useCallback(() => {
     if (!store) return
     setLoading(true); setMsg('')
@@ -160,6 +161,12 @@ function AnalysisTab({ store, year, month }: { store: string; year: number; mont
   if (loading) return <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
   if (!data) return <div className="text-center py-8 text-gray-400 text-sm">{t('selectStoreYearMonthFirst')}</div>
   const cc = data.cross_checks, po = data.possibility
+  // 異常貨物：超過門檻者，依損失金額、再依誤差比例排序
+  const overRows = data.rows.filter(r => r.over)
+    .sort((a, b) => (b.money_loss - a.money_loss) || (Math.abs(b.pct ?? 0) - Math.abs(a.pct ?? 0)))
+  const overUsed = overRows.filter(r => r.diff > 0)   // 實際用量多於應有用量（可能短少／浪費）
+  const underUsed = overRows.filter(r => r.diff < 0)  // 實際用量少於應有用量（可能漏記銷售或盤點多算）
+  const tableRows = onlyOver ? data.rows.filter(r => r.over) : data.rows
 
   return (
     <div className="space-y-4">
@@ -195,11 +202,37 @@ function AnalysisTab({ store, year, month }: { store: string; year: number; mont
         </Card>
       )}
 
+      {overRows.length > 0 ? (
+        <Card className="p-4 border-red-200 bg-red-50/40 space-y-3">
+          <div className="text-sm font-bold text-red-800">{t('anomalyListTitle', { n: overRows.length })}</div>
+          {[{ list: overUsed, title: t('anomalyOverUsed'), cls: 'text-red-700' }, { list: underUsed, title: t('anomalyUnderUsed'), cls: 'text-emerald-700' }]
+            .filter(g => g.list.length > 0).map(g => (
+              <div key={g.title} className="space-y-1">
+                <div className={`text-xs font-semibold ${g.cls}`}>{g.title}（{g.list.length}）</div>
+                <div className="grid sm:grid-cols-2 gap-1.5">
+                  {g.list.map(r => (
+                    <div key={r.material_code} className="flex items-center gap-2 text-xs bg-white border rounded-lg px-2.5 py-1.5">
+                      <span className="font-medium truncate">{r.material_name}</span>
+                      <span className={`ml-auto tabular-nums font-semibold ${g.cls}`}>{r.diff > 0 ? '+' : ''}{fmt(r.diff, locale)} {r.unit}（{pctStr(r.pct)}）</span>
+                      {r.money_loss > 0 && <span className="tabular-nums text-red-600">{fmt(r.money_loss, locale)}</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+        </Card>
+      ) : data.rows.length > 0 && (
+        <Card className="p-3 text-sm text-emerald-700 bg-emerald-50 border-emerald-200">{t('anomalyNone', { pct: data.threshold })}</Card>
+      )}
+
       <Card className="p-4">
+        <label className="flex items-center gap-1.5 text-xs text-gray-600 mb-2">
+          <input type="checkbox" checked={onlyOver} onChange={e => setOnlyOver(e.target.checked)} />{t('onlyAnomalies')}
+        </label>
         <div className="overflow-x-auto max-h-[26rem]">
           <table className="w-full text-sm"><thead><tr className="text-left text-gray-500 border-b sticky top-0 bg-white">
             <th className="py-2 pr-2">{t('material')}</th><th className="pr-2">{t('unit')}</th><th className="pr-2 text-right">{t('expectedUsage')}</th><th className="pr-2 text-right">{t('actualUsage')}</th><th className="pr-2 text-right">{t('difference')}</th><th className="pr-2 text-right">{t('errorPct')}</th><th className="pr-2 text-right">{t('moneyLoss')}</th></tr></thead>
-            <tbody>{data.rows.map(r => (
+            <tbody>{tableRows.map(r => (
               <tr key={r.material_code} className={`border-b last:border-0 ${r.over ? 'bg-red-50' : ''}`}>
                 <td className="py-1 pr-2">{r.material_name}{r.over && <span className="ml-1 text-[11px] text-red-600">{t('over')}</span>}</td>
                 <td className="pr-2 text-gray-400">{r.unit}</td>
