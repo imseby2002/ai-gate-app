@@ -326,6 +326,9 @@ export default function VisualTemplatesPage() {
     const pName = videoProductName.trim() ? `${videoProductName.trim()}, ` : ''
     return `commercial advertising video of ${pName}${selectedVideoTemplate.title}, ${selectedVideoTemplate.positivePrompt}, high dynamic range, 4k ultra detailed cinematic lighting, aspect ratio ${videoAspect}`
   }, [selectedVideoTemplate, videoAspect, videoProductName])
+  // 使用者手動修改的 Prompt（僅對當下選的模板有效；換模板即回到自動組裝）
+  const [editedVideoPrompt, setEditedVideoPrompt] = useState<{ tplId: string; text: string } | null>(null)
+  const finalVideoPrompt = editedVideoPrompt?.tplId === selectedVideoTemplate.id ? editedVideoPrompt.text : synthesizedVideoPrompt
 
   // 複製完整分鏡腳本
   const handleCopyVideoScript = () => {
@@ -336,7 +339,7 @@ export default function VisualTemplatesPage() {
 
   // 複製影片英文 Prompt
   const handleCopyVideoPrompt = () => {
-    navigator.clipboard.writeText(synthesizedVideoPrompt)
+    navigator.clipboard.writeText(finalVideoPrompt)
     setCopiedVideoPrompt(true)
     setTimeout(() => setCopiedVideoPrompt(false), 2000)
   }
@@ -403,7 +406,7 @@ ${selectedVideoTemplate.rawScript}
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: synthesizedVideoPrompt,
+          prompt: finalVideoPrompt,
           model: videoModel,
           duration: String(Math.min(selectedVideoTemplate.recommendedSeconds, 10)),
           aspectRatio: videoAspect,
@@ -1236,6 +1239,24 @@ ${selectedVideoTemplate.rawScript}
 
                   {/* 即時組裝提示詞與腳本工具 */}
                   <div className="space-y-2 pt-2 border-t">
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-foreground">{t('videoPromptLabel')}</label>
+                        {editedVideoPrompt?.tplId === selectedVideoTemplate.id && (
+                          <button type="button" onClick={() => setEditedVideoPrompt(null)}
+                            className="text-[10px] text-primary hover:underline">
+                            {t('resetPrompt')}
+                          </button>
+                        )}
+                      </div>
+                      <textarea
+                        value={finalVideoPrompt}
+                        onChange={e => setEditedVideoPrompt({ tplId: selectedVideoTemplate.id, text: e.target.value })}
+                        rows={4}
+                        className="w-full px-2.5 py-2 rounded-lg border bg-background text-[11px] leading-relaxed outline-none focus:ring-2 resize-y"
+                      />
+                      <p className="text-[10px] text-muted-foreground">{t('videoPromptHint')}</p>
+                    </div>
                     <div className="flex items-center justify-between">
                       <Button
                         variant="outline"
@@ -1274,7 +1295,7 @@ ${selectedVideoTemplate.rawScript}
                       <span>✨ {t('expandScript')}</span>
                     </Button>
 
-                    {expandedAiScript && (
+                    {expandedAiScript !== null && (
                       <div className="p-3 bg-muted/40 rounded-xl space-y-1 text-xs border animate-in fade-in-50">
                         <div className="font-bold text-foreground flex items-center justify-between">
                           <span>{t('voScript')}</span>
@@ -1288,9 +1309,12 @@ ${selectedVideoTemplate.rawScript}
                             {t('copyVo')}
                           </button>
                         </div>
-                        <p className="font-mono text-[11px] text-muted-foreground whitespace-pre-wrap max-h-40 overflow-y-auto leading-relaxed">
-                          {expandedAiScript}
-                        </p>
+                        <textarea
+                          value={expandedAiScript}
+                          onChange={e => setExpandedAiScript(e.target.value)}
+                          rows={6}
+                          className="w-full px-2 py-1.5 rounded-lg border bg-background font-mono text-[11px] text-foreground leading-relaxed outline-none focus:ring-2 resize-y"
+                        />
                       </div>
                     )}
                   </div>

@@ -3728,7 +3728,11 @@
       "scriptTitle": "Storyboard video {n} — Claude Sonnet · {dur} giây",
       "totalVideos": "Tổng {n}",
       "feedbackPlaceholder": "VD: nhịp quá chậm; mở đầu chưa hấp dẫn; thêm chi tiết sản phẩm…",
-      "tipBody": "Sau khi xong kịch bản, vào bước <b>7. Tạo video</b> dùng KLING (5/10 giây), Google VEO3 (25 giây) hoặc SORA (60 giây) để chuyển kịch bản thành video thực tế."
+      "tipBody": "Sau khi xong kịch bản, vào bước <b>7. Tạo video</b> dùng KLING (5/10 giây), Google VEO3 (25 giây) hoặc SORA (60 giây) để chuyển kịch bản thành video thực tế.",
+      "editScript": "Sửa kịch bản",
+      "saveEdit": "Lưu",
+      "cancelEdit": "Hủy",
+      "editHint": "Có thể sửa trực tiếp cảnh quay, lời thoại/phụ đề và mô tả. Sau khi lưu, Prompt video ở bước Sản xuất video sẽ cập nhật theo kịch bản mới (Prompt đã sửa tay sẽ được giữ nguyên)."
     },
     "u8": {
       "model": {
@@ -9747,7 +9751,10 @@
       "social": "Tương tác MXH",
       "trust": "Uy tín & đánh giá",
       "business": "Thông báo kinh doanh"
-    }
+    },
+    "videoPromptLabel": "Prompt video (có thể sửa)",
+    "resetPrompt": "Khôi phục tự động",
+    "videoPromptHint": "Nội dung này được dùng để tạo video; có thể sửa nội dung cảnh và phong cách. Chữ trong video AI có thể không chính xác, nên thêm phụ đề ở bước hậu kỳ."
   },
   "MktPlatforms": {
     "ga4Hosts": " | phiên theo trang: {hosts}",
