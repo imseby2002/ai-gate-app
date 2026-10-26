@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { UserAssetItem } from '@/app/api/marketing/assets/route'
+import { PrintHdButton } from '@/components/marketing/PrintHdButton'
 
 export interface MarketingAssetArchiveModalProps {
   open: boolean
@@ -390,6 +391,9 @@ export function MarketingAssetArchiveModal({
                     {t('downloadHd')}
                   </Button>
                 </a>
+                {!previewAsset.isVideo && previewAsset.typeKey !== 'printHd' && (
+                  <PrintHdButton imageUrl={previewAsset.url} />
+                )}
               </div>
             </div>
           </div>
