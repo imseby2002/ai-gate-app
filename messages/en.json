@@ -9835,6 +9835,10 @@
     "save": "Save",
     "testGa4": "Test GA4 connection (read-only)",
     "testAds": "Test Meta Ads connection (read-only, no spend)",
+    "testFbPage": "Test Page Publishing Permission (read-only)",
+    "testIg": "Test Instagram Connection (read-only)",
+    "fbPageOk": "Page \"{name}\" (ID: {id}) post permission normal",
+    "igOk": "Instagram account @{username} connected successfully",
     "guide": {
       "title": "Step-by-step setup guide",
       "docs": "Official docs: "

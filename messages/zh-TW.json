@@ -9835,6 +9835,10 @@
     "save": "儲存",
     "testGa4": "測試 GA4 連線（唯讀）",
     "testAds": "測試 Meta 廣告連線（唯讀，不會花錢）",
+    "testFbPage": "測試粉專發文權限（唯讀）",
+    "testIg": "測試 Instagram 連線（唯讀）",
+    "fbPageOk": "粉專「{name}」（ID: {id}）發文權限正常（具有貼文建立權限）",
+    "igOk": "IG 帳號 @{username} 連線正常",
     "guide": {
       "title": "詳細設定教學（一步一步）",
       "docs": "官方文件："

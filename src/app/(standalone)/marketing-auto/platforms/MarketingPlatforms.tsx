@@ -171,6 +171,58 @@ export function MarketingPlatforms({ canSettings }: { canSettings: boolean }) {
     finally { setAdsTesting(false) }
   }
 
+  const [fbPageTesting, setFbPageTesting] = useState(false)
+  const [fbPageResult, setFbPageResult] = useState<{ ok: boolean; text: string } | null>(null)
+
+  const testFbPage = async () => {
+    setFbPageTesting(true); setFbPageResult(null)
+    try {
+      const res = await fetch('/api/agent/fb-page-test')
+      const d = await res.json()
+      if (d.ok) {
+        setFbPageResult({
+          ok: true,
+          text: tr('fbPageOk', { name: d.pageName || d.pageId, id: d.pageId }),
+        })
+      } else {
+        setFbPageResult({
+          ok: false,
+          text: `${d.error || tr('testFailed')}${d.hint ? `\n💡 ${d.hint}` : ''}`,
+        })
+      }
+    } catch {
+      setFbPageResult({ ok: false, text: tr('netErr') })
+    } finally {
+      setFbPageTesting(false)
+    }
+  }
+
+  const [igTesting, setIgTesting] = useState(false)
+  const [igResult, setIgResult] = useState<{ ok: boolean; text: string } | null>(null)
+
+  const testIg = async () => {
+    setIgTesting(true); setIgResult(null)
+    try {
+      const res = await fetch('/api/agent/ig-test')
+      const d = await res.json()
+      if (d.ok) {
+        setIgResult({
+          ok: true,
+          text: tr('igOk', { username: d.username || d.igUserId }),
+        })
+      } else {
+        setIgResult({
+          ok: false,
+          text: `${d.error || tr('testFailed')}${d.hint ? `\n💡 ${d.hint}` : ''}`,
+        })
+      }
+    } catch {
+      setIgResult({ ok: false, text: tr('netErr') })
+    } finally {
+      setIgTesting(false)
+    }
+  }
+
   const [ga4Testing, setGa4Testing] = useState(false)
   const [ga4Result, setGa4Result] = useState<{ ok: boolean; text: string } | null>(null)
 
@@ -354,15 +406,42 @@ export function MarketingPlatforms({ canSettings }: { canSettings: boolean }) {
 
                   {p.id === 'Facebook' && connected && (
                     <div className="mt-3 space-y-2">
-                      <button onClick={testMetaAds} disabled={adsTesting}
-                        className="flex items-center gap-1.5 px-4 py-2 rounded-lg border text-sm font-medium disabled:opacity-50 hover:bg-accent transition-colors">
-                        {adsTesting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wifi className="h-4 w-4" />}
-                        {tr('testAds')}
-                      </button>
+                      <div className="flex flex-wrap gap-2">
+                        <button onClick={testFbPage} disabled={fbPageTesting}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium disabled:opacity-50 hover:bg-accent transition-colors">
+                          {fbPageTesting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wifi className="h-3.5 w-3.5" />}
+                          {tr('testFbPage')}
+                        </button>
+                        <button onClick={testMetaAds} disabled={adsTesting}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium disabled:opacity-50 hover:bg-accent transition-colors">
+                          {adsTesting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wifi className="h-3.5 w-3.5" />}
+                          {tr('testAds')}
+                        </button>
+                      </div>
+                      {fbPageResult && (
+                        <div className={`text-xs rounded-lg px-3 py-2 whitespace-pre-wrap ${fbPageResult.ok ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400' : 'bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-400'}`}>
+                          {fbPageResult.text}
+                        </div>
+                      )}
                       {adsResult && (
                         <p className={`text-xs rounded-lg px-3 py-2 ${adsResult.ok ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400' : 'bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-400'}`}>
                           {adsResult.text}
                         </p>
+                      )}
+                    </div>
+                  )}
+
+                  {p.id === 'Instagram' && connected && (
+                    <div className="mt-3 space-y-2">
+                      <button onClick={testIg} disabled={igTesting}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium disabled:opacity-50 hover:bg-accent transition-colors">
+                        {igTesting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wifi className="h-3.5 w-3.5" />}
+                        {tr('testIg')}
+                      </button>
+                      {igResult && (
+                        <div className={`text-xs rounded-lg px-3 py-2 whitespace-pre-wrap ${igResult.ok ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400' : 'bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-400'}`}>
+                          {igResult.text}
+                        </div>
                       )}
                     </div>
                   )}

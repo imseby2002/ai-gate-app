@@ -8,7 +8,7 @@ export interface PlatformResult {
 }
 
 // Exchange System User / User token → Page Access Token via /me/accounts
-async function resolvePageToken(token: string, pageId: string): Promise<{ pageToken: string; debug: string }> {
+export async function resolvePageToken(token: string, pageId: string): Promise<{ pageToken: string; debug: string }> {
   try {
     // Method 1: direct field lookup
     const r1 = await fetch(

@@ -9835,6 +9835,10 @@
     "save": "Lưu",
     "testGa4": "Kiểm tra kết nối GA4 (chỉ đọc)",
     "testAds": "Kiểm tra kết nối Meta Ads (chỉ đọc, không tốn tiền)",
+    "testFbPage": "Kiểm tra quyền đăng bài Trang (chỉ đọc)",
+    "testIg": "Kiểm tra kết nối Instagram (chỉ đọc)",
+    "fbPageOk": "Trang \"{name}\" (ID: {id}) quyền đăng bài bình thường",
+    "igOk": "Tài khoản Instagram @{username} đã kết nối",
     "guide": {
       "title": "Hướng dẫn thiết lập từng bước",
       "docs": "Tài liệu chính thức: "
