@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 
 type FbType = 'bug' | 'feature' | 'text_change' | 'ai_error' | 'other' | 'problem' | 'idea'
-type FbStatus = 'pending' | 'awaiting_approval' | 'processing' | 'pr_ready' | 'suggestion' | 'rejected' | 'merged' | 'approved' | 'in_progress' | 'completed'
+type FbStatus = 'pending' | 'awaiting_approval' | 'processing' | 'pr_ready' | 'suggestion' | 'rejected' | 'merged' | 'approved' | 'in_progress' | 'completed' | 'verify_pending'
 
 interface Feedback {
   id: string
@@ -28,6 +28,7 @@ interface Feedback {
   contact: string | null
   is_paid: boolean
   price_quote_usd: number | null
+  ai_verdict?: { done: boolean; pr_number: number | null; pr_url: string | null; evidence: string; checked_at: string } | null
   profiles?: { email: string; full_name: string | null }
   companies?: { id: string; name: string } | { id: string; name: string }[] | null
 }
@@ -46,6 +47,7 @@ const STATUS_CONFIG: Record<FbStatus, { label: string; badgeClass: string }> = {
   approved:          { label: '✅ 部門負責人已批准', badgeClass: 'bg-emerald-50 text-emerald-800 border-emerald-300 font-bold' },
   in_progress:       { label: '🔄 程式改寫中',    badgeClass: 'bg-blue-50 text-blue-700 border-blue-200 animate-pulse' },
   completed:         { label: '✅ 已完成上線',    badgeClass: 'bg-emerald-100 text-emerald-900 border-emerald-300' },
+  verify_pending:    { label: '🤖 AI 判定已完成・待你確認', badgeClass: 'bg-sky-50 text-sky-800 border-sky-300 font-bold' },
 }
 
 const TYPE_CONFIG: Record<FbType, { label: string; icon: string }> = {
@@ -95,6 +97,20 @@ export default function AdminFeedbackPage() {
       await load()
     } finally {
       setProcessing(null)
+    }
+  }
+
+  // 請 AI 驗收：判斷是否已有合併的程式修改完成此需求
+  const [verifying, setVerifying] = useState<string | null>(null)
+  async function requestVerify(id: string) {
+    setVerifying(id)
+    try {
+      const res = await fetch(`/api/feedback/${id}/verify`, { method: 'POST' })
+      const d = await res.json().catch(() => ({}))
+      if (!res.ok) { alert(d.error ?? 'AI 驗收失敗'); return }
+      setFeedbacks(prev => prev.map(f => f.id === id ? { ...f, status: d.status as FbStatus, ai_verdict: d.verdict, pr_url: d.verdict?.pr_url ?? f.pr_url } : f))
+    } finally {
+      setVerifying(null)
     }
   }
 
@@ -167,6 +183,7 @@ export default function AdminFeedbackPage() {
     if (statusFilter === 'all') return true
     if (statusFilter === 'open') return !CLOSED_STATUSES.has(f.status)
     if (statusFilter === 'merged') return f.status === 'merged' || f.status === 'completed'
+    if (statusFilter === 'verify_pending') return f.status === 'verify_pending'
     if (statusFilter === 'confirm_needed') return f.status === 'awaiting_approval'
     if (statusFilter === 'pr_ready') return f.status === 'pr_ready'
     return f.status === statusFilter
@@ -248,6 +265,17 @@ export default function AdminFeedbackPage() {
           }`}
         >
           未結案 ({feedbacks.filter(f => !CLOSED_STATUSES.has(f.status)).length})
+        </button>
+
+        <button
+          onClick={() => setStatusFilter('verify_pending')}
+          className={`text-xs px-3.5 py-1.5 rounded-xl border font-bold transition-all cursor-pointer ${
+            statusFilter === 'verify_pending'
+              ? 'bg-sky-600 text-white border-sky-600 shadow-xs'
+              : 'bg-sky-50 border-sky-200 text-sky-800 hover:bg-sky-100'
+          }`}
+        >
+          🤖 待你確認 ({feedbacks.filter(f => f.status === 'verify_pending').length})
         </button>
 
         <button
@@ -650,6 +678,19 @@ export default function AdminFeedbackPage() {
                   </div>
                 )}
 
+                {fb.ai_verdict && (
+                  <div className={`text-xs rounded-xl p-3 space-y-1 border ${fb.ai_verdict.done ? 'bg-sky-50 border-sky-200 text-sky-900' : 'bg-slate-50 border-slate-200 text-slate-700'}`}>
+                    <div className="font-bold flex items-center gap-1.5">
+                      <span>{fb.ai_verdict.done ? '🤖 AI 驗收：已完成' : '🤖 AI 驗收：尚未完成'}</span>
+                      {fb.ai_verdict.pr_url && (
+                        <a href={fb.ai_verdict.pr_url} target="_blank" rel="noreferrer" className="underline font-medium">PR #{fb.ai_verdict.pr_number}</a>
+                      )}
+                      <span className="ml-auto font-normal text-[10px] text-slate-400">{new Date(fb.ai_verdict.checked_at).toLocaleString('zh-TW')}</span>
+                    </div>
+                    <p className="leading-relaxed pl-5">{fb.ai_verdict.evidence}</p>
+                  </div>
+                )}
+
                 {fb.error_log && (
                   <div className="text-xs text-rose-950 bg-rose-50/80 border border-rose-200 rounded-xl p-3 space-y-1">
                     <div className="font-bold text-rose-800 flex items-center gap-1.5">
@@ -713,13 +754,30 @@ export default function AdminFeedbackPage() {
 
                   {/* 關閉或標記為已處理 */}
                   <div className="flex items-center gap-2">
-                    {!CLOSED_STATUSES.has(fb.status) && (
+                    {fb.status === 'verify_pending' ? (
+                      <>
+                        <button
+                          onClick={() => updateStatus(fb.id, 'completed')}
+                          title="確認後提案人會看到「已完成上線」"
+                          className="text-xs px-3 py-1.5 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg transition-colors cursor-pointer font-bold"
+                        >
+                          ✅ 確認處理成功
+                        </button>
+                        <button
+                          onClick={() => updateStatus(fb.id, 'pending')}
+                          className="text-xs px-2.5 py-1 text-amber-700 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
+                        >
+                          ↩ 未成功，退回
+                        </button>
+                      </>
+                    ) : !CLOSED_STATUSES.has(fb.status) && (
                       <button
-                        onClick={() => updateStatus(fb.id, 'completed')}
-                        title="已另外修好時使用：提案人會看到「已完成上線」"
-                        className="text-xs px-2.5 py-1 text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer font-medium"
+                        onClick={() => requestVerify(fb.id)}
+                        disabled={verifying === fb.id}
+                        title="AI 比對此提案與之後合併的程式修改，判斷是否已完成"
+                        className="text-xs px-2.5 py-1 text-sky-700 hover:bg-sky-50 rounded-lg transition-colors cursor-pointer font-medium disabled:opacity-50"
                       >
-                        ✅ 標記已完成
+                        {verifying === fb.id ? '🤖 AI 驗收中…' : '🤖 請 AI 驗收'}
                       </button>
                     )}
                     {!CLOSED_STATUSES.has(fb.status) && (
