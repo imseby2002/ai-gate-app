@@ -18,6 +18,7 @@ import { SimulationPanel } from '@/components/marketing/SimulationPanel'
 import type { SimulationResult } from '@/app/api/marketing/simulate/route'
 import { useMarketingPlan } from '@/components/marketing/PlanGate'
 import KnowledgePicker from '@/components/knowledge/KnowledgePicker'
+import { PrintHdButton } from '@/components/marketing/PrintHdButton'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1785,6 +1786,9 @@ function Unit6ImageGenerate({
                           <X className="h-3 w-3" />
                         </button>
                       </div>
+                      <div className="px-3 py-2 bg-white border-t">
+                        <PrintHdButton imageUrl={img.url} compact />
+                      </div>
                       {img.revisedPrompt && img.revisedPrompt !== img.prompt && (
                         <div className="px-3 py-2 bg-gray-50 border-t">
                           <div className="text-[10px] text-gray-500 font-medium mb-0.5">{t('u6.revisedPrompt')}</div>
@@ -1838,6 +1842,9 @@ function Unit6ImageGenerate({
                   <button onClick={() => removeImage(img.url)} className="p-1 rounded-lg bg-black/60 text-white hover:bg-black/80">
                     <X className="h-2.5 w-2.5" />
                   </button>
+                </div>
+                <div className="p-1.5 bg-white border-t">
+                  <PrintHdButton imageUrl={img.url} compact />
                 </div>
               </div>
             ))}

@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils/cn'
 import { PlanGate } from '@/components/marketing/PlanGate'
+import { PrintHdButton } from '@/components/marketing/PrintHdButton'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -601,6 +602,7 @@ function ContentItemCard({ item, onGenerateImage }: { item: ContentItem; onGener
         <p className="text-primary font-bold text-sm mb-1">{item.headline}</p>
         <p className="text-xs text-muted-foreground mb-2 leading-relaxed">{item.body_copy}</p>
         <p className="text-xs font-medium bg-slate-100 dark:bg-slate-800 inline-block px-2 py-0.5 rounded mb-3">{item.cta_text}</p>
+        {item.generatedImageUrl && <PrintHdButton imageUrl={item.generatedImageUrl} compact className="mb-2" />}
 
         <div className="flex gap-2">
           <Button size="sm" variant="outline" className="flex-1 h-7 text-xs gap-1" onClick={onGenerateImage} disabled={item.generatingImage}>
