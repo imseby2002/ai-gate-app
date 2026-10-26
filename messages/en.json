@@ -5885,7 +5885,12 @@
     "recipeCount": "Currently {n} recipes (maintained by R&D unit).",
     "tableEmpty": "No data under this condition, please upload an export file above first.",
     "saved": "Saved",
-    "saveFailed": "Failed to save"
+    "saveFailed": "Failed to save",
+    "anomalyListTitle": "Abnormal items ({n}, over threshold)",
+    "anomalyOverUsed": "Used more than expected (possible shortage, waste or unrecorded loss)",
+    "anomalyUnderUsed": "Used less than expected (possible missing sales records or over-counted stock)",
+    "anomalyNone": "All items within {pct}% — no anomalies",
+    "onlyAnomalies": "Show abnormal items only"
   },
   "Repair": {
     "adminOnly": "Only Repair/Store units can use this",

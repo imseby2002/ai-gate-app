@@ -5885,7 +5885,12 @@
     "recipeCount": "Hiện có {n} công thức (bảo trì bởi bộ phận R&D).",
     "tableEmpty": "Chưa có dữ liệu với điều kiện này, vui lòng tải lên file xuất ở trên trước.",
     "saved": "Đã lưu",
-    "saveFailed": "Lưu thất bại"
+    "saveFailed": "Lưu thất bại",
+    "anomalyListTitle": "Hàng bất thường ({n} mục, vượt ngưỡng)",
+    "anomalyOverUsed": "Dùng nhiều hơn mức chuẩn (có thể thiếu hụt, lãng phí hoặc hủy chưa ghi)",
+    "anomalyUnderUsed": "Dùng ít hơn mức chuẩn (có thể thiếu doanh số hoặc kiểm kê dư)",
+    "anomalyNone": "Tất cả hàng trong mức {pct}% — không có bất thường",
+    "onlyAnomalies": "Chỉ hiện hàng bất thường"
   },
   "Repair": {
     "adminOnly": "Chỉ bộ phận sửa chữa／cửa hàng được sử dụng",
