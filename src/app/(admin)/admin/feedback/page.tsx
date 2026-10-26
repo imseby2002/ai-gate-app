@@ -32,6 +32,9 @@ interface Feedback {
   companies?: { id: string; name: string } | { id: string; name: string }[] | null
 }
 
+// 已結案（不再出現在預設「未結案」清單）
+const CLOSED_STATUSES = new Set<string>(['merged', 'completed', 'rejected'])
+
 const STATUS_CONFIG: Record<FbStatus, { label: string; badgeClass: string }> = {
   pending:           { label: '待排程處理',      badgeClass: 'bg-slate-100 text-slate-700 border-slate-200' },
   awaiting_approval: { label: '⏸️ 等我確認施作', badgeClass: 'bg-amber-50 text-amber-800 border-amber-300 font-bold' },
@@ -59,7 +62,7 @@ export default function AdminFeedbackPage() {
   const [feedbacks, setFeedbacks]     = useState<Feedback[]>([])
   const [loading, setLoading]         = useState(true)
   const [processing, setProcessing]   = useState<string | null>(null)
-  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [statusFilter, setStatusFilter] = useState<string>('open')
   const [notes, setNotes]             = useState<Record<string, string>>({})
   const [expanded, setExpanded]       = useState<string | null>(null)
   const [priceInputs, setPriceInputs] = useState<Record<string, string>>({})
@@ -162,6 +165,8 @@ export default function AdminFeedbackPage() {
   // 篩選列表
   const filtered = feedbacks.filter(f => {
     if (statusFilter === 'all') return true
+    if (statusFilter === 'open') return !CLOSED_STATUSES.has(f.status)
+    if (statusFilter === 'merged') return f.status === 'merged' || f.status === 'completed'
     if (statusFilter === 'confirm_needed') return f.status === 'awaiting_approval'
     if (statusFilter === 'pr_ready') return f.status === 'pr_ready'
     return f.status === statusFilter
@@ -234,6 +239,17 @@ export default function AdminFeedbackPage() {
 
       {/* 篩選標籤 (Tabs) */}
       <div className="flex gap-2 flex-wrap items-center">
+        <button
+          onClick={() => setStatusFilter('open')}
+          className={`text-xs px-3.5 py-1.5 rounded-xl border font-semibold transition-all cursor-pointer ${
+            statusFilter === 'open'
+              ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+              : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+          }`}
+        >
+          未結案 ({feedbacks.filter(f => !CLOSED_STATUSES.has(f.status)).length})
+        </button>
+
         <button
           onClick={() => setStatusFilter('all')}
           className={`text-xs px-3.5 py-1.5 rounded-xl border font-semibold transition-all cursor-pointer ${
@@ -310,7 +326,7 @@ export default function AdminFeedbackPage() {
               : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
           }`}
         >
-          ✅ 已合併 ({feedbacks.filter(f => f.status === 'merged').length})
+          ✅ 已完成 ({feedbacks.filter(f => f.status === 'merged' || f.status === 'completed').length})
         </button>
 
         <button
@@ -664,7 +680,7 @@ export default function AdminFeedbackPage() {
                 <div className="flex items-center justify-between flex-wrap gap-2 pt-2 border-t border-slate-100 text-xs">
                   <div className="flex items-center gap-2">
                     {/* 若非 awaiting_approval 且尚未 merged，允許手動強制呼叫 Claude Sonnet 4.6 重新施作 */}
-                    {!isAwaiting && fb.status !== 'merged' && (
+                    {!isAwaiting && fb.status !== 'merged' && fb.status !== 'completed' && (
                       <button
                         onClick={() => processAutoFix(fb.id)}
                         disabled={isProcessingThis}
@@ -697,9 +713,19 @@ export default function AdminFeedbackPage() {
 
                   {/* 關閉或標記為已處理 */}
                   <div className="flex items-center gap-2">
-                    {fb.status !== 'rejected' && fb.status !== 'merged' && (
+                    {!CLOSED_STATUSES.has(fb.status) && (
+                      <button
+                        onClick={() => updateStatus(fb.id, 'completed')}
+                        title="已另外修好時使用：提案人會看到「已完成上線」"
+                        className="text-xs px-2.5 py-1 text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer font-medium"
+                      >
+                        ✅ 標記已完成
+                      </button>
+                    )}
+                    {!CLOSED_STATUSES.has(fb.status) && (
                       <button
                         onClick={() => updateStatus(fb.id, 'rejected')}
+                        title="提案人會看到「暫不採納」"
                         className="text-xs px-2.5 py-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
                       >
                         關閉此案
