@@ -110,7 +110,8 @@ export async function GET(req: NextRequest) {
       attachments: parsed.attachments || [],
       author_name: parsed.author_name || (r.profiles as any)?.full_name || (r.profiles as any)?.email?.split('@')[0] || '同仁',
       author_email: parsed.author_email || (r.profiles as any)?.email || '',
-      status: r.status || 'pending',
+      // AI 判定完成、待管理者確認前，提案人看到的仍是「程式改寫中」
+      status: r.status === 'verify_pending' ? 'in_progress' : (r.status || 'pending'),
       admin_notes: r.admin_notes || '',
       ai_plan: r.ai_plan || '',
       branch_name: r.branch_name || '',

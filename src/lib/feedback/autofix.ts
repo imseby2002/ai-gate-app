@@ -190,7 +190,7 @@ ${contextStr.slice(0, 12000)}
     if (inTokens > 0 || outTokens > 0) {
       void trackAiUsage({
         feature: 'autofix',
-        modelId: 'claude-3-7-sonnet',
+        modelId: 'claude-sonnet-4-6',
         inputTokens: inTokens,
         outputTokens: outTokens,
         sourceChannel: 'anthropic',
@@ -256,7 +256,7 @@ ${existing}
     if (inTokens > 0 || outTokens > 0) {
       void trackAiUsage({
         feature: 'autofix',
-        modelId: 'claude-3-7-sonnet',
+        modelId: 'claude-sonnet-4-6',
         inputTokens: inTokens,
         outputTokens: outTokens,
         sourceChannel: 'anthropic',
@@ -283,7 +283,7 @@ export async function runFeedbackAutoFix(feedbackId: string) {
     return { ok: true as const, status: 'awaiting_approval', skipped: true }
   }
   // 避免重複處理
-  if (fb.status === 'processing' || fb.status === 'pr_ready' || fb.status === 'merged') {
+  if (['processing', 'pr_ready', 'merged', 'completed', 'verify_pending'].includes(fb.status)) {
     return { ok: true as const, status: fb.status, skipped: true }
   }
 
