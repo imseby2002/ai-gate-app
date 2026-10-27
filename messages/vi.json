@@ -7823,7 +7823,19 @@
     "profileEditDaysUnit": "ngày kể từ khi mở",
     "profileEditDaysHint": "0 = không tự khóa; tải tài liệu luôn mở, nhắc thiếu hồ sơ hằng tuần",
     "portalLinkChanged": "Mã chấm công đã đổi nên đường dẫn trang nhân viên cũng đổi. Vui lòng gửi lại đường dẫn mới (đường dẫn cũ sẽ tự chuyển hướng).",
-    "payrollVnHelp": "Có thể tải trực tiếp bảng lương kế toán (ví dụ \"092026 bang luong.xls\"): hệ thống tự tìm sheet của tháng và dòng tiêu đề, lấy năm/tháng theo MMYYYY trong tên tệp, khớp nhân viên theo Mã NV và tên, nhập đầy đủ các cột chi tiết."
+    "payrollVnHelp": "Có thể tải trực tiếp bảng lương kế toán (ví dụ \"092026 bang luong.xls\"): hệ thống tự tìm sheet của tháng và dòng tiêu đề, lấy năm/tháng theo MMYYYY trong tên tệp, khớp nhân viên theo Mã NV và tên, nhập đầy đủ các cột chi tiết.",
+    "payrollDraftButton": "Tự tạo bản nháp",
+    "payrollDraftTitle": "Tạo bảng lương tháng này từ tháng trước, hồ sơ nhân sự và đánh giá của trưởng ca/văn phòng",
+    "payrollDraftConfirm": "Tạo bản nháp lương tháng {month}/{year}?\n• Lấy tháng gần nhất có bảng lương làm gốc\n• Lương cơ bản toàn thời gian lấy từ hồ sơ nhân sự (nếu trống thì theo tháng trước); bán thời gian theo tháng trước\n• Thưởng giữ như tháng trước; làm thêm, thưởng lễ, phạt, đồng phục đặt về 0\n• Đánh giá trưởng ca/văn phòng đưa vào thưởng KPI và tiền phạt\nNhân viên đã có lương tháng này sẽ không bị thay đổi.",
+    "payrollDraftOverwriteConfirm": "Tháng này đã có bản nháp tự động. Tạo lại và ghi đè bản nháp? (Hủy = chỉ thêm nhân viên chưa có lương; dữ liệu nhập hoặc thêm tay không bị thay đổi)",
+    "payrollDraftDone": "Đã tạo bản nháp (gốc: {base})\nThêm {created}, ghi đè {overwritten}\nGiữ nguyên (đã có lương) {existing}; bỏ qua (không có lương tháng trước/lương cơ bản) {nodata}\nCần kiểm tra {flagged} (ghi chú vàng dưới tên)",
+    "evalKindStore": "Trưởng ca đánh giá",
+    "evalKindOffice": "Văn phòng đánh giá",
+    "evalTiersButton": "Bảng thưởng theo xếp hạng",
+    "evalTiersTitle": "Bảng xếp hạng → tiền thưởng",
+    "evalTiersDesc": "Xếp hạng khi đánh giá được quy đổi thành tiền thưởng theo bảng này; bản nháp lương đưa vào thưởng KPI và ghi xếp hạng vào cột Xếp hạng. Thay đổi chỉ áp dụng cho các đánh giá lưu sau đó.",
+    "evalTierAdd": "+ Thêm xếp hạng",
+    "evalTierAmount": "Thưởng xếp hạng"
   },
   "FinancePage": {
     "accountBalancesTitle": "Số dư theo tài khoản",

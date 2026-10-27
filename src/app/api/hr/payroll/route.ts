@@ -69,6 +69,13 @@ export async function PATCH(req: NextRequest) {
     updates.paid_at = new Date().toISOString()
   }
 
+  // 人工改過金額的自動草稿改標為 edited:，之後「重新產生草稿」不會覆蓋
+  if (Object.keys(updates).some(k => k !== 'status' && k !== 'paid_at')) {
+    const { data: cur } = await supabase.from('hr_payroll').select('source').eq('id', id).eq('owner_id', user.id).maybeSingle()
+    const src = String(cur?.source ?? '')
+    if (src.startsWith('auto:')) updates.source = 'edited:' + src.slice(5)
+  }
+
   const { data, error } = await supabase
     .from('hr_payroll')
     .update({ ...updates, updated_at: new Date().toISOString() })
