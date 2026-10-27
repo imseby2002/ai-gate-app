@@ -7823,7 +7823,19 @@
     "profileEditDaysUnit": "天自動關閉",
     "profileEditDaysHint": "0＝不自動關閉；文件上傳不受影響，缺件每週提醒",
     "portalLinkChanged": "打卡工號已變更，員工專區連結已改為新網址，請重新傳送給員工（舊連結會自動導向新網址）。",
-    "payrollVnHelp": "也可直接上傳越南會計薪資表（bảng lương，例：「092026 bang luong.xls」）：自動找出當月工作表與標題列，依檔名 MMYYYY 判斷年月，用 Mã NV 與姓名比對員工並帶入所有明細欄位。"
+    "payrollVnHelp": "也可直接上傳越南會計薪資表（bảng lương，例：「092026 bang luong.xls」）：自動找出當月工作表與標題列，依檔名 MMYYYY 判斷年月，用 Mã NV 與姓名比對員工並帶入所有明細欄位。",
+    "payrollDraftButton": "自動產生草稿",
+    "payrollDraftTitle": "以上月薪資為底稿，帶入人事資料與領班／辦公室評分，產生本月薪資草稿",
+    "payrollDraftConfirm": "產生 {year} 年 {month} 月薪資草稿？\n・以上一個有薪資的月份為底稿\n・正職底薪取人事資料（未填則沿用上月），兼職底薪沿用上月\n・獎金沿用上月；加班、節慶獎金、罰款、制服費歸零\n・領班／辦公室評分帶入 KPI 獎金與罰款\n已有本月薪資的員工不會被更動。",
+    "payrollDraftOverwriteConfirm": "本月已有自動草稿。要重新產生並覆蓋自動草稿嗎？（按「取消」則只補產生還沒有薪資的員工；匯入或手動新增的資料一律不動）",
+    "payrollDraftDone": "已產生草稿（底稿：{base}）\n新增 {created} 筆、覆蓋 {overwritten} 筆\n已有薪資未更動 {existing} 位；無上月薪資與底薪未建立 {nodata} 位\n需人工確認 {flagged} 筆（名字下方黃色提示）",
+    "evalKindStore": "領班評分",
+    "evalKindOffice": "辦公室評分",
+    "evalTiersButton": "評等獎金表",
+    "evalTiersTitle": "評等 → 獎金對應表",
+    "evalTiersDesc": "評分時選的評等會依此表換算獎金，產生薪資草稿時帶入 KPI 獎金，評等也會寫入薪資表的 Xếp hạng。修改後只影響之後存檔的評分。",
+    "evalTierAdd": "＋新增評等",
+    "evalTierAmount": "評等獎金"
   },
   "FinancePage": {
     "accountBalancesTitle": "各帳戶結餘",

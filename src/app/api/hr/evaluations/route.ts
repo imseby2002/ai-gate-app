@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getUnitContextAny, storeAllowed, type UnitContext } from '@/lib/auth/unit-access'
+import { normKind, normTiers, tierAmount } from '@/lib/hr/eval-tiers'
 
 // 人事可評全部員工；門市／門市領班只能評所屬門市的員工（未綁門市的門市帳號不限門市）
 async function getAdminUser() {
@@ -52,15 +53,20 @@ export async function GET(req: NextRequest) {
   if (ids && ids.length === 0) return NextResponse.json({ evaluations: [] })
   const year = parseInt(sp.get('year') ?? '') || new Date().getFullYear()
   const month = parseInt(sp.get('month') ?? '') || (new Date().getMonth() + 1)
+  const kind = sp.get('kind') // 未指定＝兩種都回（薪資彙整用）
 
   let q = supabase
     .from('hr_evaluations')
     .select('*')
     .eq('owner_id', user.id).eq('year', year).eq('month', month)
   if (ids) q = q.in('employee_id', ids)
-  const { data, error } = await q
+  if (kind) q = q.eq('kind', normKind(kind))
+  const [{ data, error }, { data: st }] = await Promise.all([
+    q,
+    supabase.from('hr_settings').select('eval_tiers').eq('owner_id', user.id).maybeSingle(),
+  ])
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ evaluations: data ?? [] })
+  return NextResponse.json({ evaluations: data ?? [], tiers: normTiers(st?.eval_tiers) })
 }
 
 // 建立/更新單一員工的評估表（依 employee+year+month upsert）
@@ -82,18 +88,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
+  // 辦公室評分只限人事／管理者；門市領班只能做領班評分
+  const kind = normKind(body.kind)
+  if (kind === 'office' && !fullHr) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const rating = String(body.rating ?? '').trim()
+  const { data: st } = await supabase.from('hr_settings').select('eval_tiers').eq('owner_id', user.id).maybeSingle()
+
   const { items, reward, penalty } = normItems(body.items)
   const { data, error } = await supabase
     .from('hr_evaluations')
     .upsert({
-      owner_id: user.id, employee_id, year, month,
-      rating: String(body.rating ?? ''),
+      owner_id: user.id, employee_id, year, month, kind,
+      rating,
+      tier_amount: tierAmount(normTiers(st?.eval_tiers), kind, rating),
       bonus: Number(body.bonus) || 0,
       items, reward_total: reward, penalty_total: penalty,
       notes: String(body.notes ?? ''),
       evaluator: String(body.evaluator ?? ''),
       updated_at: new Date().toISOString(),
-    }, { onConflict: 'owner_id,employee_id,year,month' })
+    }, { onConflict: 'owner_id,employee_id,year,month,kind' })
     .select('*').single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ evaluation: data })

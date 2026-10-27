@@ -7823,7 +7823,19 @@
     "profileEditDaysUnit": "days after opening",
     "profileEditDaysHint": "0 = never; document uploads stay open with weekly reminders",
     "portalLinkChanged": "The attendance number changed, so the employee portal link changed. Please resend the new link (the old link redirects automatically).",
-    "payrollVnHelp": "You can also upload the Vietnamese accounting payroll workbook (bảng lương, e.g. \"092026 bang luong.xls\") directly: the month sheet and header row are detected automatically, year/month come from the MMYYYY in the file name, and employees are matched by Mã NV and name with all detail columns imported."
+    "payrollVnHelp": "You can also upload the Vietnamese accounting payroll workbook (bảng lương, e.g. \"092026 bang luong.xls\") directly: the month sheet and header row are detected automatically, year/month come from the MMYYYY in the file name, and employees are matched by Mã NV and name with all detail columns imported.",
+    "payrollDraftButton": "Auto-generate draft",
+    "payrollDraftTitle": "Builds this month's payroll draft from last month, HR records and leader/office evaluations",
+    "payrollDraftConfirm": "Generate the {year}/{month} payroll draft?\n• Uses the latest month with payroll as the base\n• Full-time base salary from HR records (else last month); part-time base copied from last month\n• Bonuses copied from last month; overtime, holiday bonus, penalties and uniform fees reset to 0\n• Leader/office evaluations go to KPI bonus and penalty\nEmployees who already have payroll this month are left unchanged.",
+    "payrollDraftOverwriteConfirm": "This month already has auto drafts. Regenerate and overwrite them? (Cancel = only add employees without payroll; imported or manually added rows are never touched)",
+    "payrollDraftDone": "Draft generated (base: {base})\nCreated {created}, overwritten {overwritten}\nUnchanged (already had payroll) {existing}; skipped (no previous payroll or base) {nodata}\nNeeds review {flagged} (yellow notes under names)",
+    "evalKindStore": "Leader evaluation",
+    "evalKindOffice": "Office evaluation",
+    "evalTiersButton": "Rating bonus table",
+    "evalTiersTitle": "Rating → bonus table",
+    "evalTiersDesc": "The rating chosen in an evaluation is converted to a bonus with this table; payroll drafts put it into KPI bonus and the rating into Xếp hạng. Changes apply to evaluations saved afterwards.",
+    "evalTierAdd": "+ Add rating",
+    "evalTierAmount": "Rating bonus"
   },
   "FinancePage": {
     "accountBalancesTitle": "Balance by account",

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ExcelImportModal } from '@/components/common/ExcelImportModal'
 import type { ImportColumn } from '@/lib/excel/universal-import'
+import { normTiers, type EvalKind, type EvalTiers, type Tier } from '@/lib/hr/eval-tiers'
 
 const fmt = (n: number, locale: string) => Math.round(n).toLocaleString(locale === 'vi' ? 'vi-VN' : locale === 'en' ? 'en-US' : 'zh-TW')
 
@@ -37,13 +38,14 @@ interface Evaluation {
   id: string; employee_id: string; year: number; month: number
   rating: string; bonus: number; items: EvalItem[]
   reward_total: number; penalty_total: number; notes: string; evaluator: string
+  kind?: EvalKind; tier_amount?: number
 }
-const RATINGS = ['', '優', '佳', '普', '待改進']
 
 export interface EvalEmployee { id: string; name: string; store?: string | null; status: string }
 
 // store：只看該門市員工（門市排班頁使用）；allowImport：顯示 Excel 批次匯入（限人事頁）
-export function EvaluationTab({ employees, loading, store, allowImport = true }: { employees: EvalEmployee[]; loading: boolean; store?: string; allowImport?: boolean }) {
+// kinds：可填的評分種類（門市排班頁只有領班評分）；canEditTiers：可編輯評等獎金表（限人事頁）
+export function EvaluationTab({ employees, loading, store, allowImport = true, kinds = ['store', 'office'], canEditTiers = false }: { employees: EvalEmployee[]; loading: boolean; store?: string; allowImport?: boolean; kinds?: EvalKind[]; canEditTiers?: boolean }) {
   const t = useTranslations('HrPage')
   const locale = useLocale()
   const now = new Date()
@@ -53,15 +55,29 @@ export function EvaluationTab({ employees, loading, store, allowImport = true }:
   const [editing, setEditing] = useState<{ emp: EvalEmployee; draft: Partial<Evaluation> } | null>(null)
   const [busy, setBusy] = useState(false)
   const [showImport, setShowImport] = useState(false)
+  const [kind, setKind] = useState<EvalKind>(kinds[0] ?? 'store')
+  const [tiers, setTiers] = useState<EvalTiers>(normTiers(null))
+  const [tierDraft, setTierDraft] = useState<EvalTiers | null>(null)
 
   const load = useCallback(async () => {
-    const res = await fetch(`/api/hr/evaluations?year=${year}&month=${month}${store ? `&store=${encodeURIComponent(store)}` : ''}`)
+    const res = await fetch(`/api/hr/evaluations?year=${year}&month=${month}&kind=${kind}${store ? `&store=${encodeURIComponent(store)}` : ''}`)
     if (!res.ok) return
     const d = await res.json()
     const map: Record<string, Evaluation> = {}
     for (const e of (d.evaluations ?? []) as Evaluation[]) map[e.employee_id] = e
     setEvals(map)
-  }, [year, month, store])
+    setTiers(normTiers(d.tiers))
+  }, [year, month, store, kind])
+  const tierOf = (rating: string) => tiers[kind].find(x => x.rating === rating)?.amount ?? 0
+
+  const saveTiers = async () => {
+    if (!tierDraft) return
+    setBusy(true)
+    const res = await fetch('/api/hr/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ eval_tiers: tierDraft }) })
+    setBusy(false)
+    if (res.ok) { setTierDraft(null); load() }
+    else alert((await res.json().catch(() => ({}))).error ?? t('saveFailed'))
+  }
   useEffect(() => { load() }, [load])
 
   const active = employees.filter(e => e.status === 'active')
@@ -80,8 +96,9 @@ export function EvaluationTab({ employees, loading, store, allowImport = true }:
     const items = d.items ?? []
     const reward = items.filter(i => i.kind === 'reward').reduce((s, i) => s + (Number(i.amount) || 0), 0)
     const penalty = items.filter(i => i.kind === 'penalty').reduce((s, i) => s + (Number(i.amount) || 0), 0)
-    const net = (Number(d.bonus) || 0) + reward - penalty
-    return { reward, penalty, net }
+    const tier = tierOf(d.rating ?? '')
+    const net = tier + (Number(d.bonus) || 0) + reward - penalty
+    return { reward, penalty, net, tier }
   }
 
   const saveEdit = async () => {
@@ -89,7 +106,7 @@ export function EvaluationTab({ employees, loading, store, allowImport = true }:
     setBusy(true)
     const res = await fetch('/api/hr/evaluations', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ employee_id: editing.emp.id, year, month, ...editing.draft }),
+      body: JSON.stringify({ employee_id: editing.emp.id, year, month, ...editing.draft, kind }),
     })
     setBusy(false)
     if (res.ok) { setEditing(null); load() }
@@ -116,8 +133,21 @@ export function EvaluationTab({ employees, loading, store, allowImport = true }:
           <h3 className="font-semibold">{t('evaluationTitle')}</h3>
           <p className="text-sm text-gray-500">{t('evaluationDesc')}</p>
         </div>
-        <div className="flex items-center gap-2">
-          {allowImport && (
+        <div className="flex items-center gap-2 flex-wrap">
+          {kinds.length > 1 && (
+            <div className="flex rounded-lg border p-0.5">
+              {kinds.map(k => (
+                <button key={k} onClick={() => setKind(k)}
+                  className={`px-3 py-1 rounded-md text-xs font-medium ${kind === k ? 'bg-primary text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+                  {t(k === 'store' ? 'evalKindStore' : 'evalKindOffice')}
+                </button>
+              ))}
+            </div>
+          )}
+          {canEditTiers && (
+            <Button size="sm" variant="outline" onClick={() => setTierDraft(JSON.parse(JSON.stringify(tiers)))}>{t('evalTiersButton')}</Button>
+          )}
+          {allowImport && kind === 'store' && (
             <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowImport(true)}>
               <FileSpreadsheet className="h-4 w-4 text-emerald-600" />{t('batchImport')}
             </Button>
@@ -162,19 +192,20 @@ export function EvaluationTab({ employees, loading, store, allowImport = true }:
             <thead>
               <tr className="text-left text-gray-500 border-b">
                 <th className="py-2 pr-2">{t('nameColLabel')}</th><th className="pr-2">{t('storeLabel')}</th><th className="pr-2">{t('ratingLabel')}</th>
-                <th className="pr-2 text-right">{t('bonusLabel')}</th><th className="pr-2 text-right">{t('rewardLabel')}</th>
+                <th className="pr-2 text-right">{t('evalTierAmount')}</th><th className="pr-2 text-right">{t('bonusLabel')}</th><th className="pr-2 text-right">{t('rewardLabel')}</th>
                 <th className="pr-2 text-right">{t('penaltyLabel')}</th><th className="pr-2 text-right">{t('netRewardPenaltyLabel')}</th><th></th>
               </tr>
             </thead>
             <tbody>
               {active.map(emp => {
                 const ev = evals[emp.id]
-                const net = ev ? (Number(ev.bonus) + Number(ev.reward_total) - Number(ev.penalty_total)) : 0
+                const net = ev ? (Number(ev.tier_amount ?? 0) + Number(ev.bonus) + Number(ev.reward_total) - Number(ev.penalty_total)) : 0
                 return (
                   <tr key={emp.id} className="border-b last:border-0">
                     <td className="py-2 pr-2 font-medium">{emp.name}</td>
                     <td className="pr-2 text-gray-500">{emp.store || '—'}</td>
                     <td className="pr-2">{ev?.rating || '—'}</td>
+                    <td className="pr-2 text-right">{ev ? fmt(Number(ev.tier_amount ?? 0), locale) : '—'}</td>
                     <td className="pr-2 text-right">{ev ? fmt(Number(ev.bonus), locale) : '—'}</td>
                     <td className="pr-2 text-right text-emerald-600">{ev ? fmt(Number(ev.reward_total), locale) : '—'}</td>
                     <td className="pr-2 text-right text-red-500">{ev ? fmt(Number(ev.penalty_total), locale) : '—'}</td>
@@ -198,15 +229,18 @@ export function EvaluationTab({ employees, loading, store, allowImport = true }:
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setEditing(null)}>
             <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-5 space-y-3" onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold">{t('evalModalTitle', { name: editing.emp.name, year, month })}</h3>
+                <h3 className="font-semibold">{t('evalModalTitle', { name: editing.emp.name, year, month })}・{t(kind === 'store' ? 'evalKindStore' : 'evalKindOffice')}</h3>
                 <button onClick={() => setEditing(null)}><X className="h-5 w-5 text-gray-400" /></button>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <Field label={t('ratingLabel')}>
                   <select value={editing.draft.rating ?? ''} onChange={e => setDraft({ rating: e.target.value })} className="w-full h-9 rounded-md border px-2 text-sm">
-                    {RATINGS.map(r => <option key={r} value={r}>{r || t('notRatedYet')}</option>)}
+                    <option value="">{t('notRatedYet')}</option>
+                    {tiers[kind].map(r => <option key={r.rating} value={r.rating}>{r.rating}（{fmt(r.amount, locale)}）</option>)}
+                    {editing.draft.rating && !tiers[kind].some(r => r.rating === editing.draft.rating) && <option value={editing.draft.rating}>{editing.draft.rating}</option>}
                   </select>
                 </Field>
+                <Field label={t('evalTierAmount')}><Input value={fmt(totals.tier, locale)} disabled /></Field>
                 <Field label={t('bonusLabel')}><Input type="number" value={String(editing.draft.bonus ?? 0)} onChange={e => setDraft({ bonus: Number(e.target.value) || 0 })} /></Field>
                 <Field label={t('evaluatorLabel')}><Input value={editing.draft.evaluator ?? ''} onChange={e => setDraft({ evaluator: e.target.value })} /></Field>
               </div>
@@ -249,6 +283,40 @@ export function EvaluationTab({ employees, loading, store, allowImport = true }:
           </div>
         )
       })()}
+
+      {tierDraft && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setTierDraft(null)}>
+          <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-5 space-y-3" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold">{t('evalTiersTitle')}</h3>
+              <button onClick={() => setTierDraft(null)}><X className="h-5 w-5 text-gray-400" /></button>
+            </div>
+            <p className="text-xs text-gray-500">{t('evalTiersDesc')}</p>
+            {(['store', 'office'] as EvalKind[]).map(k => (
+              <div key={k} className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{t(k === 'store' ? 'evalKindStore' : 'evalKindOffice')}</span>
+                  <button onClick={() => setTierDraft(d => d ? { ...d, [k]: [...d[k], { rating: '', amount: 0 }] } : d)}
+                    className="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200">{t('evalTierAdd')}</button>
+                </div>
+                {tierDraft[k].map((row: Tier, i: number) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <Input value={row.rating} placeholder="A+" className="w-24"
+                      onChange={e => setTierDraft(d => d ? { ...d, [k]: d[k].map((x, j) => j === i ? { ...x, rating: e.target.value } : x) } : d)} />
+                    <Input type="number" value={String(row.amount)}
+                      onChange={e => setTierDraft(d => d ? { ...d, [k]: d[k].map((x, j) => j === i ? { ...x, amount: Number(e.target.value) || 0 } : x) } : d)} />
+                    <button onClick={() => setTierDraft(d => d ? { ...d, [k]: d[k].filter((_, j) => j !== i) } : d)} className="text-gray-400 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
+                  </div>
+                ))}
+              </div>
+            ))}
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => setTierDraft(null)}>{t('cancel')}</Button>
+              <Button size="sm" onClick={saveTiers} disabled={busy}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : t('save')}</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

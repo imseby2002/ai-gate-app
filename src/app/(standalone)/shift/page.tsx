@@ -62,5 +62,5 @@ function StoreEvaluation({ store }: { store: string }) {
       .then(d => setData({ store, emps: d.employees ?? [] }))
   }, [store])
   const loading = data?.store !== store
-  return <Card className="p-4"><EvaluationTab employees={loading ? [] : data!.emps} loading={loading} store={store} allowImport={false} /></Card>
+  return <Card className="p-4"><EvaluationTab employees={loading ? [] : data!.emps} loading={loading} store={store} allowImport={false} kinds={['store']} /></Card>
 }

@@ -4,7 +4,7 @@ import { ChannelAccountPicker } from '@/components/channels/ChannelAccountPicker
 import { useState, useEffect, useCallback, useRef, ReactNode, type ChangeEvent } from 'react'
 import Link from 'next/link'
 import { useTranslations, useLocale } from 'next-intl'
-import { Users, DollarSign, Calendar, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Loader2, AlertCircle, Building2, Phone, Mail, Briefcase, CreditCard, Zap, Wallet, Upload, Shield, Clock, Download, UserPlus, ArrowRight, ClipboardCheck, Store, Video, FileSpreadsheet, HeartHandshake, Send, FileText, KeyRound, Copy, Link2, UserCheck, BookOpen } from 'lucide-react'
+import { Users, DollarSign, Calendar, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Loader2, AlertCircle, Building2, Phone, Mail, Briefcase, CreditCard, Zap, Wallet, Upload, Shield, Clock, Download, UserPlus, ArrowRight, ClipboardCheck, Store, Video, FileSpreadsheet, HeartHandshake, Send, FileText, KeyRound, Copy, Link2, UserCheck, BookOpen, Wand2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -1058,8 +1058,14 @@ function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: 
     // 評估表獎懲 → 對應員工
     const ed = await eRes.json()
     const emap: Record<string, EvalSummary> = {}
-    for (const ev of (ed.evaluations ?? []) as { employee_id: string; bonus: number; reward_total: number; penalty_total: number }[]) {
-      emap[ev.employee_id] = { bonus: Number(ev.bonus) || 0, reward: Number(ev.reward_total) || 0, penalty: Number(ev.penalty_total) || 0 }
+    // 領班評分＋辦公室評分加總；評等獎金（tier_amount）併入獎金
+    for (const ev of (ed.evaluations ?? []) as { employee_id: string; bonus: number; tier_amount?: number; reward_total: number; penalty_total: number }[]) {
+      const cur = emap[ev.employee_id] ?? { bonus: 0, reward: 0, penalty: 0 }
+      emap[ev.employee_id] = {
+        bonus: cur.bonus + (Number(ev.bonus) || 0) + (Number(ev.tier_amount) || 0),
+        reward: cur.reward + (Number(ev.reward_total) || 0),
+        penalty: cur.penalty + (Number(ev.penalty_total) || 0),
+      }
     }
     setEvals(emap)
     // 考勤時數 → 對應員工（優先 考勤工号＋門市，否則姓名）
@@ -1104,6 +1110,32 @@ function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: 
   }
 
   const [sendingPayslips, setSendingPayslips] = useState(false)
+  const [generating, setGenerating] = useState(false)
+  // 自動產生本月薪資草稿：上月為底稿＋人事資料＋領班／辦公室評分；已有薪資的人不動
+  const generateDraft = async () => {
+    const overwriteAuto = payroll.some(p => String((p as { source?: string }).source ?? '').startsWith('auto:'))
+      ? confirm(t('payrollDraftOverwriteConfirm'))
+      : false
+    if (!confirm(t('payrollDraftConfirm', { year, month }))) return
+    setGenerating(true)
+    try {
+      const res = await fetch('/api/hr/payroll/generate', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ year, month, overwriteAuto }),
+      })
+      const d = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(d.error || res.statusText)
+      alert(t('payrollDraftDone', {
+        base: d.baseMonth ? `${d.baseMonth.year}/${d.baseMonth.month}` : '—',
+        created: d.created, overwritten: d.overwritten, existing: d.skippedExisting, nodata: d.skippedNoData, flagged: d.flagged,
+      }))
+      load()
+    } catch (e) {
+      alert(e instanceof Error ? e.message : String(e))
+    } finally {
+      setGenerating(false)
+    }
+  }
 
   async function exportBank() {
     setErr(''); setExporting(true)
@@ -1162,6 +1194,9 @@ function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: 
           </Button>
           <Button size="sm" variant="outline" className="gap-1 text-emerald-700 border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100" onClick={exportBank} disabled={exporting || payroll.length === 0} title={t('downloadTpbankTitle')}>
             {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}{t('downloadTpbankButton')}
+          </Button>
+          <Button size="sm" variant="outline" className="gap-1 border-violet-200 bg-violet-50/60 text-violet-700 hover:bg-violet-100" onClick={generateDraft} disabled={generating} title={t('payrollDraftTitle')}>
+            {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}{t('payrollDraftButton')}
           </Button>
           <Button size="sm" variant="outline" className="gap-1" onClick={() => setShowImport(v => !v)}>
             <FileSpreadsheet className="h-4 w-4 text-emerald-600" />{t('batchImport')}
@@ -1259,6 +1294,9 @@ function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: 
                         {p.payroll_code ? <span className="font-mono text-gray-500 mr-1" title={t('payrollCodeLabel')}>{p.payroll_code}</span> : null}
                         {p.store || p.hr_employees?.department} {p.position || p.hr_employees?.position}
                       </div>
+                      {p.notes?.startsWith('[自動草稿]') && p.notes.length > 6 && (
+                        <div className="text-[11px] text-amber-700 mt-0.5">{p.notes.replace('[自動草稿]', '').trim()}</div>
+                      )}
                     </td>
                     <td className="text-right py-2.5 px-3 tabular-nums">{fmt(p.base_salary, locale)}</td>
                     <td className="text-right py-2.5 px-3 tabular-nums text-blue-600">{p.allowances > 0 ? `+${fmt(p.allowances, locale)}` : '—'}</td>
@@ -2443,7 +2481,7 @@ export default function HRPage() {
         {tab === 'recruitment' && <RecruitmentTab onHired={loadEmployees} />}
         {tab === 'attendance' && <AttendanceTab />}
         {tab === 'payroll'   && <PayrollTab employees={employees} loading={empLoading} onRefresh={loadEmployees} />}
-        {tab === 'evaluation' && <EvaluationTab employees={employees} loading={empLoading} />}
+        {tab === 'evaluation' && <EvaluationTab employees={employees} loading={empLoading} canEditTiers />}
         {tab === 'contracts' && <ContractsTab employees={employees} />}
         {tab === 'insurance' && <InsuranceTab onRefresh={loadEmployees} />}
         {tab === 'union'     && <UnionTab />}

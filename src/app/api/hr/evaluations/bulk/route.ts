@@ -57,11 +57,12 @@ export async function POST(req: NextRequest) {
       employee_id: emp.id,
       year,
       month,
+      kind: 'store',
       bonus: Number(r.bonus) || 0,
-      reward: Number(r.reward) || 0,
-      penalty: Number(r.penalty) || 0,
-      score: r.score !== undefined && r.score !== '' ? Number(r.score) : null,
-      notes: String(r.notes ?? r.note ?? '').trim(),
+      // 表上沒有 reward/penalty/score 欄位：獎懲寫入 reward_total/penalty_total，評分記在備註
+      reward_total: Math.max(0, Number(r.reward) || 0),
+      penalty_total: Math.max(0, Number(r.penalty) || 0),
+      notes: [r.score !== undefined && r.score !== '' ? `評分 ${r.score}` : '', String(r.notes ?? r.note ?? '').trim()].filter(Boolean).join('；'),
       updated_at: new Date().toISOString(),
     }
 
@@ -72,6 +73,7 @@ export async function POST(req: NextRequest) {
       .eq('employee_id', emp.id)
       .eq('year', year)
       .eq('month', month)
+      .eq('kind', 'store')
       .maybeSingle()
 
     if (existingEval) {
