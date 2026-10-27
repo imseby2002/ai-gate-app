@@ -182,7 +182,7 @@ export function MarketingPlatforms({ canSettings }: { canSettings: boolean }) {
       if (d.ok) {
         setFbPageResult({
           ok: true,
-          text: tr('fbPageOk', { name: d.pageName || d.pageId, id: d.pageId }),
+          text: tr('fbPageOk', { name: d.pageName || d.pageId, id: d.pageId }) + (d.warning ? `\n⚠️ ${d.warning}` : ''),
         })
       } else {
         setFbPageResult({
