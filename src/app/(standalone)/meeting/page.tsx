@@ -10,8 +10,11 @@ import {
   Mic, MicOff, Copy, LogOut, Plus, Users, Video, VideoOff,
   Building2, Store, CheckCircle2, AlertCircle, Languages,
   Sparkles, Radio, Eye, Loader2, Download, History, Trash2,
-  Globe, UserCheck, X
+  Globe, UserCheck, X, MessageSquare, UserPlus
 } from 'lucide-react'
+import { MeetingVideo } from '@/components/meeting/MeetingVideo'
+import { MeetingChat } from '@/components/meeting/MeetingChat'
+import { GuestInviteDialog } from '@/components/meeting/GuestInviteDialog'
 import {
   fetchAzureSpeechToken, preloadAzureSpeechSdk, startAzureRecognition,
   type AzureRecognitionController, type AzureSpeechToken,
@@ -124,32 +127,6 @@ function getSRCtor(): SRCtor | null {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null
 }
 
-// ── JaaS 視訊（8x8 Jitsi as a Service，CDN 嵌入，無需套件）───────────
-// 以 NEXT_PUBLIC_JAAS_APP_ID 是否存在來判斷是否啟用視訊。
-const JAAS_APP_ID = process.env.NEXT_PUBLIC_JAAS_APP_ID
-interface JaasApi { dispose(): void }
-type JaasCtor = new (domain: string, options: Record<string, unknown>) => JaasApi
-
-function loadJaasScript(appId: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const w = window as unknown as { JitsiMeetExternalAPI?: JaasCtor }
-    if (w.JitsiMeetExternalAPI) return resolve()
-    const existing = document.querySelector<HTMLScriptElement>('script[data-jaas="1"]')
-    if (existing) {
-      existing.addEventListener('load', () => resolve())
-      existing.addEventListener('error', () => reject(new Error('jaas script load failed')))
-      return
-    }
-    const s = document.createElement('script')
-    s.src = `https://8x8.vc/${appId}/external_api.js`
-    s.async = true
-    s.dataset.jaas = '1'
-    s.onload = () => resolve()
-    s.onerror = () => reject(new Error('jaas script load failed'))
-    document.body.appendChild(s)
-  })
-}
-
 // ── 翻譯快取（跨元件共用）──────────────────────────────────────────
 const transCache = new Map<string, string>()
 const tkey = (locale: string, text: string) => `${locale}:${text}`
@@ -193,6 +170,7 @@ function fmtTime(iso: string) {
 
 export default function MeetingPage() {
   const t = useTranslations('Meeting')
+  const tr = useTranslations('MeetingRoom')
   const locale = useLocale()
   // createClient() 回傳單例，直接取用即可（不需 useRef，避免 render 期存取 ref）
   const supabase = createClient()
@@ -336,11 +314,10 @@ export default function MeetingPage() {
   const bottomRef = useRef<HTMLDivElement | null>(null)
   const inFlightRef = useRef<Set<string>>(new Set())
 
-  // 視訊（JaaS）
-  const [video, setVideo] = useState<{ jwt: string; room: string } | null>(null)
-  const [videoLoading, setVideoLoading] = useState(false)
-  const videoBoxRef = useRef<HTMLDivElement | null>(null)
-  const jaasApiRef = useRef<JaasApi | null>(null)
+  // 視訊（有設定 JaaS 用 JaaS，否則內建 WebRTC）、訪客邀請、聊天
+  const [video, setVideo] = useState(false)
+  const [showChat, setShowChat] = useState(false)
+  const [inviteOpen, setInviteOpen] = useState(false)
 
   // ── 載入使用者與單位/門市元數據 ──
   useEffect(() => {
@@ -1042,49 +1019,9 @@ export default function MeetingPage() {
     }
   }, [stopRec])
 
-  // ── 視訊（JaaS）：開啟時取 token、載入 CDN 腳本、掛載 iframe ──
-  async function startVideo() {
-    if (!meeting || !JAAS_APP_ID || videoLoading) return
-    setVideoLoading(true)
-    setErr('')
-    try {
-      const res = await fetch('/api/meeting/jaas-token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ meetingId: meeting.id }),
-      })
-      if (!res.ok) { setErr(t('videoFailed')); return }
-      const { jwt, room } = (await res.json()) as { jwt: string; room: string }
-      await loadJaasScript(JAAS_APP_ID)
-      setVideo({ jwt, room })
-    } catch {
-      setErr(t('videoFailed'))
-    } finally {
-      setVideoLoading(false)
-    }
-  }
-
   function stopVideo() {
-    setVideo(null)
+    setVideo(false)
   }
-
-  // video 設定後掛載 JaaS iframe；清除時 dispose
-  useEffect(() => {
-    if (!video || !videoBoxRef.current || !JAAS_APP_ID) return
-    const w = window as unknown as { JitsiMeetExternalAPI?: JaasCtor }
-    if (!w.JitsiMeetExternalAPI) return
-    const api = new w.JitsiMeetExternalAPI('8x8.vc', {
-      roomName: `${JAAS_APP_ID}/${video.room}`,
-      jwt: video.jwt,
-      parentNode: videoBoxRef.current,
-      configOverwrite: { prejoinPageEnabled: false, startWithAudioMuted: true, startWithVideoMuted: false },
-    })
-    jaasApiRef.current = api
-    return () => {
-      try { api.dispose() } catch {}
-      jaasApiRef.current = null
-    }
-  }, [video])
 
   function leaveMeeting() {
     stopRec()
@@ -1664,25 +1601,35 @@ export default function MeetingPage() {
           <Download className="h-4 w-4" />{downloading ? t('downloading') : t('download')}
         </Button>
 
-        {/* 視訊按鈕（線上會議模式才展示） */}
-        {JAAS_APP_ID && meeting.meeting_mode === 'online' && (
-          <div>
-            {video ? (
-              <Button size="sm" variant="outline" onClick={stopVideo} className="gap-1.5">
-                <VideoOff className="h-4 w-4" />{t('videoStop')}
-              </Button>
-            ) : (
-              <Button size="sm" variant="outline" onClick={startVideo} disabled={videoLoading} className="gap-1.5">
-                <Video className="h-4 w-4" />{videoLoading ? t('videoLoading') : t('videoStart')}
-              </Button>
-            )}
-          </div>
+        {/* 視訊、聊天、邀請訪客 */}
+        {video ? (
+          <Button size="sm" variant="outline" onClick={stopVideo} className="gap-1.5">
+            <VideoOff className="h-4 w-4" />{t('videoStop')}
+          </Button>
+        ) : (
+          <Button size="sm" variant="outline" onClick={() => setVideo(true)} className="gap-1.5">
+            <Video className="h-4 w-4" />{t('videoStart')}
+          </Button>
+        )}
+        <Button size="sm" variant={showChat ? 'default' : 'outline'} onClick={() => setShowChat(v => !v)} className="gap-1.5">
+          <MessageSquare className="h-4 w-4" />{tr('chatTitle')}
+        </Button>
+        {me?.id === meeting.host_id && (
+          <Button size="sm" variant="outline" onClick={() => setInviteOpen(true)} className="gap-1.5">
+            <UserPlus className="h-4 w-4" />{tr('inviteGuest')}
+          </Button>
         )}
       </div>
 
       {micDenied && <p className="text-sm text-red-500">{t('micDenied')}</p>}
 
-      {video && <div ref={videoBoxRef} className="h-72 w-full overflow-hidden rounded-lg border bg-black" />}
+      {(video || showChat) && me && (
+        <div className={`grid gap-3 ${video && showChat ? 'lg:grid-cols-[1fr_340px]' : ''}`}>
+          {video && <MeetingVideo meetingId={meeting.id} selfId={`u-${me.id}`} selfName={me.name} onClose={stopVideo} />}
+          {showChat && <MeetingChat meetingId={meeting.id} />}
+        </div>
+      )}
+      {inviteOpen && <GuestInviteDialog meetingId={meeting.id} roomCode={meeting.room_code} onClose={() => setInviteOpen(false)} />}
 
       {/* 逐字稿與翻譯輸出區 */}
       <div className="flex-1 space-y-3 overflow-y-auto rounded-lg border p-3">
