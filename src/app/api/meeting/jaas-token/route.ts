@@ -15,12 +15,19 @@ export async function POST(req: NextRequest) {
   const actor = await resolveMeetingActor(req, meetingId)
   if (!actor) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const jwt = mintJaasToken({
-    room: actor.meeting.room_code,
-    userId: actor.id,
-    name: actor.kind === 'guest' ? `${actor.name}（訪客）` : actor.name,
-    moderator: actor.isHost,
-  })
+  let jwt: string
+  try {
+    jwt = mintJaasToken({
+      room: actor.meeting.room_code,
+      userId: actor.id,
+      name: actor.kind === 'guest' ? `${actor.name}（訪客）` : actor.name,
+      moderator: actor.isHost,
+    })
+  } catch (e) {
+    // 金鑰設定有誤時回 501，前端自動改用內建 WebRTC 視訊，不讓會議卡住
+    console.error('[jaas-token] 簽發失敗', e instanceof Error ? e.message : e)
+    return NextResponse.json({ error: 'JaaS 金鑰設定有誤' }, { status: 501 })
+  }
 
   return NextResponse.json({ jwt, appId: getJaasAppId(), room: actor.meeting.room_code })
 }

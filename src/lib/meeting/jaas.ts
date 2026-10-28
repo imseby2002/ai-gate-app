@@ -16,6 +16,28 @@ export function jaasConfigured(): boolean {
   return !!(getJaasAppId() && process.env.JAAS_API_KEY && process.env.JAAS_PRIVATE_KEY)
 }
 
+/**
+ * 讀取 JAAS_PRIVATE_KEY 並容錯：貼到 Vercel 時常見換行消失（變空白或字面 \\n）、
+ * Windows 換行、外層引號，或只貼了中間的 base64。一律取出 base64 內容重新排成標準 PEM，
+ * 先試 PKCS#8（BEGIN PRIVATE KEY），再試 PKCS#1（BEGIN RSA PRIVATE KEY）。
+ */
+let cachedKey: crypto.KeyObject | null = null
+export function loadJaasPrivateKey(): crypto.KeyObject {
+  if (cachedKey) return cachedKey
+  const raw = (process.env.JAAS_PRIVATE_KEY ?? '').trim().replace(/^["']|["']$/g, '').replace(/\\r/g, '').replace(/\\n/g, '\n')
+  const tries: string[] = []
+  if (/-----BEGIN [A-Z ]*PRIVATE KEY-----/.test(raw)) tries.push(raw.replace(/\r/g, ''))
+  const label = raw.match(/-----BEGIN ([A-Z ]*PRIVATE KEY)-----/)?.[1]
+  const body = raw.replace(/-----(BEGIN|END) [A-Z ]*-----/g, '').replace(/[^A-Za-z0-9+/=]/g, '')
+  const wrapped = body.match(/.{1,64}/g)?.join('\n') ?? ''
+  for (const l of [label, 'PRIVATE KEY', 'RSA PRIVATE KEY']) if (l) tries.push(`-----BEGIN ${l}-----\n${wrapped}\n-----END ${l}-----\n`)
+  let last: unknown
+  for (const pem of tries) {
+    try { cachedKey = crypto.createPrivateKey(pem); return cachedKey } catch (e) { last = e }
+  }
+  throw new Error(`JAAS_PRIVATE_KEY 無法解析：${last instanceof Error ? last.message : String(last)}`)
+}
+
 function b64url(input: Buffer | string): string {
   return Buffer.from(input).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 }
@@ -28,7 +50,7 @@ export function mintJaasToken(opts: {
 }): string {
   const appId = getJaasAppId()!
   const apiKey = process.env.JAAS_API_KEY!
-  const privateKey = process.env.JAAS_PRIVATE_KEY!.replace(/\\n/g, '\n')
+  const privateKey = loadJaasPrivateKey()
   const now = Math.floor(Date.now() / 1000)
 
   const header = { alg: 'RS256', kid: `${appId}/${apiKey}`, typ: 'JWT' }
