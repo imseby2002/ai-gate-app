@@ -9,6 +9,9 @@
  * - 薪資 hr_payroll：薪資＝底薪＋津貼＋獎金；保險＝公司負擔保險＋工會費，依薪資表門市歸屬
  *   當月有薪資資料時，出納裡的 luong（薪資）與保險費用不重複計入
  * - 門市費用 fin_bills：水電瓦斯冰塊帳單；當月某科目有帳單時，該科目改用帳單、不再取出納
+ * - iPOS 售出 inv_pos_sales：門市當月有 POS 資料時，營業額改用 POS（出納的門市現金繳回只做比對）
+ * - 進銷存 inv_movements（INVENTORY 匯出）：原料使用＝規定用量×單價、原料損耗＝超用量×單價；
+ *   當月有任何門市的進銷存資料時，出納的原物料採購不再計入（已轉為庫存，避免重複）
  *
  * 人工修改值（pnl_entries）優先於自動值，由 API／前端合併；修改留痕在 pnl_entry_logs。
  */
@@ -24,7 +27,7 @@ export interface PnlStoreRow {
 }
 
 export interface Contribution {
-  src: 'cashflow' | 'payroll' | 'bill'
+  src: 'cashflow' | 'payroll' | 'bill' | 'pos' | 'inventory'
   label: string
   amount: number   // 已分攤後計入此門市的金額
   total: number    // 原始金額
@@ -182,18 +185,34 @@ async function fetchAll<T>(build: (from: number, to: number) => PromiseLike<{ da
 interface CashRow { id: string; type: string; category: string; category_parent: string; amount: number; date: string; description: string; notes: string; store_code: string }
 interface PayRow { year: number; month: number; store: string; base_salary: number; allowances: number; bonus: number; employer_insurance: number; employer_union: number }
 interface BillRow { store_code: string; year: number; month: number; category_code: string; amount: number; note: string }
+interface PosRow { store: string; year: number; month: number; revenue: number }
+interface MovRow { store: string; year: number; month: number; material_code: string; material_name: string; out_pos: number; usage_month: number; open_qty: number; in_total: number; close_qty: number }
+
+/** 營業額／庫存比對（每門市每月） */
+export interface Recon {
+  pos_revenue: number        // iPOS 營業額
+  cash_revenue: number       // 出納「門市收入」（門市現金繳回）
+  has_pos: boolean
+  inv_expected: number       // 規定用量成本（POS 點單推算 × 單價）
+  inv_actual: number         // 實耗成本（當月使用量 × 單價）
+  inv_loss: number           // 超用金額（實耗 > 規定的部分）
+  has_inv: boolean
+  missing_price: number      // 有用量但沒有單價的原料數
+}
+export type ReconMap = Record<string, Record<string, Recon>> // period → storeId → recon
+const emptyRecon = (): Recon => ({ pos_revenue: 0, cash_revenue: 0, has_pos: false, inv_expected: 0, inv_actual: 0, inv_loss: 0, has_inv: false, missing_price: 0 })
 
 export async function computeAutoPnl(
   admin: Admin, ownerId: string, stores: PnlStoreRow[], fin: FinStore[],
   from: string, to: string,
   trace?: { period: string; storeId: string; line: string },
-): Promise<{ values: AutoValues; contributions: Contribution[] }> {
+): Promise<{ values: AutoValues; contributions: Contribution[]; recon: ReconMap; purchasesSkipped: Record<string, number> }> {
   const aliases = buildAliases(stores, fin)
   const hq = stores.find(s => s.code === HQ_CODE)?.id ?? null
   const [fy, fm] = from.split('-').map(Number)
   const [ty, tm] = to.split('-').map(Number)
 
-  const [cash, pay, bills] = await Promise.all([
+  const [cash, pay, bills, posRows, movRows, prices] = await Promise.all([
     fetchAll<CashRow>((a, b) => admin.from('hr_cashflow')
       .select('id, type, category, category_parent, amount, date, description, notes, store_code')
       .eq('owner_id', ownerId).gte('date', `${from}-01`).lt('date', `${nextMonth(to)}-01`).order('id').range(a, b)),
@@ -203,6 +222,14 @@ export async function computeAutoPnl(
     fetchAll<BillRow>((a, b) => admin.from('fin_bills')
       .select('store_code, year, month, category_code, amount, note')
       .eq('owner_id', ownerId).gte('year', fy).lte('year', ty).order('id').range(a, b)),
+    fetchAll<PosRow>((a, b) => admin.from('inv_pos_sales')
+      .select('store, year, month, revenue')
+      .eq('owner_id', ownerId).gte('year', fy).lte('year', ty).order('id').range(a, b)),
+    fetchAll<MovRow>((a, b) => admin.from('inv_movements')
+      .select('store, year, month, material_code, material_name, out_pos, usage_month, open_qty, in_total, close_qty')
+      .eq('owner_id', ownerId).gte('year', fy).lte('year', ty).order('id').range(a, b)),
+    fetchAll<{ material_code: string; export_price: number }>((a, b) => admin.from('inv_material_prices')
+      .select('material_code, export_price').eq('owner_id', ownerId).order('material_code').range(a, b)),
   ])
 
   const values: AutoValues = {}
@@ -215,6 +242,56 @@ export async function computeAutoPnl(
     s[line] = (s[line] ?? 0) + amt
     if (trace && trace.period === period && trace.storeId === sid && trace.line === line) contributions.push({ ...c, amount: amt })
   }
+
+  const recon: ReconMap = {}
+  const rc = (period: string, sid: string) => ((recon[period] ??= {})[sid] ??= emptyRecon())
+
+  // iPOS 營業額
+  const posAgg = new Map<string, { period: string; sid: string | null; store: string; amt: number }>()
+  for (const r of posRows) {
+    const period = `${r.year}-${String(r.month).padStart(2, '0')}`
+    if (!inRange(period)) continue
+    const sid = matchStoreCode(r.store, aliases)
+    const k = `${period}|${sid ?? r.store}`
+    const cur = posAgg.get(k) ?? { period, sid, store: r.store, amt: 0 }
+    cur.amt += Number(r.revenue) || 0
+    posAgg.set(k, cur)
+  }
+  const posStores = new Set<string>() // `${period}|${sid}`
+  for (const g of posAgg.values()) {
+    add(g.period, g.sid, 'revenue', g.amt, { src: 'pos', label: `iPOS 營業額（${g.store}）`, total: g.amt, split: 1 })
+    const sid = g.sid ?? hq
+    if (sid) { posStores.add(`${g.period}|${sid}`); const x = rc(g.period, sid); x.pos_revenue += g.amt; x.has_pos = true }
+  }
+
+  // 進銷存（INVENTORY）：規定用量＝Xuất bán POS、實耗＝lượng dùng tháng（未填則 期初＋進貨−期末）
+  const priceOf = new Map(prices.map(p => [p.material_code, Number(p.export_price) || 0]))
+  const invPeriods = new Set<string>()
+  const invAgg = new Map<string, { period: string; sid: string | null; store: string; exp: number; act: number; loss: number; miss: number }>()
+  for (const m of movRows) {
+    const period = `${m.year}-${String(m.month).padStart(2, '0')}`
+    if (!inRange(period)) continue
+    invPeriods.add(period)
+    const sid = matchStoreCode(m.store, aliases)
+    const k = `${period}|${sid ?? m.store}`
+    const g = invAgg.get(k) ?? { period, sid, store: m.store, exp: 0, act: 0, loss: 0, miss: 0 }
+    const expected = Number(m.out_pos) || 0
+    const usage = Number(m.usage_month) || 0
+    const actual = usage > 0 ? usage : (Number(m.open_qty) || 0) + (Number(m.in_total) || 0) - (Number(m.close_qty) || 0)
+    const price = priceOf.get(m.material_code) ?? 0
+    if (!price && (expected || actual)) g.miss++
+    g.exp += expected * price
+    g.act += actual * price
+    if (actual > expected) g.loss += (actual - expected) * price
+    invAgg.set(k, g)
+  }
+  for (const g of invAgg.values()) {
+    add(g.period, g.sid, 'material_used', g.exp, { src: 'inventory', label: `進銷存規定用量成本（${g.store}）`, total: g.exp, split: 1 })
+    add(g.period, g.sid, 'material_loss', g.loss, { src: 'inventory', label: `進銷存超用金額（${g.store}）`, total: g.loss, split: 1 })
+    const sid = g.sid ?? hq
+    if (sid) { const x = rc(g.period, sid); x.inv_expected += g.exp; x.inv_actual += g.act; x.inv_loss += g.loss; x.has_inv = true; x.missing_price += g.miss }
+  }
+  const purchasesSkipped: Record<string, number> = {}
 
   // 薪資
   const payrollPeriods = new Set<string>()
@@ -254,13 +331,27 @@ export async function computeAutoPnl(
     const attributable = line === 'revenue' ? String(r.category_parent ?? '').trim() === '門市收入' : line !== 'material_used'
     const direct = r.store_code ? matchStoreCode(r.store_code, aliases) : null
     const hits = direct ? [direct] : attributable ? findStores(`${r.description ?? ''} ${r.notes ?? ''}`, aliases) : []
+    if (line === 'material_used' && invPeriods.has(period)) { purchasesSkipped[period] = (purchasesSkipped[period] ?? 0) + amt; continue }
     const base = { src: 'cashflow' as const, label: r.description || r.category, total: amt, date: r.date, category: [r.category_parent, r.category].filter(Boolean).join(' / ') }
-    if (!hits.length) add(period, null, line, amt, { ...base, split: 1 })
-    else for (const sid of hits) add(period, sid, line, amt / hits.length, { ...base, split: hits.length })
+    const targets = hits.length ? hits : [null]
+    for (const t of targets) {
+      const share = amt / targets.length
+      const sid = t ?? hq
+      // 門市收入：記入比對；該門市當月已有 POS 營業額時不再計入損益表
+      if (line === 'revenue' && String(r.category_parent ?? '').trim() === '門市收入' && sid) {
+        rc(period, sid).cash_revenue += share
+        if (posStores.has(`${period}|${sid}`)) continue
+      }
+      add(period, t, line, share, { ...base, split: targets.length })
+    }
   }
 
   for (const p of Object.keys(values)) for (const s of Object.keys(values[p])) for (const l of Object.keys(values[p][s])) {
     values[p][s][l] = Math.round(values[p][s][l])
   }
-  return { values, contributions }
+  for (const p of Object.keys(recon)) for (const s of Object.keys(recon[p])) {
+    const x = recon[p][s]
+    for (const k of ['pos_revenue', 'cash_revenue', 'inv_expected', 'inv_actual', 'inv_loss'] as const) x[k] = Math.round(x[k])
+  }
+  return { values, contributions, recon, purchasesSkipped }
 }

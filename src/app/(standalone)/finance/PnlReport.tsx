@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
-import { Loader2, Plus, X, Columns3, LineChart, Settings2, Upload } from 'lucide-react'
+import { Loader2, Plus, X, Columns3, LineChart, Scale, Settings2, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { getStoreKindLabel, type PnlLine } from './pnl-schema'
-import { CompareView, TrendView } from './PnlViews'
+import { CompareView, TrendView, ReconView } from './PnlViews'
 import PnlSchemaEditor from './PnlSchemaEditor'
 import PnlImportSchema from './PnlImportSchema'
 
@@ -14,7 +14,7 @@ import type { Store } from './PnlViews'
 
 export default function PnlReport() {
   const t = useTranslations('FinancePage')
-  const [mode, setMode] = useState<'compare' | 'trend'>('compare')
+  const [mode, setMode] = useState<'compare' | 'trend' | 'recon'>('compare')
   const [stores, setStores] = useState<Store[]>([])
   const [lines, setLines] = useState<PnlLine[]>([])
   const [loadingSchema, setLoadingSchema] = useState(true)
@@ -75,6 +75,11 @@ export default function PnlReport() {
             style={mode === 'trend' ? { background: 'white', color: 'var(--primary)' } : { color: '#6b7280' }}>
             <LineChart className="h-4 w-4" />{t('singleStoreTrend')}
           </button>
+          <button onClick={() => setMode('recon')}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all"
+            style={mode === 'recon' ? { background: 'white', color: 'var(--primary)' } : { color: '#6b7280' }}>
+            <Scale className="h-4 w-4" />{t('reconTab')}
+          </button>
         </div>
         <Button variant="outline" size="sm" onClick={() => setImporting(true)} className="gap-1.5 h-8 ml-auto">
           <Upload className="h-4 w-4" />{t('reportImport')}
@@ -97,6 +102,8 @@ export default function PnlReport() {
         </div>
       ) : mode === 'compare' ? (
         <CompareView lines={lines} />
+      ) : mode === 'recon' ? (
+        <ReconView />
       ) : (
         <TrendView stores={stores} lines={lines} />
       )}

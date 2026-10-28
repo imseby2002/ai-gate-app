@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
     }
 
     if (!PERIOD_RE.test(period)) return NextResponse.json({ stores, entries: [], auto: {}, periods, logCounts: {} })
-    const [{ values }, { data: entries, error }, { data: logs }] = await Promise.all([
+    const [{ values, recon, purchasesSkipped }, { data: entries, error }, { data: logs }] = await Promise.all([
       computeAutoPnl(admin, ownerId, stores, fin, period, period),
       admin.from('pnl_entries').select('store_id, line_code, amount, source, updated_at').eq('owner_id', ownerId).eq('period', period),
       admin.from('pnl_entry_logs').select('store_id, line_code').eq('owner_id', ownerId).eq('period', period),
@@ -54,7 +54,10 @@ export async function GET(req: NextRequest) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     const logCounts: Record<string, number> = {}
     for (const l of logs ?? []) logCounts[`${l.store_id}|${l.line_code}`] = (logCounts[`${l.store_id}|${l.line_code}`] ?? 0) + 1
-    return NextResponse.json({ stores, entries: entries ?? [], auto: values[period] ?? {}, periods, logCounts })
+    return NextResponse.json({
+      stores, entries: entries ?? [], auto: values[period] ?? {}, periods, logCounts,
+      recon: recon[period] ?? {}, purchasesSkipped: purchasesSkipped[period] ?? 0,
+    })
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 })
   }

@@ -287,7 +287,7 @@ function CellDialog({ period, store, line, onClose, onSaved }: { period: string;
     } finally { setSaving(false) }
   }
 
-  const srcLabel = (s: string) => s === 'payroll' ? t('pnlSrcPayroll') : s === 'bill' ? t('pnlSrcBill') : t('pnlSrcCashflow')
+  const srcLabel = (s: string) => s === 'payroll' ? t('pnlSrcPayroll') : s === 'bill' ? t('pnlSrcBill') : s === 'pos' ? t('pnlSrcPos') : s === 'inventory' ? t('pnlSrcInventory') : t('pnlSrcCashflow')
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
@@ -375,6 +375,116 @@ function CellDialog({ period, store, line, onClose, onSaved }: { period: string;
             </div>
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+// ── 營業額／庫存比對：iPOS 營業額 vs 出納門市收入；進銷存規定用量 vs 實耗 ──
+interface Recon { pos_revenue: number; cash_revenue: number; has_pos: boolean; inv_expected: number; inv_actual: number; inv_loss: number; has_inv: boolean; missing_price: number }
+
+export function ReconView() {
+  const t = useTranslations('FinancePage')
+  const locale = useLocale()
+  const [period, setPeriod] = useState(thisMonth())
+  const [stores, setStores] = useState<Store[]>([])
+  const [recon, setRecon] = useState<Record<string, Recon>>({})
+  const [skipped, setSkipped] = useState(0)
+  const [loading, setLoading] = useState(false)
+  const [onlyData, setOnlyData] = useState(false)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/hr/pnl?period=${period}`)
+      const j = await res.json()
+      setStores(j.stores ?? []); setRecon(j.recon ?? {}); setSkipped(Number(j.purchasesSkipped) || 0)
+    } finally { setLoading(false) }
+  }, [period])
+  useEffect(() => { load() }, [load])
+
+  const rows = useMemo(() => stores
+    .map(s => ({ s, r: recon[s.id] }))
+    .filter(x => x.s.kind === 'store' || x.r)
+    .filter(x => !onlyData || x.r?.has_pos || x.r?.has_inv || (x.r?.cash_revenue ?? 0) !== 0), [stores, recon, onlyData])
+  const tot = rows.reduce((a, { r }) => {
+    if (!r) return a
+    a.pos += r.pos_revenue; a.cash += r.cash_revenue; a.exp += r.inv_expected; a.act += r.inv_actual; a.loss += r.inv_loss
+    return a
+  }, { pos: 0, cash: 0, exp: 0, act: 0, loss: 0 })
+  const posCount = rows.filter(x => x.r?.has_pos).length, invCount = rows.filter(x => x.r?.has_inv).length
+  const storeCount = rows.filter(x => x.s.kind === 'store').length
+  const pctTxt = (a: number, b: number) => b ? `${(a / b * 100).toFixed(1)}%` : '–'
+  const f = (n: number) => fmt(n, locale)
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm text-gray-500">{t('monthLabel')}</span>
+        <Input type="month" value={period} onChange={e => e.target.value && setPeriod(e.target.value)} className="h-8 w-40 text-sm" />
+        <Button variant="outline" size="sm" onClick={load} disabled={loading} className="gap-1.5 h-8">
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}{t('refresh')}
+        </Button>
+        <label className="flex items-center gap-1.5 text-xs text-gray-600 ml-2"><input type="checkbox" checked={onlyData} onChange={e => setOnlyData(e.target.checked)} />{t('reconOnlyData')}</label>
+        <a href="/store-reports" className="ml-auto text-xs text-blue-600 hover:underline">{t('reconImportLink')}</a>
+      </div>
+      <div className="flex flex-wrap gap-2 text-xs">
+        <span className={`rounded-full px-2.5 py-1 ${posCount < storeCount ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}>{t('reconPosStatus', { n: posCount, total: storeCount })}</span>
+        <span className={`rounded-full px-2.5 py-1 ${invCount < storeCount ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}>{t('reconInvStatus', { n: invCount, total: storeCount })}</span>
+        {skipped > 0 && <span className="rounded-full px-2.5 py-1 bg-gray-100 text-gray-600">{t('reconPurchasesSkipped', { amt: f(skipped) })}</span>}
+      </div>
+      <p className="text-xs text-gray-500">{t('reconHint')}</p>
+      <div className="overflow-auto max-h-[75vh] border rounded-xl">
+        <table className="text-sm border-separate border-spacing-0 w-max min-w-full">
+          <thead>
+            <tr className="text-xs">
+              <th rowSpan={2} className="sticky left-0 top-0 z-30 bg-gray-50 dark:bg-gray-900 text-left px-2 py-2 border-b border-r w-40 min-w-40">{t('storeLabel')}</th>
+              <th colSpan={4} className="sticky top-0 z-20 bg-blue-50 dark:bg-blue-950 px-2 py-1 border-b border-r">{t('reconRevenueGroup')}</th>
+              <th colSpan={4} className="sticky top-0 z-20 bg-emerald-50 dark:bg-emerald-950 px-2 py-1 border-b">{t('reconInvGroup')}</th>
+            </tr>
+            <tr className="text-xs">
+              {[t('reconPos'), t('reconCash'), t('reconDiff'), t('reconCashShare'), t('reconExpected'), t('reconActual'), t('reconLoss'), t('reconLossPct')].map((h, i) => (
+                <th key={i} className="sticky top-8 z-20 bg-gray-50 dark:bg-gray-900 px-2 py-1.5 border-b border-r text-right whitespace-nowrap min-w-[104px]">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(({ s, r }) => {
+              const x = r ?? { pos_revenue: 0, cash_revenue: 0, has_pos: false, inv_expected: 0, inv_actual: 0, inv_loss: 0, has_inv: false, missing_price: 0 }
+              const lossPct = x.inv_expected ? x.inv_loss / x.inv_expected * 100 : 0
+              return (
+                <tr key={s.id}>
+                  <td className="sticky left-0 z-10 bg-white dark:bg-gray-950 px-2 py-1.5 border-b border-r w-40 min-w-40">
+                    <div className="truncate">{s.code === HQ_CODE ? t('pnlHqCol') : s.name}</div>
+                    <div className="text-[10px] text-gray-400">{s.code === HQ_CODE ? '' : s.code}</div>
+                  </td>
+                  <td className="px-2 py-1.5 border-b border-r text-right tabular-nums">{x.has_pos ? f(x.pos_revenue) : <span className="text-[11px] text-amber-600">{t('reconNoPos')}</span>}</td>
+                  <td className="px-2 py-1.5 border-b border-r text-right tabular-nums">{f(x.cash_revenue)}</td>
+                  <td className="px-2 py-1.5 border-b border-r text-right tabular-nums">{x.has_pos ? f(x.pos_revenue - x.cash_revenue) : '–'}</td>
+                  <td className="px-2 py-1.5 border-b border-r text-right tabular-nums">{x.has_pos ? pctTxt(x.cash_revenue, x.pos_revenue) : '–'}</td>
+                  <td className="px-2 py-1.5 border-b border-r text-right tabular-nums">{x.has_inv ? f(x.inv_expected) : <span className="text-[11px] text-amber-600">{t('reconNoInv')}</span>}</td>
+                  <td className="px-2 py-1.5 border-b border-r text-right tabular-nums">{x.has_inv ? f(x.inv_actual) : '–'}</td>
+                  <td className={`px-2 py-1.5 border-b border-r text-right tabular-nums ${x.inv_loss > 0 ? 'text-red-600' : ''}`}>{x.has_inv ? f(x.inv_loss) : '–'}</td>
+                  <td className={`px-2 py-1.5 border-b text-right tabular-nums ${lossPct > 5 ? 'text-red-600 font-semibold' : ''}`}>
+                    {x.has_inv ? `${lossPct.toFixed(1)}%` : '–'}
+                    {x.missing_price > 0 && <div className="text-[10px] text-amber-600">{t('reconMissingPrice', { n: x.missing_price })}</div>}
+                  </td>
+                </tr>
+              )
+            })}
+            <tr className="font-semibold bg-gray-50 dark:bg-gray-900">
+              <td className="sticky left-0 z-10 bg-gray-50 dark:bg-gray-900 px-2 py-1.5 border-r">{t('pnlTotalCol')}</td>
+              <td className="px-2 py-1.5 border-r text-right tabular-nums">{f(tot.pos)}</td>
+              <td className="px-2 py-1.5 border-r text-right tabular-nums">{f(tot.cash)}</td>
+              <td className="px-2 py-1.5 border-r text-right tabular-nums">{f(tot.pos - tot.cash)}</td>
+              <td className="px-2 py-1.5 border-r text-right tabular-nums">{pctTxt(tot.cash, tot.pos)}</td>
+              <td className="px-2 py-1.5 border-r text-right tabular-nums">{f(tot.exp)}</td>
+              <td className="px-2 py-1.5 border-r text-right tabular-nums">{f(tot.act)}</td>
+              <td className="px-2 py-1.5 border-r text-right tabular-nums">{f(tot.loss)}</td>
+              <td className="px-2 py-1.5 text-right tabular-nums">{tot.exp ? `${(tot.loss / tot.exp * 100).toFixed(1)}%` : '–'}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   )
