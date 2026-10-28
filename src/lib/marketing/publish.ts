@@ -380,7 +380,7 @@ async function uploadYouTube(creds: Record<string, string>, videoUrl: string, co
           Authorization: `Bearer ${tokenData.access_token}`,
           'Content-Type': 'multipart/related; boundary=boundary',
         },
-        body: [
+        body: new Blob([
           '--boundary\r\nContent-Type: application/json\r\n\r\n',
           JSON.stringify({
             snippet: {
@@ -392,9 +392,9 @@ async function uploadYouTube(creds: Record<string, string>, videoUrl: string, co
             status: { privacyStatus: 'public' },
           }),
           '\r\n--boundary\r\nContent-Type: video/mp4\r\n\r\n',
-          new Uint8Array(videoBuffer),
+          videoBuffer,
           '\r\n--boundary--',
-        ].join(''),
+        ]),
       }
     )
     const uploadData = await uploadRes.json()
