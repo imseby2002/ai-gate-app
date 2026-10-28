@@ -1,55 +1,20 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
-import { useTranslations, useLocale } from 'next-intl'
-import { Loader2, Plus, RefreshCw, X, Columns3, LineChart, Settings2, Upload } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
+import { Loader2, Plus, X, Columns3, LineChart, Scale, Settings2, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { getStoreKindLabel, type PnlLine } from './pnl-schema'
+import { CompareView, TrendView, ReconView } from './PnlViews'
 import PnlSchemaEditor from './PnlSchemaEditor'
 import PnlImportSchema from './PnlImportSchema'
 
-interface Store { id: string; code: string; name: string; name_vi: string; kind: string; sort: number }
-interface Entry { store_id: string; line_code: string; amount: number }
-interface SeriesRow { period: string; line_code: string; amount: number }
-
-const fmt = (n: number, locale: string) => n === 0 ? '–' : Math.round(n).toLocaleString(locale === 'vi' ? 'vi-VN' : locale === 'en' ? 'en-US' : 'zh-TW')
-const pct = (v: number, base: number) => base ? (v / base * 100).toFixed(2) + '%' : '–'
-const thisMonth = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` }
-
-// 依存值＋科目樹公式，解出單一門市每個科目的最終值（存值優先，缺值才套公式）
-function resolveStore(vals: Record<string, number>, lines: PnlLine[], map: Record<string, PnlLine>): Record<string, number> {
-  const out: Record<string, number> = {}
-  const visiting = new Set<string>()
-  const get = (code: string): number => {
-    if (code in out) return out[code]
-    if (code in vals) { out[code] = vals[code]; return out[code] }
-    const line = map[code]
-    if (!line?.compute) { out[code] = 0; return 0 }
-    if (visiting.has(code)) return 0
-    visiting.add(code)
-    const c = line.compute
-    let r = 0
-    if (c.op === 'sum') r = c.codes.reduce((s, x) => s + get(x), 0)
-    else if (c.op === 'sumSection') r = lines.filter(l => l.section === c.section && l.kind === 'detail').reduce((s, l) => s + get(l.code), 0)
-    else if (c.op === 'sub') r = get(c.left) - get(c.right)
-    else if (c.op === 'subMany') r = c.minus.reduce((s, x) => s - get(x), get(c.base))
-    visiting.delete(code)
-    out[code] = r
-    return r
-  }
-  for (const l of lines) get(l.code)
-  return out
-}
-
-const rowStyle = (kind: string) =>
-  kind === 'revenue' ? 'bg-primary/10 font-bold'
-    : kind === 'subtotal' ? 'bg-gray-100 font-semibold'
-      : ''
+import type { Store } from './PnlViews'
 
 export default function PnlReport() {
   const t = useTranslations('FinancePage')
-  const [mode, setMode] = useState<'compare' | 'trend'>('compare')
+  const [mode, setMode] = useState<'compare' | 'trend' | 'recon'>('compare')
   const [stores, setStores] = useState<Store[]>([])
   const [lines, setLines] = useState<PnlLine[]>([])
   const [loadingSchema, setLoadingSchema] = useState(true)
@@ -110,6 +75,11 @@ export default function PnlReport() {
             style={mode === 'trend' ? { background: 'white', color: 'var(--primary)' } : { color: '#6b7280' }}>
             <LineChart className="h-4 w-4" />{t('singleStoreTrend')}
           </button>
+          <button onClick={() => setMode('recon')}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all"
+            style={mode === 'recon' ? { background: 'white', color: 'var(--primary)' } : { color: '#6b7280' }}>
+            <Scale className="h-4 w-4" />{t('reconTab')}
+          </button>
         </div>
         <Button variant="outline" size="sm" onClick={() => setImporting(true)} className="gap-1.5 h-8 ml-auto">
           <Upload className="h-4 w-4" />{t('reportImport')}
@@ -131,192 +101,11 @@ export default function PnlReport() {
           {t('noStoresYetHint')}
         </div>
       ) : mode === 'compare' ? (
-        <CompareView stores={stores} lines={lines} />
+        <CompareView lines={lines} />
+      ) : mode === 'recon' ? (
+        <ReconView />
       ) : (
         <TrendView stores={stores} lines={lines} />
-      )}
-    </div>
-  )
-}
-
-// ── 多店比較：月份固定，門市並排（科目為列） ──
-function CompareView({ stores, lines: allLines }: { stores: Store[]; lines: PnlLine[] }) {
-  const t = useTranslations('FinancePage')
-  const locale = useLocale()
-  const STORE_KIND_LABEL = getStoreKindLabel(t)
-  const [entries, setEntries] = useState<Entry[]>([])
-  const [periods, setPeriods] = useState<string[]>([])
-  const [period, setPeriod] = useState(thisMonth())
-  const [loading, setLoading] = useState(false)
-
-  const lineMap = useMemo(() => Object.fromEntries(allLines.map(l => [l.code, l])), [allLines])
-
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const res = await fetch(`/api/hr/pnl?period=${period}`)
-      const j = await res.json()
-      setEntries(j.entries ?? [])
-      setPeriods(j.periods ?? [])
-    } finally { setLoading(false) }
-  }, [period])
-  useEffect(() => { load() }, [load])
-
-  const resolved = useMemo(() => {
-    const byStore: Record<string, Record<string, number>> = {}
-    for (const s of stores) byStore[s.id] = {}
-    for (const e of entries) {
-      if (!byStore[e.store_id]) byStore[e.store_id] = {}
-      byStore[e.store_id][e.line_code] = Number(e.amount) || 0
-    }
-    const out: Record<string, Record<string, number>> = {}
-    for (const s of stores) out[s.id] = resolveStore(byStore[s.id] ?? {}, allLines, lineMap)
-    return out
-  }, [stores, entries, allLines, lineMap])
-
-  const lines = useMemo(() => allLines.filter(l => l.section !== 'compare' && !l.archived), [allLines])
-
-  return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm text-gray-500">{t('monthLabel')}</span>
-        <Input type="month" value={period} onChange={e => setPeriod(e.target.value)} className="h-8 w-40 text-sm" />
-        {periods.length > 0 && (
-          <select value={periods.includes(period) ? period : ''} onChange={e => e.target.value && setPeriod(e.target.value)}
-            className="h-8 rounded-md border bg-background px-2 text-sm">
-            <option value="">{t('periodsWithDataPlaceholder')}</option>
-            {periods.map(p => <option key={p} value={p}>{p}</option>)}
-          </select>
-        )}
-        <Button variant="outline" size="sm" onClick={load} disabled={loading} className="gap-1.5 h-8">
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}{t('refresh')}
-        </Button>
-      </div>
-
-      <div className="overflow-x-auto border rounded-xl">
-        <table className="text-sm border-collapse w-full">
-          <thead>
-            <tr className="bg-gray-50">
-              <th className="sticky left-0 z-10 bg-gray-50 text-left px-3 py-2 border-b border-r min-w-[180px]">{t('lineColHeader')}</th>
-              {stores.map(s => (
-                <th key={s.id} className="px-3 py-2 border-b border-r text-right min-w-[120px] whitespace-nowrap">
-                  <div className="font-semibold">{s.name}</div>
-                  <div className="text-[10px] font-normal text-gray-400">{STORE_KIND_LABEL[s.kind] ?? s.kind}</div>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {lines.map(line => (
-              <tr key={line.code} className={rowStyle(line.kind)}>
-                <td className={`sticky left-0 z-10 px-3 py-1.5 border-b border-r whitespace-nowrap ${rowStyle(line.kind) || 'bg-white'}`}>
-                  {line.zh}<span className="ml-1.5 text-[10px] text-gray-400">{line.vi}</span>
-                </td>
-                {stores.map(s => {
-                  const v = resolved[s.id]?.[line.code] ?? 0
-                  const base = resolved[s.id]?.revenue ?? 0
-                  return (
-                    <td key={s.id} className="px-3 py-1.5 border-b border-r text-right tabular-nums whitespace-nowrap">
-                      <span className={v < 0 ? 'text-red-600' : ''}>{fmt(v, locale)}</span>
-                      {line.kind !== 'revenue' && <span className="ml-1.5 text-[10px] text-gray-400">{pct(v, base)}</span>}
-                    </td>
-                  )
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  )
-}
-
-// ── 單店趨勢：選一門市，月份並排（科目為列），看逐月走勢 ──
-function TrendView({ stores, lines: allLines }: { stores: Store[]; lines: PnlLine[] }) {
-  const t = useTranslations('FinancePage')
-  const locale = useLocale()
-  const [storeId, setStoreId] = useState(stores[0]?.id ?? '')
-  const [series, setSeries] = useState<SeriesRow[]>([])
-  const [loading, setLoading] = useState(false)
-
-  const lineMap = useMemo(() => Object.fromEntries(allLines.map(l => [l.code, l])), [allLines])
-
-  useEffect(() => { if (!storeId && stores[0]) setStoreId(stores[0].id) }, [stores, storeId])
-
-  const load = useCallback(async () => {
-    if (!storeId) return
-    setLoading(true)
-    try {
-      const res = await fetch(`/api/hr/pnl?store_id=${storeId}`)
-      const j = await res.json()
-      setSeries(j.series ?? [])
-    } finally { setLoading(false) }
-  }, [storeId])
-  useEffect(() => { load() }, [load])
-
-  // 所有出現過的月份（由新到舊）
-  const months = useMemo(() => Array.from(new Set(series.map(r => r.period))).sort().reverse(), [series])
-
-  // 每月解析後的科目值
-  const byMonth = useMemo(() => {
-    const raw: Record<string, Record<string, number>> = {}
-    for (const r of series) {
-      (raw[r.period] ??= {})[r.line_code] = Number(r.amount) || 0
-    }
-    const out: Record<string, Record<string, number>> = {}
-    for (const m of months) out[m] = resolveStore(raw[m] ?? {}, allLines, lineMap)
-    return out
-  }, [series, months, allLines, lineMap])
-
-  const lines = useMemo(() => allLines.filter(l => l.section !== 'compare' && !l.archived), [allLines])
-
-  return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm text-gray-500">{t('storeLabel')}</span>
-        <select value={storeId} onChange={e => setStoreId(e.target.value)}
-          className="h-8 rounded-md border bg-background px-2 text-sm min-w-[140px]">
-          {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-        </select>
-        <Button variant="outline" size="sm" onClick={load} disabled={loading} className="gap-1.5 h-8">
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}{t('refresh')}
-        </Button>
-      </div>
-
-      {months.length === 0 ? (
-        <div className="py-12 text-center text-gray-400 text-sm">{t('noMonthDataForStore')}</div>
-      ) : (
-        <div className="overflow-x-auto border rounded-xl">
-          <table className="text-sm border-collapse w-full">
-            <thead>
-              <tr className="bg-gray-50">
-                <th className="sticky left-0 z-10 bg-gray-50 text-left px-3 py-2 border-b border-r min-w-[180px]">{t('lineColHeader')}</th>
-                {months.map(m => (
-                  <th key={m} className="px-3 py-2 border-b border-r text-right min-w-[120px] whitespace-nowrap font-semibold">{m}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {lines.map(line => (
-                <tr key={line.code} className={rowStyle(line.kind)}>
-                  <td className={`sticky left-0 z-10 px-3 py-1.5 border-b border-r whitespace-nowrap ${rowStyle(line.kind) || 'bg-white'}`}>
-                    {line.zh}<span className="ml-1.5 text-[10px] text-gray-400">{line.vi}</span>
-                  </td>
-                  {months.map(m => {
-                    const v = byMonth[m]?.[line.code] ?? 0
-                    const base = byMonth[m]?.revenue ?? 0
-                    return (
-                      <td key={m} className="px-3 py-1.5 border-b border-r text-right tabular-nums whitespace-nowrap">
-                        <span className={v < 0 ? 'text-red-600' : ''}>{fmt(v, locale)}</span>
-                        {line.kind !== 'revenue' && <span className="ml-1.5 text-[10px] text-gray-400">{pct(v, base)}</span>}
-                      </td>
-                    )
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
       )}
     </div>
   )
