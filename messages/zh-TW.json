@@ -13377,6 +13377,9 @@
     "viewerGrant": "授權",
     "viewerRevoke": "取消授權",
     "viewerAdminTag": "管理者",
-    "viewerToMe": "可瀏覽這些人的會議紀錄：{names}"
+    "viewerToMe": "可瀏覽這些人的會議紀錄：{names}",
+    "micBlockedTitle": "偵測不到麥克風，對方聽不到你的聲音",
+    "micBlockedHelp": "1. 點網址列左邊的圖示 →「權限」或「網站設定」→ 麥克風改成「允許」\n2. 手機請到 系統設定 → 應用程式 → Chrome（或 Safari）→ 權限 → 麥克風 → 允許\n3. 關閉正在使用麥克風的其他 App 或分頁（例如另一個通話、會議錄音）\n完成後按下方「重新取得麥克風」",
+    "micRetry": "重新取得麥克風"
   }
 }
