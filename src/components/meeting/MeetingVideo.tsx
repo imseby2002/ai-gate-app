@@ -19,6 +19,13 @@ interface JaasApi {
   executeCommand(cmd: string, ...args: unknown[]): void
 }
 
+function isMobileDevice(): boolean {
+  if (typeof navigator === 'undefined') return false
+  const uaData = (navigator as unknown as { userAgentData?: { mobile?: boolean } }).userAgentData
+  if (uaData?.mobile) return true
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent))
+}
+
 /** 先在本頁請求鏡頭＋麥克風權限（手機 Chrome 常因 iframe 內才詢問而被擋，導致 Jitsi 麥克風灰掉） */
 async function preflightMedia(): Promise<'ok' | 'mic-denied' | 'all-denied'> {
   if (!navigator.mediaDevices?.getUserMedia) return 'ok'
@@ -117,6 +124,17 @@ export function MeetingVideo({ meetingId, selfId, selfName, authHeaders, onClose
         }
         if (!res.ok) { setMode('error'); return }
         const j = await res.json() as { jwt: string; room: string; appId: string }
+        // Jitsi 手機網頁版加入時常拿不到麥克風（出現 Join without audio）：
+        // 有人用手機開視訊時，整場改用內建視訊（存到會議並通知其他人一起切）
+        if (isMobileDevice()) {
+          await fetch('/api/meeting/video-mode', {
+            method: 'POST', headers: { 'Content-Type': 'application/json', ...JSON.parse(headersKey) },
+            body: JSON.stringify({ meetingId, mode: 'webrtc' }),
+          }).catch(() => {})
+          void chRef.current?.send({ type: 'broadcast', event: 'mode', payload: { mode: 'webrtc' } })
+          if (!alive) return
+          setJaasAvailable(true); setMode('webrtc'); return
+        }
         const perm = await preflightMedia()
         if (!alive) return
         setMicProblem(perm !== 'ok')
@@ -134,7 +152,7 @@ export function MeetingVideo({ meetingId, selfId, selfName, authHeaders, onClose
     if (!w.JitsiMeetExternalAPI) return
     const api = new w.JitsiMeetExternalAPI('8x8.vc', {
       roomName: `${jaas.appId}/${jaas.room}`, jwt: jaas.jwt, parentNode: boxRef.current,
-      configOverwrite: { prejoinPageEnabled: false, startWithAudioMuted: false, startWithVideoMuted: false, disableDeepLinking: true },
+      configOverwrite: { prejoinPageEnabled: false, prejoinConfig: { enabled: false }, startWithAudioMuted: false, startWithVideoMuted: false, disableDeepLinking: true },
       userInfo: { displayName: selfName },
     }) as JaasApi
     apiRef.current = api

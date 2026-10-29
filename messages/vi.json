@@ -13382,7 +13382,7 @@
     "micBlockedHelp": "1. Bấm biểu tượng bên trái thanh địa chỉ → Quyền / Cài đặt trang → Micro chọn Cho phép\n2. Trên điện thoại: Cài đặt → Ứng dụng → Chrome (hoặc Safari) → Quyền → Micro → Cho phép\n3. Đóng ứng dụng/tab khác đang dùng micro (cuộc gọi khác, ghi âm cuộc họp)\nSau đó bấm “Thử lại micro” bên dưới",
     "micRetry": "Thử lại micro",
     "switchToBuiltin": "Chuyển sang video tích hợp (dự phòng)",
-    "switchToBuiltinHint": "Nếu không có tiếng, bấm đây — mọi người trong cuộc họp sẽ cùng chuyển",
+    "switchToBuiltinHint": "Nếu không có tiếng, bấm đây — mọi người cùng chuyển (tự chuyển khi có người dùng điện thoại)",
     "switchToJaas": "Quay lại Jitsi"
   }
 }
