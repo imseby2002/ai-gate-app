@@ -17,7 +17,7 @@ interface Msg {
 const MAX = 50 * 1024 * 1024
 const fmtSize = (n: number | null) => !n ? '' : n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.ceil(n / 1024)} KB`
 
-export function MeetingChat({ meetingId, authHeaders, className }: { meetingId: string; authHeaders?: Record<string, string>; className?: string }) {
+export function MeetingChat({ meetingId, authHeaders, className, readOnly }: { meetingId: string; authHeaders?: Record<string, string>; className?: string; readOnly?: boolean }) {
   const t = useTranslations('MeetingRoom')
   const [msgs, setMsgs] = useState<Msg[]>([])
   const [me, setMe] = useState<{ kind: string; id: string } | null>(null)
@@ -118,7 +118,7 @@ export function MeetingChat({ meetingId, authHeaders, className }: { meetingId: 
         <div ref={bottomRef} />
       </div>
       {err && <p className="px-3 text-xs text-red-600">{err}</p>}
-      <div className="flex gap-2 p-2 border-t">
+      {!readOnly && <div className="flex gap-2 p-2 border-t">
         <input ref={fileRef} type="file" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) void sendFile(f) }} />
         <Button size="icon" variant="outline" onClick={() => fileRef.current?.click()} disabled={busy} title={t('attach')} className="shrink-0">
           <Paperclip className="h-4 w-4" />
@@ -128,7 +128,7 @@ export function MeetingChat({ meetingId, authHeaders, className }: { meetingId: 
         <Button size="icon" onClick={sendText} disabled={busy || !text.trim()} className="shrink-0">
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
         </Button>
-      </div>
+      </div>}
     </div>
   )
 }

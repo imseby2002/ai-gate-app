@@ -13368,6 +13368,15 @@
     "copy": "Sao chép",
     "copied": "Đã sao chép",
     "joinedGuests": "Khách đã tham gia ({n})",
-    "noGuests": "Chưa có khách"
+    "noGuests": "Chưa có khách",
+    "viewOnlyBadge": "Xem · {host} chủ trì",
+    "viewOnlyNotice": "Cuộc họp do {host} chủ trì. Bạn chỉ có quyền xem (không ghi âm, không nhắn tin).",
+    "viewerTitle": "Quyền xem biên bản họp",
+    "viewerHint": "Người được cấp quyền có thể xem mọi cuộc họp bạn chủ trì (biên bản và tin nhắn) nhưng không sửa được. Chủ công ty và quản trị IT vốn đã xem được tất cả.",
+    "viewerPick": "Chọn đồng nghiệp…",
+    "viewerGrant": "Cấp quyền",
+    "viewerRevoke": "Thu hồi",
+    "viewerAdminTag": "quản trị",
+    "viewerToMe": "Bạn được xem cuộc họp của: {names}"
   }
 }

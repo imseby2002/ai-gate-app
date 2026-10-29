@@ -13368,6 +13368,15 @@
     "copy": "Copy",
     "copied": "Copied",
     "joinedGuests": "Guests joined ({n})",
-    "noGuests": "No guests yet"
+    "noGuests": "No guests yet",
+    "viewOnlyBadge": "View · hosted by {host}",
+    "viewOnlyNotice": "Hosted by {host}. You have view access (read only — no recording or messages).",
+    "viewerTitle": "Meeting record access",
+    "viewerHint": "Grantees can view every meeting you host (transcript and chat) but cannot change them. Company owners and IT admins can already view all company meetings.",
+    "viewerPick": "Choose a colleague…",
+    "viewerGrant": "Grant",
+    "viewerRevoke": "Revoke",
+    "viewerAdminTag": "admin",
+    "viewerToMe": "You can view meetings hosted by: {names}"
   }
 }

@@ -42,6 +42,8 @@ export interface MeetingActor {
   id: string
   name: string
   isHost: boolean
+  /** 只有瀏覽權限（公司管理者或被授權者），不能發言、傳檔、開視訊 */
+  viewer: boolean
   meeting: { id: string; host_id: string; room_code: string; title: string; is_active: boolean; allow_guests: boolean }
 }
 
@@ -56,17 +58,22 @@ export async function resolveMeetingActor(req: NextRequest, meetingId: string): 
   const guest = verifyGuestToken(req.headers.get(GUEST_HEADER))
   if (guest) {
     if (guest.m !== meetingId || !meeting.allow_guests || !meeting.is_active) return null
-    return { kind: 'guest', id: guest.g, name: guest.n, isHost: false, meeting }
+    return { kind: 'guest', id: guest.g, name: guest.n, isHost: false, viewer: false, meeting }
   }
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
   const isHost = meeting.host_id === user.id
+  let viewer = false
   if (!isHost) {
     const { data: p } = await admin.from('meeting_participants').select('id').eq('meeting_id', meetingId).eq('user_id', user.id).maybeSingle()
-    if (!p) return null
+    if (!p) {
+      const { data: canView } = await supabase.rpc('can_view_meeting', { p_meeting: meetingId })
+      if (!canView) return null
+      viewer = true
+    }
   }
   const { data: profile } = await admin.from('profiles').select('full_name, email').eq('id', user.id).maybeSingle()
-  return { kind: 'user', id: user.id, name: profile?.full_name || profile?.email || user.email || 'member', isHost, meeting }
+  return { kind: 'user', id: user.id, name: profile?.full_name || profile?.email || user.email || 'member', isHost, viewer, meeting }
 }

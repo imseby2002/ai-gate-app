@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
   if (!meetingId) return NextResponse.json({ error: 'bad request' }, { status: 400 })
 
   const actor = await resolveMeetingActor(req, meetingId)
-  if (!actor) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!actor || actor.viewer) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   let jwt: string
   try {
