@@ -13383,6 +13383,7 @@
     "micRetry": "重新取得麥克風",
     "switchToBuiltin": "改用內建視訊（備案）",
     "switchToBuiltinHint": "聽不到聲音時按這裡，同場所有人會一起切換（有人用手機開視訊時會自動切換）",
-    "switchToJaas": "改回 Jitsi 視訊"
+    "switchToJaas": "改回 Jitsi 視訊",
+    "tapForSound": "點此開啟聲音"
   }
 }

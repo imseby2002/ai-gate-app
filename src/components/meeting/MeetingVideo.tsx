@@ -337,10 +337,34 @@ function WebRtcRoom({ meetingId, selfId, selfName, onClose }: { meetingId: strin
 function Tile({ stream, name, muted, mirror, state }: { stream: MediaStream | null; name: string; muted?: boolean; mirror?: boolean; state?: string }) {
   const t = useTranslations('MeetingRoom')
   const ref = useRef<HTMLVideoElement | null>(null)
-  useEffect(() => { if (ref.current && ref.current.srcObject !== stream) ref.current.srcObject = stream }, [stream])
+  const [blocked, setBlocked] = useState(false)
+  useEffect(() => {
+    const v = ref.current
+    if (!v) return
+    if (v.srcObject !== stream) v.srcObject = stream
+    if (!stream || muted) return
+    // 手機瀏覽器常擋「有聲自動播放」：先試播，被擋就顯示「點此開啟聲音」
+    v.muted = false
+    v.play().then(() => setBlocked(false)).catch(() => {
+      setBlocked(true)
+      v.muted = true
+      void v.play().catch(() => {})
+    })
+  }, [stream, muted])
+  const unmute = () => {
+    const v = ref.current
+    if (!v) return
+    v.muted = false
+    v.play().then(() => setBlocked(false)).catch(() => setBlocked(true))
+  }
   return (
     <div className="relative aspect-video rounded-lg overflow-hidden bg-gray-900">
       <video ref={ref} autoPlay playsInline muted={muted} className={`h-full w-full object-cover ${mirror ? '-scale-x-100' : ''}`} />
+      {blocked && (
+        <button onClick={unmute} className="absolute inset-0 flex items-center justify-center bg-black/50 text-white text-sm font-medium">
+          🔊 {t('tapForSound')}
+        </button>
+      )}
       {!stream && <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-xs"><Loader2 className="h-5 w-5 animate-spin" /></div>}
       <div className="absolute bottom-1 left-1 rounded bg-black/60 px-2 py-0.5 text-xs text-white">
         {name}{state === 'failed' ? ` · ${t('connFailed')}` : state && state !== 'connected' && state !== 'new' ? ` · ${state}` : ''}

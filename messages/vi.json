@@ -13383,6 +13383,7 @@
     "micRetry": "Thử lại micro",
     "switchToBuiltin": "Chuyển sang video tích hợp (dự phòng)",
     "switchToBuiltinHint": "Nếu không có tiếng, bấm đây — mọi người cùng chuyển (tự chuyển khi có người dùng điện thoại)",
-    "switchToJaas": "Quay lại Jitsi"
+    "switchToJaas": "Quay lại Jitsi",
+    "tapForSound": "Bấm để bật âm thanh"
   }
 }

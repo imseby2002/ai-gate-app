@@ -13383,6 +13383,7 @@
     "micRetry": "Retry microphone",
     "switchToBuiltin": "Switch to built-in video (backup)",
     "switchToBuiltinHint": "If there's no sound, tap here — everyone switches together (switches automatically when someone joins from a phone)",
-    "switchToJaas": "Switch back to Jitsi"
+    "switchToJaas": "Switch back to Jitsi",
+    "tapForSound": "Tap to turn on sound"
   }
 }
