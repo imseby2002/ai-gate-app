@@ -142,7 +142,10 @@ export function MeetingVideo({ meetingId, selfId, selfName, authHeaders, onClose
     const api = new w.JitsiMeetExternalAPI('8x8.vc', {
       roomName: `${jaas.appId}/${jaas.room}`, jwt: jaas.jwt, parentNode: boxRef.current,
       // 手機保留 Jitsi 的加入頁：讓使用者在 Jitsi 畫面內點一下「Join」，瀏覽器才允許該畫面播放聲音、取得麥克風
-      configOverwrite: { prejoinPageEnabled: isMobileDevice(), prejoinConfig: { enabled: isMobileDevice() }, startWithAudioMuted: false, startWithVideoMuted: false, disableDeepLinking: true },
+      configOverwrite: { prejoinPageEnabled: isMobileDevice(), prejoinConfig: { enabled: isMobileDevice() }, startWithAudioMuted: false, startWithVideoMuted: false, disableDeepLinking: true,
+        // 兩人時 Jitsi 預設改走點對點（P2P）；手機 4G 上關鏡頭重新協商時 P2P 會斷、聲音跟著消失。
+        // 關掉 P2P，一律經 Jitsi 伺服器轉送，關鏡頭也不影響聲音
+        p2p: { enabled: false } },
       userInfo: { displayName: selfName },
     }) as JaasApi
     apiRef.current = api
