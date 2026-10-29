@@ -1651,11 +1651,16 @@ function Unit12CustomerService({
   }
 
   // around：從搜尋結果開啟時，載入符合訊息的前後一段
+  // 最後一次要求載入的對話；切換對話後，舊對話晚到的回應一律丟掉，避免畫面顯示別的客人的訊息
+  const threadRequestKey = useRef<string | null>(null)
   async function loadThreadBubbles(platform: string, to: string, around?: string | null) {
+    const key = `${platform}:${to}`
+    threadRequestKey.current = key
     setThreadLoading(true)
     try {
       const res = await fetch(`/api/marketing/cs-thread?to=${encodeURIComponent(to)}&platform=${encodeURIComponent(platform)}${around ? `&around=${encodeURIComponent(around)}` : ''}`)
       const d = await res.json()
+      if (threadRequestKey.current !== key) return
       if (d.bubbles) {
         setThreadBubbles(d.bubbles)
         setThreadHasOlder(!!d.hasOlder)
@@ -1692,6 +1697,7 @@ function Unit12CustomerService({
     try {
       const res = await fetch(`/api/marketing/cs-thread?to=${encodeURIComponent(from_id)}&platform=${encodeURIComponent(platform)}&before=${encodeURIComponent(threadBubbles[0].at)}`)
       const d = await res.json()
+      if (threadRequestKey.current !== `${platform}:${from_id}`) return
       if (d.bubbles) {
         threadPrevScrollHeight.current = inboxThreadRef.current?.scrollHeight ?? null
         setThreadBubbles(prev => [...d.bubbles, ...prev])

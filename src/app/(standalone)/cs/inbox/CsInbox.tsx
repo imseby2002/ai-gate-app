@@ -126,11 +126,17 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
     `/api/marketing/cs-thread?industry=${encodeURIComponent(industry)}&platform=${encodeURIComponent(c.platform)}&to=${encodeURIComponent(c.from_id)}`, [industry])
 
   // around：從搜尋結果開啟時，載入符合訊息的前後一段
+  // 目前開啟的對話；切換對話後，還在路上的舊對話回應一律丟掉。
+  // 真實案例：切到陳倩芬的對話，畫面卻顯示另一位客人林秀嬫的訊息（舊對話的輪詢回應晚到，蓋掉新對話）。
+  const activeKeyRef = useRef<string | null>(null)
+  const convoKey = (c: Conversation) => `${c.platform}:${c.from_id}`
+
   const loadThread = useCallback(async (c: Conversation, silent = false, around?: string | null) => {
     if (!silent) setLoadingThread(true)
     try {
       const res = await fetch(threadUrl(c) + (around ? `&around=${encodeURIComponent(around)}` : ''))
       const data = await res.json()
+      if (activeKeyRef.current !== `${c.platform}:${c.from_id}`) return
       const fresh: Bubble[] = data.bubbles ?? []
       if (silent) {
         // 輪詢只更新最新那一段，保留已往前載入的更早訊息
@@ -155,6 +161,7 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
     try {
       const res = await fetch(threadUrl(active) + `&before=${encodeURIComponent(bubbles[0].at)}`)
       const data = await res.json()
+      if (activeKeyRef.current !== convoKey(active)) return
       const older: Bubble[] = data.bubbles ?? []
       nearBottomRef.current = false
       prevScrollHeight.current = scrollRef.current?.scrollHeight ?? null
@@ -224,6 +231,7 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
 
   const openConvo = (c: Conversation) => {
     syncUrl(c)
+    activeKeyRef.current = convoKey(c)
     setActive(c)
     setBubbles([])
     setErr(null)
@@ -459,7 +467,7 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
                 {/* 對話 header */}
                 <div className="flex items-center justify-between gap-3 px-4 py-3 border-b bg-card/60">
                   <div className="flex items-center gap-2 min-w-0">
-                    <button onClick={() => { syncUrl(null); setActive(null) }} className="md:hidden text-muted-foreground"><ChevronLeft className="h-5 w-5" /></button>
+                    <button onClick={() => { syncUrl(null); activeKeyRef.current = null; setActive(null) }} className="md:hidden text-muted-foreground"><ChevronLeft className="h-5 w-5" /></button>
                     <span className="text-base">{plat(active.platform).emoji}</span>
                     <div className="min-w-0">
                       <div className="font-semibold truncate">{formatCustomerName(active.name, active.from_id, t)}</div>

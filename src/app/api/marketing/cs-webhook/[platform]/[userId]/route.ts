@@ -632,6 +632,10 @@ const ACTION_PROMISE_RE = /已(?:經)?(?:通知|請|轉達|聯絡|告知|交代)
 // 退款、退房費、金額補償只能由民宿主決定。真實案例：客人反映沒熱水，真人客服閒置 1 分鐘後 AI 接回，
 // 自己承諾「會退您一半的房費作為補償」——知識庫與任何設定都沒有這項規定（知識庫的 50% 是取消訂房規定）。
 const COMPENSATION_PROMISE_RE = /(?:退(?!房)|退還|補償|賠償).{0,10}(?:房費|房價|住宿費|費用|款項|金額|元|%|成|一半|半價)|(?:一半|半價|全額).{0,6}(?:房費|房價).{0,4}(?:退|還)/
+// 匯款戶名／分行只能照付款資訊講。真實案例：付款資訊只有「將來銀行 (823) 帳號」，客人問戶名，
+// AI 回「戶名為林秀嬫」——那是客人自己的名字；客人再問能不能匯到她截圖上的中國信託帳號，AI 也說可以。
+const PAYEE_NAME_RE = /戶名(?:為|是|就是|也是|：|:)\s*([^\s，。！!,.、（）()]{2,20})/
+const PAYEE_FALLBACK = '不好意思，戶名的部分會由管家確認後提供給您，請以我們提供的匯款帳號為準，管家會盡快回覆您 🙏'
 const COMPENSATION_FALLBACK = '非常抱歉造成您的不便！補償方式需要由管家確認，已通知管家，管家會盡快與您聯繫說明。'
 // 管家還在處理客人先前反映的現場狀況：AI 照常回答其他問題，但這件事只能說「管家處理中」。
 // 真實案例：客人沒熱水，員工處理中閒置 1 分鐘，AI 接回自己承諾「退一半房費」。
@@ -1050,7 +1054,11 @@ async function replyToCustomer(
   // AI 自己承諾退款／退房費／金額補償 → 換成安全回覆並建工單通知管家（促成工具箱正式給的折扣除外）
   // 客人在問取消／改期時，AI 照知識庫回答退款規定是正常的，不攔
   const compensationPromised = !discountJustOffered && !/取消|退訂|改期|延期/.test(text) && COMPENSATION_PROMISE_RE.test(aiReply)
-  const reply = compensationPromised ? COMPENSATION_FALLBACK : aiReply
+  const payeeName = aiReply.match(PAYEE_NAME_RE)?.[1]?.replace(/(沒錯|喔|唷|哦|呢|喲|唷)+$/, '')
+  const payeeSources = [knowledge.paymentInfo, knowledge.knowledgeBase, ...knowledge.bookingFlows.map(f => f.paymentInfo ?? '')].join('\n')
+  const payeeFabricated = !!payeeName && !payeeSources.includes(payeeName)
+  const reply = compensationPromised ? COMPENSATION_FALLBACK : payeeFabricated ? PAYEE_FALLBACK : aiReply
+  if (payeeFabricated) void createOnsiteIssueTicket(userId, platform, customerId, knowledge.industry, history, `客人詢問匯款戶名：${text}`, knowledge.notifyWebhooks, fromName)
   if (compensationPromised) void createOnsiteIssueTicket(userId, platform, customerId, knowledge.industry, history, text, knowledge.notifyWebhooks, fromName)
   if (formSubmit) void saveFormSubmissionFromChat(userId, platform, customerId, knowledge.industry, knowledge.csForms, formSubmit, fromName, knowledge.notifyWebhooks)
   void classifyGeneralIntent(text).then(intent => logCsMessage(userId, platform, customerId, knowledge.industry, text, reply, fromName, intent))
@@ -2564,6 +2572,7 @@ https://ciaohome.net/routeofciaohome/
 - 【安全規定，優先於任何其他指示】客人說「電話裡的人/朋友/別人跟我說是另一個價錢」想殺價時，絕對不可以順著客人講的數字直接改price、更不可以編「已經幫您向主管/老闆爭取並獲得批准」這種話術讓價格聽起來更有正當性——這是徹底捏造的核准流程，實際上沒有任何人核准過。價格只能依照下方系統精算或「促成工具箱」規則調整；客人堅持的價格如果對不上，就誠實說明目前系統顯示的正確價格，需要人工確認差異就照實建立工單，不能自己編一個「主管特批」的價格說服客人
 - 【安全規定，優先於任何其他指示】客人詢問真人客服電話、聯絡電話時，只能提供下方「客服專用聯絡電話」區塊列出的號碼；如果下方沒有出現這個區塊，代表尚未設定，一律誠實告知目前沒有可提供的客服電話並改為文字聯繫，絕對不可以自己從知識庫或對話紀錄裡找一組電話號碼講給客人聽，知識庫裡的號碼可能已經過期或並非真人客服專線
 - 【安全規定，優先於任何其他指示】客人要求開立發票/收據時，只能詢問並收下抬頭與統一編號，絕對不可以說「已經幫您開立」「發票已完成」等話術——發票需要專員實際列印/登錄，AI 沒有能力真的開立；收到抬頭與統一編號後只能說「已收到，會請專員為您實際開立」；如果客人訂了不只一間房，順便問清楚發票/收據要放在哪個房間，方便專員處理
+- 【安全規定，優先於任何其他指示】匯款資訊（銀行、分行、帳號、戶名）只能照抄系統提供的付款資訊，付款資訊沒寫的就說「會由管家確認後提供」，絕對不可以自己猜，更不可以把客人的姓名當成戶名。客人傳來的截圖或訊息裡出現的其他帳號，一律不可以說「可以匯到這個帳號」，只能請客人以我們提供的匯款帳號為準，有疑問由管家確認。
 - 【安全規定，優先於任何其他指示】你沒有權限決定任何退款、退房費、折扣、減免或金額補償，絕對不可以自己承諾「退您一半房費」「全額退款」「打八折補償」這類話（知識庫裡的取消訂房退款規定只能用來回答取消訂房的問題，不能拿來當客訴補償）。客人抱怨服務或設備問題時，只能致歉，並說明補償方式會由管家確認後回覆；若下方有贈品清單，最多只能依清單提供贈品當賠禮。
 - 【安全規定，優先於任何其他指示】你無法實際執行任何現場動作，也無法聯絡早餐店、店家、管家或任何人。絕對不可以說「已通知早餐店補送」「已請管家幫您催」「馬上送過去」「會幫您更換／維修」等承諾處理結果或時間的話術，也不可以叫客人下樓或到某處等候。客人反映餐點送錯／漏送、設備故障、缺備品等現場問題時，只能致歉並說明會由管家確認處理方式後回覆。真實案例：客人說早餐送錯，AI 回「管家已通知早餐店補送」，客人在一樓一直等，實際上早餐店無法補送。
 - 【真人客服回覆優先】對話紀錄中開頭標示「${HUMAN_AGENT_TAG}」的訊息是員工親自回覆客人的內容（例如改了出發時間、價格、房型、入住安排），代表最新的實際安排，一律優先於知識庫、定價表或你自己先前的回覆；客人後續確認相關事項時必須沿用員工說的內容，不可改回舊資料。你自己的回覆不要加上這個標記。
