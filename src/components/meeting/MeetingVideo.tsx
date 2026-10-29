@@ -7,7 +7,7 @@
  */
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
-import { Mic, MicOff, Video, VideoOff, Loader2, PhoneOff } from 'lucide-react'
+import { Mic, MicOff, Video, VideoOff, Loader2, PhoneOff, RefreshCw } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 
@@ -77,7 +77,30 @@ export function MeetingVideo({ meetingId, selfId, selfName, authHeaders, onClose
   const boxRef = useRef<HTMLDivElement | null>(null)
   const apiRef = useRef<JaasApi | null>(null)
   const [micProblem, setMicProblem] = useState(false)
+  const [jaasAvailable, setJaasAvailable] = useState(false)
+  const [reload, setReload] = useState(0)
   const headersKey = JSON.stringify(authHeaders ?? {})
+
+  // 備案：任一人切換視訊模式時，用 broadcast 通知同場所有人一起切換（並存到會議，晚加入者也跟著）
+  const chRef = useRef<ReturnType<ReturnType<typeof createClient>['channel']> | null>(null)
+  useEffect(() => {
+    const supabase = createClient()
+    const ch = supabase.channel(`meetvid:${meetingId}`, { config: { broadcast: { self: false } } })
+      .on('broadcast', { event: 'mode' }, () => setReload(n => n + 1))
+      .subscribe()
+    chRef.current = ch
+    return () => { chRef.current = null; void supabase.removeChannel(ch) }
+  }, [meetingId])
+
+  const switchMode = async (next: 'auto' | 'webrtc') => {
+    setMode('loading')
+    await fetch('/api/meeting/video-mode', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', ...JSON.parse(headersKey) },
+      body: JSON.stringify({ meetingId, mode: next }),
+    }).catch(() => {})
+    void chRef.current?.send({ type: 'broadcast', event: 'mode', payload: { mode: next } })
+    setReload(n => n + 1)
+  }
 
   useEffect(() => {
     let alive = true
@@ -88,7 +111,10 @@ export function MeetingVideo({ meetingId, selfId, selfName, authHeaders, onClose
           body: JSON.stringify({ meetingId }),
         })
         if (!alive) return
-        if (res.status === 501) { setMode('webrtc'); return }
+        if (res.status === 501) {
+          const e = await res.json().catch(() => ({})) as { jaasAvailable?: boolean }
+          setJaasAvailable(!!e.jaasAvailable); setMode('webrtc'); return
+        }
         if (!res.ok) { setMode('error'); return }
         const j = await res.json() as { jwt: string; room: string; appId: string }
         const perm = await preflightMedia()
@@ -96,11 +122,11 @@ export function MeetingVideo({ meetingId, selfId, selfName, authHeaders, onClose
         setMicProblem(perm !== 'ok')
         await loadJaasScript(j.appId)
         if (!alive) return
-        setJaas(j); setMode('jaas')
+        setJaas(j); setJaasAvailable(true); setMode('jaas')
       } catch { if (alive) setMode('webrtc') }
     })()
     return () => { alive = false }
-  }, [meetingId, headersKey])
+  }, [meetingId, headersKey, reload])
 
   useEffect(() => {
     if (mode !== 'jaas' || !jaas || !boxRef.current) return
@@ -143,10 +169,21 @@ export function MeetingVideo({ meetingId, selfId, selfName, authHeaders, onClose
         </div>
       )}
       <div ref={boxRef} className="h-[420px] w-full overflow-hidden rounded-lg border bg-black" />
-      <Button size="sm" variant="outline" onClick={onClose} className="gap-1.5"><PhoneOff className="h-4 w-4" />{t('videoLeave')}</Button>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button size="sm" variant="outline" onClick={onClose} className="gap-1.5"><PhoneOff className="h-4 w-4" />{t('videoLeave')}</Button>
+        <Button size="sm" variant="outline" onClick={() => switchMode('webrtc')} className="gap-1.5"><RefreshCw className="h-4 w-4" />{t('switchToBuiltin')}</Button>
+        <span className="text-[11px] text-gray-500">{t('switchToBuiltinHint')}</span>
+      </div>
     </div>
   )
-  return <WebRtcRoom meetingId={meetingId} selfId={selfId} selfName={selfName} onClose={onClose} />
+  return (
+    <div className="space-y-2">
+      <WebRtcRoom key={reload} meetingId={meetingId} selfId={selfId} selfName={selfName} onClose={onClose} />
+      {jaasAvailable && (
+        <Button size="sm" variant="ghost" onClick={() => switchMode('auto')} className="gap-1.5 text-xs h-7"><RefreshCw className="h-3.5 w-3.5" />{t('switchToJaas')}</Button>
+      )}
+    </div>
+  )
 }
 
 interface Peer { id: string; name: string; stream: MediaStream | null; state: string }

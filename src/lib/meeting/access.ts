@@ -44,7 +44,7 @@ export interface MeetingActor {
   isHost: boolean
   /** 只有瀏覽權限（公司管理者或被授權者），不能發言、傳檔、開視訊 */
   viewer: boolean
-  meeting: { id: string; host_id: string; room_code: string; title: string; is_active: boolean; allow_guests: boolean }
+  meeting: { id: string; host_id: string; room_code: string; title: string; is_active: boolean; allow_guests: boolean; video_mode?: string }
 }
 
 /** 解析呼叫者對這場會議的身分；無權限回 null */
@@ -52,7 +52,7 @@ export async function resolveMeetingActor(req: NextRequest, meetingId: string): 
   if (!meetingId) return null
   const admin = createAdminClient()
   const { data: meeting } = await admin.from('meetings')
-    .select('id, host_id, room_code, title, is_active, allow_guests').eq('id', meetingId).maybeSingle()
+    .select('id, host_id, room_code, title, is_active, allow_guests, video_mode').eq('id', meetingId).maybeSingle()
   if (!meeting) return null
 
   const guest = verifyGuestToken(req.headers.get(GUEST_HEADER))
