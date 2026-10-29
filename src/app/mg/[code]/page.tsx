@@ -10,8 +10,9 @@ import { Card } from '@/components/ui/card'
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
 import { MeetingVideo } from '@/components/meeting/MeetingVideo'
 import { MeetingChat } from '@/components/meeting/MeetingChat'
+import { GuestTranscriber } from '@/components/meeting/GuestTranscriber'
 
-interface Session { token: string; guest: { id: string; name: string }; meeting: { id: string; title: string; room_code: string } }
+interface Session { token: string; guest: { id: string; name: string }; meeting: { id: string; title: string; room_code: string; source_lang?: string; other_langs?: string[] } }
 
 export default function MeetingGuestPage({ params }: { params: Promise<{ code: string }> }) {
   const { code: rawCode } = use(params)
@@ -77,6 +78,8 @@ export default function MeetingGuestPage({ params }: { params: Promise<{ code: s
               {!video && <Button size="sm" onClick={() => setVideo(true)} className="gap-1.5"><Video className="h-4 w-4" />{t('videoStart')}</Button>}
               <Button size="sm" variant="outline" onClick={leave} className="ml-auto">{t('leave')}</Button>
             </div>
+            <GuestTranscriber meetingId={session.meeting.id} token={session.token}
+              languages={[session.meeting.source_lang || 'zh-TW', ...(session.meeting.other_langs ?? [])]} />
             <div className={`grid gap-4 ${video ? 'lg:grid-cols-[1fr_360px]' : ''}`}>
               {video && (
                 <MeetingVideo meetingId={session.meeting.id} selfId={`g-${session.guest.id}`} selfName={session.guest.name}

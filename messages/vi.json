@@ -13384,6 +13384,12 @@
     "switchToBuiltin": "Chuyển sang video tích hợp (dự phòng)",
     "switchToBuiltinHint": "Nếu không có tiếng có thể thử — mọi người cùng chuyển (video tích hợp có thể không kết nối được trên một số mạng 4G)",
     "switchToJaas": "Quay lại Jitsi",
-    "tapForSound": "Bấm để bật âm thanh"
+    "tapForSound": "Bấm để bật âm thanh",
+    "transcribeOn": "Đang ghi lời nói (lời bạn được chuyển thành chữ cho chủ trì)",
+    "transcribeOff": "Đã tạm dừng ghi lời nói",
+    "transcribePause": "Tạm dừng",
+    "transcribeStart": "Bắt đầu",
+    "transcribeFailed": "Không ghi được — hãy cho phép micro rồi bấm Bắt đầu",
+    "transcribeUnsupported": "Trình duyệt không hỗ trợ ghi lời nói"
   }
 }

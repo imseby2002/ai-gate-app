@@ -6,9 +6,13 @@ export interface AzureSpeechToken {
   region?: string
 }
 
+// 訪客（免登入）取 token 時要帶 x-meeting-guest；由訪客頁設定，之後自動更新 token 也會沿用
+let tokenHeaders: Record<string, string> = {}
+export function setAzureTokenHeaders(h: Record<string, string>) { tokenHeaders = h }
+
 export async function fetchAzureSpeechToken(): Promise<AzureSpeechToken> {
   try {
-    const res = await fetch('/api/meeting/azure-token', { cache: 'no-store' })
+    const res = await fetch('/api/meeting/azure-token', { cache: 'no-store', headers: tokenHeaders })
     if (!res.ok) return { configured: false }
     const data = await res.json()
     return data

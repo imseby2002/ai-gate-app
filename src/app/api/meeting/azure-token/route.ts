@@ -1,11 +1,22 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { GUEST_HEADER, verifyGuestToken } from '@/lib/meeting/access'
 
-export async function GET() {
+// 登入成員，或持有效訪客 token（會議進行中且允許訪客）的人可取得語音辨識 token
+async function allowed(req: NextRequest): Promise<boolean> {
+  const guest = verifyGuestToken(req.headers.get(GUEST_HEADER))
+  if (guest) {
+    const { data: m } = await createAdminClient().from('meetings').select('is_active, allow_guests').eq('id', guest.m).maybeSingle()
+    return !!(m?.is_active && m?.allow_guests)
+  }
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  return !!user
+}
 
-  if (!user) {
+export async function GET(req: NextRequest) {
+  if (!(await allowed(req))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

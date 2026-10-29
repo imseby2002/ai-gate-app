@@ -13384,6 +13384,12 @@
     "switchToBuiltin": "Switch to built-in video (backup)",
     "switchToBuiltinHint": "If there's no sound you can try this — everyone switches together (built-in video may not connect on some 4G networks)",
     "switchToJaas": "Switch back to Jitsi",
-    "tapForSound": "Tap to turn on sound"
+    "tapForSound": "Tap to turn on sound",
+    "transcribeOn": "Recording speech (your words are transcribed for the host)",
+    "transcribeOff": "Speech recording paused",
+    "transcribePause": "Pause",
+    "transcribeStart": "Start",
+    "transcribeFailed": "Speech recording failed — allow the microphone and tap Start",
+    "transcribeUnsupported": "This browser doesn't support speech recording"
   }
 }

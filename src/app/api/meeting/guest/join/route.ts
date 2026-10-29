@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
 
   const admin = createAdminClient()
   const { data: meeting } = await admin.from('meetings')
-    .select('id, title, room_code, is_active, allow_guests').eq('room_code', code).eq('is_active', true).maybeSingle()
+    .select('id, title, room_code, is_active, allow_guests, source_lang, other_langs').eq('room_code', code).eq('is_active', true).maybeSingle()
   if (!meeting) return NextResponse.json({ error: 'not_found' }, { status: 404 })
   if (!meeting.allow_guests) return NextResponse.json({ error: 'guests_closed' }, { status: 403 })
 
@@ -23,6 +23,6 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     token: signGuestToken({ m: meeting.id, g: guest.id, n: name }),
     guest: { id: guest.id, name },
-    meeting: { id: meeting.id, title: meeting.title, room_code: meeting.room_code },
+    meeting: { id: meeting.id, title: meeting.title, room_code: meeting.room_code, source_lang: meeting.source_lang, other_langs: meeting.other_langs ?? [] },
   })
 }
