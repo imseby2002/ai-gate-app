@@ -13377,6 +13377,9 @@
     "viewerGrant": "Grant",
     "viewerRevoke": "Revoke",
     "viewerAdminTag": "admin",
-    "viewerToMe": "You can view meetings hosted by: {names}"
+    "viewerToMe": "You can view meetings hosted by: {names}",
+    "micBlockedTitle": "Microphone unavailable — others can't hear you",
+    "micBlockedHelp": "1. Tap the icon left of the address bar → Permissions / Site settings → set Microphone to Allow\n2. On phones: Settings → Apps → Chrome (or Safari) → Permissions → Microphone → Allow\n3. Close other apps or tabs using the mic (another call, meeting recording)\nThen tap “Retry microphone” below",
+    "micRetry": "Retry microphone"
   }
 }

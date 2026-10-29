@@ -11,7 +11,35 @@ import { Mic, MicOff, Video, VideoOff, Loader2, PhoneOff } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 
-interface JaasApi { dispose(): void }
+interface JaasApi {
+  dispose(): void
+  addListener(event: string, fn: (e: Record<string, unknown>) => void): void
+  isAudioAvailable(): Promise<boolean>
+  isAudioMuted(): Promise<boolean>
+  executeCommand(cmd: string, ...args: unknown[]): void
+}
+
+/** 先在本頁請求鏡頭＋麥克風權限（手機 Chrome 常因 iframe 內才詢問而被擋，導致 Jitsi 麥克風灰掉） */
+async function preflightMedia(): Promise<'ok' | 'mic-denied' | 'all-denied'> {
+  if (!navigator.mediaDevices?.getUserMedia) return 'ok'
+  try {
+    const s = await navigator.mediaDevices.getUserMedia({ audio: true, video: true })
+    s.getTracks().forEach(t => t.stop())
+    return 'ok'
+  } catch {
+    try {
+      const a = await navigator.mediaDevices.getUserMedia({ audio: true })
+      a.getTracks().forEach(t => t.stop())
+      return 'ok'
+    } catch {
+      try {
+        const v = await navigator.mediaDevices.getUserMedia({ video: true })
+        v.getTracks().forEach(t => t.stop())
+        return 'mic-denied'
+      } catch { return 'all-denied' }
+    }
+  }
+}
 type JaasCtor = new (domain: string, options: Record<string, unknown>) => JaasApi
 
 function loadJaasScript(appId: string): Promise<void> {
@@ -47,6 +75,8 @@ export function MeetingVideo({ meetingId, selfId, selfName, authHeaders, onClose
   const [mode, setMode] = useState<'loading' | 'jaas' | 'webrtc' | 'error'>('loading')
   const [jaas, setJaas] = useState<{ jwt: string; room: string; appId: string } | null>(null)
   const boxRef = useRef<HTMLDivElement | null>(null)
+  const apiRef = useRef<JaasApi | null>(null)
+  const [micProblem, setMicProblem] = useState(false)
   const headersKey = JSON.stringify(authHeaders ?? {})
 
   useEffect(() => {
@@ -61,6 +91,9 @@ export function MeetingVideo({ meetingId, selfId, selfName, authHeaders, onClose
         if (res.status === 501) { setMode('webrtc'); return }
         if (!res.ok) { setMode('error'); return }
         const j = await res.json() as { jwt: string; room: string; appId: string }
+        const perm = await preflightMedia()
+        if (!alive) return
+        setMicProblem(perm !== 'ok')
         await loadJaasScript(j.appId)
         if (!alive) return
         setJaas(j); setMode('jaas')
@@ -75,16 +108,40 @@ export function MeetingVideo({ meetingId, selfId, selfName, authHeaders, onClose
     if (!w.JitsiMeetExternalAPI) return
     const api = new w.JitsiMeetExternalAPI('8x8.vc', {
       roomName: `${jaas.appId}/${jaas.room}`, jwt: jaas.jwt, parentNode: boxRef.current,
-      configOverwrite: { prejoinPageEnabled: false, startWithAudioMuted: false, startWithVideoMuted: false },
+      configOverwrite: { prejoinPageEnabled: false, startWithAudioMuted: false, startWithVideoMuted: false, disableDeepLinking: true },
       userInfo: { displayName: selfName },
+    }) as JaasApi
+    apiRef.current = api
+    // 麥克風拿不到時（權限被擋、被其他程式占用）提示使用者
+    const check = () => { api.isAudioAvailable().then(ok => setMicProblem(!ok)).catch(() => {}) }
+    api.addListener('audioAvailabilityChanged', e => setMicProblem(!e.available))
+    api.addListener('videoConferenceJoined', () => {
+      check()
+      api.isAudioMuted().then(m => { if (m) api.executeCommand('toggleAudio') }).catch(() => {})
     })
-    return () => { try { api.dispose() } catch {} }
+    return () => { apiRef.current = null; try { api.dispose() } catch {} }
   }, [mode, jaas, selfName])
 
   if (mode === 'loading') return <div className="h-72 rounded-lg border bg-black/90 flex items-center justify-center text-gray-300"><Loader2 className="h-6 w-6 animate-spin" /></div>
   if (mode === 'error') return <div className="rounded-lg border p-4 text-sm text-red-600">{t('videoFailed')}</div>
+  const retryMic = async () => {
+    const perm = await preflightMedia()
+    setMicProblem(perm !== 'ok')
+    if (perm === 'ok') {
+      // 重新掛載 Jitsi，讓它重新取得麥克風
+      setJaas(j => (j ? { ...j } : j))
+    }
+  }
+
   if (mode === 'jaas') return (
     <div className="space-y-2">
+      {micProblem && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 dark:bg-amber-950/50 dark:text-amber-200 space-y-1.5">
+          <p className="font-medium">{t('micBlockedTitle')}</p>
+          <p className="whitespace-pre-line">{t('micBlockedHelp')}</p>
+          <Button size="sm" variant="outline" onClick={retryMic} className="h-7 gap-1.5"><Mic className="h-3.5 w-3.5" />{t('micRetry')}</Button>
+        </div>
+      )}
       <div ref={boxRef} className="h-[420px] w-full overflow-hidden rounded-lg border bg-black" />
       <Button size="sm" variant="outline" onClick={onClose} className="gap-1.5"><PhoneOff className="h-4 w-4" />{t('videoLeave')}</Button>
     </div>
