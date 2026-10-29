@@ -13382,7 +13382,7 @@
     "micBlockedHelp": "1. Tap the icon left of the address bar → Permissions / Site settings → set Microphone to Allow\n2. On phones: Settings → Apps → Chrome (or Safari) → Permissions → Microphone → Allow\n3. Close other apps or tabs using the mic (another call, meeting recording)\nThen tap “Retry microphone” below",
     "micRetry": "Retry microphone",
     "switchToBuiltin": "Switch to built-in video (backup)",
-    "switchToBuiltinHint": "If there's no sound, tap here — everyone switches together (switches automatically when someone joins from a phone)",
+    "switchToBuiltinHint": "If there's no sound you can try this — everyone switches together (built-in video may not connect on some 4G networks)",
     "switchToJaas": "Switch back to Jitsi",
     "tapForSound": "Tap to turn on sound"
   }

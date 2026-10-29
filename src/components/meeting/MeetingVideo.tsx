@@ -124,17 +124,6 @@ export function MeetingVideo({ meetingId, selfId, selfName, authHeaders, onClose
         }
         if (!res.ok) { setMode('error'); return }
         const j = await res.json() as { jwt: string; room: string; appId: string }
-        // Jitsi 手機網頁版加入時常拿不到麥克風（出現 Join without audio）：
-        // 有人用手機開視訊時，整場改用內建視訊（存到會議並通知其他人一起切）
-        if (isMobileDevice()) {
-          await fetch('/api/meeting/video-mode', {
-            method: 'POST', headers: { 'Content-Type': 'application/json', ...JSON.parse(headersKey) },
-            body: JSON.stringify({ meetingId, mode: 'webrtc' }),
-          }).catch(() => {})
-          void chRef.current?.send({ type: 'broadcast', event: 'mode', payload: { mode: 'webrtc' } })
-          if (!alive) return
-          setJaasAvailable(true); setMode('webrtc'); return
-        }
         const perm = await preflightMedia()
         if (!alive) return
         setMicProblem(perm !== 'ok')
@@ -152,7 +141,8 @@ export function MeetingVideo({ meetingId, selfId, selfName, authHeaders, onClose
     if (!w.JitsiMeetExternalAPI) return
     const api = new w.JitsiMeetExternalAPI('8x8.vc', {
       roomName: `${jaas.appId}/${jaas.room}`, jwt: jaas.jwt, parentNode: boxRef.current,
-      configOverwrite: { prejoinPageEnabled: false, prejoinConfig: { enabled: false }, startWithAudioMuted: false, startWithVideoMuted: false, disableDeepLinking: true },
+      // 手機保留 Jitsi 的加入頁：讓使用者在 Jitsi 畫面內點一下「Join」，瀏覽器才允許該畫面播放聲音、取得麥克風
+      configOverwrite: { prejoinPageEnabled: isMobileDevice(), prejoinConfig: { enabled: isMobileDevice() }, startWithAudioMuted: false, startWithVideoMuted: false, disableDeepLinking: true },
       userInfo: { displayName: selfName },
     }) as JaasApi
     apiRef.current = api
