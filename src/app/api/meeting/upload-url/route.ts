@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
   const meetingId = String(body?.meetingId ?? '')
   const actor = await resolveMeetingActor(req, meetingId)
-  if (!actor || !actor.meeting.is_active) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!actor || actor.viewer || !actor.meeting.is_active) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   const size = Number(body?.size) || 0
   if (size <= 0 || size > MAX) return NextResponse.json({ error: 'file_too_large' }, { status: 400 })
   const name = String(body?.name ?? 'file')

@@ -13368,6 +13368,15 @@
     "copy": "複製",
     "copied": "已複製",
     "joinedGuests": "已加入訪客（{n}）",
-    "noGuests": "尚無訪客"
+    "noGuests": "尚無訪客",
+    "viewOnlyBadge": "瀏覽 · {host} 主持",
+    "viewOnlyNotice": "這場會議由 {host} 主持，你有瀏覽權限（只能看，不能錄音或發言）。",
+    "viewerTitle": "會議紀錄瀏覽授權",
+    "viewerHint": "授權後，對方可以瀏覽你主持的所有會議紀錄（含逐字稿與聊天），但不能修改。公司負責人與 IT 管理員本來就能瀏覽全公司的會議紀錄。",
+    "viewerPick": "選擇同事…",
+    "viewerGrant": "授權",
+    "viewerRevoke": "取消授權",
+    "viewerAdminTag": "管理者",
+    "viewerToMe": "可瀏覽這些人的會議紀錄：{names}"
   }
 }

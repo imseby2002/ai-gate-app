@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
   const b = await req.json().catch(() => ({}))
   const meetingId = String(b?.meetingId ?? '')
   const actor = await resolveMeetingActor(req, meetingId)
-  if (!actor || !actor.meeting.is_active) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!actor || actor.viewer || !actor.meeting.is_active) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   const text = String(b?.body ?? '').trim().slice(0, 4000)
   const f = b?.file && typeof b.file === 'object' ? b.file : null
   const filePath = f ? String(f.path ?? '') : ''

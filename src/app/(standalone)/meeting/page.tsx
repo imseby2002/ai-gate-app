@@ -15,6 +15,7 @@ import {
 import { MeetingVideo } from '@/components/meeting/MeetingVideo'
 import { MeetingChat } from '@/components/meeting/MeetingChat'
 import { GuestInviteDialog } from '@/components/meeting/GuestInviteDialog'
+import { MeetingViewerGrants } from '@/components/meeting/MeetingViewerGrants'
 import {
   fetchAzureSpeechToken, preloadAzureSpeechSdk, startAzureRecognition,
   type AzureRecognitionController, type AzureSpeechToken,
@@ -48,6 +49,9 @@ interface Meeting {
   created_at?: string
   /** 其他會出現的語言；null = 舊會議（沿用中/越/英自動偵測） */
   other_langs?: string[] | null
+  /** 列表 API 帶入：主持人姓名、我的角色（viewer＝只能瀏覽：公司管理者或被授權） */
+  host_name?: string
+  role?: 'host' | 'participant' | 'viewer'
 }
 
 interface DeptOption {
@@ -531,12 +535,10 @@ export default function MeetingPage() {
   // ── 大廳：我主持或參加過的會議 ──
   useEffect(() => {
     if (meeting || !me) return
-    supabase.from('meetings')
-      .select('id, title, room_code, host_id, source_lang, other_langs, department, departments, meeting_mode, stores, context_keywords, created_at')
-      .order('created_at', { ascending: false })
-      .limit(50)
-      .then(({ data }) => setHistory((data ?? []) as Meeting[]))
-  }, [supabase, meeting, me])
+    fetch('/api/meeting/list').then(r => r.ok ? r.json() : { meetings: [] })
+      .then((j: { meetings?: Meeting[] }) => setHistory(j.meetings ?? []))
+      .catch(() => {})
+  }, [meeting, me])
 
   // 主持人：刪除整場會議（含逐字稿）；其他參與者：從自己的紀錄移除
   async function deleteMeeting(m: Meeting) {
@@ -1382,29 +1384,35 @@ export default function MeetingPage() {
                     onClick={() => openMeeting(m)}
                     className="flex min-w-0 flex-1 items-center justify-between gap-3 py-2 text-left text-sm hover:text-primary"
                   >
-                    <span className="truncate">{m.title || t('title')}</span>
+                    <span className="min-w-0 truncate">
+                      {m.title || t('title')}
+                      {m.role === 'viewer' && <span className="ml-1.5 rounded bg-amber-50 px-1.5 py-0.5 text-[10px] text-amber-700 dark:bg-amber-950/50">{tr('viewOnlyBadge', { host: m.host_name || '' })}</span>}
+                    </span>
                     <span className="shrink-0 text-xs text-muted-foreground">
                       {m.created_at ? `${fmtDate(m.created_at)} ${fmtTime(m.created_at)}` : ''} · <span className="font-mono">{m.room_code}</span>
                     </span>
                   </button>
-                  <button
+                  {m.role !== 'viewer' && <button
                     onClick={() => deleteMeeting(m)}
                     title={m.host_id === me?.id ? t('delete') : t('removeFromList')}
                     className="shrink-0 rounded p-1.5 text-muted-foreground hover:bg-red-50 hover:text-red-500"
                   >
                     <Trash2 className="h-4 w-4" />
-                  </button>
+                  </button>}
                 </div>
               ))}
             </div>
           )}
         </Card>
+
+        <MeetingViewerGrants />
       </div>
     )
   }
 
   // ── 會議進行中畫面 ──
   const isHost = me?.id === meeting.host_id
+  const viewOnly = meeting.role === 'viewer'
   const meetingDeptKeys = meeting.departments?.length
     ? meeting.departments
     : (meeting.department ? meeting.department.split(',') : [])
@@ -1506,9 +1514,15 @@ export default function MeetingPage() {
         </div>
       )}
 
+      {viewOnly && (
+        <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/50 dark:text-amber-300">
+          {tr('viewOnlyNotice', { host: meeting.host_name || '' })}
+        </p>
+      )}
+
       {/* 控制列：麥克風、輸入辨識語言、翻譯目標語言、視訊、三段式檢視切換 */}
       <div className="flex items-center gap-2 border-y py-2 flex-wrap">
-        {srSupported ? (
+        {viewOnly ? null : srSupported ? (
           recording ? (
             <Button size="sm" variant="destructive" onClick={stopRec} className="gap-1.5 shrink-0">
               <MicOff className="h-4 w-4" />{t('stop')}
@@ -1601,8 +1615,8 @@ export default function MeetingPage() {
           <Download className="h-4 w-4" />{downloading ? t('downloading') : t('download')}
         </Button>
 
-        {/* 視訊、聊天、邀請訪客 */}
-        {video ? (
+        {/* 視訊、聊天、邀請訪客（只能瀏覽者只看聊天） */}
+        {viewOnly ? null : video ? (
           <Button size="sm" variant="outline" onClick={stopVideo} className="gap-1.5">
             <VideoOff className="h-4 w-4" />{t('videoStop')}
           </Button>
@@ -1626,7 +1640,7 @@ export default function MeetingPage() {
       {(video || showChat) && me && (
         <div className={`grid gap-3 ${video && showChat ? 'lg:grid-cols-[1fr_340px]' : ''}`}>
           {video && <MeetingVideo meetingId={meeting.id} selfId={`u-${me.id}`} selfName={me.name} onClose={stopVideo} />}
-          {showChat && <MeetingChat meetingId={meeting.id} />}
+          {showChat && <MeetingChat meetingId={meeting.id} readOnly={viewOnly} />}
         </div>
       )}
       {inviteOpen && <GuestInviteDialog meetingId={meeting.id} roomCode={meeting.room_code} onClose={() => setInviteOpen(false)} />}
