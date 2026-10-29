@@ -15,7 +15,7 @@ export async function GET() {
   const [{ data: pos }, { data: map }, { data: recipes }] = await Promise.all([
     supabase.from('inv_pos_sales').select('product_code, product_name').eq('owner_id', user.id),
     supabase.from('inv_product_map').select('product_code, recipe_id, kind').eq('owner_id', user.id),
-    supabase.from('inv_recipes').select('id, name').eq('owner_id', user.id).order('name'),
+    supabase.from('inv_recipes').select('id, name').eq('owner_id', user.id).eq('hidden', false).order('name'),
   ])
   const mapByCode: Record<string, { recipe_id: string | null; kind: string }> = {}
   for (const m of map ?? []) mapByCode[m.product_code] = { recipe_id: m.recipe_id, kind: m.kind ?? '' }

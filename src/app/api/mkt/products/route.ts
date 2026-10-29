@@ -18,7 +18,7 @@ export async function GET() {
 
   // 2. 跨模組撈取研發配方 (inv_recipes) 與門市點單品項 (pos_items)，供行銷人員「一鍵匯入 / 補圖」
   const [recipesRes, posRes] = await Promise.all([
-    c.admin.from('inv_recipes').select('id, name, note').eq('owner_id', c.ownerId).limit(200),
+    c.admin.from('inv_recipes').select('id, name, note').eq('owner_id', c.ownerId).eq('hidden', false).limit(200),
     c.admin.from('pos_items').select('id, name, price_cents, barcode, description, image_url').eq('owner_id', c.ownerId).limit(200),
   ])
 

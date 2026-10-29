@@ -7,7 +7,7 @@ import type { createAdminClient } from '@/lib/supabase/admin'
 
 type Admin = ReturnType<typeof createAdminClient>
 
-interface InvRecipe { id: string; name: string; note: string | null; kind: string | null; cup_size: string | null; created_at: string }
+interface InvRecipe { id: string; name: string; note: string | null; kind: string | null; cup_size: string | null; created_at: string; hidden?: boolean }
 interface InvItem { recipe_id: string; material_code: string; material_name: string; qty_per_cup: number; qty_display: number | null; unit_display: string | null; sort: number | null }
 interface InvPrice { material_code: string; material_name: string; unit: string | null; export_price: number | null; category: string | null; updated_at: string | null }
 
@@ -37,7 +37,7 @@ function cupMl(cup: string | null): number | null {
 
 export async function loadInvRecipesForLab(admin: Admin, ownerId: string) {
   const [recipes, items, prices] = await Promise.all([
-    fetchAll<InvRecipe>(admin, 'inv_recipes', 'id, name, note, kind, cup_size, created_at', ownerId, 'name'),
+    fetchAll<InvRecipe>(admin, 'inv_recipes', 'id, name, note, kind, cup_size, created_at, hidden', ownerId, 'name'),
     fetchAll<InvItem>(admin, 'inv_recipe_items', 'recipe_id, material_code, material_name, qty_per_cup, qty_display, unit_display, sort', ownerId, 'id'),
     fetchAll<InvPrice>(admin, 'inv_material_prices', 'material_code, material_name, unit, export_price, category, updated_at', ownerId, 'material_code'),
   ])
@@ -46,7 +46,8 @@ export async function loadInvRecipesForLab(admin: Admin, ownerId: string) {
   const itemsByRecipe = new Map<string, InvItem[]>()
   for (const it of items) itemsByRecipe.set(it.recipe_id, [...(itemsByRecipe.get(it.recipe_id) ?? []), it])
 
-  const labRecipes = recipes.map(r => {
+  // 已隱藏的配方不帶入 R&D Lab
+  const labRecipes = recipes.filter(r => !r.hidden).map(r => {
     const rows = (itemsByRecipe.get(r.id) ?? []).sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
     const ingredients = rows.map((it, i) => {
       const pr = priceMap.get(it.material_code)
