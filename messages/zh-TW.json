@@ -13384,6 +13384,12 @@
     "switchToBuiltin": "改用內建視訊（備案）",
     "switchToBuiltinHint": "聽不到聲音時可試這裡，同場所有人會一起切換（內建視訊在部分 4G 網路連不上）",
     "switchToJaas": "改回 Jitsi 視訊",
-    "tapForSound": "點此開啟聲音"
+    "tapForSound": "點此開啟聲音",
+    "transcribeOn": "語音記錄中（你說的話會轉成文字給主持人）",
+    "transcribeOff": "語音記錄已暫停",
+    "transcribePause": "暫停記錄",
+    "transcribeStart": "開始記錄",
+    "transcribeFailed": "語音記錄無法啟動，請允許麥克風後按「開始記錄」",
+    "transcribeUnsupported": "這個瀏覽器不支援語音記錄"
   }
 }
