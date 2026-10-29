@@ -13380,6 +13380,10 @@
     "viewerToMe": "You can view meetings hosted by: {names}",
     "micBlockedTitle": "Microphone unavailable — others can't hear you",
     "micBlockedHelp": "1. Tap the icon left of the address bar → Permissions / Site settings → set Microphone to Allow\n2. On phones: Settings → Apps → Chrome (or Safari) → Permissions → Microphone → Allow\n3. Close other apps or tabs using the mic (another call, meeting recording)\nThen tap “Retry microphone” below",
-    "micRetry": "Retry microphone"
+    "micRetry": "Retry microphone",
+    "switchToBuiltin": "Switch to built-in video (backup)",
+    "switchToBuiltinHint": "If there's no sound, tap here — everyone switches together (switches automatically when someone joins from a phone)",
+    "switchToJaas": "Switch back to Jitsi",
+    "tapForSound": "Tap to turn on sound"
   }
 }

@@ -14,6 +14,7 @@ export async function POST(req: NextRequest) {
 
   const actor = await resolveMeetingActor(req, meetingId)
   if (!actor || actor.viewer) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (actor.meeting.video_mode === 'webrtc') return NextResponse.json({ error: 'webrtc', jaasAvailable: true }, { status: 501 })
 
   let jwt: string
   try {
