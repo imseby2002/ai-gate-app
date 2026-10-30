@@ -1396,6 +1396,8 @@
       "earlyGateLabel": "Chat: share gate code early",
       "earlyGateOnHint": "When a guest checking in today arrives early, the bot verifies them and shares the gate code so they can drop luggage or rest in common areas; the room code is still given at check-in time",
       "earlyGateOffHint": "No codes are shared before check-in time",
+      "earlyGateFromLabel": "Gate code available from",
+      "earlyGateFromHint": "On check-in day, the bot shares the gate code only from this time",
       "all": "All",
       "loadError": "Failed to load. Please refresh the page or try again later.",
       "empty": "No booking requests yet",

@@ -1396,6 +1396,8 @@
       "earlyGateLabel": "Chat: gửi mã cổng sớm",
       "earlyGateOnHint": "Khách nhận phòng hôm nay đến sớm sẽ được bot xác minh và gửi mã cổng để gửi hành lý hoặc nghỉ ở khu vực chung; mã phòng vẫn gửi sau giờ nhận phòng",
       "earlyGateOffHint": "Không gửi mã nào trước giờ nhận phòng",
+      "earlyGateFromLabel": "Giờ gửi mã cổng",
+      "earlyGateFromHint": "Vào ngày nhận phòng, bot chỉ gửi mã cổng từ giờ này",
       "all": "Tất cả",
       "loadError": "Tải thất bại. Vui lòng làm mới trang hoặc thử lại sau.",
       "empty": "Chưa có yêu cầu đặt phòng",
