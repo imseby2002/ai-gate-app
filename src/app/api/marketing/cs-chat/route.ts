@@ -58,7 +58,7 @@ async function dispatchHandoffTicket(
     .single()
 
   const ticketNum = ticket?.id?.slice(0, 8).toUpperCase() ?? '—'
-  const taiwanNow = new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false })
+  const taiwanNow = new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hourCycle: 'h23' })
   const notifyMsg = `\n[AI GATE 工單]\n客人要求：${opts.message.slice(0, 80)}\n工單編號：${ticketNum}\n時間：${taiwanNow}`
 
   void sendTicketNotification(opts.notifyWebhooks, {
@@ -688,7 +688,7 @@ ${csBookingMode === 'manual' ? `接著一行：「以上資訊是否正確？」
         ? buildBookingSystemPrompt(paymentInfo, bookingFlows, csBookingMode, officialBookingUrl)
         : `你是民宿的 AI 客服。直接回答客人問題，語氣親切自然。不確定的資訊請誠實說明，勿猜測。`)
 
-  const taiwanTime = new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false })
+  const taiwanTime = new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hourCycle: 'h23' })
 
   // ── Breakfast ordering section ────────────────────────────────────────────
   const breakfastSection = breakfastCfg

@@ -2043,6 +2043,16 @@ async function createBalanceCheckTicket(
   } catch { /* 不中斷主流程 */ }
 }
 
+// 真實案例：凌晨 00:25 客人說「我是 10/29 入住」，AI 回「今天已是入住當天，且已過 14:50 開放時間」。
+// 尚未到密碼開放時間時，回覆若宣稱「已過/已到開放時間」一律換成制式說明。
+const CHECKIN_PASSED_CLAIM_RE = /已(?:經)?(?:超)?(?:過|到)了?[^。！!？?\n]{0,20}(?:開放|入住時間|取(?:得)?密碼|\d{1,2}[:：]\d{2})/
+function enforceCheckinTimeClaim(
+  reply: string, ci: { before: boolean; checkinTime: string; stayTime: string; nowHHMM: string } | null,
+): string {
+  if (!ci?.before || !CHECKIN_PASSED_CLAIM_RE.test(reply)) return reply
+  return `您好！目前台灣時間 ${ci.nowHHMM}，大門／房門密碼與房號於入住當天 ${ci.checkinTime} 起開放查詢（入住時間為 ${ci.stayTime}）。請於入住當天 ${ci.checkinTime} 後提供訂單號碼或訂房手機號碼，我會立即為您查詢 🙏`
+}
+
 async function enforceNoFabricatedReveal(
   reply: string, externalDataSection: string, history: HistoryMsg[], knowledgeBase: string,
   userId: string, platform: string, customerId: string, industry: string, lastMessage: string,
@@ -2146,13 +2156,16 @@ async function getAIReply(
           ? buildBookingSystemPrompt(knowledge.paymentInfo, knowledge.bookingFlows, knowledge.csBookingMode, knowledge.officialBookingUrl)
           : '你是一個專業的客服 AI 助理，代表公司提供售後支援。語氣親切專業，回答簡潔明瞭，不捏造資訊。')
 
-    const taiwanTime = new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false })
+    // hour12:false 在部分 ICU 版本午夜會印成 24:xx（真實案例：00:16 被寫成 24:16，AI 以為已過 14:50），一律用 h23
+    const taiwanTime = new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hourCycle: 'h23' })
+    let checkinState: { before: boolean; checkinTime: string; stayTime: string; nowHHMM: string } | null = null
     // 入住時間只認客服系統（source_prefs.checkinTime）或訂房系統（bnb_profiles.check_in_time）的人工設定，
     // 知識庫／提示詞裡寫死的時間不可信（真實案例：知識庫寫 15:00、設定是 14:50，AI 在 14:22 說「已過 15:00」）。
     let checkinTimeLine = ''
     if (knowledge.csBookingMode !== 'none') {
       try {
         const ci = await checkBeforeCheckin(getServiceClient(), userId)
+        checkinState = ci
         checkinTimeLine = ci.checkinTime === ci.stayTime
           ? `\n- 【入住時間——唯一依據，優先於知識庫與任何其他文字】入住時間為每日 ${ci.stayTime}，密碼／房號同一時間開放查詢；目前台灣時間 ${ci.nowHHMM}，今日${ci.before ? '尚未到' : '已到'}入住時間。知識庫或提示詞中寫的其他入住時間一律以此為準。`
           : `\n- 【入住時間與密碼開放時間——唯一依據，優先於知識庫與任何其他文字】入住時間為每日 ${ci.stayTime}（客人問幾點入住、幾點可以進房，一律回答 ${ci.stayTime}）；大門／房門密碼與房號每日 ${ci.checkinTime} 起開放查詢（判斷能否提供密碼只看這個時間）。目前台灣時間 ${ci.nowHHMM}，今日${ci.before ? '尚未到' : '已到'}密碼開放時間。知識庫或提示詞中寫的其他時間一律以此為準。`
@@ -2609,7 +2622,7 @@ https://ciaohome.net/routeofciaohome/
             system: systemPrompt,
             messages,
           })
-          return await enforceNoFabricatedReveal(cleanReply(text) || FALLBACK, externalDataSection, history, knowledge.knowledgeBase, userId, platform, customerId, knowledge.industry, message, knowledge.notifyWebhooks)
+          return enforceCheckinTimeClaim(await enforceNoFabricatedReveal(cleanReply(text) || FALLBACK, externalDataSection, history, knowledge.knowledgeBase, userId, platform, customerId, knowledge.industry, message, knowledge.notifyWebhooks), checkinState)
         } catch { /* fall through to L2 chain */ }
       }
     }
@@ -2626,7 +2639,7 @@ https://ciaohome.net/routeofciaohome/
         ? await generateCsReplyL3(systemPrompt, messages)
         : await generateCsReplyL2(systemPrompt, messages)
     const finalReply = (result ? cleanReply(result.reply) : '') || FALLBACK
-    return await enforceNoFabricatedReveal(finalReply, externalDataSection, history, knowledge.knowledgeBase, userId, platform, customerId, knowledge.industry, message, knowledge.notifyWebhooks)
+    return enforceCheckinTimeClaim(await enforceNoFabricatedReveal(finalReply, externalDataSection, history, knowledge.knowledgeBase, userId, platform, customerId, knowledge.industry, message, knowledge.notifyWebhooks), checkinState)
   } catch (err) {
     console.error('[cs-webhook] getAIReply failed, falling back to canned reply:', err)
     return FALLBACK
