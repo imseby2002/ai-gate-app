@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
     campaignId,
   } = await req.json()
 
-  const taiwanNow = new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false })
+  const taiwanNow = new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hourCycle: 'h23' })
 
   const participantLines = (participants as Participant[]).map((p, i) => {
     const age = calcAge(p.birthday)
