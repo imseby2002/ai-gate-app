@@ -46,6 +46,7 @@ export default function PublicBookingsPage() {
   const [csModeSaving, setCsModeSaving] = useState(false)
   const [earlyGate, setEarlyGate]             = useState(false)
   const [earlyGateSaving, setEarlyGateSaving] = useState(false)
+  const [earlyGateFrom, setEarlyGateFrom]     = useState('08:00')
 
   useEffect(() => {
     fetch('/api/booking/public-bookings')
@@ -59,6 +60,7 @@ export default function PublicBookingsPage() {
         setAutoConfirm(!!d.profile?.auto_confirm_bookings)
         setCsMode(d.profile?.cs_booking_mode === 'ai' ? 'ai' : 'manual')
         setEarlyGate(!!d.profile?.early_gate_access)
+        if (/^\d{2}:\d{2}/.test(d.profile?.early_gate_from ?? '')) setEarlyGateFrom(String(d.profile.early_gate_from).slice(0, 5))
       })
       .catch(() => {})
   }, [])
@@ -110,6 +112,20 @@ export default function PublicBookingsPage() {
       setEarlyGate(!next)
       notify(false, t('bookings.toast.networkError'))
     } finally { setEarlyGateSaving(false) }
+  }
+
+  async function saveEarlyGateFrom(next: string) {
+    if (!/^\d{2}:\d{2}$/.test(next)) return
+    setEarlyGateFrom(next)
+    try {
+      const res = await fetch('/api/booking/profile', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ early_gate_from: next }),
+      })
+      if (!res.ok) notify(false, t('public.actionFailed'))
+    } catch {
+      notify(false, t('bookings.toast.networkError'))
+    }
   }
 
   function notify(ok: boolean, text: string) {
@@ -250,6 +266,21 @@ export default function PublicBookingsPage() {
           <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${earlyGate ? 'translate-x-5' : ''}`} />
         </button>
       </div>
+      {earlyGate && (
+        <div className="flex items-center justify-between gap-3 bg-white border rounded-xl px-4 py-3 -mt-1">
+          <div>
+            <div className="text-sm font-medium text-gray-800">{t('public.earlyGateFromLabel')}</div>
+            <div className="text-xs text-gray-400 mt-0.5">{t('public.earlyGateFromHint')}</div>
+          </div>
+          <input
+            type="time"
+            value={earlyGateFrom}
+            onChange={e => setEarlyGateFrom(e.target.value)}
+            onBlur={e => saveEarlyGateFrom(e.target.value)}
+            className="shrink-0 border rounded-lg px-2 py-1 text-sm"
+          />
+        </div>
+      )}
 
       {flash && (
         <div className={`text-sm rounded-lg px-3 py-2 ${flash.ok ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-600 border border-rose-200'}`}>

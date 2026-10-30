@@ -1396,6 +1396,8 @@
       "earlyGateLabel": "客服：提前提供大門密碼",
       "earlyGateOnHint": "今日入住的客人提早抵達時，客服核對身份後會先給大門密碼，讓客人放行李或在公共區域休息；房門密碼仍於入住時間後提供",
       "earlyGateOffHint": "入住時間前不提供任何密碼",
+      "earlyGateFromLabel": "大門密碼開放時間",
+      "earlyGateFromHint": "入住當天這個時間起，客服才會先給大門密碼；之前一律不給",
       "all": "全部",
       "loadError": "載入失敗，請重新整理頁面或稍後再試。",
       "empty": "尚無訂房申請",
