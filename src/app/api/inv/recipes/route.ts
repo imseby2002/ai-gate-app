@@ -43,7 +43,7 @@ export async function GET() {
   }
 
   const [recipes, items, { data: mats }, prices] = await Promise.all([
-    fetchAll<{ id: string; name: string; note: string; created_at: string }>('inv_recipes', 'id, name, note, created_at, kind, cup_size, unit_label, sell_ratio_export, sell_ratio_purchase, excel_total_export, excel_total_purchase, source', 'name'),
+    fetchAll<{ id: string; name: string; note: string; created_at: string }>('inv_recipes', 'id, name, note, created_at, kind, cup_size, unit_label, sell_ratio_export, sell_ratio_purchase, excel_total_export, excel_total_purchase, source, hidden', 'name'),
     fetchAll<{ id: string; recipe_id: string; material_code: string; material_name: string; qty_per_cup: number; qty_display: number | null; unit_display: string | null; sort: number | null }>('inv_recipe_items', 'id, recipe_id, material_code, material_name, qty_per_cup, qty_display, unit_display, sort', 'id'),
     supabase.from('inv_movements').select('material_code, material_name, unit').eq('owner_id', user.id),
     fetchAll<{ material_code: string; material_name: string; unit: string; export_price: number; purchase_price: number; dealer_price: number; category: string; updated_at: string }>('inv_material_prices', 'material_code, material_name, unit, export_price, purchase_price, dealer_price, category, updated_at', 'material_code'),
@@ -179,6 +179,7 @@ export async function PATCH(req: NextRequest) {
   const upd: Record<string, unknown> = {}
   if (body.name !== undefined) upd.name = String(body.name).trim()
   if (body.note !== undefined) upd.note = String(body.note)
+  if (body.hidden !== undefined) upd.hidden = !!body.hidden
   if (Object.keys(upd).length) {
     const { error } = await supabase.from('inv_recipes').update(upd).eq('id', id).eq('owner_id', user.id)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })

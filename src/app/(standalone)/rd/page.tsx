@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useTranslations, useLocale } from 'next-intl'
 import {
   FlaskConical, Upload, Loader2, AlertCircle, Building2, Store,
-  Plus, Trash2, Edit3, Search, FileSpreadsheet, X, CheckCircle2,
+  Plus, Trash2, Edit3, Search, FileSpreadsheet, X, CheckCircle2, Eye, EyeOff,
   Package, BookOpen, Link2, Scale, TrendingUp, DollarSign, ChevronDown, ChevronUp, Info,
   Wrench, Coffee, ShoppingBag, Layers, Rocket, Download
 } from 'lucide-react'
@@ -64,6 +64,7 @@ interface Recipe {
   kind?: RecipeKind | null           // drink | coffee | food | base
   cup_size?: string | null
   unit_label?: string | null
+  hidden?: boolean
   sell_ratio_export?: number | null  // Excel 成本比例（直營價）
   excel_total_export?: number | null // Excel 試算成本（直營價）
   store_cost?: number     // 門市每杯總成本
@@ -108,6 +109,7 @@ export default function RdPage() {
   const [prices, setPrices] = useState<MaterialPrice[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [showHidden, setShowHidden] = useState(false)
   const [kindFilter, setKindFilter] = useState<'all' | RecipeKind>('all')
   const [visible, setVisible] = useState(RECIPE_PAGE)
   const [msg, setMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
@@ -216,7 +218,23 @@ export default function RdPage() {
     setBusy(false)
   }
 
-  // 刪除配方
+  // 隱藏／取消隱藏配方（暫不使用、日後可能再用）
+  const toggleHidden = async (r: Recipe) => {
+    setMsg(null)
+    const res = await fetch('/api/inv/recipes', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: r.id, hidden: !r.hidden }),
+    })
+    if (res.ok) {
+      setMsg({ text: r.hidden ? t('unhideSuccess', { name: r.name }) : t('hideSuccess', { name: r.name }), type: 'success' })
+      loadData()
+    } else {
+      alert(t('saveFailed'))
+    }
+  }
+
+  // 刪除配方（永久不再使用）
   const removeRecipe = async (r: Recipe) => {
     if (!confirm(t('confirmDelete', { name: r.name }))) return
     setMsg(null)
@@ -297,7 +315,9 @@ export default function RdPage() {
   }
 
   // 搜尋過濾
+  const hiddenCount = recipes.filter(r => r.hidden).length
   const filteredRecipes = recipes.filter(r => {
+    if (!!r.hidden !== showHidden) return false
     if (kindFilter !== 'all' && (r.kind || 'drink') !== kindFilter) return false
     if (!search.trim()) return true
     const q = search.toLowerCase()
@@ -531,7 +551,12 @@ export default function RdPage() {
                 {t('clear')}
               </Button>
             )}
+            <Button variant={showHidden ? 'default' : 'outline'} size="sm" className="gap-1.5 shrink-0"
+              onClick={() => { setShowHidden(v => !v); setVisible(RECIPE_PAGE) }}>
+              <EyeOff className="h-4 w-4" />{showHidden ? t('showActiveRecipes') : t('showHiddenRecipes', { n: hiddenCount })}
+            </Button>
           </div>
+          {showHidden && <p className="text-xs text-muted-foreground">{t('hiddenRecipesHint')}</p>}
 
           {/* 配方類別篩選 */}
           <div className="flex flex-wrap gap-2">
@@ -600,6 +625,7 @@ export default function RdPage() {
                         <div>
                           <div className="flex items-center gap-2">
                             <h3 className="font-bold text-lg text-foreground">{r.name}</h3>
+                            {r.hidden && <span className="rounded bg-gray-200 px-1.5 py-0.5 text-[10px] text-gray-600 dark:bg-gray-700 dark:text-gray-300">{t('hiddenBadge')}</span>}
                           </div>
                           {(r.cup_size || r.unit_label) && (
                             <span className="inline-block mt-1 px-2 py-0.5 rounded bg-muted text-[11px] text-muted-foreground">{r.cup_size || r.unit_label}</span>
@@ -639,6 +665,15 @@ export default function RdPage() {
                             title={t('editRecipeTitle')}
                           >
                             <Edit3 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-gray-400 hover:text-amber-600"
+                            onClick={() => toggleHidden(r)}
+                            title={r.hidden ? t('unhideRecipeTitle') : t('hideRecipeTitle')}
+                          >
+                            {r.hidden ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                           </Button>
                           <Button
                             variant="ghost"
