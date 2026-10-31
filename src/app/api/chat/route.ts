@@ -19,6 +19,9 @@ import { getCompanyBillingContext } from '@/lib/company/billing-context'
 import { getModuleEntitlements, planRequiredResponse } from '@/lib/module-plans/entitlements'
 import { minPlanLabel } from '@/lib/module-plans/definitions'
 import { checkEnterpriseCostAlert } from '@/lib/company/enterprise'
+import { ENTERPRISE_TIER_DEFS } from '@/lib/company/enterprise-plans'
+import { getBalance, deductCredits } from '@/lib/skills/billing'
+import { priceFromCost } from '@/lib/marketing/billing'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -47,6 +50,11 @@ export async function POST(req: NextRequest) {
     ? await Promise.all([getCompanyBillingContext(user.id), getModuleEntitlements(user.id, 'chat')])
     : [null, null]
   const chatRestricted = !!chatEnt && !chatEnt.features.allModels
+  // 已指定等級的企業版：CHAT 依實際成本 × 該級倍率從點數池扣點；點數用完先擋下
+  const enterpriseTier = companyCtx?.enterprise ? companyCtx.enterpriseTier : null
+  if (companyCtx && enterpriseTier && (await getBalance(user.id, companyCtx.companyId)) <= 0) {
+    return new Response(JSON.stringify({ error: 'insufficient_credits' }), { status: 402 })
+  }
   if (chatEnt && chatEnt.features.dailyMessageLimit !== Infinity) {
     // FREE 的公司成員沿用既有的每日 100 則（CHAT_DAILY_LIMIT.company）
     const limitOverride = chatEnt.plan === 'free' ? undefined : chatEnt.features.dailyMessageLimit
@@ -348,8 +356,17 @@ export async function POST(req: NextRequest) {
             })
           }
 
-          // 企業版用量不扣點，但計入成本警示
-          if (companyCtx?.enterprise) void checkEnterpriseCostAlert(companyCtx.companyId)
+          if (companyCtx && enterpriseTier) {
+            // 點數池扣點；先前已確認有餘額，單次超出時扣款失敗只記錄
+            const points = priceFromCost(costUsd, ENTERPRISE_TIER_DEFS[enterpriseTier].multiplier)
+            if (points > 0) {
+              const r = await deductCredits(user.id, points, `CHAT ${effectiveModelId ?? ''}`.trim(), companyCtx.companyId)
+              if (!r.ok) console.error('[chat] 企業點數池扣點失敗', { userId: user.id, companyId: companyCtx.companyId, points, reason: r.reason })
+            }
+          } else if (companyCtx?.enterprise) {
+            // 未指定等級的舊企業版不扣點，但計入成本警示
+            void checkEnterpriseCostAlert(companyCtx.companyId)
+          }
 
           controller.enqueue(encoder.encode(
             `data: ${JSON.stringify({

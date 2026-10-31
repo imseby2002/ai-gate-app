@@ -10,6 +10,7 @@ import { getBalance, deductCredits as deductCreditsRaw } from '@/lib/skills/bill
 import { getCompanyBillingContext } from '@/lib/company/billing-context'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getMarketingEntitlements, type MarketingPlan } from './entitlements'
+import { ENTERPRISE_TIER_DEFS } from '@/lib/company/enterprise-plans'
 
 export { getBalance }
 
@@ -43,9 +44,11 @@ export const PLAN_COST_MULTIPLIER: Record<MarketingPlan, number> = {
 // 非行銷模組（或無法判斷方案）時使用的倍率，等同 FREE
 export const DEFAULT_COST_MULTIPLIER = PLAN_COST_MULTIPLIER.free
 
-/** 取得帳號目前方案對應的成本倍率（依 lib/marketing/entitlements 判斷方案） */
+/** 取得帳號目前方案對應的成本倍率（已指定等級的企業版用該級倍率；否則依 lib/marketing/entitlements 判斷方案） */
 export async function getCostMultiplier(userId: string): Promise<number> {
   try {
+    const company = await getCompanyBillingContext(userId)
+    if (company?.enterprise && company.enterpriseTier) return ENTERPRISE_TIER_DEFS[company.enterpriseTier].multiplier
     const { plan } = await getMarketingEntitlements(null, userId)
     return PLAN_COST_MULTIPLIER[plan] ?? DEFAULT_COST_MULTIPLIER
   } catch {

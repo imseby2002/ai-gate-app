@@ -54,10 +54,11 @@ export async function checkEnterpriseCostAlert(companyId: string): Promise<void>
     if (already) return
 
     const { data: sub } = await admin
-      .from('company_subscriptions').select('enterprise, enterprise_monthly_usd, cost_alert_ratio')
+      .from('company_subscriptions').select('enterprise, enterprise_monthly_usd, cost_alert_ratio, enterprise_tier')
       .eq('company_id', companyId).maybeSingle()
     const fee = Number(sub?.enterprise_monthly_usd ?? 0)
-    if (!sub?.enterprise || fee <= 0) return
+    // 已指定等級的企業版改用點數池扣點，不需要成本警示
+    if (!sub?.enterprise || sub.enterprise_tier || fee <= 0) return
 
     const usage = await getEnterpriseMonthUsage(companyId)
     const threshold = fee * Number(sub.cost_alert_ratio ?? 0.5)

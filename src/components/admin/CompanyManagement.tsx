@@ -142,7 +142,8 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
   const [formEnterpriseFee, setFormEnterpriseFee] = useState('')
   const [formAlertRatio, setFormAlertRatio] = useState('50')
   // 企業方案等級：存進 company_subscriptions.enterprise_tier；月費需按「套用為議價月費」才會更新
-  const [formEnterpriseTier, setFormEnterpriseTier] = useState<EnterpriseTier>('max')
+  // '' = 未指定（舊企業版：不扣點、以議價月費計）；指定等級後改用點數池扣點
+  const [formEnterpriseTier, setFormEnterpriseTier] = useState<EnterpriseTier | ''>('')
   const [formErpSeats, setFormErpSeats] = useState('0')
   const [formRetailStores, setFormRetailStores] = useState('0')
   const [formCustomDomain, setFormCustomDomain] = useState(false)
@@ -264,7 +265,7 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
     setFormFeedbackQuota(company.free_feature_quota_monthly != null ? String(company.free_feature_quota_monthly) : '')
     setFormPlan(company.enterprise ? 'enterprise' : (company.plan ?? 'free'))
     setFormEnterpriseFee(company.enterpriseMonthlyUsd != null ? String(company.enterpriseMonthlyUsd) : '')
-    setFormEnterpriseTier(company.enterpriseTier ?? 'max')
+    setFormEnterpriseTier(company.enterpriseTier ?? '')
     setFormAlertRatio(String(Math.round((company.costAlertRatio ?? 0.5) * 100)))
     setFormErpSeats(String(company.erpSeats ?? 0))
     setFormRetailStores(String(company.retailStores ?? 0))
@@ -292,7 +293,7 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
           plan: formPlan === 'enterprise' ? 'company' : formPlan,
           enterprise: formPlan === 'enterprise',
           enterpriseMonthlyUsd: formEnterpriseFee.trim() === '' ? null : Number(formEnterpriseFee),
-          enterpriseTier: formPlan === 'enterprise' ? formEnterpriseTier : null,
+          enterpriseTier: formPlan === 'enterprise' && formEnterpriseTier ? formEnterpriseTier : null,
           costAlertRatio: Number(formAlertRatio) > 0 ? Number(formAlertRatio) / 100 : undefined,
           erpSeats: Number(formErpSeats) || 0,
           retailStores: Number(formRetailStores) || 0,
@@ -1094,16 +1095,17 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
                     </label>
                   </div>
                   {(() => {
-                    const tierPrice = calcEnterpriseMonthlyPrice(formEnterpriseTier, {
+                    const tierPrice = formEnterpriseTier ? calcEnterpriseMonthlyPrice(formEnterpriseTier, {
                       stores: Number(formRetailStores) || 0,
                       seats: Number(formErpSeats) || 0,
-                    })
+                    }) : null
                     return (
                       <div className="p-2.5 rounded-lg border border-amber-200 bg-white space-y-2">
                         <label className="text-xs text-slate-600 space-y-1 block">
-                          <span className="block">企業方案等級（儲存時寫入；月費依下方 ERP 人數與門市數試算）</span>
-                          <select id="company-enterprise-tier" value={formEnterpriseTier} onChange={e => setFormEnterpriseTier(e.target.value as EnterpriseTier)}
+                          <span className="block">企業方案等級（儲存時寫入；指定等級後改用點數池扣點，月費依下方 ERP 人數與門市數試算）</span>
+                          <select id="company-enterprise-tier" value={formEnterpriseTier} onChange={e => setFormEnterpriseTier(e.target.value as EnterpriseTier | '')}
                             className="w-full h-9 px-2 rounded-lg border border-slate-200 bg-white text-sm">
+                            <option value="">未指定（舊企業版：不扣點，以議價月費計）</option>
                             {ENTERPRISE_TIERS.map(t => {
                               const d = ENTERPRISE_TIER_DEFS[t]
                               return (
@@ -1114,6 +1116,7 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
                             })}
                           </select>
                         </label>
+                        {tierPrice && (<>
                         <div className="text-xs text-slate-600 space-y-0.5 tabular-nums">
                           {tierPrice.lines.map(l => (
                             <div key={l.label} className="flex justify-between gap-2"><span>{l.label}</span><span>${l.usd}</span></div>
@@ -1129,6 +1132,7 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
                           onClick={() => setFormEnterpriseFee(String(tierPrice.monthlyUsd))}>
                           套用為議價月費
                         </Button>
+                        </>)}
                       </div>
                     )
                   })()}

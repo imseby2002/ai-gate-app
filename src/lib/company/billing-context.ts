@@ -3,6 +3,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { resolveUserCompanyId } from '@/lib/company/activeCompany'
 import type { CompanyBillingContext } from '@/lib/company/entitlements'
+import { isEnterpriseTier } from '@/lib/company/enterprise-plans'
 
 /**
  * userId 目前所屬公司若有有效的公司版（'company' 方案），回傳公司 id 與是否為專屬客製-企業版；否則 null。
@@ -25,7 +26,13 @@ export async function getCompanyBillingContext(userId: string, companyIdOverride
     console.error('[company entitlements] 公司方案狀態查詢失敗', { userId, error: error ?? entErr })
     return null
   }
-  return active ? { companyId, enterprise: !!enterprise } : null
+  if (!active) return null
+  let enterpriseTier: CompanyBillingContext['enterpriseTier'] = null
+  if (enterprise) {
+    const { data: sub } = await admin.from('company_subscriptions').select('enterprise_tier').eq('company_id', companyId).maybeSingle()
+    enterpriseTier = isEnterpriseTier(sub?.enterprise_tier) ? sub.enterprise_tier : null
+  }
+  return { companyId, enterprise: !!enterprise, enterpriseTier }
 }
 
 /** 扣點改走公司錢包時的公司 id（有效公司版才有）；否則 null */

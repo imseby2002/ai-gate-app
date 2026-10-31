@@ -3,12 +3,12 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getCompanyBillingContext } from '@/lib/company/billing-context'
 import { checkEnterpriseCostAlert } from '@/lib/company/enterprise'
 
-// 查詢使用者可用點數。專屬客製-企業版不限點數（Infinity）；公司版回傳公司錢包餘額（本月贈點＋儲值）；
+// 查詢使用者可用點數。未指定等級的舊企業版不限點數（Infinity）；公司版與已指定等級的企業版回傳公司錢包餘額（本月贈點／點數池＋儲值）；
 // 否則為個人餘額（以 credit_transactions 加總為真相來源）。
 export async function getBalance(userId: string, companyId?: string | null): Promise<number> {
   const admin = createAdminClient()
   const company = await getCompanyBillingContext(userId, companyId)
-  if (company?.enterprise) return Infinity
+  if (company?.enterprise && !company.enterpriseTier) return Infinity
   if (company) {
     const { data } = await admin.rpc('get_company_credit_balance', { p_company_id: company.companyId })
     const row = Array.isArray(data) ? data[0] : data
@@ -28,8 +28,8 @@ export async function deductCredits(
   if (amount <= 0) return { ok: true, balance: await getBalance(userId, companyId) }
   const admin = createAdminClient()
   const company = await getCompanyBillingContext(userId, companyId)
-  // 專屬客製-企業版：不扣點，只記錄用量並檢查成本警示
-  if (company?.enterprise) {
+  // 未指定等級的舊企業版：不扣點，只記錄用量並檢查成本警示（已指定等級者改走下方公司錢包＝點數池）
+  if (company?.enterprise && !company.enterpriseTier) {
     const { error } = await admin.rpc('record_company_usage', {
       p_company_id: company.companyId,
       p_user_id: userId,
@@ -40,7 +40,7 @@ export async function deductCredits(
     void checkEnterpriseCostAlert(company.companyId)
     return { ok: true, balance: Infinity }
   }
-  // 公司版成員：從公司錢包扣（先扣本月贈點，再扣儲值）
+  // 公司版成員與已指定等級的企業版：從公司錢包扣（先扣本月贈點／點數池，再扣儲值）
   if (company) {
     const { data, error } = await admin.rpc('deduct_company_credits', {
       p_company_id: company.companyId,
