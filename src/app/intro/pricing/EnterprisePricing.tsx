@@ -26,12 +26,15 @@ function fill(tpl: string, n: number | string, m?: number | string): string {
   return m === undefined ? s : s.replace('{m}', String(m))
 }
 
-export async function EnterprisePricing({ grad }: { grad: string }) {
+export async function EnterprisePricing({ grad, showDetailLink = true }: { grad: string; showDetailLink?: boolean }) {
   const tr = await introTr()
   return (
     <section className="max-w-5xl mx-auto px-6 pb-16">
       <h2 className="text-[clamp(22px,3.6vw,30px)] font-black tracking-tight">{tr('企業方案')}</h2>
       <p className="mt-2 text-[15px] text-[#3f3a4d]">{tr('全部模組一次開通，依門市與人數計價。三級皆為公開定價，需要更多用量時以加值服務加購。')}</p>
+      {showDetailLink && (
+        <Link href="/intro/enterprise" className="mt-2 inline-block text-[14px] font-bold text-[#6a4be0] hover:underline">{tr('看企業方案完整介紹 →')}</Link>
+      )}
 
       <div className="mt-5 grid gap-3 md:grid-cols-3">
         {ENTERPRISE_TIERS.map(t => {
