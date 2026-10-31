@@ -15,7 +15,7 @@ const FIT: Record<EnterpriseTier, string> = {
   pro: '要調整流程、報表與介面的中型企業',
   max: '需要專屬功能的大型連鎖',
 }
-const CUSTOM: Record<'none' | 'modify' | 'full', string> = { none: '不可客製', modify: '修改現有功能', full: '開發專屬新功能' }
+const CUSTOM: Record<'none' | 'modify' | 'full', string> = { none: '不含客製，可按 $30／小時加購', modify: '修改現有功能', full: '開發專屬新功能' }
 const ADDRESS: Record<EnterpriseTier, string> = { core: '共用平台網址', pro: '專屬子網域＋企業 Logo', max: '自有網域' }
 const SUPPORT: Record<EnterpriseTier, string> = { core: '工作日回覆', pro: '優先回覆', max: '專人窗口' }
 

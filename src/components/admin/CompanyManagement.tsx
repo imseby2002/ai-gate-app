@@ -53,6 +53,8 @@ export interface CompanyItem {
   enterprise?: boolean
   enterpriseMonthlyUsd?: number | null
   enterpriseTier?: EnterpriseTier | null
+  /** 企業方案計費用據點數（自動抓 fin_stores） */
+  locationCount?: number
   costAlertRatio?: number
   enterpriseUsage?: { pointsUsd: number; chatUsd: number; totalUsd: number } | null
   created_at: string
@@ -1095,14 +1097,15 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
                     </label>
                   </div>
                   {(() => {
+                    const locationCount = editingCompany?.locationCount ?? 0
                     const tierPrice = formEnterpriseTier ? calcEnterpriseMonthlyPrice(formEnterpriseTier, {
-                      stores: Number(formRetailStores) || 0,
+                      stores: locationCount,
                       seats: Number(formErpSeats) || 0,
                     }) : null
                     return (
                       <div className="p-2.5 rounded-lg border border-amber-200 bg-white space-y-2">
                         <label className="text-xs text-slate-600 space-y-1 block">
-                          <span className="block">企業方案等級（儲存時寫入；指定等級後改用點數池扣點，月費依下方 ERP 人數與門市數試算）</span>
+                          <span className="block">企業方案等級（儲存時寫入；指定等級後改用點數池扣點，月費依據點數與下方 ERP 人數試算）</span>
                           <select id="company-enterprise-tier" value={formEnterpriseTier} onChange={e => setFormEnterpriseTier(e.target.value as EnterpriseTier | '')}
                             className="w-full h-9 px-2 rounded-lg border border-slate-200 bg-white text-sm">
                             <option value="">未指定（舊企業版：不扣點，以議價月費計）</option>
@@ -1117,6 +1120,7 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
                           </select>
                         </label>
                         {tierPrice && (<>
+                        <div className="text-xs text-slate-600">據點數（自動抓財務模組的啟用據點）：<span className="font-bold tabular-nums">{locationCount}</span></div>
                         <div className="text-xs text-slate-600 space-y-0.5 tabular-nums">
                           {tierPrice.lines.map(l => (
                             <div key={l.label} className="flex justify-between gap-2"><span>{l.label}</span><span>${l.usd}</span></div>

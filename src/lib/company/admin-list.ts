@@ -49,6 +49,11 @@ export async function loadAdminCompanyList() {
     [s.company_id, await getEnterpriseMonthUsage(s.company_id)] as const))
   const usageMap = new Map(usageEntries)
 
+  // 企業方案計費用的據點數：自動抓 fin_stores（公司負責人帳號下啟用中的據點，含門市、工廠、辦公室等）
+  const { data: finUnits } = await admin.from('fin_stores').select('owner_id').eq('active', true)
+  const locationsByOwner = new Map<string, number>()
+  for (const u of finUnits ?? []) locationsByOwner.set(u.owner_id, (locationsByOwner.get(u.owner_id) ?? 0) + 1)
+
   const result = (companies ?? []).map(c => {
     const compMembers = membersByCompany.get(c.id) ?? []
     const ownerMember = compMembers.find(m => m.role === 'owner' && m.status === 'active')
@@ -71,6 +76,7 @@ export async function loadAdminCompanyList() {
       enterprise: planMap.get(c.id)?.enterprise ?? false,
       enterpriseMonthlyUsd: planMap.get(c.id)?.enterprise_monthly_usd ?? null,
       enterpriseTier: planMap.get(c.id)?.enterprise_tier ?? null,
+      locationCount: c.bnb_owner_id ? (locationsByOwner.get(c.bnb_owner_id) ?? 0) : 0,
       costAlertRatio: planMap.get(c.id)?.cost_alert_ratio ?? 0.5,
       enterpriseUsage: usageMap.get(c.id) ?? null,
     }

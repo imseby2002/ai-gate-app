@@ -43,7 +43,7 @@ export interface EnterpriseTierDef {
   points: number
   /** 扣點倍率：原廠官方單價 × multiplier */
   multiplier: number
-  /** false = 不可客製；'modify' = 只能修改現有功能；'full' = 可開發專屬新功能 */
+  /** false = 不含客製（可按小時加購）；'modify' = 只能修改現有功能；'full' = 可開發專屬新功能 */
   customization: false | 'modify' | 'full'
   subdomain: boolean
   customDomain: boolean
@@ -53,17 +53,17 @@ export const ENTERPRISE_TIER_DEFS: Record<EnterpriseTier, EnterpriseTierDef> = {
   core: {
     label: { zh: '企業 CORE（企業基礎版）', en: 'Enterprise CORE', vi: 'Doanh nghiệp CORE' },
     includedStores: 5, maxStores: 10, includedSeats: 20, maxSeats: 30,
-    customHours: 0, points: 62, multiplier: 1.4, customization: false, subdomain: false, customDomain: false,
+    customHours: 0, points: 60, multiplier: 1.4, customization: false, subdomain: false, customDomain: false,
   },
   pro: {
     label: { zh: '企業 PRO（企業進階版）', en: 'Enterprise PRO', vi: 'Doanh nghiệp PRO' },
     includedStores: 15, maxStores: 30, includedSeats: 50, maxSeats: 100,
-    customHours: 4, points: 211, multiplier: 1.3, customization: 'modify', subdomain: true, customDomain: false,
+    customHours: 4, points: 200, multiplier: 1.3, customization: 'modify', subdomain: true, customDomain: false,
   },
   max: {
     label: { zh: '企業 MAX（企業專屬版）', en: 'Enterprise MAX', vi: 'Doanh nghiệp MAX' },
     includedStores: 30, maxStores: null, includedSeats: 100, maxSeats: null,
-    customHours: 10, points: 582, multiplier: 1.2, customization: 'full', subdomain: true, customDomain: true,
+    customHours: 10, points: 400, multiplier: 1.2, customization: 'full', subdomain: true, customDomain: true,
   },
 }
 
@@ -79,8 +79,8 @@ export const ENTERPRISE_ADD_ONS: { key: string; label: string; unit: string; inc
   { key: 'phone_number', label: '專用電話號碼', unit: '$1.5／個／月', included: { core: '—', pro: '—', max: '1 個' } },
   { key: 'zalo_zns', label: 'Zalo ZNS', unit: '通知 250 VND／則；行銷 360 VND／則', included: { core: '—', pro: '—', max: '—' } },
   { key: 'email', label: 'Email 寄送', unit: '$1.1／1,000 封', included: { core: '1,000 封', pro: '5,000 封', max: '20,000 封' } },
-  { key: 'points', label: 'AI 點數', unit: '$1／點', included: { core: '62 點', pro: '211 點', max: '582 點' } },
-  { key: 'custom_hour', label: '客製開發／特殊功能', unit: `$${ENTERPRISE_CUSTOM_HOUR_USD}／小時`, included: { core: '不提供', pro: '4 小時', max: '10 小時' } },
+  { key: 'points', label: 'AI 點數', unit: '$1／點', included: { core: '60 點', pro: '200 點', max: '400 點' } },
+  { key: 'custom_hour', label: '客製開發／特殊功能', unit: `$${ENTERPRISE_CUSTOM_HOUR_USD}／小時`, included: { core: '可加購', pro: '4 小時', max: '10 小時' } },
   { key: 'lead_ops_hour', label: '潛在客戶開發代操', unit: `$${ENTERPRISE_LEAD_OPS_HOUR_USD}／小時（另加通訊費）`, included: { core: '不提供', pro: '依工時', max: '依工時' } },
 ]
 

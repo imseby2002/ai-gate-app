@@ -808,5 +808,10 @@
 "4 小時": "4 hours",
 "10 小時": "10 hours",
 "依工時": "Billed hourly",
-"超出含量的門市每家 $10、ERP 使用者每人 $2；CORE、PRO 有上限。門市沒用滿時，每 1 家可換 5 位使用者（沒有門市的企業可多用人數）。以美元計價，未含稅。": "Extra stores are $10 each and extra ERP users $2 each; CORE and PRO have limits. Each unused store allowance converts to 5 extra users (companies without stores get more users). Prices in USD, excluding tax."
+"超出含量的門市每家 $10、ERP 使用者每人 $2；CORE、PRO 有上限。門市沒用滿時，每 1 家可換 5 位使用者（沒有門市的企業可多用人數）。以美元計價，未含稅。": "Extra stores are $10 each and extra ERP users $2 each; CORE and PRO have limits. Each unused store allowance converts to 5 extra users (companies without stores get more users). Prices in USD, excluding tax.",
+"60 點": "60 credits",
+"200 點": "200 credits",
+"400 點": "400 credits",
+"可加購": "Available as add-on",
+"不含客製，可按 $30／小時加購": "No customization included; buy hours at $30/hour"
 }
