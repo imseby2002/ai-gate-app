@@ -53,6 +53,7 @@ export async function PUT(req: NextRequest) {
 export async function POST() {
   const status = await assertAdmin()
   if (status !== 200) return NextResponse.json({ error: 'Forbidden' }, { status })
-  const result = await runDbBackup()
+  // 手動執行一律完整備份
+  const result = await runDbBackup({ forceFull: true })
   return NextResponse.json(result, { status: result.ok ? 200 : 500 })
 }

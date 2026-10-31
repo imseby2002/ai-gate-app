@@ -1,4 +1,6 @@
-// 全資料庫每日備份：逐表匯出 public schema 為 JSON，gzip 後上傳至管理者授權的 Google Drive 資料夾，保留 30 天
+// 資料庫備份：每月一次完整備份（逐表匯出 public schema），其餘每天只匯出有變動的資料表（增量），
+// gzip 後上傳至管理者授權的 Google Drive 資料夾，保留 40 天（涵蓋上一份完整備份）。
+// 還原：取最近一份完整備份，再依時間順序以之後各增量檔中的資料表整表覆蓋。
 import { gzipSync } from 'zlib'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { refreshAccessToken } from '@/lib/google-drive'
@@ -6,7 +8,8 @@ import { refreshAccessToken } from '@/lib/google-drive'
 const DRIVE_API = 'https://www.googleapis.com/drive/v3'
 const UPLOAD_API = 'https://www.googleapis.com/upload/drive/v3'
 const FOLDER_NAME = 'AI-GATE 資料庫備份'
-const RETENTION_DAYS = 30
+const RETENTION_DAYS = 40
+const FULL_INTERVAL_DAYS = 28
 export const BACKUP_SETTINGS_ID = 'gdrive'
 
 export function getBackupOAuthUrl(redirectUri: string, state: string): string {
@@ -113,7 +116,7 @@ export async function getCompanyBackupTargets(): Promise<{ id: string; name: str
 
 type Row = Record<string, unknown>
 
-export async function runDbBackup(): Promise<{ ok: boolean; files?: string[]; tables?: number; rows?: number; sizeKb?: number; pruned?: number; error?: string }> {
+export async function runDbBackup(opts: { forceFull?: boolean } = {}): Promise<{ ok: boolean; mode?: 'full' | 'incremental'; files?: string[]; tables?: number; rows?: number; sizeKb?: number; pruned?: number; error?: string }> {
   const admin = createAdminClient()
   const { data: settings } = await admin.from('system_backup_settings').select('*').eq('id', BACKUP_SETTINGS_ID).maybeSingle()
   if (!settings?.refresh_token) return { ok: false, error: '尚未連結 Google Drive' }
@@ -127,20 +130,35 @@ export async function runDbBackup(): Promise<{ ok: boolean; files?: string[]; ta
 
     const { data: tables, error: listErr } = await admin.rpc('backup_list_tables')
     if (listErr) throw new Error(`列出資料表失敗：${listErr.message}`)
+    const { data: counterRows, error: cErr } = await admin.rpc('backup_table_counters')
+    if (cErr) throw new Error(`讀取資料表異動統計失敗：${cErr.message}`)
+    const counters: Record<string, number> = {}
+    for (const r of (counterRows ?? []) as { t: string; n: number }[]) counters[r.t] = Number(r.n)
 
-    // 逐表匯出全部資料
+    // 每月一次（距上次完整備份 ≥ 28 天，或手動執行）做完整備份；其餘只匯出異動次數與上次不同的資料表
+    const lastFull = settings.last_full_at ? new Date(settings.last_full_at).getTime() : 0
+    const mode: 'full' | 'incremental' =
+      opts.forceFull || !lastFull || Date.now() - lastFull >= FULL_INTERVAL_DAYS * 86400_000 ? 'full' : 'incremental'
+    const prev = (settings.table_counters ?? {}) as Record<string, number>
+    const allTables = (tables ?? []) as string[]
+    const exportTables = mode === 'full' ? allTables : allTables.filter(t => prev[t] === undefined || prev[t] !== counters[t])
+
+    // 依公司分檔需要使用者 → 公司對照，增量時 profiles 未變動也要讀
+    const toFetch = exportTables.includes('profiles') ? exportTables : [...exportTables, 'profiles']
     const data: Record<string, Row[]> = {}
     let rows = 0
-    for (const t of (tables ?? []) as string[]) {
+    for (const t of toFetch) {
       const { data: arr, error } = await admin.rpc('backup_table_json', { t })
       if (error) throw new Error(`匯出 ${t} 失敗：${error.message}`)
       data[t] = (arr ?? []) as Row[]
-      rows += data[t].length
+      if (exportTables.includes(t)) rows += data[t].length
     }
+    const profiles = data.profiles ?? []
+    if (!exportTables.includes('profiles')) delete data.profiles
 
     // 使用者 → 公司對照（大部分資料表只記 owner_id / user_id）
     const userCompany = new Map<string, string>()
-    for (const p of data.profiles ?? []) if (p.company_id) userCompany.set(String(p.id), String(p.company_id))
+    for (const p of profiles) if (p.company_id) userCompany.set(String(p.id), String(p.company_id))
     const companyOf = (table: string, r: Row): string | null => {
       if (table === 'companies') return String(r.id)
       if (r.company_id) return String(r.company_id)
@@ -169,8 +187,15 @@ export async function runDbBackup(): Promise<{ ok: boolean; files?: string[]; ta
       sizeKb += Math.round(gz.length / 1024)
     }
 
-    // 1. 完整備份（整庫還原用）
-    await put('完整備份', `aigate-db-full-${stamp}.json.gz`, data, { scope: 'full' })
+    const count = exportTables.length
+    if (mode === 'incremental' && count === 0) {
+      await record({ table_counters: counters, last_status: '成功（增量）：無資料表變動，未產生檔案' })
+      return { ok: true, mode, files: [], tables: 0, rows: 0, sizeKb: 0, pruned: 0 }
+    }
+
+    // 1. 整庫檔（完整備份＝所有資料表；增量＝只有變動的資料表）
+    if (mode === 'full') await put('完整備份', `aigate-db-full-${stamp}.json.gz`, data, { scope: 'full' })
+    else await put('增量備份', `aigate-db-incr-${stamp}.json.gz`, data, { scope: 'incremental', base_full_at: settings.last_full_at })
 
     // 2. 依公司分檔（只含該公司的資料列）
     for (const c of targets) {
@@ -180,12 +205,20 @@ export async function runDbBackup(): Promise<{ ok: boolean; files?: string[]; ta
         if (own.length) payload[t] = own
       }
       const safe = c.name.replace(/[\\/:*?"<>|]/g, '_')
-      await put(safe, `aigate-db-${safe}-${stamp}.json.gz`, payload, { scope: 'company', company_id: c.id, company_name: c.name })
+      if (mode === 'incremental' && !Object.keys(payload).length) continue
+      const kind = mode === 'full' ? 'full' : 'incr'
+      await put(safe, `aigate-db-${safe}-${kind}-${stamp}.json.gz`, payload, { scope: 'company', mode, company_id: c.id, company_name: c.name })
     }
 
-    const count = (tables ?? []).length
-    await record({ folder_id: rootId, last_status: `成功：${count} 張表、${rows} 筆；公司 ${targets.length} 家`, last_file: files.join('、') })
-    return { ok: true, files, tables: count, rows, sizeKb, pruned }
+    const label = mode === 'full' ? '完整' : '增量'
+    await record({
+      folder_id: rootId,
+      table_counters: counters,
+      ...(mode === 'full' ? { last_full_at: now.toISOString() } : {}),
+      last_status: `成功（${label}）：${count} 張表、${rows} 筆；公司 ${targets.length} 家`,
+      last_file: files.join('、'),
+    })
+    return { ok: true, mode, files, tables: count, rows, sizeKb, pruned }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
     await record({ last_status: `失敗：${msg}` })

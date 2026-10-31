@@ -1,3 +1,4 @@
+import { createHash } from 'crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { findOrCreateOrder } from './orders'
 import { safeFetch } from '@/lib/ssrf'
@@ -84,6 +85,19 @@ export async function syncICalForSetting(settingId: string): Promise<SyncResult>
     return result
   }
 
+  // 事件內容與上次成功同步時相同 → 房況沒變，不重寫訂單與 blocked_dates。
+  // 比對解析後的事件而非原始文字：平台每次回應的 DTSTAMP 都會變。
+  const icalHash = createHash('sha256')
+    .update(JSON.stringify(vevents.map(e => [e.uid, e.start, e.end, e.summary, e.description])))
+    .digest('hex')
+  if (setting.last_ical_hash === icalHash && !setting.last_sync_error) {
+    await supabase.from('ical_settings').update({ last_synced_at: new Date().toISOString() }).eq('id', settingId)
+    return result
+  }
+
+  // 同一天以後出現的事件為準（與逐筆 upsert 時的覆蓋順序一致）
+  const wantedBlocks = new Map<string, string | null>()
+
   for (const ev of vevents) {
     const checkIn  = ev.start
     const checkOut = ev.end
@@ -136,28 +150,43 @@ export async function syncICalForSetting(settingId: string): Promise<SyncResult>
       }
     }
 
-    const dates = dateRange(checkIn, checkOut)
-    for (const date of dates) {
-      const { error: bdErr } = await supabase
-        .from('blocked_dates')
-        .upsert({
-          user_id:         setting.user_id,
-          property_id:     setting.property_id,
-          booking_id:      bookingId,
-          ical_setting_id: settingId,
-          date,
-          platform:        setting.platform,
-          reason:          'booking',
-        }, { onConflict: 'user_id,property_id,date,ical_setting_id' })
-
-      if (!bdErr) result.blocked++
-    }
+    for (const date of dateRange(checkIn, checkOut)) wantedBlocks.set(date, bookingId)
   }
+
+  // 只寫入新增或 booking_id 有變的日期，已存在且相同的不重寫
+  const { data: existingBlocks, error: exErr } = await supabase
+    .from('blocked_dates')
+    .select('date, booking_id')
+    .eq('user_id', setting.user_id)
+    .eq('property_id', setting.property_id)
+    .eq('ical_setting_id', settingId)
+  if (exErr) result.errors.push(`讀取既有房況失敗：${exErr.message}`)
+  const existing = new Map((existingBlocks ?? []).map((b: { date: string; booking_id: string | null }) => [b.date, b.booking_id]))
+  const toWrite = [...wantedBlocks]
+    .filter(([date, bookingId]) => exErr || !existing.has(date) || existing.get(date) !== bookingId)
+    .map(([date, bookingId]) => ({
+      user_id:         setting.user_id,
+      property_id:     setting.property_id,
+      booking_id:      bookingId,
+      ical_setting_id: settingId,
+      date,
+      platform:        setting.platform,
+      reason:          'booking',
+    }))
+  for (let i = 0; i < toWrite.length; i += 500) {
+    const { error: bdErr } = await supabase
+      .from('blocked_dates')
+      .upsert(toWrite.slice(i, i + 500), { onConflict: 'user_id,property_id,date,ical_setting_id' })
+    if (bdErr) result.errors.push(`房況寫入失敗：${bdErr.message}`)
+  }
+  result.blocked = wantedBlocks.size
 
   await supabase.from('ical_settings').update({
     last_synced_at:  new Date().toISOString(),
     last_sync_count: result.added + result.updated,
     last_sync_error: result.errors.length > 0 ? result.errors[0] : null,
+    // 有錯誤時不記雜湊，下次照常完整同步
+    last_ical_hash:  result.errors.length > 0 ? null : icalHash,
   }).eq('id', settingId)
 
   return result

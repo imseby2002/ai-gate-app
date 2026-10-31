@@ -1,6 +1,6 @@
 /**
  * GET /api/cron/db-backup（Vercel Cron，每日）
- * 全資料庫匯出至 Google Drive，細節見 src/lib/backup/db-backup.ts
+ * 每月一次完整備份、其餘每天只匯出有變動的資料表至 Google Drive，細節見 src/lib/backup/db-backup.ts
  */
 import { NextResponse } from 'next/server'
 import { runDbBackup } from '@/lib/backup/db-backup'
