@@ -1962,12 +1962,16 @@ function cleanReply(raw: string): string {
     .replace(/^THOUGHT[\s\S]*?\n\n(?=\S)/i, '')
     .replace(/^<think>[\s\S]*?<\/think>\s*/i, '')
     .replace(/^\*\*思考\*\*[\s\S]*?\n\n(?=\S)/i, '')
-  // Discard leading non-Chinese reasoning paragraphs, but only when Chinese content
+  // Discard leading English reasoning paragraphs, but only when Chinese content
   // exists (so a full English/Korean reply for a foreign customer is preserved).
+  // 只丟「完全沒有中日韓文字」的開頭段落：真實案例，AI 照入住流程模板回「* 房號：202 *大門密碼：…」，
+  // 舊判斷要求段落以中文字開頭，「*」「[圖片]」開頭的段落全被當成思考過程刪掉，客人只收到停車／早餐連結、拿不到密碼。
   const paragraphs = reply.split(/\n\n+/)
-  const CN_START = /^[一-鿿㐀-䶿！-￮　-〿]|^好的|^您好|^謝謝|^感謝|^請問|^抱歉|^很抱歉|^非常感謝/
-  const idx = paragraphs.findIndex(p => CN_START.test(p.trimStart()))
-  if (idx > 0) reply = paragraphs.slice(idx).join('\n\n')
+  const HAS_CJK = /[一-鿿㐀-䶿]/
+  const idx = paragraphs.findIndex(p => HAS_CJK.test(p))
+  if (idx > 0 && paragraphs.slice(0, idx).every(p => /[A-Za-z]{3,}/.test(p))) reply = paragraphs.slice(idx).join('\n\n')
+  // 模型偶爾把自我檢查的話寫進回覆開頭（真實案例：「一切符合指令。已收到您的匯款明細截圖！」）
+  reply = reply.replace(/^\s*(?:一切)?(?:均|皆)?符合(?:所有)?(?:指令|規則|要求)[。.!！]?\s*/, '')
   return reply.trim()
     .replace(/[^\n]*×\s*1\.\d+\s*=\s*[^\n]*/g, '')   // strip surcharge-multiplier lines
     // 網址後面緊接中文/全形標點卻沒有換行或空白，通訊軟體的超連結偵測會把後面的文字
