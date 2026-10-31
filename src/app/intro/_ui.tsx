@@ -88,6 +88,7 @@ export async function IntroFooter() {
       <span className="flex items-center gap-2"><Zap className="h-3.5 w-3.5" />{" "}{tr("AI GATE 行銷中心 · IMT")}</span>
       <Link href="/intro/features" className="hover:text-[#3f3a4d]">{tr("功能詳解")}</Link>
       <Link href="/intro/pricing" className="hover:text-[#3f3a4d]">{tr("方案比較")}</Link>
+      <Link href="/intro/enterprise" className="hover:text-[#3f3a4d]">{tr("企業方案")}</Link>
       <Link href="/privacy" className="hover:text-[#3f3a4d]">{tr("隱私權政策")}</Link>
     </footer>
   )
