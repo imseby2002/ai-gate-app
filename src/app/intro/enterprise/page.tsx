@@ -18,7 +18,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 const MODULE_GROUPS__ZH = [
-  { title: '據點與 ERP', items: ['POS 收銀與點餐機', '庫存與叫貨', '財務與損益', '人資與排班', '門市教練與行政事務'] },
+  { title: '據點與 ERP', items: ['POS 收銀與點餐機', '庫存與叫貨', '財務與損益', '人資與排班', '據點教練與行政事務'] },
   { title: '行銷', items: ['行銷流水線', '圖片與影片生成', '社群內容與發文', '潛在客戶開發工具'] },
   { title: '客服', items: ['AI 客服自動回覆', '客戶記憶', '表單整批處理', '多平台訊息整合'] },
   { title: 'AI 工具', items: ['AI 對話與 RAG 助理', '智慧圓桌', 'AI Agent', '法律合規 AI', 'Office 與職場助手'] },
