@@ -21,9 +21,9 @@ interface Bubble {
   image?: string
 }
 
-const THREAD_PAGE = 300
+const THREAD_PAGE = 50
 const AROUND_BEFORE = 50
-const AROUND_AFTER = 250
+const AROUND_AFTER = 50
 const CUSTOMER_COLS = 'platform, from_id, name, stage, message_count, last_message_at, facts'
 interface CustomerRow {
   platform: string
@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
 
   // ── 單一對話 thread ────────────────────────────────────────────────────────
   if (to && platform) {
-    // 預設載入最新 300 則；before＝往前載入更早的訊息；around＝從搜尋結果開啟，載入該則訊息前後
+    // 預設載入最新 50 則（每次開啟或送出都會重載，筆數影響 Supabase 流量）；before＝往前載入更早的訊息；around＝從搜尋結果開啟，載入該則訊息前後
     const before = sp.get('before')
     const around = sp.get('around')
     const base = () => supabase
