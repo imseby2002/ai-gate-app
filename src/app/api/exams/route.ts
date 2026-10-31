@@ -3,7 +3,7 @@
  * POST /api/exams — 建立考卷草稿（公司負責人／IT／該部門負責人）
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getDeptAccess, canManageDept } from '@/lib/company/dept-access'
+import { getDeptAccess, canManageDept, managedDepts } from '@/lib/company/dept-access'
 import { EXAM_COLUMNS, parseExamMeta, type ExamRow } from '@/lib/exams/server'
 
 export const dynamic = 'force-dynamic'
@@ -44,8 +44,8 @@ export async function GET() {
 
   return NextResponse.json({
     exams,
-    isCompanyAdmin: access.isCompanyAdmin,
-    managedUnits: access.isCompanyAdmin ? null : access.isManager ? access.units : [],
+    isCompanyAdmin: access.canManageAll,
+    managedUnits: managedDepts(access),
   })
 }
 
