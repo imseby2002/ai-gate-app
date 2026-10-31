@@ -813,5 +813,18 @@
 "200 點": "200 credits",
 "400 點": "400 credits",
 "可加購": "Available as add-on",
-"不含客製，可按 $30／小時加購": "No customization included; buy hours at $30/hour"
+"不含客製，可按 $30／小時加購": "No customization included; buy hours at $30/hour",
+"每個據點每月約 ${n}": "About ${n} per location per month",
+"每位使用者約 ${n}": "about ${n} per user",
+"年繳 ${n}（只收 {m} 個月）": "Yearly ${n} (pay for {m} months)",
+"年繳 ${n}": "Yearly ${n}",
+"不另收費的服務": "Included at no extra cost",
+"未用完的客製工時可留到下個月（最多 10 小時）": "Unused custom hours carry over to next month (up to 10 hours)",
+"新功能優先試用": "Early access to new features",
+"每季一次營運檢討會議（30 分鐘線上）": "Quarterly business review (30-minute online call)",
+"每月用量與成本報表": "Monthly usage and cost report",
+"首月導入協助（設定與教育訓練）": "First-month onboarding (setup and training)",
+"資料備份與匯出保證": "Data backup and export guarantee",
+"為什麼選 MAX：": "Why MAX: ",
+"用 PRO 加購到 MAX 的內含量（30 個據點、100 人、10 小時客製、400 點）要 ${n}，比 MAX 的 ${m} 還貴；MAX 另外還有專屬新功能、自有網域、專人窗口與較低的扣點倍率。": "Topping up PRO to MAX’s amounts (30 locations, 100 users, 10 custom hours, 400 credits) costs ${n}, more than MAX at ${m}. MAX also adds features built for you, your own domain, a dedicated contact and a lower credit rate."
 }

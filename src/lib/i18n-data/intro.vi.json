@@ -813,5 +813,18 @@
 "200 點": "200 điểm",
 "400 點": "400 điểm",
 "可加購": "Có thể mua thêm",
-"不含客製，可按 $30／小時加購": "Không gồm tùy chỉnh; mua thêm $30/giờ"
+"不含客製，可按 $30／小時加購": "Không gồm tùy chỉnh; mua thêm $30/giờ",
+"每個據點每月約 ${n}": "Khoảng ${n} mỗi chi nhánh mỗi tháng",
+"每位使用者約 ${n}": "khoảng ${n} mỗi người dùng",
+"年繳 ${n}（只收 {m} 個月）": "Trả năm ${n} (chỉ tính {m} tháng)",
+"年繳 ${n}": "Trả năm ${n}",
+"不另收費的服務": "Miễn phí kèm theo",
+"未用完的客製工時可留到下個月（最多 10 小時）": "Giờ tùy chỉnh chưa dùng được chuyển sang tháng sau (tối đa 10 giờ)",
+"新功能優先試用": "Dùng thử tính năng mới trước",
+"每季一次營運檢討會議（30 分鐘線上）": "Họp đánh giá hằng quý (30 phút trực tuyến)",
+"每月用量與成本報表": "Báo cáo sử dụng và chi phí hằng tháng",
+"首月導入協助（設定與教育訓練）": "Hỗ trợ triển khai tháng đầu (cài đặt và đào tạo)",
+"資料備份與匯出保證": "Đảm bảo sao lưu và xuất dữ liệu",
+"為什麼選 MAX：": "Vì sao chọn MAX: ",
+"用 PRO 加購到 MAX 的內含量（30 個據點、100 人、10 小時客製、400 點）要 ${n}，比 MAX 的 ${m} 還貴；MAX 另外還有專屬新功能、自有網域、專人窗口與較低的扣點倍率。": "Mua thêm cho PRO để bằng mức của MAX (30 chi nhánh, 100 người dùng, 10 giờ tùy chỉnh, 400 điểm) tốn ${n}, đắt hơn MAX ${m}. MAX còn có tính năng riêng, tên miền riêng, người phụ trách riêng và tỷ lệ trừ điểm thấp hơn."
 }

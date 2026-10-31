@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { ENTERPRISE_TIER_DEFS, isEnterpriseTier } from '@/lib/company/enterprise-plans'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getUserCompany } from '@/lib/company/membership'
@@ -36,7 +37,7 @@ export async function POST(req: NextRequest) {
   const admin = createAdminClient()
   const [{ data: companyRow }, { data: currentSub }] = await Promise.all([
     admin.from('companies').select('enabled_modules').eq('id', company.companyId).single(),
-    admin.from('company_subscriptions').select('erp_seats, retail_stores, custom_domain, enterprise, enterprise_monthly_usd').eq('company_id', company.companyId).maybeSingle(),
+    admin.from('company_subscriptions').select('erp_seats, retail_stores, custom_domain, enterprise, enterprise_monthly_usd, enterprise_tier').eq('company_id', company.companyId).maybeSingle(),
   ])
   const pricingConfig = {
     modules: companyRow?.enabled_modules ?? [],
@@ -50,9 +51,12 @@ export async function POST(req: NextRequest) {
     // 專屬客製-企業版：以管理者填入的議價月費計價
     const fee = Number(currentSub.enterprise_monthly_usd ?? 0)
     if (fee <= 0) return NextResponse.json({ error: '企業版月費尚未設定，請聯繫我們' }, { status: 400 })
-    lines = [{ label: '專屬客製-企業版', usd: fee }]
-    totalUsd = cycle === 'yearly' ? fee * YEARLY_MONTHS : fee
-    label = `專屬客製-企業版（${cycleLabel}）`
+    // 已指定等級：年繳月數依等級（CORE 12、PRO 11、MAX 10）；未指定等級沿用公司方案的年繳月數
+    const tierDef = isEnterpriseTier(currentSub.enterprise_tier) ? ENTERPRISE_TIER_DEFS[currentSub.enterprise_tier] : null
+    const name = tierDef ? tierDef.label.zh : '專屬客製-企業版'
+    lines = [{ label: name, usd: fee }]
+    totalUsd = cycle === 'yearly' ? fee * (tierDef?.yearlyMonths ?? YEARLY_MONTHS) : fee
+    label = `${name}（${cycleLabel}）`
   } else {
     ({ lines, totalUsd } = calcCompanyPrice(pricingConfig, cycle))
     label = `公司版（${cycleLabel}）`

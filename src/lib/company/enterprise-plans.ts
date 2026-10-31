@@ -37,8 +37,14 @@ export interface EnterpriseTierDef {
   maxStores: number | null
   includedSeats: number
   maxSeats: number | null
-  /** 每月內含客製工時（小時），未用完不累積 */
+  /** 每月內含客製工時（小時） */
   customHours: number
+  /** 上個月未用完的客製工時可留到本月的上限（小時）；0 = 不累積 */
+  rolloverHours: number
+  /** 年繳收幾個月的月費 */
+  yearlyMonths: number
+  /** 不另收費的服務（方案頁列出） */
+  perks: string[]
   /** 每月內含 AI 點數（1 點 = US$1） */
   points: number
   /** 扣點倍率：原廠官方單價 × multiplier */
@@ -54,16 +60,22 @@ export const ENTERPRISE_TIER_DEFS: Record<EnterpriseTier, EnterpriseTierDef> = {
     label: { zh: '企業 CORE（企業基礎版）', en: 'Enterprise CORE', vi: 'Doanh nghiệp CORE' },
     includedStores: 5, maxStores: 10, includedSeats: 20, maxSeats: 30,
     customHours: 0, points: 60, multiplier: 1.4, customization: false, subdomain: false, customDomain: false,
+    rolloverHours: 0, yearlyMonths: 12,
+    perks: ['資料備份與匯出保證'],
   },
   pro: {
     label: { zh: '企業 PRO（企業進階版）', en: 'Enterprise PRO', vi: 'Doanh nghiệp PRO' },
     includedStores: 15, maxStores: 30, includedSeats: 50, maxSeats: 100,
     customHours: 4, points: 200, multiplier: 1.3, customization: 'modify', subdomain: true, customDomain: false,
+    rolloverHours: 0, yearlyMonths: 11,
+    perks: ['每月用量與成本報表', '資料備份與匯出保證'],
   },
   max: {
     label: { zh: '企業 MAX（企業專屬版）', en: 'Enterprise MAX', vi: 'Doanh nghiệp MAX' },
     includedStores: 30, maxStores: null, includedSeats: 100, maxSeats: null,
     customHours: 10, points: 400, multiplier: 1.2, customization: 'full', subdomain: true, customDomain: true,
+    rolloverHours: 10, yearlyMonths: 10,
+    perks: ['未用完的客製工時可留到下個月（最多 10 小時）', '新功能優先試用', '每季一次營運檢討會議（30 分鐘線上）', '每月用量與成本報表', '首月導入協助（設定與教育訓練）', '資料備份與匯出保證'],
   },
 }
 
@@ -135,4 +147,16 @@ export function calcEnterpriseMonthlyPrice(tier: EnterpriseTier, usage: Enterpri
   if (maxSeats != null && seats > maxSeats) overCap.push(`人數 ${seats} 人超過上限 ${maxSeats} 人`)
 
   return { lines, monthlyUsd: lines.reduce((s, l) => s + l.usd, 0), overCap }
+}
+
+/** 以低一級加購到高一級的內含量要花多少（據點、人數、客製工時、點數皆照單價），用來說明升級划算 */
+export function calcAddOnCostToReach(from: EnterpriseTier, to: EnterpriseTier): number {
+  const a = ENTERPRISE_TIER_DEFS[from]
+  const b = ENTERPRISE_TIER_DEFS[to]
+  const base = calcEnterpriseMonthlyPrice(from, { stores: a.includedStores, seats: a.includedSeats }).monthlyUsd
+  return base
+    + Math.max(0, b.includedStores - a.includedStores) * RETAIL_STORE_USD
+    + Math.max(0, b.includedSeats - a.includedSeats) * ERP_EXTRA_SEAT_USD
+    + Math.max(0, b.customHours - a.customHours) * ENTERPRISE_CUSTOM_HOUR_USD
+    + Math.max(0, b.points - a.points)
 }

@@ -5,14 +5,15 @@ import { ENTERPRISE_FEEDBACK_DEFAULT_HOURS, ENTERPRISE_TIER_DEFS, isEnterpriseTi
 // 錯誤回報（bug/ai_error）一律免費；功能新增/調整（feature/text_change）預設要
 // 計費。公司的每月免費額度，優先順序：
 // 1. feedback_free_features=true 或未指定等級的舊企業版：完全免費、不限次數（最優先）
-//    已指定等級的企業版改以「每月客製工時」計算（CORE 0、PRO 4、MAX 10 小時；每件未填實際工時以 1 小時計）
+//    已指定等級的企業版改以「每月客製工時」計算（CORE 0、PRO 4、MAX 10 小時；每件未填實際工時以 1 小時計；MAX 上月未用完可留到本月，最多 10 小時）
 // 2. companies.free_feature_quota_monthly：手動覆寫的每月次數（有設定就蓋過方案預設）
 // 3. 公司會員方案（company_subscriptions，free/core/pro/max）的預設每月次數
 const PAID_TYPES = new Set(['feature', 'text_change'])
 
-function taipeiMonthStart(): string {
+function taipeiMonthStart(monthOffset = 0): string {
   const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Taipei' }))
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01T00:00:00+08:00`
+  const d = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01T00:00:00+08:00`
 }
 
 export interface FeedbackBillingResult {
@@ -45,15 +46,25 @@ export async function resolveFeedbackBilling(
     if (!isEnterpriseTier(sub?.enterprise_tier)) return { isPaid: false, initialStatus: 'pending' }
 
     // 已指定等級：本月已用工時（免費件，未填實際工時以預設時數計）＋本件預設時數 不超過內含工時才免費
-    const limit = ENTERPRISE_TIER_DEFS[sub.enterprise_tier].customHours
-    const { data: rows } = await admin
-      .from('user_feedback')
-      .select('custom_hours')
-      .eq('company_id', companyId)
-      .in('type', ['feature', 'text_change'])
-      .eq('is_paid', false)
-      .gte('created_at', taipeiMonthStart())
-    const used = (rows ?? []).reduce((s, r) => s + Number(r.custom_hours ?? ENTERPRISE_FEEDBACK_DEFAULT_HOURS), 0)
+    const def = ENTERPRISE_TIER_DEFS[sub.enterprise_tier]
+    const hoursSince = async (from: string, to?: string) => {
+      let q = admin
+        .from('user_feedback')
+        .select('custom_hours')
+        .eq('company_id', companyId)
+        .in('type', ['feature', 'text_change'])
+        .eq('is_paid', false)
+        .gte('created_at', from)
+      if (to) q = q.lt('created_at', to)
+      const { data: rows } = await q
+      return (rows ?? []).reduce((s, r) => s + Number(r.custom_hours ?? ENTERPRISE_FEEDBACK_DEFAULT_HOURS), 0)
+    }
+    const used = await hoursSince(taipeiMonthStart())
+    // 上個月未用完的工時可留到本月（MAX 最多 10 小時）
+    const carried = def.rolloverHours > 0
+      ? Math.min(def.rolloverHours, Math.max(0, def.customHours - await hoursSince(taipeiMonthStart(-1), taipeiMonthStart())))
+      : 0
+    const limit = def.customHours + carried
     if (used + ENTERPRISE_FEEDBACK_DEFAULT_HOURS <= limit) {
       return { isPaid: false, initialStatus: 'pending', quota: { used: used + ENTERPRISE_FEEDBACK_DEFAULT_HOURS, limit, unit: 'hours' } }
     }
