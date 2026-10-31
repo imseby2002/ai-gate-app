@@ -5,7 +5,7 @@
  *   multipart：department、title、file 或 text（舊版相容）
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getDeptAccess, canManageDept } from '@/lib/company/dept-access'
+import { getDeptAccess, canManageDept, managedDepts } from '@/lib/company/dept-access'
 import { extractFileText } from '@/lib/knowledge/extract'
 import { KNOWLEDGE_BUCKET } from '@/lib/knowledge/constants'
 
@@ -29,8 +29,8 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     docs: (data ?? []).map(d => ({ ...d, editable: canManageDept(access, d.department as string) })),
-    isCompanyAdmin: access.isCompanyAdmin,
-    managedUnits: access.isCompanyAdmin ? null : access.isManager ? access.units : [],
+    isCompanyAdmin: access.canManageAll,
+    managedUnits: managedDepts(access),
   })
 }
 
