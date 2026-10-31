@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
       `CS 方案：${plan}`,
       `聯絡方式：${contact || '（未留）'}`,
       `內容：${note}`,
-      ...(isPaid && quota ? [`本月免費額度已用完：${quota.used}/${quota.limit}`] : []),
+      ...(isPaid && quota ? [quota.unit === 'hours' ? `本月客製工時已用完：${quota.used}/${quota.limit} 小時` : `本月免費額度已用完：${quota.used}/${quota.limit}`] : []),
       isPaid
         ? '此項目需計費，請至後台審核／報價／核准或拒絕：https://www.im-tourist.com/admin/feedback'
         : 'AI 將自動處理，完成後請至後台確認合併：https://www.im-tourist.com/admin/feedback',

@@ -23,6 +23,8 @@ export function isEnterpriseTier(v: unknown): v is EnterpriseTier {
 export const ENTERPRISE_BUNDLE_DISCOUNT = 0.1
 export const ENTERPRISE_CUSTOM_HOUR_USD = 30
 export const ENTERPRISE_LEAD_OPS_HOUR_USD = 10
+/** 意見反映（功能新增／調整）未填實際工時時，每件以幾小時計入每月客製工時 */
+export const ENTERPRISE_FEEDBACK_DEFAULT_HOURS = 1
 
 export interface EnterpriseTierDef {
   /** 中文／英文／越文名稱 */

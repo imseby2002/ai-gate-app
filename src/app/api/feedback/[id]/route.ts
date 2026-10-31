@@ -44,6 +44,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (body.title !== undefined)             update.title = body.title
   if (body.description !== undefined)       update.description = body.description
   if (body.price_quote_usd !== undefined)   update.price_quote_usd = body.price_quote_usd
+  if (body.custom_hours !== undefined) {
+    const h = body.custom_hours === null || body.custom_hours === '' ? null : Number(body.custom_hours)
+    if (h !== null && !(h >= 0)) return NextResponse.json({ error: '客製工時需為 0 以上的數字' }, { status: 400 })
+    update.custom_hours = h
+  }
 
   // 核准計費項目：awaiting_approval → pending，讓它跟免費項目一樣可以送去跑 AI
   if (body.approve === true) update.status = 'pending'
