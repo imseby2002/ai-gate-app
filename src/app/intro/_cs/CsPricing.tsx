@@ -5,6 +5,7 @@ import { Check } from 'lucide-react'
 import { CsDarkHeader, CsFinalCta, CsFooter, CsGradText, CS_GRAD } from './ui'
 import { CS_PLANS, PLAN_NAME, PLAN_FIT as PLAN_FIT__ZH, PLAN_HIGHLIGHTS as PLAN_HIGHLIGHTS__ZH, COMPARISON_GROUPS as COMPARISON_GROUPS__ZH, CS_FEATURE_REQUEST_PRICING, planPrice, yearlySavePct } from './data'
 import { introTr, trDeep } from '@/lib/i18n-data/server'
+import { EnterprisePricing } from '../pricing/EnterprisePricing'
 
 export const csPricingMetadata: Metadata = {
   title: '方案價格｜IMT 智能客服',
@@ -137,6 +138,8 @@ export async function CsPricing() {
         </div>
         <Link href="/intro/features" className="mt-6 inline-block font-bold text-[14px] text-[#0d8f8e] hover:underline">{tr("看每個功能的詳細說明 →")}</Link>
       </section>
+
+      <EnterprisePricing grad={CS_GRAD} />
 
       <CsFinalCta title={tr("先免費用，覺得好再升級")} sub={tr("FREE 方案即可串接 3 個平台，不限訊息則數。")} />
       <CsFooter />

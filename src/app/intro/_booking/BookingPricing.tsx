@@ -5,6 +5,7 @@ import { Check } from 'lucide-react'
 import { BkDarkHeader, BkFinalCta, BkFooter, BkGradText, BK_GRAD } from './ui'
 import { BK_PLANS, PLAN_NAME, PLAN_FIT as PLAN_FIT__ZH, PLAN_HIGHLIGHTS as PLAN_HIGHLIGHTS__ZH, COMPARISON_GROUPS as COMPARISON_GROUPS__ZH, planPrice, yearlySavePct } from './data'
 import { introTr, trDeep } from '@/lib/i18n-data/server'
+import { EnterprisePricing } from '../pricing/EnterprisePricing'
 
 export const bookingPricingMetadata: Metadata = {
   title: '方案比較｜IMT 智能訂房系統',
@@ -129,6 +130,8 @@ export async function BookingPricing() {
         </div>
         <Link href="/intro/features" className="mt-6 inline-block font-bold text-[14px] text-[#c2410c] hover:underline">{tr("看每個功能的詳細說明 →")}</Link>
       </section>
+
+      <EnterprisePricing grad={BK_GRAD} />
 
       <BkFinalCta title={tr("先免費用，覺得好再升級")} sub={tr("FREE 方案含 1 房源、官網 AI 設計與 iCal 同步。")} />
       <BkFooter />
