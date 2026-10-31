@@ -1,7 +1,8 @@
 // 企業方案三級定價（美金／月）：企業 CORE／PRO／MAX。純常數與計算，client／server 皆可 import。
 // 平台費 = 公司方案全模組單買加總（含該級內含門市與 ERP 人數）× 0.9，再加客製工時與 AI 點數池。
 // 超出內含量的門市與人數照單買單價加收、不打折；CORE／PRO 有上限，MAX 不限。
-// 沒有門市的企業不收門市零售包。三級皆為公開定價，不再單獨報價；超過 MAX 以加值服務加購。
+// 月費固定含該級門市額度；門市未用滿時，每 1 家換成 ENTERPRISE_SEATS_PER_STORE 位 ERP 使用者（依單價 $10 ÷ $2）。
+// 三級皆為公開定價，不再單獨報價；超過 MAX 以加值服務加購。
 import {
   COMPANY_BASE_USD,
   COMPANY_MODULE_PRICES_USD,
@@ -25,6 +26,8 @@ export const ENTERPRISE_CUSTOM_HOUR_USD = 30
 export const ENTERPRISE_LEAD_OPS_HOUR_USD = 10
 /** 意見反映（功能新增／調整）未填實際工時時，每件以幾小時計入每月客製工時 */
 export const ENTERPRISE_FEEDBACK_DEFAULT_HOURS = 1
+/** 未用滿的門市額度，每 1 家可換成幾位 ERP 使用者（門市 $10 ÷ 人數 $2） */
+export const ENTERPRISE_SEATS_PER_STORE = RETAIL_STORE_USD / ERP_EXTRA_SEAT_USD
 
 export interface EnterpriseTierDef {
   /** 中文／英文／越文名稱 */
@@ -88,7 +91,7 @@ function erpUsd(seats: number): number {
 }
 
 export interface EnterpriseUsage {
-  /** 實際門市數；0 = 沒有門市（不收門市零售包） */
+  /** 實際門市數；未用滿的門市額度會換成人數 */
   stores: number
   /** 實際 ERP 使用人數 */
   seats: number
@@ -105,27 +108,31 @@ export function calcEnterpriseMonthlyPrice(tier: EnterpriseTier, usage: Enterpri
   const def = ENTERPRISE_TIER_DEFS[tier]
   const stores = Math.max(0, Math.floor(usage.stores))
   const seats = Math.max(0, Math.floor(usage.seats))
-  const hasStores = stores > 0
+  // 門市未用滿的額度換成人數：內含人數與人數上限都加上換算的人數
+  const unusedStores = Math.max(0, def.includedStores - stores)
+  const bonusSeats = unusedStores * ENTERPRISE_SEATS_PER_STORE
+  const includedSeats = def.includedSeats + bonusSeats
+  const maxSeats = def.maxSeats == null ? null : def.maxSeats + bonusSeats
 
   const listUsd = COMPANY_BASE_USD + MODULES_USD + erpUsd(def.includedSeats)
-    + (hasStores ? def.includedStores * RETAIL_STORE_USD : 0)
+    + def.includedStores * RETAIL_STORE_USD
     + (def.customDomain ? CUSTOM_DOMAIN_USD : 0)
   const platformUsd = Math.round(listUsd * (1 - ENTERPRISE_BUNDLE_DISCOUNT))
 
   const lines: CompanyPriceLine[] = [
-    { label: `平台費（全模組單買 $${listUsd} × ${1 - ENTERPRISE_BUNDLE_DISCOUNT}${hasStores ? `，含 ${def.includedStores} 家門市` : '，無門市'}、${def.includedSeats} 人）`, usd: platformUsd, key: 'enterprise_platform' },
+    { label: `平台費（全模組單買 $${listUsd} × ${1 - ENTERPRISE_BUNDLE_DISCOUNT}，含 ${def.includedStores} 家門市、${def.includedSeats} 人${bonusSeats > 0 ? `；未用 ${unusedStores} 家門市換 ${bonusSeats} 人，共 ${includedSeats} 人` : ''}）`, usd: platformUsd, key: 'enterprise_platform' },
   ]
   if (def.customHours > 0) lines.push({ label: `客製開發 ${def.customHours} 小時 × $${ENTERPRISE_CUSTOM_HOUR_USD}`, usd: def.customHours * ENTERPRISE_CUSTOM_HOUR_USD, key: 'enterprise_hours' })
   lines.push({ label: `AI 點數池 ${def.points} 點（扣點 × ${def.multiplier}）`, usd: def.points, key: 'enterprise_points' })
 
-  const extraStores = hasStores ? Math.max(0, stores - def.includedStores) : 0
+  const extraStores = Math.max(0, stores - def.includedStores)
   if (extraStores > 0) lines.push({ label: `超出門市 ${extraStores} 家 × $${RETAIL_STORE_USD}`, usd: extraStores * RETAIL_STORE_USD, key: 'enterprise_extra_stores' })
-  const extraSeats = Math.max(0, seats - def.includedSeats)
+  const extraSeats = Math.max(0, seats - includedSeats)
   if (extraSeats > 0) lines.push({ label: `超出人數 ${extraSeats} 人 × $${ERP_EXTRA_SEAT_USD}`, usd: extraSeats * ERP_EXTRA_SEAT_USD, key: 'enterprise_extra_seats' })
 
   const overCap: string[] = []
   if (def.maxStores != null && stores > def.maxStores) overCap.push(`門市 ${stores} 家超過上限 ${def.maxStores} 家`)
-  if (def.maxSeats != null && seats > def.maxSeats) overCap.push(`人數 ${seats} 人超過上限 ${def.maxSeats} 人`)
+  if (maxSeats != null && seats > maxSeats) overCap.push(`人數 ${seats} 人超過上限 ${maxSeats} 人`)
 
   return { lines, monthlyUsd: lines.reduce((s, l) => s + l.usd, 0), overCap }
 }

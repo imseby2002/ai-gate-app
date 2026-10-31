@@ -763,7 +763,6 @@
 "優先回覆": "Priority replies",
 "專人窗口": "Dedicated contact person",
 "註冊後聯絡我們開通": "Sign up, then contact us to activate",
-"超出含量的門市每家 $10、ERP 使用者每人 $2；CORE、PRO 有上限。沒有門市的企業不收門市費用。以美元計價，未含稅。": "Extra stores are $10 each and extra ERP users $2 each; CORE and PRO have limits. Companies without stores pay no store fee. Prices in USD, excluding tax.",
 "加值服務": "Add-ons",
 "單價": "Unit price",
 "AdsPower 代管：成員席次": "Managed AdsPower: member seats",
@@ -808,5 +807,6 @@
 "不提供": "Not available",
 "4 小時": "4 hours",
 "10 小時": "10 hours",
-"依工時": "Billed hourly"
+"依工時": "Billed hourly",
+"超出含量的門市每家 $10、ERP 使用者每人 $2；CORE、PRO 有上限。門市沒用滿時，每 1 家可換 5 位使用者（沒有門市的企業可多用人數）。以美元計價，未含稅。": "Extra stores are $10 each and extra ERP users $2 each; CORE and PRO have limits. Each unused store allowance converts to 5 extra users (companies without stores get more users). Prices in USD, excluding tax."
 }

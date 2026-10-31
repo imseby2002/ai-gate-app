@@ -763,7 +763,6 @@
 "優先回覆": "Phản hồi ưu tiên",
 "專人窗口": "Người phụ trách riêng",
 "註冊後聯絡我們開通": "Đăng ký rồi liên hệ để kích hoạt",
-"超出含量的門市每家 $10、ERP 使用者每人 $2；CORE、PRO 有上限。沒有門市的企業不收門市費用。以美元計價，未含稅。": "Cửa hàng vượt mức $10/cửa hàng, người dùng ERP vượt mức $2/người; CORE và PRO có giới hạn. Doanh nghiệp không có cửa hàng không tính phí cửa hàng. Giá tính bằng USD, chưa gồm thuế.",
 "加值服務": "Dịch vụ bổ sung",
 "單價": "Đơn giá",
 "AdsPower 代管：成員席次": "AdsPower quản lý: chỗ thành viên",
@@ -808,5 +807,6 @@
 "不提供": "Không có",
 "4 小時": "4 giờ",
 "10 小時": "10 giờ",
-"依工時": "Tính theo giờ"
+"依工時": "Tính theo giờ",
+"超出含量的門市每家 $10、ERP 使用者每人 $2；CORE、PRO 有上限。門市沒用滿時，每 1 家可換 5 位使用者（沒有門市的企業可多用人數）。以美元計價，未含稅。": "Cửa hàng vượt mức $10/cửa hàng, người dùng ERP vượt mức $2/người; CORE và PRO có giới hạn. Mỗi suất cửa hàng chưa dùng đổi được 5 người dùng (doanh nghiệp không có cửa hàng được dùng thêm người). Giá tính bằng USD, chưa gồm thuế."
 }

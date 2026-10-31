@@ -62,7 +62,7 @@ export async function EnterprisePricing({ grad }: { grad: string }) {
           )
         })}
       </div>
-      <p className="mt-3 text-[13px] text-[#6b6480]">{tr('超出含量的門市每家 $10、ERP 使用者每人 $2；CORE、PRO 有上限。沒有門市的企業不收門市費用。以美元計價，未含稅。')}</p>
+      <p className="mt-3 text-[13px] text-[#6b6480]">{tr('超出含量的門市每家 $10、ERP 使用者每人 $2；CORE、PRO 有上限。門市沒用滿時，每 1 家可換 5 位使用者（沒有門市的企業可多用人數）。以美元計價，未含稅。')}</p>
 
       <h3 className="mt-8 mb-3 text-[18px] font-black">{tr('加值服務')}</h3>
       <div className="overflow-x-auto rounded-2xl border border-[#e6e2ee] bg-white">
