@@ -4,6 +4,7 @@ import { Check } from 'lucide-react'
 import { PLAN_CARDS as PLAN_CARDS__ZH, COMPARISON_ROWS as COMPARISON_ROWS__ZH } from '@/lib/marketing/plan-compare'
 import { GRAD, DarkHeader, FinalCta, IntroFooter, GradText } from '../_ui'
 import { introTr, trDeep } from '@/lib/i18n-data/server'
+import { EnterprisePricing } from './EnterprisePricing'
 
 export const marketingPricingMetadata: Metadata = {
   title: '方案比較｜AI GATE 行銷中心',
@@ -118,6 +119,8 @@ export async function MarketingPricing() {
           ))}
         </div>
       </section>
+
+      <EnterprisePricing grad={GRAD} />
 
       <FinalCta title={<>{tr("不用現在決定，")}<br />{tr("先免費用看看。")}</>} />
       <IntroFooter />

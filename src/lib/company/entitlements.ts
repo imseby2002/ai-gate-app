@@ -2,6 +2,8 @@
 // 的既有慣例（唯一權威判斷點、free/core/pro/max、一次性付款、無自動續訂、到期
 // 即視同 free），但 key 是 company_id——CS／訂房方案目前都掛在「個人」帳號上，
 // 公司實體本身原本沒有自己的方案。
+import type { EnterpriseTier } from './enterprise-plans'
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SupabaseClient = any
 
@@ -83,8 +85,10 @@ export async function hasCompanyModuleGrant(ownerId: string, moduleId: string): 
 
 export interface CompanyBillingContext {
   companyId: string
-  /** 專屬客製-企業版：不扣點、CHAT 完全開放、功能修改不限次數 */
+  /** 專屬客製-企業版：CHAT 完全開放、功能修改不限次數 */
   enterprise: boolean
+  /** 企業方案等級；有值時改用點數池（公司錢包）扣點並套用該級扣點倍率，null = 舊企業版（不扣點） */
+  enterpriseTier: EnterpriseTier | null
 }
 
 export interface CompanyGrantInfo {

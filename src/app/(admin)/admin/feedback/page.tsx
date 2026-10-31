@@ -28,6 +28,7 @@ interface Feedback {
   contact: string | null
   is_paid: boolean
   price_quote_usd: number | null
+  custom_hours?: number | null
   ai_verdict?: { done: boolean; pr_number: number | null; pr_url: string | null; evidence: string; checked_at: string } | null
   profiles?: { email: string; full_name: string | null }
   companies?: { id: string; name: string } | { id: string; name: string }[] | null
@@ -68,6 +69,7 @@ export default function AdminFeedbackPage() {
   const [notes, setNotes]             = useState<Record<string, string>>({})
   const [expanded, setExpanded]       = useState<string | null>(null)
   const [priceInputs, setPriceInputs] = useState<Record<string, string>>({})
+  const [hoursInputs, setHoursInputs] = useState<Record<string, string>>({})
   const [editTitle, setEditTitle]     = useState<Record<string, string>>({})
   const [editDesc, setEditDesc]       = useState<Record<string, string>>({})
   const [approving, setApproving]     = useState<string | null>(null)
@@ -122,6 +124,20 @@ export default function AdminFeedbackPage() {
       body: JSON.stringify({ status }),
     })
     setFeedbacks(prev => prev.map(f => f.id === id ? { ...f, status: status as FbStatus } : f))
+  }
+
+  // 儲存實際客製工時（已指定等級的企業版以此計算每月客製工時；空白 = 依預設 1 小時計）
+  async function saveHours(id: string) {
+    const raw = hoursInputs[id]
+    if (raw === undefined) return
+    const value = raw.trim() === '' ? null : Number(raw)
+    const res = await fetch(`/api/feedback/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ custom_hours: value }),
+    })
+    if (!res.ok) { alert((await res.json().catch(() => ({}))).error ?? '工時儲存失敗'); return }
+    setFeedbacks(prev => prev.map(f => f.id === id ? { ...f, custom_hours: value } : f))
   }
 
   // 儲存管理者備註
@@ -445,6 +461,20 @@ export default function AdminFeedbackPage() {
                     }`}>
                       {fb.is_paid ? `💰 需計費${fb.price_quote_usd != null ? ` $${fb.price_quote_usd}` : ''}` : '🆓 免費額度'}
                     </span>
+                    {(fb.type === 'feature' || fb.type === 'text_change') && (
+                      <label className="flex items-center gap-1 text-[11px] text-slate-600 border border-slate-200 rounded-md px-2 py-0.5 bg-white">
+                        客製工時
+                        <input
+                          type="number" min={0} step="0.5"
+                          value={hoursInputs[fb.id] ?? (fb.custom_hours ?? '')}
+                          onChange={e => setHoursInputs(p => ({ ...p, [fb.id]: e.target.value }))}
+                          onBlur={() => saveHours(fb.id)}
+                          placeholder="1"
+                          className="w-12 text-[11px] font-mono focus:outline-none"
+                        />
+                        小時
+                      </label>
+                    )}
                   </div>
 
                   <span className="text-xs text-slate-500 font-mono">

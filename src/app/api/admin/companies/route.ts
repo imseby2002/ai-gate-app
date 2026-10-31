@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { validateCompanySlug } from '@/lib/company/subdomain'
+import { isEnterpriseTier } from '@/lib/company/enterprise-plans'
 import { loadAdminCompanyList } from '@/lib/company/admin-list'
 
 async function checkIsAdmin() {
@@ -138,7 +139,7 @@ export async function PATCH(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { id, name, enabledModules, bnbOwnerId, ownerId, itId, feedbackFree, freeFeatureQuotaMonthly, plan, erpSeats, retailStores, customDomain, creditTopUpUsd, slug, enterprise, enterpriseMonthlyUsd, costAlertRatio } = body as {
+    const { id, name, enabledModules, bnbOwnerId, ownerId, itId, feedbackFree, freeFeatureQuotaMonthly, plan, erpSeats, retailStores, customDomain, creditTopUpUsd, slug, enterprise, enterpriseMonthlyUsd, enterpriseTier, costAlertRatio } = body as {
       id: string
       name?: string
       enabledModules?: string[] | null
@@ -155,6 +156,7 @@ export async function PATCH(req: NextRequest) {
       slug?: string | null
       enterprise?: boolean
       enterpriseMonthlyUsd?: number | null
+      enterpriseTier?: string | null
       costAlertRatio?: number
     }
 
@@ -200,6 +202,10 @@ export async function PATCH(req: NextRequest) {
       if (enterprise) { subPatch.plan = 'company'; subPatch.status = 'active' }
     }
     if (enterpriseMonthlyUsd !== undefined) subPatch.enterprise_monthly_usd = enterpriseMonthlyUsd == null ? null : Math.max(0, Number(enterpriseMonthlyUsd) || 0)
+    if (enterpriseTier !== undefined) {
+      if (enterpriseTier !== null && !isEnterpriseTier(enterpriseTier)) return NextResponse.json({ error: '企業方案等級不正確' }, { status: 400 })
+      subPatch.enterprise_tier = enterpriseTier
+    }
     if (costAlertRatio !== undefined && Number(costAlertRatio) > 0) subPatch.cost_alert_ratio = Number(costAlertRatio)
     if (Object.keys(subPatch).length > 0) {
       const { error: planErr } = await admin

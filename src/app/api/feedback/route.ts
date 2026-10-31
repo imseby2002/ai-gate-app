@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
     isPaid ? `[意見反映] 新的計費需求待審核：${data.title}` : `[意見反映] 新回報：${data.title}`,
     [
       `類型：${type}`, `帳號：${user.email ?? user.id}`, `內容：${description}`,
-      ...(isPaid && quota ? [`本月免費額度已用完：${quota.used}/${quota.limit}`] : []),
+      ...(isPaid && quota ? [quota.unit === 'hours' ? `本月客製工時已用完：${quota.used}/${quota.limit} 小時` : `本月免費額度已用完：${quota.used}/${quota.limit}`] : []),
       `後台查看：https://www.im-tourist.com/admin/feedback`,
     ]
   )
