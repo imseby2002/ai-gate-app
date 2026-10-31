@@ -1178,13 +1178,10 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
   const supabase = getServiceClient()
 
   // Load most recently updated campaign unit_data[12]
-  const { data: campaigns } = await supabase
-    .from('marketing_campaigns')
-    .select('unit_data, updated_at')
-    .eq('user_id', userId)
-    .neq('status', 'archived')
-    .order('updated_at', { ascending: false })
-    .limit(10)
+  // 只取第 12 單元（客服設定），不整包讀 unit_data：每則訊息都會呼叫，整包讀是 Supabase 流量大宗
+  const { data: unit12Rows } = await supabase.rpc('cs_campaign_unit12', { p_user_id: userId })
+  const campaigns = ((unit12Rows ?? []) as { unit12: unknown; updated_at: string }[])
+    .map(r => ({ unit_data: { 12: r.unit12 } as Record<string, unknown>, updated_at: r.updated_at }))
 
   let systemPrompt = ''
   let escalationThreshold: 'medium' | 'high' = 'high'
@@ -1331,7 +1328,7 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
   const companyParts: string[] = []
   {
     const admin = createAdminClient()
-    const cd = await loadCompanyProfile(admin, await dataOwnerOf(admin, userId))
+    const cd = await loadCompanyProfile(admin, await dataOwnerOf(admin, userId), { productDescriptions: false })
     // Company FAQ files
     for (const f of cd.files ?? []) {
       if (f.textContent && !seenFiles.has(f.name)) {

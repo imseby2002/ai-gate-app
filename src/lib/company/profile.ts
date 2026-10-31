@@ -91,12 +91,16 @@ export async function dataOwnerOf(admin: Admin, userId: string): Promise<string>
   return (await resolveCompanyOwner(admin, (profile?.company_id as string | null) ?? null)) ?? userId
 }
 
-export async function loadCompanyProfile(admin: Admin, ownerId: string): Promise<CompanyProfile> {
+// opts.productDescriptions=false：不讀產品長描述（客服 webhook 每則訊息都會呼叫，只用到產品名稱／價格／標語）
+export async function loadCompanyProfile(admin: Admin, ownerId: string, opts: { productDescriptions?: boolean } = {}): Promise<CompanyProfile> {
+  const productsQuery = opts.productDescriptions === false
+    ? admin.from('mkt_product_profiles').select('id, name, category, price, slogan, description:slogan').eq('owner_id', ownerId).order('created_at')
+    : admin.from('mkt_product_profiles').select('id, name, category, price, slogan, description').eq('owner_id', ownerId).order('created_at')
   const [brandRes, storesRes, storeProfRes, productsRes] = await Promise.all([
     admin.from('mkt_brand').select('*').eq('owner_id', ownerId).maybeSingle(),
     admin.from('fin_stores').select('id, name, address, unit_type, active').eq('owner_id', ownerId).order('code'),
     admin.from('mkt_store_profiles').select('store_id, story, opening_hours').eq('owner_id', ownerId),
-    admin.from('mkt_product_profiles').select('id, name, category, price, slogan, description').eq('owner_id', ownerId).order('created_at'),
+    productsQuery,
   ])
   const b = (brandRes.data ?? {}) as Record<string, string | undefined> & { platforms?: Record<string, string>; files?: unknown }
   const storeProf = new Map((storeProfRes.data ?? []).map(p => [p.store_id as string, p]))
@@ -111,7 +115,7 @@ export async function loadCompanyProfile(admin: Admin, ownerId: string): Promise
 
   const productList: CompanyProduct[] = (productsRes.data ?? []).map(p => ({
     id: p.id, name: p.name, category: p.category ?? '', price: Number(p.price) || 0,
-    slogan: p.slogan ?? '', description: p.description ?? '',
+    slogan: p.slogan ?? '', description: opts.productDescriptions === false ? '' : (p.description ?? ''),
   }))
   const products = productList
     .map(p => `- ${p.name}${p.category ? `（${p.category}）` : ''}${p.price ? ` $${p.price}` : ''}${p.slogan ? `：${p.slogan}` : ''}`)

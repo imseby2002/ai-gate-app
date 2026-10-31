@@ -182,6 +182,9 @@ export default function MeetingPage() {
   const [me, setMe] = useState<Me | null>(null)
   const [meeting, setMeeting] = useState<Meeting | null>(null)
   const [lines, setLines] = useState<Line[]>([])
+  // 定時同步只抓最新一筆之後的逐字稿（逐字稿只會新增），不再每 6 秒重抓整份
+  const latestLineAtRef = useRef<string | null>(null)
+  useEffect(() => { latestLineAtRef.current = lines.length ? lines[lines.length - 1].created_at : null }, [lines])
   const [participants, setParticipants] = useState<string[]>([])
 
   const [departments, setDepartments] = useState<DeptOption[]>([])
@@ -420,11 +423,14 @@ export default function MeetingPage() {
 
     const syncLatest = async () => {
       try {
-        const { data: latest } = await supabase
+        let q = supabase
           .from('meeting_lines')
           .select('*')
           .eq('meeting_id', meeting.id)
-          .order('created_at', { ascending: true })
+        // 往前多抓 30 秒，涵蓋較晚送達但時間較早的發言；重複的以 id 去重
+        const after = latestLineAtRef.current
+        if (after) q = q.gte('created_at', new Date(new Date(after).getTime() - 30_000).toISOString())
+        const { data: latest } = await q.order('created_at', { ascending: true })
 
         if (!alive || !latest) return
         setLines(prev => {
