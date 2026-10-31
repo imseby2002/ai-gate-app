@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { calcCompanyMonthlyPrice, YEARLY_MONTHS } from '@/lib/company/pricing'
+import { calcEnterpriseMonthlyPrice, ENTERPRISE_TIERS, ENTERPRISE_TIER_DEFS, type EnterpriseTier } from '@/lib/company/enterprise-plans'
 import { validateCompanySlug } from '@/lib/company/subdomain'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
@@ -139,6 +140,8 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
   const [formPlan, setFormPlan] = useState<'free' | 'core' | 'pro' | 'max' | 'company' | 'enterprise'>('free')
   const [formEnterpriseFee, setFormEnterpriseFee] = useState('')
   const [formAlertRatio, setFormAlertRatio] = useState('50')
+  // 企業方案等級只用來試算月費，試算結果套用到議價月費後才會儲存
+  const [formEnterpriseTier, setFormEnterpriseTier] = useState<EnterpriseTier>('max')
   const [formErpSeats, setFormErpSeats] = useState('0')
   const [formRetailStores, setFormRetailStores] = useState('0')
   const [formCustomDomain, setFormCustomDomain] = useState(false)
@@ -1087,6 +1090,45 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
                         className="w-full h-9 px-2 rounded-lg border border-slate-200 bg-white text-sm" />
                     </label>
                   </div>
+                  {(() => {
+                    const tierPrice = calcEnterpriseMonthlyPrice(formEnterpriseTier, {
+                      stores: Number(formRetailStores) || 0,
+                      seats: Number(formErpSeats) || 0,
+                    })
+                    return (
+                      <div className="p-2.5 rounded-lg border border-amber-200 bg-white space-y-2">
+                        <label className="text-xs text-slate-600 space-y-1 block">
+                          <span className="block">企業方案等級試算（依下方 ERP 人數與門市數）</span>
+                          <select id="company-enterprise-tier" value={formEnterpriseTier} onChange={e => setFormEnterpriseTier(e.target.value as EnterpriseTier)}
+                            className="w-full h-9 px-2 rounded-lg border border-slate-200 bg-white text-sm">
+                            {ENTERPRISE_TIERS.map(t => {
+                              const d = ENTERPRISE_TIER_DEFS[t]
+                              return (
+                                <option key={t} value={t}>
+                                  {d.label.zh} — 含 {d.includedStores} 家／{d.includedSeats} 人、{d.points} 點、客製 {d.customHours} 小時
+                                </option>
+                              )
+                            })}
+                          </select>
+                        </label>
+                        <div className="text-xs text-slate-600 space-y-0.5 tabular-nums">
+                          {tierPrice.lines.map(l => (
+                            <div key={l.label} className="flex justify-between gap-2"><span>{l.label}</span><span>${l.usd}</span></div>
+                          ))}
+                          <div className="flex justify-between font-bold text-slate-800 border-t border-amber-200 pt-1 mt-1">
+                            <span>試算月費</span><span>${tierPrice.monthlyUsd}</span>
+                          </div>
+                          {tierPrice.overCap.length > 0 && (
+                            <div className="text-red-600">{tierPrice.overCap.join('；')}，請改選更高等級</div>
+                          )}
+                        </div>
+                        <Button type="button" size="sm" variant="outline" disabled={tierPrice.overCap.length > 0}
+                          onClick={() => setFormEnterpriseFee(String(tierPrice.monthlyUsd))}>
+                          套用為議價月費
+                        </Button>
+                      </div>
+                    )
+                  })()}
                   {editingCompany?.enterpriseUsage && (
                     <div className="text-xs text-slate-600 tabular-nums space-y-0.5">
                       <div>本月用量（以點數計）：<span className="font-bold">${editingCompany.enterpriseUsage.totalUsd.toFixed(2)}</span>{Number(formEnterpriseFee) > 0 ? `（月費的 ${Math.round(editingCompany.enterpriseUsage.totalUsd / Number(formEnterpriseFee) * 100)}%）` : ''}</div>
