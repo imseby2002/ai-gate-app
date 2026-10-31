@@ -52,6 +52,7 @@ export interface CompanyItem {
   wallet?: { gift: number; paid: number }
   enterprise?: boolean
   enterpriseMonthlyUsd?: number | null
+  enterpriseTier?: EnterpriseTier | null
   costAlertRatio?: number
   enterpriseUsage?: { pointsUsd: number; chatUsd: number; totalUsd: number } | null
   created_at: string
@@ -140,7 +141,7 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
   const [formPlan, setFormPlan] = useState<'free' | 'core' | 'pro' | 'max' | 'company' | 'enterprise'>('free')
   const [formEnterpriseFee, setFormEnterpriseFee] = useState('')
   const [formAlertRatio, setFormAlertRatio] = useState('50')
-  // 企業方案等級只用來試算月費，試算結果套用到議價月費後才會儲存
+  // 企業方案等級：存進 company_subscriptions.enterprise_tier；月費需按「套用為議價月費」才會更新
   const [formEnterpriseTier, setFormEnterpriseTier] = useState<EnterpriseTier>('max')
   const [formErpSeats, setFormErpSeats] = useState('0')
   const [formRetailStores, setFormRetailStores] = useState('0')
@@ -263,6 +264,7 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
     setFormFeedbackQuota(company.free_feature_quota_monthly != null ? String(company.free_feature_quota_monthly) : '')
     setFormPlan(company.enterprise ? 'enterprise' : (company.plan ?? 'free'))
     setFormEnterpriseFee(company.enterpriseMonthlyUsd != null ? String(company.enterpriseMonthlyUsd) : '')
+    setFormEnterpriseTier(company.enterpriseTier ?? 'max')
     setFormAlertRatio(String(Math.round((company.costAlertRatio ?? 0.5) * 100)))
     setFormErpSeats(String(company.erpSeats ?? 0))
     setFormRetailStores(String(company.retailStores ?? 0))
@@ -290,6 +292,7 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
           plan: formPlan === 'enterprise' ? 'company' : formPlan,
           enterprise: formPlan === 'enterprise',
           enterpriseMonthlyUsd: formEnterpriseFee.trim() === '' ? null : Number(formEnterpriseFee),
+          enterpriseTier: formPlan === 'enterprise' ? formEnterpriseTier : null,
           costAlertRatio: Number(formAlertRatio) > 0 ? Number(formAlertRatio) / 100 : undefined,
           erpSeats: Number(formErpSeats) || 0,
           retailStores: Number(formRetailStores) || 0,
@@ -1098,7 +1101,7 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
                     return (
                       <div className="p-2.5 rounded-lg border border-amber-200 bg-white space-y-2">
                         <label className="text-xs text-slate-600 space-y-1 block">
-                          <span className="block">企業方案等級試算（依下方 ERP 人數與門市數）</span>
+                          <span className="block">企業方案等級（儲存時寫入；月費依下方 ERP 人數與門市數試算）</span>
                           <select id="company-enterprise-tier" value={formEnterpriseTier} onChange={e => setFormEnterpriseTier(e.target.value as EnterpriseTier)}
                             className="w-full h-9 px-2 rounded-lg border border-slate-200 bg-white text-sm">
                             {ENTERPRISE_TIERS.map(t => {

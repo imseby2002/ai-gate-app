@@ -16,6 +16,10 @@ import {
 export type EnterpriseTier = 'core' | 'pro' | 'max'
 export const ENTERPRISE_TIERS: EnterpriseTier[] = ['core', 'pro', 'max']
 
+export function isEnterpriseTier(v: unknown): v is EnterpriseTier {
+  return typeof v === 'string' && (ENTERPRISE_TIERS as string[]).includes(v)
+}
+
 export const ENTERPRISE_BUNDLE_DISCOUNT = 0.1
 export const ENTERPRISE_CUSTOM_HOUR_USD = 30
 export const ENTERPRISE_LEAD_OPS_HOUR_USD = 10

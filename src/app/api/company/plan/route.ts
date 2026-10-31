@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getUserCompany, canTopUpCompanyWallet } from '@/lib/company/membership'
 import { getCompanyEntitlements } from '@/lib/company/entitlements'
 import { calcCompanyMonthlyPrice } from '@/lib/company/pricing'
+import { ENTERPRISE_TIER_DEFS, isEnterpriseTier } from '@/lib/company/enterprise-plans'
 
 // GET /api/company/plan — 給公司方案頁用來顯示目前方案、平台開通內容與計價明細
 export async function GET() {
@@ -20,7 +21,7 @@ export async function GET() {
   const admin = createAdminClient()
   const [{ data: companyRow }, { data: sub }] = await Promise.all([
     admin.from('companies').select('enabled_modules').eq('id', company.companyId).single(),
-    admin.from('company_subscriptions').select('erp_seats, retail_stores, custom_domain, current_period_end, enterprise, enterprise_monthly_usd').eq('company_id', company.companyId).maybeSingle(),
+    admin.from('company_subscriptions').select('erp_seats, retail_stores, custom_domain, current_period_end, enterprise, enterprise_monthly_usd, enterprise_tier').eq('company_id', company.companyId).maybeSingle(),
   ])
   const { data: walletData } = await admin.rpc('get_company_credit_balance', { p_company_id: company.companyId })
   const walletRow = Array.isArray(walletData) ? walletData[0] : walletData
@@ -31,6 +32,9 @@ export async function GET() {
     customDomain: sub?.custom_domain ?? false,
   }
 
+  const enterpriseTier = sub?.enterprise && isEnterpriseTier(sub.enterprise_tier) ? sub.enterprise_tier : null
+  const enterpriseLabel = enterpriseTier ? ENTERPRISE_TIER_DEFS[enterpriseTier].label.zh : '專屬客製-企業版'
+
   return NextResponse.json({
     plan,
     features,
@@ -40,9 +44,10 @@ export async function GET() {
     config,
     // 專屬客製-企業版以議價月費計，不顯示模組明細
     price: sub?.enterprise
-      ? { lines: [{ label: '專屬客製-企業版', usd: Number(sub.enterprise_monthly_usd ?? 0), key: 'enterprise' }], monthlyUsd: Number(sub.enterprise_monthly_usd ?? 0) }
+      ? { lines: [{ label: enterpriseLabel, usd: Number(sub.enterprise_monthly_usd ?? 0), key: 'enterprise' }], monthlyUsd: Number(sub.enterprise_monthly_usd ?? 0) }
       : calcCompanyMonthlyPrice(config),
     enterprise: !!sub?.enterprise,
+    enterpriseTier,
     wallet: { gift: Number(walletRow?.gift ?? 0), paid: Number(walletRow?.paid ?? 0) },
     canTopUp: !!(await canTopUpCompanyWallet(user.id)),
   })

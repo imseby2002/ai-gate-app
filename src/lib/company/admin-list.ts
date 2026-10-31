@@ -17,7 +17,7 @@ export async function loadAdminCompanyList() {
     admin.from('companies').select('*').order('created_at', { ascending: false }),
     admin.from('company_members').select('*').order('created_at', { ascending: true }),
     admin.from('profiles').select('id, email, full_name'),
-    admin.from('company_subscriptions').select('company_id, plan, current_period_end, erp_seats, retail_stores, custom_domain, enterprise, enterprise_monthly_usd, cost_alert_ratio'),
+    admin.from('company_subscriptions').select('company_id, plan, current_period_end, erp_seats, retail_stores, custom_domain, enterprise, enterprise_monthly_usd, enterprise_tier, cost_alert_ratio'),
   ])
 
   if (compErr) throw new Error(compErr.message)
@@ -70,6 +70,7 @@ export async function loadAdminCompanyList() {
       wallet: walletMap.get(c.id) ?? { gift: 0, paid: 0 },
       enterprise: planMap.get(c.id)?.enterprise ?? false,
       enterpriseMonthlyUsd: planMap.get(c.id)?.enterprise_monthly_usd ?? null,
+      enterpriseTier: planMap.get(c.id)?.enterprise_tier ?? null,
       costAlertRatio: planMap.get(c.id)?.cost_alert_ratio ?? 0.5,
       enterpriseUsage: usageMap.get(c.id) ?? null,
     }
