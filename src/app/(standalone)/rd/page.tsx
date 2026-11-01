@@ -396,6 +396,23 @@ export default function RdPage() {
               <BookOpen className="h-4 w-4" />{t('navRdLogs')}
             </Button>
           </Link>
+          {/* 公司權責原則：平時只顯示標籤，滑鼠移上（或點選）才浮出說明 */}
+          <div className="relative group self-center">
+            <button type="button" className="flex items-center gap-1.5 rounded-full border border-amber-200/80 dark:border-amber-800/40 bg-amber-50/80 dark:bg-amber-950/30 px-3 py-1 text-xs font-semibold text-amber-900 dark:text-amber-300 cursor-help">
+              <Info className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+              {t('policyBannerLabel')}
+            </button>
+            <div role="tooltip" className="invisible opacity-0 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 transition-opacity absolute right-0 top-full z-50 mt-2 w-[min(42rem,calc(100vw-2rem))] rounded-xl border border-amber-200/80 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-950 p-4 shadow-lg">
+              <div className="text-xs text-amber-950 dark:text-amber-200 space-y-1.5 leading-relaxed">
+                <p className="font-bold text-sm text-amber-900 dark:text-amber-300">{t('policyBannerTitle')}</p>
+                <ul className="list-disc list-inside space-y-1 text-amber-900/90 dark:text-amber-200/90">
+                  <li>{t.rich('policyItem1', { b: (chunks) => <b>{chunks}</b> })}</li>
+                  <li>{t.rich('policyItem2', { b: (chunks) => <b>{chunks}</b> })}</li>
+                  <li>{t.rich('policyItem3', { b: (chunks) => <b>{chunks}</b> })}</li>
+                </ul>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -428,24 +445,6 @@ export default function RdPage() {
           </button>
         </div>
       )}
-
-      {/* 公司權責原則：平時只顯示標籤，滑鼠移上（或點選）才浮出說明 */}
-      <div className="relative group w-fit">
-        <button type="button" className="flex items-center gap-1.5 rounded-full border border-amber-200/80 dark:border-amber-800/40 bg-amber-50/80 dark:bg-amber-950/30 px-3 py-1 text-xs font-semibold text-amber-900 dark:text-amber-300 cursor-help">
-          <Info className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
-          {t('policyBannerLabel')}
-        </button>
-        <div role="tooltip" className="invisible opacity-0 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 transition-opacity absolute left-0 top-full z-50 mt-2 w-[min(42rem,calc(100vw-2rem))] rounded-xl border border-amber-200/80 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-950 p-4 shadow-lg">
-          <div className="text-xs text-amber-950 dark:text-amber-200 space-y-1.5 leading-relaxed">
-            <p className="font-bold text-sm text-amber-900 dark:text-amber-300">{t('policyBannerTitle')}</p>
-            <ul className="list-disc list-inside space-y-1 text-amber-900/90 dark:text-amber-200/90">
-              <li>{t.rich('policyItem1', { b: (chunks) => <b>{chunks}</b> })}</li>
-              <li>{t.rich('policyItem2', { b: (chunks) => <b>{chunks}</b> })}</li>
-              <li>{t.rich('policyItem3', { b: (chunks) => <b>{chunks}</b> })}</li>
-            </ul>
-          </div>
-        </div>
-      </div>
 
       {/* 分頁按鈕列 */}
       <div className="flex gap-1 p-1 bg-muted rounded-xl w-fit border flex-wrap">
