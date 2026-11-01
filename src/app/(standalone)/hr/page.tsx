@@ -751,25 +751,47 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
     alert(await sendLinks(targets.map(e => e.id)))
   }
 
-  const noBirthday = employees.filter(e => e.status === 'active' && !e.birthday)
+  // 門市／據點篩選：先依據點縮小範圍，狀態篩選與各項人數都以此為準
+  const [storeFilter, setStoreFilter] = useState<string>('')
+  const storeName = new Map(storeOptions.map(o => [o.code, o.name]))
+  const storeCounts = new Map<string, number>()
+  for (const e of employees) { const k = (e.store ?? '').trim(); storeCounts.set(k, (storeCounts.get(k) ?? 0) + 1) }
+  const storeKeys = [...new Set([...storeOptions.map(o => o.code), ...storeCounts.keys()])]
+    .filter(k => k !== '').sort((a, b) => a.localeCompare(b))
+  const base = storeFilter === '' ? employees
+    : storeFilter === '__none__' ? employees.filter(e => !(e.store ?? '').trim())
+    : employees.filter(e => (e.store ?? '').trim() === storeFilter)
+
+  const noBirthday = base.filter(e => e.status === 'active' && !e.birthday)
   // 有系統帳號（店長、辦公室人員等）與只用員工專區（一般工讀生、正職）
-  const activeEmps = employees.filter(e => e.status === 'active')
+  const activeEmps = base.filter(e => e.status === 'active')
   const withAccount = activeEmps.filter(e => e.profile_id)
   const portalOnly = activeEmps.filter(e => !e.profile_id)
   const accountOf = (id: string | null) => id ? accounts.find(a => a.id === id) ?? null : null
-  const filtered = statusFilter === 'all' ? employees
+  const filtered = statusFilter === 'all' ? base
     : statusFilter === 'nobirthday' ? noBirthday
     : statusFilter === 'account' ? withAccount
     : statusFilter === 'portalonly' ? portalOnly
-    : employees.filter(e => e.status === statusFilter)
+    : base.filter(e => e.status === statusFilter)
 
   return (
     <div className="space-y-4">
       <ProfileEditDaysSetting />
       <div className="flex flex-wrap items-center gap-2">
+        <label className="flex items-center gap-1.5 text-sm text-gray-600">
+          <Building2 className="h-4 w-4" />
+          <select value={storeFilter} onChange={e => setStoreFilter(e.target.value)} className="h-9 rounded-md border px-2 text-sm bg-white dark:bg-gray-900" title={t('storeFilterHint')}>
+            <option value="">{t('storeFilterAll', { n: employees.length })}</option>
+            {storeKeys.map(k => {
+              const nm = storeName.get(k)
+              return <option key={k} value={k}>{nm && nm !== k ? `${k}｜${nm}` : k}（{storeCounts.get(k) ?? 0}）</option>
+            })}
+            {(storeCounts.get('') ?? 0) > 0 && <option value="__none__">{t('storeFilterNone', { n: storeCounts.get('') ?? 0 })}</option>}
+          </select>
+        </label>
         {['all', 'active', 'inactive', 'resigned'].map(s => (
           <Button key={s} size="sm" variant={statusFilter === s ? 'default' : 'ghost'} onClick={() => setStatusFilter(s)}>
-            {s === 'all' ? t('allWithCount', { n: employees.length }) : t('labelWithCount', { label: LABELS[s] ?? s, n: employees.filter(e => e.status === s).length })}
+            {s === 'all' ? t('allWithCount', { n: base.length }) : t('labelWithCount', { label: LABELS[s] ?? s, n: base.filter(e => e.status === s).length })}
           </Button>
         ))}
         <Button size="sm" variant={statusFilter === 'account' ? 'default' : 'ghost'} className="text-blue-700" title={t('accountFilterHint')} onClick={() => setStatusFilter('account')}>
@@ -852,6 +874,7 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
                     <span className="font-semibold text-sm">{emp.name}</span>
                     {emp.department && <span className="text-xs text-gray-400">{emp.department}</span>}
                     {emp.position && <span className="text-xs text-gray-400">· {emp.position}</span>}
+                    {emp.store && <Badge variant="outline" className="gap-1 text-xs"><Store className="h-3 w-3" />{emp.store}</Badge>}
                     <StatusBadge value={emp.status} kind="emp" />
                     {emp.profile_id && (() => { const a = accountOf(emp.profile_id); return <Badge variant="outline" className="gap-1 text-blue-700 border-blue-300" title={t('accountBadgeHint', { account: a?.email || a?.full_name || '' })}><UserCheck className="h-3 w-3" />{t('accountBadge')}</Badge> })()}
                     {emp.status === 'active' && !emp.birthday && <Badge variant="outline" className="text-amber-700 border-amber-300" title={t('missingBirthdayHint')}>{t('missingBirthday')}</Badge>}

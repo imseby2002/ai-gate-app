@@ -7845,7 +7845,10 @@
     "evalTiersTitle": "評等 → 獎金對應表",
     "evalTiersDesc": "評分時選的評等會依此表換算獎金，產生薪資草稿時帶入 KPI 獎金，評等也會寫入薪資表的 Xếp hạng。修改後只影響之後存檔的評分。",
     "evalTierAdd": "＋新增評等",
-    "evalTierAmount": "評等獎金"
+    "evalTierAmount": "評等獎金",
+    "storeFilterAll": "全部門市／據點（{n}）",
+    "storeFilterNone": "未指定門市（{n}）",
+    "storeFilterHint": "依門市／據點篩選員工"
   },
   "FinancePage": {
     "accountBalancesTitle": "各帳戶結餘",

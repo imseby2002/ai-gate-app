@@ -7845,7 +7845,10 @@
     "evalTiersTitle": "Bảng xếp hạng → tiền thưởng",
     "evalTiersDesc": "Xếp hạng khi đánh giá được quy đổi thành tiền thưởng theo bảng này; bản nháp lương đưa vào thưởng KPI và ghi xếp hạng vào cột Xếp hạng. Thay đổi chỉ áp dụng cho các đánh giá lưu sau đó.",
     "evalTierAdd": "+ Thêm xếp hạng",
-    "evalTierAmount": "Thưởng xếp hạng"
+    "evalTierAmount": "Thưởng xếp hạng",
+    "storeFilterAll": "Tất cả cửa hàng / địa điểm ({n})",
+    "storeFilterNone": "Chưa gán cửa hàng ({n})",
+    "storeFilterHint": "Lọc nhân viên theo cửa hàng / địa điểm"
   },
   "FinancePage": {
     "accountBalancesTitle": "Số dư theo tài khoản",
