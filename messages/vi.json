@@ -13186,7 +13186,8 @@
     "manualPolishing": "AI đang chỉnh sửa, khoảng 1 phút…",
     "manualPolishHint": "Câu hỏi đã chỉnh sẽ được thêm vào cuối, vẫn có thể sửa từng câu.",
     "manualTooLong": "Nội dung quá dài (tối đa {max} ký tự), vui lòng chia nhỏ.",
-    "editHint": "Mọi câu hỏi (kể cả do AI tạo) đều có thể sửa trực tiếp nội dung, lựa chọn, đáp án đúng và giải thích; sửa xong nhấn Lưu."
+    "editHint": "Mọi câu hỏi (kể cả do AI tạo) đều có thể sửa trực tiếp nội dung, lựa chọn, đáp án đúng và giải thích; sửa xong nhấn Lưu.",
+    "kind_portal": "Cổng nhân viên"
   },
   "KnowledgePicker": {
     "tab": "Kho kiến thức công ty",

@@ -3,10 +3,11 @@
 // 員工專區：<公司子網域>/e/<打卡編號>。首次以生日（DDMMYYYY）登入並設定自己的密碼，之後用密碼登入。
 import { useCallback, useEffect, useRef, useState, use } from 'react'
 import Link from 'next/link'
-import { Loader2, LogOut, KeyRound, FileText, CheckCircle2, CalendarDays, Upload, Paperclip, Trash2, Clock, UserRound, Lock, Menu, ChevronDown, ChevronLeft } from 'lucide-react'
+import { Loader2, LogOut, KeyRound, FileText, CheckCircle2, CalendarDays, Upload, Paperclip, Trash2, Clock, UserRound, Lock, Menu, ChevronDown, ChevronLeft, ClipboardList, Play } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { SLOT_MIN } from '@/lib/shift/time'
+import { ExamTaker } from '@/components/exams/ExamTaker'
 import type { ReactNode } from 'react'
 
 interface Me {
@@ -177,8 +178,8 @@ function merge(list: Range[]): Range[] {
 const rangesText = (rs: Range[]) => rs.map(r => `${hhmm(r.start)}–${hhmm(r.end)}`).join('、')
 
 // 登入後主體：手機單欄，電腦雙欄（左：薪資條、班表、文件；右：可上班時段／期待休假日）
-type View = 'shift' | 'pay' | 'profile' | 'docs'
-const VIEWS: View[] = ['shift', 'pay', 'profile', 'docs']
+type View = 'shift' | 'pay' | 'exam' | 'profile' | 'docs'
+const VIEWS: View[] = ['shift', 'pay', 'exam', 'profile', 'docs']
 
 // 登入後主體：常用「班表」（我的班表＋可上班時段／期待休假日）與「薪資條」放分頁；履歷、文件、密碼、登出收在右上選單
 function PortalBody({ api, company, name, payslips, onChangePin, onLogout }: {
@@ -188,6 +189,7 @@ function PortalBody({ api, company, name, payslips, onChangePin, onLogout }: {
   const [view, setViewState] = useState<View>('shift')
   const [menu, setMenu] = useState(false)
   const [missingDocs, setMissingDocs] = useState(0)
+  const [pendingExams, setPendingExams] = useState(0)
   const load = useCallback(async () => {
     const r = await fetch(`${api}/shifts`)
     setData(r.ok ? await r.json() : null)
@@ -207,11 +209,18 @@ function PortalBody({ api, company, name, payslips, onChangePin, onLogout }: {
       setMissingDocs(items.filter(x => x.required && !done(x) && !(x.either && eduDone)).length)
     }).catch(() => {})
   }, [api, view])
+  // 尚未作答的考試數（分頁紅點提醒）
+  useEffect(() => {
+    fetch(`${api}/exams`).then(r => r.ok ? r.json() : null).then(d => {
+      setPendingExams(((d?.exams ?? []) as PortalExam[]).filter(e => !e.my_last).length)
+    }).catch(() => {})
+  }, [api, view])
   const setView = (v: View) => { setViewState(v); setMenu(false); history.replaceState(null, '', `#${v}`); window.scrollTo({ top: 0 }) }
 
   const tabs: [View, string, ReactNode][] = [
     ['shift', 'Lịch làm / 班表', <CalendarDays key="i" className="h-4 w-4" />],
     ['pay', 'Phiếu lương / 薪資條', <FileText key="i" className="h-4 w-4" />],
+    ['exam', 'Bài kiểm tra / 我的考試', <ClipboardList key="i" className="h-4 w-4" />],
   ]
   const menuItems: [string, ReactNode, () => void, ReactNode?][] = [
     ['Hồ sơ của tôi / 我的履歷', <UserRound key="i" className="h-4 w-4" />, () => setView('profile')],
@@ -248,12 +257,13 @@ function PortalBody({ api, company, name, payslips, onChangePin, onLogout }: {
         </div>
       </Card>
 
-      {(view === 'shift' || view === 'pay') ? (
+      {(view === 'shift' || view === 'pay' || view === 'exam') ? (
         <div className="flex rounded-xl bg-white border p-1 gap-1">
           {tabs.map(([v, label, icon]) => (
             <button key={v} onClick={() => setView(v)}
-              className={`flex-1 h-10 rounded-lg text-sm flex items-center justify-center gap-1.5 ${view === v ? 'bg-indigo-600 text-white font-semibold' : 'text-slate-600'}`}>
-              {icon}{label}
+              className={`relative flex-1 min-h-10 py-1 rounded-lg text-xs sm:text-sm flex items-center justify-center gap-1.5 ${view === v ? 'bg-indigo-600 text-white font-semibold' : 'text-slate-600'}`}>
+              {icon}<span className="text-center leading-tight">{label}</span>
+              {v === 'exam' && pendingExams > 0 && <span className="ml-0.5 text-[11px] px-1.5 rounded-full bg-rose-500 text-white">{pendingExams}</span>}
             </button>
           ))}
         </div>
@@ -278,9 +288,70 @@ function PortalBody({ api, company, name, payslips, onChangePin, onLogout }: {
         </div>
       )}
       {view === 'pay' && <div className="max-w-2xl">{payslips}</div>}
+      {view === 'exam' && <div className="max-w-3xl"><ExamsCard api={api} /></div>}
       {view === 'profile' && <div className="max-w-3xl"><ProfileCard api={api} /></div>}
       {view === 'docs' && <div className="max-w-3xl"><DocsCard api={api} /></div>}
     </div>
+  )
+}
+
+interface PortalExam {
+  id: string; title: Record<string, string>; description: Record<string, string>; question_count: number
+  my_last: { score: number; max_score: number; grading_status: string; created_at: string } | null
+}
+const examTitle = (l: Record<string, string>) => l.vi || l.zh || l.en || '-'
+const examTitleZh = (l: Record<string, string>) => (l.zh && l.zh !== l.vi ? l.zh : '')
+
+// 我的考試：公司已發布、開放員工作答的考卷；點「作答」在本頁開啟作答畫面，成績記在員工名下
+function ExamsCard({ api }: { api: string }) {
+  const [exams, setExams] = useState<PortalExam[] | null>(null)
+  const [taking, setTaking] = useState<string | null>(null)
+  const [reloadKey, setReloadKey] = useState(0)
+  const load = () => setReloadKey(k => k + 1)
+  useEffect(() => {
+    let alive = true
+    fetch(`${api}/exams`).then(r => r.ok ? r.json() : { exams: [] })
+      .then(d => { if (alive) setExams(d.exams ?? []) }).catch(() => { if (alive) setExams([]) })
+    return () => { alive = false }
+  }, [api, reloadKey])
+
+  if (taking) {
+    return (
+      <div className="space-y-3">
+        <button onClick={() => { setTaking(null); load() }} className="flex items-center gap-1 text-sm text-indigo-700">
+          <ChevronLeft className="h-4 w-4" />Danh sách bài kiểm tra / 考試清單
+        </button>
+        <div className="-mx-4 sm:mx-0">
+          <ExamTaker loadUrl={`${api}/exams/${taking}`} submitUrl={`${api}/exams/${taking}`} />
+        </div>
+      </div>
+    )
+  }
+  return (
+    <Card className="p-5 space-y-3">
+      <h2 className="font-bold flex items-center gap-2"><ClipboardList className="h-4 w-4" /> Bài kiểm tra / 我的考試</h2>
+      {!exams && <Loader2 className="h-5 w-5 animate-spin text-slate-400" />}
+      {exams && exams.length === 0 && <p className="text-sm text-slate-500">Chưa có bài kiểm tra / 目前沒有考試</p>}
+      <div className="divide-y">
+        {exams?.map(e => (
+          <div key={e.id} className="py-3 flex items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="font-medium">{examTitle(e.title)}</div>
+              {examTitleZh(e.title) && <div className="text-xs text-slate-500">{examTitleZh(e.title)}</div>}
+              <div className="text-xs text-slate-500 mt-0.5">
+                {e.question_count} câu / 題
+                {e.my_last
+                  ? ` · Lần gần nhất / 最近成績：${e.my_last.score}/${e.my_last.max_score}${e.my_last.grading_status === 'pending' ? '（Chờ chấm / 待評分）' : ''}`
+                  : ' · Chưa làm / 尚未作答'}
+              </div>
+            </div>
+            <Button size="sm" onClick={() => { setTaking(e.id); window.scrollTo({ top: 0 }) }} variant={e.my_last ? 'outline' : 'default'}>
+              <Play className="h-3.5 w-3.5 mr-1" />{e.my_last ? 'Làm lại / 重考' : 'Làm bài / 作答'}
+            </Button>
+          </div>
+        ))}
+      </div>
+    </Card>
   )
 }
 
