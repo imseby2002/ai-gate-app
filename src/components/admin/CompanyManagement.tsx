@@ -29,6 +29,9 @@ export const ALL_MODULES = [
   { id: 'agent',     label: 'AI Agent',    desc: '自主多智慧體執行與排程' },
 ] as const
 
+// 不列在勾選清單的專屬模組（例：門市點單 POS 只開給 Feeling Tea），全選／清除時保留原狀，避免誤刪
+const HIDDEN_MODULES = ['pos']
+
 const ROLE_CONFIG: Record<string, { label: string; badgeClass: string; icon: typeof Crown }> = {
   owner:   { label: '負責人 (Owner)',  badgeClass: 'bg-purple-50 text-purple-700 border-purple-200/80', icon: Crown },
   admin:   { label: 'IT 管理員 (Admin)', badgeClass: 'bg-blue-50 text-blue-700 border-blue-200/80',     icon: Shield },
@@ -864,11 +867,11 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
 
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="font-bold text-slate-800 block">開通模組權限 ({formModules.length}/{ALL_MODULES.length})</label>
+                  <label className="font-bold text-slate-800 block">開通模組權限 ({formModules.filter(id => !HIDDEN_MODULES.includes(id)).length}/{ALL_MODULES.length})</label>
                   <div className="text-xs font-semibold text-indigo-600 flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => setFormModules(ALL_MODULES.map(m => m.id))}
+                      onClick={() => setFormModules(prev => [...ALL_MODULES.map(m => m.id), ...prev.filter(id => HIDDEN_MODULES.includes(id))])}
                       className="hover:underline"
                     >
                       全選
@@ -876,7 +879,7 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
                     <span>|</span>
                     <button
                       type="button"
-                      onClick={() => setFormModules([])}
+                      onClick={() => setFormModules(prev => prev.filter(id => HIDDEN_MODULES.includes(id)))}
                       className="hover:underline text-slate-400"
                     >
                       清空
@@ -1009,11 +1012,11 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
 
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="font-bold text-slate-800 block">開通模組權限 ({formModules.length}/{ALL_MODULES.length})</label>
+                  <label className="font-bold text-slate-800 block">開通模組權限 ({formModules.filter(id => !HIDDEN_MODULES.includes(id)).length}/{ALL_MODULES.length})</label>
                   <div className="text-xs font-semibold text-indigo-600 flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => setFormModules(ALL_MODULES.map(m => m.id))}
+                      onClick={() => setFormModules(prev => [...ALL_MODULES.map(m => m.id), ...prev.filter(id => HIDDEN_MODULES.includes(id))])}
                       className="hover:underline"
                     >
                       全選
@@ -1021,7 +1024,7 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
                     <span>|</span>
                     <button
                       type="button"
-                      onClick={() => setFormModules([])}
+                      onClick={() => setFormModules(prev => prev.filter(id => HIDDEN_MODULES.includes(id)))}
                       className="hover:underline text-slate-400"
                     >
                       清空
