@@ -13178,7 +13178,15 @@
     "correctAnswer": "正確答案",
     "needsGrading": "AI 未能評分，請人工評分",
     "feedbackPh": "評語（選填）",
-    "saveReview": "儲存評分"
+    "saveReview": "儲存評分",
+    "manualTitle": "人工出題（AI 修飾）",
+    "manualHint": "自己寫題目，不一定要跟知識庫有關。可以只寫題目草稿、用任一語言、註明題型與答案；AI 會整理措辭、補齊選項／答案／說明並翻成中英越三語。",
+    "manualPh": "例如：\n1.（單選）短影音前 3 秒最重要的是什麼？答案：抓住注意力\n2.（申論）請說明你會如何規劃一支新品上市短影音",
+    "manualPolish": "AI 整理並加入題目",
+    "manualPolishing": "AI 整理中，約需 1 分鐘…",
+    "manualPolishHint": "整理好的題目會加在題目最後，可再逐題修改。",
+    "manualTooLong": "人工出題內容太長（上限 {max} 字），請分批送出。",
+    "editHint": "所有題目（包含 AI 出的題）都可以直接修改題目、選項、正確答案與說明，改完按「儲存」。"
   },
   "KnowledgePicker": {
     "tab": "公司知識庫",

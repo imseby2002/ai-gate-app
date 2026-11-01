@@ -13178,7 +13178,15 @@
     "correctAnswer": "Correct answer",
     "needsGrading": "AI could not grade this; please grade manually",
     "feedbackPh": "Feedback (optional)",
-    "saveReview": "Save grading"
+    "saveReview": "Save grading",
+    "manualTitle": "Write your own questions (AI polish)",
+    "manualHint": "Write your own questions — they don't need to come from the knowledge base. Drafts in any language are fine; note the type and answer if you like. AI will polish the wording, fill in options/answers/explanations and translate into Chinese, English and Vietnamese.",
+    "manualPh": "e.g.\n1. (Single choice) What matters most in the first 3 seconds of a short video? Answer: grabbing attention\n2. (Essay) Describe how you would plan a short video for a new product launch",
+    "manualPolish": "Polish with AI and add",
+    "manualPolishing": "AI is polishing, about 1 minute…",
+    "manualPolishHint": "Polished questions are added to the end; you can still edit each one.",
+    "manualTooLong": "Too long (max {max} characters). Please split it up.",
+    "editHint": "Every question, including AI-generated ones, can be edited directly — question, options, correct answer and explanation. Click Save when done."
   },
   "KnowledgePicker": {
     "tab": "Company knowledge",

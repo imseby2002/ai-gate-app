@@ -13178,7 +13178,15 @@
     "correctAnswer": "Đáp án đúng",
     "needsGrading": "AI không chấm được, vui lòng chấm tay",
     "feedbackPh": "Nhận xét (không bắt buộc)",
-    "saveReview": "Lưu điểm"
+    "saveReview": "Lưu điểm",
+    "manualTitle": "Tự soạn câu hỏi (AI chỉnh sửa)",
+    "manualHint": "Tự viết câu hỏi, không nhất thiết liên quan kho tri thức. Có thể chỉ viết bản nháp, bằng bất kỳ ngôn ngữ nào, ghi chú loại câu hỏi và đáp án; AI sẽ chỉnh câu chữ, bổ sung lựa chọn/đáp án/giải thích và dịch sang Trung, Anh, Việt.",
+    "manualPh": "Ví dụ:\n1. (Một lựa chọn) Điều quan trọng nhất trong 3 giây đầu video ngắn là gì? Đáp án: thu hút sự chú ý\n2. (Tự luận) Hãy trình bày cách bạn lên kế hoạch video ngắn ra mắt sản phẩm mới",
+    "manualPolish": "AI chỉnh sửa và thêm vào",
+    "manualPolishing": "AI đang chỉnh sửa, khoảng 1 phút…",
+    "manualPolishHint": "Câu hỏi đã chỉnh sẽ được thêm vào cuối, vẫn có thể sửa từng câu.",
+    "manualTooLong": "Nội dung quá dài (tối đa {max} ký tự), vui lòng chia nhỏ.",
+    "editHint": "Mọi câu hỏi (kể cả do AI tạo) đều có thể sửa trực tiếp nội dung, lựa chọn, đáp án đúng và giải thích; sửa xong nhấn Lưu."
   },
   "KnowledgePicker": {
     "tab": "Kho kiến thức công ty",
