@@ -6982,7 +6982,8 @@
     "showHiddenRecipes": "Đã ẩn ({n})",
     "showActiveRecipes": "Về công thức đang dùng",
     "hiddenRecipesHint": "Các công thức đã ẩn: không hiện trong R&D Lab, sản phẩm marketing hay đối chiếu POS. Bấm biểu tượng mắt để khôi phục.",
-    "hiddenBadge": "Đã ẩn"
+    "hiddenBadge": "Đã ẩn",
+    "policyBannerLabel": "Nguyên tắc phân quyền"
   },
   "AuditPlatform": {
     "knowledgeCoreStatus": "COMPANY KNOWLEDGE CORE — lớp kiến thức chung của doanh nghiệp đang liên kết",

@@ -6982,7 +6982,8 @@
     "showHiddenRecipes": "Hidden ({n})",
     "showActiveRecipes": "Back to active recipes",
     "hiddenRecipesHint": "These recipes are hidden: they don't appear in R&D Lab, marketing products or POS mapping. Tap the eye icon to restore.",
-    "hiddenBadge": "Hidden"
+    "hiddenBadge": "Hidden",
+    "policyBannerLabel": "Responsibility policy"
   },
   "AuditPlatform": {
     "knowledgeCoreStatus": "COMPANY KNOWLEDGE CORE — shared enterprise knowledge layer connected",
