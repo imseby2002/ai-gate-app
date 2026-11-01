@@ -7,7 +7,7 @@ import type { QuestionResult } from '@/lib/exams/grade'
 
 export const dynamic = 'force-dynamic'
 
-const KIND: Record<string, string> = { employee: '員工', public: '應徵者' }
+const KIND: Record<string, string> = { employee: '員工', portal: '員工專區', public: '應徵者' }
 const STATUS: Record<string, string> = { graded: '已評分', pending: '待人工評分', reviewed: '已人工覆核' }
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
