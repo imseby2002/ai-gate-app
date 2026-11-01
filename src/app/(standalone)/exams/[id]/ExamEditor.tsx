@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type TextareaHTMLAttributes } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useLocale, useTranslations } from 'next-intl'
-import { ArrowDown, ArrowLeft, ArrowUp, BarChart3, Check, Copy, Loader2, Plus, Sparkles, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowUp, BarChart3, Check, Copy, Loader2, PenLine, Plus, Sparkles, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { getLocalizedDepartments } from '@/lib/org-units'
@@ -17,6 +17,21 @@ interface Exam {
 interface Doc { id: string; department: string; title: string; char_count: number }
 
 const LANG_LABEL: Record<ExamLang, string> = { zh: '中文', en: 'English', vi: 'Tiếng Việt' }
+
+// 依內容自動長高的輸入框：題目、選項、答案一次看完整，不用在小框裡捲動
+function AutoTextarea({ minRows = 2, className = '', value, ...rest }: TextareaHTMLAttributes<HTMLTextAreaElement> & { minRows?: number }) {
+  const ref = useRef<HTMLTextAreaElement>(null)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight + 2}px`
+  }, [value])
+  return (
+    <textarea ref={ref} rows={minRows} value={value} {...rest}
+      className={`w-full resize-y overflow-hidden rounded-md border bg-background p-2.5 text-sm leading-relaxed disabled:opacity-70 ${className}`} />
+  )
+}
 
 function newQuestion(type: QuestionType, position: number): ExamQuestion {
   const base = { position, type, question: emptyL10n(), rubric: emptyL10n(), explanation: emptyL10n(), points: type === 'essay' ? 10 : type === 'short' ? 5 : 1 }
@@ -41,6 +56,8 @@ export function ExamEditor({ id }: { id: string }) {
   const [editLang, setEditLang] = useState<ExamLang>(locale === 'vi' ? 'vi' : locale === 'en' ? 'en' : 'zh')
   const [counts, setCounts] = useState<Record<QuestionType, number>>({ single: 5, multi: 2, fill: 2, short: 1, essay: 0 })
   const [topic, setTopic] = useState('')
+  const [manual, setManual] = useState('')
+  const [polishing, setPolishing] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [saving, setSaving] = useState(false)
   const [dirty, setDirty] = useState(false)
@@ -102,6 +119,25 @@ export function ExamEditor({ id }: { id: string }) {
     setReloadKey(k => k + 1)
   }
 
+  // 人工出題、AI 修飾：手寫題目交給 AI 整理成三語正式題目，新增在題目最後
+  const polishManual = async () => {
+    if (!manual.trim()) return
+    if (dirty && !(await saveAll())) return
+    setPolishing(true)
+    const res = await fetch(`/api/exams/${id}/generate`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ manual, knowledge_doc_ids: exam.knowledge_doc_ids }),
+    }).catch(() => null)
+    setPolishing(false)
+    const d = await res?.json().catch(() => ({}))
+    if (!res?.ok) {
+      alert(d?.error === 'manual_too_long' ? t('manualTooLong', { max: d.max }) : d?.error === 'knowledge_too_long' ? t('knowledgeTooLong') : t('generateFailed'))
+      return
+    }
+    setManual('')
+    setReloadKey(k => k + 1)
+  }
+
   const remove = async () => {
     if (!confirm(t('confirmDeleteExam'))) return
     const res = await fetch(`/api/exams/${id}`, { method: 'DELETE' })
@@ -114,7 +150,7 @@ export function ExamEditor({ id }: { id: string }) {
 
   return (
     <div className="min-h-full bg-slate-50/50 dark:bg-background">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-6">
         <div className="flex flex-wrap items-center gap-3">
           <Link href="/exams" className="text-muted-foreground hover:text-foreground"><ArrowLeft className="h-5 w-5" /></Link>
           <h1 className="text-xl font-bold flex-1 min-w-[12rem]">{exam.title[editLang] || exam.title.zh || exam.title.en || exam.title.vi || t('untitled')}</h1>
@@ -146,7 +182,7 @@ export function ExamEditor({ id }: { id: string }) {
           </div>
           <label className="block space-y-1 text-sm">
             <span className="font-medium">{t('description')}（{LANG_LABEL[editLang]}）</span>
-            <textarea rows={2} className="w-full rounded-md border bg-background p-2 text-sm" value={exam.description[editLang]} onChange={e => setMeta({ description: setL(exam.description, e.target.value) })} />
+            <AutoTextarea minRows={2} value={exam.description[editLang]} onChange={e => setMeta({ description: setL(exam.description, e.target.value) })} />
           </label>
           <div className="flex flex-wrap gap-4 text-sm">
             {['employee', 'public'].map(a => (
@@ -216,6 +252,24 @@ export function ExamEditor({ id }: { id: string }) {
           )}
         </section>
 
+        {/* 人工出題、AI 修飾 */}
+        {!locked && (
+          <section className="rounded-2xl border bg-card p-5 space-y-3">
+            <div>
+              <h2 className="font-semibold flex items-center gap-1.5"><PenLine className="h-4 w-4" />{t('manualTitle')}</h2>
+              <p className="text-xs text-muted-foreground mt-1">{t('manualHint')}</p>
+            </div>
+            <AutoTextarea minRows={6} placeholder={t('manualPh')} value={manual} maxLength={20000} onChange={e => setManual(e.target.value)} />
+            <div className="flex flex-wrap items-center gap-3">
+              <Button onClick={polishManual} disabled={polishing || !manual.trim()}>
+                {polishing ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1" />}
+                {polishing ? t('manualPolishing') : t('manualPolish')}
+              </Button>
+              <span className="text-xs text-muted-foreground">{t('manualPolishHint')}</span>
+            </div>
+          </section>
+        )}
+
         {/* 題目 */}
         <section className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -231,6 +285,7 @@ export function ExamEditor({ id }: { id: string }) {
             )}
           </div>
           {locked && <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">{t('locked')}</div>}
+          {!locked && questions.length > 0 && <p className="text-xs text-muted-foreground">{t('editHint')}</p>}
 
           {questions.map((q, i) => (
             <div key={q.id ?? `new-${i}`} className="rounded-xl border bg-card p-4 space-y-3 text-sm">
@@ -250,7 +305,7 @@ export function ExamEditor({ id }: { id: string }) {
                 )}
               </div>
 
-              <textarea rows={2} disabled={locked} className="w-full rounded-md border bg-background p-2" placeholder={t('questionPh')}
+              <AutoTextarea minRows={3} disabled={locked} className="text-base" placeholder={t('questionPh')}
                 value={q.question[editLang]} onChange={e => setQ(i, { question: setL(q.question, e.target.value) })} />
 
               {(q.type === 'single' || q.type === 'multi') && (
@@ -258,14 +313,14 @@ export function ExamEditor({ id }: { id: string }) {
                   {q.options.map((o, oi) => {
                     const correct = q.type === 'single' ? q.answer === o.key : (q.answer as string[]).includes(o.key)
                     return (
-                      <div key={o.key} className="flex items-center gap-2">
-                        <input type={q.type === 'single' ? 'radio' : 'checkbox'} disabled={locked} checked={correct} title={t('markCorrect')}
+                      <div key={o.key} className="flex items-start gap-2">
+                        <input type={q.type === 'single' ? 'radio' : 'checkbox'} className="mt-3" disabled={locked} checked={correct} title={t('markCorrect')}
                           onChange={() => {
                             if (q.type === 'single') setQ(i, { answer: o.key })
                             else { const cur = q.answer as string[]; setQ(i, { answer: cur.includes(o.key) ? cur.filter(x => x !== o.key) : [...cur, o.key].sort() }) }
                           }} />
-                        <span className="w-5 font-medium">{o.key}.</span>
-                        <Input disabled={locked} className={correct ? 'border-emerald-400' : ''} value={o.text[editLang]}
+                        <span className="w-5 font-medium mt-2.5">{o.key}.</span>
+                        <AutoTextarea minRows={1} disabled={locked} className={correct ? 'border-emerald-400 bg-emerald-50/40 dark:bg-emerald-950/20' : ''} value={o.text[editLang]}
                           onChange={e => setQ(i, { options: q.options.map((x, xi) => (xi === oi ? { ...x, text: setL(x.text, e.target.value) } : x)) })} />
                       </div>
                     )
@@ -286,19 +341,19 @@ export function ExamEditor({ id }: { id: string }) {
                 <>
                   <label className="block space-y-1">
                     <span className="text-xs text-muted-foreground">{t('referenceAnswer')}（{LANG_LABEL[editLang]}）</span>
-                    <textarea rows={3} disabled={locked} className="w-full rounded-md border bg-background p-2" value={(q.answer as L10n)[editLang]}
+                    <AutoTextarea minRows={4} disabled={locked} value={(q.answer as L10n)[editLang]}
                       onChange={e => setQ(i, { answer: setL(q.answer as L10n, e.target.value) })} />
                   </label>
                   <label className="block space-y-1">
                     <span className="text-xs text-muted-foreground">{t('rubric')}（{LANG_LABEL[editLang]}）</span>
-                    <textarea rows={2} disabled={locked} className="w-full rounded-md border bg-background p-2" value={q.rubric[editLang]}
+                    <AutoTextarea minRows={3} disabled={locked} value={q.rubric[editLang]}
                       onChange={e => setQ(i, { rubric: setL(q.rubric, e.target.value) })} />
                   </label>
                 </>
               )}
               <label className="block space-y-1">
                 <span className="text-xs text-muted-foreground">{t('explanation')}（{LANG_LABEL[editLang]}）</span>
-                <textarea rows={2} disabled={locked} className="w-full rounded-md border bg-background p-2" value={q.explanation[editLang]}
+                <AutoTextarea minRows={2} disabled={locked} value={q.explanation[editLang]}
                   onChange={e => setQ(i, { explanation: setL(q.explanation, e.target.value) })} />
               </label>
             </div>
