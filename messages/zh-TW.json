@@ -6983,7 +6983,10 @@
     "showActiveRecipes": "回到使用中配方",
     "hiddenRecipesHint": "以下是已隱藏的配方：不會出現在 R&D Lab、行銷產品、POS 對照等地方。按眼睛圖示可恢復使用。",
     "hiddenBadge": "已隱藏",
-    "policyBannerLabel": "公司權責劃分原則"
+    "policyBannerLabel": "公司權責劃分原則",
+    "pushedBtn": "已推送",
+    "pushedTitle": "已推送至行銷部新品上架流程（可在 行銷系統 → 產品圖文 → 新品上架流水線 查看）",
+    "pushAlready": "此配方已在行銷部新品上架流程中，不需重複推送。"
   },
   "AuditPlatform": {
     "knowledgeCoreStatus": "COMPANY KNOWLEDGE CORE 共享企業知識底層連動中",

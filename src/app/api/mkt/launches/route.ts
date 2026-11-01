@@ -16,6 +16,14 @@ export async function GET(req: NextRequest) {
   const sp = new URL(req.url).searchParams
   const status = s(sp.get('status'))
 
+  // 研發頁用：只回傳已推送過的配方 ID（封存的不算）
+  if (sp.get('pushed') === '1') {
+    const { data, error } = await c.admin.from('mkt_product_launches')
+      .select('inv_recipe_id').eq('owner_id', c.ownerId).not('inv_recipe_id', 'is', null).neq('status', 'archived')
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ recipeIds: [...new Set((data ?? []).map(r => r.inv_recipe_id as string))] })
+  }
+
   let q = c.admin
     .from('mkt_product_launches')
     .select(`
@@ -55,6 +63,14 @@ export async function POST(req: NextRequest) {
   if (!name) return NextResponse.json({ error: '新品名稱必填' }, { status: 400 })
 
   const status = STATUSES.includes(s(b.status)) ? s(b.status) : 'mkt_prep'
+  const invRecipeId = d(b.inv_recipe_id)
+
+  // 同一配方已在上架流程中（未封存）就不重複建立
+  if (invRecipeId) {
+    const { data: dup } = await c.admin.from('mkt_product_launches').select('id')
+      .eq('owner_id', c.ownerId).eq('inv_recipe_id', invRecipeId).neq('status', 'archived').limit(1)
+    if (dup && dup.length) return NextResponse.json({ error: 'already_pushed' }, { status: 409 })
+  }
 
   // 若提供了 recipe_id 或 pos_item_id，亦自動確保 mkt_product_profiles 有對應紀錄
   let productId = b.product_id || null
@@ -77,7 +93,7 @@ export async function POST(req: NextRequest) {
           category: s(b.category || '新品特調'),
           price: Number(b.price) || 0,
           slogan: s(b.slogan || '研發全新力作'),
-          recipe_id: b.recipe_id || null,
+          recipe_id: invRecipeId,
           pos_item_id: b.pos_item_id || null,
         })
         .select('id')
@@ -93,6 +109,7 @@ export async function POST(req: NextRequest) {
       name,
       product_id: productId,
       recipe_id: b.recipe_id || null,
+      inv_recipe_id: invRecipeId,
       pos_item_id: b.pos_item_id || null,
       status,
       vip_start_date: d(b.vip_start_date),

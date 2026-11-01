@@ -155,6 +155,14 @@ export default function RdPage() {
     loadData()
   }, [loadData])
 
+  // 已推送至行銷新品上架流程的配方（未封存）
+  const [pushedIds, setPushedIds] = useState<Set<string>>(new Set())
+  const loadPushed = useCallback(() => {
+    fetch('/api/mkt/launches?pushed=1').then(r => r.ok ? r.json() : { recipeIds: [] })
+      .then(d => setPushedIds(new Set<string>(d.recipeIds ?? []))).catch(() => {})
+  }, [])
+  useEffect(() => { loadPushed() }, [loadPushed])
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const p = new URLSearchParams(window.location.search).get('tab')
@@ -253,6 +261,7 @@ export default function RdPage() {
 
   // 推送至行銷部新品上架流水線
   const submitToMarketingLaunch = async (r: Recipe) => {
+    if (pushedIds.has(r.id)) return
     if (!confirm(t('pushConfirm', { name: r.name }))) return
     try {
       const res = await fetch('/api/mkt/launches', {
@@ -260,20 +269,21 @@ export default function RdPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: r.name,
-          recipe_id: r.id,
+          inv_recipe_id: r.id,
           price: Math.round((r.store_cost || 0) * 2.5),
           status: 'mkt_prep',
           vip_notes: `研發定稿配方：${r.name}，單杯門市成本約 $${Math.round(r.store_cost || 0)}`,
         }),
       })
-      const j = await res.json()
-      if (res.ok) {
-        alert(t('pushDone', { name: r.name }))
+      const j = await res.json().catch(() => ({}))
+      if (res.ok || j.error === 'already_pushed') {
+        setPushedIds(prev => new Set(prev).add(r.id))
+        alert(res.ok ? t('pushDone', { name: r.name }) : t('pushAlready'))
       } else {
         alert(j.error || t('pushFailed'))
       }
-    } catch (e: any) {
-      alert(e.message || t('pushFailed'))
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : t('pushFailed'))
     }
   }
 
@@ -642,16 +652,29 @@ export default function RdPage() {
                           )}
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 px-2 gap-1 text-xs text-primary border-primary/30 hover:bg-primary/10 font-semibold"
-                            onClick={() => submitToMarketingLaunch(r)}
-                            title={t('pushTitle')}
-                          >
-                            <Rocket className="h-3.5 w-3.5" />
-                            {t('pushBtn')}
-                          </Button>
+                          {pushedIds.has(r.id) ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled
+                              className="h-8 px-2 gap-1 text-xs text-emerald-700 border-emerald-500/40 bg-emerald-50 dark:bg-emerald-950/30 dark:text-emerald-400 disabled:opacity-100 font-semibold"
+                              title={t('pushedTitle')}
+                            >
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                              {t('pushedBtn')}
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 px-2 gap-1 text-xs text-primary border-primary/30 hover:bg-primary/10 font-semibold"
+                              onClick={() => submitToMarketingLaunch(r)}
+                              title={t('pushTitle')}
+                            >
+                              <Rocket className="h-3.5 w-3.5" />
+                              {t('pushBtn')}
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="icon"
