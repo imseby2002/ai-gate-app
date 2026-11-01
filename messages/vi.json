@@ -6983,7 +6983,10 @@
     "showActiveRecipes": "Về công thức đang dùng",
     "hiddenRecipesHint": "Các công thức đã ẩn: không hiện trong R&D Lab, sản phẩm marketing hay đối chiếu POS. Bấm biểu tượng mắt để khôi phục.",
     "hiddenBadge": "Đã ẩn",
-    "policyBannerLabel": "Nguyên tắc phân quyền"
+    "policyBannerLabel": "Nguyên tắc phân quyền",
+    "pushedBtn": "Đã chuyển",
+    "pushedTitle": "Đã chuyển sang quy trình ra mắt sản phẩm mới của Marketing (xem Marketing → Nội dung sản phẩm → Quy trình ra mắt)",
+    "pushAlready": "Công thức này đã có trong quy trình ra mắt của Marketing."
   },
   "AuditPlatform": {
     "knowledgeCoreStatus": "COMPANY KNOWLEDGE CORE — lớp kiến thức chung của doanh nghiệp đang liên kết",

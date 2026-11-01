@@ -6983,7 +6983,10 @@
     "showActiveRecipes": "Back to active recipes",
     "hiddenRecipesHint": "These recipes are hidden: they don't appear in R&D Lab, marketing products or POS mapping. Tap the eye icon to restore.",
     "hiddenBadge": "Hidden",
-    "policyBannerLabel": "Responsibility policy"
+    "policyBannerLabel": "Responsibility policy",
+    "pushedBtn": "Pushed",
+    "pushedTitle": "Already sent to Marketing's new product launch pipeline (see Marketing → Product content → Launch pipeline)",
+    "pushAlready": "This recipe is already in Marketing's launch pipeline."
   },
   "AuditPlatform": {
     "knowledgeCoreStatus": "COMPANY KNOWLEDGE CORE — shared enterprise knowledge layer connected",
