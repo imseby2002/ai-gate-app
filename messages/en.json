@@ -13186,7 +13186,8 @@
     "manualPolishing": "AI is polishing, about 1 minute…",
     "manualPolishHint": "Polished questions are added to the end; you can still edit each one.",
     "manualTooLong": "Too long (max {max} characters). Please split it up.",
-    "editHint": "Every question, including AI-generated ones, can be edited directly — question, options, correct answer and explanation. Click Save when done."
+    "editHint": "Every question, including AI-generated ones, can be edited directly — question, options, correct answer and explanation. Click Save when done.",
+    "kind_portal": "Employee portal"
   },
   "KnowledgePicker": {
     "tab": "Company knowledge",

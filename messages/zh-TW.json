@@ -13186,7 +13186,8 @@
     "manualPolishing": "AI 整理中，約需 1 分鐘…",
     "manualPolishHint": "整理好的題目會加在題目最後，可再逐題修改。",
     "manualTooLong": "人工出題內容太長（上限 {max} 字），請分批送出。",
-    "editHint": "所有題目（包含 AI 出的題）都可以直接修改題目、選項、正確答案與說明，改完按「儲存」。"
+    "editHint": "所有題目（包含 AI 出的題）都可以直接修改題目、選項、正確答案與說明，改完按「儲存」。",
+    "kind_portal": "員工專區"
   },
   "KnowledgePicker": {
     "tab": "公司知識庫",
