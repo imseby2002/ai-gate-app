@@ -7845,7 +7845,10 @@
     "evalTiersTitle": "Rating → bonus table",
     "evalTiersDesc": "The rating chosen in an evaluation is converted to a bonus with this table; payroll drafts put it into KPI bonus and the rating into Xếp hạng. Changes apply to evaluations saved afterwards.",
     "evalTierAdd": "+ Add rating",
-    "evalTierAmount": "Rating bonus"
+    "evalTierAmount": "Rating bonus",
+    "storeFilterAll": "All stores / locations ({n})",
+    "storeFilterNone": "No store assigned ({n})",
+    "storeFilterHint": "Filter employees by store / location"
   },
   "FinancePage": {
     "accountBalancesTitle": "Balance by account",
