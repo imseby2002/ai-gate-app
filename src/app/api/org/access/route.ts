@@ -22,6 +22,7 @@ export async function GET() {
   let isCompanyAdmin = false
   let companyRole: string | null = null
   let companyName: string | null = null
+  let posEnabled = false
 
   if (profile?.company_id) {
     const [{ data: m }, { data: c }] = await Promise.all([
@@ -32,12 +33,13 @@ export async function GET() {
         .eq('status', 'active')
         .maybeSingle(),
       admin.from('companies')
-        .select('name')
+        .select('name, enabled_modules')
         .eq('id', profile.company_id)
         .single()
     ])
     companyRole = m?.role ?? null
     companyName = c?.name ?? null
+    posEnabled = ((c?.enabled_modules as string[] | null) ?? []).includes('pos')
     if (m?.role === 'owner' || m?.role === 'admin') {
       isCompanyAdmin = true
     }
@@ -58,5 +60,7 @@ export async function GET() {
     units: effectiveUnits,
     store_code: storeCode,
     store_codes: storeCodes,
+    // 門市點單 POS 只給開通 pos 模組的公司
+    posEnabled,
   })
 }

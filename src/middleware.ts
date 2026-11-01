@@ -317,7 +317,7 @@ export async function middleware(request: NextRequest) {
           '/prospect-call':  ['leads', 'marketing', 'mkt'],
           '/resume':         ['resume'],
           '/work':           ['work'],
-          '/pos':            ['work'],
+          '/pos':            ['pos'], // 門市點單 POS 只開給有 pos 模組的公司（Feeling Tea），不屬共用功能
           '/hr':             ['hr'],
           '/finance':        ['finance'],
           '/agent':          ['agent'],

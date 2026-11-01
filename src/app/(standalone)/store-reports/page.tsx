@@ -45,6 +45,11 @@ export default function StoreReportsPage() {
   const t = useTranslations('StoreReports')
   const now = new Date()
   const [tab, setTab] = useState<Tab>('report')
+  // 門市點單 POS 只給開通 pos 模組的公司
+  const [posEnabled, setPosEnabled] = useState(false)
+  useEffect(() => {
+    fetch('/api/org/access').then(r => r.ok ? r.json() : null).then(d => setPosEnabled(!!d?.posEnabled)).catch(() => {})
+  }, [])
   const { status: storeStatus, options: storeOptions, store, setStore, locked: lockedStore, reload: reloadStores } = useStoreOptions()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
@@ -93,11 +98,13 @@ export default function StoreReportsPage() {
               <Calendar className="h-4 w-4 text-indigo-600" />{t('shift')}
             </Link>
           </Button>
-          <Button asChild variant="outline" size="sm" className="gap-1.5">
-            <Link href="/pos">
-              <Store className="h-4 w-4 text-orange-600" />{t('pos')}
-            </Link>
-          </Button>
+          {posEnabled && (
+            <Button asChild variant="outline" size="sm" className="gap-1.5">
+              <Link href="/pos">
+                <Store className="h-4 w-4 text-orange-600" />{t('pos')}
+              </Link>
+            </Button>
+          )}
         </div>
       </div>
 

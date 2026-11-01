@@ -27,6 +27,7 @@ interface Access {
   companyRole?: string | null
   companyName?: string | null
   units: string[]
+  posEnabled?: boolean
 }
 interface UserRow { id: string; full_name: string | null; email: string | null; user_type: string; units: string[] | null; store_code?: string | null; hr_employee_name?: string | null }
 
@@ -118,7 +119,7 @@ export default function OfficePage() {
     .map(a => ({ ...a, pages: a.pages.filter(p => canManage || !p.adminOnly) }))
     .filter(a => a.pages.length > 0)
   // 門市點單 POS 是門市獨立使用的前台，門市營運管不到，只放在管理者（主帳號）的公司入口
-  if (canManage) {
+  if (canManage && access.posEnabled) {
     const posLabel = locale === 'vi' ? 'POS Bán hàng tại quầy' : locale === 'en' ? 'Counter POS' : '門市點單 POS'
     visibleAreas.push({ key: 'pos', label: posLabel, homeHref: '/pos', description: '', pages: [{ href: '/pos', label: posLabel }] })
   }
