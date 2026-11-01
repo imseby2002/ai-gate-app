@@ -80,6 +80,8 @@ export function ExamEditor({ id }: { id: string }) {
   if (!exam) return <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
 
   const locked = submissionCount > 0
+  // 已發布或已關閉的考卷只能檢視；要改題目請先「改回草稿」
+  const readOnly = locked || exam.status !== 'draft'
   const setMeta = (patch: Partial<Exam>) => { setExam({ ...exam, ...patch }); setDirty(true) }
   const setQ = (i: number, patch: Partial<ExamQuestion>) => { setQuestions(qs => qs.map((q, j) => (j === i ? { ...q, ...patch } : q))); setDirty(true) }
   const setL = (l: L10n, v: string): L10n => ({ ...l, [editLang]: v })
@@ -136,6 +138,12 @@ export function ExamEditor({ id }: { id: string }) {
     }
     setManual('')
     setReloadKey(k => k + 1)
+  }
+
+  // 發布後回到考試中心清單，不再停留在出題頁
+  const publish = async () => {
+    if (!confirm(t('publishConfirm'))) return
+    if (await saveAll({ status: 'published' })) router.push('/exams')
   }
 
   const remove = async () => {
@@ -230,7 +238,7 @@ export function ExamEditor({ id }: { id: string }) {
               </label>
             ))}
           </div>
-          {!locked && (
+          {!readOnly && (
             <>
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                 {QUESTION_TYPES.map(qt => (
@@ -253,7 +261,7 @@ export function ExamEditor({ id }: { id: string }) {
         </section>
 
         {/* 人工出題、AI 修飾 */}
-        {!locked && (
+        {!readOnly && (
           <section className="rounded-2xl border bg-card p-5 space-y-3">
             <div>
               <h2 className="font-semibold flex items-center gap-1.5"><PenLine className="h-4 w-4" />{t('manualTitle')}</h2>
@@ -274,7 +282,7 @@ export function ExamEditor({ id }: { id: string }) {
         <section className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="font-semibold">{t('questionsTitle', { n: questions.length, points: totalPoints })}</h2>
-            {!locked && (
+            {!readOnly && (
               <div className="flex flex-wrap gap-1">
                 {QUESTION_TYPES.map(qt => (
                   <Button key={qt} size="sm" variant="outline" onClick={() => { setQuestions(qs => [...qs, newQuestion(qt, qs.length)]); setDirty(true) }}>
@@ -285,7 +293,8 @@ export function ExamEditor({ id }: { id: string }) {
             )}
           </div>
           {locked && <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">{t('locked')}</div>}
-          {!locked && questions.length > 0 && <p className="text-xs text-muted-foreground">{t('editHint')}</p>}
+          {!locked && readOnly && <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">{t('publishedReadOnly')}</div>}
+          {!readOnly && questions.length > 0 && <p className="text-xs text-muted-foreground">{t('editHint')}</p>}
 
           {questions.map((q, i) => (
             <div key={q.id ?? `new-${i}`} className="rounded-xl border bg-card p-4 space-y-3 text-sm">
@@ -294,9 +303,9 @@ export function ExamEditor({ id }: { id: string }) {
                 <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700">{t(`type_${q.type}`)}</span>
                 <label className="flex items-center gap-1 text-xs ml-auto">
                   {t('points')}
-                  <Input className="w-16 h-7" type="number" min={1} max={100} disabled={locked} value={q.points} onChange={e => setQ(i, { points: Math.max(1, Number(e.target.value) || 1) })} />
+                  <Input className="w-16 h-7" type="number" min={1} max={100} disabled={readOnly} value={q.points} onChange={e => setQ(i, { points: Math.max(1, Number(e.target.value) || 1) })} />
                 </label>
-                {!locked && (
+                {!readOnly && (
                   <div className="flex gap-1">
                     <button disabled={i === 0} onClick={() => { setQuestions(qs => { const c = [...qs]; [c[i - 1], c[i]] = [c[i], c[i - 1]]; return c }); setDirty(true) }} className="p-1 rounded border disabled:opacity-30"><ArrowUp className="h-3.5 w-3.5" /></button>
                     <button disabled={i === questions.length - 1} onClick={() => { setQuestions(qs => { const c = [...qs]; [c[i + 1], c[i]] = [c[i], c[i + 1]]; return c }); setDirty(true) }} className="p-1 rounded border disabled:opacity-30"><ArrowDown className="h-3.5 w-3.5" /></button>
@@ -305,7 +314,7 @@ export function ExamEditor({ id }: { id: string }) {
                 )}
               </div>
 
-              <AutoTextarea minRows={3} disabled={locked} className="text-base" placeholder={t('questionPh')}
+              <AutoTextarea minRows={3} disabled={readOnly} className="text-base" placeholder={t('questionPh')}
                 value={q.question[editLang]} onChange={e => setQ(i, { question: setL(q.question, e.target.value) })} />
 
               {(q.type === 'single' || q.type === 'multi') && (
@@ -314,18 +323,18 @@ export function ExamEditor({ id }: { id: string }) {
                     const correct = q.type === 'single' ? q.answer === o.key : (q.answer as string[]).includes(o.key)
                     return (
                       <div key={o.key} className="flex items-start gap-2">
-                        <input type={q.type === 'single' ? 'radio' : 'checkbox'} className="mt-3" disabled={locked} checked={correct} title={t('markCorrect')}
+                        <input type={q.type === 'single' ? 'radio' : 'checkbox'} className="mt-3" disabled={readOnly} checked={correct} title={t('markCorrect')}
                           onChange={() => {
                             if (q.type === 'single') setQ(i, { answer: o.key })
                             else { const cur = q.answer as string[]; setQ(i, { answer: cur.includes(o.key) ? cur.filter(x => x !== o.key) : [...cur, o.key].sort() }) }
                           }} />
                         <span className="w-5 font-medium mt-2.5">{o.key}.</span>
-                        <AutoTextarea minRows={1} disabled={locked} className={correct ? 'border-emerald-400 bg-emerald-50/40 dark:bg-emerald-950/20' : ''} value={o.text[editLang]}
+                        <AutoTextarea minRows={1} disabled={readOnly} className={correct ? 'border-emerald-400 bg-emerald-50/40 dark:bg-emerald-950/20' : ''} value={o.text[editLang]}
                           onChange={e => setQ(i, { options: q.options.map((x, xi) => (xi === oi ? { ...x, text: setL(x.text, e.target.value) } : x)) })} />
                       </div>
                     )
                   })}
-                  {!locked && q.options.length < 8 && (
+                  {!readOnly && q.options.length < 8 && (
                     <button className="text-xs text-primary" onClick={() => setQ(i, { options: [...q.options, { key: String.fromCharCode(65 + q.options.length), text: emptyL10n() }] })}>+ {t('addOption')}</button>
                   )}
                 </div>
@@ -333,7 +342,7 @@ export function ExamEditor({ id }: { id: string }) {
               {q.type === 'fill' && (
                 <label className="block space-y-1">
                   <span className="text-xs text-muted-foreground">{t('fillAnswers')}（{LANG_LABEL[editLang]}）</span>
-                  <Input disabled={locked} value={((q.answer as Record<ExamLang, string[]>)[editLang] ?? []).join(' / ')}
+                  <Input disabled={readOnly} value={((q.answer as Record<ExamLang, string[]>)[editLang] ?? []).join(' / ')}
                     onChange={e => setQ(i, { answer: { ...(q.answer as Record<ExamLang, string[]>), [editLang]: e.target.value.split('/').map(s => s.trim()).filter(Boolean) } })} />
                 </label>
               )}
@@ -341,19 +350,19 @@ export function ExamEditor({ id }: { id: string }) {
                 <>
                   <label className="block space-y-1">
                     <span className="text-xs text-muted-foreground">{t('referenceAnswer')}（{LANG_LABEL[editLang]}）</span>
-                    <AutoTextarea minRows={4} disabled={locked} value={(q.answer as L10n)[editLang]}
+                    <AutoTextarea minRows={4} disabled={readOnly} value={(q.answer as L10n)[editLang]}
                       onChange={e => setQ(i, { answer: setL(q.answer as L10n, e.target.value) })} />
                   </label>
                   <label className="block space-y-1">
                     <span className="text-xs text-muted-foreground">{t('rubric')}（{LANG_LABEL[editLang]}）</span>
-                    <AutoTextarea minRows={3} disabled={locked} value={q.rubric[editLang]}
+                    <AutoTextarea minRows={3} disabled={readOnly} value={q.rubric[editLang]}
                       onChange={e => setQ(i, { rubric: setL(q.rubric, e.target.value) })} />
                   </label>
                 </>
               )}
               <label className="block space-y-1">
                 <span className="text-xs text-muted-foreground">{t('explanation')}（{LANG_LABEL[editLang]}）</span>
-                <AutoTextarea minRows={2} disabled={locked} value={q.explanation[editLang]}
+                <AutoTextarea minRows={2} disabled={readOnly} value={q.explanation[editLang]}
                   onChange={e => setQ(i, { explanation: setL(q.explanation, e.target.value) })} />
               </label>
             </div>
@@ -363,7 +372,7 @@ export function ExamEditor({ id }: { id: string }) {
         {/* 操作 */}
         <div className="sticky bottom-0 bg-background/95 backdrop-blur border-t -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 flex flex-wrap items-center gap-2">
           <Button onClick={() => saveAll()} disabled={saving}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : t('save')}</Button>
-          {exam.status !== 'published' && <Button variant="outline" onClick={() => saveAll({ status: 'published' })} disabled={saving}>{t('publish')}</Button>}
+          {exam.status !== 'published' && <Button variant="outline" onClick={publish} disabled={saving}>{t('publish')}</Button>}
           {exam.status === 'published' && <Button variant="outline" onClick={() => saveAll({ status: 'closed' })} disabled={saving}>{t('close')}</Button>}
           {exam.status !== 'draft' && <Button variant="outline" onClick={() => saveAll({ status: 'draft' })} disabled={saving}>{t('backToDraft')}</Button>}
           {dirty && <span className="text-xs text-amber-600">{t('unsaved')}</span>}
