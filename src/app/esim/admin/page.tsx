@@ -6,7 +6,7 @@ import {
   Wallet, RefreshCw, CheckCircle2, AlertCircle, QrCode, Mail,
   ArrowRight, ExternalLink, Globe, Shield, ShoppingCart, DollarSign, Bell,
   Tag, Percent, Sliders, Calculator, Sparkles, Save, Check,
-  Ticket, Plus, Trash2, ToggleLeft, ToggleRight, Pencil, X, Copy
+  Ticket, Plus, Trash2, ToggleLeft, ToggleRight, Pencil, X, Copy, History
 } from 'lucide-react'
 import { DEFAULT_PRICING_SETTINGS, EsimPricingSettings } from '@/lib/esim/catalog'
 
@@ -406,6 +406,30 @@ export default function EsimAdminPage() {
       alert(`批次刪除異常: ${err.message}`)
     }
   }
+
+  // 使用紀錄查詢
+  const [usageCoupon, setUsageCoupon] = useState<any | null>(null)
+  const [usageData, setUsageData] = useState<{ records: any[]; summary: any } | null>(null)
+  const [loadingUsage, setLoadingUsage] = useState(false)
+  const [usageError, setUsageError] = useState('')
+
+  async function openCouponUsage(c: any) {
+    setUsageCoupon(c)
+    setUsageData(null)
+    setUsageError('')
+    setLoadingUsage(true)
+    try {
+      const data = await fetch(`/api/esim/admin/coupons/usage?code=${encodeURIComponent(c.code)}`).then(r => r.json())
+      if (data.success) setUsageData({ records: data.records || [], summary: data.summary })
+      else setUsageError(data.error || '查詢失敗')
+    } catch (err: any) {
+      setUsageError(err.message || '查詢失敗')
+    } finally {
+      setLoadingUsage(false)
+    }
+  }
+
+  const PAYMENT_LABEL: Record<string, string> = { paid: '已付款', pending: '待付款', failed: '付款失敗', refunded: '已退款' }
 
   // 儲存定價與促銷設定
   async function handleSaveSettings(e: React.FormEvent) {
@@ -1574,6 +1598,14 @@ export default function EsimAdminPage() {
                             </button>
                             <button
                               type="button"
+                              onClick={() => openCouponUsage(c)}
+                              className="p-1.5 hover:bg-amber-50 rounded-lg text-slate-400 hover:text-amber-600 transition-colors cursor-pointer"
+                              title="使用紀錄"
+                            >
+                              <History className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
                               onClick={() => handleEditCoupon(c, true)}
                               className="p-1.5 hover:bg-indigo-50 rounded-lg text-slate-400 hover:text-indigo-600 transition-colors cursor-pointer"
                               title="複製為新優惠券"
@@ -1596,6 +1628,78 @@ export default function EsimAdminPage() {
                 </table>
               </div>
             )}
+          </div>
+        </div>
+      )}
+      {usageCoupon && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setUsageCoupon(null)}>
+          <div className="bg-white rounded-3xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-xl" onClick={e => e.stopPropagation()}>
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">使用紀錄：{usageCoupon.code}</h3>
+                <p className="text-xs text-slate-500">{usageCoupon.name}</p>
+              </div>
+              <button type="button" onClick={() => setUsageCoupon(null)} className="p-1.5 rounded-lg hover:bg-slate-100">
+                <X className="w-5 h-5 text-slate-500" />
+              </button>
+            </div>
+            <div className="p-5 overflow-y-auto text-xs space-y-4">
+              {loadingUsage && <div className="text-center text-slate-400 py-8">查詢中...</div>}
+              {usageError && <div className="text-center text-red-500 py-8">{usageError}</div>}
+              {usageData && (
+                <>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="rounded-2xl bg-slate-50 p-3"><div className="text-slate-500">使用訂單</div><div className="text-lg font-bold">{usageData.summary.total_orders}</div></div>
+                    <div className="rounded-2xl bg-emerald-50 p-3"><div className="text-slate-500">已付款</div><div className="text-lg font-bold text-emerald-700">{usageData.summary.paid_orders}</div></div>
+                    <div className="rounded-2xl bg-amber-50 p-3"><div className="text-slate-500">已折抵總額</div><div className="text-lg font-bold text-amber-700">NT$ {usageData.summary.total_discount_twd}</div></div>
+                    <div className="rounded-2xl bg-blue-50 p-3"><div className="text-slate-500">實收總額</div><div className="text-lg font-bold text-blue-700">NT$ {usageData.summary.total_revenue_twd}</div></div>
+                  </div>
+                  {usageData.records.length === 0 ? (
+                    <div className="text-center text-slate-400 py-8">尚無訂單使用此優惠券</div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left">
+                        <thead className="bg-slate-50 text-slate-500 font-semibold">
+                          <tr>
+                            <th className="py-2 px-3">訂單編號</th>
+                            <th className="py-2 px-3">時間</th>
+                            <th className="py-2 px-3">客人</th>
+                            <th className="py-2 px-3">方案</th>
+                            <th className="py-2 px-3 text-right">原價</th>
+                            <th className="py-2 px-3 text-right">折抵</th>
+                            <th className="py-2 px-3 text-right">實付</th>
+                            <th className="py-2 px-3">付款狀態</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {usageData.records.map((r: any) => (
+                            <tr key={r.order_no}>
+                              <td className="py-2 px-3 font-mono">
+                                <Link href={`/esim/order/${r.order_no}`} target="_blank" className="text-blue-600 hover:underline">{r.order_no}</Link>
+                              </td>
+                              <td className="py-2 px-3 whitespace-nowrap">{new Date(r.created_at).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })}</td>
+                              <td className="py-2 px-3">
+                                <div>{r.customer_name}</div>
+                                <div className="text-slate-400">{r.customer_email}</div>
+                              </td>
+                              <td className="py-2 px-3">{r.plan}</td>
+                              <td className="py-2 px-3 text-right">NT$ {r.subtotal_twd}</td>
+                              <td className="py-2 px-3 text-right text-amber-700">- NT$ {r.discount_twd}</td>
+                              <td className="py-2 px-3 text-right font-bold">NT$ {r.total_twd}</td>
+                              <td className="py-2 px-3">
+                                <span className={r.payment_status === 'paid' ? 'text-emerald-600 font-bold' : 'text-slate-500'}>
+                                  {PAYMENT_LABEL[r.payment_status] || r.payment_status}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}

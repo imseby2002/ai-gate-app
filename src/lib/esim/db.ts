@@ -246,6 +246,34 @@ export async function getAllEsimOrders(limit: number = 100): Promise<EsimOrder[]
     .slice(0, limit)
 }
 
+/**
+ * 取得使用指定優惠券代碼的訂單（供後台查詢使用紀錄）
+ */
+export async function getEsimOrdersByCouponCode(code: string, limit: number = 500): Promise<EsimOrder[]> {
+  const cleanCode = code.trim().toUpperCase()
+  try {
+    const admin = createAdminClient()
+    const { data, error } = await admin
+      .from('esim_orders')
+      .select('*')
+      .eq('metadata->>coupon_code', cleanCode)
+      .order('created_at', { ascending: false })
+      .limit(limit)
+
+    if (!error && data) {
+      return data as EsimOrder[]
+    }
+  } catch (err) {
+    // Fallback
+  }
+
+  const local = readLocalOrders()
+  return Object.values(local)
+    .filter(o => String(o.metadata?.coupon_code || '').toUpperCase() === cleanCode)
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, limit)
+}
+
 const LOCAL_SETTINGS_FILE = path.join(process.cwd(), 'scratch', 'esim_settings_fallback.json')
 
 /**
