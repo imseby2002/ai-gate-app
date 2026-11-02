@@ -33,6 +33,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const body = await req.json().catch(() => null) as Record<string, unknown> | null
   if (!body) return NextResponse.json({ error: 'invalid' }, { status: 400 })
   const patch: Record<string, unknown> = { ...parseExamMeta(body), updated_at: new Date().toISOString() }
+  const opens = ('opens_at' in patch ? patch.opens_at : exam.opens_at) as string | null
+  const closes = ('closes_at' in patch ? patch.closes_at : exam.closes_at) as string | null
+  if (opens && closes && Date.parse(closes) <= Date.parse(opens)) return NextResponse.json({ error: 'bad_window' }, { status: 400 })
 
   if (typeof body.department === 'string' && body.department !== exam.department) {
     if (!canManageDept(access, body.department)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })

@@ -5,7 +5,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { EXAM_COLUMNS, loadQuestions, type ExamRow } from '@/lib/exams/server'
+import { EXAM_COLUMNS, examWindow, loadQuestions, type ExamRow } from '@/lib/exams/server'
 import { answerKey, gradeSubmission, publicQuestions, sanitizeAnswers } from '@/lib/exams/grade'
 import { isExamLang } from '@/lib/exams/types'
 
@@ -23,9 +23,12 @@ async function loadPublic(token: string) {
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   const { admin, exam } = await loadPublic((await params).token)
   if (!exam) return NextResponse.json({ error: 'not_found' }, { status: 404 })
+  // 不在開放作答時間內
+  const w = examWindow(exam)
+  if (w !== 'open') return NextResponse.json({ error: w, opens_at: exam.opens_at, closes_at: exam.closes_at }, { status: 403 })
   const questions = await loadQuestions(admin, exam.id)
   return NextResponse.json({
-    exam: { id: exam.id, title: exam.title, description: exam.description, pass_score: exam.pass_score },
+    exam: { id: exam.id, title: exam.title, description: exam.description, pass_score: exam.pass_score, opens_at: exam.opens_at, closes_at: exam.closes_at },
     questions: publicQuestions(questions),
   })
 }
@@ -33,6 +36,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ tok
 export async function POST(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   const { admin, exam } = await loadPublic((await params).token)
   if (!exam) return NextResponse.json({ error: 'not_found' }, { status: 404 })
+  // 截止後 5 分鐘內仍收卷（作答中剛好過截止時間）
+  const w = examWindow(exam, Date.now() - 5 * 60 * 1000)
+  if (w === 'ended') return NextResponse.json({ error: w, opens_at: exam.opens_at, closes_at: exam.closes_at }, { status: 403 })
+  if (examWindow(exam) === 'not_yet') return NextResponse.json({ error: 'not_yet', opens_at: exam.opens_at, closes_at: exam.closes_at }, { status: 403 })
 
   const body = await req.json().catch(() => null) as { name?: unknown; contact?: unknown; lang?: unknown; answers?: unknown } | null
   const name = typeof body?.name === 'string' ? body.name.trim().slice(0, 80) : ''

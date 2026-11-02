@@ -13,7 +13,17 @@ import { EXAM_LANGS, QUESTION_TYPES, emptyL10n, type ExamLang, type ExamQuestion
 interface Exam {
   id: string; department: string; title: L10n; description: L10n; status: 'draft' | 'published' | 'closed'
   audience: string[]; public_token: string | null; knowledge_doc_ids: string[]; pass_score: number | null; reveal_answers: boolean
+  opens_at: string | null; closes_at: string | null
 }
+
+// ISO 時間 ↔ <input type="datetime-local"> 的本地時間字串
+const toLocalInput = (iso: string | null) => {
+  if (!iso) return ''
+  const d = new Date(iso)
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`
+}
+const fromLocalInput = (v: string) => (v ? new Date(v).toISOString() : null)
 interface Doc { id: string; department: string; title: string; char_count: number }
 
 const LANG_LABEL: Record<ExamLang, string> = { zh: '中文', en: 'English', vi: 'Tiếng Việt' }
@@ -93,13 +103,14 @@ export function ExamEditor({ id }: { id: string }) {
       body: JSON.stringify({
         department: exam.department, title: exam.title, description: exam.description, audience: exam.audience,
         knowledge_doc_ids: exam.knowledge_doc_ids, pass_score: exam.pass_score, reveal_answers: exam.reveal_answers,
+        opens_at: exam.opens_at, closes_at: exam.closes_at,
         ...(locked ? {} : { questions: questions.map((q, i) => ({ ...q, position: i })) }),
         ...extra,
       }),
     })
     setSaving(false)
     const d = await res.json().catch(() => ({}))
-    if (!res.ok) { alert(d.error === 'no_questions' ? t('noQuestionsToPublish') : d.error === 'has_submissions' ? t('locked') : t('saveFailed')); return false }
+    if (!res.ok) { alert(d.error === 'no_questions' ? t('noQuestionsToPublish') : d.error === 'has_submissions' ? t('locked') : d.error === 'bad_window' ? t('openWindowInvalid') : t('saveFailed')); return false }
     setReloadKey(k => k + 1)
     return true
   }
@@ -209,6 +220,15 @@ export function ExamEditor({ id }: { id: string }) {
               <Input className="w-20 h-8" type="number" min={0} max={100} value={exam.pass_score ?? ''} onChange={e => setMeta({ pass_score: e.target.value === '' ? null : Number(e.target.value) })} />%
             </label>
           </div>
+          {/* 開放作答時間（空白＝不限） */}
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="font-medium">{t('openWindow')}</span>
+            <Input type="datetime-local" className="w-auto h-9" value={toLocalInput(exam.opens_at)} onChange={e => setMeta({ opens_at: fromLocalInput(e.target.value) })} />
+            <span className="text-muted-foreground">~</span>
+            <Input type="datetime-local" className="w-auto h-9" value={toLocalInput(exam.closes_at)} onChange={e => setMeta({ closes_at: fromLocalInput(e.target.value) })} />
+            <span className="text-xs text-muted-foreground">{t('openWindowHint')}</span>
+          </div>
+          {exam.opens_at && exam.closes_at && exam.closes_at <= exam.opens_at && <p className="text-xs text-red-600">{t('openWindowInvalid')}</p>}
           {exam.audience.includes('public') && exam.public_token && (
             <div className="flex items-center gap-2 text-xs">
               <span className="text-muted-foreground shrink-0">{t('publicLink')}</span>

@@ -15,11 +15,13 @@ export interface ExamRow {
   knowledge_doc_ids: string[]
   pass_score: number | null
   reveal_answers: boolean
+  opens_at: string | null
+  closes_at: string | null
   created_at: string
   updated_at: string
 }
 
-export const EXAM_COLUMNS = 'id, company_id, department, title, description, status, audience, public_token, knowledge_doc_ids, pass_score, reveal_answers, created_at, updated_at'
+export const EXAM_COLUMNS = 'id, company_id, department, title, description, status, audience, public_token, knowledge_doc_ids, pass_score, reveal_answers, opens_at, closes_at, created_at, updated_at'
 export const QUESTION_COLUMNS = 'id, position, type, question, options, answer, rubric, explanation, points'
 
 export function newPublicToken() {
@@ -63,9 +65,23 @@ export function parseExamMeta(body: Record<string, unknown>) {
     out.knowledge_doc_ids = body.knowledge_doc_ids.filter((x): x is string => typeof x === 'string').slice(0, 50)
   }
   if ('reveal_answers' in body) out.reveal_answers = !!body.reveal_answers
+  for (const k of ['opens_at', 'closes_at'] as const) {
+    if (k in body) {
+      const v = body[k]
+      const d = typeof v === 'string' && v ? new Date(v) : null
+      out[k] = d && !Number.isNaN(d.getTime()) ? d.toISOString() : null
+    }
+  }
   if ('pass_score' in body) {
     const n = Number(body.pass_score)
     out.pass_score = body.pass_score === null || body.pass_score === '' || !Number.isFinite(n) ? null : Math.max(0, Math.min(100, Math.round(n)))
   }
   return out
+}
+
+/** 開放作答時間判斷：not_yet＝尚未開始、ended＝已截止、open＝可作答（空白代表不限） */
+export function examWindow(exam: { opens_at?: string | null; closes_at?: string | null }, now = Date.now()): 'open' | 'not_yet' | 'ended' {
+  if (exam.opens_at && now < Date.parse(exam.opens_at)) return 'not_yet'
+  if (exam.closes_at && now > Date.parse(exam.closes_at)) return 'ended'
+  return 'open'
 }

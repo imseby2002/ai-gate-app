@@ -10,7 +10,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ no: 
   if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { data: exams, error } = await ctx.admin.from('exams')
-    .select('id, department, title, description, pass_score, audience, updated_at')
+    .select('id, department, title, description, pass_score, audience, opens_at, closes_at, updated_at')
     .eq('company_id', ctx.company.companyId).eq('status', 'published').contains('audience', ['employee'])
     .order('updated_at', { ascending: false })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -27,6 +27,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ no: 
   return NextResponse.json({
     exams: (exams ?? []).map(e => ({
       id: e.id, department: e.department, title: e.title, description: e.description, pass_score: e.pass_score,
+      opens_at: e.opens_at, closes_at: e.closes_at,
       question_count: (qs ?? []).filter(q => q.exam_id === e.id).length,
       my_last: (mine ?? []).find(m => m.exam_id === e.id) ?? null,
     })).filter(e => e.question_count > 0),

@@ -13,7 +13,16 @@ import type { ExamLang, L10n } from '@/lib/exams/types'
 interface ExamItem {
   id: string; department: string; title: L10n; status: 'draft' | 'published' | 'closed'; audience: string[]
   editable: boolean; question_count: number; submission_count?: number
+  opens_at: string | null; closes_at: string | null
   my_last: { score: number; max_score: number; grading_status: string; created_at: string } | null
+}
+
+const fmtTime = (iso: string | null) => (iso ? new Date(iso).toLocaleString(undefined, { hour12: false, month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '')
+const windowState = (e: { opens_at: string | null; closes_at: string | null }) => {
+  const now = Date.now()
+  if (e.opens_at && now < Date.parse(e.opens_at)) return 'not_yet'
+  if (e.closes_at && now > Date.parse(e.closes_at)) return 'ended'
+  return 'open'
 }
 
 export function ExamsPage() {
@@ -87,8 +96,11 @@ export function ExamsPage() {
                   {deptLabel(e.department)} · {t('questionCount', { n: e.question_count })}
                   {e.my_last && ` · ${t('lastScore', { score: e.my_last.score, max: e.my_last.max_score })}`}
                 </div>
+                {(e.opens_at || e.closes_at) && <div className="text-xs text-muted-foreground">{t('openWindow')}：{fmtTime(e.opens_at) || '—'} ~ {fmtTime(e.closes_at) || '—'}</div>}
               </div>
-              <Link href={`/exams/${e.id}/take`}><Button size="sm"><Play className="h-3.5 w-3.5 mr-1" />{e.my_last ? t('retake') : t('start')}</Button></Link>
+              {windowState(e) === 'open'
+                ? <Link href={`/exams/${e.id}/take`}><Button size="sm"><Play className="h-3.5 w-3.5 mr-1" />{e.my_last ? t('retake') : t('start')}</Button></Link>
+                : <Button size="sm" variant="outline" disabled>{windowState(e) === 'not_yet' ? t('windowNotYet') : t('windowEnded')}</Button>}
             </div>
           ))}
         </section>
@@ -130,6 +142,7 @@ export function ExamsPage() {
                   <div className="text-xs text-muted-foreground">
                     {deptLabel(e.department)} · {t('questionCount', { n: e.question_count })} · {t('submissionCount', { n: e.submission_count ?? 0 })}
                     {' · '}{e.audience.map(a => t(`audience_${a}`)).join('、')}
+                    {(e.opens_at || e.closes_at) && <>{' · '}{t('openWindow')}：{fmtTime(e.opens_at) || '—'} ~ {fmtTime(e.closes_at) || '—'}</>}
                   </div>
                 </div>
                 <Link href={`/exams/${e.id}`}><Button size="sm" variant="outline"><Pencil className="h-3.5 w-3.5 mr-1" />{t('edit')}</Button></Link>

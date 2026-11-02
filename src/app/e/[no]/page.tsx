@@ -212,7 +212,7 @@ function PortalBody({ api, company, name, payslips, onChangePin, onLogout }: {
   // 尚未作答的考試數（分頁紅點提醒）
   useEffect(() => {
     fetch(`${api}/exams`).then(r => r.ok ? r.json() : null).then(d => {
-      setPendingExams(((d?.exams ?? []) as PortalExam[]).filter(e => !e.my_last).length)
+      setPendingExams(((d?.exams ?? []) as PortalExam[]).filter(e => !e.my_last && examState(e) === 'open').length)
     }).catch(() => {})
   }, [api, view])
   const setView = (v: View) => { setViewState(v); setMenu(false); history.replaceState(null, '', `#${v}`); window.scrollTo({ top: 0 }) }
@@ -297,10 +297,18 @@ function PortalBody({ api, company, name, payslips, onChangePin, onLogout }: {
 
 interface PortalExam {
   id: string; title: Record<string, string>; description: Record<string, string>; question_count: number
+  opens_at: string | null; closes_at: string | null
   my_last: { score: number; max_score: number; grading_status: string; created_at: string } | null
 }
 const examTitle = (l: Record<string, string>) => l.vi || l.zh || l.en || '-'
 const examTitleZh = (l: Record<string, string>) => (l.zh && l.zh !== l.vi ? l.zh : '')
+const examTime = (iso: string | null) => (iso ? new Date(iso).toLocaleString('vi-VN', { hour12: false, day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—')
+const examState = (e: PortalExam) => {
+  const now = Date.now()
+  if (e.opens_at && now < Date.parse(e.opens_at)) return 'not_yet'
+  if (e.closes_at && now > Date.parse(e.closes_at)) return 'ended'
+  return 'open'
+}
 
 // 我的考試：公司已發布、開放員工作答的考卷；點「作答」在本頁開啟作答畫面，成績記在員工名下
 function ExamsCard({ api }: { api: string }) {
@@ -344,10 +352,17 @@ function ExamsCard({ api }: { api: string }) {
                   ? ` · Lần gần nhất / 最近成績：${e.my_last.score}/${e.my_last.max_score}${e.my_last.grading_status === 'pending' ? '（Chờ chấm / 待評分）' : ''}`
                   : ' · Chưa làm / 尚未作答'}
               </div>
+              {(e.opens_at || e.closes_at) && (
+                <div className="text-xs text-slate-500">Thời gian / 作答時間：{examTime(e.opens_at)} ~ {examTime(e.closes_at)}</div>
+              )}
             </div>
-            <Button size="sm" onClick={() => { setTaking(e.id); window.scrollTo({ top: 0 }) }} variant={e.my_last ? 'outline' : 'default'}>
-              <Play className="h-3.5 w-3.5 mr-1" />{e.my_last ? 'Làm lại / 重考' : 'Làm bài / 作答'}
-            </Button>
+            {examState(e) === 'open' ? (
+              <Button size="sm" onClick={() => { setTaking(e.id); window.scrollTo({ top: 0 }) }} variant={e.my_last ? 'outline' : 'default'}>
+                <Play className="h-3.5 w-3.5 mr-1" />{e.my_last ? 'Làm lại / 重考' : 'Làm bài / 作答'}
+              </Button>
+            ) : (
+              <Button size="sm" variant="outline" disabled>{examState(e) === 'not_yet' ? 'Chưa mở / 尚未開放' : 'Đã đóng / 已截止'}</Button>
+            )}
           </div>
         ))}
       </div>
