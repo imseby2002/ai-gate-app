@@ -2230,7 +2230,8 @@
       "videoTimeout": "Video generation timed out",
       "publishAll": "Publish to social platforms in one click",
       "publish": "Publish",
-      "aiQuota": "The AI image/video service has run out of credits, so it can't generate right now. Please ask your administrator to top up, then try again."
+      "aiQuota": "The AI image/video service has run out of credits, so it can't generate right now. Please ask your administrator to top up, then try again.",
+      "tooLarge": "The image is too large for the server. Please use a smaller image (under 2 MB recommended) or fewer reference images, then try again."
     },
     "brandPage": {
       "title": "Company profile",

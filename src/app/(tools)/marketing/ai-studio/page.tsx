@@ -257,9 +257,7 @@ function AiStudioContent() {
   const handleUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>, nodeId: string) => {
     const file = e.target.files?.[0]
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = ev => {
-      const url = ev.target?.result as string
+    prepareUploadImage(file).then(url => {
       updateNode(nodeId, { outputUrl: url, inputUrl: url, status: 'done' })
       // propagate to next node
       setNodes(prev => {
@@ -267,8 +265,7 @@ function AiStudioContent() {
         if (idx === -1 || idx + 1 >= prev.length) return prev
         return prev.map((n, i) => i === idx + 1 ? { ...n, inputUrl: url } : n)
       })
-    }
-    reader.readAsDataURL(file)
+    }).catch(() => {})
     e.target.value = ''
   }, [updateNode])
 
@@ -299,7 +296,7 @@ function AiStudioContent() {
             scriptId: 0,
           }),
         })
-        const data = await res.json()
+        const data = await readJson(res)
         if (!res.ok) throw new Error(data.error)
         updateNode(nodeId, { videoRequestId: data.requestId, status: 'processing' })
         await pollVideo(nodeId, data.requestId, 'kling-img2video')
@@ -323,7 +320,7 @@ function AiStudioContent() {
             referenceImageMimeType: node.referenceImageMimeType ?? 'image/jpeg',
           }),
         })
-        const data = await res.json()
+        const data = await readJson(res)
         if (!res.ok) throw new Error(data.error)
         const outUrl = data.url
         updateNode(nodeId, { status: 'done', outputUrl: outUrl, error: null })
@@ -356,7 +353,7 @@ function AiStudioContent() {
             prompt: node.compositePrompt,
           }),
         })
-        const data = await res.json()
+        const data = await readJson(res)
         if (!res.ok) throw new Error(data.error)
         const outUrl = data.url
         updateNode(nodeId, { status: 'done', outputUrl: outUrl, error: null })
@@ -378,7 +375,7 @@ function AiStudioContent() {
             stylePreset: node.stylePreset,
           }),
         })
-        const data = await res.json()
+        const data = await readJson(res)
         if (!res.ok) throw new Error(data.error)
         const outUrl = data.url
         updateNode(nodeId, { status: 'done', outputUrl: outUrl, error: null })
@@ -399,7 +396,7 @@ function AiStudioContent() {
       await new Promise(r => setTimeout(r, 5000))
       try {
         const res = await fetch(`/api/marketing/generate-video?requestId=${requestId}&model=${model}`)
-        const data = await res.json()
+        const data = await readJson(res)
         if (data.status === 'completed' && (data.url || data.videoUrl)) {
           updateNode(nodeId, { status: 'done', outputUrl: data.url || data.videoUrl, error: null })
           return
@@ -440,7 +437,7 @@ function AiStudioContent() {
               scriptId: 0,
             }),
           })
-          const data = await res.json()
+          const data = await readJson(res)
           if (!res.ok) throw new Error(data.error)
           updateNode(node.id, { videoRequestId: data.requestId })
           await pollVideo(node.id, data.requestId, 'kling-img2video')
@@ -465,7 +462,7 @@ function AiStudioContent() {
               referenceImageMimeType: node.referenceImageMimeType ?? 'image/jpeg',
             }),
           })
-          const data = await res.json()
+          const data = await readJson(res)
           if (!res.ok) throw new Error(data.error)
           lastOutput = data.url
           updateNode(node.id, { status: 'done', outputUrl: lastOutput, error: null })
@@ -487,7 +484,7 @@ function AiStudioContent() {
               prompt: node.compositePrompt,
             }),
           })
-          const data = await res.json()
+          const data = await readJson(res)
           if (!res.ok) throw new Error(data.error)
           lastOutput = data.url
           updateNode(node.id, { status: 'done', outputUrl: lastOutput, error: null })
@@ -503,7 +500,7 @@ function AiStudioContent() {
               stylePreset: node.stylePreset,
             }),
           })
-          const data = await res.json()
+          const data = await readJson(res)
           if (!res.ok) throw new Error(data.error)
           lastOutput = data.url
           updateNode(node.id, { status: 'done', outputUrl: lastOutput, error: null })
@@ -802,7 +799,7 @@ function NodeCard({ node, index, canRemove, onUpdate, onRun, onRemove, onUpload,
           referenceImages: node.referenceImages || [],
         }),
       })
-      const data = await res.json()
+      const data = await readJson(res)
       if (res.ok && data.suggestion) onUpdate({ prompt: data.suggestion })
     } catch { /* ignore */ } finally {
       setSuggesting(false)
@@ -1169,7 +1166,7 @@ function NodeCard({ node, index, canRemove, onUpdate, onRun, onRemove, onUpload,
 
         {/* Error */}
         {node.status === 'error' && node.error && (
-          <p className="text-xs text-red-500 mt-1.5 leading-relaxed">{node.error.includes(AI_QUOTA_CODE) ? t('studioX.aiQuota') : node.error}</p>
+          <p className="text-xs text-red-500 mt-1.5 leading-relaxed">{node.error.includes(AI_QUOTA_CODE) ? t('studioX.aiQuota') : node.error.includes(PAYLOAD_TOO_LARGE) ? t('studioX.tooLarge') : node.error}</p>
         )}
 
         {/* Run button for non-input nodes */}
@@ -1465,10 +1462,7 @@ function CompositeNodeConfig({ node, onUpdate, t }: CompositeNodeConfigProps) {
   const handleBUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    const mime = file.type
-    const reader = new FileReader()
-    reader.onload = ev => onUpdate({ sourceBImageDataUrl: ev.target?.result as string, sourceBImageMimeType: mime, sourceBMaskDataUrl: null })
-    reader.readAsDataURL(file)
+    prepareUploadImage(file).then(url => onUpdate({ sourceBImageDataUrl: url, sourceBImageMimeType: dataUrlMime(url), sourceBMaskDataUrl: null })).catch(() => {})
     e.target.value = ''
   }
 
@@ -1566,10 +1560,7 @@ function InpaintReferenceUpload({
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    const mime = file.type
-    const reader = new FileReader()
-    reader.onload = ev => onRefChange(ev.target?.result as string, mime)
-    reader.readAsDataURL(file)
+    prepareUploadImage(file).then(url => onRefChange(url, dataUrlMime(url))).catch(() => {})
     e.target.value = ''
   }
 
@@ -1618,6 +1609,34 @@ function InpaintReferenceUpload({
 
 // ─── Multi-Reference Upload Component (For Edit / Redesign) ───────────────────
 
+// 上傳圖片：小於 1.5MB 原樣使用；較大的照片縮到長邊 2048、JPEG 90%，
+// 避免整個請求超過伺服器 4.5MB 上限（會出現「Request Entity Too Large」）
+const UPLOAD_KEEP_BYTES = 1.5 * 1024 * 1024
+function prepareUploadImage(file: File): Promise<string> {
+  if (file.size <= UPLOAD_KEEP_BYTES) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = ev => resolve(ev.target?.result as string)
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+  }
+  return compressImageFile(file, 2048, 0.9)
+}
+const dataUrlMime = (u: string) => u.match(/^data:([^;,]+)/)?.[1] ?? 'image/jpeg'
+
+// 伺服器回應不是 JSON 時（例如請求過大回 413 純文字），轉成可顯示的錯誤
+const PAYLOAD_TOO_LARGE = 'PAYLOAD_TOO_LARGE'
+// 成功時各欄位依 API 而定；失敗時只有 error
+interface StudioResponse { error?: string; url: string; requestId: string; status: string; suggestion: string; videoUrl: string }
+async function readJson(res: Response): Promise<StudioResponse> {
+  const text = await res.text()
+  try { return JSON.parse(text) } catch {
+    if (res.status === 413 || /request entity too large|payload too large/i.test(text)) return { error: PAYLOAD_TOO_LARGE } as StudioResponse
+    return { error: text.slice(0, 200) || `HTTP ${res.status}` } as StudioResponse
+  }
+}
+
 function compressImageFile(file: File, maxDim = 1024, quality = 0.85): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -1640,6 +1659,9 @@ function compressImageFile(file: File, maxDim = 1024, quality = 0.85): Promise<s
         canvas.height = height
         const ctx = canvas.getContext('2d')
         if (!ctx) { resolve(src); return }
+        // 轉成 JPEG 時透明處補白底，避免變黑
+        ctx.fillStyle = '#ffffff'
+        ctx.fillRect(0, 0, width, height)
         ctx.drawImage(img, 0, 0, width, height)
         resolve(canvas.toDataURL('image/jpeg', quality))
       }
