@@ -223,7 +223,35 @@ export default function EsimAdminPage() {
     URL.revokeObjectURL(url)
   }
 
-  // 匯出全部優惠券 CSV
+  // 搜尋篩選
+  const [couponSearch, setCouponSearch] = useState('')
+  const [couponTypeFilter, setCouponTypeFilter] = useState('all')
+  const [couponStatusFilter, setCouponStatusFilter] = useState('all')
+
+  function couponStatus(c: any): 'active' | 'paused' | 'expired' | 'used_up' {
+    if (c.expires_at) {
+      const d = String(c.expires_at)
+      const t = /^\d{4}-\d{2}-\d{2}$/.test(d) ? new Date(`${d}T23:59:59+08:00`).getTime() : new Date(d).getTime()
+      if (!isNaN(t) && t < Date.now()) return 'expired'
+    }
+    if (c.max_usage_count && (c.usage_count || 0) >= c.max_usage_count) return 'used_up'
+    return c.is_active ? 'active' : 'paused'
+  }
+
+  const filteredCoupons = coupons.filter((c: any) => {
+    const q = couponSearch.trim().toLowerCase()
+    if (q) {
+      const planNames = Object.values(c.applicable_plan_names || {}).join(' ')
+      const hay = `${c.code} ${c.name} ${(c.applicable_countries || []).join(' ')} ${planNames}`.toLowerCase()
+      if (!hay.includes(q)) return false
+    }
+    if (couponTypeFilter !== 'all' && c.discount_type !== couponTypeFilter) return false
+    if (couponStatusFilter !== 'all' && couponStatus(c) !== couponStatusFilter) return false
+    return true
+  })
+  const isCouponFiltered = couponSearch.trim() !== '' || couponTypeFilter !== 'all' || couponStatusFilter !== 'all'
+
+  // 匯出優惠券 CSV（依目前篩選結果）
   function exportCouponsCsv() {
     const esc = (v: unknown) => {
       const str = v === undefined || v === null ? '' : String(v)
@@ -231,7 +259,7 @@ export default function EsimAdminPage() {
     }
     const typeLabel = (t: string) => (t === 'free' ? '贈品' : t === 'percent' ? '成數折扣' : '現折金額')
     const header = ['代碼', '活動名稱', '折扣方式', '折扣數值', '最低消費', '最高折抵', '適用國家', '適用產品', '已兌換次數', '使用次數上限', '到期日', '狀態', '建立時間']
-    const rows = coupons.map((c: any) => [
+    const rows = filteredCoupons.map((c: any) => [
       c.code,
       c.name,
       typeLabel(c.discount_type),
@@ -1290,11 +1318,13 @@ export default function EsimAdminPage() {
                 <h3 className="text-sm font-bold text-slate-900">商城現有優惠券總覽</h3>
               </div>
               <div className="flex items-center gap-3">
-                <span className="text-xs text-slate-400">共 {coupons.length} 張優惠券</span>
+                <span className="text-xs text-slate-400">
+                  {isCouponFiltered ? `符合 ${filteredCoupons.length} / 共 ${coupons.length} 張` : `共 ${coupons.length} 張優惠券`}
+                </span>
                 <button
                   type="button"
                   onClick={exportCouponsCsv}
-                  disabled={coupons.length === 0}
+                  disabled={filteredCoupons.length === 0}
                   className="px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-50"
                 >
                   匯出 CSV
@@ -1302,9 +1332,55 @@ export default function EsimAdminPage() {
               </div>
             </div>
 
+            {coupons.length > 0 && (
+              <div className="px-6 py-3 border-b border-slate-100 flex flex-wrap items-center gap-2 text-xs">
+                <input
+                  type="text"
+                  placeholder="搜尋代碼、名稱、國家、產品"
+                  value={couponSearch}
+                  onChange={e => setCouponSearch(e.target.value)}
+                  className="flex-1 min-w-[180px] px-3 py-2 rounded-xl border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none"
+                />
+                <select
+                  value={couponTypeFilter}
+                  onChange={e => setCouponTypeFilter(e.target.value)}
+                  className="px-3 py-2 rounded-xl border border-slate-300 bg-white"
+                >
+                  <option value="all">全部折扣方式</option>
+                  <option value="fixed">現折金額</option>
+                  <option value="percent">成數折扣</option>
+                  <option value="free">贈品</option>
+                </select>
+                <select
+                  value={couponStatusFilter}
+                  onChange={e => setCouponStatusFilter(e.target.value)}
+                  className="px-3 py-2 rounded-xl border border-slate-300 bg-white"
+                >
+                  <option value="all">全部狀態</option>
+                  <option value="active">可使用</option>
+                  <option value="paused">已暫停</option>
+                  <option value="expired">已過期</option>
+                  <option value="used_up">已達上限</option>
+                </select>
+                {isCouponFiltered && (
+                  <button
+                    type="button"
+                    onClick={() => { setCouponSearch(''); setCouponTypeFilter('all'); setCouponStatusFilter('all') }}
+                    className="px-3 py-2 rounded-xl border border-slate-300 hover:bg-slate-100 font-semibold text-slate-600"
+                  >
+                    清除篩選
+                  </button>
+                )}
+              </div>
+            )}
+
             {coupons.length === 0 ? (
               <div className="p-12 text-center text-slate-400 text-xs">
                 尚無設定優惠券，可於上方表單快速建立。
+              </div>
+            ) : filteredCoupons.length === 0 ? (
+              <div className="p-12 text-center text-slate-400 text-xs">
+                沒有符合篩選條件的優惠券。
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -1322,7 +1398,7 @@ export default function EsimAdminPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {coupons.map((c: any) => (
+                    {filteredCoupons.map((c: any) => (
                       <tr key={c.id} className="hover:bg-slate-50/80 transition-colors">
                         <td className="py-3 px-4">
                           <span className="font-mono font-bold text-slate-900 text-sm bg-slate-100 px-2 py-1 rounded-lg border border-slate-200">
