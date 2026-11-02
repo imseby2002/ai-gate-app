@@ -48,6 +48,7 @@ export default function EsimAdminPage() {
   const [selectedPlans, setSelectedPlans] = useState<Record<string, string>>({})
   const [planCountry, setPlanCountry] = useState('JP')
   const [planOptions, setPlanOptions] = useState<any[]>([])
+  const [planSearch, setPlanSearch] = useState('')
   const [loadingPlanOptions, setLoadingPlanOptions] = useState(false)
 
   async function loadPlanOptions() {
@@ -1314,9 +1315,49 @@ export default function EsimAdminPage() {
                   </div>
                 )}
 
-                {planOptions.length > 0 && (
+                {planOptions.length > 0 && (() => {
+                  const terms = planSearch.trim().toLowerCase().split(/\s+/).filter(Boolean)
+                  const visiblePlans = terms.length === 0 ? planOptions : planOptions.filter((p: any) => {
+                    const hay = `${planLabel(p)} ${p.channel_dataplan_name || ''} ${p.channel_dataplan_id}`.toLowerCase()
+                    return terms.every(t => hay.includes(t))
+                  })
+                  return (
+                  <>
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    <input
+                      type="text"
+                      placeholder="搜尋產品，如：2GB 5天、吃到飽、全球"
+                      value={planSearch}
+                      onChange={e => setPlanSearch(e.target.value)}
+                      className="flex-1 min-w-[200px] px-3 py-2 rounded-xl border border-slate-300 bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPlans(prev => {
+                        const next = { ...prev }
+                        visiblePlans.forEach((p: any) => { next[p.channel_dataplan_id] = planLabel(p) })
+                        return next
+                      })}
+                      disabled={visiblePlans.length === 0}
+                      className="px-3 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 font-semibold disabled:opacity-50"
+                    >
+                      全選結果 ({visiblePlans.length})
+                    </button>
+                    {Object.keys(selectedPlans).length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPlans({})}
+                        className="px-3 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 font-semibold text-slate-600"
+                      >
+                        清除已選
+                      </button>
+                    )}
+                  </div>
                   <div className="max-h-56 overflow-y-auto rounded-xl border border-slate-200 bg-white divide-y divide-slate-100">
-                    {planOptions.map((p: any) => (
+                    {visiblePlans.length === 0 && (
+                      <div className="px-3 py-4 text-center text-slate-400">沒有符合的產品</div>
+                    )}
+                    {visiblePlans.map((p: any) => (
                       <label key={p.channel_dataplan_id} className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-slate-50">
                         <input
                           type="checkbox"
@@ -1328,7 +1369,9 @@ export default function EsimAdminPage() {
                       </label>
                     ))}
                   </div>
-                )}
+                  </>
+                  )
+                })()}
               </div>
 
               {/* 提交按鈕 */}
