@@ -144,7 +144,16 @@ export function ExamResults({ id }: { id: string }) {
                   <div key={q.id} className={`rounded-lg border p-3 space-y-2 ${r.pending ? 'border-amber-300' : r.correct ? 'border-emerald-200' : 'border-rose-200'}`}>
                     <div className="font-medium">{i + 1}. {pick(q.question)}</div>
                     <div><span className="text-muted-foreground">{t('takerAnswer')}：</span><span className="whitespace-pre-line">{answerText(q, open.answers[q.id!])}</span></div>
-                    <div className="text-muted-foreground"><span>{t('correctAnswer')}：</span>{keyText(q)}</div>
+                    {/* 檢查人專用：正確／參考答案、評分重點、說明（不會給作答者） */}
+                    <div className="rounded-md bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/70 p-2 space-y-1">
+                      <div><span className="font-medium text-emerald-800 dark:text-emerald-300">{t('correctAnswer')}：</span><span className="whitespace-pre-line">{keyText(q)}</span></div>
+                      {(q.type === 'short' || q.type === 'essay') && pick(q.rubric) && (
+                        <div><span className="font-medium text-emerald-800 dark:text-emerald-300">{t('rubric')}：</span><span className="whitespace-pre-line">{pick(q.rubric)}</span></div>
+                      )}
+                      {pick(q.explanation) && (
+                        <div className="text-muted-foreground"><span className="font-medium">{t('explanation')}：</span><span className="whitespace-pre-line">{pick(q.explanation)}</span></div>
+                      )}
+                    </div>
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-xs">{t('score')}</span>
                       <Input className="w-20 h-8" type="number" min={0} max={r.max} value={e.score}

@@ -61,8 +61,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ no:
   })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+  // 未開放「交卷後顯示答案」時，只回總分，不回各題對錯、評語與答案（答案只給檢查人在成績頁看）
+  if (!exam.reveal_answers) {
+    return NextResponse.json({ score: graded.score, max_score: graded.max_score, grading_status: graded.grading_status, results: {}, key: null })
+  }
   return NextResponse.json({
     ...graded,
-    key: exam.reveal_answers ? answerKey(questions) : null,
+    key: answerKey(questions),
   })
 }
