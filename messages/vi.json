@@ -13190,7 +13190,12 @@
     "kind_portal": "Cổng nhân viên",
     "publishConfirm": "Xác nhận phát hành? Nhân viên sẽ làm bài tại Trung tâm kiểm tra và Cổng nhân viên; câu hỏi sẽ bị khóa (muốn sửa hãy chuyển về bản nháp).",
     "publishedReadOnly": "Bài kiểm tra đã phát hành, câu hỏi chỉ xem. Muốn sửa hãy nhấn “Chuyển về nháp” bên dưới; muốn tạo bài mới hãy quay lại Trung tâm kiểm tra và nhấn “Tạo đề”.",
-    "kindAll": "Tất cả ({n})"
+    "kindAll": "Tất cả ({n})",
+    "openWindow": "Thời gian làm bài",
+    "openWindowHint": "Để trống = không giới hạn. Ngoài thời gian này không ai làm bài được (vẫn nhận bài nộp trong 5 phút sau khi đóng).",
+    "openWindowInvalid": "Thời gian kết thúc phải sau thời gian bắt đầu.",
+    "windowNotYet": "Chưa mở",
+    "windowEnded": "Đã đóng"
   },
   "KnowledgePicker": {
     "tab": "Kho kiến thức công ty",

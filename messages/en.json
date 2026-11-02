@@ -13190,7 +13190,12 @@
     "kind_portal": "Employee portal",
     "publishConfirm": "Publish now? Employees will be able to take it in the Exam Center and the employee portal, and questions will be locked (switch back to draft to edit).",
     "publishedReadOnly": "This exam is published, so questions are view-only. To edit, click “Back to draft” below; to make a new exam, go back to the Exam Center and click “Create exam”.",
-    "kindAll": "All ({n})"
+    "kindAll": "All ({n})",
+    "openWindow": "Exam time",
+    "openWindowHint": "Leave blank for no limit. Outside this time no one can take the exam (submissions accepted up to 5 minutes after closing).",
+    "openWindowInvalid": "The end time must be after the start time.",
+    "windowNotYet": "Not open yet",
+    "windowEnded": "Closed"
   },
   "KnowledgePicker": {
     "tab": "Company knowledge",

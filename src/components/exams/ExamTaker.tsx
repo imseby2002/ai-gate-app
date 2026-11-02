@@ -25,6 +25,8 @@ const T = {
     pass: '及格', fail: '未及格', review: '正確答案與說明', right: '✓ 正確', wrong: '✗ 錯誤', partial: '部分得分',
     yourAnswer: '你的作答', correct: '正確答案', reference: '參考答案', feedback: '評語', none: '（未作答）',
     thanks: '已收到你的作答，謝謝！',
+    notYet: (d: string) => `考試尚未開放，開放時間：${d}`, ended: (d: string) => `考試已於 ${d} 截止。`,
+    window: '作答時間', until: '至',
   },
   en: {
     name: 'Full name', contact: 'Phone or email (optional)', submit: 'Submit', submitting: 'Grading...', submitted: 'Submitted',
@@ -36,6 +38,8 @@ const T = {
     pass: 'Pass', fail: 'Not passed', review: 'Answers & Explanations', right: '✓ Correct', wrong: '✗ Wrong', partial: 'Partial credit',
     yourAnswer: 'Your answer', correct: 'Correct answer', reference: 'Reference answer', feedback: 'Feedback', none: '(no answer)',
     thanks: 'Your answers have been received. Thank you!',
+    notYet: (d: string) => `This exam is not open yet. It opens at ${d}.`, ended: (d: string) => `This exam closed at ${d}.`,
+    window: 'Exam time', until: 'to',
   },
   vi: {
     name: 'Họ và tên', contact: 'Số điện thoại hoặc email (không bắt buộc)', submit: 'Nộp bài', submitting: 'Đang chấm...', submitted: 'Đã nộp bài',
@@ -47,8 +51,12 @@ const T = {
     pass: 'Đạt', fail: 'Chưa đạt', review: 'Đáp án & Giải thích', right: '✓ Đúng', wrong: '✗ Sai', partial: 'Đúng một phần',
     yourAnswer: 'Bạn trả lời', correct: 'Đáp án đúng', reference: 'Đáp án tham khảo', feedback: 'Nhận xét', none: '(chưa trả lời)',
     thanks: 'Đã nhận bài làm của bạn. Cảm ơn!',
+    notYet: (d: string) => `Bài kiểm tra chưa mở. Thời gian mở: ${d}`, ended: (d: string) => `Bài kiểm tra đã đóng lúc ${d}.`,
+    window: 'Thời gian làm bài', until: 'đến',
   },
 }
+
+const fmtTime = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleString(undefined, { hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '')
 
 function pick(l: L10n | undefined, lang: ExamLang) {
   if (!l) return ''
@@ -63,8 +71,10 @@ export function ExamTaker({ loadUrl, submitUrl, isPublic, defaultName }: {
   defaultName?: string
 }) {
   const [lang, setLang] = useState<ExamLang>('vi')
-  const [data, setData] = useState<{ exam: { title: L10n; description: L10n; pass_score: number | null }; questions: PubQuestion[] } | null>(null)
+  const [data, setData] = useState<{ exam: { title: L10n; description: L10n; pass_score: number | null; opens_at?: string | null; closes_at?: string | null }; questions: PubQuestion[] } | null>(null)
   const [loadError, setLoadError] = useState(false)
+  // 不在開放作答時間：not_yet／ended 與時間
+  const [windowErr, setWindowErr] = useState<{ error: string; opens_at?: string | null; closes_at?: string | null } | null>(null)
   const [name, setName] = useState(defaultName ?? '')
   const [contact, setContact] = useState('')
   const [answers, setAnswers] = useState<Record<string, string | string[]>>({})
@@ -83,7 +93,12 @@ export function ExamTaker({ loadUrl, submitUrl, isPublic, defaultName }: {
 
   useEffect(() => {
     let alive = true
-    fetch(loadUrl).then(r => (r.ok ? r.json() : Promise.reject())).then(d => { if (alive) setData(d) }).catch(() => { if (alive) setLoadError(true) })
+    fetch(loadUrl).then(async r => {
+      if (r.ok) return r.json()
+      const e = await r.json().catch(() => null)
+      if (e?.error === 'not_yet' || e?.error === 'ended') { if (alive) setWindowErr(e); return null }
+      return Promise.reject()
+    }).then(d => { if (alive && d) setData(d) }).catch(() => { if (alive) setLoadError(true) })
     return () => { alive = false }
   }, [loadUrl])
 
@@ -109,7 +124,11 @@ export function ExamTaker({ loadUrl, submitUrl, isPublic, defaultName }: {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ lang, answers, name, contact }),
       })
-      if (!res.ok) throw new Error(String(res.status))
+      if (!res.ok) {
+        const e = await res.json().catch(() => null)
+        if (e?.error === 'ended') { alert(t.ended(fmtTime(e.closes_at))); return }
+        throw new Error(String(res.status))
+      }
       setOutcome(await res.json())
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch {
@@ -130,6 +149,12 @@ export function ExamTaker({ loadUrl, submitUrl, isPublic, defaultName }: {
     </div>
   )
 
+  if (windowErr) return (
+    <div className="max-w-xl mx-auto p-8 text-center space-y-3">
+      <div className="bg-indigo-600 rounded-2xl p-3">{langBar}</div>
+      <p className="text-sm text-slate-600">{windowErr.error === 'not_yet' ? t.notYet(fmtTime(windowErr.opens_at)) : t.ended(fmtTime(windowErr.closes_at))}</p>
+    </div>
+  )
   if (loadError) return <div className="max-w-xl mx-auto p-8 text-center text-sm text-slate-500">{t.loadFailed}</div>
   if (!data) return <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-slate-400" /></div>
 
@@ -160,6 +185,9 @@ export function ExamTaker({ loadUrl, submitUrl, isPublic, defaultName }: {
           {langBar}
           <h1 className="text-xl font-bold">{pick(exam.title, lang)}</h1>
           {pick(exam.description, lang) && <p className="text-xs text-indigo-100 whitespace-pre-line">{pick(exam.description, lang)}</p>}
+          {(exam.opens_at || exam.closes_at) && (
+            <p className="text-xs text-indigo-100">{t.window}：{fmtTime(exam.opens_at) || '—'} {t.until} {fmtTime(exam.closes_at) || '—'}</p>
+          )}
         </div>
 
         {done && outcome && (
