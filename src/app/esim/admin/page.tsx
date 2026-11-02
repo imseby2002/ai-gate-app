@@ -223,6 +223,39 @@ export default function EsimAdminPage() {
     URL.revokeObjectURL(url)
   }
 
+  // 匯出全部優惠券 CSV
+  function exportCouponsCsv() {
+    const esc = (v: unknown) => {
+      const str = v === undefined || v === null ? '' : String(v)
+      return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str
+    }
+    const typeLabel = (t: string) => (t === 'free' ? '贈品' : t === 'percent' ? '成數折扣' : '現折金額')
+    const header = ['代碼', '活動名稱', '折扣方式', '折扣數值', '最低消費', '最高折抵', '適用國家', '適用產品', '已兌換次數', '使用次數上限', '到期日', '狀態', '建立時間']
+    const rows = coupons.map((c: any) => [
+      c.code,
+      c.name,
+      typeLabel(c.discount_type),
+      c.discount_type === 'free' ? '' : c.discount_value,
+      c.min_spend_twd || 0,
+      c.max_discount_twd || '',
+      (c.applicable_countries || []).join(' '),
+      (c.applicable_plan_ids || []).map((id: string) => c.applicable_plan_names?.[id] || id).join(' | '),
+      c.usage_count || 0,
+      c.max_usage_count || '',
+      c.expires_at ? String(c.expires_at).split('T')[0] : '',
+      c.is_active ? '啟用' : '暫停',
+      c.created_at || '',
+    ])
+    const csv = '\uFEFF' + [header, ...rows].map(r => r.map(esc).join(',')).join('\r\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `esim_coupons_${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   // 新增／編輯優惠券
   async function handleCreateCoupon(e: React.FormEvent) {
     e.preventDefault()
@@ -1256,7 +1289,17 @@ export default function EsimAdminPage() {
                 <Ticket className="w-4 h-4 text-slate-700" />
                 <h3 className="text-sm font-bold text-slate-900">商城現有優惠券總覽</h3>
               </div>
-              <span className="text-xs text-slate-400">共 {coupons.length} 張優惠券</span>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-slate-400">共 {coupons.length} 張優惠券</span>
+                <button
+                  type="button"
+                  onClick={exportCouponsCsv}
+                  disabled={coupons.length === 0}
+                  className="px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-50"
+                >
+                  匯出 CSV
+                </button>
+              </div>
             </div>
 
             {coupons.length === 0 ? (
