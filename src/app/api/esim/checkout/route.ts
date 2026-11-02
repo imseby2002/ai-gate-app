@@ -4,6 +4,7 @@ import { parseMicroEsimPlan } from '@/lib/esim/catalog'
 import { createEsimOrder, updateEsimOrder } from '@/lib/esim/db'
 import { fulfillEsimOrder } from '@/lib/esim/fulfillment'
 import { validateCoupon, incrementCouponUsage } from '@/lib/esim/coupons'
+import { sendCouponUsedNotification } from '@/lib/esim/coupon-notify'
 import {
   getEcpayConfig,
   generateCheckMac,
@@ -118,7 +119,10 @@ export async function POST(req: NextRequest) {
         payment_trade_no: `FREE_COUPON_${Date.now()}`,
         paid_at: new Date().toISOString(),
       })
-      if (appliedCouponCode) await incrementCouponUsage(appliedCouponCode)
+      if (appliedCouponCode) {
+        await incrementCouponUsage(appliedCouponCode)
+        await sendCouponUsedNotification(orderNo)
+      }
       const fulfillRes = await fulfillEsimOrder(orderNo)
       return NextResponse.json({
         success: true,
@@ -136,7 +140,10 @@ export async function POST(req: NextRequest) {
         payment_trade_no: `TEST_${Date.now()}`,
         paid_at: new Date().toISOString(),
       })
-      if (appliedCouponCode) await incrementCouponUsage(appliedCouponCode)
+      if (appliedCouponCode) {
+        await incrementCouponUsage(appliedCouponCode)
+        await sendCouponUsedNotification(orderNo)
+      }
 
       // 觸發發卡
       const fulfillRes = await fulfillEsimOrder(orderNo)

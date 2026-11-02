@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCoupons, saveCoupons, EsimCoupon } from '@/lib/esim/coupons'
 import { createClient } from '@/lib/supabase/server'
+import { getCouponNotifySettings, saveCouponNotifySettings } from '@/lib/esim/coupon-notify'
 
 async function requireAdmin() {
   const supabase = await createClient()
@@ -48,10 +49,11 @@ export async function GET() {
     return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
   }
   try {
-    const coupons = await getCoupons()
+    const [coupons, notify] = await Promise.all([getCoupons(), getCouponNotifySettings()])
     return NextResponse.json({
       success: true,
       coupons,
+      notify,
     })
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 })
@@ -74,6 +76,17 @@ export async function POST(req: NextRequest) {
         coupons,
         message: '優惠券清單已成功儲存！',
       })
+    }
+
+    // 0. 儲存使用通知設定
+    if (action === 'save_notify') {
+      const emails: string[] = (Array.isArray(body.emails) ? body.emails : [])
+        .map((e: unknown) => String(e || '').trim())
+        .filter((e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e))
+        .slice(0, 10)
+      const notify = { enabled: !!body.enabled && emails.length > 0, emails }
+      await saveCouponNotifySettings(notify)
+      return NextResponse.json({ success: true, notify, message: '通知設定已儲存' })
     }
 
     const currentCoupons = await getCoupons()
