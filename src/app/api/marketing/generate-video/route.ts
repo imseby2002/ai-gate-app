@@ -7,6 +7,7 @@
  *   veo3*         → Google VEO3 (25s)
  *   sora*         → OpenAI Sora 2（4／8／12 秒，720p）
  */
+import { AI_QUOTA_CODE, isFalQuotaError } from '@/lib/ai/fal-errors'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { fal } from '@fal-ai/client'
@@ -198,6 +199,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '不支援的模型' }, { status: 400 })
   } catch (err) {
     console.error('[generate-video POST]', err)
+    if (isFalQuotaError(err)) return NextResponse.json({ error: AI_QUOTA_CODE, code: AI_QUOTA_CODE }, { status: 503 })
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }
 }

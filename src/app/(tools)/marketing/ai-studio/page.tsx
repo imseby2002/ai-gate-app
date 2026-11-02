@@ -3,6 +3,7 @@
 import React, { useState, useRef, useCallback, useId, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
+import { AI_QUOTA_CODE } from '@/lib/ai/fal-errors'
 import {
   ChevronLeft, Upload, Sparkles, Loader2, Image as ImageIcon,
   Wand2, Palette, ArrowUpToLine, Scissors, Video, Plus, X,
@@ -1168,7 +1169,7 @@ function NodeCard({ node, index, canRemove, onUpdate, onRun, onRemove, onUpload,
 
         {/* Error */}
         {node.status === 'error' && node.error && (
-          <p className="text-xs text-red-500 mt-1.5 leading-relaxed">{node.error}</p>
+          <p className="text-xs text-red-500 mt-1.5 leading-relaxed">{node.error.includes(AI_QUOTA_CODE) ? t('studioX.aiQuota') : node.error}</p>
         )}
 
         {/* Run button for non-input nodes */}

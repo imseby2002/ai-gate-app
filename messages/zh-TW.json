@@ -2229,7 +2229,8 @@
       "videoFailed": "影片生成失敗",
       "videoTimeout": "影片生成逾時",
       "publishAll": "一鍵串接上傳至社群平台",
-      "publish": "發布"
+      "publish": "發布",
+      "aiQuota": "AI 圖片／影片服務額度已用完，暫時無法產生。請聯絡系統管理員儲值後再試。"
     },
     "brandPage": {
       "title": "公司資料",
