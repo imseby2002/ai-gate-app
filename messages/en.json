@@ -13189,7 +13189,8 @@
     "editHint": "Every question, including AI-generated ones, can be edited directly — question, options, correct answer and explanation. Click Save when done.",
     "kind_portal": "Employee portal",
     "publishConfirm": "Publish now? Employees will be able to take it in the Exam Center and the employee portal, and questions will be locked (switch back to draft to edit).",
-    "publishedReadOnly": "This exam is published, so questions are view-only. To edit, click “Back to draft” below; to make a new exam, go back to the Exam Center and click “Create exam”."
+    "publishedReadOnly": "This exam is published, so questions are view-only. To edit, click “Back to draft” below; to make a new exam, go back to the Exam Center and click “Create exam”.",
+    "kindAll": "All ({n})"
   },
   "KnowledgePicker": {
     "tab": "Company knowledge",
