@@ -39,6 +39,7 @@ export default function EsimAdminPage() {
     min_spend_twd: 100,
     max_discount_twd: '',
     max_usage_count: '',
+    starts_at: '',
     expires_at: '',
     applicable_countries: '',
     is_active: true,
@@ -124,6 +125,7 @@ export default function EsimAdminPage() {
     min_spend_twd: 100,
     max_discount_twd: '',
     max_usage_count: '',
+    starts_at: '',
     expires_at: '',
     applicable_countries: '',
     is_active: true,
@@ -140,6 +142,7 @@ export default function EsimAdminPage() {
       min_spend_twd: c.min_spend_twd ?? 0,
       max_discount_twd: c.max_discount_twd ? String(c.max_discount_twd) : '',
       max_usage_count: c.max_usage_count ? String(c.max_usage_count) : '',
+      starts_at: c.starts_at ? String(c.starts_at).split('T')[0] : '',
       expires_at: c.expires_at ? String(c.expires_at).split('T')[0] : '',
       applicable_countries: (c.applicable_countries || []).join(','),
       is_active: c.is_active !== false,
@@ -171,6 +174,7 @@ export default function EsimAdminPage() {
       code: newCoupon.code.trim().toUpperCase(),
       max_discount_twd: newCoupon.max_discount_twd ? parseInt(newCoupon.max_discount_twd, 10) : undefined,
       max_usage_count: newCoupon.max_usage_count ? parseInt(newCoupon.max_usage_count, 10) : undefined,
+      starts_at: newCoupon.starts_at || undefined,
       expires_at: newCoupon.expires_at || undefined,
       applicable_countries: countries,
       applicable_plan_ids: Object.keys(selectedPlans),
@@ -178,7 +182,16 @@ export default function EsimAdminPage() {
     }
   }
 
+  function couponDatesInvalid() {
+    if (newCoupon.starts_at && newCoupon.expires_at && newCoupon.starts_at > newCoupon.expires_at) {
+      alert('啟用日期不可晚於到期日')
+      return true
+    }
+    return false
+  }
+
   async function handleBatchCreate() {
+    if (couponDatesInvalid()) return
     if (batchCount < 1 || batchCount > 500) {
       alert('批次數量需介於 1～500')
       return
@@ -228,14 +241,20 @@ export default function EsimAdminPage() {
   const [couponTypeFilter, setCouponTypeFilter] = useState('all')
   const [couponStatusFilter, setCouponStatusFilter] = useState('all')
 
-  function couponStatus(c: any): 'active' | 'paused' | 'expired' | 'used_up' {
+  function couponStatus(c: any): 'active' | 'paused' | 'expired' | 'used_up' | 'scheduled' {
     if (c.expires_at) {
       const d = String(c.expires_at)
       const t = /^\d{4}-\d{2}-\d{2}$/.test(d) ? new Date(`${d}T23:59:59+08:00`).getTime() : new Date(d).getTime()
       if (!isNaN(t) && t < Date.now()) return 'expired'
     }
     if (c.max_usage_count && (c.usage_count || 0) >= c.max_usage_count) return 'used_up'
-    return c.is_active ? 'active' : 'paused'
+    if (!c.is_active) return 'paused'
+    if (c.starts_at) {
+      const d = String(c.starts_at)
+      const t = /^\d{4}-\d{2}-\d{2}$/.test(d) ? new Date(`${d}T00:00:00+08:00`).getTime() : new Date(d).getTime()
+      if (!isNaN(t) && t > Date.now()) return 'scheduled'
+    }
+    return 'active'
   }
 
   const filteredCoupons = coupons.filter((c: any) => {
@@ -258,7 +277,7 @@ export default function EsimAdminPage() {
       return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str
     }
     const typeLabel = (t: string) => (t === 'free' ? '贈品' : t === 'percent' ? '成數折扣' : '現折金額')
-    const header = ['代碼', '活動名稱', '折扣方式', '折扣數值', '最低消費', '最高折抵', '適用國家', '適用產品', '已兌換次數', '使用次數上限', '到期日', '狀態', '建立時間']
+    const header = ['代碼', '活動名稱', '折扣方式', '折扣數值', '最低消費', '最高折抵', '適用國家', '適用產品', '已兌換次數', '使用次數上限', '啟用日期', '到期日', '狀態', '建立時間']
     const rows = filteredCoupons.map((c: any) => [
       c.code,
       c.name,
@@ -270,6 +289,7 @@ export default function EsimAdminPage() {
       (c.applicable_plan_ids || []).map((id: string) => c.applicable_plan_names?.[id] || id).join(' | '),
       c.usage_count || 0,
       c.max_usage_count || '',
+      c.starts_at ? String(c.starts_at).split('T')[0] : '',
       c.expires_at ? String(c.expires_at).split('T')[0] : '',
       c.is_active ? '啟用' : '暫停',
       c.created_at || '',
@@ -288,6 +308,7 @@ export default function EsimAdminPage() {
   async function handleCreateCoupon(e: React.FormEvent) {
     e.preventDefault()
     if (!newCoupon.code.trim()) return
+    if (couponDatesInvalid()) return
     setSavingCoupon(true)
     setCouponMessage('')
     try {
@@ -1224,6 +1245,20 @@ export default function EsimAdminPage() {
                 />
               </div>
 
+              {/* 啟用日期 */}
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  啟用日期 (選填，當天起可用)
+                </label>
+                <input
+                  type="date"
+                  value={newCoupon.starts_at}
+                  max={newCoupon.expires_at || undefined}
+                  onChange={e => setNewCoupon({ ...newCoupon, starts_at: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none"
+                />
+              </div>
+
               {/* 到期日 */}
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">
@@ -1232,6 +1267,7 @@ export default function EsimAdminPage() {
                 <input
                   type="date"
                   value={newCoupon.expires_at}
+                  min={newCoupon.starts_at || undefined}
                   onChange={e => setNewCoupon({ ...newCoupon, expires_at: e.target.value })}
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none"
                 />
@@ -1430,6 +1466,7 @@ export default function EsimAdminPage() {
                   <option value="active">可使用</option>
                   <option value="paused">已暫停</option>
                   <option value="expired">已過期</option>
+                  <option value="scheduled">尚未開始</option>
                   <option value="used_up">已達上限</option>
                 </select>
                 {isCouponFiltered && (
@@ -1486,7 +1523,7 @@ export default function EsimAdminPage() {
                       <th className="py-3 px-4">優惠代碼 (Code)</th>
                       <th className="py-3 px-4">活動名稱</th>
                       <th className="py-3 px-4">折扣內容</th>
-                      <th className="py-3 px-4">使用門檻 / 到期</th>
+                      <th className="py-3 px-4">使用門檻 / 期間</th>
                       <th className="py-3 px-4">適用國家 / 產品</th>
                       <th className="py-3 px-4">已兌換次數</th>
                       <th className="py-3 px-4">狀態</th>
@@ -1533,6 +1570,11 @@ export default function EsimAdminPage() {
                         </td>
                         <td className="py-3 px-4 text-slate-600">
                           {c.min_spend_twd > 0 ? `滿 NT$ ${c.min_spend_twd}` : '無消費門檻'}
+                          {c.starts_at && (
+                            <span className={`block text-[10px] mt-0.5 ${couponStatus(c) === 'scheduled' ? 'text-amber-600' : 'text-slate-400'}`}>
+                              開始 {String(c.starts_at).split('T')[0]}
+                            </span>
+                          )}
                           {c.expires_at && (
                             <span className={`block text-[10px] mt-0.5 ${new Date(`${String(c.expires_at).split('T')[0]}T23:59:59+08:00`).getTime() < Date.now() ? 'text-red-500' : 'text-slate-400'}`}>
                               到期 {String(c.expires_at).split('T')[0]}
@@ -1564,7 +1606,11 @@ export default function EsimAdminPage() {
                           )}
                         </td>
                         <td className="py-3 px-4">
-                          {c.is_active ? (
+                          {c.is_active && couponStatus(c) === 'scheduled' ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                              尚未開始
+                            </span>
+                          ) : c.is_active ? (
                             <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                               啟用中
                             </span>
