@@ -6,7 +6,7 @@ import {
   Wallet, RefreshCw, CheckCircle2, AlertCircle, QrCode, Mail,
   ArrowRight, ExternalLink, Globe, Shield, ShoppingCart, DollarSign, Bell,
   Tag, Percent, Sliders, Calculator, Sparkles, Save, Check,
-  Ticket, Plus, Trash2, ToggleLeft, ToggleRight, Pencil, X
+  Ticket, Plus, Trash2, ToggleLeft, ToggleRight, Pencil, X, Copy
 } from 'lucide-react'
 import { DEFAULT_PRICING_SETTINGS, EsimPricingSettings } from '@/lib/esim/catalog'
 
@@ -130,10 +130,10 @@ export default function EsimAdminPage() {
   }
   const [editingCouponId, setEditingCouponId] = useState<string | null>(null)
 
-  function handleEditCoupon(c: any) {
-    setEditingCouponId(c.id)
+  function handleEditCoupon(c: any, asCopy = false) {
+    setEditingCouponId(asCopy ? null : c.id)
     setNewCoupon({
-      code: c.code || '',
+      code: asCopy ? `${c.code}_COPY` : c.code || '',
       name: c.name || '',
       discount_type: c.discount_type || 'fixed',
       discount_value: c.discount_value ?? 0,
@@ -147,7 +147,7 @@ export default function EsimAdminPage() {
     const plans: Record<string, string> = {}
     for (const id of c.applicable_plan_ids || []) plans[id] = c.applicable_plan_names?.[id] || id
     setSelectedPlans(plans)
-    setCouponMessage('')
+    setCouponMessage(asCopy ? `📋 已複製「${c.code}」的設定，請修改代碼後建立` : '')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -1251,6 +1251,14 @@ export default function EsimAdminPage() {
                               title="編輯優惠券"
                             >
                               <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleEditCoupon(c, true)}
+                              className="p-1.5 hover:bg-indigo-50 rounded-lg text-slate-400 hover:text-indigo-600 transition-colors cursor-pointer"
+                              title="複製為新優惠券"
+                            >
+                              <Copy className="w-4 h-4" />
                             </button>
                             <button
                               type="button"
