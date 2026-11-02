@@ -31,6 +31,7 @@ function buildCouponFields(coupon: any, code: string) {
     is_active: coupon.is_active !== false,
     max_usage_count: coupon.max_usage_count ? parseInt(coupon.max_usage_count, 10) : undefined,
     max_uses_per_customer: coupon.max_uses_per_customer ? parseInt(coupon.max_uses_per_customer, 10) : undefined,
+    max_uses_per_day: coupon.max_uses_per_day ? parseInt(coupon.max_uses_per_day, 10) : undefined,
     starts_at: coupon.starts_at || undefined,
     expires_at: coupon.expires_at || undefined,
   }

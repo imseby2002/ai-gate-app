@@ -15,6 +15,7 @@ export interface EsimCoupon {
   usage_count: number // 已套用次數
   max_usage_count?: number // 最大可使用次數限制 (可選)
   max_uses_per_customer?: number // 每位顧客（依 Email）可使用次數 (可選)
+  max_uses_per_day?: number // 每日（台灣時間）可使用次數 (可選)
   starts_at?: string // 啟用日期 (YYYY-MM-DD 或 ISO 8601，可選；只填日期時為台灣時間當天 00:00 開始)
   expires_at?: string // 到期時間 (YYYY-MM-DD 或 ISO 8601，可選)
   created_at: string
@@ -193,6 +194,29 @@ export async function validateCoupon(
       }
     } catch (err) {
       console.warn('[Coupons] Failed to check per-customer usage:', err)
+    }
+  }
+
+  // 2.6 檢查每日使用上限（台灣時間當日，只計已付款訂單）
+  const perDay = coupon.max_uses_per_day
+  if (typeof perDay === 'number' && perDay > 0) {
+    try {
+      const twDay = (iso: string) => new Date(new Date(iso).getTime() + 8 * 3600 * 1000).toISOString().slice(0, 10)
+      const today = twDay(new Date().toISOString())
+      const orders = await getEsimOrdersByCouponCode(coupon.code)
+      const usedToday = orders.filter(
+        o => o.payment_status === 'paid' && twDay(o.paid_at || o.created_at) === today
+      ).length
+      if (usedToday >= perDay) {
+        return {
+          valid: false,
+          error: `優惠券「${code}」今日名額已滿（每日限 ${perDay} 次），請明天再試`,
+          discountTwd: 0,
+          finalPriceTwd: subtotalTwd,
+        }
+      }
+    } catch (err) {
+      console.warn('[Coupons] Failed to check daily usage:', err)
     }
   }
 
