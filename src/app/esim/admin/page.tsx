@@ -38,6 +38,7 @@ export default function EsimAdminPage() {
     discount_value: 50,
     min_spend_twd: 100,
     max_discount_twd: '',
+    max_usage_count: '',
     applicable_countries: '',
     is_active: true,
   })
@@ -134,6 +135,7 @@ export default function EsimAdminPage() {
             ...newCoupon,
             code: newCoupon.code.trim().toUpperCase(),
             max_discount_twd: newCoupon.max_discount_twd ? parseInt(newCoupon.max_discount_twd, 10) : undefined,
+            max_usage_count: newCoupon.max_usage_count ? parseInt(newCoupon.max_usage_count, 10) : undefined,
             applicable_countries: countries,
             applicable_plan_ids: Object.keys(selectedPlans),
             applicable_plan_names: selectedPlans,
@@ -151,6 +153,7 @@ export default function EsimAdminPage() {
           discount_value: 50,
           min_spend_twd: 100,
           max_discount_twd: '',
+          max_usage_count: '',
           applicable_countries: '',
           is_active: true,
         })
@@ -972,6 +975,22 @@ export default function EsimAdminPage() {
                 />
               </div>
 
+              {/* 使用次數上限 */}
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  使用次數上限 (選填)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  placeholder="留空代表不限次數"
+                  value={newCoupon.max_usage_count}
+                  onChange={e => setNewCoupon({ ...newCoupon, max_usage_count: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none"
+                />
+              </div>
+
               {/* 限定產品 */}
               <div className="sm:col-span-2 lg:col-span-4 rounded-2xl border border-slate-200 p-4 bg-slate-50/60">
                 <div className="flex flex-wrap items-end gap-2 mb-2">
@@ -1126,7 +1145,10 @@ export default function EsimAdminPage() {
                           )}
                         </td>
                         <td className="py-3 px-4 font-semibold text-slate-700">
-                          {c.usage_count || 0} 次
+                          {c.usage_count || 0}{c.max_usage_count ? ` / ${c.max_usage_count}` : ''} 次
+                          {c.max_usage_count && (c.usage_count || 0) >= c.max_usage_count && (
+                            <span className="block text-[10px] text-red-500">已達上限</span>
+                          )}
                         </td>
                         <td className="py-3 px-4">
                           {c.is_active ? (
