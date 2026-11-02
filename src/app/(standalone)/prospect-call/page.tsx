@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
-import { createClient } from '@/lib/supabase/client'
+import { usePlatformOwner } from '@/lib/auth/usePlatformOwner'
 import {
   Search, Building2, MapPin, Phone, Play, Loader2,
   CheckCircle2, AlertCircle, XCircle, Plus, Trash2, ChevronDown, ChevronUp,
@@ -609,20 +609,11 @@ export default function ProspectCallPage() {
   }
 
   // 寄件設定測試：直接寄一封測試信到指定信箱，驗證 Resend 網域／金鑰是否正常（僅管理員可用）
-  const [isAdmin, setIsAdmin] = useState(false)
+  // 電話／Email 測試與來電顯示號碼只給平台擁有者（imseby@gmail.com）
+  const isOwner = usePlatformOwner()
   const [testEmail, setTestEmail] = useState('')
   const [testingSend, setTestingSend] = useState(false)
   const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null)
-
-  useEffect(() => {
-    const supabase = createClient()
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) return
-      const { data: profile } = await supabase
-        .from('profiles').select('user_type').eq('id', user.id).single()
-      setIsAdmin(profile?.user_type === 'admin')
-    })
-  }, [])
 
   const sendTestEmail = async () => {
     const to = testEmail.trim()
@@ -1633,6 +1624,8 @@ export default function ProspectCallPage() {
             <Section title={t('s6p.title')} icon={Phone}
               open={openSections.call} onToggle={() => toggleSection('call')}>
               <div className="space-y-4">
+                {/* Caller ID 與測試撥號：平台設定，只給平台擁有者 */}
+                {isOwner && (<>
                 {/* Caller ID */}
                 <div>
                   <label className="block text-xs font-medium mb-1">
@@ -1665,6 +1658,8 @@ export default function ProspectCallPage() {
                   </div>
                   {testCallMsg && <p className="text-[11px] text-gray-600 mt-1">{testCallMsg}</p>}
                 </div>
+
+                </>)}
 
                 {/* 待撥清單預覽 */}
                 {selectedOrgs.length > 0 && (
@@ -1884,8 +1879,8 @@ export default function ProspectCallPage() {
                   {t('s6e.systemManaged')}
                 </div>
 
-                {/* 寄件設定測試：僅管理員可用，直接寄一封到指定信箱驗證 Resend 設定 */}
-                {isAdmin && (
+                {/* 寄件設定測試：僅平台擁有者可用，直接寄一封到指定信箱驗證 Resend 設定 */}
+                {isOwner && (
                   <div className="pt-3 border-t space-y-2">
                     <label className="block text-xs font-medium">{t('s6e.testTitle')}</label>
                     <div className="flex gap-2">

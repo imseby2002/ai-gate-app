@@ -1,5 +1,6 @@
 'use client'
 
+import { usePlatformOwner } from '@/lib/auth/usePlatformOwner'
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import {
@@ -3238,6 +3239,8 @@ function Unit10ProspectMarketing({
 
   const [voiceId, setVoiceId] = useState(savedData?.voiceId ?? 'EXAVITQu4vr4xnSDxMaL')
   const [callerId, setCallerId] = useState(savedData?.callerId ?? savedData?.birdCallerId ?? '')
+  // 來電顯示號碼是平台設定，只給平台擁有者（imseby@gmail.com）
+  const isOwner = usePlatformOwner()
 
   const [phoneInput, setPhoneInput] = useState(savedData?.phoneInput ?? '')
   const [phones, setPhones] = useState<string[]>(() => {
@@ -3906,6 +3909,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
               {ELEVEN_VOICES.map(v => <option key={v.id} value={v.id}>{v.name} — {t(`u10.voice.${v.descKey}`)}</option>)}
             </select>
           </div>
+          {isOwner && (
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1.5 flex items-center justify-between">
               <span>{t('u10.birdCallerId')}</span>
@@ -3918,6 +3922,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
               💡 {t('x.callerIdHelp')}
             </p>
           </div>
+          )}
         </div>
       </div>
 
