@@ -39,6 +39,7 @@ export default function EsimAdminPage() {
     min_spend_twd: 100,
     max_discount_twd: '',
     max_usage_count: '',
+    expires_at: '',
     applicable_countries: '',
     is_active: true,
   })
@@ -136,6 +137,7 @@ export default function EsimAdminPage() {
             code: newCoupon.code.trim().toUpperCase(),
             max_discount_twd: newCoupon.max_discount_twd ? parseInt(newCoupon.max_discount_twd, 10) : undefined,
             max_usage_count: newCoupon.max_usage_count ? parseInt(newCoupon.max_usage_count, 10) : undefined,
+            expires_at: newCoupon.expires_at || undefined,
             applicable_countries: countries,
             applicable_plan_ids: Object.keys(selectedPlans),
             applicable_plan_names: selectedPlans,
@@ -154,6 +156,7 @@ export default function EsimAdminPage() {
           min_spend_twd: 100,
           max_discount_twd: '',
           max_usage_count: '',
+          expires_at: '',
           applicable_countries: '',
           is_active: true,
         })
@@ -991,6 +994,19 @@ export default function EsimAdminPage() {
                 />
               </div>
 
+              {/* 到期日 */}
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  到期日 (選填，含當天)
+                </label>
+                <input
+                  type="date"
+                  value={newCoupon.expires_at}
+                  onChange={e => setNewCoupon({ ...newCoupon, expires_at: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none"
+                />
+              </div>
+
               {/* 限定產品 */}
               <div className="sm:col-span-2 lg:col-span-4 rounded-2xl border border-slate-200 p-4 bg-slate-50/60">
                 <div className="flex flex-wrap items-end gap-2 mb-2">
@@ -1085,7 +1101,7 @@ export default function EsimAdminPage() {
                       <th className="py-3 px-4">優惠代碼 (Code)</th>
                       <th className="py-3 px-4">活動名稱</th>
                       <th className="py-3 px-4">折扣內容</th>
-                      <th className="py-3 px-4">使用門檻</th>
+                      <th className="py-3 px-4">使用門檻 / 到期</th>
                       <th className="py-3 px-4">適用國家 / 產品</th>
                       <th className="py-3 px-4">已兌換次數</th>
                       <th className="py-3 px-4">狀態</th>
@@ -1125,6 +1141,11 @@ export default function EsimAdminPage() {
                         </td>
                         <td className="py-3 px-4 text-slate-600">
                           {c.min_spend_twd > 0 ? `滿 NT$ ${c.min_spend_twd}` : '無消費門檻'}
+                          {c.expires_at && (
+                            <span className={`block text-[10px] mt-0.5 ${new Date(`${String(c.expires_at).split('T')[0]}T23:59:59+08:00`).getTime() < Date.now() ? 'text-red-500' : 'text-slate-400'}`}>
+                              到期 {String(c.expires_at).split('T')[0]}
+                            </span>
+                          )}
                         </td>
                         <td className="py-3 px-4">
                           {c.applicable_countries && c.applicable_countries.length > 0 ? (

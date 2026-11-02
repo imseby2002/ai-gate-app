@@ -131,7 +131,10 @@ export async function validateCoupon(
 
   // 1. 檢查到期日
   if (coupon.expires_at) {
-    const expiryTime = new Date(coupon.expires_at).getTime()
+    // 只填日期時，視為台灣時間當天 23:59:59 到期
+    const expiryTime = /^\d{4}-\d{2}-\d{2}$/.test(coupon.expires_at)
+      ? new Date(`${coupon.expires_at}T23:59:59+08:00`).getTime()
+      : new Date(coupon.expires_at).getTime()
     if (!isNaN(expiryTime) && Date.now() > expiryTime) {
       return {
         valid: false,
