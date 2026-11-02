@@ -185,6 +185,23 @@ export async function POST(req: NextRequest) {
       })
     }
 
+    // 4.1 批次刪除
+    if (action === 'batch_delete') {
+      const ids: string[] = Array.isArray(body.ids) ? body.ids.filter((id: unknown) => typeof id === 'string') : []
+      if (ids.length === 0) {
+        return NextResponse.json({ success: false, error: '未選取任何優惠券' }, { status: 400 })
+      }
+      const idSet = new Set(ids)
+      const updated = currentCoupons.filter(c => !idSet.has(c.id))
+      const removed = currentCoupons.length - updated.length
+      await saveCoupons(updated)
+      return NextResponse.json({
+        success: true,
+        coupons: updated,
+        message: `已刪除 ${removed} 張優惠券`,
+      })
+    }
+
     // 4. 刪除優惠券
     if (action === 'delete' && coupon?.id) {
       const updated = currentCoupons.filter(c => c.id !== coupon.id)
