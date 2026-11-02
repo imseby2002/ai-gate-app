@@ -361,6 +361,52 @@ export default function EsimAdminPage() {
     }
   }
 
+  // 批次刪除
+  const [selectedCouponIds, setSelectedCouponIds] = useState<Set<string>>(new Set())
+  const allFilteredSelected = filteredCoupons.length > 0 && filteredCoupons.every((c: any) => selectedCouponIds.has(c.id))
+
+  function toggleCouponSelect(id: string) {
+    setSelectedCouponIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function toggleSelectAllFiltered() {
+    setSelectedCouponIds(prev => {
+      const next = new Set(prev)
+      if (allFilteredSelected) filteredCoupons.forEach((c: any) => next.delete(c.id))
+      else filteredCoupons.forEach((c: any) => next.add(c.id))
+      return next
+    })
+  }
+
+  async function handleBatchDelete() {
+    const ids = Array.from(selectedCouponIds).filter(id => coupons.some((c: any) => c.id === id))
+    if (ids.length === 0) return
+    if (!confirm(`確定要刪除選取的 ${ids.length} 張優惠券嗎？此動作無法復原。`)) return
+    try {
+      const res = await fetch('/api/esim/admin/coupons', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'batch_delete', ids }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setCoupons(data.coupons)
+        setSelectedCouponIds(new Set())
+        setCouponMessage(`✅ ${data.message}`)
+        setTimeout(() => setCouponMessage(''), 4000)
+      } else {
+        alert(`批次刪除失敗: ${data.error}`)
+      }
+    } catch (err: any) {
+      alert(`批次刪除異常: ${err.message}`)
+    }
+  }
+
   // 儲存定價與促銷設定
   async function handleSaveSettings(e: React.FormEvent) {
     e.preventDefault()
@@ -1371,6 +1417,24 @@ export default function EsimAdminPage() {
                     清除篩選
                   </button>
                 )}
+                {selectedCouponIds.size > 0 && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleBatchDelete}
+                      className="px-3 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold"
+                    >
+                      刪除選取 ({selectedCouponIds.size})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedCouponIds(new Set())}
+                      className="px-3 py-2 rounded-xl border border-slate-300 hover:bg-slate-100 font-semibold text-slate-600"
+                    >
+                      取消選取
+                    </button>
+                  </>
+                )}
               </div>
             )}
 
@@ -1387,6 +1451,14 @@ export default function EsimAdminPage() {
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
                     <tr>
+                      <th className="py-3 pl-4 pr-0 w-8">
+                        <input
+                          type="checkbox"
+                          checked={allFilteredSelected}
+                          onChange={toggleSelectAllFiltered}
+                          title="全選目前列表"
+                        />
+                      </th>
                       <th className="py-3 px-4">優惠代碼 (Code)</th>
                       <th className="py-3 px-4">活動名稱</th>
                       <th className="py-3 px-4">折扣內容</th>
@@ -1399,7 +1471,14 @@ export default function EsimAdminPage() {
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {filteredCoupons.map((c: any) => (
-                      <tr key={c.id} className="hover:bg-slate-50/80 transition-colors">
+                      <tr key={c.id} className={`hover:bg-slate-50/80 transition-colors ${selectedCouponIds.has(c.id) ? 'bg-blue-50/60' : ''}`}>
+                        <td className="py-3 pl-4 pr-0">
+                          <input
+                            type="checkbox"
+                            checked={selectedCouponIds.has(c.id)}
+                            onChange={() => toggleCouponSelect(c.id)}
+                          />
+                        </td>
                         <td className="py-3 px-4">
                           <span className="font-mono font-bold text-slate-900 text-sm bg-slate-100 px-2 py-1 rounded-lg border border-slate-200">
                             {c.code}
