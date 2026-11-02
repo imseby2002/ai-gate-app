@@ -39,6 +39,7 @@ export default function EsimAdminPage() {
     min_spend_twd: 100,
     max_discount_twd: '',
     max_usage_count: '',
+    max_uses_per_customer: '',
     starts_at: '',
     expires_at: '',
     applicable_countries: '',
@@ -126,6 +127,7 @@ export default function EsimAdminPage() {
     min_spend_twd: 100,
     max_discount_twd: '',
     max_usage_count: '',
+    max_uses_per_customer: '',
     starts_at: '',
     expires_at: '',
     applicable_countries: '',
@@ -143,6 +145,7 @@ export default function EsimAdminPage() {
       min_spend_twd: c.min_spend_twd ?? 0,
       max_discount_twd: c.max_discount_twd ? String(c.max_discount_twd) : '',
       max_usage_count: c.max_usage_count ? String(c.max_usage_count) : '',
+      max_uses_per_customer: c.max_uses_per_customer ? String(c.max_uses_per_customer) : '',
       starts_at: c.starts_at ? String(c.starts_at).split('T')[0] : '',
       expires_at: c.expires_at ? String(c.expires_at).split('T')[0] : '',
       applicable_countries: (c.applicable_countries || []).join(','),
@@ -175,6 +178,7 @@ export default function EsimAdminPage() {
       code: newCoupon.code.trim().toUpperCase(),
       max_discount_twd: newCoupon.max_discount_twd ? parseInt(newCoupon.max_discount_twd, 10) : undefined,
       max_usage_count: newCoupon.max_usage_count ? parseInt(newCoupon.max_usage_count, 10) : undefined,
+      max_uses_per_customer: newCoupon.max_uses_per_customer ? parseInt(newCoupon.max_uses_per_customer, 10) : undefined,
       starts_at: newCoupon.starts_at || undefined,
       expires_at: newCoupon.expires_at || undefined,
       applicable_countries: countries,
@@ -278,7 +282,7 @@ export default function EsimAdminPage() {
       return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str
     }
     const typeLabel = (t: string) => (t === 'free' ? '贈品' : t === 'percent' ? '成數折扣' : '現折金額')
-    const header = ['代碼', '活動名稱', '折扣方式', '折扣數值', '最低消費', '最高折抵', '適用國家', '適用產品', '已兌換次數', '使用次數上限', '啟用日期', '到期日', '狀態', '建立時間']
+    const header = ['代碼', '活動名稱', '折扣方式', '折扣數值', '最低消費', '最高折抵', '適用國家', '適用產品', '已兌換次數', '使用次數上限', '每人限用', '啟用日期', '到期日', '狀態', '建立時間']
     const rows = filteredCoupons.map((c: any) => [
       c.code,
       c.name,
@@ -290,6 +294,7 @@ export default function EsimAdminPage() {
       (c.applicable_plan_ids || []).map((id: string) => c.applicable_plan_names?.[id] || id).join(' | '),
       c.usage_count || 0,
       c.max_usage_count || '',
+      c.max_uses_per_customer || '',
       c.starts_at ? String(c.starts_at).split('T')[0] : '',
       c.expires_at ? String(c.expires_at).split('T')[0] : '',
       c.is_active ? '啟用' : '暫停',
@@ -1246,6 +1251,22 @@ export default function EsimAdminPage() {
                 />
               </div>
 
+              {/* 每人限用次數 */}
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  每人限用次數 (選填，依 Email)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  placeholder="留空代表不限"
+                  value={newCoupon.max_uses_per_customer}
+                  onChange={e => setNewCoupon({ ...newCoupon, max_uses_per_customer: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none"
+                />
+              </div>
+
               {/* 啟用日期 */}
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">
@@ -1644,6 +1665,9 @@ export default function EsimAdminPage() {
                         </td>
                         <td className="py-3 px-4 font-semibold text-slate-700">
                           {c.usage_count || 0}{c.max_usage_count ? ` / ${c.max_usage_count}` : ''} 次
+                          {c.max_uses_per_customer && (
+                            <span className="block text-[10px] text-slate-400 font-normal">每人限 {c.max_uses_per_customer} 次</span>
+                          )}
                           {c.max_usage_count && (c.usage_count || 0) >= c.max_usage_count && (
                             <span className="block text-[10px] text-red-500">已達上限</span>
                           )}

@@ -110,6 +110,7 @@ export default function EsimShopPage() {
           country_code: checkoutPlan.primaryCountryCode,
           plan_id: checkoutPlan.channel_dataplan_id,
           unit_price: checkoutPlan.retailPriceTwd,
+          customer_email: customerEmail || undefined,
         }),
       })
       const data = await res.json()
@@ -148,6 +149,7 @@ export default function EsimShopPage() {
         country_code: checkoutPlan.primaryCountryCode,
         plan_id: checkoutPlan.channel_dataplan_id,
         unit_price: checkoutPlan.retailPriceTwd,
+        customer_email: customerEmail || undefined,
       }),
     })
       .then(res => res.json())

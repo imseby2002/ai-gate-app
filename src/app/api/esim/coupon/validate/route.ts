@@ -4,7 +4,7 @@ import { validateCoupon } from '@/lib/esim/coupons'
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { code, subtotal, country_code, plan_id, unit_price } = body
+    const { code, subtotal, country_code, plan_id, unit_price, customer_email } = body
 
     if (!code || typeof code !== 'string') {
       return NextResponse.json({ success: false, error: '請輸入優惠券代碼' }, { status: 400 })
@@ -19,6 +19,7 @@ export async function POST(req: NextRequest) {
     const result = await validateCoupon(code, subtotalTwd, country_code, {
       planId: typeof plan_id === 'string' ? plan_id : undefined,
       unitPriceTwd,
+      customerEmail: typeof customer_email === 'string' ? customer_email : undefined,
     })
 
     if (!result.valid || !result.coupon) {
