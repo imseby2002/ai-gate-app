@@ -492,6 +492,62 @@ export default function EsimAdminPage() {
     }
   }
 
+  // 使用統計報表
+  const [showReport, setShowReport] = useState(false)
+  const [reportFrom, setReportFrom] = useState('')
+  const [reportTo, setReportTo] = useState('')
+  const [reportData, setReportData] = useState<any | null>(null)
+  const [loadingReport, setLoadingReport] = useState(false)
+
+  function twToday(offsetDays = 0) {
+    return new Date(Date.now() + 8 * 3600 * 1000 - offsetDays * 86400 * 1000).toISOString().slice(0, 10)
+  }
+
+  async function loadReport(from = reportFrom, to = reportTo) {
+    setLoadingReport(true)
+    try {
+      const qs = new URLSearchParams()
+      if (from) qs.set('from', from)
+      if (to) qs.set('to', to)
+      const data = await fetch(`/api/esim/admin/coupons/report?${qs.toString()}`).then(r => r.json())
+      if (data.success) setReportData(data)
+      else alert(`報表載入失敗: ${data.error}`)
+    } catch (err: any) {
+      alert(`報表載入異常: ${err.message}`)
+    } finally {
+      setLoadingReport(false)
+    }
+  }
+
+  function setReportRange(days: number | null) {
+    const from = days === null ? '' : twToday(days - 1)
+    const to = days === null ? '' : twToday(0)
+    setReportFrom(from)
+    setReportTo(to)
+    loadReport(from, to)
+  }
+
+  function exportReportCsv() {
+    if (!reportData) return
+    const esc = (v: unknown) => {
+      const str = v === undefined || v === null ? '' : String(v)
+      return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str
+    }
+    const header = ['代碼', '活動名稱', '使用訂單', '使用人數', '原價總額', '折抵總額', '實收總額', '最後使用']
+    const rows = reportData.rows.map((r: any) => [
+      r.code, r.name, r.orders, r.customers, r.subtotal_twd, r.discount_twd, r.revenue_twd,
+      new Date(r.last_used_at).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' }),
+    ])
+    const csv = '\uFEFF' + [header, ...rows].map(r => r.map(esc).join(',')).join('\r\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `coupon_report_${reportFrom || 'all'}_${reportTo || 'now'}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const PAYMENT_LABEL: Record<string, string> = { paid: '已付款', pending: '待付款', failed: '付款失敗', refunded: '已退款' }
 
   // 儲存定價與促銷設定
@@ -1124,6 +1180,122 @@ export default function EsimAdminPage() {
               <span>{couponMessage}</span>
             </div>
           )}
+
+          {/* 使用統計報表 */}
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-xs text-xs">
+            <button
+              type="button"
+              onClick={() => {
+                const next = !showReport
+                setShowReport(next)
+                if (next && !reportData) setReportRange(30)
+              }}
+              className="w-full p-5 flex items-center justify-between font-bold text-slate-900 text-sm"
+            >
+              <span>📊 優惠券使用統計報表</span>
+              <span className="text-slate-400 text-xs">{showReport ? '收合 ▲' : '展開 ▼'}</span>
+            </button>
+            {showReport && (
+              <div className="px-5 pb-5 space-y-4">
+                <div className="flex flex-wrap items-end gap-2">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">開始日期</label>
+                    <input type="date" value={reportFrom} max={reportTo || undefined} onChange={e => setReportFrom(e.target.value)} className="px-3 py-2 rounded-xl border border-slate-300" />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">結束日期</label>
+                    <input type="date" value={reportTo} min={reportFrom || undefined} onChange={e => setReportTo(e.target.value)} className="px-3 py-2 rounded-xl border border-slate-300" />
+                  </div>
+                  <button type="button" onClick={() => loadReport()} disabled={loadingReport} className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold disabled:opacity-50">
+                    {loadingReport ? '查詢中...' : '查詢'}
+                  </button>
+                  {[7, 30, 90].map(d => (
+                    <button key={d} type="button" onClick={() => setReportRange(d)} className="px-3 py-2 rounded-xl border border-slate-300 hover:bg-slate-100 font-semibold">
+                      近 {d} 天
+                    </button>
+                  ))}
+                  <button type="button" onClick={() => setReportRange(null)} className="px-3 py-2 rounded-xl border border-slate-300 hover:bg-slate-100 font-semibold">全部</button>
+                  {reportData && reportData.rows.length > 0 && (
+                    <button type="button" onClick={exportReportCsv} className="px-3 py-2 rounded-xl border border-slate-300 hover:bg-slate-100 font-semibold ml-auto">匯出 CSV</button>
+                  )}
+                </div>
+
+                {reportData && (
+                  <>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                      {[
+                        ['使用訂單', reportData.totals.orders, 'bg-slate-50 text-slate-900'],
+                        ['使用券數', reportData.totals.coupons_used, 'bg-slate-50 text-slate-900'],
+                        ['使用人數', reportData.totals.customers, 'bg-slate-50 text-slate-900'],
+                        ['原價總額', `NT$ ${reportData.totals.subtotal_twd}`, 'bg-slate-50 text-slate-900'],
+                        ['折抵總額', `NT$ ${reportData.totals.discount_twd}`, 'bg-amber-50 text-amber-700'],
+                        ['實收總額', `NT$ ${reportData.totals.revenue_twd}`, 'bg-blue-50 text-blue-700'],
+                      ].map(([label, value, cls]) => (
+                        <div key={String(label)} className={`rounded-2xl p-3 ${cls}`}>
+                          <div className="text-slate-500">{label}</div>
+                          <div className="text-lg font-bold">{value}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-slate-400">只計已付款訂單，日期依付款時間（台灣時間）。{reportData.truncated && '資料超過 5000 筆，僅統計最新 5000 筆。'}</p>
+
+                    {reportData.rows.length === 0 ? (
+                      <div className="text-center text-slate-400 py-6">此期間沒有優惠券使用紀錄</div>
+                    ) : (
+                      <>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-left">
+                            <thead className="bg-slate-50 text-slate-500 font-semibold">
+                              <tr>
+                                <th className="py-2 px-3">代碼</th>
+                                <th className="py-2 px-3">活動名稱</th>
+                                <th className="py-2 px-3 text-right">使用訂單</th>
+                                <th className="py-2 px-3 text-right">使用人數</th>
+                                <th className="py-2 px-3 text-right">折抵總額</th>
+                                <th className="py-2 px-3 text-right">實收總額</th>
+                                <th className="py-2 px-3">最後使用</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                              {reportData.rows.map((r: any) => (
+                                <tr key={r.code}>
+                                  <td className="py-2 px-3 font-mono font-bold">{r.code}</td>
+                                  <td className="py-2 px-3">{r.name}</td>
+                                  <td className="py-2 px-3 text-right font-bold">{r.orders}</td>
+                                  <td className="py-2 px-3 text-right">{r.customers}</td>
+                                  <td className="py-2 px-3 text-right text-amber-700">NT$ {r.discount_twd}</td>
+                                  <td className="py-2 px-3 text-right text-blue-700">NT$ {r.revenue_twd}</td>
+                                  <td className="py-2 px-3 whitespace-nowrap">{new Date(r.last_used_at).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        <div>
+                          <div className="font-bold text-slate-700 mb-2">每日使用趨勢</div>
+                          <div className="space-y-1 max-h-64 overflow-y-auto">
+                            {(() => {
+                              const max = Math.max(1, ...reportData.daily.map((d: any) => d.orders))
+                              return reportData.daily.map((d: any) => (
+                                <div key={d.date} className="flex items-center gap-2">
+                                  <span className="w-20 shrink-0 font-mono text-slate-500">{d.date.slice(5)}</span>
+                                  <div className="flex-1 bg-slate-100 rounded h-4 overflow-hidden">
+                                    <div className="bg-blue-500 h-4" style={{ width: `${(d.orders / max) * 100}%` }} />
+                                  </div>
+                                  <span className="w-36 shrink-0 text-right text-slate-600">{d.orders} 筆 · 折 NT$ {d.discount_twd}</span>
+                                </div>
+                              ))
+                            })()}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* 使用通知 Email */}
           <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-xs text-xs">

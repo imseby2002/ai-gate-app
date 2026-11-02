@@ -274,6 +274,39 @@ export async function getEsimOrdersByCouponCode(code: string, limit: number = 50
     .slice(0, limit)
 }
 
+/**
+ * 取得期間內已付款且有使用優惠券的訂單（供統計報表）
+ */
+export async function getPaidCouponOrders(fromIso?: string, toIso?: string, limit: number = 5000): Promise<EsimOrder[]> {
+  try {
+    const admin = createAdminClient()
+    let q = admin
+      .from('esim_orders')
+      .select('*')
+      .eq('payment_status', 'paid')
+      .not('metadata->>coupon_code', 'is', null)
+    if (fromIso) q = q.gte('paid_at', fromIso)
+    if (toIso) q = q.lte('paid_at', toIso)
+    const { data, error } = await q.order('paid_at', { ascending: false }).limit(limit)
+    if (!error && data) {
+      return data as EsimOrder[]
+    }
+  } catch (err) {
+    // Fallback
+  }
+
+  const fromT = fromIso ? new Date(fromIso).getTime() : -Infinity
+  const toT = toIso ? new Date(toIso).getTime() : Infinity
+  const local = readLocalOrders()
+  return Object.values(local)
+    .filter(o => {
+      if (o.payment_status !== 'paid' || !o.metadata?.coupon_code) return false
+      const t = new Date(o.paid_at || o.created_at).getTime()
+      return t >= fromT && t <= toT
+    })
+    .slice(0, limit)
+}
+
 const LOCAL_SETTINGS_FILE = path.join(process.cwd(), 'scratch', 'esim_settings_fallback.json')
 
 /**
