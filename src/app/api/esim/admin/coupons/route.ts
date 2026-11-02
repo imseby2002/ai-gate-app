@@ -12,6 +12,27 @@ async function requireAdmin() {
   return supabase
 }
 
+function buildCouponFields(coupon: any, code: string) {
+  return {
+    code,
+    name: coupon.name?.trim() || `${code} 優惠`,
+    discount_type: (coupon.discount_type === 'percent' ? 'percent' : coupon.discount_type === 'free' ? 'free' : 'fixed') as EsimCoupon['discount_type'],
+    discount_value: coupon.discount_type === 'free' ? 0 : parseFloat(coupon.discount_value) || 0,
+    min_spend_twd: parseInt(coupon.min_spend_twd, 10) || 0,
+    max_discount_twd: coupon.max_discount_twd ? parseInt(coupon.max_discount_twd, 10) : undefined,
+    applicable_countries: Array.isArray(coupon.applicable_countries) && coupon.applicable_countries.length > 0 ? coupon.applicable_countries : undefined,
+    applicable_plan_ids: Array.isArray(coupon.applicable_plan_ids) && coupon.applicable_plan_ids.length > 0
+      ? coupon.applicable_plan_ids.filter((id: unknown) => typeof id === 'string')
+      : undefined,
+    applicable_plan_names: coupon.applicable_plan_names && typeof coupon.applicable_plan_names === 'object'
+      ? coupon.applicable_plan_names
+      : undefined,
+    is_active: coupon.is_active !== false,
+    max_usage_count: coupon.max_usage_count ? parseInt(coupon.max_usage_count, 10) : undefined,
+    expires_at: coupon.expires_at || undefined,
+  }
+}
+
 export async function GET() {
   if (!(await requireAdmin())) {
     return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
@@ -59,23 +80,8 @@ export async function POST(req: NextRequest) {
 
       const newCoupon: EsimCoupon = {
         id: `coupon_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-        code,
-        name: coupon.name?.trim() || `${code} 優惠`,
-        discount_type: coupon.discount_type === 'percent' ? 'percent' : coupon.discount_type === 'free' ? 'free' : 'fixed',
-        discount_value: coupon.discount_type === 'free' ? 0 : parseFloat(coupon.discount_value) || 0,
-        min_spend_twd: parseInt(coupon.min_spend_twd, 10) || 0,
-        max_discount_twd: coupon.max_discount_twd ? parseInt(coupon.max_discount_twd, 10) : undefined,
-        applicable_countries: Array.isArray(coupon.applicable_countries) && coupon.applicable_countries.length > 0 ? coupon.applicable_countries : undefined,
-        applicable_plan_ids: Array.isArray(coupon.applicable_plan_ids) && coupon.applicable_plan_ids.length > 0
-          ? coupon.applicable_plan_ids.filter((id: unknown) => typeof id === 'string')
-          : undefined,
-        applicable_plan_names: coupon.applicable_plan_names && typeof coupon.applicable_plan_names === 'object'
-          ? coupon.applicable_plan_names
-          : undefined,
-        is_active: coupon.is_active !== false,
+        ...buildCouponFields(coupon, code),
         usage_count: 0,
-        max_usage_count: coupon.max_usage_count ? parseInt(coupon.max_usage_count, 10) : undefined,
-        expires_at: coupon.expires_at || undefined,
         created_at: new Date().toISOString(),
       }
 
@@ -87,6 +93,35 @@ export async function POST(req: NextRequest) {
         coupon: newCoupon,
         coupons: updated,
         message: `優惠券「${code}」已成功建立！`,
+      })
+    }
+
+    // 2.5 編輯優惠券
+    if (action === 'update' && coupon?.id) {
+      const existing = currentCoupons.find(c => c.id === coupon.id)
+      if (!existing) {
+        return NextResponse.json({ success: false, error: '找不到此優惠券' }, { status: 404 })
+      }
+      const code = String(coupon.code || '').trim().toUpperCase()
+      if (!code) {
+        return NextResponse.json({ success: false, error: '缺少優惠券代碼' }, { status: 400 })
+      }
+      if (currentCoupons.some(c => c.id !== coupon.id && c.code.toUpperCase() === code)) {
+        return NextResponse.json({ success: false, error: `代碼「${code}」已存在，請使用其他代碼` }, { status: 400 })
+      }
+      const updatedCoupon: EsimCoupon = {
+        ...buildCouponFields(coupon, code),
+        id: existing.id,
+        usage_count: existing.usage_count || 0,
+        created_at: existing.created_at,
+      }
+      const updated = currentCoupons.map(c => (c.id === existing.id ? updatedCoupon : c))
+      await saveCoupons(updated)
+      return NextResponse.json({
+        success: true,
+        coupon: updatedCoupon,
+        coupons: updated,
+        message: `優惠券「${code}」已更新！`,
       })
     }
 

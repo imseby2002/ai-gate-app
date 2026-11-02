@@ -6,7 +6,7 @@ import {
   Wallet, RefreshCw, CheckCircle2, AlertCircle, QrCode, Mail,
   ArrowRight, ExternalLink, Globe, Shield, ShoppingCart, DollarSign, Bell,
   Tag, Percent, Sliders, Calculator, Sparkles, Save, Check,
-  Ticket, Plus, Trash2, ToggleLeft, ToggleRight
+  Ticket, Plus, Trash2, ToggleLeft, ToggleRight, Pencil, X
 } from 'lucide-react'
 import { DEFAULT_PRICING_SETTINGS, EsimPricingSettings } from '@/lib/esim/catalog'
 
@@ -116,7 +116,48 @@ export default function EsimAdminPage() {
     }
   }
 
-  // 新增優惠券
+  const EMPTY_COUPON_FORM = {
+    code: '',
+    name: '',
+    discount_type: 'fixed',
+    discount_value: 50,
+    min_spend_twd: 100,
+    max_discount_twd: '',
+    max_usage_count: '',
+    expires_at: '',
+    applicable_countries: '',
+    is_active: true,
+  }
+  const [editingCouponId, setEditingCouponId] = useState<string | null>(null)
+
+  function handleEditCoupon(c: any) {
+    setEditingCouponId(c.id)
+    setNewCoupon({
+      code: c.code || '',
+      name: c.name || '',
+      discount_type: c.discount_type || 'fixed',
+      discount_value: c.discount_value ?? 0,
+      min_spend_twd: c.min_spend_twd ?? 0,
+      max_discount_twd: c.max_discount_twd ? String(c.max_discount_twd) : '',
+      max_usage_count: c.max_usage_count ? String(c.max_usage_count) : '',
+      expires_at: c.expires_at ? String(c.expires_at).split('T')[0] : '',
+      applicable_countries: (c.applicable_countries || []).join(','),
+      is_active: c.is_active !== false,
+    })
+    const plans: Record<string, string> = {}
+    for (const id of c.applicable_plan_ids || []) plans[id] = c.applicable_plan_names?.[id] || id
+    setSelectedPlans(plans)
+    setCouponMessage('')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  function handleCancelEdit() {
+    setEditingCouponId(null)
+    setNewCoupon(EMPTY_COUPON_FORM)
+    setSelectedPlans({})
+  }
+
+  // 新增／編輯優惠券
   async function handleCreateCoupon(e: React.FormEvent) {
     e.preventDefault()
     if (!newCoupon.code.trim()) return
@@ -131,9 +172,10 @@ export default function EsimAdminPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'create',
+          action: editingCouponId ? 'update' : 'create',
           coupon: {
             ...newCoupon,
+            id: editingCouponId || undefined,
             code: newCoupon.code.trim().toUpperCase(),
             max_discount_twd: newCoupon.max_discount_twd ? parseInt(newCoupon.max_discount_twd, 10) : undefined,
             max_usage_count: newCoupon.max_usage_count ? parseInt(newCoupon.max_usage_count, 10) : undefined,
@@ -147,26 +189,16 @@ export default function EsimAdminPage() {
       const data = await res.json()
       if (data.success) {
         setCoupons(data.coupons)
-        setCouponMessage(`✅ 優惠券「${newCoupon.code.toUpperCase()}」已成功新增！`)
-        setNewCoupon({
-          code: '',
-          name: '',
-          discount_type: 'fixed',
-          discount_value: 50,
-          min_spend_twd: 100,
-          max_discount_twd: '',
-          max_usage_count: '',
-          expires_at: '',
-          applicable_countries: '',
-          is_active: true,
-        })
+        setCouponMessage(`✅ 優惠券「${newCoupon.code.toUpperCase()}」已成功${editingCouponId ? '更新' : '新增'}！`)
+        setEditingCouponId(null)
+        setNewCoupon(EMPTY_COUPON_FORM)
         setSelectedPlans({})
         setTimeout(() => setCouponMessage(''), 4000)
       } else {
-        alert(`新增失敗: ${data.error}`)
+        alert(`${editingCouponId ? '更新' : '新增'}失敗: ${data.error}`)
       }
     } catch (err: any) {
-      alert(`新增異常: ${err.message}`)
+      alert(`${editingCouponId ? '更新' : '新增'}異常: ${err.message}`)
     } finally {
       setSavingCoupon(false)
     }
@@ -850,10 +882,22 @@ export default function EsimAdminPage() {
               <div className="flex items-center gap-2">
                 <Ticket className="w-5 h-5 text-blue-600" />
                 <div>
-                  <h3 className="text-base sm:text-lg font-bold text-slate-900">建立新優惠券折扣碼</h3>
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900">
+                    {editingCouponId ? `編輯優惠券「${newCoupon.code}」` : '建立新優惠券折扣碼'}
+                  </h3>
                   <p className="text-xs text-slate-500">顧客於結帳彈窗輸入此代碼即可立即折抵訂單金額</p>
                 </div>
               </div>
+              {editingCouponId && (
+                <button
+                  type="button"
+                  onClick={handleCancelEdit}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  取消編輯
+                </button>
+              )}
             </div>
 
             <form onSubmit={handleCreateCoupon} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
@@ -1072,8 +1116,12 @@ export default function EsimAdminPage() {
                   disabled={savingCoupon || !newCoupon.code.trim()}
                   className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                 >
-                  <Plus className="w-4 h-4" />
-                  <span>{savingCoupon ? '建立中...' : '建立優惠券'}</span>
+                  {editingCouponId ? <Save className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                  <span>
+                    {savingCoupon
+                      ? (editingCouponId ? '儲存中...' : '建立中...')
+                      : (editingCouponId ? '儲存變更' : '建立優惠券')}
+                  </span>
                 </button>
               </div>
             </form>
@@ -1195,6 +1243,14 @@ export default function EsimAdminPage() {
                               ) : (
                                 <ToggleLeft className="w-5 h-5 text-slate-400" />
                               )}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleEditCoupon(c)}
+                              className="p-1.5 hover:bg-blue-50 rounded-lg text-slate-400 hover:text-blue-600 transition-colors cursor-pointer"
+                              title="編輯優惠券"
+                            >
+                              <Pencil className="w-4 h-4" />
                             </button>
                             <button
                               type="button"
