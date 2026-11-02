@@ -61,11 +61,17 @@ export async function POST(req: NextRequest) {
         id: `coupon_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
         code,
         name: coupon.name?.trim() || `${code} 優惠`,
-        discount_type: coupon.discount_type === 'percent' ? 'percent' : 'fixed',
-        discount_value: parseFloat(coupon.discount_value) || 0,
+        discount_type: coupon.discount_type === 'percent' ? 'percent' : coupon.discount_type === 'free' ? 'free' : 'fixed',
+        discount_value: coupon.discount_type === 'free' ? 0 : parseFloat(coupon.discount_value) || 0,
         min_spend_twd: parseInt(coupon.min_spend_twd, 10) || 0,
         max_discount_twd: coupon.max_discount_twd ? parseInt(coupon.max_discount_twd, 10) : undefined,
         applicable_countries: Array.isArray(coupon.applicable_countries) && coupon.applicable_countries.length > 0 ? coupon.applicable_countries : undefined,
+        applicable_plan_ids: Array.isArray(coupon.applicable_plan_ids) && coupon.applicable_plan_ids.length > 0
+          ? coupon.applicable_plan_ids.filter((id: unknown) => typeof id === 'string')
+          : undefined,
+        applicable_plan_names: coupon.applicable_plan_names && typeof coupon.applicable_plan_names === 'object'
+          ? coupon.applicable_plan_names
+          : undefined,
         is_active: coupon.is_active !== false,
         usage_count: 0,
         max_usage_count: coupon.max_usage_count ? parseInt(coupon.max_usage_count, 10) : undefined,

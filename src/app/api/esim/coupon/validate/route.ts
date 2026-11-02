@@ -4,7 +4,7 @@ import { validateCoupon } from '@/lib/esim/coupons'
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { code, subtotal, country_code } = body
+    const { code, subtotal, country_code, plan_id, unit_price } = body
 
     if (!code || typeof code !== 'string') {
       return NextResponse.json({ success: false, error: '請輸入優惠券代碼' }, { status: 400 })
@@ -15,7 +15,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: '訂單金額不正確' }, { status: 400 })
     }
 
-    const result = await validateCoupon(code, subtotalTwd, country_code)
+    const unitPriceTwd = parseFloat(String(unit_price)) || undefined
+    const result = await validateCoupon(code, subtotalTwd, country_code, {
+      planId: typeof plan_id === 'string' ? plan_id : undefined,
+      unitPriceTwd,
+    })
 
     if (!result.valid || !result.coupon) {
       return NextResponse.json({
@@ -34,7 +38,9 @@ export async function POST(req: NextRequest) {
       },
       discount_twd: result.discountTwd,
       final_price_twd: result.finalPriceTwd,
-      message: `已成功套用優惠券「${result.coupon.code}」！現折 NT$ ${result.discountTwd}`,
+      message: result.coupon.discount_type === 'free'
+        ? `已成功兌換贈品「${result.coupon.code}」！免費 1 張`
+        : `已成功套用優惠券「${result.coupon.code}」！現折 NT$ ${result.discountTwd}`,
     })
   } catch (err: any) {
     return NextResponse.json({
