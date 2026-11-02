@@ -13,6 +13,7 @@
  *   referenceImageMimeType?: string
  * }
  */
+import { AI_QUOTA_CODE, isFalQuotaError } from '@/lib/ai/fal-errors'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAnthropic } from '@ai-sdk/anthropic'
@@ -479,6 +480,10 @@ async function handlePost(req: NextRequest) {
       return NextResponse.json({ error: '不支援的操作類型' }, { status: 400 })
     }
   } catch (err) {
+    if (isFalQuotaError(err)) {
+      console.error('[ai-studio] fal.ai 額度不足，帳戶被鎖', err)
+      return NextResponse.json({ error: AI_QUOTA_CODE, code: AI_QUOTA_CODE }, { status: 503 })
+    }
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }
 

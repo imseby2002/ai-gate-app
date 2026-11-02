@@ -2229,7 +2229,8 @@
       "videoFailed": "Tạo video thất bại",
       "videoTimeout": "Tạo video quá thời gian",
       "publishAll": "Đăng lên mạng xã hội chỉ với một cú nhấp",
-      "publish": "Đăng"
+      "publish": "Đăng",
+      "aiQuota": "Dịch vụ AI tạo ảnh/video đã hết hạn mức nên tạm thời không thể tạo. Vui lòng liên hệ quản trị viên nạp thêm rồi thử lại."
     },
     "brandPage": {
       "title": "Hồ sơ công ty",
