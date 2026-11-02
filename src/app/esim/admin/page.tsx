@@ -72,6 +72,7 @@ export default function EsimAdminPage() {
     max_discount_twd: '',
     max_usage_count: '',
     max_uses_per_customer: '',
+    max_uses_per_day: '',
     starts_at: '',
     expires_at: '',
     applicable_countries: '',
@@ -82,6 +83,9 @@ export default function EsimAdminPage() {
   const [planCountry, setPlanCountry] = useState('JP')
   const [planOptions, setPlanOptions] = useState<any[]>([])
   const [planSearch, setPlanSearch] = useState('')
+  const [planDayFilter, setPlanDayFilter] = useState('all')
+  const [planTypeFilter, setPlanTypeFilter] = useState('all')
+  const [planDataFilter, setPlanDataFilter] = useState('all')
   const [loadingPlanOptions, setLoadingPlanOptions] = useState(false)
 
   async function loadPlanOptions() {
@@ -91,6 +95,9 @@ export default function EsimAdminPage() {
     try {
       const data = await fetch(`/api/esim/plans?country=${encodeURIComponent(cc)}`).then(r => r.json())
       setPlanOptions(data.success ? data.plans || [] : [])
+      setPlanDayFilter('all')
+      setPlanTypeFilter('all')
+      setPlanDataFilter('all')
     } catch {
       setPlanOptions([])
     } finally {
@@ -164,6 +171,7 @@ export default function EsimAdminPage() {
     max_discount_twd: '',
     max_usage_count: '',
     max_uses_per_customer: '',
+    max_uses_per_day: '',
     starts_at: '',
     expires_at: '',
     applicable_countries: '',
@@ -182,6 +190,7 @@ export default function EsimAdminPage() {
       max_discount_twd: c.max_discount_twd ? String(c.max_discount_twd) : '',
       max_usage_count: c.max_usage_count ? String(c.max_usage_count) : '',
       max_uses_per_customer: c.max_uses_per_customer ? String(c.max_uses_per_customer) : '',
+      max_uses_per_day: c.max_uses_per_day ? String(c.max_uses_per_day) : '',
       starts_at: c.starts_at ? String(c.starts_at).split('T')[0] : '',
       expires_at: c.expires_at ? String(c.expires_at).split('T')[0] : '',
       applicable_countries: (c.applicable_countries || []).join(','),
@@ -215,6 +224,7 @@ export default function EsimAdminPage() {
       max_discount_twd: newCoupon.max_discount_twd ? parseInt(newCoupon.max_discount_twd, 10) : undefined,
       max_usage_count: newCoupon.max_usage_count ? parseInt(newCoupon.max_usage_count, 10) : undefined,
       max_uses_per_customer: newCoupon.max_uses_per_customer ? parseInt(newCoupon.max_uses_per_customer, 10) : undefined,
+      max_uses_per_day: newCoupon.max_uses_per_day ? parseInt(newCoupon.max_uses_per_day, 10) : undefined,
       starts_at: newCoupon.starts_at || undefined,
       expires_at: newCoupon.expires_at || undefined,
       applicable_countries: countries,
@@ -318,7 +328,7 @@ export default function EsimAdminPage() {
       return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str
     }
     const typeLabel = (t: string) => (t === 'free' ? '贈品' : t === 'percent' ? '成數折扣' : '現折金額')
-    const header = ['代碼', '活動名稱', '折扣方式', '折扣數值', '最低消費', '最高折抵', '適用國家', '適用產品', '已兌換次數', '使用次數上限', '每人限用', '啟用日期', '到期日', '狀態', '建立時間']
+    const header = ['代碼', '活動名稱', '折扣方式', '折扣數值', '最低消費', '最高折抵', '適用國家', '適用產品', '已兌換次數', '使用次數上限', '每人限用', '每日上限', '啟用日期', '到期日', '狀態', '建立時間']
     const rows = filteredCoupons.map((c: any) => [
       c.code,
       c.name,
@@ -331,6 +341,7 @@ export default function EsimAdminPage() {
       c.usage_count || 0,
       c.max_usage_count || '',
       c.max_uses_per_customer || '',
+      c.max_uses_per_day || '',
       c.starts_at ? String(c.starts_at).split('T')[0] : '',
       c.expires_at ? String(c.expires_at).split('T')[0] : '',
       c.is_active ? '啟用' : '暫停',
@@ -1501,6 +1512,22 @@ export default function EsimAdminPage() {
                 />
               </div>
 
+              {/* 每日使用上限 */}
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  每日使用上限 (選填，台灣時間)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  placeholder="留空代表不限"
+                  value={newCoupon.max_uses_per_day}
+                  onChange={e => setNewCoupon({ ...newCoupon, max_uses_per_day: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none"
+                />
+              </div>
+
               {/* 啟用日期 */}
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">
@@ -1572,13 +1599,47 @@ export default function EsimAdminPage() {
 
                 {planOptions.length > 0 && (() => {
                   const terms = planSearch.trim().toLowerCase().split(/\s+/).filter(Boolean)
-                  const visiblePlans = terms.length === 0 ? planOptions : planOptions.filter((p: any) => {
+                  const dayOptions = Array.from(new Set<number>(planOptions.map((p: any) => Number(p.day)))).filter(d => d > 0).sort((a, b) => a - b)
+                  const dataOptions = Array.from(new Set<string>(planOptions
+                    .filter((p: any) => planTypeFilter === 'all' || p.planType === planTypeFilter)
+                    .map((p: any) => String(p.dataTierLabel || '')))).filter(Boolean).sort()
+                  const visiblePlans = planOptions.filter((p: any) => {
+                    if (planDayFilter !== 'all' && Number(p.day) !== Number(planDayFilter)) return false
+                    if (planTypeFilter !== 'all' && p.planType !== planTypeFilter) return false
+                    if (planDataFilter !== 'all' && p.dataTierLabel !== planDataFilter) return false
+                    if (terms.length === 0) return true
                     const hay = `${planLabel(p)} ${p.channel_dataplan_name || ''} ${p.channel_dataplan_id}`.toLowerCase()
                     return terms.every(t => hay.includes(t))
                   })
                   return (
                   <>
                   <div className="flex flex-wrap items-center gap-2 mb-2">
+                    <select
+                      value={planTypeFilter}
+                      onChange={e => { setPlanTypeFilter(e.target.value); setPlanDataFilter('all') }}
+                      className="px-3 py-2 rounded-xl border border-slate-300 bg-white"
+                    >
+                      <option value="all">全部方案類型</option>
+                      <option value="daily">每日流量</option>
+                      <option value="total">總量流量</option>
+                      <option value="unlimited">吃到飽</option>
+                    </select>
+                    <select
+                      value={planDataFilter}
+                      onChange={e => setPlanDataFilter(e.target.value)}
+                      className="px-3 py-2 rounded-xl border border-slate-300 bg-white"
+                    >
+                      <option value="all">全部流量</option>
+                      {dataOptions.map(d => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                    <select
+                      value={planDayFilter}
+                      onChange={e => setPlanDayFilter(e.target.value)}
+                      className="px-3 py-2 rounded-xl border border-slate-300 bg-white"
+                    >
+                      <option value="all">全部天數</option>
+                      {dayOptions.map(d => <option key={d} value={d}>{d} 天</option>)}
+                    </select>
                     <input
                       type="text"
                       placeholder="搜尋產品，如：2GB 5天、吃到飽、全球"
@@ -1901,6 +1962,9 @@ export default function EsimAdminPage() {
                           {c.usage_count || 0}{c.max_usage_count ? ` / ${c.max_usage_count}` : ''} 次
                           {c.max_uses_per_customer && (
                             <span className="block text-[10px] text-slate-400 font-normal">每人限 {c.max_uses_per_customer} 次</span>
+                          )}
+                          {c.max_uses_per_day && (
+                            <span className="block text-[10px] text-slate-400 font-normal">每日限 {c.max_uses_per_day} 次</span>
                           )}
                           {c.max_usage_count && (c.usage_count || 0) >= c.max_usage_count && (
                             <span className="block text-[10px] text-red-500">已達上限</span>
