@@ -63,8 +63,6 @@ export async function POST(req: NextRequest) {
         finalTotalPriceTwd = couponRes.finalPriceTwd
         appliedCouponCode = couponRes.coupon.code
         appliedCouponName = couponRes.coupon.name
-        // 累計使用次數
-        await incrementCouponUsage(appliedCouponCode)
       } else {
         return NextResponse.json({ error: couponRes.error || '優惠券代碼無效' }, { status: 400 })
       }
@@ -119,6 +117,7 @@ export async function POST(req: NextRequest) {
         payment_trade_no: `FREE_COUPON_${Date.now()}`,
         paid_at: new Date().toISOString(),
       })
+      if (appliedCouponCode) await incrementCouponUsage(appliedCouponCode)
       const fulfillRes = await fulfillEsimOrder(orderNo)
       return NextResponse.json({
         success: true,
@@ -136,6 +135,7 @@ export async function POST(req: NextRequest) {
         payment_trade_no: `TEST_${Date.now()}`,
         paid_at: new Date().toISOString(),
       })
+      if (appliedCouponCode) await incrementCouponUsage(appliedCouponCode)
 
       // 觸發發卡
       const fulfillRes = await fulfillEsimOrder(orderNo)

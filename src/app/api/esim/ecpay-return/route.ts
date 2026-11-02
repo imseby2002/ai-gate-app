@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyCheckMac, getEcpayConfig } from '@/lib/ecpay/client'
-import { updateEsimOrder } from '@/lib/esim/db'
+import { updateEsimOrder, getEsimOrderByNo } from '@/lib/esim/db'
+import { incrementCouponUsage } from '@/lib/esim/coupons'
 import { fulfillEsimOrder } from '@/lib/esim/fulfillment'
 
 export async function POST(req: NextRequest) {
@@ -24,11 +25,19 @@ export async function POST(req: NextRequest) {
 
     if (RtnCode === '1') {
       console.log(`[ECPay eSIM] Payment successful for order ${MerchantTradeNo}, TradeNo: ${TradeNo}`)
+      const existing = await getEsimOrderByNo(MerchantTradeNo)
+      const alreadyPaid = existing?.payment_status === 'paid'
       await updateEsimOrder(MerchantTradeNo, {
         payment_status: 'paid',
         payment_trade_no: TradeNo,
         paid_at: new Date().toISOString(),
       })
+
+      // 付款成功才累計優惠券使用次數（綠界重送通知時不重複計算）
+      const couponCode = existing?.metadata?.coupon_code
+      if (!alreadyPaid && couponCode) {
+        await incrementCouponUsage(couponCode)
+      }
 
       // 觸發 MicroEsim 發卡
       fulfillEsimOrder(MerchantTradeNo).catch(err => {
