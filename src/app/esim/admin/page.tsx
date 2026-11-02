@@ -31,6 +31,38 @@ export default function EsimAdminPage() {
   const [loadingCoupons, setLoadingCoupons] = useState(false)
   const [savingCoupon, setSavingCoupon] = useState(false)
   const [couponMessage, setCouponMessage] = useState('')
+  // 使用通知 Email
+  const [notifyEnabled, setNotifyEnabled] = useState(false)
+  const [notifyEmails, setNotifyEmails] = useState('')
+  const [savingNotify, setSavingNotify] = useState(false)
+
+  async function handleSaveNotify() {
+    const emails = notifyEmails.split(/[,\s]+/).map(e => e.trim()).filter(Boolean)
+    if (notifyEnabled && emails.length === 0) {
+      alert('請至少填一個通知 Email')
+      return
+    }
+    setSavingNotify(true)
+    try {
+      const data = await fetch('/api/esim/admin/coupons', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save_notify', enabled: notifyEnabled, emails }),
+      }).then(r => r.json())
+      if (data.success) {
+        setNotifyEnabled(!!data.notify.enabled)
+        setNotifyEmails((data.notify.emails || []).join(', '))
+        setCouponMessage(`✅ ${data.message}`)
+        setTimeout(() => setCouponMessage(''), 4000)
+      } else {
+        alert(`儲存失敗: ${data.error}`)
+      }
+    } catch (err: any) {
+      alert(`儲存異常: ${err.message}`)
+    } finally {
+      setSavingNotify(false)
+    }
+  }
   const [newCoupon, setNewCoupon] = useState({
     code: '',
     name: '',
@@ -111,6 +143,10 @@ export default function EsimAdminPage() {
 
       if (cpnRes.success) {
         setCoupons(cpnRes.coupons || [])
+        if (cpnRes.notify) {
+          setNotifyEnabled(!!cpnRes.notify.enabled)
+          setNotifyEmails((cpnRes.notify.emails || []).join(', '))
+        }
       }
     } catch (err) {
       console.error('Failed to load admin data:', err)
@@ -1088,6 +1124,32 @@ export default function EsimAdminPage() {
               <span>{couponMessage}</span>
             </div>
           )}
+
+          {/* 使用通知 Email */}
+          <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-xs text-xs">
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="inline-flex items-center gap-2 font-bold text-slate-800 cursor-pointer">
+                <input type="checkbox" checked={notifyEnabled} onChange={e => setNotifyEnabled(e.target.checked)} />
+                優惠券使用通知 Email
+              </label>
+              <input
+                type="text"
+                placeholder="收件人 Email，多個以逗號分隔"
+                value={notifyEmails}
+                onChange={e => setNotifyEmails(e.target.value)}
+                className="flex-1 min-w-[220px] px-3 py-2 rounded-xl border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none"
+              />
+              <button
+                type="button"
+                onClick={handleSaveNotify}
+                disabled={savingNotify}
+                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold disabled:opacity-50"
+              >
+                {savingNotify ? '儲存中...' : '儲存'}
+              </button>
+            </div>
+            <p className="mt-2 text-slate-500">開啟後，每筆使用優惠券的訂單付款成功時，會寄通知信到上述信箱（最多 10 個）。</p>
+          </div>
 
           {/* 新增優惠券卡片 */}
           <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-6">

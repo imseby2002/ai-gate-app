@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyCheckMac, getEcpayConfig } from '@/lib/ecpay/client'
 import { updateEsimOrder, getEsimOrderByNo } from '@/lib/esim/db'
 import { incrementCouponUsage } from '@/lib/esim/coupons'
+import { sendCouponUsedNotification } from '@/lib/esim/coupon-notify'
 import { fulfillEsimOrder } from '@/lib/esim/fulfillment'
 
 export async function POST(req: NextRequest) {
@@ -37,6 +38,7 @@ export async function POST(req: NextRequest) {
       const couponCode = existing?.metadata?.coupon_code
       if (!alreadyPaid && couponCode) {
         await incrementCouponUsage(couponCode)
+        await sendCouponUsedNotification(MerchantTradeNo)
       }
 
       // 觸發 MicroEsim 發卡
