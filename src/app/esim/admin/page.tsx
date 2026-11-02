@@ -157,6 +157,72 @@ export default function EsimAdminPage() {
     setSelectedPlans({})
   }
 
+  // 批次產生
+  const [batchPrefix, setBatchPrefix] = useState('')
+  const [batchCount, setBatchCount] = useState(10)
+  const [batchCodes, setBatchCodes] = useState<string[]>([])
+
+  function buildCouponPayload() {
+    const countries = newCoupon.applicable_countries
+      ? newCoupon.applicable_countries.split(',').map((c: string) => c.trim().toUpperCase()).filter(Boolean)
+      : []
+    return {
+      ...newCoupon,
+      code: newCoupon.code.trim().toUpperCase(),
+      max_discount_twd: newCoupon.max_discount_twd ? parseInt(newCoupon.max_discount_twd, 10) : undefined,
+      max_usage_count: newCoupon.max_usage_count ? parseInt(newCoupon.max_usage_count, 10) : undefined,
+      expires_at: newCoupon.expires_at || undefined,
+      applicable_countries: countries,
+      applicable_plan_ids: Object.keys(selectedPlans),
+      applicable_plan_names: selectedPlans,
+    }
+  }
+
+  async function handleBatchCreate() {
+    if (batchCount < 1 || batchCount > 500) {
+      alert('批次數量需介於 1～500')
+      return
+    }
+    if (!newCoupon.max_usage_count && !confirm('未設定「使用次數上限」，每組代碼將可無限次使用。確定要繼續嗎？（一般建議設為 1）')) return
+    setSavingCoupon(true)
+    setCouponMessage('')
+    try {
+      const res = await fetch('/api/esim/admin/coupons', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'batch_create',
+          prefix: batchPrefix,
+          count: batchCount,
+          coupon: buildCouponPayload(),
+        }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setCoupons(data.coupons)
+        setBatchCodes(data.codes || [])
+        setCouponMessage(`✅ ${data.message}`)
+      } else {
+        alert(`批次產生失敗: ${data.error}`)
+      }
+    } catch (err: any) {
+      alert(`批次產生異常: ${err.message}`)
+    } finally {
+      setSavingCoupon(false)
+    }
+  }
+
+  function downloadBatchCsv() {
+    const csv = 'code\n' + batchCodes.join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `coupons_${batchPrefix || 'batch'}_${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   // 新增／編輯優惠券
   async function handleCreateCoupon(e: React.FormEvent) {
     e.preventDefault()
@@ -164,25 +230,14 @@ export default function EsimAdminPage() {
     setSavingCoupon(true)
     setCouponMessage('')
     try {
-      const countries = newCoupon.applicable_countries
-        ? newCoupon.applicable_countries.split(',').map(c => c.trim().toUpperCase()).filter(Boolean)
-        : []
-
       const res = await fetch('/api/esim/admin/coupons', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: editingCouponId ? 'update' : 'create',
           coupon: {
-            ...newCoupon,
+            ...buildCouponPayload(),
             id: editingCouponId || undefined,
-            code: newCoupon.code.trim().toUpperCase(),
-            max_discount_twd: newCoupon.max_discount_twd ? parseInt(newCoupon.max_discount_twd, 10) : undefined,
-            max_usage_count: newCoupon.max_usage_count ? parseInt(newCoupon.max_usage_count, 10) : undefined,
-            expires_at: newCoupon.expires_at || undefined,
-            applicable_countries: countries,
-            applicable_plan_ids: Object.keys(selectedPlans),
-            applicable_plan_names: selectedPlans,
           },
         }),
       })
@@ -1124,6 +1179,73 @@ export default function EsimAdminPage() {
                   </span>
                 </button>
               </div>
+
+              {/* 批次產生 */}
+              {!editingCouponId && (
+                <div className="sm:col-span-2 lg:col-span-4 rounded-2xl border border-indigo-200 p-4 bg-indigo-50/50 space-y-3">
+                  <div className="font-bold text-indigo-900">批次產生（套用上方設定，自動產生不重複代碼，上方「優惠代碼」可留空）</div>
+                  <div className="flex flex-wrap items-end gap-2">
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">代碼前綴 (選填)</label>
+                      <input
+                        type="text"
+                        maxLength={12}
+                        placeholder="如 GIFT"
+                        value={batchPrefix}
+                        onChange={e => setBatchPrefix(e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, ''))}
+                        className="w-36 px-3 py-2 rounded-xl border border-slate-300 bg-white uppercase font-mono focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">數量 (1～500)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="500"
+                        value={batchCount}
+                        onChange={e => setBatchCount(parseInt(e.target.value, 10) || 0)}
+                        className="w-28 px-3 py-2 rounded-xl border border-slate-300 bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 outline-none"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleBatchCreate}
+                      disabled={savingCoupon}
+                      className="py-2 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold disabled:opacity-50"
+                    >
+                      {savingCoupon ? '產生中...' : `批次產生 ${batchCount} 張`}
+                    </button>
+                    <span className="text-slate-500">代碼格式：{batchPrefix || ''}XXXXXXXX</span>
+                  </div>
+
+                  {batchCodes.length > 0 && (
+                    <div className="space-y-2">
+                      <textarea
+                        readOnly
+                        value={batchCodes.join('\n')}
+                        rows={6}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white font-mono text-[11px]"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => navigator.clipboard.writeText(batchCodes.join('\n')).then(() => alert('已複製到剪貼簿'))}
+                          className="px-3 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 font-semibold"
+                        >
+                          複製全部代碼
+                        </button>
+                        <button
+                          type="button"
+                          onClick={downloadBatchCsv}
+                          className="px-3 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 font-semibold"
+                        >
+                          下載 CSV
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </form>
           </div>
 

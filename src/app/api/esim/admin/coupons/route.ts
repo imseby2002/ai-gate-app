@@ -33,6 +33,14 @@ function buildCouponFields(coupon: any, code: string) {
   }
 }
 
+const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // 去除易混淆的 I O 0 1
+
+function randomCode(length: number) {
+  const bytes = new Uint8Array(length)
+  crypto.getRandomValues(bytes)
+  return Array.from(bytes, b => CODE_CHARS[b % CODE_CHARS.length]).join('')
+}
+
 export async function GET() {
   if (!(await requireAdmin())) {
     return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
@@ -93,6 +101,42 @@ export async function POST(req: NextRequest) {
         coupon: newCoupon,
         coupons: updated,
         message: `優惠券「${code}」已成功建立！`,
+      })
+    }
+
+    // 2.1 批次產生優惠券（每張代碼不同、設定相同）
+    if (action === 'batch_create') {
+      const count = parseInt(body.count, 10)
+      if (!Number.isFinite(count) || count < 1 || count > 500) {
+        return NextResponse.json({ success: false, error: '批次數量需介於 1～500' }, { status: 400 })
+      }
+      const prefix = String(body.prefix || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '')
+      if (prefix.length > 12) {
+        return NextResponse.json({ success: false, error: '前綴最多 12 個字元' }, { status: 400 })
+      }
+      const existingCodes = new Set(currentCoupons.map(c => c.code.toUpperCase()))
+      const now = Date.now()
+      const created: EsimCoupon[] = []
+      let attempts = 0
+      while (created.length < count && attempts < count * 20) {
+        attempts++
+        const code = `${prefix}${randomCode(8)}`
+        if (existingCodes.has(code)) continue
+        existingCodes.add(code)
+        created.push({
+          id: `coupon_${now}_${created.length}_${Math.random().toString(36).substring(2, 6)}`,
+          ...buildCouponFields({ ...(coupon || {}), name: coupon?.name?.trim() || `${prefix || '批次'} 優惠券` }, code),
+          usage_count: 0,
+          created_at: new Date(now).toISOString(),
+        })
+      }
+      const updated = [...created, ...currentCoupons]
+      await saveCoupons(updated)
+      return NextResponse.json({
+        success: true,
+        codes: created.map(c => c.code),
+        coupons: updated,
+        message: `已批次產生 ${created.length} 張優惠券`,
       })
     }
 
