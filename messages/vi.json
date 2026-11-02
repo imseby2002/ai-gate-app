@@ -2230,7 +2230,8 @@
       "videoTimeout": "Tạo video quá thời gian",
       "publishAll": "Đăng lên mạng xã hội chỉ với một cú nhấp",
       "publish": "Đăng",
-      "aiQuota": "Dịch vụ AI tạo ảnh/video đã hết hạn mức nên tạm thời không thể tạo. Vui lòng liên hệ quản trị viên nạp thêm rồi thử lại."
+      "aiQuota": "Dịch vụ AI tạo ảnh/video đã hết hạn mức nên tạm thời không thể tạo. Vui lòng liên hệ quản trị viên nạp thêm rồi thử lại.",
+      "tooLarge": "Ảnh quá lớn, máy chủ không nhận được. Vui lòng dùng ảnh nhỏ hơn (nên dưới 2MB) hoặc bớt ảnh tham khảo rồi thử lại."
     },
     "brandPage": {
       "title": "Hồ sơ công ty",
