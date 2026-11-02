@@ -38,9 +38,42 @@ export default function EsimAdminPage() {
     discount_value: 50,
     min_spend_twd: 100,
     max_discount_twd: '',
+    max_usage_count: '',
     applicable_countries: '',
     is_active: true,
   })
+  // 贈品／限定產品選擇
+  const [selectedPlans, setSelectedPlans] = useState<Record<string, string>>({})
+  const [planCountry, setPlanCountry] = useState('JP')
+  const [planOptions, setPlanOptions] = useState<any[]>([])
+  const [loadingPlanOptions, setLoadingPlanOptions] = useState(false)
+
+  async function loadPlanOptions() {
+    const cc = planCountry.trim().toUpperCase()
+    if (!cc) return
+    setLoadingPlanOptions(true)
+    try {
+      const data = await fetch(`/api/esim/plans?country=${encodeURIComponent(cc)}`).then(r => r.json())
+      setPlanOptions(data.success ? data.plans || [] : [])
+    } catch {
+      setPlanOptions([])
+    } finally {
+      setLoadingPlanOptions(false)
+    }
+  }
+
+  function planLabel(p: any) {
+    return `${p.flagEmoji || ''} ${p.primaryCountryName} ${p.dataTierLabel} ${p.day}天 (NT$ ${p.retailPriceTwd})`.trim()
+  }
+
+  function togglePlan(p: any) {
+    setSelectedPlans(prev => {
+      const next = { ...prev }
+      if (next[p.channel_dataplan_id]) delete next[p.channel_dataplan_id]
+      else next[p.channel_dataplan_id] = planLabel(p)
+      return next
+    })
+  }
 
   // 即時定價試算器 (Simulator)
   const [testCostHkd, setTestCostHkd] = useState<number>(15.0)
@@ -102,7 +135,10 @@ export default function EsimAdminPage() {
             ...newCoupon,
             code: newCoupon.code.trim().toUpperCase(),
             max_discount_twd: newCoupon.max_discount_twd ? parseInt(newCoupon.max_discount_twd, 10) : undefined,
+            max_usage_count: newCoupon.max_usage_count ? parseInt(newCoupon.max_usage_count, 10) : undefined,
             applicable_countries: countries,
+            applicable_plan_ids: Object.keys(selectedPlans),
+            applicable_plan_names: selectedPlans,
           },
         }),
       })
@@ -117,9 +153,11 @@ export default function EsimAdminPage() {
           discount_value: 50,
           min_spend_twd: 100,
           max_discount_twd: '',
+          max_usage_count: '',
           applicable_countries: '',
           is_active: true,
         })
+        setSelectedPlans({})
         setTimeout(() => setCouponMessage(''), 4000)
       } else {
         alert(`新增失敗: ${data.error}`)
@@ -854,17 +892,27 @@ export default function EsimAdminPage() {
                   value={newCoupon.discount_type}
                   onChange={e => setNewCoupon({
                     ...newCoupon,
-                    discount_type: e.target.value as 'fixed' | 'percent',
-                    discount_value: e.target.value === 'percent' ? 0.9 : 50,
+                    discount_type: e.target.value as 'fixed' | 'percent' | 'free',
+                    discount_value: e.target.value === 'percent' ? 0.9 : e.target.value === 'free' ? 0 : 50,
+                    min_spend_twd: e.target.value === 'free' ? 0 : newCoupon.min_spend_twd,
                   })}
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none font-medium"
                 >
                   <option value="fixed">現折固定金額 (TWD)</option>
                   <option value="percent">成數折扣 (例如 9 折、85 折)</option>
+                  <option value="free">🎁 贈品 (輸入代碼免費兌換 1 張)</option>
                 </select>
               </div>
 
               {/* 折扣數值 */}
+              {newCoupon.discount_type === 'free' ? (
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">贈品內容</label>
+                <div className="w-full px-3 py-2 rounded-xl border border-amber-200 bg-amber-50 text-amber-700 font-bold">
+                  免費兌換 1 張（下方可指定產品）
+                </div>
+              </div>
+              ) : (
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">
                   {newCoupon.discount_type === 'fixed' ? '折抵金額 (NT$)' : '折扣成數 (0.9=9折)'} <span className="text-red-500">*</span>
@@ -880,6 +928,7 @@ export default function EsimAdminPage() {
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold text-blue-600 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none"
                 />
               </div>
+              )}
 
               {/* 最低消費門檻 */}
               <div>
@@ -926,6 +975,80 @@ export default function EsimAdminPage() {
                 />
               </div>
 
+              {/* 使用次數上限 */}
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  使用次數上限 (選填)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  placeholder="留空代表不限次數"
+                  value={newCoupon.max_usage_count}
+                  onChange={e => setNewCoupon({ ...newCoupon, max_usage_count: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none"
+                />
+              </div>
+
+              {/* 限定產品 */}
+              <div className="sm:col-span-2 lg:col-span-4 rounded-2xl border border-slate-200 p-4 bg-slate-50/60">
+                <div className="flex flex-wrap items-end gap-2 mb-2">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">
+                      限定適用產品 (選填{newCoupon.discount_type === 'free' ? '，贈品建議指定' : ''})
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="國家代碼，如 JP"
+                      value={planCountry}
+                      onChange={e => setPlanCountry(e.target.value.toUpperCase())}
+                      className="w-32 px-3 py-2 rounded-xl border border-slate-300 uppercase font-mono bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={loadPlanOptions}
+                    disabled={loadingPlanOptions || !planCountry.trim()}
+                    className="px-3 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 font-semibold disabled:opacity-50"
+                  >
+                    {loadingPlanOptions ? '載入中...' : '載入產品'}
+                  </button>
+                  <span className="text-slate-400">未勾選代表不限產品</span>
+                </div>
+
+                {Object.keys(selectedPlans).length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {Object.entries(selectedPlans).map(([id, label]) => (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => setSelectedPlans(prev => { const n = { ...prev }; delete n[id]; return n })}
+                        className="px-2 py-1 rounded-full bg-blue-100 text-blue-700 border border-blue-200 text-[11px] font-semibold"
+                      >
+                        {label} ✕
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {planOptions.length > 0 && (
+                  <div className="max-h-56 overflow-y-auto rounded-xl border border-slate-200 bg-white divide-y divide-slate-100">
+                    {planOptions.map((p: any) => (
+                      <label key={p.channel_dataplan_id} className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-slate-50">
+                        <input
+                          type="checkbox"
+                          checked={!!selectedPlans[p.channel_dataplan_id]}
+                          onChange={() => togglePlan(p)}
+                        />
+                        <span className="flex-1">{planLabel(p)}</span>
+                        <span className="font-mono text-[10px] text-slate-400">{p.channel_dataplan_id}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               {/* 提交按鈕 */}
               <div className="flex items-end">
                 <button
@@ -963,7 +1086,7 @@ export default function EsimAdminPage() {
                       <th className="py-3 px-4">活動名稱</th>
                       <th className="py-3 px-4">折扣內容</th>
                       <th className="py-3 px-4">使用門檻</th>
-                      <th className="py-3 px-4">適用國家</th>
+                      <th className="py-3 px-4">適用國家 / 產品</th>
                       <th className="py-3 px-4">已兌換次數</th>
                       <th className="py-3 px-4">狀態</th>
                       <th className="py-3 px-4 text-right">操作</th>
@@ -981,7 +1104,11 @@ export default function EsimAdminPage() {
                           {c.name}
                         </td>
                         <td className="py-3 px-4">
-                          {c.discount_type === 'fixed' ? (
+                          {c.discount_type === 'free' ? (
+                            <span className="font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                              🎁 贈品 免費 1 張
+                            </span>
+                          ) : c.discount_type === 'fixed' ? (
                             <span className="font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                               現折 NT$ {c.discount_value}
                             </span>
@@ -1007,9 +1134,21 @@ export default function EsimAdminPage() {
                           ) : (
                             <span className="text-slate-400">全館通用</span>
                           )}
+                          {c.applicable_plan_ids && c.applicable_plan_ids.length > 0 && (
+                            <div className="mt-1 space-y-0.5">
+                              {c.applicable_plan_ids.map((id: string) => (
+                                <div key={id} className="text-[10px] text-blue-700">
+                                  {c.applicable_plan_names?.[id] || id}
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </td>
                         <td className="py-3 px-4 font-semibold text-slate-700">
-                          {c.usage_count || 0} 次
+                          {c.usage_count || 0}{c.max_usage_count ? ` / ${c.max_usage_count}` : ''} 次
+                          {c.max_usage_count && (c.usage_count || 0) >= c.max_usage_count && (
+                            <span className="block text-[10px] text-red-500">已達上限</span>
+                          )}
                         </td>
                         <td className="py-3 px-4">
                           {c.is_active ? (

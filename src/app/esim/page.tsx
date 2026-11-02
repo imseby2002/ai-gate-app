@@ -108,6 +108,8 @@ export default function EsimShopPage() {
           code: couponInput.trim(),
           subtotal: currentSubtotal,
           country_code: checkoutPlan.primaryCountryCode,
+          plan_id: checkoutPlan.channel_dataplan_id,
+          unit_price: checkoutPlan.retailPriceTwd,
         }),
       })
       const data = await res.json()
@@ -144,6 +146,8 @@ export default function EsimShopPage() {
         code: appliedCoupon.code,
         subtotal: currentSubtotal,
         country_code: checkoutPlan.primaryCountryCode,
+        plan_id: checkoutPlan.channel_dataplan_id,
+        unit_price: checkoutPlan.retailPriceTwd,
       }),
     })
       .then(res => res.json())

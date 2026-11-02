@@ -4,11 +4,13 @@ export interface EsimCoupon {
   id: string
   code: string // e.g. "WELCOME50", "TRAVEL9", "JAPAN88" (大寫無空白)
   name: string // e.g. "新客首購折扣 NT$ 50", "出國限時 9 折優惠"
-  discount_type: 'fixed' | 'percent' // 'fixed' = 現折固定金額 (TWD), 'percent' = 折扣成數 (例如 0.9 = 9折, 0.85 = 85折)
+  discount_type: 'fixed' | 'percent' | 'free' // 'fixed' = 現折固定金額 (TWD), 'percent' = 折扣成數 (例如 0.9 = 9折), 'free' = 贈品（免費兌換 1 張）
   discount_value: number // 50 (代表折 50 元) 或 0.9 (代表 9 折)
   min_spend_twd: number // 最低消費門檻金額 (0 代表無門檻)
   max_discount_twd?: number // 折扣上限金額 (可選)
   applicable_countries?: string[] // 限定國家代碼 (可選，例如 ["JP"]，空陣列代表全館通用)
+  applicable_plan_ids?: string[] // 限定產品 channel_dataplan_id (可選，空代表不限)
+  applicable_plan_names?: Record<string, string> // 限定產品顯示名稱 (id → 名稱)
   is_active: boolean // 是否啟用
   usage_count: number // 已套用次數
   max_usage_count?: number // 最大可使用次數限制 (可選)
@@ -93,7 +95,8 @@ export interface CouponValidationResult {
 export async function validateCoupon(
   rawCode: string,
   subtotalTwd: number,
-  countryCode?: string
+  countryCode?: string,
+  opts: { planId?: string; unitPriceTwd?: number } = {}
 ): Promise<CouponValidationResult> {
   const code = (rawCode || '').trim().toUpperCase()
   if (!code) {
@@ -165,6 +168,22 @@ export async function validateCoupon(
     }
   }
 
+  // 3.5 檢查限定產品
+  if (coupon.applicable_plan_ids && coupon.applicable_plan_ids.length > 0) {
+    if (!opts.planId || !coupon.applicable_plan_ids.includes(opts.planId)) {
+      const names = coupon.applicable_plan_ids
+        .map(id => coupon.applicable_plan_names?.[id] || id)
+        .slice(0, 5)
+        .join('、')
+      return {
+        valid: false,
+        error: `此優惠碼僅適用於指定產品（${names}${coupon.applicable_plan_ids.length > 5 ? ' 等' : ''}）`,
+        discountTwd: 0,
+        finalPriceTwd: subtotalTwd,
+      }
+    }
+  }
+
   // 4. 檢查最低消費金額
   if (coupon.min_spend_twd > 0 && subtotalTwd < coupon.min_spend_twd) {
     return {
@@ -187,6 +206,10 @@ export async function validateCoupon(
       calculated = Math.min(calculated, coupon.max_discount_twd)
     }
     discountTwd = Math.min(subtotalTwd, calculated)
+  } else if (coupon.discount_type === 'free') {
+    // 贈品：免費兌換 1 張
+    const unit = typeof opts.unitPriceTwd === 'number' && opts.unitPriceTwd > 0 ? opts.unitPriceTwd : subtotalTwd
+    discountTwd = Math.min(subtotalTwd, unit)
   }
 
   const finalPriceTwd = Math.max(0, subtotalTwd - discountTwd)
