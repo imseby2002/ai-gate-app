@@ -1,4 +1,4 @@
-import { getEsimSettings, saveEsimSettings } from './db'
+import { getEsimSettings, saveEsimSettings, getEsimOrdersByCouponCode } from './db'
 
 export interface EsimCoupon {
   id: string
@@ -14,6 +14,7 @@ export interface EsimCoupon {
   is_active: boolean // 是否啟用
   usage_count: number // 已套用次數
   max_usage_count?: number // 最大可使用次數限制 (可選)
+  max_uses_per_customer?: number // 每位顧客（依 Email）可使用次數 (可選)
   starts_at?: string // 啟用日期 (YYYY-MM-DD 或 ISO 8601，可選；只填日期時為台灣時間當天 00:00 開始)
   expires_at?: string // 到期時間 (YYYY-MM-DD 或 ISO 8601，可選)
   created_at: string
@@ -97,7 +98,7 @@ export async function validateCoupon(
   rawCode: string,
   subtotalTwd: number,
   countryCode?: string,
-  opts: { planId?: string; unitPriceTwd?: number } = {}
+  opts: { planId?: string; unitPriceTwd?: number; customerEmail?: string } = {}
 ): Promise<CouponValidationResult> {
   const code = (rawCode || '').trim().toUpperCase()
   if (!code) {
@@ -170,6 +171,28 @@ export async function validateCoupon(
         discountTwd: 0,
         finalPriceTwd: subtotalTwd,
       }
+    }
+  }
+
+  // 2.5 檢查每人限用次數（依 Email，只計已付款訂單）
+  const perCustomer = coupon.max_uses_per_customer
+  const email = (opts.customerEmail || '').trim().toLowerCase()
+  if (typeof perCustomer === 'number' && perCustomer > 0 && email) {
+    try {
+      const orders = await getEsimOrdersByCouponCode(coupon.code)
+      const used = orders.filter(
+        o => o.payment_status === 'paid' && (o.customer_email || '').trim().toLowerCase() === email
+      ).length
+      if (used >= perCustomer) {
+        return {
+          valid: false,
+          error: `此優惠碼每位顧客限用 ${perCustomer} 次，您已使用過`,
+          discountTwd: 0,
+          finalPriceTwd: subtotalTwd,
+        }
+      }
+    } catch (err) {
+      console.warn('[Coupons] Failed to check per-customer usage:', err)
     }
   }
 

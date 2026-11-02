@@ -57,6 +57,7 @@ export async function POST(req: NextRequest) {
       const couponRes = await validateCoupon(coupon_code, subtotalPriceTwd, parsedPlan.primaryCountryCode, {
         planId: rawPlan.channel_dataplan_id,
         unitPriceTwd,
+        customerEmail: customer_email,
       })
       if (couponRes.valid && couponRes.coupon) {
         couponDiscountTwd = couponRes.discountTwd
