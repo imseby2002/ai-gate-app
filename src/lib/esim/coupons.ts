@@ -14,6 +14,7 @@ export interface EsimCoupon {
   is_active: boolean // 是否啟用
   usage_count: number // 已套用次數
   max_usage_count?: number // 最大可使用次數限制 (可選)
+  starts_at?: string // 啟用日期 (YYYY-MM-DD 或 ISO 8601，可選；只填日期時為台灣時間當天 00:00 開始)
   expires_at?: string // 到期時間 (YYYY-MM-DD 或 ISO 8601，可選)
   created_at: string
 }
@@ -126,6 +127,21 @@ export async function validateCoupon(
       error: `優惠券「${code}」目前已暫停使用`,
       discountTwd: 0,
       finalPriceTwd: subtotalTwd,
+    }
+  }
+
+  // 0. 檢查啟用日期
+  if (coupon.starts_at) {
+    const startTime = /^\d{4}-\d{2}-\d{2}$/.test(coupon.starts_at)
+      ? new Date(`${coupon.starts_at}T00:00:00+08:00`).getTime()
+      : new Date(coupon.starts_at).getTime()
+    if (!isNaN(startTime) && Date.now() < startTime) {
+      return {
+        valid: false,
+        error: `優惠券「${code}」將於 ${coupon.starts_at.split('T')[0]} 開始使用`,
+        discountTwd: 0,
+        finalPriceTwd: subtotalTwd,
+      }
     }
   }
 
