@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * 本機錄影：用瀏覽器「分享畫面」錄下目前分頁（含視訊畫面與對方聲音），
+ * 本機錄影：用瀏覽器「分享畫面」錄下目前分頁，並以 Region Capture 只裁出視訊區塊，
  * 再混入自己的麥克風，結束後直接下載到本機，不上傳。
  * 手機瀏覽器不支援分享畫面，不顯示此功能。
  */
@@ -47,14 +47,30 @@ export function LocalRecorder({ fileName }: { fileName: string }) {
 
   const start = async () => {
     setErr('')
+    const target = document.querySelector('[data-meeting-video]')
+    if (!target) { setErr('請先開啟視訊再錄影'); return }
     let display: MediaStream
     try {
       display = await navigator.mediaDevices.getDisplayMedia({
-        video: { frameRate: 24 }, audio: true,
+        video: { frameRate: 24, displaySurface: 'browser' }, audio: true,
         // Chrome：預設選目前分頁、可勾選分享分頁音訊
         preferCurrentTab: true, selfBrowserSurface: 'include', systemAudio: 'include',
       } as DisplayMediaStreamOptions)
     } catch { return } // 使用者取消
+
+    // 只錄視訊區塊：需選「此分頁」，再裁切到視訊位置（Chrome／Edge 104+）
+    const vTrack = display.getVideoTracks()[0] as MediaStreamTrack & { cropTo?: (t: unknown) => Promise<void> }
+    const CT = (window as unknown as { CropTarget?: { fromElement(el: Element): Promise<unknown> } }).CropTarget
+    try {
+      if (!vTrack || !vTrack.cropTo || !CT) throw new Error('unsupported')
+      await vTrack.cropTo(await CT.fromElement(target))
+    } catch {
+      display.getTracks().forEach(t => t.stop())
+      setErr(vTrack && (vTrack.getSettings() as { displaySurface?: string }).displaySurface !== 'browser'
+        ? '請在分享視窗選擇「此分頁」，才能只錄視訊畫面'
+        : '此瀏覽器無法只錄視訊區塊，請用最新版電腦 Chrome／Edge')
+      return
+    }
 
     let mic: MediaStream | null = null
     try { mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }) } catch {}
