@@ -32,7 +32,7 @@ import { isHandoffActive, getHumanIdleMinutes, getOpenOnsiteIssues } from '@/lib
 import { notifyUserMobile } from '@/lib/push/expo'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { issueCsGiftCode, ESIM_SHOP_URL } from '@/lib/esim/cs-gift'
-import { getVerifiedStayNights, type VerifiedStay } from '@/lib/cs/stay-nights'
+import { getVerifiedStayNights, countGuestStays, type VerifiedStay } from '@/lib/cs/stay-nights'
 import { dataOwnerOf, loadCompanyProfile } from '@/lib/company/profile'
 
 // Agent 核准請求走這個 webhook 通知老闆自己的 LINE（見 src/lib/agents/notify.ts），
@@ -1075,7 +1075,10 @@ async function replyToCustomer(
   const payeeFabricated = !!payeeName && !payeeSources.includes(payeeName)
   const scamVerdict = SCAM_VERDICT_RE.test(aiReply) && !SCAM_VERDICT_RE.test(payeeSources)
   const guardedReply = compensationPromised ? COMPENSATION_FALLBACK : payeeFabricated ? PAYEE_FALLBACK : scamVerdict ? SCAM_VERDICT_FALLBACK : aiReply
-  const reply = await fillEsimGiftCodes(guardedReply, userId, knowledge.discountGifts, fromName || customerId, platform, customerId, text)
+  const giftReply = await fillEsimGiftCodes(guardedReply, userId, knowledge.discountGifts, fromName || customerId, platform, customerId, text)
+  const reply = knowledge.welcomeEsimCouponCode && giftReply
+    ? await appendWelcomeEsim(giftReply, userId, platform, customerId, knowledge.industry, knowledge.welcomeEsimCouponCode, fromName || customerId)
+    : giftReply
   if (reply.includes(ESIM_GIFT_FAILED)) void createOnsiteIssueTicket(userId, platform, customerId, knowledge.industry, history, `eSIM 贈品兌換碼自動產生失敗，請人工提供：${text}`, knowledge.notifyWebhooks, fromName)
   if (scamVerdict) void createOnsiteIssueTicket(userId, platform, customerId, knowledge.industry, history, `客人詢問收到的訊息是否屬實：${text}`, knowledge.notifyWebhooks, fromName)
   if (payeeFabricated) void createOnsiteIssueTicket(userId, platform, customerId, knowledge.industry, history, `客人詢問匯款戶名：${text}`, knowledge.notifyWebhooks, fromName)
@@ -1150,6 +1153,7 @@ export interface CsGiftItem {
   esimCouponCode?: string // eSIM 商店範本券代碼：送出時系統自動產生客人專屬兌換碼
   minNights?: number // 最少住宿晚數：系統到訂房系統核對客人訂單達到才可送
   minComplaints?: number // 最少抱怨次數：系統統計客人近 30 天被分類為「客訴/抱怨」的訊息數（含這則）達到才可送
+  minStays?: number // 最少入住次數：系統在訂房系統找到這位旅客的入住次數達到才可送（2＝回訪客人）
 }
 
 export interface CsCampaignOffer {
@@ -1179,6 +1183,7 @@ interface CsKnowledge {
   industry: string
   discountMaxPct: number
   discountGifts: CsGiftItem[]
+  welcomeEsimCouponCode: string // 見面禮：有訂房的客人核對到有效訂單後自動送一組 eSIM 兌換碼（每筆入住一次，不佔贈品額度）
   pricingConfigs: PricingConfig[]
   csForms: CsChatForm[]
   corrections: string
@@ -1208,6 +1213,7 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
   let bookingFlows: BookingFlowDef[] = []
   let discountMaxPct = 0
   let discountGifts: CsGiftItem[] = []
+  let welcomeEsimCouponCode = ''
   let notifyWebhooks: NotifyWebhook[] = []
   let contactPhone1 = ''
   let contactPhone2 = ''
@@ -1254,6 +1260,7 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
         if (Array.isArray(unit12.bookingFlows)) bookingFlows = unit12.bookingFlows as BookingFlowDef[]
         if (typeof unit12.discountMaxPct === 'number') discountMaxPct = unit12.discountMaxPct
         if (Array.isArray(unit12.discountGifts)) discountGifts = unit12.discountGifts as CsGiftItem[]
+        if (typeof unit12.welcomeEsimCouponCode === 'string') welcomeEsimCouponCode = unit12.welcomeEsimCouponCode.trim()
         if (Array.isArray(unit12.notifyWebhooks)) notifyWebhooks = unit12.notifyWebhooks as NotifyWebhook[]
         if (unit12.contactPhone1) contactPhone1 = String(unit12.contactPhone1)
         if (unit12.contactPhone2) contactPhone2 = String(unit12.contactPhone2)
@@ -1382,6 +1389,7 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
     industry,
     discountMaxPct,
     discountGifts,
+    welcomeEsimCouponCode,
     pricingConfigs,
     csForms,
     corrections,
@@ -1573,6 +1581,7 @@ async function buildSalesContext(
   campaignOfferSource: 'cs' | 'booking' | 'both' = 'both',
   verifiedStay: VerifiedStay | null = null,
   priorComplaints: number | null = null,
+  guestStays: number | null = null,
 ): Promise<string> {
   const supabase = getServiceClient()
   const sections: string[] = []
@@ -1691,7 +1700,7 @@ async function buildSalesContext(
       sections.push('【促成/賠禮工具箱——這位客人這次對話已經拿過優惠或贈品了】絕對不可以再提供任何折扣或贈品，就算客人又表達不滿或抱怨也一樣；只能同理客戶的感受、用非金錢方式回應（例如強調品質、服務保證、解答疑慮），不要提到「已經用完優惠額度」這類會讓客人追問的說法，自然地把話題帶回行程本身。')
     } else {
       const giftLines = giftList.length
-        ? giftList.map(g => `• ${g.name}${g.situation ? `（適用情境：${g.situation}）` : ''}${g.minNights ? `（限住宿滿 ${g.minNights} 晚：${verifiedStay ? `系統已到訂房系統核對這位客人的訂單為 ${verifiedStay.checkIn} 入住、${verifiedStay.checkOut} 退房，共 ${verifiedStay.nights} 晚，${verifiedStay.nights >= g.minNights ? '符合條件' : '未達條件，絕對不可以送這項'}` : '系統還沒核對到這位客人的訂單，不可以送這項；客人提到續住或住幾晚時，先請客人提供訂單號碼或訂房手機，系統核對訂單晚數後才能送，不能只憑客人自己說的晚數'}）` : ''}${g.minComplaints ? `（限客人抱怨滿 ${g.minComplaints} 次才可送：系統統計這位客人近 30 天已抱怨 ${priorComplaints ?? 0} 次（不含這則）${(priorComplaints ?? 0) + 1 >= g.minComplaints ? '，這則如果也是抱怨就符合條件' : '，這則就算也是抱怨仍未達條件，絕對不可以送這項，也不要跟客人提到抱怨次數'}）` : ''}${g.esimCouponCode ? `（eSIM 贈品：選這項時，不要自己編兌換碼，在回覆中要放兌換碼的地方原樣寫 <<<ESIM_GIFT:${g.id}>>>，系統會換成客人專屬兌換碼與兌換網址）` : ''}`).join('\n')
+        ? giftList.map(g => `• ${g.name}${g.situation ? `（適用情境：${g.situation}）` : ''}${g.minNights ? `（限住宿滿 ${g.minNights} 晚：${verifiedStay ? `系統已到訂房系統核對這位客人的訂單為 ${verifiedStay.checkIn} 入住、${verifiedStay.checkOut} 退房，共 ${verifiedStay.nights} 晚，${verifiedStay.nights >= g.minNights ? '符合條件' : '未達條件，絕對不可以送這項'}` : '系統還沒核對到這位客人的訂單，不可以送這項；客人提到續住或住幾晚時，先請客人提供訂單號碼或訂房手機，系統核對訂單晚數後才能送，不能只憑客人自己說的晚數'}）` : ''}${g.minStays ? `（限第 ${g.minStays} 次以上入住的回訪客人：${guestStays ? `系統在訂房系統找到這位客人共入住 ${guestStays} 次，${guestStays >= g.minStays ? '符合條件' : '未達條件，絕對不可以送這項'}` : '系統還沒核對到這位客人的訂房紀錄，不可以送這項；不能只憑客人自己說住過，要先請客人提供訂單號碼或訂房手機，系統核對後才能送'}）` : ''}${g.minComplaints ? `（限客人抱怨滿 ${g.minComplaints} 次才可送：系統統計這位客人近 30 天已抱怨 ${priorComplaints ?? 0} 次（不含這則）${(priorComplaints ?? 0) + 1 >= g.minComplaints ? '，這則如果也是抱怨就符合條件' : '，這則就算也是抱怨仍未達條件，絕對不可以送這項，也不要跟客人提到抱怨次數'}）` : ''}${g.esimCouponCode ? `（eSIM 贈品：選這項時，不要自己編兌換碼，在回覆中要放兌換碼的地方原樣寫 <<<ESIM_GIFT:${g.id}>>>，系統會換成客人專屬兌換碼與兌換網址）` : ''}`).join('\n')
         : ''
       const lines = ['【促成/賠禮工具箱——整個對話最多主動提供一次，用過就不能再用；折扣跟贈品絕對不會同時給，一次只能選一種】']
       lines.push('\n情境一・成交前客人對價格猶豫或嫌貴：客人第一次表現出價格猶豫或不滿就要主動提出，不要等客人講第二次才給——包括但不限於「有點貴」「我再想想」「考慮看看」「太貴了」「能不能便宜一點」「以前/之前訂比較便宜」「怎麼差那麼多」「別家比較便宜」等任何對價格表達疑慮或比較的說法，只要客人在問完價格後表達了「不滿意/意外/猶豫」的情緒，就算沒有用到上面例句的字眼，也要主動提出優惠，不要只顧著解釋定價邏輯而不提供優惠。')
@@ -2086,6 +2095,27 @@ const ESIM_GIFT_RE = /<<<ESIM_GIFT:([^>]*)>>>/g
 const ESIM_GIFT_FAILED = 'eSIM 兌換碼會由管家確認後提供給您'
 const GIFT_NIGHTS_BLOCKED = '系統核對訂單後就會提供給您'
 const COMPLAINT_GIFT_BLOCKED = '非常抱歉造成您不好的體驗，您的意見我們已經記錄下來並轉給管家，會盡快改善 🙏'
+// 見面禮：客人的身份已核對到訂房系統裡一筆有效（進行中或即將入住）的訂單 → 自動附上一組 eSIM 兌換碼。
+// 每次入住（以入住日為準）只送一次，記在 cs_customers.facts.welcomeEsim；不佔「促成/賠禮工具箱」的一次額度。
+async function appendWelcomeEsim(reply: string, userId: string, platform: string, customerId: string, industry: string, couponCode: string, note: string): Promise<string> {
+  try {
+    const sb = getServiceClient()
+    const { data } = await sb.from('cs_customers').select('facts').eq('user_id', userId).eq('platform', platform).eq('from_id', customerId).eq('industry', industry).maybeSingle()
+    const facts = (data?.facts ?? null) as Record<string, unknown> | null
+    const stay = await getVerifiedStayNights(sb, userId, facts)
+    if (!stay) return reply
+    const given = facts?.welcomeEsim as { stay?: string } | undefined
+    if (given?.stay === stay.checkIn) return reply
+    const { data: prof } = await sb.from('profiles').select('email').eq('id', userId).maybeSingle()
+    const code = await issueCsGiftCode(String(prof?.email ?? ''), couponCode, `見面禮｜${note}`)
+    if (!code) return reply
+    await saveConfirmedFacts(userId, platform, customerId, industry, { welcomeEsim: { stay: stay.checkIn, code } })
+    return `${reply}\n\n🎁 感謝您的訂房！送您一份 eSIM 見面禮：\neSIM 兌換碼：${code}\n兌換網址：\n${ESIM_SHOP_URL}\n（選購方案結帳時輸入兌換碼，限用一次）`
+  } catch {
+    return reply
+  }
+}
+
 async function fillEsimGiftCodes(reply: string, userId: string, gifts: CsGiftItem[], note: string, platform: string, customerId: string, text: string): Promise<string> {
   const ids = [...reply.matchAll(ESIM_GIFT_RE)].map(m => m[1].trim())
   if (!ids.length) return reply
@@ -2113,15 +2143,27 @@ async function fillEsimGiftCodes(reply: string, userId: string, gifts: CsGiftIte
   } catch { /* 取不到就走失敗訊息 */ }
   const issued = new Map<string, string | null>()
   const blocked = new Map<string, number>()
+  const staysBlocked = new Set<string>()
+  let stays: number | undefined
+  const staysOf = async () => {
+    if (stays !== undefined) return stays
+    try {
+      const { data } = await getServiceClient().from('cs_customers').select('facts').eq('user_id', userId).eq('platform', platform).eq('from_id', customerId).limit(1).maybeSingle()
+      stays = await countGuestStays(getServiceClient(), userId, data?.facts as Record<string, unknown> | null)
+    } catch { stays = 0 }
+    return stays
+  }
   for (const id of new Set(ids)) {
     const gift = gifts.find(g => g.id === id) ?? null
     if (gift?.minNights) {
       const st = await stayOf()
       if (!st || st.nights < gift.minNights) { blocked.set(id, gift.minNights); continue }
     }
+    if (gift?.minStays && (await staysOf()) < gift.minStays) { staysBlocked.add(id); continue }
     issued.set(id, gift?.esimCouponCode ? await issueCsGiftCode(email, gift.esimCouponCode, note).catch(() => null) : null)
   }
   return reply.replace(ESIM_GIFT_RE, (_m, raw: string) => {
+    if (staysBlocked.has(raw.trim())) return `這項是回訪客人的專屬禮物，麻煩提供您的訂單號碼或訂房手機，${GIFT_NIGHTS_BLOCKED}`
     const min = blocked.get(raw.trim())
     if (min) return `這項贈品需要住宿滿 ${min} 晚，麻煩提供您的訂單號碼或訂房手機，${GIFT_NIGHTS_BLOCKED}`
     const code = issued.get(raw.trim())
@@ -2562,7 +2604,7 @@ async function getAIReply(
     }
 
     const salesContext = userId
-      ? await buildSalesContext(userId, knowledge.discountMaxPct, knowledge.discountGifts, discountAlreadyOffered, knowledge.campaignOffers, knowledge.campaignOfferSource, knowledge.discountGifts.some(g => g.minNights) ? await getVerifiedStayNights(getServiceClient(), userId, customerFacts).catch(() => null) : null, knowledge.discountGifts.some(g => g.minComplaints) && customerId ? await countPriorComplaints(userId, platform, customerId) : null)
+      ? await buildSalesContext(userId, knowledge.discountMaxPct, knowledge.discountGifts, discountAlreadyOffered, knowledge.campaignOffers, knowledge.campaignOfferSource, knowledge.discountGifts.some(g => g.minNights) ? await getVerifiedStayNights(getServiceClient(), userId, customerFacts).catch(() => null) : null, knowledge.discountGifts.some(g => g.minComplaints) && customerId ? await countPriorComplaints(userId, platform, customerId) : null, knowledge.discountGifts.some(g => g.minStays) ? await countGuestStays(getServiceClient(), userId, customerFacts).catch(() => 0) : null)
       : ''
 
     const systemPrompt = `${baseInstructions}

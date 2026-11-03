@@ -376,6 +376,7 @@ interface CsGiftItem {
   esimCouponCode?: string // eSIM 商店範本券代碼：送出時系統自動產生客人專屬兌換碼
   minNights?: number // 最少住宿晚數：系統到訂房系統核對客人訂單達到才可送
   minComplaints?: number // 最少抱怨次數：系統統計客人近 30 天的客訴訊息數達到才可送
+  minStays?: number // 最少入住次數：系統在訂房系統找到這位旅客的入住次數達到才可送（2＝回訪客人）
 }
 
 interface Unit12Data {
@@ -393,6 +394,7 @@ interface Unit12Data {
   notifyWebhooks?: NotifyWebhook[]
   discountMaxPct?: number
   discountGifts?: CsGiftItem[]
+  welcomeEsimCouponCode?: string
   campaignOffers?: CsCampaignOffer[]
   campaignOfferSource?: 'cs' | 'booking' | 'both'
   contactPhone1?: string
@@ -672,6 +674,7 @@ function Unit12CustomerService({
   const [notifyWebhooks, setNotifyWebhooks] = useState<NotifyWebhook[]>(savedData?.notifyWebhooks ?? [])
   const [discountMaxPct, setDiscountMaxPct] = useState(savedData?.discountMaxPct ?? 0)
   const [discountGifts, setDiscountGifts] = useState<CsGiftItem[]>(Array.isArray(savedData?.discountGifts) ? savedData.discountGifts : [])
+  const [welcomeEsimCouponCode, setWelcomeEsimCouponCode] = useState<string>(typeof savedData?.welcomeEsimCouponCode === 'string' ? savedData.welcomeEsimCouponCode : '')
   const [esimGiftCoupons, setEsimGiftCoupons] = useState<Array<{ code: string; name: string }>>([])
   useEffect(() => {
     fetch('/api/cs/esim-gift-coupons').then(r => r.ok ? r.json() : null).then(d => setEsimGiftCoupons(Array.isArray(d?.coupons) ? d.coupons : [])).catch(() => {})
@@ -733,6 +736,7 @@ function Unit12CustomerService({
     if (savedData.notifyWebhooks !== undefined) setNotifyWebhooks(savedData.notifyWebhooks)
     if (savedData.discountMaxPct !== undefined) setDiscountMaxPct(savedData.discountMaxPct)
     if (Array.isArray(savedData.discountGifts)) setDiscountGifts(savedData.discountGifts)
+    if (typeof savedData.welcomeEsimCouponCode === 'string') setWelcomeEsimCouponCode(savedData.welcomeEsimCouponCode)
     if (Array.isArray(savedData.campaignOffers)) setCampaignOffers(savedData.campaignOffers)
     if (savedData.campaignOfferSource) setCampaignOfferSource(savedData.campaignOfferSource)
     if (savedData.contactPhone1 !== undefined) setContactPhone1(savedData.contactPhone1)
@@ -765,6 +769,7 @@ function Unit12CustomerService({
       notifyWebhooks,
       discountMaxPct,
       discountGifts,
+      welcomeEsimCouponCode,
       campaignOffers,
       campaignOfferSource,
       contactPhone1,
@@ -782,7 +787,7 @@ function Unit12CustomerService({
     dialogueFiles, savedData?.dialogueFiles, systemPrompt, knowledgeBase,
     escalationThreshold, replyLanguage, logs, bookingFlowEnabled, paymentInfo,
     bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct,
-    discountGifts, campaignOffers, campaignOfferSource, contactPhone1, contactPhone2,
+    discountGifts, welcomeEsimCouponCode, campaignOffers, campaignOfferSource, contactPhone1, contactPhone2,
     aiSenderName, aiSenderIconUrl, humanSenderName, humanSenderIconUrl, onDone
   ])
 
@@ -3479,6 +3484,7 @@ function Unit12CustomerService({
                   { key: 'situation', label: t('giftSituationLabel'), type: 'text', width: 'w-56' },
                   { key: 'minNights', label: t('giftMinNightsLabel'), type: 'number', width: 'w-24' },
                   { key: 'minComplaints', label: t('giftMinComplaintsLabel'), type: 'number', width: 'w-24' },
+                  { key: 'minStays', label: t('giftMinStaysLabel'), type: 'number', width: 'w-24' },
                   ...(esimGiftCoupons.length || discountGifts.some(g => g.esimCouponCode) ? [{
                     key: 'esimCouponCode', label: t('giftEsimLabel'), type: 'select' as const, width: 'w-44',
                     options: [
@@ -3495,10 +3501,29 @@ function Unit12CustomerService({
                   ...(r.esimCouponCode ? { esimCouponCode: String(r.esimCouponCode) } : {}),
                   ...(Number(r.minNights) > 0 ? { minNights: Math.floor(Number(r.minNights)) } : {}),
                   ...(Number(r.minComplaints) > 0 ? { minComplaints: Math.floor(Number(r.minComplaints)) } : {}),
+                  ...(Number(r.minStays) > 0 ? { minStays: Math.floor(Number(r.minStays)) } : {}),
                 })))}
                 addLabel={t('addGiftItem')}
               />
             </div>
+
+            {(esimGiftCoupons.length > 0 || welcomeEsimCouponCode) && (
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">{t('welcomeEsimLabel')}</label>
+                <select
+                  value={welcomeEsimCouponCode}
+                  onChange={e => setWelcomeEsimCouponCode(e.target.value)}
+                  className="text-sm border rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-rose-300"
+                >
+                  <option value="">{t('welcomeEsimNone')}</option>
+                  {esimGiftCoupons.map(c => <option key={c.code} value={c.code}>{c.name}（{c.code}）</option>)}
+                  {welcomeEsimCouponCode && !esimGiftCoupons.some(c => c.code === welcomeEsimCouponCode) && (
+                    <option value={welcomeEsimCouponCode}>{welcomeEsimCouponCode}（{t('giftEsimUnavailable')}）</option>
+                  )}
+                </select>
+                <p className="text-[11px] text-gray-400 mt-1">{t('welcomeEsimHint')}</p>
+              </div>
+            )}
 
             <p className="text-[11px] text-gray-400 bg-white/70 border border-rose-100 rounded-lg p-2">{t('negotiationToolkitRule')}</p>
           </div>
