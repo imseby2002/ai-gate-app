@@ -23,10 +23,14 @@ export default async function LandingPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
       {/* Header */}
       <header className="flex items-center justify-between px-4 sm:px-8 py-4 border-b bg-white/80 backdrop-blur">
-        <div className="flex items-center gap-2">
-          <Zap className="h-6 w-6 sm:h-7 sm:w-7 text-primary" style={{ color: 'var(--primary)' }} />
-          <span className="text-xl sm:text-2xl font-bold tracking-tight">IMT</span>
-        </div>
+        <Link href="/" className="flex items-center gap-2 sm:gap-3 min-w-0">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/im-tourist-icon-512.png" alt="IM Tourist" className="h-10 w-10 sm:h-12 sm:w-12 shrink-0" />
+          <span className="flex flex-col leading-tight font-bold uppercase tracking-wide text-[11px] sm:text-sm min-w-0">
+            <span className="text-[#111827] truncate">{t('sloganLine1')}</span>
+            <span className="text-[#139488] truncate">{t('sloganLine2')}</span>
+          </span>
+        </Link>
         <div className="flex items-center gap-2 sm:gap-3">
           <LanguageSwitcher currentLocale={locale} />
           <Link
