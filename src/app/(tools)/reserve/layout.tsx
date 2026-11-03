@@ -33,6 +33,16 @@ export default function ReserveLayout({ children }: { children: React.ReactNode 
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [storeSlug, setStoreSlug] = useState('demo')
+
+  useEffect(() => {
+    fetch('/api/reserve/store')
+      .then(r => r.json())
+      .then(d => {
+        if (d?.store?.slug) setStoreSlug(d.store.slug)
+      })
+      .catch(() => {})
+  }, [])
 
   function isActive(href: string) {
     if (href === '/reserve') return pathname === '/reserve'
@@ -60,7 +70,7 @@ export default function ReserveLayout({ children }: { children: React.ReactNode 
                   服務預約系統
                 </div>
                 <div className="text-[10px] text-muted-foreground truncate">
-                  美業 · 美髮 · 診所
+                  診所 · 美髮 · 美業 · 各業
                 </div>
               </div>
             </div>
@@ -114,7 +124,7 @@ export default function ReserveLayout({ children }: { children: React.ReactNode 
         {/* Public customer page shortcut */}
         <div className="p-2 border-t bg-slate-50/70 dark:bg-slate-900/60">
           <Link
-            href="/r/elegance-beauty"
+            href={`/r/${storeSlug}`}
             target="_blank"
             className={cn(
               'flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-slate-600 hover:text-rose-600 hover:bg-white dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-800 transition-all shadow-xs',
@@ -169,7 +179,7 @@ export default function ReserveLayout({ children }: { children: React.ReactNode 
               })}
             </nav>
             <Link
-              href="/r/elegance-beauty"
+              href={`/r/${storeSlug}`}
               target="_blank"
               className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200"
             >
@@ -196,7 +206,7 @@ export default function ReserveLayout({ children }: { children: React.ReactNode 
             服務預約系統
           </div>
           <Link
-            href="/r/elegance-beauty"
+            href={`/r/${storeSlug}`}
             target="_blank"
             className="text-xs text-rose-600 font-medium px-2 py-1 rounded-md bg-rose-50"
           >

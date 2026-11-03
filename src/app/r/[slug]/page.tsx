@@ -151,6 +151,68 @@ export default function PublicBookingPortal({
     setStep(1)
   }
 
+  // Industry terminology dictionary based on store category
+  const industryCategory = (store.category || 'other').toLowerCase()
+  const term = (() => {
+    switch (industryCategory) {
+      case 'clinic':
+        return {
+          systemBadge: '醫療門診與健康預約',
+          serviceStepSubtitle: '請點擊您所需的門診或診療諮詢項目',
+          staffStepTitle: '步驟 2：選擇主治醫師 / 治療師',
+          staffDefaultTitle: '由診所安排 (不指定醫師/治療師)',
+          staffDefaultDesc: '自動為您媒合當前看診空檔最充裕之醫師或專業治療師，預約速度最快！',
+          staffBadge: '醫師 / 治療師',
+          notesPlaceholder: '請在此填寫症狀描述、過往病史或就診特殊需求...',
+          noticeLabel: '就診須知：',
+        }
+      case 'hair':
+        return {
+          systemBadge: '美髮沙龍線上預約',
+          serviceStepSubtitle: '請點擊您所需的剪髮、染燙或護髮頭皮護理項目',
+          staffStepTitle: '步驟 2：選擇指定設計師 / 造型總監',
+          staffDefaultTitle: '由沙龍安排 (不指定設計師)',
+          staffDefaultDesc: '自動為您媒合當前空檔最充裕之設計師，預約速度最快！',
+          staffBadge: '設計師 / 造型師',
+          notesPlaceholder: '請在此填寫髮質狀況、長度或欲指定髮型參考...',
+          noticeLabel: '沙龍須知：',
+        }
+      case 'spa':
+        return {
+          systemBadge: '芳療 SPA 舒壓預約',
+          serviceStepSubtitle: '請點擊您所需的精油舒壓或身體調理項目',
+          staffStepTitle: '步驟 2：選擇專業芳療師',
+          staffDefaultTitle: '由會館安排 (不指定芳療師)',
+          staffDefaultDesc: '自動為您媒合當前空檔之資深芳療師，預約速度最快！',
+          staffBadge: '芳療師',
+          notesPlaceholder: '請在此填寫加強部位、精油偏好或力道需求...',
+          noticeLabel: '預約須知：',
+        }
+      case 'beauty':
+        return {
+          systemBadge: '專業美業線上預約',
+          serviceStepSubtitle: '請點擊您所需的美容、美甲美睫或保養項目',
+          staffStepTitle: '步驟 2：選擇專業技師 / 美容師',
+          staffDefaultTitle: '由店家安排 (不指定美容師)',
+          staffDefaultDesc: '自動為您媒合當前空檔最充裕之資深技師，預約速度最快！',
+          staffBadge: '美容師 / 技師',
+          notesPlaceholder: '請在此留下膚況、過敏原或款式需求...',
+          noticeLabel: '預約須知：',
+        }
+      default:
+        return {
+          systemBadge: '專業服務線上預約平台',
+          serviceStepSubtitle: '請點擊您所需的專業諮詢或服務項目',
+          staffStepTitle: '步驟 2：選擇指定專業服務人員 / 顧問',
+          staffDefaultTitle: '由店家安排 (不指定人員)',
+          staffDefaultDesc: '自動為您媒合當前空檔最充裕之專業人員，預約速度最快！',
+          staffBadge: '專業人員 / 專家',
+          notesPlaceholder: '請在此填寫您的諮詢重點或特殊服務需求...',
+          noticeLabel: '預約須知：',
+        }
+    }
+  })()
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col">
       {/* Top Brand Banner */}
@@ -168,7 +230,7 @@ export default function PublicBookingPortal({
           <div className="space-y-1">
             <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-white/10 text-rose-300 text-xs font-semibold backdrop-blur-md">
               <Sparkles className="h-3 w-3" />
-              線上預約服務平台
+              {term.systemBadge}
             </div>
             <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight">
               {store.name}
@@ -246,7 +308,7 @@ export default function PublicBookingPortal({
                 步驟 1：選擇您想預約的服務項目
               </h2>
               <p className="text-xs text-muted-foreground mt-0.5">
-                請點擊您所需的療程或造型服務
+                {term.serviceStepSubtitle}
               </p>
             </div>
 
@@ -342,7 +404,7 @@ export default function PublicBookingPortal({
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                  步驟 2：選擇指定專業服務人員
+                  {term.staffStepTitle}
                 </h2>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   已選服務：<span className="font-semibold text-rose-600">{selectedService?.name}</span>
@@ -373,10 +435,10 @@ export default function PublicBookingPortal({
                   </div>
                   <div>
                     <h3 className="font-bold text-sm text-slate-900 dark:text-white">
-                      由店家安排 (不指定人員)
+                      {term.staffDefaultTitle}
                     </h3>
                     <p className="text-xs text-slate-400">
-                      自動為您媒合當前空檔最充裕之資深技師，預約速度最快！
+                      {term.staffDefaultDesc}
                     </p>
                   </div>
                 </div>
@@ -450,7 +512,7 @@ export default function PublicBookingPortal({
                   步驟 3：選擇日期與空檔時段
                 </h2>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  技師：<span className="font-semibold text-rose-600">{selectedStaff?.name || '門市安排'}</span>
+                  服務人員：<span className="font-semibold text-rose-600">{selectedStaff?.name || '由門市安排'}</span>
                 </p>
               </div>
               <button
@@ -581,7 +643,7 @@ export default function PublicBookingPortal({
               <div className="text-[11px] text-slate-600 dark:text-slate-300 flex items-center gap-2">
                 <span>預約日期：{selectedDate} {selectedSlot?.time}</span>
                 <span>•</span>
-                <span>設計師/醫師：{selectedStaff?.name || selectedSlot?.staffName || '由門市安排'}</span>
+                <span>{term.staffBadge}：{selectedStaff?.name || selectedSlot?.staffName || '由門市安排'}</span>
               </div>
             </div>
 
@@ -599,7 +661,7 @@ export default function PublicBookingPortal({
                 <input
                   required
                   type="text"
-                  placeholder="例如：林品妤小姐"
+                  placeholder="例如：林品妤小姐 / 王大明先生"
                   value={customerName}
                   onChange={e => setCustomerName(e.target.value)}
                   className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none focus:border-rose-500 text-sm"
@@ -635,11 +697,11 @@ export default function PublicBookingPortal({
 
               <div>
                 <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                  需求備註 (例如：膚質狀況、過敏原或特殊要求)
+                  需求備註 (選填)
                 </label>
                 <textarea
                   rows={2}
-                  placeholder="請在此留下您的需求備註..."
+                  placeholder={term.notesPlaceholder}
                   value={customerNotes}
                   onChange={e => setCustomerNotes(e.target.value)}
                   className="w-full px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none focus:border-rose-500 text-xs leading-relaxed"
@@ -649,7 +711,7 @@ export default function PublicBookingPortal({
 
             {store.notice && (
               <div className="p-3.5 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 leading-relaxed whitespace-pre-line">
-                <span className="font-bold text-slate-700 dark:text-slate-300 block mb-1">預約須知：</span>
+                <span className="font-bold text-slate-700 dark:text-slate-300 block mb-1">{term.noticeLabel}</span>
                 {store.notice}
               </div>
             )}
@@ -734,7 +796,7 @@ export default function PublicBookingPortal({
 
       {/* Footer */}
       <footer className="py-6 border-t border-slate-200/80 dark:border-slate-800 text-center text-xs text-slate-400">
-        Powered by AIGATE 服務業智能預約系統 · {store.name}
+        Powered by AIGATE 專業智能預約排程系統 · {store.name}
       </footer>
     </div>
   )

@@ -78,7 +78,7 @@ export default function ReserveSettingsPage() {
   }
 
   function copyPublicUrl() {
-    const url = `${window.location.origin}/r/${store.slug || 'elegance-beauty'}`
+    const url = `${window.location.origin}/r/${store.slug || 'demo'}`
     navigator.clipboard.writeText(url)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
@@ -132,7 +132,7 @@ export default function ReserveSettingsPage() {
             </button>
 
             <a
-              href={`/r/${store.slug || 'elegance-beauty'}`}
+              href={`/r/${store.slug || 'demo'}`}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-xs transition-all"

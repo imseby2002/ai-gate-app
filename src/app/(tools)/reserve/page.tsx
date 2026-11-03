@@ -74,20 +74,20 @@ export default function ReserveDashboard() {
   }
 
   function copyPublicLink() {
-    const url = `${window.location.origin}/r/${store.slug || 'elegance-beauty'}`
+    const url = `${window.location.origin}/r/${store.slug || 'demo'}`
     navigator.clipboard.writeText(url)
     setCopiedLink(true)
     setTimeout(() => setCopiedLink(false), 2000)
   }
 
   const categoryNameMap: Record<string, string> = {
-    beauty: '美膚管理 / 醫美診所',
+    beauty: '美膚管理 / 醫美美學',
     hair: '美髮沙龍 / 造型設計',
-    clinic: '診所掛號 / 物理治療',
+    clinic: '診所看診 / 物理治療',
     spa: '精油 SPA / 舒壓按摩',
     fitness: '體態雕塑 / 健身教練',
     pet: '寵物美容 / 醫療診所',
-    other: '專業預約服務',
+    other: '專業綜合預約中心',
   }
 
   return (
@@ -99,13 +99,13 @@ export default function ReserveDashboard() {
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/20 text-rose-300 text-xs font-semibold backdrop-blur-md border border-rose-500/30">
               <Sparkles className="h-3.5 w-3.5" />
-              {categoryNameMap[store.category] || '服務業預約系統'}
+              {categoryNameMap[store.category] || '專業服務預約系統'}
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
               {store.name}
             </h1>
             <p className="text-sm text-slate-300 max-w-2xl line-clamp-2">
-              {store.description || '專注為貴賓打造極致尊榮的服務體驗，提供線上快速預約與 AI 智慧排程管理。'}
+              {store.description || '提供專屬線上快速預約與 AI 智慧排程管理，支援診所、美髮、美容美甲與各類服務業。'}
             </p>
             <div className="flex flex-wrap items-center gap-4 text-xs text-slate-400 pt-1">
               <span className="flex items-center gap-1.5">
@@ -129,7 +129,7 @@ export default function ReserveDashboard() {
               {copiedLink ? '已複製前台預約網址' : '複製公開預約網址'}
             </button>
             <Link
-              href={`/r/${store.slug || 'elegance-beauty'}`}
+              href={`/r/${store.slug || 'demo'}`}
               target="_blank"
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all shadow-md shadow-rose-900/30 active:scale-95"
             >
@@ -138,6 +138,35 @@ export default function ReserveDashboard() {
             </Link>
           </div>
         </div>
+      </div>
+
+      {/* Multi-Industry Quick Preset Showcase */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+        <span className="text-slate-400 font-semibold shrink-0">行業前台預覽：</span>
+        <Link
+          href="/r/clinic-demo"
+          target="_blank"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-rose-400 text-slate-700 dark:text-slate-200 font-medium whitespace-nowrap shadow-xs"
+        >
+          <span>🏥 醫療診所/物理治療</span>
+          <ExternalLink className="h-3 w-3 text-slate-400" />
+        </Link>
+        <Link
+          href="/r/hair-demo"
+          target="_blank"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-rose-400 text-slate-700 dark:text-slate-200 font-medium whitespace-nowrap shadow-xs"
+        >
+          <span>✂️ 美髮沙龍/造型設計</span>
+          <ExternalLink className="h-3 w-3 text-slate-400" />
+        </Link>
+        <Link
+          href="/r/demo"
+          target="_blank"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-rose-400 text-slate-700 dark:text-slate-200 font-medium whitespace-nowrap shadow-xs"
+        >
+          <span>✨ 綜合專業服務預約</span>
+          <ExternalLink className="h-3 w-3 text-slate-400" />
+        </Link>
       </div>
 
       {/* KPI Stats Cards */}

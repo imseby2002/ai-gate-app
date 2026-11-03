@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { computeAvailableSlots } from '@/lib/reserve/slots'
-import { DEFAULT_STORE, DEFAULT_SERVICES, DEFAULT_STAFF, generateInitialAppointments } from '@/lib/reserve/mock-data'
+import {
+  DEFAULT_STORE,
+  DEFAULT_SERVICES,
+  DEFAULT_STAFF,
+  CLINIC_PRESET,
+  HAIR_PRESET,
+  generateInitialAppointments,
+} from '@/lib/reserve/mock-data'
 import { ReserveStore, ReserveService, ReserveStaff, ReserveAppointment } from '@/lib/reserve/types'
 
 export async function GET(req: NextRequest) {
@@ -22,6 +29,16 @@ export async function GET(req: NextRequest) {
     let services: ReserveService[] = DEFAULT_SERVICES
     let staffList: ReserveStaff[] = DEFAULT_STAFF
     let appointments: ReserveAppointment[] = generateInitialAppointments(dateStr)
+
+    if (storeSlug === 'clinic-demo') {
+      store = CLINIC_PRESET.store as any
+      services = CLINIC_PRESET.services as any
+      staffList = CLINIC_PRESET.staff as any
+    } else if (storeSlug === 'hair-demo') {
+      store = HAIR_PRESET.store as any
+      services = HAIR_PRESET.services as any
+      staffList = HAIR_PRESET.staff as any
+    }
 
     if (storeSlug) {
       const { data: storeData } = await admin
