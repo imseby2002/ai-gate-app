@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getEsimOrdersByCouponCode } from '@/lib/esim/db'
 import { createClient } from '@/lib/supabase/server'
+import { getHkdTwdRate, orderCostTwd } from '@/lib/esim/cost'
 
 async function requireAdmin() {
   const supabase = await createClient()
@@ -21,7 +22,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: false, error: '缺少優惠券代碼' }, { status: 400 })
   }
   try {
-    const orders = await getEsimOrdersByCouponCode(code)
+    const [orders, rate] = await Promise.all([getEsimOrdersByCouponCode(code), getHkdTwdRate()])
     const records = orders.map(o => ({
       order_no: o.order_no,
       created_at: o.created_at,
@@ -32,6 +33,8 @@ export async function GET(req: NextRequest) {
       subtotal_twd: o.metadata?.subtotal_price_twd ?? o.total_price_twd,
       discount_twd: o.metadata?.coupon_discount_twd ?? 0,
       total_twd: o.total_price_twd,
+      cost_twd: orderCostTwd(o.cost_hkd, rate),
+      profit_twd: (Number(o.total_price_twd) || 0) - orderCostTwd(o.cost_hkd, rate),
       payment_status: o.payment_status,
     }))
     const paid = records.filter(r => r.payment_status === 'paid')
@@ -43,6 +46,9 @@ export async function GET(req: NextRequest) {
         paid_orders: paid.length,
         total_discount_twd: paid.reduce((sum, r) => sum + (Number(r.discount_twd) || 0), 0),
         total_revenue_twd: paid.reduce((sum, r) => sum + (Number(r.total_twd) || 0), 0),
+        total_cost_twd: paid.reduce((sum, r) => sum + r.cost_twd, 0),
+        total_profit_twd: paid.reduce((sum, r) => sum + r.profit_twd, 0),
+        hkd_twd_rate: rate,
       },
     })
   } catch (err: any) {
