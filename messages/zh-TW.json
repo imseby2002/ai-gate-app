@@ -8200,7 +8200,21 @@
         "category": "項目搜尋",
         "payee": "收付人搜尋",
         "notes": "備註發票搜尋"
-      }
+      },
+      "exportExcel": "匯出 Excel",
+      "exportTip": "依目前篩選（月份、左側科目、搜尋）匯出；可再選只匯出支出、收入或轉帳",
+      "exportKindTip": "要匯出的類型",
+      "exportAll": "全部",
+      "exportEmpty": "目前篩選沒有可匯出的資料。",
+      "exportFile": "出納明細",
+      "exportColType": "類型",
+      "exportColParent": "上層科目",
+      "exportColCategory": "科目",
+      "exportColAmount": "金額",
+      "exportColAccount": "帳戶",
+      "exportColToAccount": "轉入帳戶",
+      "exportColInvoice": "發票號碼",
+      "exportTotal": "合計"
     },
     "pnlHqCol": "總部／未歸屬",
     "pnlHqSub": "找不到門市的金額",
@@ -8253,7 +8267,13 @@
     "reconNoInv": "未匯入",
     "reconMissingPrice": "{n} 項原料缺單價",
     "pnlSrcPos": "iPOS 售出",
-    "pnlSrcInventory": "進銷存"
+    "pnlSrcInventory": "進銷存",
+    "pnlExportExcel": "匯出 Excel",
+    "pnlExportFile": "損益表",
+    "pnlExportManualSheet": "人工修改",
+    "pnlExportCol": "欄位",
+    "pnlExportAmount": "金額",
+    "pnlFundingExcluded": "本月出納「其它費用」中有 {amt} 屬於資金調度（換匯、轉給老闆、找零金），不是營運費用，未列入損益表。"
   },
   "StoreCoachPage": {
     "fillRegTitleAndClause": "請填寫規範標題與具體條款內容",

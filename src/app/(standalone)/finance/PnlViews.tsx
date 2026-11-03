@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
-import { Loader2, RefreshCw, X, RotateCcw, Save, History } from 'lucide-react'
+import { Loader2, RefreshCw, X, RotateCcw, Save, History, Download } from 'lucide-react'
+import { downloadXlsx } from '@/lib/excel/export'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { getStoreKindLabel, type PnlLine } from './pnl-schema'
@@ -46,6 +47,20 @@ export function resolveStore(vals: Vals, lines: PnlLine[], map: Record<string, P
 const rowBg = (kind: string) => kind === 'revenue' ? 'bg-blue-50 dark:bg-blue-950/40 font-bold' : kind === 'subtotal' ? 'bg-gray-100 dark:bg-gray-800 font-semibold' : 'bg-white dark:bg-gray-950'
 
 interface Col { key: string; title: string; sub?: string; vals: Vals; manual: Set<string>; logs?: Record<string, number>; storeId?: string; period?: string }
+
+/** 把目前畫面上的表格（科目 × 欄）匯出成 Excel；第二張表列出人工修改過的格子 */
+function exportPnl(filename: string, sheetName: string, cols: Col[], lines: PnlLine[], hdr: { line: string; manualSheet: string; col: string; amount: string }) {
+  const rows: (string | number)[][] = [[hdr.line, '', ...cols.map(c => c.sub ? `${c.title}（${c.sub}）` : c.title)]]
+  for (const l of lines) rows.push([l.zh, l.vi, ...cols.map(c => Math.round(c.vals[l.code] ?? 0))])
+  const manual: (string | number)[][] = [[hdr.col, hdr.line, hdr.amount]]
+  for (const c of cols) for (const code of c.manual) {
+    const l = lines.find(x => x.code === code)
+    if (l) manual.push([c.title, l.zh, Math.round(c.vals[code] ?? 0)])
+  }
+  const sheets = [{ name: sheetName, rows, widths: [22, 22, ...cols.map(() => 16)] }]
+  if (manual.length > 1) sheets.push({ name: hdr.manualSheet, rows: manual, widths: [20, 22, 16] })
+  return downloadXlsx(filename, sheets)
+}
 
 /** 共用表格：科目為列、欄（門市或月份）並排；第一欄固定窄寬、可左右捲動 */
 function PnlTable({ cols, lines, showPct, onCell }: { cols: Col[]; lines: PnlLine[]; showPct: boolean; onCell?: (c: Col, l: PnlLine) => void }) {
@@ -114,6 +129,8 @@ export function CompareView({ lines: allLines }: { lines: PnlLine[] }) {
   const [hideEmpty, setHideEmpty] = useState(true)
   const [showPct, setShowPct] = useState(true)
   const [cell, setCell] = useState<{ store: Store; line: PnlLine } | null>(null)
+  const [fundingExcluded, setFundingExcluded] = useState(0)
+  const locale = useLocale()
 
   const lineMap = useMemo(() => Object.fromEntries(allLines.map(l => [l.code, l])), [allLines])
   const lines = useMemo(() => allLines.filter(l => l.section !== 'compare' && !l.archived), [allLines])
@@ -125,7 +142,7 @@ export function CompareView({ lines: allLines }: { lines: PnlLine[] }) {
       const j = await res.json()
       if (!res.ok) { setErr(j.error ?? t('loadFailed')); return }
       setStores(j.stores ?? []); setEntries(j.entries ?? []); setAuto(j.auto ?? {})
-      setPeriods(j.periods ?? []); setLogCounts(j.logCounts ?? {})
+      setPeriods(j.periods ?? []); setLogCounts(j.logCounts ?? {}); setFundingExcluded(Number(j.fundingExcluded) || 0)
     } finally { setLoading(false) }
   }, [period, t])
   useEffect(() => { load() }, [load])
@@ -171,10 +188,15 @@ export function CompareView({ lines: allLines }: { lines: PnlLine[] }) {
         </Button>
         <label className="flex items-center gap-1.5 text-xs text-gray-600 ml-2"><input type="checkbox" checked={hideEmpty} onChange={e => setHideEmpty(e.target.checked)} />{t('pnlHideEmpty')}</label>
         <label className="flex items-center gap-1.5 text-xs text-gray-600"><input type="checkbox" checked={showPct} onChange={e => setShowPct(e.target.checked)} />{t('pnlShowPct')}</label>
+        <Button variant="outline" size="sm" className="gap-1.5 h-8 ml-auto" disabled={loading || stores.length === 0}
+          onClick={() => exportPnl(`${t('pnlExportFile')}_${period}`, period, cols, lines, { line: t('lineColHeader'), manualSheet: t('pnlExportManualSheet'), col: t('pnlExportCol'), amount: t('pnlExportAmount') })}>
+          <Download className="h-4 w-4" />{t('pnlExportExcel')}
+        </Button>
       </div>
       <p className="text-xs text-gray-500 leading-relaxed">
         {t('pnlAutoHint')} <span className="inline-flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-amber-500" />{t('pnlManualLegend')}</span>
       </p>
+      {fundingExcluded > 0 && <p className="text-xs text-gray-500">{t('pnlFundingExcluded', { amt: fmt(fundingExcluded, locale) })}</p>}
       {err && <p className="text-sm text-red-600">{err}</p>}
       {loading && stores.length === 0
         ? <div className="flex items-center justify-center py-16 text-gray-400"><Loader2 className="h-6 w-6 animate-spin" /></div>
@@ -232,6 +254,10 @@ export function TrendView({ stores, lines: allLines }: { stores: Store[]; lines:
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}{t('refresh')}
         </Button>
         <label className="flex items-center gap-1.5 text-xs text-gray-600 ml-2"><input type="checkbox" checked={showPct} onChange={e => setShowPct(e.target.checked)} />{t('pnlShowPct')}</label>
+        <Button variant="outline" size="sm" className="gap-1.5 h-8 ml-auto" disabled={loading || cols.length === 0}
+          onClick={() => { const nm = store ? (store.code === HQ_CODE ? t('pnlHqCol') : store.name) : ''; exportPnl(`${t('pnlExportFile')}_${nm}`, nm || 'trend', cols, lines, { line: t('lineColHeader'), manualSheet: t('pnlExportManualSheet'), col: t('pnlExportCol'), amount: t('pnlExportAmount') }) }}>
+          <Download className="h-4 w-4" />{t('pnlExportExcel')}
+        </Button>
       </div>
       {loading && cols.length === 0
         ? <div className="flex items-center justify-center py-16 text-gray-400"><Loader2 className="h-6 w-6 animate-spin" /></div>

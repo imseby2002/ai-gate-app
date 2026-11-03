@@ -8200,7 +8200,21 @@
         "category": "Account",
         "payee": "Payee",
         "notes": "Notes / invoice"
-      }
+      },
+      "exportExcel": "Export Excel",
+      "exportTip": "Exports the current filter (month, subject on the left, search); choose to export only expenses, income or transfers",
+      "exportKindTip": "Type to export",
+      "exportAll": "All",
+      "exportEmpty": "Nothing to export for the current filter.",
+      "exportFile": "Cashflow",
+      "exportColType": "Type",
+      "exportColParent": "Parent subject",
+      "exportColCategory": "Subject",
+      "exportColAmount": "Amount",
+      "exportColAccount": "Account",
+      "exportColToAccount": "To account",
+      "exportColInvoice": "Invoice no.",
+      "exportTotal": "Totals"
     },
     "pnlHqCol": "HQ / unassigned",
     "pnlHqSub": "Amounts with no store",
@@ -8253,7 +8267,13 @@
     "reconNoInv": "Not imported",
     "reconMissingPrice": "{n} materials missing price",
     "pnlSrcPos": "iPOS sales",
-    "pnlSrcInventory": "Inventory"
+    "pnlSrcInventory": "Inventory",
+    "pnlExportExcel": "Export Excel",
+    "pnlExportFile": "PnL",
+    "pnlExportManualSheet": "Manual edits",
+    "pnlExportCol": "Column",
+    "pnlExportAmount": "Amount",
+    "pnlFundingExcluded": "{amt} of this month's \"other expenses\" in the cashbook is fund movement (currency exchange, transfers to the owner, change float) — not an operating cost, so it is left out of the P&L."
   },
   "StoreCoachPage": {
     "fillRegTitleAndClause": "Please fill in the regulation title and specific clause content",

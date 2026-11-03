@@ -139,9 +139,14 @@ function matchStoreCode(code: string, aliases: Map<string, string[]>): string | 
 // ── 出納分類 → 科目 ─────────────────────────────────────────
 const PAYROLL_COVERED = new Set(['salary', 'insurance'])
 
-export function cashflowLine(type: string, parent: string, category: string): string | null {
+// 出納「其它費用」裡的資金調度（換匯、轉給老闆、找零金）不是營運費用，不列入損益表
+const FUNDING_RE = /\bdoi\b.*\b(tien|ndt|dai te|usd|te)\b|\b(ndt|dai te)\b|chuyen (tien )?cho (ban )?sep|\bck cho (ban )?sep|cap tien le/
+// 廣告、社群操作
+const AD_RE = /quang cao|\bqc\b|\bads?\b|facebook|\bfb\b|tiktok|thread|seeding|\bcmt\b|comment|\bkol\b|poster/
+/** 出納記錄的損益表科目；'excluded' = 資金調度，不列入損益；null = 不屬於損益（例如轉帳、非營業收入） */
+export function cashflowLine(type: string, parent: string, category: string, description = ''): string | null {
   const p = String(parent ?? '').trim(), c = String(category ?? '').trim()
-  const cv = spaced(c), pv = spaced(p)
+  const cv = spaced(c), pv = spaced(p), dv = spaced(description)
   if (type === 'income') {
     if (p === '門市收入' || /^dt /.test(cv) || p.includes('批發收入')) return 'revenue'
     return null
@@ -160,6 +165,14 @@ export function cashflowLine(type: string, parent: string, category: string): st
   if (c === '冰块' || c === '冰塊') return 'ice'
   if (['飲料原料', '餐點原料', '工廠耗材', '門市耗材'].includes(p) || cv.startsWith('thanh toan mua hang')) return 'material_used'
   if (cv.includes('sua chua') || pv.includes('sua chua')) return 'repair'
+  // 稅金：營業稅、營所稅分到稅金區
+  if (p === '稅金') return c.includes('營所') || c.includes('所得') ? 'cit' : 'biz_tax_company'
+  if (p === '广告支出' || p === '廣告支出') return 'advertising'
+  // 其它費用：依摘要細分
+  if (c === '其它費用' || c === '其他費用') {
+    if (FUNDING_RE.test(dv)) return 'excluded'
+    if (AD_RE.test(dv)) return 'advertising'
+  }
   return 'other_fee'
 }
 
@@ -206,7 +219,7 @@ export async function computeAutoPnl(
   admin: Admin, ownerId: string, stores: PnlStoreRow[], fin: FinStore[],
   from: string, to: string,
   trace?: { period: string; storeId: string; line: string },
-): Promise<{ values: AutoValues; contributions: Contribution[]; recon: ReconMap; purchasesSkipped: Record<string, number> }> {
+): Promise<{ values: AutoValues; contributions: Contribution[]; recon: ReconMap; purchasesSkipped: Record<string, number>; fundingExcluded: Record<string, number> }> {
   const aliases = buildAliases(stores, fin)
   const hq = stores.find(s => s.code === HQ_CODE)?.id ?? null
   const [fy, fm] = from.split('-').map(Number)
@@ -292,6 +305,7 @@ export async function computeAutoPnl(
     if (sid) { const x = rc(g.period, sid); x.inv_expected += g.exp; x.inv_actual += g.act; x.inv_loss += g.loss; x.has_inv = true; x.missing_price += g.miss }
   }
   const purchasesSkipped: Record<string, number> = {}
+  const fundingExcluded: Record<string, number> = {}
 
   // 薪資
   const payrollPeriods = new Set<string>()
@@ -313,7 +327,8 @@ export async function computeAutoPnl(
     const period = `${r.year}-${String(r.month).padStart(2, '0')}`
     if (!inRange(period)) continue
     const line = BILL_LINE[r.category_code] ?? 'other_fee'
-    billLines.add(`${period}|${line}`)
+    // 只有水電瓦斯冰塊以帳單為準、不重複計出納；其他帳單不可蓋掉出納的「其他費用」
+    if (BILL_LINE[r.category_code]) billLines.add(`${period}|${line}`)
     const amt = Number(r.amount) || 0
     add(period, matchStoreCode(r.store_code, aliases), line, amt, { src: 'bill', label: `門市費用 ${r.store_code} ${r.category_code}${r.note ? `：${r.note}` : ''}`, total: amt, split: 1 })
   }
@@ -321,8 +336,9 @@ export async function computeAutoPnl(
   // 出納帳務
   for (const r of cash) {
     const period = String(r.date).slice(0, 7)
-    const line = cashflowLine(r.type, r.category_parent, r.category)
+    const line = cashflowLine(r.type, r.category_parent, r.category, r.description ?? '')
     if (!line) continue
+    if (line === 'excluded') { fundingExcluded[period] = (fundingExcluded[period] ?? 0) + (Number(r.amount) || 0); continue }
     if (PAYROLL_COVERED.has(line) && payrollPeriods.has(period)) continue
     if (billLines.has(`${period}|${line}`)) continue
     const amt = Number(r.amount) || 0
@@ -353,5 +369,5 @@ export async function computeAutoPnl(
     const x = recon[p][s]
     for (const k of ['pos_revenue', 'cash_revenue', 'inv_expected', 'inv_actual', 'inv_loss'] as const) x[k] = Math.round(x[k])
   }
-  return { values, contributions, recon, purchasesSkipped }
+  return { values, contributions, recon, purchasesSkipped, fundingExcluded }
 }
