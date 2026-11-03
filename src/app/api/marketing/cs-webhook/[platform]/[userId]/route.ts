@@ -31,7 +31,7 @@ import { sendToCustomer, HUMAN_AGENT_TAG } from '@/lib/cs/send'
 import { isHandoffActive, getHumanIdleMinutes, getOpenOnsiteIssues } from '@/lib/cs/handoff'
 import { notifyUserMobile } from '@/lib/push/expo'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { issueCsGiftCode, ESIM_SHOP_URL } from '@/lib/esim/cs-gift'
+import { issueCsGiftCode, formatCsGiftMessage } from '@/lib/esim/cs-gift'
 import { getVerifiedStayNights, countGuestStays, type VerifiedStay } from '@/lib/cs/stay-nights'
 import { dataOwnerOf, loadCompanyProfile } from '@/lib/company/profile'
 
@@ -2111,7 +2111,7 @@ async function appendWelcomeEsim(reply: string, userId: string, platform: string
     const code = await issueCsGiftCode(String(prof?.email ?? ''), couponCode, `見面禮｜${note}`)
     if (!code) return reply
     await saveConfirmedFacts(userId, platform, customerId, industry, { welcomeEsim: { stay: stay.checkIn, code } })
-    return `${reply}\n\n🎁 感謝您的訂房！送您一份 eSIM 見面禮：\neSIM 兌換碼：${code}\n兌換網址：\n${ESIM_SHOP_URL}\n（選購方案結帳時輸入兌換碼，限用一次）`
+    return `${reply}\n\n🎁 感謝您的訂房！送您一份 eSIM 見面禮：\n${await formatCsGiftMessage(code, couponCode)}`
   } catch {
     return reply
   }
@@ -2161,7 +2161,8 @@ async function fillEsimGiftCodes(reply: string, userId: string, gifts: CsGiftIte
       if (!st || st.nights < gift.minNights) { blocked.set(id, gift.minNights); continue }
     }
     if (gift?.minStays && (await staysOf()) < gift.minStays) { staysBlocked.add(id); continue }
-    issued.set(id, gift?.esimCouponCode ? await issueCsGiftCode(email, gift.esimCouponCode, note).catch(() => null) : null)
+    const code = gift?.esimCouponCode ? await issueCsGiftCode(email, gift.esimCouponCode, note).catch(() => null) : null
+    issued.set(id, code && gift?.esimCouponCode ? await formatCsGiftMessage(code, gift.esimCouponCode) : null)
   }
   return reply.replace(ESIM_GIFT_RE, (_m, raw: string) => {
     if (staysBlocked.has(raw.trim())) return `這項是回訪客人的專屬禮物，麻煩提供您的訂單號碼或訂房手機，${GIFT_NIGHTS_BLOCKED}`
@@ -2169,7 +2170,7 @@ async function fillEsimGiftCodes(reply: string, userId: string, gifts: CsGiftIte
     if (min) return `這項贈品需要住宿滿 ${min} 晚，麻煩提供您的訂單號碼或訂房手機，${GIFT_NIGHTS_BLOCKED}`
     const code = issued.get(raw.trim())
     return code
-      ? `eSIM 兌換碼：${code}\n兌換網址：\n${ESIM_SHOP_URL}\n（選購方案結帳時輸入兌換碼，限用一次）`
+      ? code
       : ESIM_GIFT_FAILED
   })
 }

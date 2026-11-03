@@ -50,3 +50,18 @@ export async function issueCsGiftCode(email: string, templateCode: string, note:
   const ok = await saveCoupons([issued, ...coupons])
   return ok ? code : null
 }
+
+/** 給客人看的兌換說明：方案（天數、流量）與到期日直接讀範本券設定，不靠 AI 自己寫 */
+export async function formatCsGiftMessage(code: string, templateCode: string): Promise<string> {
+  let planLine = ''
+  let expiryLine = ''
+  try {
+    const tpl = (await getCoupons()).find(c => c.code.toUpperCase() === templateCode.trim().toUpperCase())
+    const plans = Object.values(tpl?.applicable_plan_names ?? {})
+      .map(n => String(n).replace(/\s*\(NT\$\s*[\d,]+\)\s*$/, '').trim())
+      .filter(Boolean)
+    if (plans.length) planLine = `適用方案：${plans.join('、')}\n`
+    if (tpl?.expires_at) expiryLine = `兌換期限：${String(tpl.expires_at).slice(0, 10).replace(/-/g, '/')} 前\n`
+  } catch { /* 讀不到就只給兌換碼 */ }
+  return `eSIM 兌換碼：${code}\n${planLine}${expiryLine}兌換網址：\n${ESIM_SHOP_URL}\n（選購方案結帳時輸入兌換碼，限用一次）`
+}
