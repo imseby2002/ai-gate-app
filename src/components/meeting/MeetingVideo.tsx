@@ -192,7 +192,7 @@ export function MeetingVideo({ meetingId, selfId, selfName, authHeaders, onClose
           <Button size="sm" variant="outline" onClick={retryMic} className="h-7 gap-1.5"><Mic className="h-3.5 w-3.5" />{t('micRetry')}</Button>
         </div>
       )}
-      <div ref={boxRef} className="h-[420px] w-full overflow-hidden rounded-lg border bg-black" />
+      <div ref={boxRef} data-meeting-video className="h-[420px] w-full overflow-hidden rounded-lg border bg-black" />
       <div className="flex flex-wrap items-center gap-2">
         <Button size="sm" variant="outline" onClick={onClose} className="gap-1.5"><PhoneOff className="h-4 w-4" />{t('videoLeave')}</Button>
         <Button size="sm" variant="outline" onClick={() => switchMode('webrtc')} className="gap-1.5"><RefreshCw className="h-4 w-4" />{t('switchToBuiltin')}</Button>
@@ -327,7 +327,7 @@ function WebRtcRoom({ meetingId, selfId, selfName, onClose, camera = true }: { m
   const list = Object.values(peers)
   return (
     <div className="space-y-2">
-      <div className={`grid gap-2 ${list.length === 0 ? 'grid-cols-1' : list.length === 1 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-2'}`}>
+      <div data-meeting-video className={`grid gap-2 ${list.length === 0 ? 'grid-cols-1' : list.length === 1 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-2'}`}>
         <Tile stream={local} name={`${selfName}（${t('you')}）`} muted mirror />
         {list.map(p => <Tile key={p.id} stream={p.stream} name={p.name} state={p.state} />)}
       </div>
