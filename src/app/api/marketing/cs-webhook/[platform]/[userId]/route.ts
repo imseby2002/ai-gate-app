@@ -2095,17 +2095,18 @@ const ESIM_GIFT_RE = /<<<ESIM_GIFT:([^>]*)>>>/g
 const ESIM_GIFT_FAILED = 'eSIM 兌換碼會由管家確認後提供給您'
 const GIFT_NIGHTS_BLOCKED = '系統核對訂單後就會提供給您'
 const COMPLAINT_GIFT_BLOCKED = '非常抱歉造成您不好的體驗，您的意見我們已經記錄下來並轉給管家，會盡快改善 🙏'
-// 見面禮：客人的身份已核對到訂房系統裡一筆有效（進行中或即將入住）的訂單 → 自動附上一組 eSIM 兌換碼。
-// 每次入住（以入住日為準）只送一次，記在 cs_customers.facts.welcomeEsim；不佔「促成/賠禮工具箱」的一次額度。
+// 見面禮：第一次入住的客人，身份已核對到訂房系統裡一筆有效（進行中或即將入住）的訂單 → 自動附上一組 eSIM 兌換碼。
+// 每位客人只送一次（記在 cs_customers.facts.welcomeEsim）；訂房系統查到入住 2 次以上的回訪客人不送（回訪有自己的贈品）。
+// 不佔「促成/賠禮工具箱」的一次額度。
 async function appendWelcomeEsim(reply: string, userId: string, platform: string, customerId: string, industry: string, couponCode: string, note: string): Promise<string> {
   try {
     const sb = getServiceClient()
     const { data } = await sb.from('cs_customers').select('facts').eq('user_id', userId).eq('platform', platform).eq('from_id', customerId).eq('industry', industry).maybeSingle()
     const facts = (data?.facts ?? null) as Record<string, unknown> | null
+    if (facts?.welcomeEsim) return reply
     const stay = await getVerifiedStayNights(sb, userId, facts)
     if (!stay) return reply
-    const given = facts?.welcomeEsim as { stay?: string } | undefined
-    if (given?.stay === stay.checkIn) return reply
+    if (await countGuestStays(sb, userId, facts) >= 2) return reply
     const { data: prof } = await sb.from('profiles').select('email').eq('id', userId).maybeSingle()
     const code = await issueCsGiftCode(String(prof?.email ?? ''), couponCode, `見面禮｜${note}`)
     if (!code) return reply
