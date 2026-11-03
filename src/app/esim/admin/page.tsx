@@ -8,7 +8,7 @@ import {
   Tag, Percent, Sliders, Calculator, Sparkles, Save, Check,
   Ticket, Plus, Trash2, ToggleLeft, ToggleRight, Pencil, X, Copy, History
 } from 'lucide-react'
-import { DEFAULT_PRICING_SETTINGS, EsimPricingSettings } from '@/lib/esim/catalog'
+import { DEFAULT_PRICING_SETTINGS, EsimPricingSettings, DESTINATIONS } from '@/lib/esim/catalog'
 
 export default function EsimAdminPage() {
   const [activeTab, setActiveTab] = useState<'pricing' | 'overview' | 'orders' | 'coupons'>('pricing')
@@ -89,13 +89,27 @@ export default function EsimAdminPage() {
   const [planDataFilter, setPlanDataFilter] = useState('all')
   const [loadingPlanOptions, setLoadingPlanOptions] = useState(false)
 
-  async function loadPlanOptions() {
-    const cc = planCountry.trim().toUpperCase()
-    if (!cc) return
+  const [planMaxPrice, setPlanMaxPrice] = useState('')
+  const [planPrimaryOnly, setPlanPrimaryOnly] = useState(false)
+  const ASIA_CODES = Object.values(DESTINATIONS).filter(d => d.region === 'Asia').map(d => d.code)
+
+  function parseCountryCodes(v: string) {
+    return Array.from(new Set(v.toUpperCase().split(/[\s,，、]+/).map(c => c.trim()).filter(c => /^[A-Z]{2,3}$/.test(c))))
+  }
+
+  async function loadPlanOptions(codesInput?: string) {
+    const codes = parseCountryCodes(codesInput ?? planCountry)
+    if (codes.length === 0) return
     setLoadingPlanOptions(true)
     try {
-      const data = await fetch(`/api/esim/plans?country=${encodeURIComponent(cc)}`).then(r => r.json())
-      setPlanOptions(data.success ? data.plans || [] : [])
+      const results = await Promise.all(codes.map(cc =>
+        fetch(`/api/esim/plans?country=${encodeURIComponent(cc)}`).then(r => r.json()).catch(() => ({ success: false }))
+      ))
+      const merged = new Map<string, any>()
+      results.forEach((data: any) => {
+        if (data.success) (data.plans || []).forEach((p: any) => merged.set(p.channel_dataplan_id, p))
+      })
+      setPlanOptions(Array.from(merged.values()).sort((a: any, b: any) => a.retailPriceTwd - b.retailPriceTwd))
       setPlanDayFilter('all')
       setPlanTypeFilter('all')
       setPlanDataFilter('all')
@@ -1583,15 +1597,24 @@ export default function EsimAdminPage() {
                     </label>
                     <input
                       type="text"
-                      placeholder="國家代碼，如 JP"
+                      placeholder="國家代碼，多個用逗號：JP,KR,TH"
                       value={planCountry}
                       onChange={e => setPlanCountry(e.target.value.toUpperCase())}
-                      className="w-32 px-3 py-2 rounded-xl border border-slate-300 uppercase font-mono bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none"
+                      className="w-64 px-3 py-2 rounded-xl border border-slate-300 uppercase font-mono bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none"
                     />
                   </div>
                   <button
                     type="button"
-                    onClick={loadPlanOptions}
+                    onClick={() => { const v = ASIA_CODES.join(','); setPlanCountry(v); loadPlanOptions(v) }}
+                    disabled={loadingPlanOptions}
+                    className="px-3 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 font-semibold disabled:opacity-50"
+                    title={ASIA_CODES.join(', ')}
+                  >
+                    亞洲全部
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => loadPlanOptions()}
                     disabled={loadingPlanOptions || !planCountry.trim()}
                     className="px-3 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 font-semibold disabled:opacity-50"
                   >
@@ -1625,6 +1648,9 @@ export default function EsimAdminPage() {
                     if (planDayFilter !== 'all' && Number(p.day) !== Number(planDayFilter)) return false
                     if (planTypeFilter !== 'all' && p.planType !== planTypeFilter) return false
                     if (planDataFilter !== 'all' && p.dataTierLabel !== planDataFilter) return false
+                    const maxPrice = parseFloat(planMaxPrice)
+                    if (maxPrice > 0 && Number(p.retailPriceTwd) > maxPrice) return false
+                    if (planPrimaryOnly && !parseCountryCodes(planCountry).includes(String(p.primaryCountryCode).toUpperCase())) return false
                     if (terms.length === 0) return true
                     const hay = `${planLabel(p)} ${p.channel_dataplan_name || ''} ${p.channel_dataplan_id}`.toLowerCase()
                     return terms.every(t => hay.includes(t))
@@ -1632,6 +1658,18 @@ export default function EsimAdminPage() {
                   return (
                   <>
                   <div className="flex flex-wrap items-center gap-2 mb-2">
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="售價上限 NT$"
+                      value={planMaxPrice}
+                      onChange={e => setPlanMaxPrice(e.target.value)}
+                      className="w-36 px-3 py-2 rounded-xl border border-slate-300 bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none"
+                    />
+                    <label className="inline-flex items-center gap-1.5 px-2 font-semibold text-slate-700 cursor-pointer" title="排除只是順帶涵蓋該國的多國／區域方案">
+                      <input type="checkbox" checked={planPrimaryOnly} onChange={e => setPlanPrimaryOnly(e.target.checked)} />
+                      只看所選國家本身的方案
+                    </label>
                     <select
                       value={planTypeFilter}
                       onChange={e => { setPlanTypeFilter(e.target.value); setPlanDataFilter('all') }}
@@ -1699,6 +1737,9 @@ export default function EsimAdminPage() {
                           onChange={() => togglePlan(p)}
                         />
                         <span className="flex-1">{planLabel(p)}</span>
+                        <span className="shrink-0 text-[11px] text-slate-500 whitespace-nowrap">
+                          售價 NT$ {p.retailPriceTwd}｜成本約 NT$ {Math.round((Number(p.costHkd) || 0) * (pricingSettings.hkd_twd_rate || 0))}
+                        </span>
                         <span className="font-mono text-[10px] text-slate-400">{p.channel_dataplan_id}</span>
                       </label>
                     ))}
