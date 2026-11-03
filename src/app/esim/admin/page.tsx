@@ -1519,7 +1519,7 @@ export default function EsimAdminPage() {
               {/* CS 客服贈品授權 */}
               <div className="sm:col-span-2">
                 <label className="block font-semibold text-slate-700 mb-1">
-                  CS 客服贈品授權帳號 Email (選填，多個用逗號分隔)
+                  CS 客服贈品授權帳號 Email (選填，多個用逗號分隔；填了就成為範本券，代碼本身不能直接兌換)
                 </label>
                 <input
                   type="text"
