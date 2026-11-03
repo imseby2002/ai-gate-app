@@ -324,6 +324,7 @@ export default function MeetingPage() {
 
   // 視訊（有設定 JaaS 用 JaaS，否則內建 WebRTC）、訪客邀請、聊天
   const [video, setVideo] = useState(false)
+  const [camera, setCamera] = useState(true)
   const [showChat, setShowChat] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
 
@@ -1035,8 +1036,18 @@ export default function MeetingPage() {
   // 開視訊時同步開始語音記錄（訪客端加入即自動記錄，發起人也比照，避免只記到訪客的話）
   function startVideo() {
     setVideo(true)
+    setCamera(true)
     if (!recordingRef.current && srSupported && meeting?.role !== 'viewer') void startRec()
   }
+
+  // 線上會議：進入即自動加入通話（聲音走通話，雙方都要在通話中才聽得到）
+  const autoJoinedRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!meeting || !mounted || autoJoinedRef.current === meeting.id) return
+    autoJoinedRef.current = meeting.id
+    if (meeting.meeting_mode !== 'in_person' && meeting.role !== 'viewer') startVideo()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [meeting?.id, mounted])
 
   function leaveMeeting() {
     stopRec()
@@ -1074,7 +1085,7 @@ export default function MeetingPage() {
           </div>
         </div>
 
-        {!srSupported && (
+        {mounted && !srSupported && (
           <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
             {t('unsupported')}
           </p>
@@ -1545,9 +1556,9 @@ export default function MeetingPage() {
               <Mic className="h-4 w-4" />{t('start')}
             </Button>
           )
-        ) : (
+        ) : mounted ? (
           <span className="text-xs text-muted-foreground">{t('unsupported')}</span>
-        )}
+        ) : null}
 
         <LangPicker
           value={inputLang}
@@ -1630,8 +1641,8 @@ export default function MeetingPage() {
 
         {/* 視訊、聊天、邀請訪客（只能瀏覽者只看聊天） */}
         {viewOnly ? null : video ? (
-          <Button size="sm" variant="outline" onClick={stopVideo} className="gap-1.5">
-            <VideoOff className="h-4 w-4" />{t('videoStop')}
+          <Button size="sm" variant={camera ? 'outline' : 'destructive'} onClick={() => setCamera(c => !c)} className="gap-1.5">
+            {camera ? <Video className="h-4 w-4" /> : <VideoOff className="h-4 w-4" />}{camera ? tr('camOn') : tr('camOff')}
           </Button>
         ) : (
           <Button size="sm" variant="outline" onClick={startVideo} className="gap-1.5">
@@ -1653,7 +1664,7 @@ export default function MeetingPage() {
 
       {(video || showChat) && me && (
         <div className={`grid gap-3 ${video && showChat ? 'lg:grid-cols-[1fr_340px]' : ''}`}>
-          {video && <MeetingVideo meetingId={meeting.id} selfId={`u-${me.id}`} selfName={me.name} onClose={stopVideo} />}
+          {video && <MeetingVideo meetingId={meeting.id} selfId={`u-${me.id}`} selfName={me.name} onClose={stopVideo} camera={camera} />}
           {showChat && <MeetingChat meetingId={meeting.id} readOnly={viewOnly} />}
         </div>
       )}

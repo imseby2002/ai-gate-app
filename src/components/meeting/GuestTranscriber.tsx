@@ -29,6 +29,8 @@ export function GuestTranscriber({ meetingId, token, languages }: { meetingId: s
   const azureRef = useRef<AzureRecognitionController | null>(null)
   const srRef = useRef<SR | null>(null)
   const wantRef = useRef(false)
+  const retryRef = useRef(0)
+  const startRef = useRef<() => void>(() => {})
   const headers = { 'x-meeting-guest': token }
 
   const post = useCallback(async (content: string, lang?: string) => {
@@ -60,8 +62,14 @@ export function GuestTranscriber({ meetingId, token, languages }: { meetingId: s
       if (tk.configured && tk.token && tk.region) {
         azureRef.current = await startAzureRecognition({
           token: tk.token, region: tk.region, mode: 'online', languages: languages.length ? languages : ['zh-TW'],
-          onRecognized: (text, _s, lang) => { void post(text, lang) },
-          onError: () => { setErr(t('transcribeFailed')); setOn(false) },
+          onRecognized: (text, _s, lang) => { retryRef.current = 0; void post(text, lang) },
+          // 斷線（開關視訊、網路切換、token 過期）自動重連，連續失敗 5 次才停
+          onError: () => {
+            azureRef.current = null
+            if (!wantRef.current) return
+            if (++retryRef.current > 5) { wantRef.current = false; setErr(t('transcribeFailed')); setOn(false); return }
+            setTimeout(() => { if (wantRef.current) startRef.current() }, 1000 * retryRef.current)
+          },
         })
         setOn(true)
         return
@@ -86,10 +94,14 @@ export function GuestTranscriber({ meetingId, token, languages }: { meetingId: s
       run()
       setOn(true)
     } catch {
-      setErr(t('transcribeFailed'))
+      if (wantRef.current && ++retryRef.current <= 5) {
+        setTimeout(() => { if (wantRef.current) startRef.current() }, 1000 * retryRef.current)
+      } else setErr(t('transcribeFailed'))
     } finally { setStarting(false) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [starting, languages, post, t, token])
+
+  startRef.current = () => { void start() }
 
   // 加入後自動開始記錄；離開頁面時停止
   useEffect(() => {
@@ -103,7 +115,7 @@ export function GuestTranscriber({ meetingId, token, languages }: { meetingId: s
       {on
         ? <span className="flex items-center gap-1.5 text-red-600"><span className="h-2 w-2 animate-pulse rounded-full bg-red-500" />{t('transcribeOn')}</span>
         : <span className="text-gray-500">{t('transcribeOff')}</span>}
-      <Button size="sm" variant="outline" onClick={on ? stop : start} disabled={starting} className="h-7 gap-1.5">
+      <Button size="sm" variant="outline" onClick={on ? stop : () => { retryRef.current = 0; void start() }} disabled={starting} className="h-7 gap-1.5">
         {starting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : on ? <MicOff className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
         {on ? t('transcribePause') : t('transcribeStart')}
       </Button>

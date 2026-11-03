@@ -16,6 +16,7 @@ interface JaasApi {
   addListener(event: string, fn: (e: Record<string, unknown>) => void): void
   isAudioAvailable(): Promise<boolean>
   isAudioMuted(): Promise<boolean>
+  isVideoMuted(): Promise<boolean>
   executeCommand(cmd: string, ...args: unknown[]): void
 }
 
@@ -73,10 +74,12 @@ const ICE: RTCConfiguration = {
   iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302', 'stun:stun.cloudflare.com:3478'] }],
 }
 
-export function MeetingVideo({ meetingId, selfId, selfName, authHeaders, onClose }: {
+export function MeetingVideo({ meetingId, selfId, selfName, authHeaders, onClose, camera = true }: {
   meetingId: string; selfId: string; selfName: string
   authHeaders?: Record<string, string>
   onClose: () => void
+  /** 鏡頭開關：關鏡頭只停畫面，仍留在通話中，雙方照樣聽得到聲音 */
+  camera?: boolean
 }) {
   const t = useTranslations('MeetingRoom')
   const [mode, setMode] = useState<'loading' | 'jaas' | 'webrtc' | 'error'>('loading')
@@ -87,6 +90,8 @@ export function MeetingVideo({ meetingId, selfId, selfName, authHeaders, onClose
   const [jaasAvailable, setJaasAvailable] = useState(false)
   const [reload, setReload] = useState(0)
   const headersKey = JSON.stringify(authHeaders ?? {})
+  const cameraRef = useRef(camera)
+  cameraRef.current = camera
 
   // 備案：任一人切換視訊模式時，用 broadcast 通知同場所有人一起切換（並存到會議，晚加入者也跟著）
   const chRef = useRef<ReturnType<ReturnType<typeof createClient>['channel']> | null>(null)
@@ -142,7 +147,7 @@ export function MeetingVideo({ meetingId, selfId, selfName, authHeaders, onClose
     const api = new w.JitsiMeetExternalAPI('8x8.vc', {
       roomName: `${jaas.appId}/${jaas.room}`, jwt: jaas.jwt, parentNode: boxRef.current,
       // 手機保留 Jitsi 的加入頁：讓使用者在 Jitsi 畫面內點一下「Join」，瀏覽器才允許該畫面播放聲音、取得麥克風
-      configOverwrite: { prejoinPageEnabled: isMobileDevice(), prejoinConfig: { enabled: isMobileDevice() }, startWithAudioMuted: false, startWithVideoMuted: false, disableDeepLinking: true,
+      configOverwrite: { prejoinPageEnabled: isMobileDevice(), prejoinConfig: { enabled: isMobileDevice() }, startWithAudioMuted: false, startWithVideoMuted: !cameraRef.current, disableDeepLinking: true,
         // 兩人時 Jitsi 預設改走點對點（P2P）；手機 4G 上關鏡頭重新協商時 P2P 會斷、聲音跟著消失。
         // 關掉 P2P，一律經 Jitsi 伺服器轉送，關鏡頭也不影響聲音
         p2p: { enabled: false } },
@@ -155,9 +160,17 @@ export function MeetingVideo({ meetingId, selfId, selfName, authHeaders, onClose
     api.addListener('videoConferenceJoined', () => {
       check()
       api.isAudioMuted().then(m => { if (m) api.executeCommand('toggleAudio') }).catch(() => {})
+      api.isVideoMuted().then(m => { if (m === cameraRef.current) api.executeCommand('toggleVideo') }).catch(() => {})
     })
     return () => { apiRef.current = null; try { api.dispose() } catch {} }
   }, [mode, jaas, selfName])
+
+  // 外部切換鏡頭（JaaS）
+  useEffect(() => {
+    const api = apiRef.current
+    if (mode !== 'jaas' || !api) return
+    api.isVideoMuted().then(m => { if (m === camera) api.executeCommand('toggleVideo') }).catch(() => {})
+  }, [camera, mode])
 
   if (mode === 'loading') return <div className="h-72 rounded-lg border bg-black/90 flex items-center justify-center text-gray-300"><Loader2 className="h-6 w-6 animate-spin" /></div>
   if (mode === 'error') return <div className="rounded-lg border p-4 text-sm text-red-600">{t('videoFailed')}</div>
@@ -189,7 +202,7 @@ export function MeetingVideo({ meetingId, selfId, selfName, authHeaders, onClose
   )
   return (
     <div className="space-y-2">
-      <WebRtcRoom key={reload} meetingId={meetingId} selfId={selfId} selfName={selfName} onClose={onClose} />
+      <WebRtcRoom key={reload} meetingId={meetingId} selfId={selfId} selfName={selfName} onClose={onClose} camera={camera} />
       {jaasAvailable && (
         <Button size="sm" variant="ghost" onClick={() => switchMode('auto')} className="gap-1.5 text-xs h-7"><RefreshCw className="h-3.5 w-3.5" />{t('switchToJaas')}</Button>
       )}
@@ -200,7 +213,7 @@ export function MeetingVideo({ meetingId, selfId, selfName, authHeaders, onClose
 interface Peer { id: string; name: string; stream: MediaStream | null; state: string }
 type Signal = { from: string; to: string; kind: 'offer' | 'answer' | 'ice'; sdp?: RTCSessionDescriptionInit; cand?: RTCIceCandidateInit }
 
-function WebRtcRoom({ meetingId, selfId, selfName, onClose }: { meetingId: string; selfId: string; selfName: string; onClose: () => void }) {
+function WebRtcRoom({ meetingId, selfId, selfName, onClose, camera = true }: { meetingId: string; selfId: string; selfName: string; onClose: () => void; camera?: boolean }) {
   const t = useTranslations('MeetingRoom')
   const [local, setLocal] = useState<MediaStream | null>(null)
   const [peers, setPeers] = useState<Record<string, Peer>>({})
@@ -297,6 +310,12 @@ function WebRtcRoom({ meetingId, selfId, selfName, onClose }: { meetingId: strin
       void supabase.removeChannel(ch)
     }
   }, [meetingId, selfId, selfName, setPeer, t])
+
+  // 外部切換鏡頭（內建模式）
+  useEffect(() => {
+    local?.getVideoTracks().forEach(tr => { tr.enabled = camera })
+    setCamOn(camera)
+  }, [camera, local])
 
   const toggle = (kind: 'audio' | 'video') => {
     const tracks = kind === 'audio' ? local?.getAudioTracks() : local?.getVideoTracks()

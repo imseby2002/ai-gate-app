@@ -28,7 +28,7 @@ export default function MeetingGuestPage({ params }: { params: Promise<{ code: s
   const [video, setVideo] = useState(false)
 
   useEffect(() => {
-    try { const s = sessionStorage.getItem(key); if (s) setSession(JSON.parse(s)) } catch {}
+    try { const s = sessionStorage.getItem(key); if (s) { setSession(JSON.parse(s)); setVideo(true) } } catch {}
     try { const n = localStorage.getItem('meeting-guest-name'); if (n) setName(n) } catch {}
   }, [key])
 
@@ -46,6 +46,7 @@ export default function MeetingGuestPage({ params }: { params: Promise<{ code: s
       }
       try { sessionStorage.setItem(key, JSON.stringify(j)); localStorage.setItem('meeting-guest-name', name.trim()) } catch {}
       setSession(j)
+      setVideo(true) // 加入即進通話，聲音才通
     } finally { setJoining(false) }
   }
 
