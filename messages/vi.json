@@ -9358,6 +9358,7 @@
     "giftNameLabel": "Tên quà tặng",
     "giftSituationLabel": "Áp dụng khi",
     "giftMinNightsLabel": "Số đêm tối thiểu (0 = không giới hạn; kiểm tra hệ thống đặt phòng)",
+    "giftMinComplaintsLabel": "Số lần phàn nàn tối thiểu (0 = không giới hạn; 30 ngày gần nhất)",
     "giftEsimLabel": "Mã eSIM (tùy chọn)",
     "giftEsimNone": "Không phải eSIM",
     "giftEsimUnavailable": "đã tắt hoặc chưa được cấp quyền",
