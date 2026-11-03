@@ -179,6 +179,8 @@ export default function ReserveSettingsPage() {
                 <option value="spa">精油 SPA / 舒壓按摩</option>
                 <option value="fitness">健身瑜珈 / 私人教練</option>
                 <option value="pet">寵物美容 / 獸醫診療</option>
+                <option value="consulting">專業顧問 / 法律會計</option>
+                <option value="auto">汽車美容 / 鍍膜工藝</option>
                 <option value="other">綜合專業預約服務</option>
               </select>
             </div>

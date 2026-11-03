@@ -81,17 +81,137 @@ export default function ReserveDashboard() {
   }
 
   const categoryNameMap: Record<string, string> = {
-    beauty: '美膚管理 / 醫美美學',
+    beauty: '美膚管理 / 醫美美睫',
     hair: '美髮沙龍 / 造型設計',
     clinic: '診所看診 / 物理治療',
     spa: '精油 SPA / 舒壓按摩',
-    fitness: '體態雕塑 / 健身教練',
-    pet: '寵物美容 / 醫療診所',
+    fitness: '私人教練 / 皮拉提斯',
+    pet: '寵物美容 / 毛孩沙龍',
+    consulting: '法律稅務 / 商業顧問',
+    auto: '汽車美容 / 鍍膜工藝',
     other: '專業綜合預約中心',
   }
 
+  const [applyingTemplate, setApplyingTemplate] = useState<string | null>(null)
+  const [templateSuccess, setTemplateSuccess] = useState<string | null>(null)
+
+  async function handleApplyTemplate(templateKey: string) {
+    if (!confirm(`確定要套用此行業模板嗎？系統將為您自動設定該行業的門市資訊、專屬服務項目與人員排班！`)) return
+    setApplyingTemplate(templateKey)
+    setTemplateSuccess(null)
+    try {
+      const res = await fetch('/api/reserve/template/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ templateKey }),
+      })
+      const data = await res.json()
+      if (data.success && data.store) {
+        setStore(data.store)
+        setTemplateSuccess(data.message || '模板套用成功！')
+        // Reload services & staff
+        const [srvRes, staffRes] = await Promise.all([
+          fetch('/api/reserve/services').then(r => r.json()).catch(() => ({})),
+          fetch('/api/reserve/staff').then(r => r.json()).catch(() => ({})),
+        ])
+        if (srvRes.services) setServices(srvRes.services)
+        if (staffRes.staff) setStaffList(staffRes.staff)
+        setTimeout(() => setTemplateSuccess(null), 4000)
+      } else {
+        alert(data.error || '套用失敗')
+      }
+    } catch (e: any) {
+      alert(e.message || '套用失敗')
+    } finally {
+      setApplyingTemplate(null)
+    }
+  }
+
+  const INDUSTRY_OPTIONS = [
+    { key: 'clinic', name: '醫療門診 / 物理治療', icon: '🏥', desc: '醫師初診、徒手復健、中醫針灸' },
+    { key: 'hair', name: '美髮沙龍 / 造型工作室', icon: '✂️', desc: '日系剪髮、燙髮、歐美手刷染' },
+    { key: 'beauty', name: '美業 / 美甲美睫 / 膚況', icon: '💅', desc: '水光管理、光療美甲、空氣感睫毛' },
+    { key: 'fitness', name: '私人教練 / 體適能健身', icon: '🏋️', desc: '一對一重訓、皮拉提斯核心床' },
+    { key: 'pet', name: '寵物美容 / 毛孩沙龍', icon: '🐶', desc: '草本洗護、萌系大修造型、清耳剪指甲' },
+    { key: 'consulting', name: '專業顧問 / 法律會計', icon: '⚖️', desc: '專案律師諮詢、商業合約審閱' },
+    { key: 'auto', name: '汽車美容 / 鍍膜工藝', icon: '🚗', desc: '手工洗車、石墨烯雙層鍍膜施工' },
+  ]
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+      {/* 1-Click Industry Template Setup Banner */}
+      <div className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-slate-900 border border-rose-200/80 dark:border-rose-900/40 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-600 dark:bg-rose-950/60 dark:text-rose-300 text-[11px] font-bold mb-1">
+              <Sparkles className="h-3 w-3" />
+              新手極速設定 · 一鍵套用行業模板
+            </div>
+            <h2 className="text-base font-extrabold text-slate-900 dark:text-white">
+              您的店面屬於哪個行業？點擊直接載入全套專屬範本
+            </h2>
+            <p className="text-xs text-slate-500">
+              免除繁雜手動輸入，一鍵自動建置專屬門市資料、服務項目清單、人員排班與專業用語，套用後可隨時在後台自由微調！
+            </p>
+          </div>
+          <Link
+            href="/reserve/settings"
+            className="text-xs font-bold text-rose-600 hover:text-rose-500 flex items-center gap-1 shrink-0"
+          >
+            完全手動自訂 <ChevronRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+
+        {templateSuccess && (
+          <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 text-emerald-800 dark:text-emerald-200 text-xs font-bold flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+            {templateSuccess}
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
+          {INDUSTRY_OPTIONS.map(opt => {
+            const isCurrent = store.category === opt.key
+            const isProcessing = applyingTemplate === opt.key
+            return (
+              <button
+                key={opt.key}
+                disabled={applyingTemplate !== null}
+                onClick={() => handleApplyTemplate(opt.key)}
+                className={cn(
+                  'p-3.5 rounded-2xl border text-left transition-all relative flex flex-col justify-between gap-2 group',
+                  isCurrent
+                    ? 'border-rose-600 bg-rose-50/40 dark:bg-rose-950/20 ring-2 ring-rose-600/20'
+                    : 'border-slate-200 dark:border-slate-800 hover:border-rose-300 bg-slate-50/50 dark:bg-slate-800/30 hover:bg-white'
+                )}
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xl">{opt.icon}</span>
+                    {isCurrent && (
+                      <span className="text-[10px] font-bold text-rose-600 bg-rose-100 dark:bg-rose-950 px-2 py-0.5 rounded-full">
+                        當前使用中
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="font-bold text-xs text-slate-900 dark:text-white group-hover:text-rose-600 transition-colors">
+                    {opt.name}
+                  </h3>
+                  <p className="text-[11px] text-slate-400 line-clamp-1 mt-0.5">
+                    {opt.desc}
+                  </p>
+                </div>
+
+                <div className="pt-1 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between text-[11px] font-semibold text-rose-600">
+                  <span>{isProcessing ? '套用中...' : '一鍵套用'}</span>
+                  <ArrowUpRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
       {/* Hero Store Profile Banner */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-rose-900 via-slate-900 to-slate-950 text-white p-6 sm:p-8 shadow-xl shadow-rose-950/10">
         <div className="absolute top-0 right-0 -mt-10 -mr-10 w-96 h-96 bg-rose-500/10 rounded-full blur-3xl pointer-events-none" />

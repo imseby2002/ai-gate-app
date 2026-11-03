@@ -199,6 +199,50 @@ export default function PublicBookingPortal({
           notesPlaceholder: '請在此留下膚況、過敏原或款式需求...',
           noticeLabel: '預約須知：',
         }
+      case 'fitness':
+        return {
+          systemBadge: '私人教練與體態健身預約',
+          serviceStepSubtitle: '請點擊您所需的個人重訓指導、皮拉提斯或體態諮詢項目',
+          staffStepTitle: '步驟 2：選擇專業教練',
+          staffDefaultTitle: '由場館安排 (不指定教練)',
+          staffDefaultDesc: '自動為您媒合當前時段最合適之合格體適能教練，預約速度最快！',
+          staffBadge: '專業教練 / 師資',
+          notesPlaceholder: '請在此填寫訓練目標、運動傷害病史或體能狀況...',
+          noticeLabel: '訓練須知：',
+        }
+      case 'pet':
+        return {
+          systemBadge: '寵物精緻美容與診療預約',
+          serviceStepSubtitle: '請點擊您所需的毛孩洗護美容、造型或健康檢查項目',
+          staffStepTitle: '步驟 2：選擇寵物美容師 / 獸醫師',
+          staffDefaultTitle: '由門市安排 (不指定美容師)',
+          staffDefaultDesc: '自動為您媒合經驗豐富之合格美容師，細心呵護您的毛孩！',
+          staffBadge: '美容師 / 獸醫',
+          notesPlaceholder: '請填寫寵物種類、品種、年齡、個性（如容易緊張）或特殊健康狀況...',
+          noticeLabel: '毛孩須知：',
+        }
+      case 'consulting':
+        return {
+          systemBadge: '專業顧問諮詢線上預約',
+          serviceStepSubtitle: '請點擊您所需的法律諮詢、會計稅務或專案諮詢項目',
+          staffStepTitle: '步驟 2：選擇主辦顧問 / 律師 / 會計師',
+          staffDefaultTitle: '由事務所安排 (不指定顧問)',
+          staffDefaultDesc: '自動為您媒合專業領域相符之資深顧問，諮詢效率最高！',
+          staffBadge: '專業顧問 / 專家',
+          notesPlaceholder: '請簡述欲諮詢之案況背景、問題或需準備的文件資料...',
+          noticeLabel: '諮詢須知：',
+        }
+      case 'auto':
+        return {
+          systemBadge: '汽車美容與鍍膜工藝預約',
+          serviceStepSubtitle: '請點擊您所需的精緻洗車、石墨烯鍍膜或深層內裝護理項目',
+          staffStepTitle: '步驟 2：選擇專業技師 / 工藝師',
+          staffDefaultTitle: '由廠區安排 (不指定技師)',
+          staffDefaultDesc: '自動為您排定當前具備空檔之專業技師施作，施工品質保證！',
+          staffBadge: '專業技師 / 工藝師',
+          notesPlaceholder: '請填寫您的車輛品牌、車型、年份與特別想加強處理的漆面或內裝部位...',
+          noticeLabel: '施工須知：',
+        }
       default:
         return {
           systemBadge: '專業服務線上預約平台',

@@ -1,4 +1,4 @@
-export type StoreCategory = 'beauty' | 'hair' | 'clinic' | 'spa' | 'fitness' | 'pet' | 'other'
+export type StoreCategory = 'beauty' | 'hair' | 'clinic' | 'spa' | 'fitness' | 'pet' | 'consulting' | 'auto' | 'other'
 
 export interface DaySchedule {
   open: string  // '10:00'
