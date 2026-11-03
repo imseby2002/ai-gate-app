@@ -50,6 +50,7 @@ export async function middleware(request: NextRequest) {
     const SUBDOMAIN_HOME: Record<string, string> = {
       cs:        '/cs',            // 客服系統
       booking:   '/booking',       // 訂房系統
+      reserve:   '/reserve',       // 服務預約系統
       marketing: '/marketing',     // 行銷中心（多工具入口，非單一自動化行銷頁）
       chat:      '/apps',          // 對話系統（功能選單）
       work:      '/resume',        // 職場助手
@@ -107,6 +108,8 @@ export async function middleware(request: NextRequest) {
       pathname.startsWith('/api/esim') ||
       pathname.startsWith('/book/') ||
       pathname.startsWith('/api/book/') ||
+      pathname.startsWith('/r/') ||
+      pathname.startsWith('/api/reserve/public') ||
       pathname.startsWith('/apply') ||
       pathname.startsWith('/payslip') ||
       pathname.startsWith('/e/') ||

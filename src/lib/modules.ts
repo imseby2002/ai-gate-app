@@ -62,6 +62,15 @@ export const MODULES = [
     standalone: true,
   },
   {
+    id: 'reserve',
+    label: '服務預約',
+    desc: '美容美髮、診所與專業服務排班與預約管理',
+    href: '/reserve',
+    emoji: '✨',
+    color: 'from-pink-500 to-rose-600',
+    standalone: true,
+  },
+  {
     id: 'agent',
     label: 'AI Agent',
     desc: '全自動 AI 員工：自主研究、規劃、執行，重要動作交真人核准',

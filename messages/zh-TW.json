@@ -96,7 +96,8 @@
     "tools": "工具",
     "programing": "網頁程式開發",
     "legal": "法律合規",
-    "feedback": "意見回饋"
+    "feedback": "意見回饋",
+    "reserve": "服務預約"
   },
   "Header": {
     "balance": "餘額",
@@ -13456,5 +13457,43 @@
     "transcribeStart": "開始記錄",
     "transcribeFailed": "語音記錄無法啟動，請允許麥克風後按「開始記錄」",
     "transcribeUnsupported": "這個瀏覽器不支援語音記錄"
+  },
+  "Reserve": {
+    "title": "服務預約系統",
+    "subtitle": "美業、美髮沙龍、診所看診與各類專業服務預約排班平台",
+    "nav": {
+      "overview": "總覽儀表板",
+      "calendar": "預約行事曆",
+      "appointments": "預約單管理",
+      "services": "服務項目",
+      "staff": "服務人員排班",
+      "customers": "客戶 CRM",
+      "aiAssistant": "AI 智慧助理",
+      "settings": "門市設定",
+      "publicPortal": "前台預約頁"
+    },
+    "status": {
+      "pending": "待確認",
+      "confirmed": "已確認",
+      "in_progress": "服務中",
+      "completed": "已完成",
+      "cancelled": "已取消",
+      "no_show": "未出席"
+    },
+    "payment": {
+      "unpaid": "未付款",
+      "deposit_paid": "已付定金",
+      "paid": "已結清",
+      "refunded": "已退款"
+    },
+    "category": {
+      "beauty": "美膚管理 / 美容",
+      "hair": "美髮沙龍 / 造型",
+      "clinic": "診所診療 / 復健物理治療",
+      "spa": "精油 SPA / 舒壓按摩",
+      "fitness": "健身教練 / 瑜珈體態",
+      "pet": "寵物美容 / 獸醫",
+      "other": "專業諮詢與其他服務"
+    }
   }
 }

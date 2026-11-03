@@ -96,7 +96,8 @@
     "programing": "Lập trình web",
     "booking": "Đặt phòng",
     "legal": "Pháp lý & tuân thủ",
-    "feedback": "Góp ý"
+    "feedback": "Góp ý",
+    "reserve": "Đặt Lịch Hẹn"
   },
   "Header": {
     "balance": "Số dư",
@@ -13456,5 +13457,43 @@
     "transcribeStart": "Bắt đầu",
     "transcribeFailed": "Không ghi được — hãy cho phép micro rồi bấm Bắt đầu",
     "transcribeUnsupported": "Trình duyệt không hỗ trợ ghi lời nói"
+  },
+  "Reserve": {
+    "title": "Hệ Thống Đặt Lịch Hẹn",
+    "subtitle": "Quản lý lịch hẹn & xếp ca cho Spa, Viện thẩm mỹ, Salon tóc, Phòng khám",
+    "nav": {
+      "overview": "Tổng quan",
+      "calendar": "Lịch hẹn",
+      "appointments": "Danh sách đặt lịch",
+      "services": "Dịch vụ",
+      "staff": "Nhân viên & Xếp ca",
+      "customers": "Khách hàng CRM",
+      "aiAssistant": "Trợ lý AI",
+      "settings": "Cài đặt chi nhánh",
+      "publicPortal": "Trang đặt chỗ công khai"
+    },
+    "status": {
+      "pending": "Chờ xác nhận",
+      "confirmed": "Đã xác nhận",
+      "in_progress": "Đang phục vụ",
+      "completed": "Hoàn thành",
+      "cancelled": "Đã hủy",
+      "no_show": "Không đến"
+    },
+    "payment": {
+      "unpaid": "Chưa thanh toán",
+      "deposit_paid": "Đã cọc",
+      "paid": "Đã thanh toán",
+      "refunded": "Đã hoàn tiền"
+    },
+    "category": {
+      "beauty": "Làm đẹp & Chăm sóc da",
+      "hair": "Salon Tóc & Tạo mẫu",
+      "clinic": "Phòng khám & Vật lý trị liệu",
+      "spa": "Spa & Trị liệu thư giãn",
+      "fitness": "Gym & Huấn luyện viên",
+      "pet": "Chăm sóc thú cưng",
+      "other": "Dịch vụ chuyên nghiệp khác"
+    }
   }
 }

@@ -96,7 +96,8 @@
     "tools": "Tools",
     "programing": "Web development",
     "legal": "Legal & compliance",
-    "feedback": "Feedback"
+    "feedback": "Feedback",
+    "reserve": "Appointments"
   },
   "Header": {
     "balance": "Balance",
@@ -13456,5 +13457,43 @@
     "transcribeStart": "Start",
     "transcribeFailed": "Speech recording failed — allow the microphone and tap Start",
     "transcribeUnsupported": "This browser doesn't support speech recording"
+  },
+  "Reserve": {
+    "title": "Service Appointments",
+    "subtitle": "Smart appointment and scheduling system for beauty, hair salons, clinics and specialists",
+    "nav": {
+      "overview": "Overview",
+      "calendar": "Schedule Calendar",
+      "appointments": "Appointments",
+      "services": "Services",
+      "staff": "Staff & Roster",
+      "customers": "Customer CRM",
+      "aiAssistant": "AI Assistant",
+      "settings": "Store Settings",
+      "publicPortal": "Public Booking Page"
+    },
+    "status": {
+      "pending": "Pending",
+      "confirmed": "Confirmed",
+      "in_progress": "In Progress",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "no_show": "No Show"
+    },
+    "payment": {
+      "unpaid": "Unpaid",
+      "deposit_paid": "Deposit Paid",
+      "paid": "Paid",
+      "refunded": "Refunded"
+    },
+    "category": {
+      "beauty": "Beauty & Skincare",
+      "hair": "Hair Salon & Styling",
+      "clinic": "Medical & Physio Clinic",
+      "spa": "Spa & Wellness",
+      "fitness": "Fitness & Personal Training",
+      "pet": "Pet Grooming & Vet",
+      "other": "Professional Services"
+    }
   }
 }
