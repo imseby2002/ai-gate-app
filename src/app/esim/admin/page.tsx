@@ -90,6 +90,8 @@ export default function EsimAdminPage() {
   const [loadingPlanOptions, setLoadingPlanOptions] = useState(false)
 
   const [planMaxPrice, setPlanMaxPrice] = useState('')
+  const [planMaxCost, setPlanMaxCost] = useState('')
+  const [planMinMargin, setPlanMinMargin] = useState('')
   const [planPrimaryOnly, setPlanPrimaryOnly] = useState(false)
   const ASIA_CODES = Object.values(DESTINATIONS).filter(d => d.region === 'Asia').map(d => d.code)
 
@@ -118,6 +120,17 @@ export default function EsimAdminPage() {
     } finally {
       setLoadingPlanOptions(false)
     }
+  }
+
+  // 毛利率（毛利 ÷ 實收），實收為 0 時顯示 —
+  function marginPct(profit: number, revenue: number) {
+    const rev = Number(revenue) || 0
+    if (rev <= 0) return '—'
+    return `${Math.round(((Number(profit) || 0) / rev) * 1000) / 10}%`
+  }
+
+  function planCostTwd(p: any) {
+    return Math.round((Number(p.costHkd) || 0) * (pricingSettings.hkd_twd_rate || 0))
   }
 
   function planLabel(p: any) {
@@ -562,9 +575,9 @@ export default function EsimAdminPage() {
       const str = v === undefined || v === null ? '' : String(v)
       return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str
     }
-    const header = ['代碼', '活動名稱', '使用訂單', '使用人數', '原價總額', '折抵總額', '實收總額', '成本總額', '毛利', '最後使用']
+    const header = ['代碼', '活動名稱', '使用訂單', '使用人數', '原價總額', '折抵總額', '實收總額', '成本總額', '毛利', '毛利率', '最後使用']
     const rows = reportData.rows.map((r: any) => [
-      r.code, r.name, r.orders, r.customers, r.subtotal_twd, r.discount_twd, r.revenue_twd, r.cost_twd, r.profit_twd,
+      r.code, r.name, r.orders, r.customers, r.subtotal_twd, r.discount_twd, r.revenue_twd, r.cost_twd, r.profit_twd, marginPct(r.profit_twd, r.revenue_twd),
       new Date(r.last_used_at).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' }),
     ])
     const csv = '\uFEFF' + [header, ...rows].map(r => r.map(esc).join(',')).join('\r\n')
@@ -1251,7 +1264,7 @@ export default function EsimAdminPage() {
 
                 {reportData && (
                   <>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-9 gap-3">
                       {[
                         ['使用訂單', reportData.totals.orders, 'bg-slate-50 text-slate-900'],
                         ['使用券數', reportData.totals.coupons_used, 'bg-slate-50 text-slate-900'],
@@ -1261,6 +1274,7 @@ export default function EsimAdminPage() {
                         ['實收總額', `NT$ ${reportData.totals.revenue_twd}`, 'bg-blue-50 text-blue-700'],
                         ['成本總額', `NT$ ${reportData.totals.cost_twd}`, 'bg-rose-50 text-rose-700'],
                         ['毛利', `NT$ ${reportData.totals.profit_twd}`, reportData.totals.profit_twd < 0 ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'],
+                        ['毛利率', marginPct(reportData.totals.profit_twd, reportData.totals.revenue_twd), reportData.totals.profit_twd < 0 ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'],
                       ].map(([label, value, cls]) => (
                         <div key={String(label)} className={`rounded-2xl p-3 ${cls}`}>
                           <div className="text-slate-500">{label}</div>
@@ -1286,6 +1300,7 @@ export default function EsimAdminPage() {
                                 <th className="py-2 px-3 text-right">實收總額</th>
                                 <th className="py-2 px-3 text-right">成本</th>
                                 <th className="py-2 px-3 text-right">毛利</th>
+                                <th className="py-2 px-3 text-right">毛利率</th>
                                 <th className="py-2 px-3">最後使用</th>
                               </tr>
                             </thead>
@@ -1300,6 +1315,7 @@ export default function EsimAdminPage() {
                                   <td className="py-2 px-3 text-right text-blue-700">NT$ {r.revenue_twd}</td>
                                   <td className="py-2 px-3 text-right text-rose-700">NT$ {r.cost_twd}</td>
                                   <td className={`py-2 px-3 text-right font-bold ${r.profit_twd < 0 ? 'text-red-600' : 'text-emerald-700'}`}>NT$ {r.profit_twd}</td>
+                                  <td className={`py-2 px-3 text-right ${r.profit_twd < 0 ? 'text-red-600' : 'text-emerald-700'}`}>{marginPct(r.profit_twd, r.revenue_twd)}</td>
                                   <td className="py-2 px-3 whitespace-nowrap">{new Date(r.last_used_at).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })}</td>
                                 </tr>
                               ))}
@@ -1656,6 +1672,14 @@ export default function EsimAdminPage() {
                     if (planDataFilter !== 'all' && p.dataTierLabel !== planDataFilter) return false
                     const maxPrice = parseFloat(planMaxPrice)
                     if (maxPrice > 0 && Number(p.retailPriceTwd) > maxPrice) return false
+                    const maxCost = parseFloat(planMaxCost)
+                    if (maxCost > 0 && planCostTwd(p) > maxCost) return false
+                    const minMargin = parseFloat(planMinMargin)
+                    if (!isNaN(minMargin) && planMinMargin.trim() !== '') {
+                      const price = Number(p.retailPriceTwd) || 0
+                      const m = price > 0 ? ((price - planCostTwd(p)) / price) * 100 : -Infinity
+                      if (m < minMargin) return false
+                    }
                     if (planPrimaryOnly && !parseCountryCodes(planCountry).includes(String(p.primaryCountryCode).toUpperCase())) return false
                     if (terms.length === 0) return true
                     const hay = `${planLabel(p)} ${p.channel_dataplan_name || ''} ${p.channel_dataplan_id}`.toLowerCase()
@@ -1670,6 +1694,21 @@ export default function EsimAdminPage() {
                       placeholder="售價上限 NT$"
                       value={planMaxPrice}
                       onChange={e => setPlanMaxPrice(e.target.value)}
+                      className="w-36 px-3 py-2 rounded-xl border border-slate-300 bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none"
+                    />
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="成本上限 NT$"
+                      value={planMaxCost}
+                      onChange={e => setPlanMaxCost(e.target.value)}
+                      className="w-36 px-3 py-2 rounded-xl border border-slate-300 bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none"
+                    />
+                    <input
+                      type="number"
+                      placeholder="毛利率至少 %"
+                      value={planMinMargin}
+                      onChange={e => setPlanMinMargin(e.target.value)}
                       className="w-36 px-3 py-2 rounded-xl border border-slate-300 bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none"
                     />
                     <label className="inline-flex items-center gap-1.5 px-2 font-semibold text-slate-700 cursor-pointer" title="排除只是順帶涵蓋該國的多國／區域方案">
@@ -1744,7 +1783,7 @@ export default function EsimAdminPage() {
                         />
                         <span className="flex-1">{planLabel(p)}</span>
                         <span className="shrink-0 text-[11px] text-slate-500 whitespace-nowrap">
-                          售價 NT$ {p.retailPriceTwd}｜成本約 NT$ {Math.round((Number(p.costHkd) || 0) * (pricingSettings.hkd_twd_rate || 0))}
+                          售價 NT$ {p.retailPriceTwd}｜成本約 NT$ {planCostTwd(p)}｜毛利率 {marginPct(Number(p.retailPriceTwd) - planCostTwd(p), Number(p.retailPriceTwd))}
                         </span>
                         <span className="font-mono text-[10px] text-slate-400">{p.channel_dataplan_id}</span>
                       </label>
@@ -2130,7 +2169,7 @@ export default function EsimAdminPage() {
                     <div className="rounded-2xl bg-amber-50 p-3"><div className="text-slate-500">已折抵總額</div><div className="text-lg font-bold text-amber-700">NT$ {usageData.summary.total_discount_twd}</div></div>
                     <div className="rounded-2xl bg-blue-50 p-3"><div className="text-slate-500">實收總額</div><div className="text-lg font-bold text-blue-700">NT$ {usageData.summary.total_revenue_twd}</div></div>
                     <div className="rounded-2xl bg-rose-50 p-3"><div className="text-slate-500">成本總額</div><div className="text-lg font-bold text-rose-700">NT$ {usageData.summary.total_cost_twd}</div></div>
-                    <div className={`rounded-2xl p-3 ${usageData.summary.total_profit_twd < 0 ? 'bg-red-50' : 'bg-emerald-50'}`}><div className="text-slate-500">毛利</div><div className={`text-lg font-bold ${usageData.summary.total_profit_twd < 0 ? 'text-red-700' : 'text-emerald-700'}`}>NT$ {usageData.summary.total_profit_twd}</div></div>
+                    <div className={`rounded-2xl p-3 ${usageData.summary.total_profit_twd < 0 ? 'bg-red-50' : 'bg-emerald-50'}`}><div className="text-slate-500">毛利</div><div className={`text-lg font-bold ${usageData.summary.total_profit_twd < 0 ? 'text-red-700' : 'text-emerald-700'}`}>NT$ {usageData.summary.total_profit_twd}<span className="ml-1 text-xs font-semibold">（{marginPct(usageData.summary.total_profit_twd, usageData.summary.total_revenue_twd)}）</span></div></div>
                   </div>
                   <p className="text-slate-400">成本＝供應商港幣價 × 後台匯率 {usageData.summary.hkd_twd_rate}；統計只計已付款訂單。</p>
                   {usageData.records.length === 0 ? (
@@ -2149,6 +2188,7 @@ export default function EsimAdminPage() {
                             <th className="py-2 px-3 text-right">實付</th>
                             <th className="py-2 px-3 text-right">成本</th>
                             <th className="py-2 px-3 text-right">毛利</th>
+                                <th className="py-2 px-3 text-right">毛利率</th>
                             <th className="py-2 px-3">付款狀態</th>
                           </tr>
                         </thead>
@@ -2169,6 +2209,7 @@ export default function EsimAdminPage() {
                               <td className="py-2 px-3 text-right font-bold">NT$ {r.total_twd}</td>
                               <td className="py-2 px-3 text-right text-rose-700">NT$ {r.cost_twd}</td>
                               <td className={`py-2 px-3 text-right font-bold ${r.profit_twd < 0 ? 'text-red-600' : 'text-emerald-700'}`}>NT$ {r.profit_twd}</td>
+                              <td className={`py-2 px-3 text-right ${r.profit_twd < 0 ? 'text-red-600' : 'text-emerald-700'}`}>{marginPct(r.profit_twd, r.total_twd)}</td>
                               <td className="py-2 px-3">
                                 <span className={r.payment_status === 'paid' ? 'text-emerald-600 font-bold' : 'text-slate-500'}>
                                   {PAYMENT_LABEL[r.payment_status] || r.payment_status}
