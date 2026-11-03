@@ -276,17 +276,17 @@ export const HAIR_PRESET = {
   ],
 }
 
-// ─── 綜合專業預約服務 (預設通用) ────────────────────────────
+// ─── 綜合專業預約服務 (預設通用示範) ────────────────────────────
 export const DEFAULT_STORE: ReserveStore = {
   id: 'store-demo-01',
   user_id: 'user-demo',
   slug: 'demo',
-  name: '康研專業服務預約中心 (診所 · 美髮 · 美業)',
+  name: '【示範範本】某某專業服務門市 (請於上方點選套用您的行業)',
   category: 'other',
-  description: '整合專業醫療診所諮詢、美髮造型剪燙、美膚管理與體態調理之線上即時預約排班平台。',
-  phone: '02-2712-8899',
-  email: 'service@pro-booking.tw',
-  address: '台北市大安區忠孝東路四段 181 巷 35 號',
+  description: '此為系統預設之預約示範看板。請於上方選擇您的行業（診所、美髮、美業、健身、寵物等）一鍵套用，或至「門市設定」修改為您真實的店面名稱與服務。',
+  phone: '02-XXXX-XXXX',
+  email: 'service@example.com',
+  address: '台北市某某區某某路一段 XX 號',
   cover_url: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=1200&q=80',
   logo_url: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=200&q=80',
   slot_interval_minutes: 30,
@@ -296,7 +296,7 @@ export const DEFAULT_STORE: ReserveStore = {
   deposit_required: false,
   deposit_amount: 0,
   currency: 'TWD',
-  notice: '1. 請於預約時間前 5 分鐘抵達現場。\n2. 如需取消或變更時間，請至少提前 3 小時告知。\n3. 遲到超過 15 分鐘系統將視情況調整服務內容或取消預約。',
+  notice: '【此為示範須知】\n1. 請於預約時間前 5 分鐘抵達現場。\n2. 如需取消或變更時間，請至少提前告知。\n3. 您可以在「門市設定」隨時修改這段須知內容。',
   is_active: true,
   business_hours: {
     mon: { open: '10:00', close: '20:30', closed: false },

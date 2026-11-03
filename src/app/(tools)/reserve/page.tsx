@@ -217,9 +217,16 @@ export default function ReserveDashboard() {
         <div className="absolute top-0 right-0 -mt-10 -mr-10 w-96 h-96 bg-rose-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/20 text-rose-300 text-xs font-semibold backdrop-blur-md border border-rose-500/30">
-              <Sparkles className="h-3.5 w-3.5" />
-              {categoryNameMap[store.category] || '專業服務預約系統'}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/20 text-rose-300 text-xs font-semibold backdrop-blur-md border border-rose-500/30">
+                <Sparkles className="h-3.5 w-3.5" />
+                {categoryNameMap[store.category] || '專業服務預約系統'}
+              </div>
+              {store.slug === 'demo' && (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/40 text-[11px] font-bold">
+                  ⚠️ 系統預設示範資料（請於上方選擇您的行業）
+                </span>
+              )}
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
               {store.name}
@@ -230,11 +237,11 @@ export default function ReserveDashboard() {
             <div className="flex flex-wrap items-center gap-4 text-xs text-slate-400 pt-1">
               <span className="flex items-center gap-1.5">
                 <Phone className="h-3.5 w-3.5 text-rose-400" />
-                {store.phone || '02-2712-8899'}
+                {store.phone || '02-XXXX-XXXX'}
               </span>
               <span className="flex items-center gap-1.5">
                 <MapPin className="h-3.5 w-3.5 text-rose-400" />
-                {store.address || '台北市大安區忠孝東路四段 181 巷'}
+                {store.address || '台北市某某區某某路一段 XX 號'}
               </span>
             </div>
           </div>
