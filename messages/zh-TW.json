@@ -9358,6 +9358,7 @@
     "giftNameLabel": "贈品名稱",
     "giftSituationLabel": "適用情境",
     "giftMinNightsLabel": "最少住幾晚（0＝不限，查訂房系統核對）",
+    "giftMinComplaintsLabel": "最少抱怨幾次（0＝不限，近 30 天，系統計數）",
     "giftEsimLabel": "eSIM 優惠（選填）",
     "giftEsimNone": "不是 eSIM",
     "giftEsimUnavailable": "已停用或未授權",

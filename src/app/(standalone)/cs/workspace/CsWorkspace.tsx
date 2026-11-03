@@ -375,6 +375,7 @@ interface CsGiftItem {
   situation: string
   esimCouponCode?: string // eSIM 商店範本券代碼：送出時系統自動產生客人專屬兌換碼
   minNights?: number // 最少住宿晚數：系統到訂房系統核對客人訂單達到才可送
+  minComplaints?: number // 最少抱怨次數：系統統計客人近 30 天的客訴訊息數達到才可送
 }
 
 interface Unit12Data {
@@ -3477,6 +3478,7 @@ function Unit12CustomerService({
                   { key: 'name', label: t('giftNameLabel'), type: 'text', width: 'w-32' },
                   { key: 'situation', label: t('giftSituationLabel'), type: 'text', width: 'w-56' },
                   { key: 'minNights', label: t('giftMinNightsLabel'), type: 'number', width: 'w-24' },
+                  { key: 'minComplaints', label: t('giftMinComplaintsLabel'), type: 'number', width: 'w-24' },
                   ...(esimGiftCoupons.length || discountGifts.some(g => g.esimCouponCode) ? [{
                     key: 'esimCouponCode', label: t('giftEsimLabel'), type: 'select' as const, width: 'w-44',
                     options: [
@@ -3492,6 +3494,7 @@ function Unit12CustomerService({
                   situation: (r.situation as string) ?? '',
                   ...(r.esimCouponCode ? { esimCouponCode: String(r.esimCouponCode) } : {}),
                   ...(Number(r.minNights) > 0 ? { minNights: Math.floor(Number(r.minNights)) } : {}),
+                  ...(Number(r.minComplaints) > 0 ? { minComplaints: Math.floor(Number(r.minComplaints)) } : {}),
                 })))}
                 addLabel={t('addGiftItem')}
               />
