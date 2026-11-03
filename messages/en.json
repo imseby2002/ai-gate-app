@@ -9357,6 +9357,7 @@
     "giftListLabel": "Gift / Compensation List",
     "giftNameLabel": "Gift name",
     "giftSituationLabel": "When to use",
+    "giftMinNightsLabel": "Min. nights (0 = any; checked in booking system)",
     "giftEsimLabel": "eSIM coupon (optional)",
     "giftEsimNone": "Not eSIM",
     "giftEsimUnavailable": "inactive or not authorized",
