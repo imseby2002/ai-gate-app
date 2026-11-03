@@ -134,6 +134,16 @@ export async function validateCoupon(
     }
   }
 
+  // CS 贈品範本券只給系統複製客人專屬兌換碼用，代碼本身不能直接兌換
+  if ((coupon.cs_gift_emails ?? []).length > 0 && !coupon.cs_gift_source) {
+    return {
+      valid: false,
+      error: `優惠代碼「${code}」無法直接使用，請輸入您收到的專屬兌換碼`,
+      discountTwd: 0,
+      finalPriceTwd: subtotalTwd,
+    }
+  }
+
   // 0. 檢查啟用日期
   if (coupon.starts_at) {
     const startTime = /^\d{4}-\d{2}-\d{2}$/.test(coupon.starts_at)
