@@ -76,6 +76,7 @@ export default function EsimAdminPage() {
     starts_at: '',
     expires_at: '',
     applicable_countries: '',
+    cs_gift_emails: '',
     is_active: true,
   })
   // 贈品／限定產品選擇
@@ -175,6 +176,7 @@ export default function EsimAdminPage() {
     starts_at: '',
     expires_at: '',
     applicable_countries: '',
+    cs_gift_emails: '',
     is_active: true,
   }
   const [editingCouponId, setEditingCouponId] = useState<string | null>(null)
@@ -194,6 +196,7 @@ export default function EsimAdminPage() {
       starts_at: c.starts_at ? String(c.starts_at).split('T')[0] : '',
       expires_at: c.expires_at ? String(c.expires_at).split('T')[0] : '',
       applicable_countries: (c.applicable_countries || []).join(','),
+      cs_gift_emails: (c.cs_gift_emails || []).join(','),
       is_active: c.is_active !== false,
     })
     const plans: Record<string, string> = {}
@@ -228,6 +231,7 @@ export default function EsimAdminPage() {
       starts_at: newCoupon.starts_at || undefined,
       expires_at: newCoupon.expires_at || undefined,
       applicable_countries: countries,
+      cs_gift_emails: newCoupon.cs_gift_emails.split(/[,\s]+/).map((e: string) => e.trim().toLowerCase()).filter(Boolean),
       applicable_plan_ids: Object.keys(selectedPlans),
       applicable_plan_names: selectedPlans,
     }
@@ -1508,6 +1512,20 @@ export default function EsimAdminPage() {
                   placeholder="留空代表不限"
                   value={newCoupon.max_uses_per_customer}
                   onChange={e => setNewCoupon({ ...newCoupon, max_uses_per_customer: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none"
+                />
+              </div>
+
+              {/* CS 客服贈品授權 */}
+              <div className="sm:col-span-2">
+                <label className="block font-semibold text-slate-700 mb-1">
+                  CS 客服贈品授權帳號 Email (選填，多個用逗號分隔)
+                </label>
+                <input
+                  type="text"
+                  placeholder="例：ciao@example.com — 該帳號的 CS 客服可把此券當贈品，系統會為每位客人複製一組只能用一次的兌換碼"
+                  value={newCoupon.cs_gift_emails}
+                  onChange={e => setNewCoupon({ ...newCoupon, cs_gift_emails: e.target.value })}
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none"
                 />
               </div>

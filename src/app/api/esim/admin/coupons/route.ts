@@ -34,6 +34,9 @@ function buildCouponFields(coupon: any, code: string) {
     max_uses_per_day: coupon.max_uses_per_day ? parseInt(coupon.max_uses_per_day, 10) : undefined,
     starts_at: coupon.starts_at || undefined,
     expires_at: coupon.expires_at || undefined,
+    cs_gift_emails: Array.isArray(coupon.cs_gift_emails)
+      ? coupon.cs_gift_emails.map((e: unknown) => String(e || '').trim().toLowerCase()).filter((e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)).slice(0, 20)
+      : undefined,
   }
 }
 

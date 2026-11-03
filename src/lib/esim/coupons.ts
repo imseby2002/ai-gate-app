@@ -18,6 +18,8 @@ export interface EsimCoupon {
   max_uses_per_day?: number // 每日（台灣時間）可使用次數 (可選)
   starts_at?: string // 啟用日期 (YYYY-MM-DD 或 ISO 8601，可選；只填日期時為台灣時間當天 00:00 開始)
   expires_at?: string // 到期時間 (YYYY-MM-DD 或 ISO 8601，可選)
+  cs_gift_emails?: string[] // 允許當作 CS 客服贈品發放的帳號 Email（系統會依此券複製出客人專屬、只能用一次的兌換碼）
+  cs_gift_source?: string // 由哪張範本券複製出的 CS 贈品兌換碼（範本券代碼）
   created_at: string
 }
 

@@ -221,7 +221,7 @@ function StringListEditor({ items, onChange, placeholder, addLabel }: { items: s
   )
 }
 
-interface RowFieldDef { key: string; label: string; type: 'text' | 'number'; width?: string }
+interface RowFieldDef { key: string; label: string; type: 'text' | 'number' | 'select'; width?: string; options?: Array<{ value: string; label: string }> }
 
 function RowsEditor({ rows, fields, onChange, addLabel }: {
   rows: Array<Record<string, unknown>>
@@ -244,12 +244,22 @@ function RowsEditor({ rows, fields, onChange, addLabel }: {
           {fields.map(f => (
             <div key={f.key} className="flex flex-col gap-0.5">
               <label className="text-[9px] text-gray-400">{f.label}</label>
+              {f.type === 'select' ? (
+                <select
+                  value={(row[f.key] as string | undefined) ?? ''}
+                  onChange={e => update(idx, f.key, e.target.value)}
+                  className={`text-xs border rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400 ${f.width ?? 'w-28'}`}
+                >
+                  {(f.options ?? []).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              ) : (
               <input
                 type={f.type === 'number' ? 'number' : 'text'}
                 value={(row[f.key] as string | number | undefined) ?? (f.type === 'number' ? 0 : '')}
                 onChange={e => update(idx, f.key, f.type === 'number' ? Number(e.target.value) : e.target.value)}
                 className={`text-xs border rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400 ${f.width ?? (f.type === 'number' ? 'w-20' : 'w-28')}`}
               />
+              )}
             </div>
           ))}
           <button type="button" onClick={() => remove(idx)} className="text-red-400 hover:text-red-600 text-xs px-1 self-end mb-1">✕</button>
@@ -363,6 +373,7 @@ interface CsGiftItem {
   id: string
   name: string
   situation: string
+  esimCouponCode?: string // eSIM 商店範本券代碼：送出時系統自動產生客人專屬兌換碼
 }
 
 interface Unit12Data {
@@ -659,6 +670,10 @@ function Unit12CustomerService({
   const [notifyWebhooks, setNotifyWebhooks] = useState<NotifyWebhook[]>(savedData?.notifyWebhooks ?? [])
   const [discountMaxPct, setDiscountMaxPct] = useState(savedData?.discountMaxPct ?? 0)
   const [discountGifts, setDiscountGifts] = useState<CsGiftItem[]>(Array.isArray(savedData?.discountGifts) ? savedData.discountGifts : [])
+  const [esimGiftCoupons, setEsimGiftCoupons] = useState<Array<{ code: string; name: string }>>([])
+  useEffect(() => {
+    fetch('/api/cs/esim-gift-coupons').then(r => r.ok ? r.json() : null).then(d => setEsimGiftCoupons(Array.isArray(d?.coupons) ? d.coupons : [])).catch(() => {})
+  }, [])
   const [campaignOffers, setCampaignOffers] = useState<CsCampaignOffer[]>(savedData?.campaignOffers ?? [])
   const [campaignOfferSource, setCampaignOfferSource] = useState<'cs' | 'booking' | 'both'>(savedData?.campaignOfferSource ?? 'both')
   const [editingOffer, setEditingOffer] = useState<CsCampaignOffer | null>(null)
@@ -3460,11 +3475,20 @@ function Unit12CustomerService({
                 fields={[
                   { key: 'name', label: t('giftNameLabel'), type: 'text', width: 'w-32' },
                   { key: 'situation', label: t('giftSituationLabel'), type: 'text', width: 'w-56' },
+                  ...(esimGiftCoupons.length || discountGifts.some(g => g.esimCouponCode) ? [{
+                    key: 'esimCouponCode', label: t('giftEsimLabel'), type: 'select' as const, width: 'w-44',
+                    options: [
+                      { value: '', label: t('giftEsimNone') },
+                      ...esimGiftCoupons.map(c => ({ value: c.code, label: `${c.name}（${c.code}）` })),
+                      ...discountGifts.filter(g => g.esimCouponCode && !esimGiftCoupons.some(c => c.code === g.esimCouponCode)).map(g => ({ value: g.esimCouponCode!, label: `${g.esimCouponCode}（${t('giftEsimUnavailable')}）` })),
+                    ],
+                  }] : []),
                 ]}
                 onChange={rows => setDiscountGifts(rows.map((r, i) => ({
                   id: (r.id as string) || `g${i}`,
                   name: (r.name as string) ?? '',
                   situation: (r.situation as string) ?? '',
+                  ...(r.esimCouponCode ? { esimCouponCode: String(r.esimCouponCode) } : {}),
                 })))}
                 addLabel={t('addGiftItem')}
               />
