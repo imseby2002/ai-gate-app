@@ -11,6 +11,7 @@ import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
 import { MeetingVideo } from '@/components/meeting/MeetingVideo'
 import { MeetingChat } from '@/components/meeting/MeetingChat'
 import { GuestTranscriber } from '@/components/meeting/GuestTranscriber'
+import { LocalRecorder } from '@/components/meeting/LocalRecorder'
 
 interface Session { token: string; guest: { id: string; name: string }; meeting: { id: string; title: string; room_code: string; source_lang?: string; other_langs?: string[] } }
 
@@ -76,6 +77,7 @@ export default function MeetingGuestPage({ params }: { params: Promise<{ code: s
             <div className="flex flex-wrap items-center gap-2 text-sm">
               <span className="text-gray-500">{t('joinedAs', { name: session.guest.name })}</span>
               {!video && <Button size="sm" onClick={() => setVideo(true)} className="gap-1.5"><Video className="h-4 w-4" />{t('videoStart')}</Button>}
+              <LocalRecorder fileName={`會議錄影_${session.meeting.title || session.meeting.room_code}`} />
               <Button size="sm" variant="outline" onClick={leave} className="ml-auto">{t('leave')}</Button>
             </div>
             <GuestTranscriber meetingId={session.meeting.id} token={session.token}

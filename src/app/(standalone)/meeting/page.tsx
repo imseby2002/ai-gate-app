@@ -13,6 +13,7 @@ import {
   Globe, UserCheck, X, MessageSquare, UserPlus
 } from 'lucide-react'
 import { MeetingVideo } from '@/components/meeting/MeetingVideo'
+import { LocalRecorder } from '@/components/meeting/LocalRecorder'
 import { MeetingChat } from '@/components/meeting/MeetingChat'
 import { GuestInviteDialog } from '@/components/meeting/GuestInviteDialog'
 import { MeetingViewerGrants } from '@/components/meeting/MeetingViewerGrants'
@@ -1637,6 +1638,7 @@ export default function MeetingPage() {
             <Video className="h-4 w-4" />{t('videoStart')}
           </Button>
         )}
+        {!viewOnly && <LocalRecorder fileName={`會議錄影_${meeting.title || meeting.room_code}`} />}
         <Button size="sm" variant={showChat ? 'default' : 'outline'} onClick={() => setShowChat(v => !v)} className="gap-1.5">
           <MessageSquare className="h-4 w-4" />{tr('chatTitle')}
         </Button>
