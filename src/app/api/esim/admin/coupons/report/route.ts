@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getPaidCouponOrders } from '@/lib/esim/db'
 import { getCoupons } from '@/lib/esim/coupons'
 import { createClient } from '@/lib/supabase/server'
+import { getHkdTwdRate, orderCostTwd } from '@/lib/esim/cost'
 
 async function requireAdmin() {
   const supabase = await createClient()
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest) {
     const fromIso = DATE_RE.test(from) ? new Date(`${from}T00:00:00+08:00`).toISOString() : undefined
     const toIso = DATE_RE.test(to) ? new Date(`${to}T23:59:59.999+08:00`).toISOString() : undefined
 
-    const [orders, coupons] = await Promise.all([getPaidCouponOrders(fromIso, toIso), getCoupons()])
+    const [orders, coupons, rate] = await Promise.all([getPaidCouponOrders(fromIso, toIso), getCoupons(), getHkdTwdRate()])
     const couponMap = new Map(coupons.map(c => [c.code.toUpperCase(), c]))
 
     type Row = {
@@ -43,10 +44,11 @@ export async function GET(req: NextRequest) {
       discount_twd: number
       subtotal_twd: number
       revenue_twd: number
+      cost_twd: number
       last_used_at: string
     }
     const byCode = new Map<string, Row>()
-    const byDay = new Map<string, { date: string; orders: number; discount_twd: number; revenue_twd: number }>()
+    const byDay = new Map<string, { date: string; orders: number; discount_twd: number; revenue_twd: number; cost_twd: number }>()
 
     for (const o of orders) {
       const code = String(o.metadata?.coupon_code || '').toUpperCase()
@@ -55,6 +57,7 @@ export async function GET(req: NextRequest) {
       const discount = Number(o.metadata?.coupon_discount_twd) || 0
       const subtotal = Number(o.metadata?.subtotal_price_twd ?? o.total_price_twd) || 0
       const revenue = Number(o.total_price_twd) || 0
+      const cost = orderCostTwd(o.cost_hkd, rate)
       const paidAt = o.paid_at || o.created_at
 
       let r = byCode.get(code)
@@ -68,6 +71,7 @@ export async function GET(req: NextRequest) {
           discount_twd: 0,
           subtotal_twd: 0,
           revenue_twd: 0,
+          cost_twd: 0,
           last_used_at: paidAt,
         }
         byCode.set(code, r)
@@ -77,20 +81,22 @@ export async function GET(req: NextRequest) {
       r.discount_twd += discount
       r.subtotal_twd += subtotal
       r.revenue_twd += revenue
+      r.cost_twd += cost
       if (new Date(paidAt) > new Date(r.last_used_at)) r.last_used_at = paidAt
 
       const day = twDate(paidAt)
-      const d = byDay.get(day) || { date: day, orders: 0, discount_twd: 0, revenue_twd: 0 }
+      const d = byDay.get(day) || { date: day, orders: 0, discount_twd: 0, revenue_twd: 0, cost_twd: 0 }
       d.orders++
       d.discount_twd += discount
       d.revenue_twd += revenue
+      d.cost_twd += cost
       byDay.set(day, d)
     }
 
     const rows = Array.from(byCode.values())
-      .map(r => ({ ...r, customers: r.customers.size }))
+      .map(r => ({ ...r, customers: r.customers.size, profit_twd: r.revenue_twd - r.cost_twd }))
       .sort((a, b) => b.orders - a.orders || b.discount_twd - a.discount_twd)
-    const daily = Array.from(byDay.values()).sort((a, b) => a.date.localeCompare(b.date))
+    const daily = Array.from(byDay.values()).map(d => ({ ...d, profit_twd: d.revenue_twd - d.cost_twd })).sort((a, b) => a.date.localeCompare(b.date))
     const allCustomers = new Set(orders.map(o => (o.customer_email || '').trim().toLowerCase()))
 
     return NextResponse.json({
@@ -103,6 +109,9 @@ export async function GET(req: NextRequest) {
         discount_twd: rows.reduce((s, r) => s + r.discount_twd, 0),
         subtotal_twd: rows.reduce((s, r) => s + r.subtotal_twd, 0),
         revenue_twd: rows.reduce((s, r) => s + r.revenue_twd, 0),
+        cost_twd: rows.reduce((s, r) => s + r.cost_twd, 0),
+        profit_twd: rows.reduce((s, r) => s + r.profit_twd, 0),
+        hkd_twd_rate: rate,
       },
       rows,
       daily,

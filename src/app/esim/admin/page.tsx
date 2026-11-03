@@ -562,9 +562,9 @@ export default function EsimAdminPage() {
       const str = v === undefined || v === null ? '' : String(v)
       return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str
     }
-    const header = ['代碼', '活動名稱', '使用訂單', '使用人數', '原價總額', '折抵總額', '實收總額', '最後使用']
+    const header = ['代碼', '活動名稱', '使用訂單', '使用人數', '原價總額', '折抵總額', '實收總額', '成本總額', '毛利', '最後使用']
     const rows = reportData.rows.map((r: any) => [
-      r.code, r.name, r.orders, r.customers, r.subtotal_twd, r.discount_twd, r.revenue_twd,
+      r.code, r.name, r.orders, r.customers, r.subtotal_twd, r.discount_twd, r.revenue_twd, r.cost_twd, r.profit_twd,
       new Date(r.last_used_at).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' }),
     ])
     const csv = '\uFEFF' + [header, ...rows].map(r => r.map(esc).join(',')).join('\r\n')
@@ -1251,7 +1251,7 @@ export default function EsimAdminPage() {
 
                 {reportData && (
                   <>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
                       {[
                         ['使用訂單', reportData.totals.orders, 'bg-slate-50 text-slate-900'],
                         ['使用券數', reportData.totals.coupons_used, 'bg-slate-50 text-slate-900'],
@@ -1259,6 +1259,8 @@ export default function EsimAdminPage() {
                         ['原價總額', `NT$ ${reportData.totals.subtotal_twd}`, 'bg-slate-50 text-slate-900'],
                         ['折抵總額', `NT$ ${reportData.totals.discount_twd}`, 'bg-amber-50 text-amber-700'],
                         ['實收總額', `NT$ ${reportData.totals.revenue_twd}`, 'bg-blue-50 text-blue-700'],
+                        ['成本總額', `NT$ ${reportData.totals.cost_twd}`, 'bg-rose-50 text-rose-700'],
+                        ['毛利', `NT$ ${reportData.totals.profit_twd}`, reportData.totals.profit_twd < 0 ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'],
                       ].map(([label, value, cls]) => (
                         <div key={String(label)} className={`rounded-2xl p-3 ${cls}`}>
                           <div className="text-slate-500">{label}</div>
@@ -1266,7 +1268,7 @@ export default function EsimAdminPage() {
                         </div>
                       ))}
                     </div>
-                    <p className="text-slate-400">只計已付款訂單，日期依付款時間（台灣時間）。{reportData.truncated && '資料超過 5000 筆，僅統計最新 5000 筆。'}</p>
+                    <p className="text-slate-400">只計已付款訂單，日期依付款時間（台灣時間）。成本＝供應商港幣價 × 後台匯率 {reportData.totals.hkd_twd_rate}。{reportData.truncated && '資料超過 5000 筆，僅統計最新 5000 筆。'}</p>
 
                     {reportData.rows.length === 0 ? (
                       <div className="text-center text-slate-400 py-6">此期間沒有優惠券使用紀錄</div>
@@ -1282,6 +1284,8 @@ export default function EsimAdminPage() {
                                 <th className="py-2 px-3 text-right">使用人數</th>
                                 <th className="py-2 px-3 text-right">折抵總額</th>
                                 <th className="py-2 px-3 text-right">實收總額</th>
+                                <th className="py-2 px-3 text-right">成本</th>
+                                <th className="py-2 px-3 text-right">毛利</th>
                                 <th className="py-2 px-3">最後使用</th>
                               </tr>
                             </thead>
@@ -1294,6 +1298,8 @@ export default function EsimAdminPage() {
                                   <td className="py-2 px-3 text-right">{r.customers}</td>
                                   <td className="py-2 px-3 text-right text-amber-700">NT$ {r.discount_twd}</td>
                                   <td className="py-2 px-3 text-right text-blue-700">NT$ {r.revenue_twd}</td>
+                                  <td className="py-2 px-3 text-right text-rose-700">NT$ {r.cost_twd}</td>
+                                  <td className={`py-2 px-3 text-right font-bold ${r.profit_twd < 0 ? 'text-red-600' : 'text-emerald-700'}`}>NT$ {r.profit_twd}</td>
                                   <td className="py-2 px-3 whitespace-nowrap">{new Date(r.last_used_at).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })}</td>
                                 </tr>
                               ))}
@@ -1312,7 +1318,7 @@ export default function EsimAdminPage() {
                                   <div className="flex-1 bg-slate-100 rounded h-4 overflow-hidden">
                                     <div className="bg-blue-500 h-4" style={{ width: `${(d.orders / max) * 100}%` }} />
                                   </div>
-                                  <span className="w-36 shrink-0 text-right text-slate-600">{d.orders} 筆 · 折 NT$ {d.discount_twd}</span>
+                                  <span className="w-56 shrink-0 text-right text-slate-600">{d.orders} 筆 · 折 NT$ {d.discount_twd} · 毛利 <span className={d.profit_twd < 0 ? 'text-red-600' : 'text-emerald-700'}>NT$ {d.profit_twd}</span></span>
                                 </div>
                               ))
                             })()}
@@ -2118,12 +2124,15 @@ export default function EsimAdminPage() {
               {usageError && <div className="text-center text-red-500 py-8">{usageError}</div>}
               {usageData && (
                 <>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                     <div className="rounded-2xl bg-slate-50 p-3"><div className="text-slate-500">使用訂單</div><div className="text-lg font-bold">{usageData.summary.total_orders}</div></div>
                     <div className="rounded-2xl bg-emerald-50 p-3"><div className="text-slate-500">已付款</div><div className="text-lg font-bold text-emerald-700">{usageData.summary.paid_orders}</div></div>
                     <div className="rounded-2xl bg-amber-50 p-3"><div className="text-slate-500">已折抵總額</div><div className="text-lg font-bold text-amber-700">NT$ {usageData.summary.total_discount_twd}</div></div>
                     <div className="rounded-2xl bg-blue-50 p-3"><div className="text-slate-500">實收總額</div><div className="text-lg font-bold text-blue-700">NT$ {usageData.summary.total_revenue_twd}</div></div>
+                    <div className="rounded-2xl bg-rose-50 p-3"><div className="text-slate-500">成本總額</div><div className="text-lg font-bold text-rose-700">NT$ {usageData.summary.total_cost_twd}</div></div>
+                    <div className={`rounded-2xl p-3 ${usageData.summary.total_profit_twd < 0 ? 'bg-red-50' : 'bg-emerald-50'}`}><div className="text-slate-500">毛利</div><div className={`text-lg font-bold ${usageData.summary.total_profit_twd < 0 ? 'text-red-700' : 'text-emerald-700'}`}>NT$ {usageData.summary.total_profit_twd}</div></div>
                   </div>
+                  <p className="text-slate-400">成本＝供應商港幣價 × 後台匯率 {usageData.summary.hkd_twd_rate}；統計只計已付款訂單。</p>
                   {usageData.records.length === 0 ? (
                     <div className="text-center text-slate-400 py-8">尚無訂單使用此優惠券</div>
                   ) : (
@@ -2138,6 +2147,8 @@ export default function EsimAdminPage() {
                             <th className="py-2 px-3 text-right">原價</th>
                             <th className="py-2 px-3 text-right">折抵</th>
                             <th className="py-2 px-3 text-right">實付</th>
+                            <th className="py-2 px-3 text-right">成本</th>
+                            <th className="py-2 px-3 text-right">毛利</th>
                             <th className="py-2 px-3">付款狀態</th>
                           </tr>
                         </thead>
@@ -2156,6 +2167,8 @@ export default function EsimAdminPage() {
                               <td className="py-2 px-3 text-right">NT$ {r.subtotal_twd}</td>
                               <td className="py-2 px-3 text-right text-amber-700">- NT$ {r.discount_twd}</td>
                               <td className="py-2 px-3 text-right font-bold">NT$ {r.total_twd}</td>
+                              <td className="py-2 px-3 text-right text-rose-700">NT$ {r.cost_twd}</td>
+                              <td className={`py-2 px-3 text-right font-bold ${r.profit_twd < 0 ? 'text-red-600' : 'text-emerald-700'}`}>NT$ {r.profit_twd}</td>
                               <td className="py-2 px-3">
                                 <span className={r.payment_status === 'paid' ? 'text-emerald-600 font-bold' : 'text-slate-500'}>
                                   {PAYMENT_LABEL[r.payment_status] || r.payment_status}
