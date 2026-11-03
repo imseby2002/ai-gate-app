@@ -64,11 +64,5 @@ ON CONFLICT (key) DO NOTHING;
 ALTER TABLE public.esim_orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.esim_settings ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Public can view own order by order_no" ON public.esim_orders;
-CREATE POLICY "Public can view own order by order_no" ON public.esim_orders FOR SELECT USING (true);
-
-DROP POLICY IF EXISTS "Service role has full access to orders" ON public.esim_orders;
-CREATE POLICY "Service role has full access to orders" ON public.esim_orders FOR ALL USING (true) WITH CHECK (true);
-
-DROP POLICY IF EXISTS "Public can read esim_settings" ON public.esim_settings;
-CREATE POLICY "Public can read esim_settings" ON public.esim_settings FOR SELECT USING (true);
+-- 不建立任何公開 policy：只有伺服器端 service role（src/lib/esim/db.ts 的 createAdminClient）可以存取。
+-- 訂單含客人 Email 與 eSIM 啟用碼、設定含優惠券代碼，開放 anon 讀寫會外洩。
