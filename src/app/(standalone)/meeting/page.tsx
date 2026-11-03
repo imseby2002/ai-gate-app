@@ -13,6 +13,7 @@ import {
   Globe, UserCheck, X, MessageSquare, UserPlus
 } from 'lucide-react'
 import { MeetingVideo } from '@/components/meeting/MeetingVideo'
+import { LocalRecorder } from '@/components/meeting/LocalRecorder'
 import { MeetingChat } from '@/components/meeting/MeetingChat'
 import { GuestInviteDialog } from '@/components/meeting/GuestInviteDialog'
 import { MeetingViewerGrants } from '@/components/meeting/MeetingViewerGrants'
@@ -1031,6 +1032,12 @@ export default function MeetingPage() {
     setVideo(false)
   }
 
+  // 開視訊時同步開始語音記錄（訪客端加入即自動記錄，發起人也比照，避免只記到訪客的話）
+  function startVideo() {
+    setVideo(true)
+    if (!recordingRef.current && srSupported && meeting?.role !== 'viewer') void startRec()
+  }
+
   function leaveMeeting() {
     stopRec()
     stopVideo()
@@ -1627,10 +1634,11 @@ export default function MeetingPage() {
             <VideoOff className="h-4 w-4" />{t('videoStop')}
           </Button>
         ) : (
-          <Button size="sm" variant="outline" onClick={() => setVideo(true)} className="gap-1.5">
+          <Button size="sm" variant="outline" onClick={startVideo} className="gap-1.5">
             <Video className="h-4 w-4" />{t('videoStart')}
           </Button>
         )}
+        {!viewOnly && <LocalRecorder fileName={`會議錄影_${meeting.title || meeting.room_code}`} />}
         <Button size="sm" variant={showChat ? 'default' : 'outline'} onClick={() => setShowChat(v => !v)} className="gap-1.5">
           <MessageSquare className="h-4 w-4" />{tr('chatTitle')}
         </Button>
