@@ -9,7 +9,7 @@ import {
   ArrowDownCircle, ArrowLeftRight, Landmark, Banknote, PiggyBank,
   BarChart3, Upload, Store, FileText, Truck, FileSpreadsheet,
   Package, Search, AlertTriangle, Layers, Calendar, Filter,
-  Settings, ChevronRight, ChevronDown, Sparkles, Database
+  Settings, ChevronRight, ChevronDown, Sparkles, Database, Download
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -25,6 +25,7 @@ import type { ImportColumn } from '@/lib/excel/universal-import'
 import type { MdbErrorInfo } from '@/lib/fin/zero-import'
 
 import PnlReport from './PnlReport'
+import { downloadXlsx } from '@/lib/excel/export'
 import PricingTab from './PricingTab'
 
 type MainTab = 'cashflow' | 'pricing' | 'pnl'
@@ -601,6 +602,28 @@ export default function FinancePage() {
     })
   }, [records, subTab, selectedSubject, searchQuery, searchMode, acctName])
 
+  // 匯出 Excel：依目前畫面的篩選（月份、科目、搜尋）再選要哪一類（全部／支出／收入／轉帳）
+  const [exportKind, setExportKind] = useState<'all' | FlowType>('all')
+  const exportCashflow = useCallback(() => {
+    const rows = filteredRecords.filter(r => exportKind === 'all' || r.type === exportKind)
+    if (!rows.length) { alert(t('cf.exportEmpty')); return }
+    const typeLabel = (ty: FlowType) => (ty === 'income' ? t('cf.typeIncome') : ty === 'expense' ? t('cf.typeExpense') : t('cf.typeTransfer')).replace(/\s*[(（][^)）]*[)）]\s*$/, '')
+    const head = [t('cf.colDate'), t('cf.exportColType'), t('cf.exportColParent'), t('cf.exportColCategory'), t('cf.exportColAmount'),
+      t('cf.exportColAccount'), t('cf.exportColToAccount'), t('cf.colSummary'), t('cf.colPayee'), t('cf.exportColInvoice'), t('cf.colNotes')]
+    const data: (string | number)[][] = [head, ...rows.map(r => [
+      r.date, typeLabel(r.type), r.category_parent || '', r.category || '', Number(r.amount) || 0,
+      acctName(r.account_id), acctName(r.to_account_id), r.description || '', r.pay_coll_name || '', r.invoice_no || '', r.notes || '',
+    ])]
+    const sum = (ty: FlowType) => rows.filter(r => r.type === ty).reduce((a, r) => a + (Number(r.amount) || 0), 0)
+    data.push([], [t('cf.exportTotal')], [typeLabel('income'), '', '', '', sum('income')], [typeLabel('expense'), '', '', '', sum('expense')], [typeLabel('transfer'), '', '', '', sum('transfer')])
+    const subjectName = selectedSubject ? (selectedSubject.name || selectedSubject.parent_name || selectedSubject.class || '') : ''
+    const scope = subTab === 'month' || subTab === 'journal' ? `${year}-${String(month).padStart(2, '0')}` : subTab
+    const kindName = exportKind === 'all' ? t('cf.exportAll') : typeLabel(exportKind)
+    void downloadXlsx(`${t('cf.exportFile')}_${scope}_${kindName}${subjectName ? `_${subjectName}` : ''}`, [
+      { name: kindName, rows: data, widths: [12, 8, 16, 18, 14, 14, 14, 36, 16, 14, 24] },
+    ])
+  }, [filteredRecords, exportKind, t, acctName, selectedSubject, subTab, year, month])
+
   // 統計總和
   const monthIncome = useMemo(() => records.filter(r => r.type === 'income').reduce((s, r) => s + r.amount, 0), [records])
   const monthExpense = useMemo(() => records.filter(r => r.type === 'expense').reduce((s, r) => s + r.amount, 0), [records])
@@ -902,6 +925,20 @@ export default function FinancePage() {
                     </Button>
                   )
                 })}
+              </div>
+
+              {/* 匯出 Excel：依目前篩選，選擇匯出全部或某一類 */}
+              <div className="flex items-center gap-1 shrink-0 border-l pl-2">
+                <select value={exportKind} onChange={e => setExportKind(e.target.value as 'all' | FlowType)}
+                  className="h-7 rounded-md border bg-background px-1.5 text-2xs" title={t('cf.exportKindTip')}>
+                  <option value="all">{t('cf.exportAll')}</option>
+                  <option value="expense">{t('cf.typeExpense')}</option>
+                  <option value="income">{t('cf.typeIncome')}</option>
+                  <option value="transfer">{t('cf.typeTransfer')}</option>
+                </select>
+                <Button size="sm" variant="outline" className="h-7 text-2xs px-2 gap-1" onClick={exportCashflow} disabled={loading} title={t('cf.exportTip')}>
+                  <Download className="h-3.5 w-3.5" />{t('cf.exportExcel')}
+                </Button>
               </div>
             </div>
 

@@ -8200,7 +8200,21 @@
         "category": "Khoản mục",
         "payee": "Người thu chi",
         "notes": "Ghi chú / hóa đơn"
-      }
+      },
+      "exportExcel": "Xuất Excel",
+      "exportTip": "Xuất theo bộ lọc hiện tại (tháng, khoản mục bên trái, tìm kiếm); có thể chọn chỉ xuất chi, thu hoặc chuyển khoản",
+      "exportKindTip": "Loại cần xuất",
+      "exportAll": "Tất cả",
+      "exportEmpty": "Không có dữ liệu để xuất theo bộ lọc hiện tại.",
+      "exportFile": "Thu chi",
+      "exportColType": "Loại",
+      "exportColParent": "Nhóm khoản mục",
+      "exportColCategory": "Khoản mục",
+      "exportColAmount": "Số tiền",
+      "exportColAccount": "Tài khoản",
+      "exportColToAccount": "Tài khoản nhận",
+      "exportColInvoice": "Số hóa đơn",
+      "exportTotal": "Tổng cộng"
     },
     "pnlHqCol": "VP / chưa phân bổ",
     "pnlHqSub": "Khoản không xác định cửa hàng",
@@ -8253,7 +8267,13 @@
     "reconNoInv": "Chưa nhập",
     "reconMissingPrice": "{n} NL thiếu giá",
     "pnlSrcPos": "Bán hàng iPOS",
-    "pnlSrcInventory": "Xuất nhập tồn"
+    "pnlSrcInventory": "Xuất nhập tồn",
+    "pnlExportExcel": "Xuất Excel",
+    "pnlExportFile": "Bao cao lai lo",
+    "pnlExportManualSheet": "Sửa thủ công",
+    "pnlExportCol": "Cột",
+    "pnlExportAmount": "Số tiền",
+    "pnlFundingExcluded": "Trong \"chi phí khác\" của sổ thu chi tháng này có {amt} là điều chuyển vốn (đổi tiền, chuyển cho sếp, cấp tiền lẻ), không phải chi phí hoạt động nên không đưa vào báo cáo lãi lỗ."
   },
   "StoreCoachPage": {
     "fillRegTitleAndClause": "Vui lòng điền tiêu đề quy định và nội dung điều khoản cụ thể",
