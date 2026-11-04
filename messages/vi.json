@@ -13229,7 +13229,12 @@
     "openWindowHint": "Để trống = không giới hạn. Ngoài thời gian này không ai làm bài được (vẫn nhận bài nộp trong 5 phút sau khi đóng).",
     "openWindowInvalid": "Thời gian kết thúc phải sau thời gian bắt đầu.",
     "windowNotYet": "Chưa mở",
-    "windowEnded": "Đã đóng"
+    "windowEnded": "Đã đóng",
+    "employeeLink": "Link nhân viên (cần đăng nhập)",
+    "externalLink": "Link người ngoài (không cần đăng nhập)",
+    "externalLinkHint": "Để người ngoài làm bài, hãy chọn “Ứng viên (liên kết công khai)” trong trang chỉnh sửa và lưu.",
+    "copyLink": "Sao chép",
+    "linkCopied": "Đã sao chép"
   },
   "KnowledgePicker": {
     "tab": "Kho kiến thức công ty",

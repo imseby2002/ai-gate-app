@@ -13229,7 +13229,12 @@
     "openWindowHint": "Leave blank for no limit. Outside this time no one can take the exam (submissions accepted up to 5 minutes after closing).",
     "openWindowInvalid": "The end time must be after the start time.",
     "windowNotYet": "Not open yet",
-    "windowEnded": "Closed"
+    "windowEnded": "Closed",
+    "employeeLink": "Employee link (login required)",
+    "externalLink": "External link (no login)",
+    "externalLinkHint": "To let outside people take it, tick “Applicants (public link)” in the editor and save.",
+    "copyLink": "Copy",
+    "linkCopied": "Copied"
   },
   "KnowledgePicker": {
     "tab": "Company knowledge",

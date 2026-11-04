@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useLocale, useTranslations } from 'next-intl'
-import { ArrowLeft, BarChart3, ClipboardList, Loader2, Pencil, Plus, Play } from 'lucide-react'
+import { ArrowLeft, BarChart3, Check, ClipboardList, Copy, Link2, Loader2, Pencil, Plus, Play } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { getLocalizedDepartments } from '@/lib/org-units'
@@ -12,12 +12,31 @@ import type { ExamLang, L10n } from '@/lib/exams/types'
 
 interface ExamItem {
   id: string; department: string; title: L10n; status: 'draft' | 'published' | 'closed'; audience: string[]
-  editable: boolean; question_count: number; submission_count?: number
+  editable: boolean; public_token?: string | null; question_count: number; submission_count?: number
   opens_at: string | null; closes_at: string | null
   my_last: { score: number; max_score: number; grading_status: string; created_at: string } | null
 }
 
 const fmtTime = (iso: string | null) => (iso ? new Date(iso).toLocaleString(undefined, { hour12: false, month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '')
+function LinkRow({ label, url }: { label: string; url: string }) {
+  const t = useTranslations('Exams')
+  const [copied, setCopied] = useState(false)
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(url) } catch { window.prompt(label, url); return }
+    setCopied(true); setTimeout(() => setCopied(false), 1500)
+  }
+  return (
+    <div className="flex items-center gap-2 text-xs min-w-0">
+      <Link2 className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
+      <span className="text-muted-foreground shrink-0">{label}</span>
+      <input readOnly value={url} onFocus={e => e.currentTarget.select()} className="flex-1 min-w-0 h-7 rounded-md border bg-background px-2 font-mono text-[11px]" />
+      <Button size="sm" variant="outline" className="h-7 px-2 text-xs shrink-0" onClick={copy}>
+        {copied ? <Check className="h-3.5 w-3.5 mr-1 text-emerald-600" /> : <Copy className="h-3.5 w-3.5 mr-1" />}{copied ? t('linkCopied') : t('copyLink')}
+      </Button>
+    </div>
+  )
+}
+
 const windowState = (e: { opens_at: string | null; closes_at: string | null }) => {
   const now = Date.now()
   if (e.opens_at && now < Date.parse(e.opens_at)) return 'not_yet'
@@ -42,13 +61,14 @@ export function ExamsPage() {
   const [creating, setCreating] = useState(false)
   const [form, setForm] = useState({ department: '', title: '' })
   const [busy, setBusy] = useState(false)
+  const [origin, setOrigin] = useState('')
 
   useEffect(() => {
     let alive = true
     fetch('/api/exams')
       .then(r => { if (r.status === 403) { setNoCompany(true); return null } return r.ok ? r.json() : null })
       .then(d => { if (alive && d) { setExams(d.exams); setIsAdmin(d.isCompanyAdmin); setManaged(d.managedUnits) } })
-      .finally(() => { if (alive) setLoading(false) })
+      .finally(() => { if (alive) { setLoading(false); setOrigin(window.location.origin) } })
     return () => { alive = false }
   }, [])
 
@@ -147,6 +167,14 @@ export function ExamsPage() {
                 </div>
                 <Link href={`/exams/${e.id}`}><Button size="sm" variant="outline"><Pencil className="h-3.5 w-3.5 mr-1" />{t('edit')}</Button></Link>
                 <Link href={`/exams/${e.id}/results`}><Button size="sm" variant="outline"><BarChart3 className="h-3.5 w-3.5 mr-1" />{t('results')}</Button></Link>
+                {e.status === 'published' && origin && (
+                  <div className="basis-full space-y-1.5 border-t pt-2">
+                    {e.audience.includes('employee') && <LinkRow label={t('employeeLink')} url={`${origin}/exams/${e.id}/take`} />}
+                    {e.audience.includes('public') && e.public_token
+                      ? <LinkRow label={t('externalLink')} url={`${origin}/quiz/x/${e.public_token}`} />
+                      : <p className="text-xs text-muted-foreground">{t('externalLinkHint')}</p>}
+                  </div>
+                )}
               </div>
             ))}
           </section>

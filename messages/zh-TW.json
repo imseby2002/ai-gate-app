@@ -13229,7 +13229,12 @@
     "openWindowHint": "空白＝不限；時間外員工與應徵者都不能作答（截止後 5 分鐘內仍收卷）",
     "openWindowInvalid": "結束時間必須晚於開始時間。",
     "windowNotYet": "尚未開放",
-    "windowEnded": "已截止"
+    "windowEnded": "已截止",
+    "employeeLink": "員工連結（需登入）",
+    "externalLink": "外部人員連結（免登入）",
+    "externalLinkHint": "要給外部人員作答，請在編輯頁的作答對象勾選「應徵者公開連結」並儲存。",
+    "copyLink": "複製",
+    "linkCopied": "已複製"
   },
   "KnowledgePicker": {
     "tab": "公司知識庫",
