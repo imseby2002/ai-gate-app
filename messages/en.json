@@ -13107,7 +13107,7 @@
     "department": "Department",
     "docTitle": "Title",
     "docTitlePh": "e.g. Short video production SOP",
-    "file": "File (PDF, Word, Excel, TXT, Markdown)",
+    "file": "File (PDF, Word .doc/.docx, Excel, TXT, Markdown)",
     "filePh": "Click to upload a file",
     "orText": "Or paste text directly:",
     "needDept": "Please choose a department",

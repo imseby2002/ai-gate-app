@@ -13107,7 +13107,7 @@
     "department": "部門",
     "docTitle": "標題",
     "docTitlePh": "例如：短影音製作 SOP",
-    "file": "檔案（PDF、Word、Excel、TXT、Markdown）",
+    "file": "檔案（PDF、Word .doc／.docx、Excel、TXT、Markdown）",
     "filePh": "點選上傳檔案",
     "orText": "或直接貼上文字：",
     "needDept": "請選擇部門",
