@@ -3,6 +3,7 @@ import { Zap, Bot, BarChart3, Shield, MessageSquare, Image, Video } from 'lucide
 import { getTranslations } from 'next-intl/server'
 import { getLocale } from 'next-intl/server'
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
+import { BrandLogo, BrandSlogan } from '@/components/layout/BrandLogo'
 
 export const dynamic = 'force-dynamic'
 
@@ -24,12 +25,8 @@ export default async function LandingPage() {
       {/* Header */}
       <header className="flex items-center justify-between px-4 sm:px-8 py-4 border-b bg-white/80 backdrop-blur">
         <Link href="/" className="flex items-center gap-2 sm:gap-3 min-w-0">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/im-tourist-icon-512.png" alt="IM Tourist" className="h-10 w-10 sm:h-12 sm:w-12 shrink-0" />
-          <span className="flex flex-col leading-tight font-bold uppercase tracking-wide text-[11px] sm:text-sm min-w-0">
-            <span className="text-[#111827] truncate">{t('sloganLine1')}</span>
-            <span className="text-[#139488] truncate">{t('sloganLine2')}</span>
-          </span>
+          <BrandLogo className="h-10 w-10 sm:h-12 sm:w-12" />
+          <BrandSlogan line1={t('sloganLine1')} line2={t('sloganLine2')} className="text-[11px] sm:text-sm min-w-0" />
         </Link>
         <div className="flex items-center gap-2 sm:gap-3">
           <LanguageSwitcher currentLocale={locale} />

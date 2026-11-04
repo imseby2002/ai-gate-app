@@ -3,13 +3,15 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Zap, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
+import { BrandLogo, BrandSlogan } from '@/components/layout/BrandLogo'
 import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 
 export default function RegisterPage() {
   const router = useRouter()
   const t = useTranslations('Register')
+  const tl = useTranslations('Landing')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
@@ -82,8 +84,8 @@ export default function RegisterPage() {
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 mb-2">
-            <Zap className="h-8 w-8" style={{ color: 'var(--primary)' }} />
-            <span className="text-3xl font-bold">IMT</span>
+            <BrandLogo className="h-14 w-14" />
+            <BrandSlogan line1={tl('sloganLine1')} line2={tl('sloganLine2')} className="text-sm" />
           </div>
           <p className="text-gray-600 text-sm">{t('subtitle')}</p>
         </div>
