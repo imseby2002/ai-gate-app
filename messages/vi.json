@@ -13107,7 +13107,7 @@
     "department": "Phòng ban",
     "docTitle": "Tiêu đề",
     "docTitlePh": "VD: SOP sản xuất video ngắn",
-    "file": "Tệp (PDF, Word, Excel, TXT, Markdown)",
+    "file": "Tệp (PDF, Word .doc/.docx, Excel, TXT, Markdown)",
     "filePh": "Nhấn để tải tệp lên",
     "orText": "Hoặc dán văn bản trực tiếp:",
     "needDept": "Vui lòng chọn phòng ban",

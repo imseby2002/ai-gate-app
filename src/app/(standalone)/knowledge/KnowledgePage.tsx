@@ -146,7 +146,7 @@ export function KnowledgePage() {
               <label className="flex items-center gap-2 rounded-lg border border-dashed px-3 py-3 cursor-pointer hover:bg-muted/50">
                 <Upload className="h-4 w-4" />
                 <span className="text-muted-foreground">{file ? file.name : t('filePh')}</span>
-                <input type="file" className="hidden" accept=".pdf,.docx,.xlsx,.xls,.csv,.txt,.md,.json,.html" onChange={e => setFile(e.target.files?.[0] ?? null)} />
+                <input type="file" className="hidden" accept=".pdf,.doc,.docx,.xlsx,.xls,.csv,.txt,.md,.json,.html" onChange={e => setFile(e.target.files?.[0] ?? null)} />
                 {file && <button type="button" className="ml-auto" onClick={e => { e.preventDefault(); setFile(null) }}><X className="h-4 w-4" /></button>}
               </label>
               {!file && (
