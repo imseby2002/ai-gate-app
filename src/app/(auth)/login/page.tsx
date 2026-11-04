@@ -1,6 +1,7 @@
 import Link from 'next/link'
-import { ArrowRight, Zap } from 'lucide-react'
-import { getLocale } from 'next-intl/server'
+import { ArrowRight } from 'lucide-react'
+import { getLocale, getTranslations } from 'next-intl/server'
+import { BrandLogo, BrandSlogan } from '@/components/layout/BrandLogo'
 import { getLocalizedSystems, type SystemDef } from '@/lib/systems'
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
 import { AutoRedirectIfAuthed } from '@/components/auth/AutoRedirectIfAuthed'
@@ -16,6 +17,7 @@ export default async function LoginChooser({
   const { error: authError } = await searchParams
 
   const locale = await getLocale()
+  const tl = await getTranslations('Landing')
   const systems: SystemDef[] = Object.values(getLocalizedSystems(locale))
 
   const titleDesc = locale === 'vi'
@@ -46,8 +48,8 @@ export default async function LoginChooser({
       <div className="w-full max-w-md">
         <div className="text-center mb-7">
           <div className="inline-flex items-center gap-2 mb-2">
-            <Zap className="h-7 w-7" style={{ color: 'var(--primary)' }} />
-            <span className="text-2xl font-bold">IMT</span>
+            <BrandLogo className="h-14 w-14" />
+            <BrandSlogan line1={tl('sloganLine1')} line2={tl('sloganLine2')} className="text-sm" />
           </div>
           <p className="text-gray-500 text-sm">{titleDesc}</p>
         </div>

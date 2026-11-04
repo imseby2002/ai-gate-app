@@ -3,9 +3,10 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
+import { BrandLogo } from '@/components/layout/BrandLogo'
 import {
   MessageSquare, Bot,
-  Plus, ChevronLeft, ChevronRight, Image, Video, Zap,
+  Plus, ChevronLeft, ChevronRight, Image, Video,
   FileText, Megaphone, Headphones, LayoutDashboard, CalendarDays, CalendarCheck, Terminal, MessageSquarePlus, NotebookPen, Code2, Users, Scale,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
@@ -148,16 +149,12 @@ export function Sidebar({ userType, enabledModules, scope: scopeProp, conversati
       )}>
         {!collapsed ? (
           <Link href="/apps" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
-            <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center shadow-sm">
-              <Zap className="h-4 w-4 text-white" />
-            </div>
+            <BrandLogo className="h-8 w-8" />
             <span className="font-bold text-base tracking-tight">IMT</span>
           </Link>
         ) : (
           <Link href="/apps" className="hover:opacity-80 transition-opacity">
-            <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center shadow-sm">
-              <Zap className="h-4 w-4 text-white" />
-            </div>
+            <BrandLogo className="h-8 w-8" />
           </Link>
         )}
         {!collapsed && (

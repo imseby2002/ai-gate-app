@@ -3,7 +3,8 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Zap, KeyRound, Loader2, CheckCircle2, Eye, EyeOff, AlertCircle, ArrowRight } from 'lucide-react'
+import { KeyRound, Loader2, CheckCircle2, Eye, EyeOff, AlertCircle, ArrowRight } from 'lucide-react'
+import { BrandLogo } from '@/components/layout/BrandLogo'
 import { createClient } from '@/lib/supabase/client'
 import { SYSTEMS, isSystemKey } from '@/lib/systems'
 
@@ -96,7 +97,7 @@ function ResetPasswordForm() {
       <div className="w-full max-w-sm">
         <div className="text-center mb-6">
           <div className="inline-flex items-center gap-2 mb-1.5">
-            <Zap className="h-6 w-6 text-indigo-600" />
+            <BrandLogo className="h-8 w-8" />
             <span className="text-xl font-bold tracking-tight">IMT</span>
           </div>
           {sysDef ? (

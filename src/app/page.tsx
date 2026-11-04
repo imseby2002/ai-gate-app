@@ -3,6 +3,7 @@ import { Zap, Bot, BarChart3, Shield, MessageSquare, Image, Video } from 'lucide
 import { getTranslations } from 'next-intl/server'
 import { getLocale } from 'next-intl/server'
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
+import { BrandLogo, BrandSlogan } from '@/components/layout/BrandLogo'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,10 +24,10 @@ export default async function LandingPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
       {/* Header */}
       <header className="flex items-center justify-between px-4 sm:px-8 py-4 border-b bg-white/80 backdrop-blur">
-        <div className="flex items-center gap-2">
-          <Zap className="h-6 w-6 sm:h-7 sm:w-7 text-primary" style={{ color: 'var(--primary)' }} />
-          <span className="text-xl sm:text-2xl font-bold tracking-tight">IMT</span>
-        </div>
+        <Link href="/" className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <BrandLogo className="h-10 w-10 sm:h-12 sm:w-12" />
+          <BrandSlogan line1={t('sloganLine1')} line2={t('sloganLine2')} className="text-[11px] sm:text-sm min-w-0" />
+        </Link>
         <div className="flex items-center gap-2 sm:gap-3">
           <LanguageSwitcher currentLocale={locale} />
           <Link

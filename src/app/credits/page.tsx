@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { Zap } from 'lucide-react'
+import { BrandLogo } from '@/components/layout/BrandLogo'
 import { createClient } from '@/lib/supabase/server'
 import { CreditWallet, type CreditTx } from '@/components/billing/CreditWallet'
 import { CreditsBack } from './CreditsBack'
@@ -33,7 +33,7 @@ export default async function CreditsPage({
       {/* 極簡頂欄：只有 logo 與返回，不帶任何模組選單 */}
       <header className="border-b bg-card px-4 sm:px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Zap className="h-5 w-5 text-primary" />
+          <BrandLogo className="h-7 w-7" />
           <span className="font-bold">IMT</span>
         </div>
         <CreditsBack from={sp.from} />
