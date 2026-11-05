@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import {
-  Plus, Trash2, Mail, Loader2, Building2, Edit3, Check, X, ShieldCheck, UserPlus
+  Plus, Trash2, Mail, Loader2, Building2, Edit3, Check, X, ShieldCheck, UserPlus, KeyRound, Eye, EyeOff
 } from 'lucide-react'
 
 export interface WhitelistEntry {
@@ -86,18 +86,44 @@ export function EmployeeWhitelistManager({
     }
   }, [isCompanyMode])
 
-  // 為未註冊者直接建立帳號（初始密碼由管理員輸入，員工登入後自行修改）
+  // 公司員工初始密碼（免註冊建帳號用）
+  const [initPw, setInitPw] = useState<string | null>(null)
+  const [initPwLoaded, setInitPwLoaded] = useState(false)
+  const [showPw, setShowPw] = useState(false)
+  const [editingPw, setEditingPw] = useState(false)
+  const [pwDraft, setPwDraft] = useState('')
+  const [savingPw, setSavingPw] = useState(false)
+  const [skipSignup, setSkipSignup] = useState(true)
+  useEffect(() => {
+    if (!isCompanyMode) return
+    fetch('/api/company/employee-whitelist/initial-password').then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setInitPw(d.password ?? null) }).finally(() => setInitPwLoaded(true))
+  }, [isCompanyMode])
+  const saveInitPw = async () => {
+    if (pwDraft.length < 8) { setError(t('initPwTooShort')); return }
+    setSavingPw(true); setError('')
+    const res = await fetch('/api/company/employee-whitelist/initial-password', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pwDraft }) })
+    const d = await res.json().catch(() => ({}))
+    setSavingPw(false)
+    if (!res.ok) { setError(d.error ?? 'error'); return }
+    setInitPw(pwDraft); setEditingPw(false); setPwDraft('')
+  }
+
+  // 為未註冊者直接建立帳號（免註冊，用公司初始密碼）
   const [provisioning, setProvisioning] = useState(false)
+  const [picked, setPicked] = useState<Set<string>>(new Set())
   const unregistered = entries.filter(e => e.registered === false)
-  const provision = async () => {
-    const pw = window.prompt(t('provisionPrompt', { n: unregistered.length }))
-    if (!pw) return
+  const provision = async (emails?: string[]) => {
+    if (!initPw) { setError(t('initPwNeeded')); setEditingPw(true); return }
+    const n = emails?.length ?? unregistered.length
+    if (!confirm(t('provisionConfirm', { n }))) return
     setProvisioning(true); setError('')
-    const res = await fetch('/api/company/employee-whitelist/provision', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pw }) })
+    const res = await fetch('/api/company/employee-whitelist/provision', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(emails ? { emails } : {}) })
     const d = await res.json().catch(() => ({}))
     setProvisioning(false)
-    if (!res.ok) { setError(d.error ?? 'error'); return }
+    if (!res.ok) { setError(d.error === 'no_initial_password' ? t('initPwNeeded') : d.error ?? 'error'); return }
     alert(t('provisionDone', { created: d.created?.length ?? 0, failed: d.failed?.length ?? 0 }) + (d.failed?.length ? '\n' + d.failed.map((f: { email: string; error: string }) => `${f.email}: ${f.error}`).join('\n') : ''))
+    setPicked(new Set())
     loadCompanyData()
   }
 
@@ -118,6 +144,8 @@ export function EmployeeWhitelistManager({
 
     if (!isCompanyMode) {
       payload.company_id = selectedCompanyId || null
+    } else if (skipSignup && initPw) {
+      payload.provision = true
     }
 
     const res = await fetch(apiEndpoint, {
@@ -127,6 +155,8 @@ export function EmployeeWhitelistManager({
     })
 
     if (res.ok) {
+      const d = await res.json().catch(() => ({}))
+      if (d.provisionError) alert(t('provisionDone', { created: 0, failed: 1 }) + '\n' + d.provisionError)
       setEmail('')
       setNote('')
       if (isCompanyMode) {
@@ -137,7 +167,7 @@ export function EmployeeWhitelistManager({
       if (onRefresh) onRefresh()
     } else {
       const data = await res.json()
-      setError(data.error === 'Email already in whitelist' ? t('exists') : data.error)
+      setError(data.error === 'Email already in whitelist' ? t('exists') : data.error === 'no_initial_password' ? t('initPwNeeded') : data.error)
     }
     setAdding(false)
   }
@@ -245,13 +275,50 @@ export function EmployeeWhitelistManager({
         )}
       </div>
 
+      {isCompanyMode && initPwLoaded && (
+        <div className="px-5 py-3 border-b flex flex-wrap items-center gap-2 text-sm">
+          <KeyRound className="h-4 w-4 text-indigo-600" />
+          <span className="font-medium">{t('initPw')}</span>
+          {editingPw ? (
+            <>
+              <input type="text" value={pwDraft} onChange={e => setPwDraft(e.target.value)} placeholder={t('initPwPh')} autoComplete="off"
+                className="h-8 w-48 px-2 rounded-lg border bg-white dark:bg-background text-sm font-mono outline-none focus:ring-2" />
+              <button type="button" onClick={saveInitPw} disabled={savingPw} className="h-8 px-3 rounded-lg bg-indigo-600 text-white text-xs font-medium disabled:opacity-50">
+                {savingPw ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t('save')}
+              </button>
+              <button type="button" onClick={() => { setEditingPw(false); setPwDraft('') }} className="h-8 px-3 rounded-lg border text-xs">{t('cancel')}</button>
+            </>
+          ) : initPw ? (
+            <>
+              <span className="font-mono text-gray-700 dark:text-gray-200">{showPw ? initPw : '••••••••'}</span>
+              <button type="button" onClick={() => setShowPw(v => !v)} className="p-1 text-gray-400 hover:text-gray-600" title={showPw ? t('hide') : t('show')}>
+                {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+              <button type="button" onClick={() => { setEditingPw(true); setPwDraft('') }} className="h-7 px-2.5 rounded-lg border text-xs">{t('initPwChange')}</button>
+            </>
+          ) : (
+            <>
+              <span className="text-amber-700">{t('initPwNotSet')}</span>
+              <button type="button" onClick={() => setEditingPw(true)} className="h-7 px-2.5 rounded-lg bg-indigo-600 text-white text-xs font-medium">{t('initPwSet')}</button>
+            </>
+          )}
+          <span className="basis-full text-xs text-gray-500">{t('initPwHint')}</span>
+        </div>
+      )}
+
       {isCompanyMode && unregistered.length > 0 && (
         <div className="px-5 py-3 border-b flex flex-wrap items-center gap-2 bg-amber-50/60 text-sm">
           <span className="text-amber-800">{t('unregisteredCount', { n: unregistered.length })}</span>
-          <button type="button" onClick={provision} disabled={provisioning}
-            className="ml-auto inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-indigo-600 text-white text-xs font-medium disabled:opacity-50">
-            {provisioning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <UserPlus className="h-3.5 w-3.5" />}{t('provisionButton')}
-          </button>
+          <div className="ml-auto flex flex-wrap gap-2">
+            <button type="button" onClick={() => provision([...picked])} disabled={provisioning || picked.size === 0}
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-indigo-300 bg-white text-indigo-700 text-xs font-medium disabled:opacity-50">
+              <UserPlus className="h-3.5 w-3.5" />{t('provisionPicked', { n: picked.size })}
+            </button>
+            <button type="button" onClick={() => provision()} disabled={provisioning}
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-indigo-600 text-white text-xs font-medium disabled:opacity-50">
+              {provisioning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <UserPlus className="h-3.5 w-3.5" />}{t('provisionButton')}
+            </button>
+          </div>
         </div>
       )}
 
@@ -315,6 +382,12 @@ export function EmployeeWhitelistManager({
           />
         </div>
 
+        {isCompanyMode && (
+          <label className="h-9 flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300 cursor-pointer" title={initPw ? t('skipSignupTip') : t('initPwNeeded')}>
+            <input type="checkbox" checked={skipSignup && !!initPw} disabled={!initPw} onChange={e => setSkipSignup(e.target.checked)} />
+            {t('skipSignup')}
+          </label>
+        )}
         <button
           type="submit"
           disabled={adding}
@@ -362,6 +435,11 @@ export function EmployeeWhitelistManager({
                   return (
                     <tr key={entry.id} className="border-b last:border-0 hover:bg-gray-50/80 dark:hover:bg-muted/20 transition-colors">
                       <td className="px-5 py-3 font-medium text-gray-900 dark:text-gray-100">
+                        {isCompanyMode && entry.registered === false && (
+                          <input type="checkbox" className="mr-2 align-middle" title={t('skipSignup')}
+                            checked={picked.has(entry.email)}
+                            onChange={e => setPicked(prev => { const n = new Set(prev); if (e.target.checked) n.add(entry.email); else n.delete(entry.email); return n })} />
+                        )}
                         {entry.email}
                         {entry.registered !== undefined && (
                           <span className={`ml-2 text-[10px] px-1.5 py-0.5 rounded border ${entry.registered ? 'text-emerald-700 border-emerald-200 bg-emerald-50' : 'text-amber-700 border-amber-200 bg-amber-50'}`}>

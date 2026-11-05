@@ -346,9 +346,23 @@
       "registered": "Registered",
       "notRegistered": "Not registered",
       "unregisteredCount": "{n} emails have no account yet",
-      "provisionButton": "Create accounts",
+      "provisionButton": "Create all accounts",
       "provisionPrompt": "Create accounts for {n} unregistered emails (no verification). Enter an initial password (at least 8 characters); staff change it after signing in:",
-      "provisionDone": "Created {created} accounts, {failed} failed."
+      "provisionDone": "Created {created} accounts, {failed} failed.",
+      "initPw": "Employee initial password",
+      "initPwPh": "At least 8 characters",
+      "initPwNotSet": "Not set",
+      "initPwSet": "Set",
+      "initPwChange": "Change",
+      "initPwHint": "Employees marked “No sign-up” get an account right away and log in with this password (username = email), no verification email. Changing it only affects accounts created afterwards.",
+      "initPwTooShort": "The initial password must be at least 8 characters",
+      "initPwNeeded": "Please set the employee initial password first",
+      "show": "Show",
+      "hide": "Hide",
+      "skipSignup": "No sign-up",
+      "skipSignupTip": "Create the account with the initial password when adding",
+      "provisionPicked": "Create accounts for selected ({n})",
+      "provisionConfirm": "Create accounts for {n} emails with the employee initial password (no sign-up)?"
     }
   },
   "Chat": {

@@ -346,9 +346,23 @@
       "registered": "Đã đăng ký",
       "notRegistered": "Chưa đăng ký",
       "unregisteredCount": "{n} email chưa có tài khoản",
-      "provisionButton": "Tạo tài khoản",
+      "provisionButton": "Tạo tất cả tài khoản",
       "provisionPrompt": "Tạo tài khoản cho {n} email chưa đăng ký (không cần xác minh). Nhập mật khẩu ban đầu (ít nhất 8 ký tự); nhân viên tự đổi sau khi đăng nhập:",
-      "provisionDone": "Đã tạo {created} tài khoản, lỗi {failed}."
+      "provisionDone": "Đã tạo {created} tài khoản, lỗi {failed}.",
+      "initPw": "Mật khẩu ban đầu của nhân viên",
+      "initPwPh": "Ít nhất 8 ký tự",
+      "initPwNotSet": "Chưa đặt",
+      "initPwSet": "Đặt",
+      "initPwChange": "Đổi",
+      "initPwHint": "Nhân viên được chọn “Không cần đăng ký” sẽ có tài khoản ngay và đăng nhập bằng mật khẩu này (tài khoản = Email), không cần email xác minh. Đổi mật khẩu chỉ áp dụng cho tài khoản tạo sau đó.",
+      "initPwTooShort": "Mật khẩu ban đầu phải có ít nhất 8 ký tự",
+      "initPwNeeded": "Vui lòng đặt mật khẩu ban đầu của nhân viên trước",
+      "show": "Hiện",
+      "hide": "Ẩn",
+      "skipSignup": "Không cần đăng ký",
+      "skipSignupTip": "Tạo tài khoản bằng mật khẩu ban đầu khi thêm",
+      "provisionPicked": "Tạo tài khoản cho người đã chọn ({n})",
+      "provisionConfirm": "Tạo tài khoản cho {n} email bằng mật khẩu ban đầu (không cần đăng ký)?"
     }
   },
   "Chat": {
