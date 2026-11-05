@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getUserCompany } from '@/lib/company/membership'
+import { getInitialPassword, provisionAccounts } from '@/lib/company/employee-provision'
 
 async function requireCompanyAdmin() {
   const supabase = await createClient()
@@ -54,13 +55,16 @@ export async function POST(request: NextRequest) {
   const { error, status, company, user, admin } = await requireCompanyAdmin()
   if (error || !company || !user || !admin) return NextResponse.json({ error }, { status })
 
-  const { email, note } = await request.json().catch(() => ({}))
+  const { email, note, provision } = await request.json().catch(() => ({}))
   if (!email || typeof email !== 'string') {
     return NextResponse.json({ error: 'Email is required' }, { status: 400 })
   }
 
   const cleanEmail = email.toLowerCase().trim()
   const cleanNote = note ? String(note).trim() : null
+  // 勾選「免註冊」：用公司初始密碼直接建立帳號，須先設定初始密碼
+  const initialPassword = provision ? await getInitialPassword(admin, company.companyId) : null
+  if (provision && !initialPassword) return NextResponse.json({ error: 'no_initial_password' }, { status: 400 })
 
   const { data, error: dbError } = await admin
     .from('employee_whitelist')
@@ -101,9 +105,15 @@ export async function POST(request: NextRequest) {
     }, { onConflict: 'company_id,member_id' })
   }
 
+  const provisioned = !existingUser && initialPassword
+    ? await provisionAccounts(admin, [cleanEmail], initialPassword, user.id)
+    : null
+
   return NextResponse.json({
     ...data,
     company: { id: company.companyId, name: company.name },
+    registered: !!existingUser || !!provisioned?.created.length,
+    provisionError: provisioned?.failed[0]?.error ?? null,
   }, { status: 201 })
 }
 

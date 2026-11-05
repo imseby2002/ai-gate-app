@@ -346,9 +346,23 @@
       "registered": "已註冊",
       "notRegistered": "未註冊",
       "unregisteredCount": "{n} 個 Email 尚未註冊帳號",
-      "provisionButton": "直接建立帳號",
+      "provisionButton": "全部建立帳號",
       "provisionPrompt": "為 {n} 個未註冊的 Email 直接建立帳號（免驗證）。請輸入初始密碼（至少 8 碼），員工登入後自行修改：",
-      "provisionDone": "已建立 {created} 個帳號，失敗 {failed} 個。"
+      "provisionDone": "已建立 {created} 個帳號，失敗 {failed} 個。",
+      "initPw": "員工初始密碼",
+      "initPwPh": "至少 8 碼",
+      "initPwNotSet": "尚未設定",
+      "initPwSet": "設定",
+      "initPwChange": "修改",
+      "initPwHint": "勾選「免註冊」的員工會直接建立帳號，一律用這組密碼登入（帳號＝Email），不需收驗證信。修改密碼只影響之後建立的帳號。",
+      "initPwTooShort": "初始密碼至少 8 碼",
+      "initPwNeeded": "請先設定員工初始密碼",
+      "show": "顯示",
+      "hide": "隱藏",
+      "skipSignup": "免註冊",
+      "skipSignupTip": "新增時直接用初始密碼建立帳號",
+      "provisionPicked": "為勾選者建立帳號（{n}）",
+      "provisionConfirm": "用員工初始密碼為 {n} 個 Email 直接建立帳號（免註冊）？"
     }
   },
   "Chat": {
