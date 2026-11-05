@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { Zap, Users, BarChart3, Settings, Home, FileText, Link2, Headphones, LifeBuoy, Bot, Building2, MessageSquare, Bell, BedDouble, Megaphone, Landmark, Scale, UserCog, Briefcase, Database, ClipboardCheck } from 'lucide-react'
+import { Users, BarChart3, Settings, Home, FileText, Link2, Headphones, LifeBuoy, Bot, Building2, MessageSquare, Bell, BedDouble, Megaphone, Landmark, Scale, UserCog, Briefcase, Database, ClipboardCheck } from 'lucide-react'
+import { BrandLogo } from '@/components/layout/BrandLogo'
 import Link from 'next/link'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -57,9 +58,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       {/* Admin Sidebar */}
       <aside className="w-60 flex flex-col h-full border-r bg-card">
         <div className="flex items-center gap-2.5 px-4 py-4 border-b">
-          <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-sm">
-            <Zap className="h-4 w-4 text-white" />
-          </div>
+          <BrandLogo className="h-8 w-8" />
           <div className="font-bold text-sm">IMT 管理後台</div>
         </div>
 

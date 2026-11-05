@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation'
 import { useLocale } from 'next-intl'
-import { Zap } from 'lucide-react'
+import { BrandLogo } from '@/components/layout/BrandLogo'
 import { systemForPath, getLocalizedSystemDef } from '@/lib/systems'
 
 // 各工具模組共用的極簡頂部列品牌區塊——依目前路徑顯示該模組自己的名稱
@@ -15,9 +15,7 @@ export function ToolsBrand() {
 
   return (
     <div className="flex items-center gap-1.5">
-      <div className="h-5 w-5 rounded-md bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
-        <Zap className="h-3 w-3 text-white" />
-      </div>
+      <BrandLogo className="h-7 w-7" />
       <span className="text-xs font-bold text-gray-800">{label}</span>
     </div>
   )
