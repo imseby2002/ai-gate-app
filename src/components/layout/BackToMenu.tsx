@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { useTranslations, useLocale } from 'next-intl'
-import { Zap } from 'lucide-react'
+import { BrandLogo } from '@/components/layout/BrandLogo'
 import { SYSTEMS, SCOPE_SESSION_KEY, systemForHost, isSystemKey, systemForPath, getLocalizedSystemDef } from '@/lib/systems'
 
 export function BackToMenu() {
@@ -91,7 +91,7 @@ export function BackToMenu() {
 
   return (
     <a href={href} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-      <Zap className="h-5 w-5 text-primary" />
+      <BrandLogo className="h-8 w-8" />
       <div className="leading-none">
         <span className="font-bold text-base">{titleText}</span>
         <span className="block text-xs text-muted-foreground mt-0.5">{subText}</span>

@@ -1,5 +1,6 @@
 import Link from 'next/link'
-import { Zap, ArrowRight } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
+import { BrandLogo } from '@/components/layout/BrandLogo'
 import { getLocale } from 'next-intl/server'
 import { introTr } from '@/lib/i18n-data/server'
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
@@ -85,7 +86,7 @@ export async function IntroFooter() {
   const tr = await introTr()
   return (
     <footer className="text-center text-[#6b6480] text-[13px] py-7 flex items-center justify-center gap-3 flex-wrap">
-      <span className="flex items-center gap-2"><Zap className="h-3.5 w-3.5" />{" "}{tr("AI GATE 行銷中心 · IMT")}</span>
+      <span className="flex items-center gap-2"><BrandLogo className="h-5 w-5" />{" "}{tr("AI GATE 行銷中心 · IMT")}</span>
       <Link href="/intro/features" className="hover:text-[#3f3a4d]">{tr("功能詳解")}</Link>
       <Link href="/intro/pricing" className="hover:text-[#3f3a4d]">{tr("方案比較")}</Link>
       <Link href="/intro/enterprise" className="hover:text-[#3f3a4d]">{tr("企業方案")}</Link>
