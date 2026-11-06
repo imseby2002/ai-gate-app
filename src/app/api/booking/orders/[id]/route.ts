@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getBnbContext } from '@/lib/bnb/context'
 import { clearDailyRecordForDeletedBooking, syncDailyRecordForBooking } from '@/lib/booking/daily-sync'
+import { autoBookingNo } from '@/lib/booking/orders'
 
 // 訂單資料結構重整第三階段：訂單詳情頁改成「一張訂單、可整單處理」，旅客資訊、
 // 付款方式等訂單層級欄位在這裡統一編輯。這些欄位在 bookings（房型明細）也各自
@@ -20,6 +21,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const { id } = await params
   const patch = await req.json()
+  // 單號清空時改用自動編號，避免同房型多筆空單號撞到 bookings 唯一鍵（見 autoBookingNo）
+  if ('platform_booking_id' in patch && !String(patch.platform_booking_id ?? '').trim()) {
+    patch.platform_booking_id = autoBookingNo()
+  }
 
   const { data: order, error } = await supabase
     .from('booking_orders')

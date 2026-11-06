@@ -1,6 +1,14 @@
 // 訂單資料結構重整第二階段：所有會建立/更新 bookings 資料列的地方，都要透過這個
 // helper 先找到或建立對應的 booking_orders 父層，再把 order_id 掛到每一筆房型明細上。
 
+// bookings 唯一鍵 (user_id, platform, platform_booking_id, property_id) 在正式庫是 NULLS NOT DISTINCT
+// （iCal／Email 同步的 upsert 依賴這把鍵，不能改成部分索引），沒填單號的訂單同房型只能有一筆。
+// 沒填單號時自動編一個 M- 開頭的單號，讓「選填」真的可以不填。
+export const AUTO_BOOKING_NO_PREFIX = 'M-'
+export function autoBookingNo(): string {
+  return `${AUTO_BOOKING_NO_PREFIX}${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).slice(2, 5).toUpperCase()}`
+}
+
 interface OrderInfo {
   guest_name?: string | null
   guest_email?: string | null

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getBnbContext } from '@/lib/bnb/context'
 import { syncDailyRecordForBooking, clearDailyRecordForDeletedBooking } from '@/lib/booking/daily-sync'
-import { findOrCreateOrder } from '@/lib/booking/orders'
+import { findOrCreateOrder, autoBookingNo, AUTO_BOOKING_NO_PREFIX } from '@/lib/booking/orders'
 
 export async function GET(req: NextRequest) {
   const supabase = await createClient()
@@ -67,10 +67,10 @@ export async function POST(req: NextRequest) {
       .eq('user_id', ctx.ownerId)
       .eq('platform', platform)
       .eq('property_id', property_id)
-    // 沒填單號時 DB 允許多筆（migration 140），只有「同房型同入住/退房日」才視為重複輸入
+    // 沒填單號（含自動編號 M-）時，只有「同房型同入住/退房日」才視為重複輸入
     q = pbid
       ? q.eq('platform_booking_id', pbid)
-      : q.is('platform_booking_id', null).eq('check_in', check_in).eq('check_out', check_out)
+      : q.or(`platform_booking_id.is.null,platform_booking_id.like.${AUTO_BOOKING_NO_PREFIX}%`).eq('check_in', check_in).eq('check_out', check_out)
     const { data: rows } = await q.limit(20)
     const existing = rows?.find(b => b.status !== 'cancelled') ?? rows?.[0]
     if (existing) {
@@ -85,14 +85,21 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // 沒填單號：沿用重新啟用的那筆原單號，否則自動編號（見 autoBookingNo）
+  let finalPbid: string = pbid ?? ''
+  if (!pbid) {
+    const { data: prev } = existingId ? await supabase.from('bookings').select('platform_booking_id').eq('id', existingId).maybeSingle() : { data: null }
+    finalPbid = prev?.platform_booking_id || autoBookingNo()
+  }
+
   // 訂單資料結構重整第二階段：不管是不是多房型，每一筆房型明細都要掛在一張真正
   // 的訂單（booking_orders）下面，不能再只靠 platform_booking_id 軟性關聯。
-  const orderId = await findOrCreateOrder(supabase, ctx.ownerId, platform, pbid, {
+  const orderId = await findOrCreateOrder(supabase, ctx.ownerId, platform, finalPbid, {
     guest_name, guest_email, guest_phone, currency, special_requests, notes, source,
   })
 
   const payload = {
-    user_id: ctx.ownerId, order_id: orderId, property_id, platform, platform_booking_id: pbid,
+    user_id: ctx.ownerId, order_id: orderId, property_id, platform, platform_booking_id: finalPbid,
     guest_name, guest_email, guest_phone,
     check_in, check_out, num_guests, total_price, currency,
     status, special_requests, notes, source, extras,
