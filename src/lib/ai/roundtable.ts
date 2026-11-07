@@ -693,7 +693,7 @@ export async function fetchFactBriefing(
         fullText = data.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
         addUsage('google/gemini-2.5-flash', data.usageMetadata?.promptTokenCount, data.usageMetadata?.candidatesTokenCount)
       } else {
-        console.warn('[fact-briefing] Gemini Google Search returned non-200:', resp.status)
+        console.warn('[fact-briefing] Gemini Google Search returned non-200:', resp.status, (await resp.text().catch(() => '')).slice(0, 500))
       }
     } catch (err) {
       console.error('[fact-briefing] Google Search Grounding call error:', err)
@@ -712,6 +712,7 @@ export async function fetchFactBriefing(
         system: systemPrompt,
         prompt: userPrompt,
         maxOutputTokens: 4096,
+        onError: ({ error }) => console.warn('[fact-briefing] Perplexity stream error:', error),
       })
       for await (const part of result.fullStream) {
         if (part.type === 'text-delta') {
@@ -726,29 +727,34 @@ export async function fetchFactBriefing(
     }
   }
 
-  // 若聯網搜尋皆不可用，退回一般語言模型推論
+  // 若聯網搜尋皆不可用，退回一般語言模型推論（依序嘗試，任一家額度用完或故障時換下一家）
   if (!fullText.trim()) {
-    try {
-      const fallbackModel = resolveModel('google/gemini-2.5-flash')
-      const result = await streamText({
-        model: fallbackModel as LanguageModel,
-        system: systemPrompt,
-        prompt: userPrompt,
-        maxOutputTokens: 4096,
-        providerOptions: {
-          google: { thinkingConfig: { thinkingBudget: 0 } },
-        },
-      })
-      for await (const part of result.fullStream) {
-        if (part.type === 'text-delta') {
-          fullText += part.text
-          emit?.({ type: 'briefing-delta', content: part.text })
+    for (const modelId of ['google/gemini-2.5-flash', 'openai/gpt-4o']) {
+      try {
+        const result = await streamText({
+          model: resolveModel(modelId) as LanguageModel,
+          system: systemPrompt,
+          prompt: userPrompt,
+          maxOutputTokens: 4096,
+          providerOptions: {
+            google: { thinkingConfig: { thinkingBudget: 0 } },
+          },
+          onError: ({ error }) => console.error(`[fact-briefing] fallback ${modelId} stream error:`, error),
+        })
+        for await (const part of result.fullStream) {
+          if (part.type === 'text-delta') {
+            fullText += part.text
+            emit?.({ type: 'briefing-delta', content: part.text })
+          }
         }
+        const usage = await result.totalUsage
+        addUsage(modelId, usage.inputTokens, usage.outputTokens)
+      } catch (err) {
+        console.error(`[fact-briefing] fallback ${modelId} error:`, err)
       }
-      const usage = await result.totalUsage
-      addUsage('google/gemini-2.5-flash', usage.inputTokens, usage.outputTokens)
-    } catch (err) {
-      console.error('[fact-briefing] fallback streamText error:', err)
+      if (fullText.trim()) break
+    }
+    if (!fullText.trim()) {
       fullText = '⚠️ 資料專員聯網檢索暫時不可用，由各合夥人依自身知識庫展開研議。'
     }
   } else {
