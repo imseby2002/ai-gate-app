@@ -672,6 +672,8 @@ export async function fetchFactBriefing(
   const userPrompt = `請針對以下會議主題，運用 Google 搜尋檢索最新、最真實的客觀數據，完成《會前客觀事實簡報》：\n${instruction}`
 
   let fullText = ''
+  // 是否已逐字串流給前端（Perplexity／OpenRouter 是邊收邊送；Gemini 直連是一次拿到全文，最後再分段送）
+  let streamed = false
 
   // 優先嘗試使用 Gemini 2.5 Flash 原廠 Google Search Grounding
   if (process.env.GOOGLE_AI_API_KEY) {
@@ -717,6 +719,7 @@ export async function fetchFactBriefing(
       for await (const part of result.fullStream) {
         if (part.type === 'text-delta') {
           fullText += part.text
+          streamed = true
           emit?.({ type: 'briefing-delta', content: part.text })
         }
       }
@@ -724,6 +727,34 @@ export async function fetchFactBriefing(
       addUsage('perplexity-sonar-pro', usage.inputTokens, usage.outputTokens)
     } catch (pErr) {
       console.warn('[fact-briefing] Perplexity fallback error:', pErr)
+    }
+  }
+
+  // 第三軌：OpenRouter 的 Gemini 2.5 Flash（:online 會先做網路搜尋再回答），Google 金鑰額度用完時仍能聯網
+  if (!fullText.trim() && process.env.OPENROUTER_API_KEY) {
+    try {
+      const openrouter = createOpenAI({
+        apiKey: process.env.OPENROUTER_API_KEY,
+        baseURL: 'https://openrouter.ai/api/v1',
+      })
+      const result = await streamText({
+        model: openrouter.chat('google/gemini-2.5-flash:online'),
+        system: systemPrompt,
+        prompt: userPrompt,
+        maxOutputTokens: 4096,
+        onError: ({ error }) => console.warn('[fact-briefing] OpenRouter Gemini stream error:', error),
+      })
+      for await (const part of result.fullStream) {
+        if (part.type === 'text-delta') {
+          fullText += part.text
+          streamed = true
+          emit?.({ type: 'briefing-delta', content: part.text })
+        }
+      }
+      const usage = await result.totalUsage
+      addUsage('openrouter/google/gemini-2.5-flash:online', usage.inputTokens, usage.outputTokens)
+    } catch (oErr) {
+      console.warn('[fact-briefing] OpenRouter Gemini fallback error:', oErr)
     }
   }
 
@@ -757,7 +788,7 @@ export async function fetchFactBriefing(
     if (!fullText.trim()) {
       fullText = '⚠️ 資料專員聯網檢索暫時不可用，由各合夥人依自身知識庫展開研議。'
     }
-  } else {
+  } else if (!streamed) {
     // 將獲取的完整文字串流拋出給前端，呈現打字機效果
     const chunkSize = 40
     for (let i = 0; i < fullText.length; i += chunkSize) {
