@@ -320,7 +320,7 @@ export default function RoundtablePage() {
       setInstruction(session.instruction)
       setFactBriefing(session.fact_briefing ?? '')
       if (session.domain) {
-        setDomain(session.domain)
+        setSelectedDomain(session.domain as RoundtableDomain)
         const preset = DOMAIN_PRESETS[session.domain as RoundtableDomain] ?? DOMAIN_PRESETS.auto
         setDetectedDomainLabel(preset.label)
       }
