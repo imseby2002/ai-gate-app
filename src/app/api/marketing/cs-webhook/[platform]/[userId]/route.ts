@@ -7,6 +7,7 @@
  */
 import { trackLineGroupEvent } from '@/lib/marketing/line-groups'
 import { fireGroupNotify } from '@/lib/marketing/group-notify'
+import { reserveContextForCs } from '@/lib/reserve/cs-context'
 import { loadChannelCredentials } from '@/lib/channels/resolve'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
@@ -2341,6 +2342,9 @@ async function getAIReply(
     let externalDataSection = userId
       ? await queryDataSources(userId, message, knowledge.bookingFlowEnabled, { conversationText: convUserText, verifyName }, !!(imageBuffer && imageMimeType))
       : ''
+
+    // 預約系統串接：客人問預約／時段或提供手機號碼時，附上服務、空檔、預約連結與該客人的預約紀錄
+    if (userId) externalDataSection += await reserveContextForCs(userId, message).catch(() => '')
 
     // 真實案例：管家人工提示客人「輸入『帳號』二字取得付款資訊」（民宿慣用的付款觸發詞，
     // 知識庫的賞鯨付款說明也是這樣寫），但客人真的只回一個「帳號」時，這則訊息完全沒有
