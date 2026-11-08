@@ -56,7 +56,7 @@ export async function middleware(request: NextRequest) {
       work:      '/resume',        // 職場助手
       office:    '/office',        // 辦公系統
       agent:     '/agent',         // AI Agent 系統
-      www:       '/dashboard',     // owner 主控台
+      www:       '/portal',        // 公司總頁（各系統介紹、入口與費用）；主控台在 /dashboard
       esim:      '/esim',          // eSIM 出國上網商城
     }
     // 公司專屬子網域（<slug>.im-tourist.com）：首頁為該公司的 ERP（/office）
@@ -100,6 +100,7 @@ export async function middleware(request: NextRequest) {
     // Public routes
     const isPublic =
       pathname === '/' ||
+      pathname.startsWith('/portal') ||
       pathname.startsWith('/intro') ||
       pathname.startsWith('/privacy') ||
       pathname.startsWith('/quiz/') ||

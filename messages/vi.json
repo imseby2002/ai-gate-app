@@ -13641,5 +13641,40 @@
       "pet": "Chăm sóc thú cưng",
       "other": "Dịch vụ chuyên nghiệp khác"
     }
+  },
+  "Portal": {
+    "metaTitle": "AI GATE | Nền tảng AI doanh nghiệp tất cả trong một",
+    "metaDesc": "AI GATE cung cấp marketing, CSKH, đặt phòng, đặt lịch dịch vụ, ERP, AI Agent, trò chuyện AI, trợ lý công việc, TradingAgents và eSIM — dùng riêng từng hệ thống hoặc mở toàn bộ bằng gói Doanh nghiệp.",
+    "nav": {
+      "systems": "Hệ thống",
+      "pricing": "Chi phí",
+      "console": "Đăng nhập / Bảng điều khiển"
+    },
+    "hero": {
+      "title": "Một nền tảng cho marketing, CSKH và vận hành",
+      "desc": "AI GATE kết hợp marketing, CSKH, đặt phòng, đặt lịch, ERP và công cụ AI. Mỗi hệ thống dùng riêng được, hoặc mở cho cả công ty bằng gói Doanh nghiệp.",
+      "explore": "Xem tất cả hệ thống",
+      "enterprise": "Gói Doanh nghiệp"
+    },
+    "systemsTitle": "Tất cả hệ thống",
+    "enter": "Vào hệ thống",
+    "learnMore": "Tìm hiểu thêm",
+    "trading": {
+      "label": "TradingAgents",
+      "desc": "Phân tích giao dịch đa Agent LLM, tranh luận tăng/giảm và báo cáo quyết định đầu tư"
+    },
+    "esim": {
+      "label": "eSIM du lịch",
+      "desc": "Cửa hàng eSIM dữ liệu di động khi ra nước ngoài"
+    },
+    "pricingTitle": "Chi phí",
+    "pricingDesc": "Mỗi hệ thống có gói riêng; dùng cho cả công ty thì gói Doanh nghiệp là tiết kiệm nhất.",
+    "enterprise": {
+      "title": "Gói Doanh nghiệp",
+      "desc": "Một gói mở ERP, marketing, CSKH và công cụ AI cho cả công ty, tính theo số điểm kinh doanh và số người dùng"
+    },
+    "pricingOf": "Gói {name}",
+    "pricingOthers": "Các hệ thống khác (đặt lịch, ERP, AI Agent…), xem gói Doanh nghiệp hoặc đăng nhập để xem trong từng hệ thống.",
+    "privacy": "Chính sách bảo mật"
   }
 }

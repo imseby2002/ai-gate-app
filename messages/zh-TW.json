@@ -13641,5 +13641,40 @@
       "pet": "寵物美容 / 獸醫",
       "other": "專業諮詢與其他服務"
     }
+  },
+  "Portal": {
+    "metaTitle": "AI GATE｜一站式 AI 企業系統",
+    "metaDesc": "AI GATE 提供行銷、客服、訂房、服務預約、ERP、AI Agent、AI 對話、職場助手、TradingAgents 與 eSIM 等系統，可單獨使用或以企業方案一次開通。",
+    "nav": {
+      "systems": "系統介紹",
+      "pricing": "費用",
+      "console": "登入／主控台"
+    },
+    "hero": {
+      "title": "一個平台，管好公司的行銷、客服與營運",
+      "desc": "AI GATE 把行銷、客服、訂房、預約、ERP 與 AI 工具整合在一起，每個系統都能單獨使用，也能用企業方案一次開通全公司。",
+      "explore": "看所有系統",
+      "enterprise": "企業方案"
+    },
+    "systemsTitle": "所有系統",
+    "enter": "進入系統",
+    "learnMore": "了解更多",
+    "trading": {
+      "label": "TradingAgents 投資框架",
+      "desc": "多 Agent LLM 金融交易、多空激辯與投資決策白皮書"
+    },
+    "esim": {
+      "label": "eSIM 出國上網",
+      "desc": "出國上網 eSIM 商城"
+    },
+    "pricingTitle": "費用",
+    "pricingDesc": "各系統有自己的方案；整間公司一起用，選企業方案最划算。",
+    "enterprise": {
+      "title": "企業方案",
+      "desc": "一個方案開通全公司 ERP、行銷、客服與 AI 工具，依據點與人數計價"
+    },
+    "pricingOf": "{name} 方案",
+    "pricingOthers": "其他系統（預約、ERP、AI Agent 等）的費用，請看企業方案，或登入後在各系統內查看。",
+    "privacy": "隱私權政策"
   }
 }

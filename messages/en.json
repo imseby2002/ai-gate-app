@@ -13641,5 +13641,40 @@
       "pet": "Pet Grooming & Vet",
       "other": "Professional Services"
     }
+  },
+  "Portal": {
+    "metaTitle": "AI GATE | All-in-one AI business platform",
+    "metaDesc": "AI GATE offers marketing, customer service, booking, service reservations, ERP, AI Agent, AI chat, career assistant, TradingAgents and eSIM — use each on its own or enable everything with an Enterprise plan.",
+    "nav": {
+      "systems": "Systems",
+      "pricing": "Pricing",
+      "console": "Log in / Console"
+    },
+    "hero": {
+      "title": "One platform for your marketing, customer service and operations",
+      "desc": "AI GATE brings marketing, customer service, booking, reservations, ERP and AI tools together. Use any system on its own, or enable all of them for your company with an Enterprise plan.",
+      "explore": "See all systems",
+      "enterprise": "Enterprise plan"
+    },
+    "systemsTitle": "All systems",
+    "enter": "Open",
+    "learnMore": "Learn more",
+    "trading": {
+      "label": "TradingAgents",
+      "desc": "Multi-agent LLM trading analysis, bull/bear debate and investment decision reports"
+    },
+    "esim": {
+      "label": "eSIM travel data",
+      "desc": "eSIM store for mobile data abroad"
+    },
+    "pricingTitle": "Pricing",
+    "pricingDesc": "Each system has its own plans; for the whole company, the Enterprise plan is the best value.",
+    "enterprise": {
+      "title": "Enterprise plan",
+      "desc": "One plan enables ERP, marketing, customer service and AI tools for the whole company, priced by locations and users"
+    },
+    "pricingOf": "{name} plans",
+    "pricingOthers": "For other systems (reservations, ERP, AI Agent, etc.), see the Enterprise plan or check inside each system after logging in.",
+    "privacy": "Privacy policy"
   }
 }
