@@ -87,6 +87,15 @@ export const MODULES = [
     color: 'from-amber-600 to-rose-600',
     standalone: true,
   },
+  {
+    id: 'trading-agents',
+    label: 'TradingAgents',
+    desc: '多 Agent LLM 金融交易與投資決策框架',
+    href: '/trading-agents',
+    emoji: '📈',
+    color: 'from-emerald-500 to-cyan-600',
+    standalone: true,
+  },
 ] as const
 
 export type ModuleId = typeof MODULES[number]['id']

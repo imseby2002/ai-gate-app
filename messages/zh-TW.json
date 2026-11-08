@@ -82,6 +82,7 @@
     "work": "工作區",
     "dashboard": "儀表板",
     "roundtable": "智慧圓桌",
+    "tradingAgents": "TradingAgents 投資框架",
     "assistants": "AI 助理",
     "imageGen": "圖片生成",
     "videoGen": "影片生成",
@@ -143,6 +144,10 @@
       "roundtable": {
         "label": "智慧圓桌",
         "desc": "多模型與多角色 AI 專家會議、交叉論述與自動總結"
+      },
+      "trading-agents": {
+        "label": "TradingAgents 投資框架",
+        "desc": "多 Agent LLM 金融交易、多空激辯與投資決策白皮書"
       },
       "marketing": {
         "label": "行銷流水線",

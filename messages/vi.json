@@ -82,6 +82,7 @@
     "work": "Không gian làm việc",
     "dashboard": "Trang chủ",
     "roundtable": "Hội nghị bàn tròn AI",
+    "tradingAgents": "TradingAgents",
     "assistants": "Trợ lý AI",
     "imageGen": "Tạo ảnh",
     "videoGen": "Tạo video",
@@ -143,6 +144,10 @@
       "roundtable": {
         "label": "Hội nghị bàn tròn AI",
         "desc": "Hội nghị chuyên gia AI đa mô hình & đa vai trò, phản biện và tổng hợp tự động"
+      },
+      "trading-agents": {
+        "label": "TradingAgents",
+        "desc": "Khung giao dịch tài chính & ra quyết định đầu tư Đa-Agent LLM"
       },
       "marketing": {
         "label": "Quy trình Marketing",
