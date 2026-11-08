@@ -1215,15 +1215,26 @@
         "revenue": "Revenue",
         "bookings": "Bookings",
         "nights": "Nights",
-        "occupancy": "Occupancy"
+        "occupancy": "Occupancy",
+        "occupied": "Occupied"
       },
       "csv": {
         "month": "Month",
         "revenue": "Revenue",
         "bookings": "Bookings",
         "nights": "Room Nights",
-        "filename": "bookings-report_{year}.csv"
-      }
+        "filename": "bookings-report_{year}.csv",
+        "day": "Date",
+        "occupiedRooms": "Occupied Rooms",
+        "occupancy": "Occupancy",
+        "filenameMonth": "bookings-report_{year}-{month}.csv"
+      },
+      "allYear": "Full year",
+      "monthUnit": "{month}",
+      "dailyTrend": "Daily Trend",
+      "compareRevenue": "Revenue change",
+      "mom": "vs last month",
+      "yoy": "vs last year"
     },
     "dashboard": {
       "title": "Booking Overview",
