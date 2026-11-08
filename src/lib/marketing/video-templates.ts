@@ -24,7 +24,7 @@ export interface VideoTemplate {
   params: string
   defaultAspect: '9:16' | '16:9' | '1:1' | '4:5'
   recommendedSeconds: number
-  badge?: string
+  badge?: string | null
   gradient: string
   tags: string[]
   positivePrompt: string

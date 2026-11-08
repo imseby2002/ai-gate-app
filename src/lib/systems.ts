@@ -12,7 +12,7 @@ export interface SystemDef {
 }
 
 export const SYSTEMS: Record<SystemKey, SystemDef> = {
-  chat:      { key: 'chat',      label: 'IMT 智能對話',    desc: '多模型智慧對話、助理與圖片／影片生成', home: '/apps',           prefixes: ['/apps', '/chat', '/assistants', '/image-gen', '/video-gen', '/usage', '/roundtable'] },
+  chat:      { key: 'chat',      label: 'IMT 智能對話',    desc: '多模型智慧對話、助理與圖片／影片生成', home: '/apps',           prefixes: ['/apps', '/chat', '/assistants', '/image-gen', '/video-gen', '/usage', '/roundtable', '/trading-agents'] },
   booking:   { key: 'booking',   label: 'IMT 智能訂房系統',   desc: '房源、訂單、定價、線上訂房與通路同步', home: '/booking',        prefixes: ['/booking'] },
   reserve:   { key: 'reserve',   label: 'IMT 服務預約系統',   desc: '美容美髮、診所與專業服務排班與線上預約', home: '/reserve',        prefixes: ['/reserve'] },
   cs:        { key: 'cs',        label: 'IMT 智能客服',   desc: '多平台 AI 客服與知識庫', home: '/cs',             prefixes: ['/cs', '/marketing-auto'] },
@@ -24,7 +24,7 @@ export const SYSTEMS: Record<SystemKey, SystemDef> = {
 }
 
 export const SYSTEMS_VI: Record<SystemKey, SystemDef> = {
-  chat:      { key: 'chat',      label: 'IMT Trò Chuyện Thông Minh', desc: 'Hội thoại đa mô hình, trợ lý AI & tạo ảnh / video', home: '/apps',           prefixes: ['/apps', '/chat', '/assistants', '/image-gen', '/video-gen', '/usage', '/roundtable'] },
+  chat:      { key: 'chat',      label: 'IMT Trò Chuyện Thông Minh', desc: 'Hội thoại đa mô hình, trợ lý AI & tạo ảnh / video', home: '/apps',           prefixes: ['/apps', '/chat', '/assistants', '/image-gen', '/video-gen', '/usage', '/roundtable', '/trading-agents'] },
   booking:   { key: 'booking',   label: 'IMT Đặt Phòng',   desc: 'Quản lý phòng, đơn đặt, định giá & đồng bộ kênh OTA', home: '/booking',        prefixes: ['/booking'] },
   reserve:   { key: 'reserve',   label: 'IMT Đặt Lịch Hẹn', desc: 'Quản lý lịch hẹn & đặt chỗ cho Spa, Salon tóc, Phòng khám', home: '/reserve', prefixes: ['/reserve'] },
   cs:        { key: 'cs',        label: 'IMT CSKH Thông Minh',        desc: 'Trợ lý CSKH AI đa kênh và cơ sở dữ liệu tri thức', home: '/cs',             prefixes: ['/cs', '/marketing-auto'] },
@@ -36,7 +36,7 @@ export const SYSTEMS_VI: Record<SystemKey, SystemDef> = {
 }
 
 export const SYSTEMS_EN: Record<SystemKey, SystemDef> = {
-  chat:      { key: 'chat',      label: 'IMT Smart Chat',             desc: 'Multi-model AI conversations, assistants & media generation', home: '/apps',           prefixes: ['/apps', '/chat', '/assistants', '/image-gen', '/video-gen', '/usage', '/roundtable'] },
+  chat:      { key: 'chat',      label: 'IMT Smart Chat',             desc: 'Multi-model AI conversations, assistants & media generation', home: '/apps',           prefixes: ['/apps', '/chat', '/assistants', '/image-gen', '/video-gen', '/usage', '/roundtable', '/trading-agents'] },
   booking:   { key: 'booking',   label: 'IMT Booking',      desc: 'Properties, reservations, pricing, and OTA sync', home: '/booking',        prefixes: ['/booking'] },
   reserve:   { key: 'reserve',   label: 'IMT Appointments', desc: 'Online booking and scheduling for salons, clinics & services', home: '/reserve', prefixes: ['/reserve'] },
   cs:        { key: 'cs',        label: 'IMT Smart CS',    desc: 'Omnichannel AI customer support & knowledge base', home: '/cs',             prefixes: ['/cs', '/marketing-auto'] },
@@ -110,7 +110,7 @@ export const SCOPE_SESSION_KEY = 'ai_gate_scope'
 
 // 不受 scope 限制、任何系統都可存取的共用路徑
 // /dashboard 不在此列：為 owner 專用總控台，非管理者會被導向 /apps
-const SHARED_PREFIXES = ['/settings', '/team', '/api', '/callback', '/login', '/register', '/reset-password', '/logout', '/privacy', '/work', '/office', '/roundtable', '/mkt', '/legal', '/esim', '/feedback', '/credits', '/company', '/knowledge', '/exams', '/r']
+const SHARED_PREFIXES = ['/settings', '/team', '/api', '/callback', '/login', '/register', '/reset-password', '/logout', '/privacy', '/work', '/office', '/roundtable', '/mkt', '/legal', '/esim', '/feedback', '/credits', '/company', '/knowledge', '/exams', '/r', '/trading-agents']
 
 export function isSystemKey(s: string | undefined | null): s is SystemKey {
   return !!s && Object.prototype.hasOwnProperty.call(SYSTEMS, s)

@@ -63,7 +63,8 @@ export async function startAzureRecognition(options: {
     speechConfig.setProperty('SpeechServiceConnection_EnableSpeakerDiarization', 'true')
     speechConfig.setProperty('SpeechServiceResponse_DiarizeIntermediateResults', 'true')
     if (options.maxSpeakers && options.maxSpeakers > 0) {
-      speechConfig.setPropertyByName('maxSpeakerCount', String(options.maxSpeakers))
+      const configAny = speechConfig as unknown as { setPropertyByName?: (k: string, v: string) => void }
+      configAny.setPropertyByName?.('maxSpeakerCount', String(options.maxSpeakers))
       speechConfig.setProperty('SpeechServiceConnection_DiarizationMaxSpeakers', String(options.maxSpeakers))
     }
   } catch {}
