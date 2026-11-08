@@ -133,7 +133,7 @@ export async function BookingPricing() {
 
       <EnterprisePricing grad={BK_GRAD} />
 
-      <BkFinalCta title={tr("先免費用，覺得好再升級")} sub={tr("FREE 方案含 1 房源、官網 AI 設計與 iCal 同步。")} />
+      <BkFinalCta title={tr("先免費用，覺得好再升級")} sub={tr("FREE 方案含 3 房源、官網 AI 設計、iCal 同步、動態定價、優惠碼與客服串接。")} />
       <BkFooter />
     </div>
   )

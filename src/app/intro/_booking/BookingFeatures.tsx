@@ -26,8 +26,8 @@ const GROUPS__ZH: Array<{ id: string; n: string; title: string; sub: string; ite
       },
       { Icon: Download, title: '從 OTA 一鍵匯入', desc: '貼上 Booking.com、Agoda 等平台的民宿頁面網址，AI 解析民宿資料、設施與房型，確認後一鍵建立，不用重新建檔。' },
       { Icon: Building2, title: '民宿資料', desc: '民宿名稱、聯絡方式、入住／退房時間與入住規則，官網與通知信都會帶入。' },
-      { Icon: BedDouble, title: '房型管理', desc: '設定各房間與各平台上的房型別名，Email 同步時自動比對到正確房間。', plan: 'FREE 1 房源 · CORE／PRO 5 · MAX 15（可加購）' },
-      { Icon: Users, title: '協作成員', desc: '邀請夥伴一起管理訂單與房況。', plan: 'CORE 1 位 · PRO 2 位 · MAX 不限' },
+      { Icon: BedDouble, title: '房型管理', desc: '設定各房間與各平台上的房型別名，Email 同步時自動比對到正確房間。', plan: 'FREE 3 房源 · CORE／PRO 5 · MAX 15（可加購）' },
+      { Icon: Users, title: '協作成員', desc: '邀請夥伴一起管理訂單與房況。', plan: 'FREE／CORE 1 位 · PRO 2 位 · MAX 不限' },
     ],
   },
   {
@@ -56,10 +56,10 @@ const GROUPS__ZH: Array<{ id: string; n: string; title: string; sub: string; ite
         Icon: TrendingUp, title: '動態定價規則',
         desc: '依日期與住房率自動加減價，也能排程跟隨市場行情自動調整。',
         points: ['週末', '假日', '季節性', '住房率', '臨時訂', '早鳥訂', '市場跟隨'],
-        plan: 'CORE 起 · MAX 可客製規則',
+        plan: 'FREE 起 · MAX 可客製規則',
       },
       { Icon: Search, title: '周邊比價', desc: '查詢同地區、指定入住日的周邊旅宿房價清單與統計（資料來源 Google Hotels），定價前先看行情。' },
-      { Icon: Percent, title: '折扣與優惠碼', desc: '建立折扣碼，旅客在官網訂房時直接套用。', plan: 'CORE 起' },
+      { Icon: Percent, title: '折扣與優惠碼', desc: '建立折扣碼，旅客在官網訂房時直接套用。', plan: 'FREE 起' },
     ],
   },
   {
@@ -73,7 +73,7 @@ const GROUPS__ZH: Array<{ id: string; n: string; title: string; sub: string; ite
       },
       { Icon: Mail, title: 'Email 同步', desc: '連接信箱，自動從各平台的訂房確認信解析出訂單（備援用）。', plan: 'CORE 起' },
       { Icon: RefreshCw, title: 'iCal 同步', desc: '用各平台提供的 iCal 連結自動匯入訂單，每小時同步一次（備援，非即時）。' },
-      { Icon: Headphones, title: '串接 IMT 智能客服', desc: '旅客在 LINE、WhatsApp 等平台問訂單時，AI 客服可用訂單號碼、姓名或手機直接查詢入住資訊；入住時間前不給密碼。', plan: 'PRO 起' },
+      { Icon: Headphones, title: '串接 IMT 智能客服', desc: '旅客在 LINE、WhatsApp 等平台問訂單時，AI 客服可用訂單號碼、姓名或手機直接查詢入住資訊；入住時間前不給密碼。', plan: 'FREE 起（需訂閱 IMT 智能客服）' },
     ],
   },
   {
@@ -156,7 +156,7 @@ export async function BookingFeatures() {
         </Link>
       </section>
 
-      <BkFinalCta title={tr("先用免費方案做好你的官網")} sub={tr("FREE 方案含 1 房源、官網 AI 設計與 iCal 同步，隨時可升級。")} />
+      <BkFinalCta title={tr("先用免費方案做好你的官網")} sub={tr("FREE 方案含 3 房源、官網 AI 設計、iCal 同步、動態定價與優惠碼，隨時可升級。")} />
       <BkFooter />
     </div>
   )

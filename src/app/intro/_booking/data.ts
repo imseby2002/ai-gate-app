@@ -21,7 +21,7 @@ export function yearlySavePct(plan: BookingPlan): number {
 }
 
 export const PLAN_FIT: Record<BookingPlan, string> = {
-  free: '一間房，先做官網、接 iCal 試試看',
+  free: '三間房以內，官網、定價工具與客服串接免費用',
   core: '自己經營幾間房，要動態定價和優惠碼',
   pro: '上架多個平台，需要即時同步防超賣',
   enterprise: '房源多、團隊大，要客製定價規則',
@@ -29,8 +29,8 @@ export const PLAN_FIT: Record<BookingPlan, string> = {
 
 // 各方案卡片重點（對應站內 /booking/plan 的 cards 文案）
 export const PLAN_HIGHLIGHTS: Record<BookingPlan, string[]> = {
-  free: ['1 房源（不可加購）', '官網 AI 設計', 'iCal 同步'],
-  core: ['5 房源（+$4/房源）', '1 位協作者', '動態定價規則', '優惠碼', 'Email 同步（OTA 信件轉單）'],
+  free: ['3 房源（不可加購）', '1 位協作者', '官網 AI 設計', 'iCal 同步', '動態定價規則', '優惠碼', '與 IMT 智能客服串接'],
+  core: ['5 房源（+$4/房源）', '1 位協作者', '動態定價規則', '優惠碼', 'Email 同步（OTA 信件轉單）', '與 IMT 智能客服串接'],
   pro: ['5 房源（+$3/房源）', '2 位協作者', '即時同步 60+ 平台（秒級防超賣）', '與 IMT 智能客服串接', '每月 1 次免費協助設定'],
   enterprise: ['15 房源（+$2/房源）', '協作者不限', '動態定價客製規則', '優惠碼', '每月 2 次免費協助設定'],
 }

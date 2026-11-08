@@ -18,15 +18,17 @@ export interface BookingPlanFeatures {
 }
 
 export const BOOKING_PLAN_FEATURES: Record<BookingPlan, BookingPlanFeatures> = {
+  // 免費為主：沒有額外成本的功能全開；有成本的（Email 轉單 AI 解析、即時通路同步、人工協助）才收費。
+  // 客服串接開放給所有方案，用來帶動 IMT 智能客服訂閱。
   free: {
-    propertyBaseLimit: 1,
+    propertyBaseLimit: 3,
     extraPropertyPriceUsd: 0,
-    collaboratorLimit: 0,
-    dynamicPricing: false,
+    collaboratorLimit: 1,
+    dynamicPricing: true,
     emailSync: false,
     realtimeSync: false,
-    csIntegration: false,
-    promoCodes: false,
+    csIntegration: true,
+    promoCodes: true,
     assistedSetup: { freePerMonth: 0, priceUsd: 20 },
   },
   core: {
@@ -36,7 +38,7 @@ export const BOOKING_PLAN_FEATURES: Record<BookingPlan, BookingPlanFeatures> = {
     dynamicPricing: true,
     emailSync: true,
     realtimeSync: false,
-    csIntegration: false,
+    csIntegration: true,
     promoCodes: true,
     assistedSetup: { freePerMonth: 0, priceUsd: 20 },
   },
