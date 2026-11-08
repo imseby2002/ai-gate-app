@@ -4,7 +4,7 @@ import { requireSocialMatrix } from '@/lib/social-matrix/access'
 import { healthForDay, MATURE_DAY } from '@/lib/social-matrix/warmup'
 import type { SocialPlatform } from '@/lib/social-matrix/types'
 
-const PLATFORMS: SocialPlatform[] = ['facebook', 'instagram', 'threads', 'tiktok', 'dcard', 'x']
+const PLATFORMS: SocialPlatform[] = ['facebook', 'instagram', 'threads', 'tiktok', 'dcard', 'x', 'zalo']
 
 export async function GET(req: NextRequest) {
   const guard = await requireSocialMatrix(req)

@@ -17,6 +17,7 @@ import {
 import { officialPriceUsd, resiPackUsd } from '@/lib/social-matrix/pricing'
 import { PlanGate } from '@/components/marketing/PlanGate'
 import { ConnectorPanel, queueConnectorTask } from '@/components/marketing/ConnectorPanel'
+import { ChatGroupCopilot } from '@/components/marketing/ChatGroupCopilot'
 
 export default function SocialMatrixPage() {
   return (
@@ -1835,6 +1836,17 @@ function SocialMatrixContent() {
                       })}
                     </div>
                   </div>
+
+                  {(() => {
+                    const c = copies.find(x => x.id === selectedCopyId) || copies[0]
+                    return (
+                      <ChatGroupCopilot
+                        accounts={accounts}
+                        defaultText={c ? `${c.title}\n\n${c.content}\n\n${c.hashtags.join(' ')}` : ''}
+                        showToast={showToast}
+                      />
+                    )
+                  })()}
                 </div>
 
                 {/* Right Col: Anti-Ban Varied Copies Matrix (7 cols) */}
@@ -2323,6 +2335,7 @@ function SocialMatrixContent() {
                   <option value="dcard">{t('optDcard')}</option>
                   <option value="tiktok">{t('optTiktok')}</option>
                   <option value="x">X (Twitter)</option>
+                  <option value="zalo">Zalo</option>
                 </select>
               </div>
 

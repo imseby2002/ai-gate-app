@@ -13152,7 +13152,23 @@
     "companyManagedTitle": "AdsPower dùng chung của công ty (quản lý)",
     "companyManagedPlan": "Công ty bạn dùng chung {n} hồ sơ · {seats} chỗ thành viên, hiệu lực đến {date}",
     "companyManagedSuspended": "AdsPower dùng chung của công ty đã tạm dừng. Hãy liên hệ quản trị viên công ty hoặc bộ phận hỗ trợ AI-GATE.",
-    "companyManagedNoSeat": "Bạn chưa được chỉ định chỗ thành viên AdsPower. Hãy liên hệ quản trị viên công ty."
+    "companyManagedNoSeat": "Bạn chưa được chỉ định chỗ thành viên AdsPower. Hãy liên hệ quản trị viên công ty.",
+    "chat": {
+      "title": "Hỗ trợ đăng nhóm LINE / Zalo cá nhân",
+      "desc": "Trình kết nối sẽ mở LINE PC hoặc Zalo Web trên máy tính và sao chép nội dung; bạn tự chọn nhóm, dán (Ctrl+V) và bấm gửi.",
+      "app": {
+        "line_pc": "LINE PC",
+        "zalo_web": "Zalo Web"
+      },
+      "groupName": "Tên nhóm (để nhắc)",
+      "groupNamePh": "VD: Hội du lịch Đài Trung",
+      "groupUrl": "Link nhóm (tùy chọn)",
+      "text": "Nội dung",
+      "warn": "Không gửi cùng một nội dung hàng loạt vào nhiều nhóm — LINE / Zalo có thể khóa tài khoản. Hãy thay đổi nội dung cho từng nhóm và gửi cách quãng.",
+      "submit": "Mở trên máy tính và sao chép nội dung",
+      "needText": "Nội dung không được để trống",
+      "queued": "Đã gửi: máy tính sẽ mở {app} và sao chép nội dung. Hãy chọn nhóm, dán và tự bấm gửi."
+    }
   },
   "Knowledge": {
     "title": "Kho tri thức công ty",

@@ -13152,7 +13152,23 @@
     "companyManagedTitle": "公司共享代管 AdsPower",
     "companyManagedPlan": "貴公司共享 {n} 個環境・{seats} 個成員席次，效期至 {date}",
     "companyManagedSuspended": "貴公司的共享代管已暫停，請聯絡公司管理者或 AI-GATE 客服。",
-    "companyManagedNoSeat": "您尚未被指派 AdsPower 成員席次，請聯絡公司管理者。"
+    "companyManagedNoSeat": "您尚未被指派 AdsPower 成員席次，請聯絡公司管理者。",
+    "chat": {
+      "title": "個人 LINE／Zalo 群組帶入",
+      "desc": "連接器會在電腦開啟 LINE 電腦版或 Zalo 網頁並複製文案；請自己選群組、貼上（Ctrl+V）並按送出。",
+      "app": {
+        "line_pc": "LINE 電腦版",
+        "zalo_web": "Zalo 網頁"
+      },
+      "groupName": "群組名稱（提醒用）",
+      "groupNamePh": "例如：台中自由行交流",
+      "groupUrl": "群組連結（選填）",
+      "text": "文案",
+      "warn": "請勿對多個群組大量發送相同文案，LINE／Zalo 可能因此停權帳號；建議每個群組調整內容並間隔發送。",
+      "submit": "在電腦開啟並複製文案",
+      "needText": "文案不可為空",
+      "queued": "已送出：電腦將開啟{app}並複製文案，請選群組、貼上後自行按送出"
+    }
   },
   "Knowledge": {
     "title": "公司知識庫",

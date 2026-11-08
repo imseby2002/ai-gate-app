@@ -2,12 +2,14 @@
 //   sync_profiles — 依 AI-GATE 帳號＋代理在 AdsPower 建立／更新設定檔
 //   open_profile  — 在客人電腦開啟某社群帳號的 AdsPower 瀏覽器
 //   copilot_post  — 開啟瀏覽器、前往目標社團並把文案帶入發文框（由客人自己按發布）
+//   copilot_chat  — 個人 LINE 電腦版／Zalo 網頁群組：開啟聊天程式並複製文案（由客人自己選群組、貼上、送出）
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireSocialMatrix } from '@/lib/social-matrix/access'
 
-const TYPES = ['sync_profiles', 'open_profile', 'copilot_post'] as const
+const TYPES = ['sync_profiles', 'open_profile', 'copilot_post', 'copilot_chat'] as const
+const CHAT_APPS = ['zalo_web', 'line_pc'] as const
 type TaskType = (typeof TYPES)[number]
 
 export async function GET(req: NextRequest) {
@@ -44,7 +46,14 @@ export async function POST(req: NextRequest) {
   let deviceId: string | null = null
   const payload: Record<string, unknown> = {}
 
-  if (type !== 'sync_profiles') {
+  const chatApp = String(body.app ?? '')
+  if (type === 'copilot_chat' && !(CHAT_APPS as readonly string[]).includes(chatApp)) {
+    return NextResponse.json({ error: '請選擇 LINE 電腦版或 Zalo 網頁' }, { status: 400 })
+  }
+  // LINE 電腦版不走 AdsPower，不需指定帳號
+  const needsAccount = type !== 'sync_profiles' && !(type === 'copilot_chat' && chatApp === 'line_pc')
+
+  if (needsAccount) {
     const { data: acc } = await (await createClient())
       .from('marketing_social_accounts')
       .select('id, adspower_profile_id, connector_device_id')
@@ -67,6 +76,19 @@ export async function POST(req: NextRequest) {
       text: text.slice(0, 5000),
       copy_title: body.copy_title ?? null,
       image_urls: Array.isArray(body.image_urls) ? body.image_urls.slice(0, 10) : [],
+    })
+  }
+
+  if (type === 'copilot_chat') {
+    const text = String(body.text ?? '').trim()
+    if (!text) return NextResponse.json({ error: '文案不可為空' }, { status: 400 })
+    const groupUrl = String(body.group_url ?? '').trim()
+    if (groupUrl && !/^https:\/\//.test(groupUrl)) return NextResponse.json({ error: '群組連結需為 https://' }, { status: 400 })
+    Object.assign(payload, {
+      app: chatApp,
+      group_name: String(body.group_name ?? '').trim().slice(0, 100) || null,
+      group_url: chatApp === 'zalo_web' && groupUrl ? groupUrl : null,
+      text: text.slice(0, 5000),
     })
   }
 

@@ -54,7 +54,10 @@ const PLATFORM_DOMAINS = {
   tiktok: 'tiktok.com',
   dcard: 'dcard.tw',
   x: 'x.com',
+  zalo: 'zalo.me',
 }
+// 預設開啟頁（未列出者用 https://www.<domain>/）
+const PLATFORM_HOME = { zalo: 'https://chat.zalo.me/' }
 
 /** AI-GATE 代理 → AdsPower user_proxy_config */
 export function toProxyConfig(proxy) {
@@ -74,7 +77,7 @@ export function profileFields(account) {
   return {
     name: `AI-GATE ${account.platform} ${account.account_name}`.slice(0, 100),
     remark: `AI-GATE 帳號 ${account.id}`,
-    ...(domain ? { platform: domain, tabs: [`https://www.${domain}/`] } : {}),
+    ...(domain ? { platform: domain, tabs: [PLATFORM_HOME[account.platform] ?? `https://www.${domain}/`] } : {}),
   }
 }
 
