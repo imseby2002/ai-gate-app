@@ -1217,15 +1217,26 @@
         "revenue": "Doanh thu",
         "bookings": "Đơn",
         "nights": "Số đêm",
-        "occupancy": "Lấp đầy"
+        "occupancy": "Lấp đầy",
+        "occupied": "Đã lấp"
       },
       "csv": {
         "month": "Tháng",
         "revenue": "Doanh thu",
         "bookings": "Số đơn",
         "nights": "Số đêm phòng",
-        "filename": "bao-cao-don_{year}.csv"
-      }
+        "filename": "bao-cao-don_{year}.csv",
+        "day": "Ngày",
+        "occupiedRooms": "Phòng đã lấp",
+        "occupancy": "Tỷ lệ lấp đầy",
+        "filenameMonth": "bao-cao-don_{year}-{month}.csv"
+      },
+      "allYear": "Cả năm",
+      "monthUnit": "Tháng {month}",
+      "dailyTrend": "Xu hướng theo ngày",
+      "compareRevenue": "So sánh doanh thu",
+      "mom": "so tháng trước",
+      "yoy": "so cùng kỳ năm trước"
     },
     "dashboard": {
       "title": "Tổng quan đặt phòng",

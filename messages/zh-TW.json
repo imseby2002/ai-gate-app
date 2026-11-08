@@ -1217,15 +1217,26 @@
         "revenue": "營收",
         "bookings": "訂單",
         "nights": "晚數",
-        "occupancy": "住房率"
+        "occupancy": "住房率",
+        "occupied": "佔用"
       },
       "csv": {
         "month": "月份",
         "revenue": "營收",
         "bookings": "訂單數",
         "nights": "住房晚數",
-        "filename": "訂單報表_{year}.csv"
-      }
+        "filename": "訂單報表_{year}.csv",
+        "day": "日期",
+        "occupiedRooms": "佔用房數",
+        "occupancy": "住房率",
+        "filenameMonth": "訂單報表_{year}-{month}.csv"
+      },
+      "allYear": "全年",
+      "monthUnit": "{month} 月",
+      "dailyTrend": "每日趨勢",
+      "compareRevenue": "交易額比較",
+      "mom": "較上月",
+      "yoy": "較去年同月"
     },
     "dashboard": {
       "title": "訂房總覽",

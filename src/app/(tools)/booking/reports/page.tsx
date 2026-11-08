@@ -5,15 +5,25 @@ import {
   PieChart, Pie, Cell,
 } from 'recharts'
 import { useTranslations, useLocale } from 'next-intl'
-import { TrendingUp, BedDouble, CalendarDays, DollarSign, Download, Percent, Users } from 'lucide-react'
+import { TrendingUp, TrendingDown, BedDouble, CalendarDays, DollarSign, Download, Percent, Users, Minus } from 'lucide-react'
 
-interface ReportData {
-  monthly: { month: string; revenue: number; nights: number; bookings: number; occupancyRate: number }[]
-  byPlatform: { name: string; revenue: number; bookings: number }[]
-  byRoom:     { name: string; revenue: number; bookings: number }[]
+interface Breakdown { name: string; revenue: number; bookings: number }
+interface Totals {
   totalRevenue: number; totalNights: number; totalBookings: number; avgPrice: number
-  avgStay: number; cancelRate: number; cancelledCount: number; occupancyRate: number; revPAR: number; year: number
+  avgStay: number; cancelRate: number; cancelledCount: number; occupancyRate: number; revPAR: number
 }
+interface YearData extends Totals {
+  mode: 'year'; year: number
+  monthly: { month: string; revenue: number; nights: number; bookings: number; occupancyRate: number }[]
+  byPlatform: Breakdown[]; byRoom: Breakdown[]
+}
+interface MonthData extends Totals {
+  mode: 'month'; year: number; month: number
+  daily: { day: number; date: string; revenue: number; bookings: number; nights: number; occupancyRate: number }[]
+  byPlatform: Breakdown[]; byRoom: Breakdown[]
+  prevRevenue: number; yoyRevenue: number; momPct: number | null; yoyPct: number | null
+}
+type ReportData = YearData | MonthData
 
 const PIE_COLORS = ['#6366f1','#22d3ee','#f59e0b','#10b981','#f43f5e','#a855f7','#84cc16','#fb923c']
 
@@ -28,26 +38,41 @@ export default function ReportsPage() {
   const fmt = (n: number) => n.toLocaleString(locale)
   const year = new Date().getFullYear()
   const [selYear, setSelYear]     = useState(year)
+  const [selMonth, setSelMonth]   = useState<number | 'all'>('all')
   const [data, setData]           = useState<ReportData | null>(null)
   const [loading, setLoading]     = useState(true)
   const [chartMode, setChartMode] = useState<'revenue' | 'bookings' | 'nights' | 'occupancyRate'>('revenue')
 
   useEffect(() => {
     setLoading(true)
-    fetch(`/api/booking/reports?year=${selYear}`)
+    const q = selMonth === 'all' ? `year=${selYear}` : `year=${selYear}&month=${selMonth}`
+    fetch(`/api/booking/reports?${q}`)
       .then(r => r.json()).then(d => setData(d)).finally(() => setLoading(false))
-  }, [selYear])
+  }, [selYear, selMonth])
+
+  const isMonth = data?.mode === 'month'
 
   function exportCSV() {
     if (!data) return
-    const rows = [
-      [t('reports.csv.month'),t('reports.csv.revenue'),t('reports.csv.bookings'),t('reports.csv.nights')],
-      ...data.monthly.map(m => [m.month, m.revenue, m.bookings, m.nights]),
-    ]
+    let rows: (string | number)[][]
+    let filename: string
+    if (data.mode === 'month') {
+      rows = [
+        [t('reports.csv.day'), t('reports.csv.revenue'), t('reports.csv.bookings'), t('reports.csv.occupiedRooms'), t('reports.csv.occupancy')],
+        ...data.daily.map(d => [d.date, d.revenue, d.bookings, d.nights, `${d.occupancyRate}%`]),
+      ]
+      filename = t('reports.csv.filenameMonth', { year: data.year, month: data.month })
+    } else {
+      rows = [
+        [t('reports.csv.month'), t('reports.csv.revenue'), t('reports.csv.bookings'), t('reports.csv.nights')],
+        ...data.monthly.map(m => [m.month, m.revenue, m.bookings, m.nights]),
+      ]
+      filename = t('reports.csv.filename', { year: data.year })
+    }
     const csv = rows.map(r => r.join(',')).join('\n')
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })
     const url  = URL.createObjectURL(blob)
-    const a    = document.createElement('a'); a.href = url; a.download = t('reports.csv.filename', { year: selYear }); a.click()
+    const a    = document.createElement('a'); a.href = url; a.download = filename; a.click()
     URL.revokeObjectURL(url)
   }
 
@@ -62,6 +87,23 @@ export default function ReportsPage() {
     { label: 'RevPAR',   value: `NT$ ${fmt(data.revPAR)}`,        icon: TrendingUp,  color: 'text-cyan-600 bg-cyan-50' },
   ] : []
 
+  // 單月：環比 / 年比比較條
+  function ComparePill({ label, pct }: { label: string; pct: number | null }) {
+    const up = (pct ?? 0) > 0, down = (pct ?? 0) < 0
+    const Icon = pct === null ? Minus : up ? TrendingUp : down ? TrendingDown : Minus
+    const color = pct === null ? 'text-gray-400 bg-gray-50' : up ? 'text-emerald-600 bg-emerald-50' : down ? 'text-rose-600 bg-rose-50' : 'text-gray-500 bg-gray-50'
+    return (
+      <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm ${color}`}>
+        <Icon className="h-3.5 w-3.5" />
+        <span className="text-gray-600">{label}</span>
+        <span className="font-semibold">{pct === null ? '—' : `${pct > 0 ? '+' : ''}${pct}%`}</span>
+      </div>
+    )
+  }
+
+  const chartData = data ? (data.mode === 'month' ? data.daily : data.monthly) : []
+  const xKey = isMonth ? 'date' : 'month'
+
   return (
     <div className="p-4 md:p-6 pb-16 space-y-5 max-w-5xl">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -70,6 +112,11 @@ export default function ReportsPage() {
           <select value={selYear} onChange={e => setSelYear(parseInt(e.target.value))}
             className="border rounded-lg px-3 py-1.5 bg-white text-sm focus:outline-none">
             {[year - 1, year, year + 1].map(y => <option key={y} value={y}>{t('reports.yearUnit', { year: y })}</option>)}
+          </select>
+          <select value={selMonth} onChange={e => setSelMonth(e.target.value === 'all' ? 'all' : parseInt(e.target.value))}
+            className="border rounded-lg px-3 py-1.5 bg-white text-sm focus:outline-none">
+            <option value="all">{t('reports.allYear')}</option>
+            {Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>{t('reports.monthUnit', { month: m })}</option>)}
           </select>
           <button onClick={exportCSV}
             className="flex items-center gap-1.5 px-3 py-1.5 border rounded-lg bg-white text-sm text-gray-600 hover:bg-gray-50">
@@ -83,6 +130,15 @@ export default function ReportsPage() {
         <div className="text-center py-20 text-gray-400">{t('common.loading')}</div>
       ) : !data ? null : (
         <>
+          {/* 單月：環比 / 年比 */}
+          {data.mode === 'month' && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm text-gray-500">{t('reports.compareRevenue')}：</span>
+              <ComparePill label={t('reports.mom')} pct={data.momPct} />
+              <ComparePill label={t('reports.yoy')} pct={data.yoyPct} />
+            </div>
+          )}
+
           {/* KPI Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {kpis.map(k => {
@@ -101,12 +157,12 @@ export default function ReportsPage() {
             })}
           </div>
 
-          {/* Monthly Chart */}
+          {/* Trend Chart（單月＝每日長條、全年＝月度折線）*/}
           <div className="bg-white rounded-xl border p-4 sm:p-5 space-y-3">
             <div className="flex items-center justify-between flex-wrap gap-2">
-              <h2 className="font-semibold text-gray-900">{t('reports.monthlyTrend')}</h2>
+              <h2 className="font-semibold text-gray-900">{isMonth ? t('reports.dailyTrend') : t('reports.monthlyTrend')}</h2>
               <div className="flex gap-1">
-                {([['revenue',t('reports.mode.revenue')],['bookings',t('reports.mode.bookings')],['nights',t('reports.mode.nights')],['occupancyRate',t('reports.mode.occupancy')]] as const).map(([k, l]) => (
+                {([['revenue',t('reports.mode.revenue')],['bookings',t('reports.mode.bookings')],['nights',isMonth ? t('reports.mode.occupied') : t('reports.mode.nights')],['occupancyRate',t('reports.mode.occupancy')]] as const).map(([k, l]) => (
                   <button key={k} onClick={() => setChartMode(k)}
                     className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${chartMode === k ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
                     {l}
@@ -114,15 +170,26 @@ export default function ReportsPage() {
                 ))}
               </div>
             </div>
-            <ResponsiveContainer width="100%" height={220}>
-              <LineChart data={data.monthly} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} width={55}
-                  tickFormatter={v => chartMode === 'revenue' ? `${(v/1000).toFixed(0)}K` : chartMode === 'occupancyRate' ? `${v}%` : String(v)} />
-                <Tooltip formatter={(v) => { const n = Number(v ?? 0); return chartMode === 'revenue' ? `NT$ ${fmt(n)}` : chartMode === 'occupancyRate' ? `${n}%` : fmt(n) }} />
-                <Line dataKey={chartMode} stroke="#6366f1" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
-              </LineChart>
+            <ResponsiveContainer width="100%" height={240}>
+              {isMonth ? (
+                <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey={xKey} tick={{ fontSize: 10 }} interval={2} />
+                  <YAxis tick={{ fontSize: 11 }} width={55}
+                    tickFormatter={v => chartMode === 'revenue' ? `${(v/1000).toFixed(0)}K` : chartMode === 'occupancyRate' ? `${v}%` : String(v)} />
+                  <Tooltip formatter={(v) => { const n = Number(v ?? 0); return chartMode === 'revenue' ? `NT$ ${fmt(n)}` : chartMode === 'occupancyRate' ? `${n}%` : fmt(n) }} />
+                  <Bar dataKey={chartMode} fill="#6366f1" radius={[3, 3, 0, 0]} />
+                </BarChart>
+              ) : (
+                <LineChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey={xKey} tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} width={55}
+                    tickFormatter={v => chartMode === 'revenue' ? `${(v/1000).toFixed(0)}K` : chartMode === 'occupancyRate' ? `${v}%` : String(v)} />
+                  <Tooltip formatter={(v) => { const n = Number(v ?? 0); return chartMode === 'revenue' ? `NT$ ${fmt(n)}` : chartMode === 'occupancyRate' ? `${n}%` : fmt(n) }} />
+                  <Line dataKey={chartMode} stroke="#6366f1" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                </LineChart>
+              )}
             </ResponsiveContainer>
           </div>
 
