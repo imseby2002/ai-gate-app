@@ -13208,6 +13208,18 @@
         "line": "Tap \"Fill in LINE\" → pick the group → send.",
         "zalo": "Phone: tap \"Share to Zalo\" → pick the group → send. Computer: copy → open Zalo → paste in the group and send."
       }
+    },
+    "rules": {
+      "title": "Personal LINE / Zalo group auto-notify",
+      "desc": "When an order is confirmed or an itinerary changes, the system prepares the notice and sends it to the holder's Telegram. The holder taps \"一鍵帶入\", picks the group in their personal LINE / Zalo and sends.",
+      "event": {
+        "order_confirmed": "Order confirmed",
+        "itinerary_changed": "Itinerary change (check-in/out date, room, status)"
+      },
+      "add": "Add notify rule",
+      "added": "Notify rule added",
+      "remove": "Delete rule",
+      "noHolder": "No one has Telegram set up yet: the holder should fill in their Telegram bot token and chat_id in their profile settings first."
     }
   },
   "Knowledge": {

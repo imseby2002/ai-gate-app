@@ -8,13 +8,14 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { requireSocialMatrix } from '@/lib/social-matrix/access'
+import { getCronOrUserAuth } from '@/lib/cron-auth'
 import { lineShareUrl, notifyHolders, notifyHolderTelegram, shareDraftUrl, telegramHolders, type ShareApp } from '@/lib/marketing/share-drafts'
 
 export async function POST(req: NextRequest) {
-  const guard = await requireSocialMatrix(req)
-  if (guard.res) return guard.res
-  if (guard.user.isCron) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  // 社群矩陣與客服頁共用：登入即可（不限方案）
+  const user = await getCronOrUserAuth(req)
+  if (!user || user.isCron) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const guard = { user }
 
   const body = await req.json().catch(() => ({}))
   const app: ShareApp | null = body.app === 'line' || body.app === 'zalo' ? body.app : null
@@ -51,8 +52,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const guard = await requireSocialMatrix(req)
-  if (guard.res) return guard.res
-  if (guard.user.isCron) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  // 社群矩陣與客服頁共用：登入即可（不限方案）
+  const user = await getCronOrUserAuth(req)
+  if (!user || user.isCron) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const guard = { user }
   return NextResponse.json({ holders: await telegramHolders(guard.user.id) })
 }

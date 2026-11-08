@@ -6,6 +6,7 @@
  * AI 直接在此呼叫，不轉發至 cs-chat（cs-chat 需要 session auth）
  */
 import { trackLineGroupEvent } from '@/lib/marketing/line-groups'
+import { fireGroupNotify } from '@/lib/marketing/group-notify'
 import { loadChannelCredentials } from '@/lib/channels/resolve'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
@@ -557,6 +558,7 @@ async function maybeCreateOrderTicket(
     })
     // 工單之外，另用 LINE OA 主動 push 通知已綁定的專員 + 工作台設定的工單通知管道
     void notifyStaffOrder(userId, lastAssistant)
+    void fireGroupNotify(userId, 'order_confirmed', lastAssistant)
     dispatchTicketNotify(notifyWebhooks, { platform, customerId, industry, fromName }, `🔔 有新訂單已確認，請盡快跟進：\n\n${lastAssistant.slice(0, 900)}`)
     void forwardOrderToMatchingForms(userId, forms, lastAssistant, fromName)
   } catch { /* 不中斷主流程 */ }
