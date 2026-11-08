@@ -312,7 +312,8 @@ export const publishToSocialTool: AgentToolDef = {
   id: 'publish_to_social',
   description:
     '用行銷自動化同一套上傳功能，發佈到「平台設定」已連結的社群帳號（Facebook、Instagram、Threads、LinkedIn、Twitter/X、LINE VOOM、Zalo、FB/IG Reels、YouTube Shorts、TikTok）。' +
-    '任務未開啟「自動發文」時，每篇會先送真人審核，核准後才發出。FB/IG 圖文需要圖片網址；Reels/Shorts/TikTok 需要影片網址。',
+    '任務未開啟「自動發文」時，每篇會先送真人審核，核准後才發出。FB 可不附圖（發純文字貼文）；IG 需要圖片網址；Reels/Shorts/TikTok 需要影片網址。' +
+    'image_urls 只能用 generate_marketing_image 回傳的網址或確實存在的素材網址，不可自行編造網址。發文失敗時先看錯誤內容，圖片網址錯誤不是授權問題。',
   inputSchema: {
     type: 'object',
     properties: {

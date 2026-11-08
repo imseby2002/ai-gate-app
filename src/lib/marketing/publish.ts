@@ -45,10 +45,27 @@ async function uploadFacebook(creds: Record<string, string>, imageUrls: string[]
     const resolvedToPageToken = pageToken !== token
 
     const firstImage = imageUrls[0]
+
+    // 沒附圖：改發純文字貼文（/feed），不再對 undefined 網址 fetch 而崩潰
+    if (!firstImage) {
+      const body = new URLSearchParams({ message: copyText.slice(0, 63206), access_token: pageToken })
+      const fr = await fetch(`https://graph.facebook.com/v19.0/${page_id}/feed`, { method: 'POST', body })
+      const fd = await fr.json()
+      if (!fd.id) throw new Error(`${fd.error?.message ?? 'Facebook 發文失敗'} [tokenResolution: ${debug}]`)
+      return { platform: 'Facebook', ok: true, postId: fd.id }
+    }
+
     // Download image first, then upload as binary (avoids Facebook URL accessibility issues)
     const imgRes = await fetch(firstImage)
-    const imgBuffer = await imgRes.arrayBuffer()
     const contentType = imgRes.headers.get('content-type') ?? 'image/jpeg'
+    // 圖片網址打不開或不是圖片（例如 404 網頁）時直接說明，避免被 Facebook 回成看不懂的 Invalid parameter
+    if (!imgRes.ok || !contentType.startsWith('image/')) {
+      return {
+        platform: 'Facebook', ok: false,
+        error: `圖片網址無法使用（HTTP ${imgRes.status}，${contentType}）：${firstImage}。這不是 Facebook 授權問題，請改用實際存在的圖片網址（例如 generate_marketing_image 產生的網址）`,
+      }
+    }
+    const imgBuffer = await imgRes.arrayBuffer()
     const formData = new FormData()
     formData.append('source', new Blob([imgBuffer], { type: contentType }), 'image.jpg')
     formData.append('caption', copyText.slice(0, 2000))
