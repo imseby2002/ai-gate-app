@@ -2,7 +2,7 @@
  * POST /api/ivr/webhook/voice
  * Bird Voice callback：接收通話狀態與 DTMF 按鍵。
  * - 更新 ivr_calls 狀態
- * - voice_call.ended → 依 data.billable_ms 實際秒數 × 國別費率 × 方案倍率扣點（billed_at 原子鎖防重送重扣）
+ * - voice_call.ended → 未預扣的通話才依 data.billable_ms 實際秒數扣點（撥號時已預扣者 billed_at 已設定，不重扣）
  * - 客戶按鍵 → 依 campaign+digit 找對應通路，建立 ivr_join_event 並派送加入短連結
  *
  * 公開端點（來自 Bird，無 session），以 service role 寫入。
