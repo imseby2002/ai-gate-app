@@ -116,3 +116,48 @@ export function resolveTradingModel(modelId?: string, tier: 'quick' | 'deep' = '
 
   return null
 }
+
+export function getTradingModelCandidates(chosenModelId?: string, tier: 'quick' | 'deep' = 'quick'): LanguageModel[] {
+  const models: LanguageModel[] = []
+
+  // 1. Primary requested model
+  const primary = resolveTradingModel(chosenModelId, tier)
+  if (primary) models.push(primary)
+
+  // 2. Cascade fallback order based on tier
+  if (tier === 'quick') {
+    // Quick tier cascade: CLIProxy -> FreeLLM -> Gemini Flash -> DeepSeek -> GPT-4o -> Claude
+    const c1 = resolveTradingModel('cliproxy/gemini-2.5-flash')
+    if (c1 && !models.includes(c1)) models.push(c1)
+
+    const c2 = resolveTradingModel('freellm/auto')
+    if (c2 && !models.includes(c2)) models.push(c2)
+
+    const c3 = resolveTradingModel('google/gemini-2.5-flash')
+    if (c3 && !models.includes(c3)) models.push(c3)
+
+    const c4 = resolveTradingModel('deepseek/deepseek-chat')
+    if (c4 && !models.includes(c4)) models.push(c4)
+
+    const c5 = resolveTradingModel('openai/gpt-4o')
+    if (c5 && !models.includes(c5)) models.push(c5)
+  } else {
+    // Deep tier cascade: Claude Sonnet -> DeepSeek -> Gemini Pro -> GPT-4o -> CLIProxy
+    const d1 = resolveTradingModel('anthropic/claude-sonnet-4-6')
+    if (d1 && !models.includes(d1)) models.push(d1)
+
+    const d2 = resolveTradingModel('deepseek/deepseek-chat')
+    if (d2 && !models.includes(d2)) models.push(d2)
+
+    const d3 = resolveTradingModel('google/gemini-2.5-pro')
+    if (d3 && !models.includes(d3)) models.push(d3)
+
+    const d4 = resolveTradingModel('openai/gpt-4o')
+    if (d4 && !models.includes(d4)) models.push(d4)
+
+    const d5 = resolveTradingModel('cliproxy/gemini-2.5-pro')
+    if (d5 && !models.includes(d5)) models.push(d5)
+  }
+
+  return models
+}

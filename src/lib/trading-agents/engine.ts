@@ -13,7 +13,7 @@ import type {
   TradingAction,
 } from './types'
 import { fetchMarketData } from './market-data'
-import { resolveTradingModel, type ModelTierConfig } from './model-resolver'
+import { resolveTradingModel, getTradingModelCandidates, type ModelTierConfig } from './model-resolver'
 import { generateCompleteReportHtml } from './report-generator'
 
 import { computeValuationSuite, type ValuationSuiteResult } from './valuation-models'
@@ -55,8 +55,10 @@ export async function runTradingAgents(
   const valuationSuite = computeValuationSuite(marketData)
   emit({ type: 'valuation-suite', suite: valuationSuite })
 
-  const quickModel = resolveTradingModel(config?.modelConfig?.quickThinkModel, 'quick')
-  const deepModel = resolveTradingModel(config?.modelConfig?.deepThinkModel, 'deep')
+  const quickCandidates = getTradingModelCandidates(config?.modelConfig?.quickThinkModel, 'quick')
+  const deepCandidates = getTradingModelCandidates(config?.modelConfig?.deepThinkModel, 'deep')
+  const quickModel = quickCandidates[0] ?? null
+  const deepModel = deepCandidates[0] ?? null
 
   // Step 2: Analyst Team Parallel Evaluation
   emit({ type: 'phase', phase: 'analysts', label: '四大分析師平行獨立研判 (基本面 / 技術面 / 總經新聞 / 市場情緒)' })
@@ -119,18 +121,35 @@ ${roleGuidance[role]}
 
 請出具客觀嚴謹且完整的分析研判，包含上述所有段落並給出明確完整的結尾與評分，務必在字數限制內完整收斂結論，杜絕句子中途腰斬或虎頭蛇尾，嚴格使用繁體中文。`
 
-          const stream = streamText({
-            model: quickModel,
-            prompt,
-            maxOutputTokens: 4096,
-          })
+          let success = false
+          for (const candModel of quickCandidates) {
+            try {
+              reportText = ''
+              const stream = streamText({
+                model: candModel,
+                prompt,
+                maxOutputTokens: 4096,
+              })
 
-          for await (const chunk of stream.textStream) {
-            reportText += chunk
-            emit({ type: 'analyst-delta', role, chunk })
+              for await (const chunk of stream.textStream) {
+                reportText += chunk
+                emit({ type: 'analyst-delta', role, chunk })
+              }
+              if (reportText.trim().length > 30) {
+                success = true
+                break
+              }
+            } catch (err) {
+              console.warn(`[analyst-${role}] Candidate model failed, trying next candidate:`, err)
+            }
+          }
+
+          if (!success) {
+            reportText = generateFallbackAnalystText(role, marketData)
+            emit({ type: 'analyst-delta', role, chunk: reportText })
           }
         } catch (err) {
-          console.warn(`[analyst-${role}] LLM call failed, generating heuristic report:`, err)
+          console.warn(`[analyst-${role}] All LLM candidate calls failed, using heuristic fallback:`, err)
           reportText = generateFallbackAnalystText(role, marketData)
           emit({ type: 'analyst-delta', role, chunk: reportText })
         }
@@ -374,25 +393,38 @@ ${round > 1 ? `上一輪空方質疑：${debateStatements[debateStatements.lengt
   let managerText = ''
   const confidenceScore = Math.min(Math.max(Math.round(bullProb * 0.9 + (10 - riskScore) * 1.5), 40), 95)
 
-  if (deepModel || quickModel) {
-    try {
-      const prompt = `你是管理數十億美金資產的「投資組合主管兼基金經理人 (Portfolio Manager)」。
+  const allManagerCandidates = [...deepCandidates, ...quickCandidates]
+  if (allManagerCandidates.length > 0) {
+    const prompt = `你是管理數十億美金資產的「投資組合主管兼基金經理人 (Portfolio Manager)」。
 審查標的：${marketData.companyName} (${marketData.ticker})
 交易員提議：${traderProposal.action}，目標價：${traderProposal.targetPrice}，停損價：${traderProposal.stopLossPrice}。
 風控團隊建議：部位上限 ${riskAssessment.positionSizingCapPercent}%，風險評分 ${riskAssessment.riskScore}/10。
 
 請出具最終裁決白皮書摘要（約 180 字以內），宣告最終執行決定、下單指引與宏觀策略底定。`
 
-      const stream = streamText({
-        model: (deepModel || quickModel)!,
-        prompt,
-        maxOutputTokens: 1024,
-      })
-      for await (const chunk of stream.textStream) {
-        managerText += chunk
-        emit({ type: 'manager-delta', chunk })
+    let managerSuccess = false
+    for (const candModel of allManagerCandidates) {
+      try {
+        managerText = ''
+        const stream = streamText({
+          model: candModel,
+          prompt,
+          maxOutputTokens: 1024,
+        })
+        for await (const chunk of stream.textStream) {
+          managerText += chunk
+          emit({ type: 'manager-delta', chunk })
+        }
+        if (managerText.trim().length > 20) {
+          managerSuccess = true
+          break
+        }
+      } catch (err) {
+        console.warn(`[manager] Candidate model failed, trying next:`, err)
       }
-    } catch {
+    }
+
+    if (!managerSuccess) {
       managerText = `經全體分析師研判、多空深度激辯與風控壓力測試，本基金裁決對 ${marketData.ticker} 發出【${traderProposal.action}】執行指令。進場上限設定在現價區間，建議總部位配置 ${Math.min(traderProposal.recommendedAllocationPercent, riskAssessment.positionSizingCapPercent)}%，嚴守停損紀律。`
       emit({ type: 'manager-delta', chunk: managerText })
     }
