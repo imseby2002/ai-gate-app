@@ -3,7 +3,7 @@
 /**
  * 個人 LINE／Zalo 群組一鍵帶入（不需桌面連接器）：
  * - 這台電腦：LINE 以分享連結開啟並帶入文案；Zalo 複製文案並開啟 Zalo 網頁
- * - 通知持有人：官方帳號把「群組＋文案＋一鍵帶入連結」推給已綁定的專員，持有人在手機帶入
+ * - 通知持有人：以持有人的 Telegram（個人設定）傳「群組＋文案＋一鍵帶入」；沒人設定 Telegram 時改用 LINE 官方帳號推給已綁定的專員
  * 選群組、按送出一律由使用者操作。
  */
 import { useEffect, useState } from 'react'
@@ -24,18 +24,27 @@ export function ChatGroupCopilot({
   const [groupName, setGroupName] = useState('')
   const [text, setText] = useState(defaultText)
   const [busy, setBusy] = useState<'' | 'local' | 'notify'>('')
+  const [holders, setHolders] = useState<{ id: string; name: string }[]>([])
+  const [holderId, setHolderId] = useState('')
 
   useEffect(() => { setText(defaultText) }, [defaultText])
+  useEffect(() => {
+    fetch('/api/marketing/share-drafts').then(r => (r.ok ? r.json() : { holders: [] })).then(d => {
+      const list = (d.holders ?? []) as { id: string; name: string }[]
+      setHolders(list)
+      setHolderId(list[0]?.id ?? '')
+    }).catch(() => {})
+  }, [])
 
   const createDraft = async (notify: boolean) => {
     const res = await fetch('/api/marketing/share-drafts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ app, group_name: groupName, text, notify }),
+      body: JSON.stringify({ app, group_name: groupName, text, notify, holder_id: notify && holderId ? holderId : undefined }),
     })
     const d = await res.json()
     if (!res.ok) throw new Error(d.error ?? `HTTP ${res.status}`)
-    return d as { url: string; line_url?: string; notified: number }
+    return d as { url: string; line_url?: string; notified: number; channel: 'telegram' | 'line_oa' | null }
   }
 
   const openHere = async () => {
@@ -62,7 +71,12 @@ export function ChatGroupCopilot({
     setBusy('notify')
     try {
       const d = await createDraft(true)
-      showToast(d.notified ? t('chat.notified', { n: d.notified }) : t('chat.noHolder'), d.notified ? 'success' : 'error')
+      const ok = d.notified > 0
+      showToast(
+        ok ? (d.channel === 'telegram' ? t('chat.notifiedTg') : t('chat.notified', { n: d.notified }))
+          : (d.channel === 'telegram' ? t('chat.tgFailed') : t('chat.noHolder')),
+        ok ? 'success' : 'error',
+      )
     } catch (e) {
       showToast(`${t('failed')}：${(e as Error).message}`, 'error')
     } finally {
@@ -99,6 +113,14 @@ export function ChatGroupCopilot({
       <label className="block text-[11px] font-semibold">
         <span>{t('chat.text')}</span>
         <textarea rows={5} value={text} onChange={e => setText(e.target.value)} className={field} />
+      </label>
+
+      <label className="block text-[11px] font-semibold">
+        <span>{t('chat.holder')}</span>
+        <select value={holderId} onChange={e => setHolderId(e.target.value)} className={field}>
+          {holders.map(h => <option key={h.id} value={h.id}>Telegram · {h.name}</option>)}
+          <option value="">{t('chat.holderLineOa')}</option>
+        </select>
       </label>
 
       <p className="text-[10px] text-amber-700 dark:text-amber-400">{t('chat.warn')}</p>

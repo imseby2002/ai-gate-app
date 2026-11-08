@@ -13158,7 +13158,7 @@
       "desc": "文案帶入後，自己選群組、按送出即可；不需安裝桌面連接器。",
       "openHere": "在這台電腦帶入",
       "notifyHolder": "通知持有人",
-      "holderHint": "「通知持有人」會由 LINE 官方帳號把群組與文案傳給已綁定的專員（專員用個人 LINE 傳「綁定專員」給官方帳號即可加入），專員點連結就能在手機一鍵帶入。",
+      "holderHint": "「通知持有人」會把群組與文案傳到持有人的 Telegram（個人設定填好 Telegram 的人才會出現在清單），持有人點「一鍵帶入」就能在手機用個人 LINE／Zalo 帶入，選群組後送出。",
       "zaloCopied": "文案已複製，請在 Zalo 打開群組貼上並送出",
       "notified": "已通知 {n} 位持有人",
       "noHolder": "沒有可通知的持有人：請專員用個人 LINE 傳「綁定專員」給官方帳號",
@@ -13166,7 +13166,11 @@
       "needText": "文案不可為空",
       "groupName": "群組名稱（提醒用）",
       "groupNamePh": "例如：台中自由行交流",
-      "text": "文案"
+      "text": "文案",
+      "holder": "通知持有人方式",
+      "holderLineOa": "LINE 官方帳號（專員綁定名單）",
+      "notifiedTg": "已用 Telegram 通知持有人",
+      "tgFailed": "Telegram 傳送失敗，請確認該持有人的 Telegram 設定"
     },
     "lineOa": {
       "title": "LINE 官方帳號群組排程推播",

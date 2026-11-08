@@ -1,13 +1,15 @@
 /**
  * POST /api/marketing/share-drafts — 建立個人 LINE／Zalo 群組一鍵帶入草稿
  *   Body: { app: 'line' | 'zalo', group_name?: string, text: string, notify?: boolean }
- *   notify=true 時以官方帳號通知持有人（客服「專員綁定」名單）
- * 回傳：{ id, url, line_url?, notified }
+ *   holder_id：以該持有人的 Telegram 通知（本人或同公司成員、個人設定已填 Telegram）
+ *   notify=true 且未指定 holder_id：以 LINE 官方帳號通知「專員綁定」名單
+ * 回傳：{ id, url, line_url?, notified, channel }
+ * GET  /api/marketing/share-drafts — 可用 Telegram 通知的持有人
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireSocialMatrix } from '@/lib/social-matrix/access'
-import { lineShareUrl, notifyHolders, shareDraftUrl, type ShareApp } from '@/lib/marketing/share-drafts'
+import { lineShareUrl, notifyHolders, notifyHolderTelegram, shareDraftUrl, telegramHolders, type ShareApp } from '@/lib/marketing/share-drafts'
 
 export async function POST(req: NextRequest) {
   const guard = await requireSocialMatrix(req)
@@ -29,14 +31,28 @@ export async function POST(req: NextRequest) {
   if (error) return NextResponse.json({ error: `建立失敗：${error.message}` }, { status: 500 })
 
   let notified = 0
-  if (body.notify === true) {
+  let channel: 'telegram' | 'line_oa' | null = null
+  const holderId = String(body.holder_id ?? '')
+  if (holderId) {
+    channel = 'telegram'
+    notified = (await notifyHolderTelegram(guard.user.id, holderId, draft)) ? 1 : 0
+  } else if (body.notify === true) {
+    channel = 'line_oa'
     notified = await notifyHolders(guard.user.id, draft)
-    await admin.from('marketing_share_drafts').update({ notified_count: notified }).eq('id', draft.id)
   }
+  if (channel) await admin.from('marketing_share_drafts').update({ notified_count: notified }).eq('id', draft.id)
   return NextResponse.json({
     id: draft.id,
     url: shareDraftUrl(draft.id),
     ...(app === 'line' ? { line_url: lineShareUrl(text) } : {}),
     notified,
+    channel,
   })
+}
+
+export async function GET(req: NextRequest) {
+  const guard = await requireSocialMatrix(req)
+  if (guard.res) return guard.res
+  if (guard.user.isCron) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  return NextResponse.json({ holders: await telegramHolders(guard.user.id) })
 }

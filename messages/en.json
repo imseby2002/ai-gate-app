@@ -13158,7 +13158,7 @@
       "desc": "The post is filled in for you; pick the group and press send. No desktop connector needed.",
       "openHere": "Fill on this computer",
       "notifyHolder": "Notify account holder",
-      "holderHint": "\"Notify account holder\" sends the group and post via your LINE Official Account to bound staff (staff send \"綁定專員\" to the Official Account from their personal LINE). They tap the link to fill it on their phone.",
+      "holderHint": "\"Notify account holder\" sends the group and post to the holder's Telegram (only people with Telegram set in their profile appear). They tap \"一鍵帶入\" to fill it in their personal LINE / Zalo on the phone, pick the group and send.",
       "zaloCopied": "Post copied. Open the group in Zalo, paste and send.",
       "notified": "Notified {n} holder(s)",
       "noHolder": "No holder to notify: staff should send \"綁定專員\" to the Official Account from their personal LINE",
@@ -13166,7 +13166,11 @@
       "needText": "Post cannot be empty",
       "groupName": "Group name (reminder)",
       "groupNamePh": "e.g. Taichung travel tips",
-      "text": "Post"
+      "text": "Post",
+      "holder": "Notify holder via",
+      "holderLineOa": "LINE Official Account (bound staff)",
+      "notifiedTg": "Holder notified via Telegram",
+      "tgFailed": "Telegram send failed — check that holder's Telegram settings"
     },
     "lineOa": {
       "title": "LINE Official Account group scheduled push",
