@@ -117,12 +117,12 @@ ${portfolio ? `投資組合現況：手頭現金 $${portfolio.cash}，已有部�
 
 ${roleGuidance[role]}
 
-請出具深度、完整且條理清晰的分析報告，段落標題清楚，提供充分的數據與推導，不可中途截斷，嚴格使用繁體中文。`
+請出具客觀嚴謹且完整的分析研判，包含上述所有段落並給出明確完整的結尾與評分，務必在字數限制內完整收斂結論，杜絕句子中途腰斬或虎頭蛇尾，嚴格使用繁體中文。`
 
           const stream = streamText({
             model: quickModel,
             prompt,
-            maxOutputTokens: 2048,
+            maxOutputTokens: 4096,
           })
 
           for await (const chunk of stream.textStream) {

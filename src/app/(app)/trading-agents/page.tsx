@@ -237,6 +237,7 @@ export default function TradingAgentsPage() {
           ...prev,
           [event.role]: {
             ...prev[event.role],
+            content: event.report.details || prev[event.role].content,
             isStreaming: false,
             isDone: true,
             report: event.report,
