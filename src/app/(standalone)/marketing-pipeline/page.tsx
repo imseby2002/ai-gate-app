@@ -82,24 +82,28 @@ const DEFAULT_CONFIG: PipelineConfig = {
 const LS_CONFIG_KEY  = 'aigate_pipeline_config_v2'
 const LS_RESULTS_KEY = 'aigate_pipeline_results'
 
+function normalizeConfig(parsed: Partial<PipelineConfig> | null | undefined): PipelineConfig {
+  if (!parsed) return DEFAULT_CONFIG
+  const validIds = new Set(STEP_DEFS.map(s => s.unitId))
+  const filteredSteps = (parsed.steps || []).filter(s => validIds.has(s.unitId))
+  const existingIds = new Set(filteredSteps.map(s => s.unitId))
+  const missingSteps = STEP_DEFS.filter(s => !existingIds.has(s.unitId)).map(s => ({
+    unitId: s.unitId,
+    enabled: s.canAuto,
+    notify: [4, 6, 8, 9, 10, 11].includes(s.unitId),
+  }))
+  return {
+    ...DEFAULT_CONFIG,
+    ...parsed,
+    steps: [...filteredSteps, ...missingSteps],
+  }
+}
+
+// 沒有連結專案時才用 localStorage；有專案時設定與結果存在該專案的資料庫紀錄
 function loadConfigFromLS(): PipelineConfig {
   try {
     const raw = localStorage.getItem(LS_CONFIG_KEY)
-    if (!raw) return DEFAULT_CONFIG
-    const parsed = JSON.parse(raw) as Partial<PipelineConfig>
-    const validIds = new Set(STEP_DEFS.map(s => s.unitId))
-    const filteredSteps = (parsed.steps || []).filter(s => validIds.has(s.unitId))
-    const existingIds = new Set(filteredSteps.map(s => s.unitId))
-    const missingSteps = STEP_DEFS.filter(s => !existingIds.has(s.unitId)).map(s => ({
-      unitId: s.unitId,
-      enabled: s.canAuto,
-      notify: [4, 6, 8, 9, 10, 11].includes(s.unitId),
-    }))
-    return {
-      ...DEFAULT_CONFIG,
-      ...parsed,
-      steps: [...filteredSteps, ...missingSteps],
-    }
+    return raw ? normalizeConfig(JSON.parse(raw) as Partial<PipelineConfig>) : DEFAULT_CONFIG
   } catch { return DEFAULT_CONFIG }
 }
 
@@ -126,16 +130,19 @@ function MarketingPipelineContent() {
   const t = useTranslations('Pipeline')
   const locale = useLocale()
   const searchParams = useSearchParams()
+  const campaignId = searchParams.get('campaign')
 
   const [campaignData, setCampaignData] = useState<Record<string, unknown>>(() => {
-    if (typeof window === 'undefined') return {}
+    if (typeof window === 'undefined' || campaignId) return {}
     return loadResultsFromLS()
   })
 
   const [config, setConfig] = useState<PipelineConfig>(() => {
-    if (typeof window === 'undefined') return DEFAULT_CONFIG
+    if (typeof window === 'undefined' || campaignId) return DEFAULT_CONFIG
     return loadConfigFromLS()
   })
+  // 專案設定從資料庫載入完成前不回寫，避免用預設值蓋掉
+  const [configLoaded, setConfigLoaded] = useState(!campaignId)
 
   const [showSchedule, setShowSchedule] = useState(false)
 
@@ -156,15 +163,26 @@ function MarketingPipelineContent() {
   const logEndRef = useRef<HTMLDivElement>(null)
   const pendingFeedbackRef = useRef<string | null>(null)
 
-  // Auto-save config
+  // Auto-save config：有專案存資料庫（延遲合併送出），沒有專案存 localStorage
   useEffect(() => {
-    try { localStorage.setItem(LS_CONFIG_KEY, JSON.stringify(config)) } catch { /* ignore */ }
-  }, [config])
+    if (!configLoaded) return
+    if (!campaignId) {
+      try { localStorage.setItem(LS_CONFIG_KEY, JSON.stringify(config)) } catch { /* ignore */ }
+      return
+    }
+    const timer = setTimeout(() => {
+      fetch(`/api/marketing/campaign/${campaignId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pipeline_config: config }),
+        keepalive: true,
+      }).catch(() => { /* ignore */ })
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [config, configLoaded, campaignId])
 
   // Load from campaign when ?campaign=xxx is present, and load company data
   useEffect(() => {
-    const campaignId = searchParams.get('campaign')
-
     const load = async () => {
       setLoadingCampaign(true)
       try {
@@ -188,20 +206,22 @@ function MarketingPipelineContent() {
             .map(Number)
             .filter(n => !isNaN(n) && unitData[String(n)])
 
-          setConfig(prev => ({
-            ...prev,
-            activityName: campaign.title ?? prev.activityName,
-          }))
+          const saved = normalizeConfig(campaign.pipeline_config as Partial<PipelineConfig> | null)
+          setConfig({ ...saved, activityName: campaign.title ?? saved.activityName })
+          setConfigLoaded(true)
 
           setSourceCampaign({ id: campaignId!, title: campaign.title ?? t('untitledCampaign'), loadedUnits })
         }
 
         setCampaignData(prev => {
-          const merged = { ...prev }
+          // 有專案：只用該專案的資料，不混入其他專案的結果
+          const merged: Record<string, unknown> = campaignId ? {} : { ...prev }
           for (const [k, v] of Object.entries(unitData)) {
             if (v != null) merged[k] = v
           }
-          try { localStorage.setItem(LS_RESULTS_KEY, JSON.stringify(merged)) } catch { /* ignore */ }
+          if (!campaignId) {
+            try { localStorage.setItem(LS_RESULTS_KEY, JSON.stringify(merged)) } catch { /* ignore */ }
+          }
           return merged
         })
       } catch { /* ignore */ } finally {
@@ -223,10 +243,22 @@ function MarketingPipelineContent() {
   const saveUnit = useCallback(async (unitId: number, data: unknown) => {
     setCampaignData(prev => {
       const next = { ...prev, [unitId]: data }
-      try { localStorage.setItem(LS_RESULTS_KEY, JSON.stringify(next)) } catch { /* ignore */ }
+      if (!campaignId) {
+        try { localStorage.setItem(LS_RESULTS_KEY, JSON.stringify(next)) } catch { /* ignore */ }
+      }
       return next
     })
-  }, [])
+    if (campaignId) {
+      // 伺服器端會與既有 unit_data 合併，只覆蓋這個單元
+      try {
+        await fetch(`/api/marketing/campaign/${campaignId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ unit_data: { [unitId]: data } }),
+        })
+      } catch { /* ignore */ }
+    }
+  }, [campaignId])
 
   const sendTelegramApproval = useCallback(async (msg: string, context?: object): Promise<string | null> => {
     try {

@@ -71,6 +71,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     patch.unit_data = { ...(existing?.unit_data ?? {}), ...(body.unit_data as object) }
   }
   if ('unit_statuses'     in body) patch.unit_statuses      = body.unit_statuses
+  if ('pipeline_config'   in body) patch.pipeline_config    = body.pipeline_config
 
   const { error } = await supabase
     .from('marketing_campaigns')
