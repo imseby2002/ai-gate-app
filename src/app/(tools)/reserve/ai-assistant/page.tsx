@@ -27,17 +27,29 @@ export default function ReserveAiAssistantPage() {
   // Capacity analysis state
   const [capacityResult, setCapacityResult] = useState<any>(null)
   const [isAnalyzingCapacity, setIsAnalyzingCapacity] = useState(false)
+  const [error, setError] = useState('')
+
+  // 共用：呼叫 AI 助理，失敗（點數不足、尚未建立店家等）時顯示錯誤
+  async function callAi(payload: Record<string, unknown>) {
+    setError('')
+    const res = await fetch('/api/reserve/ai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      setError(res.status === 402 ? '點數不足，請先儲值後再使用 AI 助理' : data.error || `發生錯誤（${res.status}）`)
+      return null
+    }
+    return data.result ?? null
+  }
 
   async function handleSmartSchedule() {
     setIsScheduling(true)
     try {
-      const res = await fetch('/api/reserve/ai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'smart_schedule', prompt: schedulePrompt }),
-      })
-      const data = await res.json()
-      if (data.result) setScheduleResult(data.result)
+      const result = await callAi({ action: 'smart_schedule', prompt: schedulePrompt })
+      if (result) setScheduleResult(result)
     } catch (err) {
       console.error(err)
     } finally {
@@ -48,18 +60,8 @@ export default function ReserveAiAssistantPage() {
   async function handleGenerateFollowup() {
     setIsGeneratingMessage(true)
     try {
-      const res = await fetch('/api/reserve/ai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'followup_sms',
-          serviceName,
-          customerName,
-          staffName,
-        }),
-      })
-      const data = await res.json()
-      if (data.result) setFollowupResult(data.result)
+      const result = await callAi({ action: 'followup_sms', serviceName, customerName, staffName })
+      if (result) setFollowupResult(result)
     } catch (err) {
       console.error(err)
     } finally {
@@ -70,13 +72,8 @@ export default function ReserveAiAssistantPage() {
   async function handleAnalyzeCapacity() {
     setIsAnalyzingCapacity(true)
     try {
-      const res = await fetch('/api/reserve/ai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'capacity_analysis' }),
-      })
-      const data = await res.json()
-      if (data.result) setCapacityResult(data.result)
+      const result = await callAi({ action: 'capacity_analysis' })
+      if (result) setCapacityResult(result)
     } catch (err) {
       console.error(err)
     } finally {
@@ -104,8 +101,13 @@ export default function ReserveAiAssistantPage() {
           <p className="text-xs text-muted-foreground mt-0.5">
             以自然語言推算最佳排程時段、自動生成術後關懷文案、即時分析門市翻桌產能
           </p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">依實際 AI 用量扣點；分析使用你門市的真實服務、人員與預約資料</p>
         </div>
       </div>
+
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-xs text-red-700">{error}</div>
+      )}
 
       {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
