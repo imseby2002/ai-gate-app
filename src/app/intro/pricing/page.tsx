@@ -4,16 +4,17 @@ import { introSystem } from '../_host'
 import { MarketingPricing, marketingPricingMetadata } from './MarketingPricing'
 import { CsPricing, csPricingMetadata } from '../_cs/CsPricing'
 import { BookingPricing, bookingPricingMetadata } from '../_booking/BookingPricing'
+import { ReservePricing, reservePricingMetadata } from '../_reserve/ReserveIntro'
 
 export const dynamic = 'force-dynamic'
 
-// cs／booking 子網域 → 各自的方案頁；其餘（marketing）→ 行銷中心版本（其他子網域由 middleware 導走）
+// cs／booking／reserve 子網域 → 各自的方案頁；其餘（marketing）→ 行銷中心版本（其他子網域由 middleware 導走）
 export async function generateMetadata(): Promise<Metadata> {
   const sys = await introSystem()
-  return trDeep(sys === 'cs' ? csPricingMetadata : sys === 'booking' ? bookingPricingMetadata : marketingPricingMetadata, await introTr())
+  return trDeep(sys === 'cs' ? csPricingMetadata : sys === 'booking' ? bookingPricingMetadata : sys === 'reserve' ? reservePricingMetadata : marketingPricingMetadata, await introTr())
 }
 
 export default async function IntroPricingPage() {
   const sys = await introSystem()
-  return sys === 'cs' ? <CsPricing /> : sys === 'booking' ? <BookingPricing /> : <MarketingPricing />
+  return sys === 'cs' ? <CsPricing /> : sys === 'booking' ? <BookingPricing /> : sys === 'reserve' ? <ReservePricing /> : <MarketingPricing />
 }

@@ -24,7 +24,7 @@ const ROOT = 'im-tourist.com'
 const sub = (s: string, path = '/') => `https://${s}.${ROOT}${path}`
 
 // 有獨立介紹頁與方案頁的系統（app/intro 依子網域顯示）
-const HAS_INTRO = new Set(['marketing', 'cs', 'booking'])
+const HAS_INTRO = new Set(['marketing', 'cs', 'booking', 'reserve'])
 
 const ORDER: { key: SystemKey; icon: typeof Bot }[] = [
   { key: 'marketing', icon: Megaphone },
@@ -66,6 +66,7 @@ export default async function PortalPage() {
     { label: systems.marketing.label, href: sub('marketing', '/intro/pricing') },
     { label: systems.cs.label, href: sub('cs', '/intro/pricing') },
     { label: systems.booking.label, href: sub('booking', '/intro/pricing') },
+    { label: systems.reserve.label, href: sub('reserve', '/intro/pricing') },
   ]
 
   return (
