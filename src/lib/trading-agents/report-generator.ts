@@ -238,11 +238,11 @@ export function generateCompleteReportHtml(params: {
     </section>
 
     ${valuationSuite ? `
-    <!-- 12 Valuation Models Matrix -->
+    <!-- Valuation Models Matrix -->
     <section class="section">
       <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 16px; flex-wrap: gap: 12px;">
         <h2 class="section-title" style="border-bottom: none; padding-bottom: 0; margin-bottom: 0;">
-          📐 十二大經典估值量化模型診斷矩陣 (12 Valuation Models Matrix)
+          📐 經典估值量化模型診斷矩陣 (${valuationSuite.models.length} 款模型產出)
         </h2>
         <div style="font-size: 13px; font-weight: bold; background: rgba(56, 189, 248, 0.15); color: #38bdf8; padding: 4px 12px; border-radius: 9999px;">
           綜合定價裁定：${valuationSuite.overallValuationVerdict} (平均公允價: $${valuationSuite.averageFairValue})

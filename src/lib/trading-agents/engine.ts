@@ -27,6 +27,7 @@ export interface RunTradingAgentsParams {
     debateRounds?: number
     riskTolerance?: 'Conservative' | 'Moderate' | 'Aggressive'
     outputLanguage?: 'zh-TW' | 'en' | 'vi'
+    selectedModelIds?: string[]
   }
   /** 每次模型呼叫完成時回報實際 token 用量（供依用量扣點） */
   onUsage?: (modelId: string, usage: { inputTokens?: number; outputTokens?: number }) => void
@@ -53,8 +54,8 @@ export async function runTradingAgents(
   const marketData = await fetchMarketData(ticker)
   emit({ type: 'market-data', data: marketData })
 
-  // Compute 10 financial valuation models
-  const valuationSuite = computeValuationSuite(marketData)
+  // Compute financial valuation models
+  const valuationSuite = computeValuationSuite(marketData, config?.selectedModelIds)
   emit({ type: 'valuation-suite', suite: valuationSuite })
 
   const quickCandidates = getTradingModelCandidates(config?.modelConfig?.quickThinkModel, 'quick')

@@ -17,18 +17,46 @@ export interface ValuationModelResult {
   moat?: string // 晨星護城河評估
 }
 
+export const DEFAULT_SELECTED_MODEL_IDS: string[] = ['dcf', 'cds', 'ev_ebitda', 'roe']
+
+export interface ValuationModelDef {
+  id: string
+  name: string
+  chineseName: string
+  category: 'Intrinsic (內在價值)' | 'Relative (相對估值)' | 'Cost of Capital (資本成本)'
+  isDefault: boolean
+  desc: string
+}
+
+export const ALL_VALUATION_MODELS: ValuationModelDef[] = [
+  { id: 'dcf', name: 'Discounted Cash Flow (DCF)', chineseName: '1. 現金流折現 (DCF)', category: 'Intrinsic (內在價值)', isDefault: true, desc: '5年自由現金流折現與終值永續成長' },
+  { id: 'cds', name: 'Credit Default Swap Index (CDS)', chineseName: '2. 信用違約互換/CDS指數', category: 'Cost of Capital (資本成本)', isDefault: true, desc: '違約與償債風險、債信利差對股權公允折價' },
+  { id: 'pe', name: 'Price-to-Earnings (P/E)', chineseName: '3. 市盈率/本益比 (P/E)', category: 'Relative (相對估值)', isDefault: false, desc: '行業基準本益比乘數估值' },
+  { id: 'peg', name: 'Price/Earnings to Growth (PEG)', chineseName: '4. 市盈率增長比 (PEG)', category: 'Relative (相對估值)', isDefault: false, desc: '彼得·林區成長動量 PEG = 1.0 定價基準' },
+  { id: 'ev_ebitda', name: 'EV/EBITDA Multiple', chineseName: '5. 企業價值倍數 (EV/EBITDA)', category: 'Relative (相對估值)', isDefault: true, desc: '資本結構中立估值，消除利息與折舊干擾' },
+  { id: 'pb', name: 'Price-to-Book (P/BV)', chineseName: '6. 市淨率 (P/BV)', category: 'Relative (相對估值)', isDefault: false, desc: '淨資產溢價倍數與資產重置價值防線' },
+  { id: 'fcf', name: 'Free Cash Flow Yield (FCF)', chineseName: '7. 自由現金流殖利率 (FCF)', category: 'Intrinsic (內在價值)', isDefault: false, desc: '扣除資本支出後的真實現金流殖利率資本化' },
+  { id: 'roe', name: 'ROE / DuPont Analysis', chineseName: '8. 淨資產收益率 (ROE / 杜邦)', category: 'Intrinsic (內在價值)', isDefault: true, desc: '獲利引擎與槓桿體檢、可持續再投資增速' },
+  { id: 'capm', name: 'Capital Asset Pricing (CAPM)', chineseName: '9. 資本資產定價 (CAPM)', category: 'Cost of Capital (資本成本)', isDefault: false, desc: 'Beta 系統性風險係數與必要股權報酬率' },
+  { id: 'eva', name: 'Economic Value Added (EVA)', chineseName: '10. 經濟附加價值 (EVA)', category: 'Intrinsic (內在價值)', isDefault: false, desc: 'NOPAT 扣除資本成本之超額股東價值創造' },
+  { id: 'ddm', name: 'Dividend Discount (DDM)', chineseName: '11. 股息折現 (DDM / Gordon)', category: 'Intrinsic (內在價值)', isDefault: false, desc: '戈登成長模型長期股利折現回推' },
+  { id: 'morningstar', name: 'Morningstar Moat & Rating', chineseName: '12. 晨星護城河與星等 (Morningstar)', category: 'Intrinsic (內在價值)', isDefault: false, desc: '寬廣/狹窄護城河與 1~5 星級安全邊際評定' },
+]
+
 export interface ValuationSuiteResult {
   ticker: string
   currentPrice: number
   asOfDate: string
   models: ValuationModelResult[]
+  allModels?: ValuationModelResult[] // 完整所有 12 款模型
+  selectedModelIds?: string[]
   averageFairValue: number // 加權平均公允價值
   medianFairValue: number
   overallValuationVerdict: 'Undervalued (低估·具安全邊際)' | 'Fairly Valued (合理區間)' | 'Overvalued (高估·留意風險)'
   valuationRange: [number, number] // [最低公允, 最高公允]
 }
 
-export function computeValuationSuite(data: MarketDataSummary): ValuationSuiteResult {
+export function computeValuationSuite(data: MarketDataSummary, selectedModelIds?: string[]): ValuationSuiteResult {
   const p = data.currentPrice
   const isCrypto = data.ticker.includes('BTC') || data.ticker.includes('ETH') || data.ticker.includes('SOL')
   const eps = data.eps ?? Math.max(p / (data.peRatio || 30), p * 0.035)
@@ -368,16 +396,20 @@ export function computeValuationSuite(data: MarketDataSummary): ValuationSuiteRe
     moat,
   })
 
-  // Consolidated statistics
-  const applicableModels = models.filter(m => !m.applicability.startsWith('Low'))
-  const validValues = (applicableModels.length > 0 ? applicableModels : models).map(m => m.fairValue)
-  const avgFair = Math.round((validValues.reduce((a, b) => a + b, 0) / validValues.length) * 100) / 100
+  const allModels = [...models]
+  const targetIds = selectedModelIds && selectedModelIds.length > 0 ? selectedModelIds : null
+  const activeModels = targetIds ? allModels.filter(m => targetIds.includes(m.id)) : allModels
+
+  // Consolidated statistics for active models
+  const applicableModels = activeModels.filter(m => !m.applicability.startsWith('Low'))
+  const validValues = (applicableModels.length > 0 ? applicableModels : activeModels).map(m => m.fairValue)
+  const avgFair = validValues.length > 0 ? Math.round((validValues.reduce((a, b) => a + b, 0) / validValues.length) * 100) / 100 : p
 
   const sorted = [...validValues].sort((a, b) => a - b)
-  const medianFair = sorted[Math.floor(sorted.length / 2)]
+  const medianFair = sorted.length > 0 ? sorted[Math.floor(sorted.length / 2)] : p
 
   let verdict: ValuationSuiteResult['overallValuationVerdict'] = 'Fairly Valued (合理區間)'
-  const priceDiff = (p - avgFair) / avgFair
+  const priceDiff = avgFair > 0 ? (p - avgFair) / avgFair : 0
   if (priceDiff < -0.12) verdict = 'Undervalued (低估·具安全邊際)'
   else if (priceDiff > 0.15) verdict = 'Overvalued (高估·留意風險)'
 
@@ -385,10 +417,44 @@ export function computeValuationSuite(data: MarketDataSummary): ValuationSuiteRe
     ticker: data.ticker,
     currentPrice: p,
     asOfDate: data.asOfDate,
-    models,
+    models: activeModels,
+    allModels,
+    selectedModelIds: targetIds ?? allModels.map(m => m.id),
     averageFairValue: avgFair,
     medianFairValue: medianFair,
     overallValuationVerdict: verdict,
-    valuationRange: [Math.min(...validValues), Math.max(...validValues)],
+    valuationRange: validValues.length > 0 ? [Math.min(...validValues), Math.max(...validValues)] : [p, p],
+  }
+}
+
+/**
+ * 依據使用者勾選的模型清單，在前端即時重新過濾並計算公允價值指標
+ */
+export function filterValuationSuite(suite: ValuationSuiteResult, selectedIds: string[]): ValuationSuiteResult {
+  const sourcePool = suite.allModels && suite.allModels.length > 0 ? suite.allModels : suite.models
+  const activeModels = sourcePool.filter(m => selectedIds.includes(m.id))
+  const p = suite.currentPrice
+
+  const applicableModels = activeModels.filter(m => !m.applicability.startsWith('Low'))
+  const validValues = (applicableModels.length > 0 ? applicableModels : activeModels).map(m => m.fairValue)
+  const avgFair = validValues.length > 0 ? Math.round((validValues.reduce((a, b) => a + b, 0) / validValues.length) * 100) / 100 : p
+
+  const sorted = [...validValues].sort((a, b) => a - b)
+  const medianFair = sorted.length > 0 ? sorted[Math.floor(sorted.length / 2)] : p
+
+  let verdict: ValuationSuiteResult['overallValuationVerdict'] = 'Fairly Valued (合理區間)'
+  const priceDiff = avgFair > 0 ? (p - avgFair) / avgFair : 0
+  if (priceDiff < -0.12) verdict = 'Undervalued (低估·具安全邊際)'
+  else if (priceDiff > 0.15) verdict = 'Overvalued (高估·留意風險)'
+
+  return {
+    ...suite,
+    models: activeModels,
+    allModels: sourcePool,
+    selectedModelIds: selectedIds,
+    averageFairValue: avgFair,
+    medianFairValue: medianFair,
+    overallValuationVerdict: verdict,
+    valuationRange: validValues.length > 0 ? [Math.min(...validValues), Math.max(...validValues)] : [p, p],
   }
 }

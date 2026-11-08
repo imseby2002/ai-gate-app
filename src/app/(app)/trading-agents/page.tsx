@@ -19,6 +19,7 @@ import {
   BarChart3,
   Flame,
   Globe,
+  SlidersHorizontal,
 } from 'lucide-react'
 import type {
   MarketDataSummary,
@@ -38,7 +39,14 @@ import { AgentStreamCard } from '@/components/trading-agents/AgentStreamCard'
 import { HistoryDrawer } from '@/components/trading-agents/HistoryDrawer'
 import { ValuationMatrixCard } from '@/components/trading-agents/ValuationMatrixCard'
 import { TickerSelectModal } from '@/components/trading-agents/TickerSelectModal'
-import { type ValuationSuiteResult, computeValuationSuite } from '@/lib/trading-agents/valuation-models'
+import { ValuationModelSelectorModal } from '@/components/trading-agents/ValuationModelSelectorModal'
+import {
+  type ValuationSuiteResult,
+  computeValuationSuite,
+  filterValuationSuite,
+  DEFAULT_SELECTED_MODEL_IDS,
+  ALL_VALUATION_MODELS,
+} from '@/lib/trading-agents/valuation-models'
 
 const POPULAR_TICKERS = [
   { symbol: 'NVDA', label: '輝達 (NVIDIA)' },
@@ -74,6 +82,10 @@ export default function TradingAgentsPage() {
   const [portfolioOpen, setPortfolioOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [tickerModalOpen, setTickerModalOpen] = useState(false)
+  const [valuationModalOpen, setValuationModalOpen] = useState(false)
+
+  // Valuation Models Selection (預設只產出 DCF, CDS, EV/EBITDA, ROE 杜邦 4 大模型)
+  const [selectedModelIds, setSelectedModelIds] = useState<string[]>(DEFAULT_SELECTED_MODEL_IDS)
 
   // Streaming State
   const [analystsStreaming, setAnalystsStreaming] = useState<Record<AnalystRole, { content: string; isStreaming: boolean; isDone: boolean; report?: AnalystReport }>>({
@@ -97,6 +109,33 @@ export default function TradingAgentsPage() {
 
   const abortControllerRef = useRef<AbortController | null>(null)
 
+  // 從 localStorage 載入使用者已選擇的估值模型
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('trading_agents_selected_models')
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setSelectedModelIds(parsed)
+        }
+      }
+    } catch {
+      // ignore JSON parse error
+    }
+  }, [])
+
+  const handleUpdateSelectedModels = (newIds: string[]) => {
+    setSelectedModelIds(newIds)
+    try {
+      localStorage.setItem('trading_agents_selected_models', JSON.stringify(newIds))
+    } catch {
+      // ignore
+    }
+    if (valuationSuite) {
+      setValuationSuite(filterValuationSuite(valuationSuite, newIds))
+    }
+  }
+
   // Fetch quick quote on ticker selection
   const fetchQuote = async (ticker: string) => {
     setLoadingMarket(true)
@@ -105,7 +144,7 @@ export default function TradingAgentsPage() {
       if (res.ok) {
         const data = await res.json()
         setMarketData(data)
-        setValuationSuite(computeValuationSuite(data))
+        setValuationSuite(computeValuationSuite(data, selectedModelIds))
         setActiveTicker(ticker)
       }
     } catch (err) {
@@ -154,6 +193,7 @@ export default function TradingAgentsPage() {
           portfolio,
           config: {
             debateRounds,
+            selectedModelIds,
             modelConfig: {
               quickThinkModel: quickModel,
               deepThinkModel: deepModel,
@@ -460,14 +500,33 @@ export default function TradingAgentsPage() {
                 <option value="openai/gpt-4o">OpenAI · GPT-4o (頂級博弈裁決)</option>
               </select>
             </div>
+
+            <div className="flex items-center gap-1.5 ml-auto">
+              <span className="font-semibold text-foreground">估值模型產出：</span>
+              <button
+                type="button"
+                onClick={() => setValuationModalOpen(true)}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 transition-all cursor-pointer"
+                title="自訂是否產出各項估值模型"
+              >
+                <SlidersHorizontal className="h-3 w-3" />
+                <span>已勾選 {selectedModelIds.length}/{ALL_VALUATION_MODELS.length} 款模型</span>
+              </button>
+            </div>
           </div>
         </Card>
 
         {/* Live Market Header */}
         {marketData && <MarketHeader data={marketData} />}
 
-        {/* 10 Financial Valuation Models Matrix */}
-        {valuationSuite && <ValuationMatrixCard suite={valuationSuite} />}
+        {/* Financial Valuation Models Matrix */}
+        {valuationSuite && (
+          <ValuationMatrixCard
+            suite={valuationSuite}
+            selectedModelIds={selectedModelIds}
+            onUpdateSelectedIds={handleUpdateSelectedModels}
+          />
+        )}
 
         {/* Phase Progress Indicator */}
         {running && (
@@ -680,6 +739,13 @@ export default function TradingAgentsPage() {
       </div>
 
       {/* Modals */}
+      <ValuationModelSelectorModal
+        open={valuationModalOpen}
+        onOpenChange={setValuationModalOpen}
+        selectedIds={selectedModelIds}
+        onChangeSelectedIds={handleUpdateSelectedModels}
+      />
+
       <TickerSelectModal
         open={tickerModalOpen}
         onOpenChange={setTickerModalOpen}

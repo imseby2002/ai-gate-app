@@ -4,15 +4,26 @@ import React, { useState } from 'react'
 import type { ValuationSuiteResult } from '@/lib/trading-agents/valuation-models'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Calculator, ChevronDown, ChevronUp, ShieldAlert, Star } from 'lucide-react'
+import { Calculator, ChevronDown, ChevronUp, ShieldAlert, Star, SlidersHorizontal } from 'lucide-react'
+import { ValuationModelSelectorModal } from './ValuationModelSelectorModal'
+import { ALL_VALUATION_MODELS } from '@/lib/trading-agents/valuation-models'
 
 interface ValuationMatrixCardProps {
   suite: ValuationSuiteResult
+  selectedModelIds?: string[]
+  onUpdateSelectedIds?: (ids: string[]) => void
 }
 
-export function ValuationMatrixCard({ suite }: ValuationMatrixCardProps) {
+export function ValuationMatrixCard({
+  suite,
+  selectedModelIds,
+  onUpdateSelectedIds,
+}: ValuationMatrixCardProps) {
   const [filter, setFilter] = useState<'All' | 'Intrinsic' | 'Relative' | 'Cost'>('All')
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [selectorOpen, setSelectorOpen] = useState(false)
+
+  const activeSelectedIds = selectedModelIds || suite.selectedModelIds || suite.models.map(m => m.id)
 
   const filteredModels = suite.models.filter(m => {
     if (filter === 'All') return true
@@ -23,39 +34,53 @@ export function ValuationMatrixCard({ suite }: ValuationMatrixCardProps) {
   })
 
   return (
-    <Card className="p-4 sm:p-5 border-border/80 shadow-sm rounded-xl space-y-4">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/60 pb-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <Calculator className="h-5 w-5 text-primary" />
-            <h3 className="text-base font-bold text-foreground">
-              十二大經典估值量化模型矩陣 (12 Valuation Models Matrix)
-            </h3>
+    <>
+      <Card className="p-4 sm:p-5 border-border/80 shadow-sm rounded-xl space-y-4">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/60 pb-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <Calculator className="h-5 w-5 text-primary" />
+              <h3 className="text-base font-bold text-foreground">
+                經典估值量化模型診斷矩陣 ({suite.models.length} 款模型產出)
+              </h3>
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              依據自訂勾選產出公允價值：涵蓋現金流折現、CDS 信用違約利差、資本結構與杜邦效率
+            </p>
           </div>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            涵蓋 DCF、CDS 信用違約利差折價、晨星護城河星等、乘數相對估值、杜邦資本效率與 CAPM
-          </p>
-        </div>
 
-        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
-          <Badge className="font-bold text-xs bg-primary/10 text-primary border-primary/30" variant="outline">
-            平均公允價: ${suite.averageFairValue.toFixed(2)}
-          </Badge>
-          <Badge
-            className={`font-bold text-xs ${
-              suite.overallValuationVerdict.includes('Undervalued')
-                ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30'
-                : suite.overallValuationVerdict.includes('Overvalued')
-                ? 'bg-rose-500/15 text-rose-500 border-rose-500/30'
-                : 'bg-amber-500/15 text-amber-500 border-amber-500/30'
-            }`}
-            variant="outline"
-          >
-            {suite.overallValuationVerdict.split(' ')[0]}
-          </Badge>
+          <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+            <button
+              type="button"
+              onClick={() => setSelectorOpen(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-muted hover:bg-accent border border-border/80 text-foreground transition-all cursor-pointer"
+              title="自訂是否產出各項估值模型"
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5 text-primary" />
+              <span>模型產出配置</span>
+              <span className="font-mono text-[11px] text-primary font-bold">
+                ({suite.models.length}/{ALL_VALUATION_MODELS.length})
+              </span>
+            </button>
+
+            <Badge className="font-bold text-xs bg-primary/10 text-primary border-primary/30" variant="outline">
+              公允平均: ${suite.averageFairValue.toFixed(2)}
+            </Badge>
+            <Badge
+              className={`font-bold text-xs ${
+                suite.overallValuationVerdict.includes('Undervalued')
+                  ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30'
+                  : suite.overallValuationVerdict.includes('Overvalued')
+                  ? 'bg-rose-500/15 text-rose-500 border-rose-500/30'
+                  : 'bg-amber-500/15 text-amber-500 border-amber-500/30'
+              }`}
+              variant="outline"
+            >
+              {suite.overallValuationVerdict.split(' ')[0]}
+            </Badge>
+          </div>
         </div>
-      </div>
 
       {/* Category Tabs */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
@@ -187,5 +212,17 @@ export function ValuationMatrixCard({ suite }: ValuationMatrixCardProps) {
         })}
       </div>
     </Card>
+
+    <ValuationModelSelectorModal
+      open={selectorOpen}
+      onOpenChange={setSelectorOpen}
+      selectedIds={activeSelectedIds}
+      onChangeSelectedIds={(newIds) => {
+        if (onUpdateSelectedIds) {
+          onUpdateSelectedIds(newIds)
+        }
+      }}
+    />
+  </>
   )
 }
