@@ -4495,6 +4495,46 @@
       "corePlus": "CORE 以上",
       "proPlus": "PRO 以上",
       "openPipeline": "開啟行銷流水線全自動執行"
+    },
+    "story": {
+      "title": "多分鏡配音影片（旁白＋字幕＋背景音樂）",
+      "desc": "AI 先寫分鏡旁白與畫面，每段產圖、配音，再自動套版型、加字幕和背景音樂合成成一支影片。長度不受單段影片 5～25 秒的限制。",
+      "mode": {
+        "topic": "從主題發想",
+        "content": "從現有內容改寫"
+      },
+      "placeholder": {
+        "topic": "例：上班族如何在午休 10 分鐘恢復精神",
+        "content": "貼上文案、腳本或產品介紹，AI 會萃取重點改寫成分鏡"
+      },
+      "sceneCount": "分鏡數",
+      "stylePlaceholder": "畫面風格（選填，例：溫暖手繪插畫）",
+      "genScript": "產生分鏡",
+      "videoTitle": "影片標題（顯示在第一段）",
+      "scene": "第 {n} 段",
+      "removeScene": "刪除這段",
+      "narration": "旁白（會配音並顯示為字幕）",
+      "visualPrompt": "畫面描述（英文，用來產圖）",
+      "addScene": "新增一段",
+      "template": {
+        "classic": "版型：經典（標題＋圖＋字幕）",
+        "fullbleed": "版型：滿版畫面",
+        "card": "版型：卡片"
+      },
+      "bgm": "背景音樂",
+      "render": "開始合成",
+      "costHint": "每段約扣：產圖 1 張＋配音字數；合成在背景進行，完成後會出現在下方，可離開本頁。",
+      "errContent": "請輸入主題或內容",
+      "recent": "最近的合成",
+      "untitled": "未命名",
+      "sceneTotal": "{n} 段",
+      "status": {
+        "queued": "排隊中",
+        "rendering": "合成中",
+        "done": "完成",
+        "failed": "失敗"
+      },
+      "download": "下載影片"
     }
   },
   "Meeting": {

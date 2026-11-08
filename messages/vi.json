@@ -4495,6 +4495,46 @@
       "corePlus": "CORE trở lên",
       "proPlus": "PRO trở lên",
       "openPipeline": "Mở quy trình marketing tự động hoàn toàn"
+    },
+    "story": {
+      "title": "Video nhiều cảnh có lồng tiếng (lời thoại + phụ đề + nhạc nền)",
+      "desc": "AI viết lời thoại và hình ảnh cho từng cảnh, tạo ảnh và giọng đọc cho mỗi cảnh, rồi tự áp bố cục, phụ đề và nhạc nền thành một video. Không bị giới hạn 5–25 giây như một clip đơn.",
+      "mode": {
+        "topic": "Từ chủ đề",
+        "content": "Từ nội dung có sẵn"
+      },
+      "placeholder": {
+        "topic": "VD: Dân văn phòng hồi sức trong 10 phút nghỉ trưa",
+        "content": "Dán bài viết, kịch bản hoặc giới thiệu sản phẩm, AI sẽ rút ý chính thành các cảnh"
+      },
+      "sceneCount": "Số cảnh",
+      "stylePlaceholder": "Phong cách hình ảnh (tùy chọn, VD: minh họa vẽ tay ấm áp)",
+      "genScript": "Tạo phân cảnh",
+      "videoTitle": "Tiêu đề video (hiện ở cảnh đầu)",
+      "scene": "Cảnh {n}",
+      "removeScene": "Xóa cảnh",
+      "narration": "Lời thoại (được lồng tiếng và hiện làm phụ đề)",
+      "visualPrompt": "Mô tả hình ảnh (tiếng Anh, dùng để tạo ảnh)",
+      "addScene": "Thêm cảnh",
+      "template": {
+        "classic": "Bố cục: cổ điển (tiêu đề + ảnh + phụ đề)",
+        "fullbleed": "Bố cục: tràn viền",
+        "card": "Bố cục: thẻ"
+      },
+      "bgm": "Nhạc nền",
+      "render": "Bắt đầu dựng video",
+      "costHint": "Mỗi cảnh trừ điểm cho 1 ảnh và số ký tự lồng tiếng. Video được dựng ở chế độ nền và sẽ hiện bên dưới khi xong; bạn có thể rời trang.",
+      "errContent": "Vui lòng nhập chủ đề hoặc nội dung",
+      "recent": "Video gần đây",
+      "untitled": "Chưa đặt tên",
+      "sceneTotal": "{n} cảnh",
+      "status": {
+        "queued": "Đang chờ",
+        "rendering": "Đang dựng",
+        "done": "Hoàn tất",
+        "failed": "Thất bại"
+      },
+      "download": "Tải video"
     }
   },
   "Meeting": {

@@ -4495,6 +4495,46 @@
       "corePlus": "CORE or above",
       "proPlus": "PRO or above",
       "openPipeline": "Open the fully automated marketing pipeline"
+    },
+    "story": {
+      "title": "Multi-scene narrated video (voiceover + subtitles + music)",
+      "desc": "AI writes scene narrations and visuals, generates an image and voiceover per scene, then applies a layout, subtitles and background music into one video. Not limited to the 5–25 s of a single clip.",
+      "mode": {
+        "topic": "From a topic",
+        "content": "From existing content"
+      },
+      "placeholder": {
+        "topic": "e.g. How office workers can recharge in a 10-minute lunch break",
+        "content": "Paste copy, a script or a product description; AI will extract the key points into scenes"
+      },
+      "sceneCount": "Scenes",
+      "stylePlaceholder": "Visual style (optional, e.g. warm hand-drawn illustration)",
+      "genScript": "Generate scenes",
+      "videoTitle": "Video title (shown on the first scene)",
+      "scene": "Scene {n}",
+      "removeScene": "Remove scene",
+      "narration": "Narration (voiced and shown as subtitles)",
+      "visualPrompt": "Visual description (English, used for image generation)",
+      "addScene": "Add scene",
+      "template": {
+        "classic": "Layout: classic (title + image + subtitle)",
+        "fullbleed": "Layout: full-bleed",
+        "card": "Layout: card"
+      },
+      "bgm": "Background music",
+      "render": "Render video",
+      "costHint": "Each scene is charged for one image plus voiceover characters. Rendering runs in the background and appears below when done; you can leave this page.",
+      "errContent": "Please enter a topic or content",
+      "recent": "Recent renders",
+      "untitled": "Untitled",
+      "sceneTotal": "{n} scenes",
+      "status": {
+        "queued": "Queued",
+        "rendering": "Rendering",
+        "done": "Done",
+        "failed": "Failed"
+      },
+      "download": "Download video"
     }
   },
   "Meeting": {

@@ -20,6 +20,7 @@ import type { SimulationResult } from '@/app/api/marketing/simulate/route'
 import { useMarketingPlan } from '@/components/marketing/PlanGate'
 import KnowledgePicker from '@/components/knowledge/KnowledgePicker'
 import { PrintHdButton } from '@/components/marketing/PrintHdButton'
+import { StoryVideoPanel } from '@/components/marketing/StoryVideoPanel'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -5307,6 +5308,14 @@ export default function MarketingAutoPage() {
               drivePickedImage={driveImages[7] ?? driveImages[5] ?? null}
               onDone={handleUnit8Done}
             />
+          )}
+          {activeUnit === 8 && !unitLockRequires[8] && (
+            <div className="mt-6">
+              <StoryVideoPanel
+                defaultContent={(unitData[7] as Unit7Data | undefined)?.scripts?.[0]?.content ?? (unitData[1] as { summary?: string } | undefined)?.summary ?? ''}
+                language={(unitData[1] as { language?: string } | undefined)?.language}
+              />
+            </div>
           )}
           {activeUnit === 9 && unitLockRequires[9] && (
             <UnitPlanLock requiredPlan={unitLockRequires[9]} currentPlan={planInfo?.plan ?? 'free'} />
