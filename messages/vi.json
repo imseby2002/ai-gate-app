@@ -13208,6 +13208,18 @@
         "line": "Bấm \"Điền vào LINE\" → chọn nhóm → gửi.",
         "zalo": "Điện thoại: bấm \"Chia sẻ qua Zalo\" → chọn nhóm → gửi. Máy tính: sao chép → mở Zalo → dán vào nhóm và gửi."
       }
+    },
+    "rules": {
+      "title": "Tự động báo vào nhóm LINE / Zalo cá nhân",
+      "desc": "Khi đơn được xác nhận hoặc lịch trình thay đổi, hệ thống soạn sẵn thông báo và gửi tới Telegram của người giữ tài khoản. Họ bấm \"一鍵帶入\", chọn nhóm trên LINE / Zalo cá nhân rồi gửi.",
+      "event": {
+        "order_confirmed": "Xác nhận đơn",
+        "itinerary_changed": "Thay đổi lịch trình (ngày nhận/trả phòng, phòng, trạng thái)"
+      },
+      "add": "Thêm quy tắc thông báo",
+      "added": "Đã thêm quy tắc",
+      "remove": "Xóa quy tắc",
+      "noHolder": "Chưa ai cài Telegram: người giữ tài khoản hãy điền Telegram bot token và chat_id trong cài đặt hồ sơ trước."
     }
   },
   "Knowledge": {

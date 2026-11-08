@@ -1,3 +1,4 @@
+import { fireItineraryChange } from '@/lib/marketing/group-notify'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getBnbContext } from '@/lib/bnb/context'
@@ -127,7 +128,7 @@ export async function PUT(req: NextRequest) {
   // 修改前先取舊資料——若房型或入住日被改掉，才知道要清哪一筆舊的每日入住記錄
   const { data: before } = await supabase
     .from('bookings')
-    .select('id, property_id, guest_name, platform_booking_id, total_price, platform, check_in, status, deposit_amount, is_paid')
+    .select('id, property_id, guest_name, platform_booking_id, total_price, platform, check_in, check_out, status, deposit_amount, is_paid')
     .eq('id', id).eq('user_id', ctx.ownerId).maybeSingle()
 
   const { data, error } = await supabase
@@ -139,6 +140,8 @@ export async function PUT(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   // 訂單管理跟每日入住不論從哪一邊改，另一邊都要跟著同步
   if (data) await syncDailyRecordForBooking(supabase, ctx.ownerId, data, before)
+  // 入住／退房日、房型、狀態有變 → 依設定通知持有人轉達到群組
+  if (data) await fireItineraryChange(ctx.ownerId, before, data)
   return NextResponse.json({ booking: data })
 }
 
