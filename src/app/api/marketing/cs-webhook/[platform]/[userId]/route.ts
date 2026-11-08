@@ -830,6 +830,12 @@ export function extractParticipantsAndPhone(text: string): { participants: TourP
 
 // Single entry point for every platform: human handoff → ticket, else AI reply; logs both.
 // Returns '' when the bot should stay silent (a human has taken over).
+// 訊息只有訂單號碼或訂房手機（可帶「訂單編號」「agoda」「手機」等前綴字）
+function isCredentialOnlyMessage(text: string): boolean {
+  const core = text.replace(/訂單|訂房|編號|號碼|單號|手機|電話|agoda|booking|trip|[\s:：#\-()（）]/gi, '')
+  return /^(?:[A-Za-z]{0,8}\d{6,20}|\+?\d{9,13})$/.test(core)
+}
+
 async function replyToCustomer(
   userId: string, platform: string, customerId: string,
   knowledge: CsKnowledge, history: HistoryMsg[], text: string, gapNote: string,
@@ -841,7 +847,9 @@ async function replyToCustomer(
   if (!withinLimit) return ''  // over limit → drop silently
 
   // A human is already handling this customer → check if user/staff wants to resume AI
-  if (await hasOpenHandoff(userId, customerId)) {
+  // 例外：客人這則只有訂單號碼／訂房手機 → 照常讓 AI 查訂房系統給密碼（入住時間限制照舊）。
+  // 真實案例：真人客服請客人「輸入 agoda 訂單編號取得密碼」，客人傳了訂單號碼，但真人剛發過訊息、AI 靜音，客人多等了 2 分鐘。
+  if (!isCredentialOnlyMessage(text) && await hasOpenHandoff(userId, customerId)) {
     // 專員或客人輸入「自動」、「恢復AI」、「開啟AI」等解除手動模式
     const RESUME_AI_RE = /^(?:切換|恢復|開啟|啟動|換回|轉成|改為)?(?:AI)?自動(?:模式|回覆)?$|^(?:開啟|啟動|恢復|開|叫)?\s*AI(?:\s*(?:回覆|接手|開啟|啟動|自動|回))?$|^AI\s*(?:開啟|啟動|恢復|接手|開|回覆|回)$|^(?:恢復|開啟|啟動)$/i
     if (RESUME_AI_RE.test(text.trim())) {
