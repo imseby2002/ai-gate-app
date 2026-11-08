@@ -306,12 +306,41 @@ export const generateMarketingImageTool: AgentToolDef = {
   },
 }
 
+// Agent 自動發文頻率上限（每個社群平台分開計算）：避免短時間洗版被平台降觸及或限制發文
+const PUBLISH_MAX_PER_DAY = 3
+const PUBLISH_MIN_INTERVAL_MIN = 120
+
+/** 回傳本使用者 Agent 最近 24 小時各平台成功發文的時間（新到舊） */
+async function recentAgentPublishes(userId: string): Promise<Record<string, Date[]>> {
+  const admin = createAdminClient()
+  const since = new Date(Date.now() - 24 * 3600_000).toISOString()
+  const { data: runs } = await admin.from('agent_runs').select('id').eq('user_id', userId).gte('updated_at', since)
+  const runIds = (runs ?? []).map(r => r.id as string)
+  if (!runIds.length) return {}
+  const { data: steps } = await admin
+    .from('agent_run_steps')
+    .select('created_at, tool_output')
+    .eq('tool_id', 'publish_to_social')
+    .in('run_id', runIds)
+    .gte('created_at', since)
+    .order('created_at', { ascending: false })
+  const byPlatform: Record<string, Date[]> = {}
+  for (const st of steps ?? []) {
+    const results = ((st.tool_output as { results?: { platform?: string; ok?: boolean }[] } | null)?.results) ?? []
+    for (const r of results) {
+      if (r.ok && r.platform) (byPlatform[r.platform] ??= []).push(new Date(st.created_at as string))
+    }
+  }
+  return byPlatform
+}
+
 interface PublishInput { platforms: string[]; copy_text: string; image_urls?: string[]; video_url?: string; content_id?: string; calendar_id?: string }
 
 export const publishToSocialTool: AgentToolDef = {
   id: 'publish_to_social',
   description:
     '用行銷自動化同一套上傳功能，發佈到「平台設定」已連結的社群帳號（Facebook、Instagram、Threads、LinkedIn、Twitter/X、LINE VOOM、Zalo、FB/IG Reels、YouTube Shorts、TikTok）。' +
+    `每個平台 24 小時內最多 ${PUBLISH_MAX_PER_DAY} 篇、兩篇至少間隔 ${PUBLISH_MIN_INTERVAL_MIN} 分鐘，超過的平台會被擋下並告知可再發的時間，請改用 schedule_content 排程，不要重試。` +
     '任務未開啟「自動發文」時，每篇會先送真人審核，核准後才發出。FB 可不附圖（發純文字貼文）；IG 需要圖片網址；Reels/Shorts/TikTok 需要影片網址。' +
     'image_urls 只能用 generate_marketing_image 回傳的網址或確實存在的素材網址，不可自行編造網址。發文失敗時先看錯誤內容，圖片網址錯誤不是授權問題。',
   inputSchema: {
@@ -350,7 +379,26 @@ export const publishToSocialTool: AgentToolDef = {
     const connected = [...credRows.filter(r => r.is_connected).map(r => r.platform), ...Object.keys(overrides)]
     if (!connected.length) return { ok: false, error: '行銷自動化「平台設定」尚未連結任何社群帳號' }
 
-    const results = await publishToPlatforms(credRows, input.platforms, input.image_urls ?? [], input.video_url ?? '', input.copy_text, overrides)
+    // 發文頻率上限：超過的平台不發，告知最早可再發的時間
+    const recent = await recentAgentPublishes(ctx.userId)
+    const now = Date.now()
+    const blocked: { platform: string; ok: false; error: string }[] = []
+    const allowed = input.platforms.filter(p => {
+      const times = recent[p] ?? []
+      const next = Math.max(
+        times.length >= PUBLISH_MAX_PER_DAY ? times[PUBLISH_MAX_PER_DAY - 1].getTime() + 24 * 3600_000 : 0,
+        times.length ? times[0].getTime() + PUBLISH_MIN_INTERVAL_MIN * 60_000 : 0,
+      )
+      if (next <= now) return true
+      blocked.push({
+        platform: p, ok: false,
+        error: `已達發文頻率上限（每 24 小時最多 ${PUBLISH_MAX_PER_DAY} 篇、間隔至少 ${PUBLISH_MIN_INTERVAL_MIN} 分鐘），最早 ${new Date(next).toISOString()} 後可再發，請改用 schedule_content 排程`,
+      })
+      return false
+    })
+    if (!allowed.length) return { connectedPlatforms: connected, results: blocked }
+
+    const results = [...blocked, ...await publishToPlatforms(credRows, allowed, input.image_urls ?? [], input.video_url ?? '', input.copy_text, overrides)]
     if (results.some(r => r.ok)) {
       const ownerId = await ownerForRun(ctx)
       const now = new Date().toISOString()
