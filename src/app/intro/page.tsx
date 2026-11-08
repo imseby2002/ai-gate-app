@@ -6,6 +6,7 @@ import { SUBDOMAIN_SYSTEM } from '@/lib/systems'
 import { MarketingIntro, marketingMetadata } from './MarketingIntro'
 import { CsIntro, csMetadata } from './CsIntro'
 import { BookingIntro, bookingMetadata } from './BookingIntro'
+import { ReserveIntro, reserveMetadata } from './_reserve/ReserveIntro'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,6 +15,7 @@ export const dynamic = 'force-dynamic'
 const INTROS = {
   cs: { Page: CsIntro, metadata: csMetadata },
   booking: { Page: BookingIntro, metadata: bookingMetadata },
+  reserve: { Page: ReserveIntro, metadata: reserveMetadata },
   marketing: { Page: MarketingIntro, metadata: marketingMetadata },
 } as const
 

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { introTr, trDeep } from '@/lib/i18n-data/server'
+import { redirect } from 'next/navigation'
 import { introSystem } from '../_host'
 import { MarketingFeatures, marketingFeaturesMetadata } from './MarketingFeatures'
 import { CsFeatures, csFeaturesMetadata } from '../_cs/CsFeatures'
@@ -15,5 +16,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function IntroFeaturesPage() {
   const sys = await introSystem()
+  // 預約系統的功能說明就在 /intro
+  if (sys === 'reserve') redirect('/intro')
   return sys === 'cs' ? <CsFeatures /> : sys === 'booking' ? <BookingFeatures /> : <MarketingFeatures />
 }
