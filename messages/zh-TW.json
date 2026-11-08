@@ -13168,6 +13168,30 @@
       "submit": "在電腦開啟並複製文案",
       "needText": "文案不可為空",
       "queued": "已送出：電腦將開啟{app}並複製文案，請選群組、貼上後自行按送出"
+    },
+    "lineOa": {
+      "title": "LINE 官方帳號群組排程推播",
+      "desc": "官方帳號被邀進的群組會自動列在這裡，可立即或排程推播，全自動送出。",
+      "refresh": "重新整理",
+      "unnamed": "（未命名群組）",
+      "noGroups": "尚未偵測到群組。\n1. LINE Developers → Messaging API 設定開啟「Allow bot to join group chats」\n2. 確認客服系統已設定 LINE 官方帳號 Webhook\n3. 把官方帳號邀進群組（或在群組內發一則訊息），再按右上角重新整理",
+      "needGroup": "請選擇至少一個群組",
+      "image": "圖片網址（選填，https）",
+      "when": "排程時間（留空＝立即發送）",
+      "quota": "推播會使用您 LINE 官方帳號的訊息額度（每個群組計一次）。",
+      "schedule": "建立排程",
+      "sendNow": "立即發送",
+      "scheduled": "已建立排程",
+      "recent": "最近推播",
+      "cancel": "取消排程",
+      "status": {
+        "scheduled": "排程中",
+        "sending": "發送中",
+        "sent": "已送出",
+        "partial": "部分送出",
+        "failed": "送出失敗",
+        "canceled": "已取消"
+      }
     }
   },
   "Knowledge": {

@@ -13168,6 +13168,30 @@
       "submit": "Open on PC and copy post",
       "needText": "Post cannot be empty",
       "queued": "Sent: your PC will open {app} and copy the post. Pick the group, paste and press send yourself."
+    },
+    "lineOa": {
+      "title": "LINE Official Account group scheduled push",
+      "desc": "Groups your Official Account has been invited to appear here. Push now or on a schedule — fully automatic.",
+      "refresh": "Refresh",
+      "unnamed": "(Unnamed group)",
+      "noGroups": "No groups detected yet.\n1. LINE Developers → Messaging API settings: enable \"Allow bot to join group chats\"\n2. Make sure the customer service LINE Official Account webhook is set up\n3. Invite the Official Account to a group (or send a message in the group), then press refresh",
+      "needGroup": "Select at least one group",
+      "image": "Image URL (optional, https)",
+      "when": "Schedule time (empty = send now)",
+      "quota": "Pushes use your LINE Official Account message quota (each group counts once).",
+      "schedule": "Create schedule",
+      "sendNow": "Send now",
+      "scheduled": "Schedule created",
+      "recent": "Recent pushes",
+      "cancel": "Cancel schedule",
+      "status": {
+        "scheduled": "Scheduled",
+        "sending": "Sending",
+        "sent": "Sent",
+        "partial": "Partly sent",
+        "failed": "Failed",
+        "canceled": "Canceled"
+      }
     }
   },
   "Knowledge": {
