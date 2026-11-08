@@ -22,12 +22,13 @@ const GROUPS__ZH: Array<{ id: string; n: string; title: string; sub: string; ite
       {
         Icon: Globe, title: '官網 AI 設計',
         desc: '選一種視覺風格或直接跟 AI 設計助手描述想要的感覺，自動生成民宿官網；電腦版、手機版即時預覽，旅客可直接在官網訂房。',
+        plan: 'FREE 固定模板 · CORE 起 AI 設計',
         points: ['4 種預設模板', 'AI 自由生成專屬設計', '主題色／副標語', 'SEO 標題與摘要', '民宿故事、主人介紹、FAQ'],
       },
       { Icon: Download, title: '從 OTA 一鍵匯入', desc: '貼上 Booking.com、Agoda 等平台的民宿頁面網址，AI 解析民宿資料、設施與房型，確認後一鍵建立，不用重新建檔。' },
       { Icon: Building2, title: '民宿資料', desc: '民宿名稱、聯絡方式、入住／退房時間與入住規則，官網與通知信都會帶入。' },
-      { Icon: BedDouble, title: '房型管理', desc: '設定各房間與各平台上的房型別名，Email 同步時自動比對到正確房間。', plan: 'FREE 3 房源 · CORE／PRO 5 · MAX 15（可加購）' },
-      { Icon: Users, title: '協作成員', desc: '邀請夥伴一起管理訂單與房況。', plan: 'FREE／CORE 1 位 · PRO 2 位 · MAX 不限' },
+      { Icon: BedDouble, title: '房型管理', desc: '設定各房間與各平台上的房型別名，Email 同步時自動比對到正確房間。', plan: 'FREE 5 · CORE 8 · PRO 10 · MAX 16 房源（CORE 起可加購）' },
+      { Icon: Users, title: '協作成員', desc: '邀請夥伴一起管理訂單與房況。', plan: 'CORE 1 位 · PRO 2 位 · MAX 不限' },
     ],
   },
   {
@@ -156,7 +157,7 @@ export async function BookingFeatures() {
         </Link>
       </section>
 
-      <BkFinalCta title={tr("先用免費方案做好你的官網")} sub={tr("FREE 方案含 3 房源、官網 AI 設計、iCal 同步、動態定價與優惠碼，隨時可升級。")} />
+      <BkFinalCta title={tr("先用免費方案做好你的官網")} sub={tr("FREE 方案含 5 房源、官網固定模板、iCal 同步、動態定價與優惠碼，隨時可升級。")} />
       <BkFooter />
     </div>
   )

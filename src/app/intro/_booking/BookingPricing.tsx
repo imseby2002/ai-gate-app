@@ -37,7 +37,7 @@ export async function BookingPricing() {
       <BkDarkHeader
         eyebrow={tr("方案比較")}
         title={<>{tr("依房源數選方案，")}<BkGradText>{tr("免費就能開始")}</BkGradText></>}
-        sub={tr("官網 AI 設計、線上訂房、空房表與報表所有方案都有；升級差在房源數、定價工具與通路同步。")}
+        sub={tr("官網模板、線上訂房、空房表、動態定價與報表所有方案都有；升級差在房源數、AI 官網設計與通路同步。")}
       />
 
       {/* PLAN CARDS */}
@@ -133,7 +133,7 @@ export async function BookingPricing() {
 
       <EnterprisePricing grad={BK_GRAD} />
 
-      <BkFinalCta title={tr("先免費用，覺得好再升級")} sub={tr("FREE 方案含 3 房源、官網 AI 設計、iCal 同步、動態定價、優惠碼與客服串接。")} />
+      <BkFinalCta title={tr("先免費用，覺得好再升級")} sub={tr("FREE 方案含 5 房源、官網固定模板、iCal 同步、動態定價、優惠碼與客服串接。")} />
       <BkFooter />
     </div>
   )

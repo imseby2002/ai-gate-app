@@ -53,6 +53,14 @@ export default function WebsiteEditorPage() {
   const [previewKey, setPreviewKey] = useState(0)
   const [mobileView, setMobileView] = useState<'edit' | 'preview'>('edit')
   const [aiOpen, setAiOpen]         = useState(false)
+  // FREE 方案不能用 AI 設計（只能選固定模板）；未載入前先當可用，避免按鈕閃爍
+  const [aiAllowed, setAiAllowed]   = useState(true)
+
+  useEffect(() => {
+    fetch('/api/booking/plan').then(r => (r.ok ? r.json() : null)).then(d => {
+      if (d?.features) setAiAllowed(d.features.aiWebsiteDesign !== false)
+    }).catch(() => {})
+  }, [])
 
   useEffect(() => {
     fetch('/api/booking/profile').then(r => r.json()).then(d => {
@@ -135,6 +143,7 @@ export default function WebsiteEditorPage() {
         )}
 
         <div className="ml-auto flex items-center gap-2">
+          {aiAllowed ? (
           <button onClick={() => setAiOpen(o => !o)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors
               ${aiOpen
@@ -143,6 +152,13 @@ export default function WebsiteEditorPage() {
             <Sparkles className="h-3.5 w-3.5" />
             {t('website.aiDesign')}
           </button>
+          ) : (
+          <a href="/booking/plan" title={t('website.aiUpgradeHint')}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-200 text-gray-400 hover:text-violet-600 hover:border-violet-200">
+            <Sparkles className="h-3.5 w-3.5" />
+            {t('website.aiUpgrade')}
+          </a>
+          )}
           {/* Desktop device toggle */}
           <div className="hidden md:flex items-center gap-0.5 bg-gray-100 rounded-lg p-0.5">
             <button onClick={() => setDevice('desktop')} title={t('website.desktop')}

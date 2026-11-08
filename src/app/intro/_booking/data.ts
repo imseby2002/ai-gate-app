@@ -21,7 +21,7 @@ export function yearlySavePct(plan: BookingPlan): number {
 }
 
 export const PLAN_FIT: Record<BookingPlan, string> = {
-  free: '三間房以內，官網、定價工具與客服串接免費用',
+  free: '五間房以內，官網模板、定價工具與客服串接免費用',
   core: '自己經營幾間房，要動態定價和優惠碼',
   pro: '上架多個平台，需要即時同步防超賣',
   enterprise: '房源多、團隊大，要客製定價規則',
@@ -29,10 +29,10 @@ export const PLAN_FIT: Record<BookingPlan, string> = {
 
 // 各方案卡片重點（對應站內 /booking/plan 的 cards 文案）
 export const PLAN_HIGHLIGHTS: Record<BookingPlan, string[]> = {
-  free: ['3 房源（不可加購）', '1 位協作者', '官網 AI 設計', 'iCal 同步', '動態定價規則', '優惠碼', '與 IMT 智能客服串接'],
-  core: ['5 房源（+$4/房源）', '1 位協作者', '動態定價規則', '優惠碼', 'Email 同步（OTA 信件轉單）', '與 IMT 智能客服串接'],
-  pro: ['5 房源（+$3/房源）', '2 位協作者', '即時同步 60+ 平台（秒級防超賣）', '與 IMT 智能客服串接', '每月 1 次免費協助設定'],
-  enterprise: ['15 房源（+$2/房源）', '協作者不限', '動態定價客製規則', '優惠碼', '每月 2 次免費協助設定'],
+  free: ['5 房源（不可加購）', '官網固定模板', 'iCal 同步', '動態定價規則', '優惠碼', '與 IMT 智能客服串接'],
+  core: ['8 房源（+$4/房源）', '1 位協作者', '官網 AI 設計', '動態定價規則', '優惠碼', 'Email 同步（OTA 信件轉單）', '與 IMT 智能客服串接'],
+  pro: ['10 房源（+$3/房源）', '2 位協作者', '即時同步 60+ 平台（秒級防超賣）', '與 IMT 智能客服串接', '每月 1 次免費協助設定'],
+  enterprise: ['16 房源（+$2/房源）', '協作者不限', '動態定價客製規則', '優惠碼', '每月 2 次免費協助設定'],
 }
 
 const yes = (b: boolean) => (b ? '✓' : '—')
@@ -53,7 +53,7 @@ export const COMPARISON_GROUPS: Array<{ title: string; rows: Array<{ label: stri
   {
     title: '官網與訂房',
     rows: [
-      { label: '官網 AI 設計', values: ['✓', '✓', '✓', '✓'], market: '通常另外加購' },
+      { label: '官網 AI 設計（FREE 為固定模板）', values: col(f => (f.aiWebsiteDesign ? '✓' : '—')), market: '通常另外加購' },
       { label: '線上訂房（官網直訂）', values: ['✓', '✓', '✓', '✓'] },
       { label: '訂單、空房表、日曆、每日入住', values: ['✓', '✓', '✓', '✓'] },
       { label: '通知信、評價、數據報表', values: ['✓', '✓', '✓', '✓'] },

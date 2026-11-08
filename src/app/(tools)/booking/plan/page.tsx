@@ -69,17 +69,17 @@ const COPY: Record<Locale, Copy> = {
     assistScopeNote: '「人工協助設置」範圍：協助完成各平台通路串接與本站內各項功能設定；民宿／飯店向各平台申請上架帳號不含在協助設置內，需另外付費委託。',
     featureCol: '功能',
     cards: {
-      free: ['3 房源（不可加購）', '1 位協作者', '官網 AI 設計', 'iCal 同步', '動態定價規則', '優惠碼', '與 CS 串接（訂單密碼連動）'],
-      core: ['5 房源（+$4/房源）', '1 位協作者', '動態定價規則', '優惠碼', 'Email 同步（OTA信件轉單）', '與 CS 串接（訂單密碼連動）'],
-      pro: ['5 房源（+$3/房源）', '2 位協作者', '優惠碼', '即時同步 60+ 平台（秒級防超賣）', '與 CS 串接（訂單密碼連動）', '每月 1 次免費協助設定'],
-      enterprise: ['15 房源（+$2/房源）', '無上限協作者', '動態定價客製規則', '優惠碼', '每月 2 次免費協助設定'],
+      free: ['5 房源（不可加購）', '官網固定模板', 'iCal 同步', '動態定價規則', '優惠碼', '與 CS 串接（訂單密碼連動）'],
+      core: ['8 房源（+$4/房源）', '1 位協作者', '官網 AI 設計', '動態定價規則', '優惠碼', 'Email 同步（OTA信件轉單）', '與 CS 串接（訂單密碼連動）'],
+      pro: ['10 房源（+$3/房源）', '2 位協作者', '優惠碼', '即時同步 60+ 平台（秒級防超賣）', '與 CS 串接（訂單密碼連動）', '每月 1 次免費協助設定'],
+      enterprise: ['16 房源（+$2/房源）', '無上限協作者', '動態定價客製規則', '優惠碼', '每月 2 次免費協助設定'],
     },
     rows: [
-      { label: '房源數（基本＋加購）', values: ['3（不可加購）', '5（+$4/房源）', '5（+$3/房源）', '15（+$2/房源）'] },
-      { label: '協作者', values: ['1', '1', '2', '無上限'] },
+      { label: '房源數（基本＋加購）', values: ['5（不可加購）', '8（+$4/房源）', '10（+$3/房源）', '16（+$2/房源）'] },
+      { label: '協作者', values: ['0', '1', '2', '無上限'] },
       { label: '動態定價規則', values: ['✓', '✓', '✓', '✓＋客製規則'] },
       { label: '優惠碼', values: ['✓', '✓', '✓', '✓'] },
-      { label: '官網 AI 設計', values: ['✓', '✓', '✓', '✓'] },
+      { label: '官網 AI 設計（FREE 為固定模板）', values: ['—', '✓', '✓', '✓'] },
       { label: 'iCal 同步（備援，非即時）', values: ['✓', '✓', '✓', '✓'] },
       { label: 'Email 同步（OTA信件轉單，備援）', values: ['—', '✓', '✓', '✓'] },
       { label: '即時同步 60+ 平台（秒級防超賣）', values: ['—', '—', '✓（全房源皆含）', '✓（全房源皆含）'] },
@@ -121,17 +121,17 @@ const COPY: Record<Locale, Copy> = {
     assistScopeNote: '"Setup assist" covers: connecting OTA channels and configuring in-app features. It does not include applying for new listing accounts on OTA platforms — that\'s a separate paid service.',
     featureCol: 'Feature',
     cards: {
-      free: ['3 properties (no add-ons)', '1 collaborator', 'AI website design', 'iCal sync', 'Dynamic pricing rules', 'Promo codes', 'CS integration (order password lookup)'],
-      core: ['5 properties (+$4/property)', '1 collaborator', 'Dynamic pricing rules', 'Promo codes', 'Email sync (OTA order import)', 'CS integration (order password lookup)'],
-      pro: ['5 properties (+$3/property)', '2 collaborators', 'Promo codes', 'Real-time sync, 60+ channels (prevents overbooking)', 'CS integration (order password lookup)', '1 free setup assist / month'],
-      enterprise: ['15 properties (+$2/property)', 'Unlimited collaborators', 'Custom dynamic pricing rules', 'Promo codes', '2 free setup assists / month'],
+      free: ['5 properties (no add-ons)', 'Fixed website templates', 'iCal sync', 'Dynamic pricing rules', 'Promo codes', 'CS integration (order password lookup)'],
+      core: ['8 properties (+$4/property)', '1 collaborator', 'AI website design', 'Dynamic pricing rules', 'Promo codes', 'Email sync (OTA order import)', 'CS integration (order password lookup)'],
+      pro: ['10 properties (+$3/property)', '2 collaborators', 'Promo codes', 'Real-time sync, 60+ channels (prevents overbooking)', 'CS integration (order password lookup)', '1 free setup assist / month'],
+      enterprise: ['16 properties (+$2/property)', 'Unlimited collaborators', 'Custom dynamic pricing rules', 'Promo codes', '2 free setup assists / month'],
     },
     rows: [
-      { label: 'Property count (base + add-on)', values: ['3 (no add-ons)', '5 (+$4/property)', '5 (+$3/property)', '15 (+$2/property)'] },
-      { label: 'Collaborators', values: ['1', '1', '2', 'Unlimited'] },
+      { label: 'Property count (base + add-on)', values: ['5 (no add-ons)', '8 (+$4/property)', '10 (+$3/property)', '16 (+$2/property)'] },
+      { label: 'Collaborators', values: ['0', '1', '2', 'Unlimited'] },
       { label: 'Dynamic pricing rules', values: ['✓', '✓', '✓', '✓ + custom rules'] },
       { label: 'Promo codes', values: ['✓', '✓', '✓', '✓'] },
-      { label: 'AI website design', values: ['✓', '✓', '✓', '✓'] },
+      { label: 'AI website design (FREE: fixed templates)', values: ['—', '✓', '✓', '✓'] },
       { label: 'iCal sync (backup, not real-time)', values: ['✓', '✓', '✓', '✓'] },
       { label: 'Email sync (OTA order import, backup)', values: ['—', '✓', '✓', '✓'] },
       { label: 'Real-time sync, 60+ channels (prevents overbooking)', values: ['—', '—', '✓ (all properties)', '✓ (all properties)'] },
@@ -173,17 +173,17 @@ const COPY: Record<Locale, Copy> = {
     assistScopeNote: 'Phạm vi "Hỗ trợ cài đặt": hỗ trợ kết nối các kênh OTA và cấu hình các tính năng trong hệ thống. Không bao gồm việc đăng ký tài khoản mới trên các nền tảng OTA — đây là dịch vụ tính phí riêng.',
     featureCol: 'Tính năng',
     cards: {
-      free: ['3 phòng (không mua thêm)', '1 cộng tác viên', 'Thiết kế website AI', 'Đồng bộ iCal', 'Quy tắc định giá động', 'Mã khuyến mãi', 'Tích hợp CS (tra mật khẩu đơn)'],
-      core: ['5 phòng (+$4/phòng)', '1 cộng tác viên', 'Quy tắc định giá động', 'Mã khuyến mãi', 'Đồng bộ Email (nhập đơn từ OTA)', 'Tích hợp CS (tra mật khẩu đơn)'],
-      pro: ['5 phòng (+$3/phòng)', '2 cộng tác viên', 'Mã khuyến mãi', 'Đồng bộ tức thời 60+ kênh (chống overbooking)', 'Tích hợp CS (tra mật khẩu đơn)', '1 lần hỗ trợ cài đặt miễn phí/tháng'],
-      enterprise: ['15 phòng (+$2/phòng)', 'Cộng tác viên không giới hạn', 'Quy tắc định giá tùy chỉnh', 'Mã khuyến mãi', '2 lần hỗ trợ cài đặt miễn phí/tháng'],
+      free: ['5 phòng (không mua thêm)', 'Mẫu website cố định', 'Đồng bộ iCal', 'Quy tắc định giá động', 'Mã khuyến mãi', 'Tích hợp CS (tra mật khẩu đơn)'],
+      core: ['8 phòng (+$4/phòng)', '1 cộng tác viên', 'Thiết kế website AI', 'Quy tắc định giá động', 'Mã khuyến mãi', 'Đồng bộ Email (nhập đơn từ OTA)', 'Tích hợp CS (tra mật khẩu đơn)'],
+      pro: ['10 phòng (+$3/phòng)', '2 cộng tác viên', 'Mã khuyến mãi', 'Đồng bộ tức thời 60+ kênh (chống overbooking)', 'Tích hợp CS (tra mật khẩu đơn)', '1 lần hỗ trợ cài đặt miễn phí/tháng'],
+      enterprise: ['16 phòng (+$2/phòng)', 'Cộng tác viên không giới hạn', 'Quy tắc định giá tùy chỉnh', 'Mã khuyến mãi', '2 lần hỗ trợ cài đặt miễn phí/tháng'],
     },
     rows: [
-      { label: 'Số phòng (cơ bản + mua thêm)', values: ['3 (không mua thêm)', '5 (+$4/phòng)', '5 (+$3/phòng)', '15 (+$2/phòng)'] },
-      { label: 'Cộng tác viên', values: ['1', '1', '2', 'Không giới hạn'] },
+      { label: 'Số phòng (cơ bản + mua thêm)', values: ['5 (không mua thêm)', '8 (+$4/phòng)', '10 (+$3/phòng)', '16 (+$2/phòng)'] },
+      { label: 'Cộng tác viên', values: ['0', '1', '2', 'Không giới hạn'] },
       { label: 'Quy tắc định giá động', values: ['✓', '✓', '✓', '✓ + tùy chỉnh'] },
       { label: 'Mã khuyến mãi', values: ['✓', '✓', '✓', '✓'] },
-      { label: 'Thiết kế website AI', values: ['✓', '✓', '✓', '✓'] },
+      { label: 'Thiết kế website AI (FREE: mẫu cố định)', values: ['—', '✓', '✓', '✓'] },
       { label: 'Đồng bộ iCal (dự phòng, không tức thời)', values: ['✓', '✓', '✓', '✓'] },
       { label: 'Đồng bộ Email (nhập đơn OTA, dự phòng)', values: ['—', '✓', '✓', '✓'] },
       { label: 'Đồng bộ tức thời 60+ kênh (chống overbooking)', values: ['—', '—', '✓ (tất cả phòng)', '✓ (tất cả phòng)'] },
@@ -231,7 +231,7 @@ export default function BookingPlanPage() {
       const data = await res.json()
       setPlan(data.plan ?? 'free')
       setPropertyLimit(data.propertyLimit ?? 1)
-    } catch { setPlan('free'); setPropertyLimit(3) }
+    } catch { setPlan('free'); setPropertyLimit(5) }
     try {
       const res = await fetch('/api/booking/referral')
       const data = await res.json()

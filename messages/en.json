@@ -865,7 +865,9 @@
           "5": "Optimize the SEO title and search summary",
           "6": "Skip the templates, design a one-of-a-kind look for my website"
         }
-      }
+      },
+      "aiUpgrade": "AI website design (CORE+)",
+      "aiUpgradeHint": "The FREE plan can pick a fixed template; upgrade to CORE or above to design the website and write copy with AI"
     },
     "pricing": {
       "tabs": {

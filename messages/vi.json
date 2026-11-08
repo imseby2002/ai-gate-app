@@ -865,7 +865,9 @@
           "5": "Tối ưu tiêu đề SEO và tóm tắt tìm kiếm",
           "6": "Không dùng mẫu có sẵn, hãy tự thiết kế một phong cách riêng biệt cho website"
         }
-      }
+      },
+      "aiUpgrade": "Thiết kế website AI (CORE trở lên)",
+      "aiUpgradeHint": "Gói FREE có thể chọn mẫu cố định; nâng cấp CORE trở lên để thiết kế website và viết nội dung bằng AI"
     },
     "pricing": {
       "tabs": {
