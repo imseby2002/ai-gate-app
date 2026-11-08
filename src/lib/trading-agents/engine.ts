@@ -78,22 +78,51 @@ export async function runTradingAgents(
 
       if (quickModel) {
         try {
+          const roleGuidance: Record<AnalystRole, string> = {
+            fundamentals: `重點審查財務體質、估值乘數（P/E, EV/EBITDA, DCF）、營收成長與獲利護城河。
+請包含：
+【核心結論】
+【財務報表與獲利品質審計】（含營收毛利、自由現金流、負債比）
+【商業模式與護城河評估】
+【潛在風險與估值倍數修正】
+【綜合評分】格式：評分：+XX / 100 或 -XX / 100`,
+            technical: `重點評估量價結構、均線多空排列、支撐壓力突破與動量擺盪指標（RSI, MACD, 布林帶）。
+請包含：
+【核心結論】
+【量價型態與均線趨勢解算】（以 SMA20/50/200 及現價研判）
+【動態動能與擺盪指標】（結合 RSI 與 MACD 柱狀體）
+【關鍵進出場點位】（明確給出支撐防守位與上方突破壓力位）
+【綜合評分】格式：評分：+XX / 100 或 -XX / 100`,
+            news: `重點分析全球總體經濟、地緣政治（如油田遇襲/能源衝擊/貿易關稅）、行政命令禁令（如出口管制）與產業重磅催化劑。
+請包含：
+【核心結論】
+【地緣政治與全球總經傳導】（評估通膨、利率與突發衝突連鎖影響）
+【政策法規與行政禁令衝擊】（美中貿易、出口管制或產業補貼）
+【產業動態與近期催化劑 (Catalysts)】
+【綜合評分】格式：評分：+XX / 100 或 -XX / 100`,
+            sentiment: `重點分析機構持倉籌碼、散戶輿情熱度、多空分歧度與極端恐慌貪婪情緒。
+請包含：
+【核心結論】
+【機構籌碼與主力動向】
+【社群輿情與散戶多空情緒分歧】
+【空頭擠壓 (Short Squeeze) 或恐慌拋售機率評估】
+【綜合評分】格式：評分：+XX / 100 或 -XX / 100`,
+          }
+
           const prompt = `你是頂級避險基金的「${name}」。
 目標標的：${marketData.companyName} (${marketData.ticker})
 現價：${marketData.currency} ${marketData.currentPrice} (${marketData.changePercent > 0 ? '+' : ''}${marketData.changePercent}%)
 技術指標摘要：RSI(14)=${marketData.technicals.rsi14}, SMA20=${marketData.technicals.sma20}, SMA50=${marketData.technicals.sma50}, SMA200=${marketData.technicals.sma200}, MACD Histogram=${marketData.technicals.macdHistogram}, 支撐位=${marketData.technicals.supportLevel}, 壓力位=${marketData.technicals.resistanceLevel}
 ${portfolio ? `投資組合現況：手頭現金 $${portfolio.cash}，已有部位：${JSON.stringify(portfolio.positions)}` : ''}
 
-請針對你的專責領域出具客觀嚴謹的研判報告：
-1. 核心結論（1-2 句話）
-2. 3 項關鍵量化/質化支撐論點
-3. 綜合評分（-100 到 +100，負數代表極度看空，正數代表極度看多）
-請嚴格以繁體中文回覆，條理清晰，杜絕空洞套話。`
+${roleGuidance[role]}
+
+請出具深度、完整且條理清晰的分析報告，段落標題清楚，提供充分的數據與推導，不可中途截斷，嚴格使用繁體中文。`
 
           const stream = streamText({
             model: quickModel,
             prompt,
-            maxOutputTokens: 1024,
+            maxOutputTokens: 2048,
           })
 
           for await (const chunk of stream.textStream) {
