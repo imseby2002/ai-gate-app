@@ -13175,7 +13175,19 @@
       "holder": "Notify holder via",
       "holderLineOa": "LINE Official Account (bound staff)",
       "notifiedTg": "Holder notified via Telegram",
-      "tgFailed": "Telegram send failed — check that holder's Telegram settings"
+      "tgFailed": "Telegram send failed — check that holder's Telegram settings",
+      "scheduleTitle": "Scheduled holder notice (e.g. daily promo)",
+      "needWhen": "Please set a time",
+      "schedule": "Create schedule",
+      "scheduled": "Schedule created; the holder will be notified on time",
+      "repeat": {
+        "once": "Once",
+        "daily": "Daily",
+        "weekly": "Weekly"
+      },
+      "done": "Done",
+      "cancel": "Cancel",
+      "lastFailed": "Last notice failed — check the holder's Telegram settings"
     },
     "lineOa": {
       "title": "LINE Official Account group scheduled push",

@@ -13175,7 +13175,19 @@
       "holder": "Báo cho người giữ qua",
       "holderLineOa": "LINE Official Account (nhân viên đã liên kết)",
       "notifiedTg": "Đã báo qua Telegram",
-      "tgFailed": "Gửi Telegram thất bại — kiểm tra cài đặt Telegram của người nhận"
+      "tgFailed": "Gửi Telegram thất bại — kiểm tra cài đặt Telegram của người nhận",
+      "scheduleTitle": "Hẹn giờ báo người giữ tài khoản (VD: khuyến mãi mỗi ngày)",
+      "needWhen": "Hãy đặt thời gian",
+      "schedule": "Tạo lịch",
+      "scheduled": "Đã tạo lịch, đến giờ sẽ báo cho người giữ",
+      "repeat": {
+        "once": "Một lần",
+        "daily": "Mỗi ngày",
+        "weekly": "Mỗi tuần"
+      },
+      "done": "Đã xong",
+      "cancel": "Hủy",
+      "lastFailed": "Lần báo trước thất bại — kiểm tra cài đặt Telegram của người nhận"
     },
     "lineOa": {
       "title": "Đẩy tin hẹn giờ vào nhóm LINE Official Account",
