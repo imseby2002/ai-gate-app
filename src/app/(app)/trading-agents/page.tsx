@@ -35,6 +35,8 @@ import { PortfolioModal } from '@/components/trading-agents/PortfolioModal'
 import { DecisionVerdictCard } from '@/components/trading-agents/DecisionVerdictCard'
 import { AgentStreamCard } from '@/components/trading-agents/AgentStreamCard'
 import { HistoryDrawer } from '@/components/trading-agents/HistoryDrawer'
+import { ValuationMatrixCard } from '@/components/trading-agents/ValuationMatrixCard'
+import { type ValuationSuiteResult, computeValuationSuite } from '@/lib/trading-agents/valuation-models'
 
 const POPULAR_TICKERS = [
   { symbol: 'NVDA', label: '輝達 (NVIDIA)' },
@@ -87,6 +89,7 @@ export default function TradingAgentsPage() {
   const [finalDecision, setFinalDecision] = useState<FinalDecision | null>(null)
   const [fullReportHtml, setFullReportHtml] = useState<string | null>(null)
   const [sessionId, setSessionId] = useState<string | null>(null)
+  const [valuationSuite, setValuationSuite] = useState<ValuationSuiteResult | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const abortControllerRef = useRef<AbortController | null>(null)
@@ -99,6 +102,7 @@ export default function TradingAgentsPage() {
       if (res.ok) {
         const data = await res.json()
         setMarketData(data)
+        setValuationSuite(computeValuationSuite(data))
         setActiveTicker(ticker)
       }
     } catch (err) {
@@ -204,6 +208,9 @@ export default function TradingAgentsPage() {
     switch (event.type) {
       case 'market-data':
         setMarketData(event.data)
+        break
+      case 'valuation-suite':
+        setValuationSuite(event.suite)
         break
       case 'phase':
         setCurrentPhase(event.phase)
@@ -430,6 +437,9 @@ export default function TradingAgentsPage() {
 
         {/* Live Market Header */}
         {marketData && <MarketHeader data={marketData} />}
+
+        {/* 10 Financial Valuation Models Matrix */}
+        {valuationSuite && <ValuationMatrixCard suite={valuationSuite} />}
 
         {/* Phase Progress Indicator */}
         {running && (

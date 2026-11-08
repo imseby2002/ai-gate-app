@@ -16,6 +16,8 @@ import { fetchMarketData } from './market-data'
 import { resolveTradingModel, type ModelTierConfig } from './model-resolver'
 import { generateCompleteReportHtml } from './report-generator'
 
+import { computeValuationSuite, type ValuationSuiteResult } from './valuation-models'
+
 export interface RunTradingAgentsParams {
   ticker: string
   analysisDate?: string
@@ -33,6 +35,7 @@ export async function runTradingAgents(
   emit: (event: TradingAgentsEvent) => void
 ): Promise<{
   marketData: MarketDataSummary
+  valuationSuite: ValuationSuiteResult
   analysts: Record<AnalystRole, AnalystReport>
   debate: DebateSummary
   traderProposal: TraderProposal
@@ -47,6 +50,10 @@ export async function runTradingAgents(
   emit({ type: 'phase', phase: 'analysts', label: '盤勢情資載入與即時技術指標解算' })
   const marketData = await fetchMarketData(ticker)
   emit({ type: 'market-data', data: marketData })
+
+  // Compute 10 financial valuation models
+  const valuationSuite = computeValuationSuite(marketData)
+  emit({ type: 'valuation-suite', suite: valuationSuite })
 
   const quickModel = resolveTradingModel(config?.modelConfig?.quickThinkModel, 'quick')
   const deepModel = resolveTradingModel(config?.modelConfig?.deepThinkModel, 'deep')
@@ -403,6 +410,7 @@ ${round > 1 ? `上一輪空方質疑：${debateStatements[debateStatements.lengt
     riskAssessment,
     finalDecision,
     portfolio,
+    valuationSuite,
   })
 
   emit({ type: 'final-decision', decision: finalDecision, reportHtml })
@@ -410,6 +418,7 @@ ${round > 1 ? `上一輪空方質疑：${debateStatements[debateStatements.lengt
 
   return {
     marketData,
+    valuationSuite,
     analysts: analystsRecord,
     debate: debateSummary,
     traderProposal,

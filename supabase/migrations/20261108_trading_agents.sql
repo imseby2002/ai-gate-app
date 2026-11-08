@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS public.trading_sessions (
   analysis_date DATE NOT NULL DEFAULT CURRENT_DATE,
   market_data JSONB NOT NULL DEFAULT '{}'::jsonb,
   portfolio_context JSONB DEFAULT NULL,
+  valuation_suite JSONB DEFAULT NULL,
   analysts JSONB NOT NULL DEFAULT '{}'::jsonb,
   debate JSONB NOT NULL DEFAULT '{}'::jsonb,
   trader_proposal JSONB DEFAULT NULL,

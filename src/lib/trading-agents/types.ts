@@ -157,6 +157,7 @@ export interface TradingAgentsSession {
   status: 'running' | 'completed' | 'failed'
   marketData: MarketDataSummary
   portfolio?: PortfolioContext
+  valuationSuite?: import('./valuation-models').ValuationSuiteResult
   analysts: Record<AnalystRole, AnalystReport>
   debate: DebateSummary
   traderProposal?: TraderProposal
@@ -169,6 +170,7 @@ export interface TradingAgentsSession {
 
 export type TradingAgentsEvent =
   | { type: 'market-data'; data: MarketDataSummary }
+  | { type: 'valuation-suite'; suite: import('./valuation-models').ValuationSuiteResult }
   | { type: 'phase'; phase: 'analysts' | 'debate' | 'trader' | 'risk' | 'portfolio_manager' | 'completed'; label: string }
   | { type: 'analyst-start'; role: AnalystRole; analystName: string; model: string }
   | { type: 'analyst-delta'; role: AnalystRole; chunk: string }

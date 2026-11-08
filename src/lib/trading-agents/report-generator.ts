@@ -19,6 +19,7 @@ export function generateCompleteReportHtml(params: {
   riskAssessment?: RiskAssessment
   finalDecision: FinalDecision
   portfolio?: PortfolioContext
+  valuationSuite?: import('./valuation-models').ValuationSuiteResult
 }): string {
   const {
     ticker,
@@ -30,6 +31,7 @@ export function generateCompleteReportHtml(params: {
     riskAssessment,
     finalDecision,
     portfolio,
+    valuationSuite,
   } = params
 
   const actionColorMap: Record<string, string> = {
@@ -234,6 +236,56 @@ export function generateCompleteReportHtml(params: {
         </div>
       </div>
     </section>
+
+    ${valuationSuite ? `
+    <!-- 10 Valuation Models Matrix -->
+    <section class="section">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 16px; flex-wrap: gap: 12px;">
+        <h2 class="section-title" style="border-bottom: none; padding-bottom: 0; margin-bottom: 0;">
+          📐 十大經典估值量化模型診斷矩陣 (10 Valuation Models Matrix)
+        </h2>
+        <div style="font-size: 13px; font-weight: bold; background: rgba(56, 189, 248, 0.15); color: #38bdf8; padding: 4px 12px; border-radius: 9999px;">
+          綜合定價裁定：${valuationSuite.overallValuationVerdict} (平均公允價: $${valuationSuite.averageFairValue})
+        </div>
+      </div>
+
+      <div style="overflow-x: auto;">
+        <table class="order-table" style="font-size: 13px;">
+          <thead>
+            <tr style="background: rgba(15, 23, 42, 0.6);">
+              <th>模型名稱</th>
+              <th>模型類型</th>
+              <th>估算公允股價</th>
+              <th>相對現價溢折價</th>
+              <th>模型適用度</th>
+              <th>核心參數與公式摘要</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${valuationSuite.models.map(m => `
+              <tr>
+                <td style="font-weight: 700; color: #fff;">${m.chineseName}</td>
+                <td><span style="font-size: 11px; color: var(--text-muted);">${m.category}</span></td>
+                <td style="font-weight: 800; color: #38bdf8;">$${m.fairValue.toFixed(2)}</td>
+                <td style="font-weight: 700; color: ${m.premiumDiscountPercent > 0 ? '#ef4444' : '#10b981'};">
+                  ${m.premiumDiscountPercent > 0 ? '溢價 +' : '折價 '}${Math.abs(m.premiumDiscountPercent)}%
+                </td>
+                <td>
+                  <span style="font-size: 11px; padding: 2px 6px; border-radius: 4px; background: ${m.applicability.startsWith('High') ? 'rgba(16, 185, 129, 0.2)' : m.applicability.startsWith('Moderate') ? 'rgba(245, 158, 11, 0.2)' : 'rgba(239, 68, 68, 0.2)'}; color: ${m.applicability.startsWith('High') ? '#10b981' : m.applicability.startsWith('Moderate') ? '#f59e0b' : '#ef4444'};">
+                    ${m.applicability.split(' ')[0]}
+                  </span>
+                </td>
+                <td style="font-size: 12px; color: #94a3b8; max-width: 320px;">
+                  <div>${m.summary}</div>
+                  <div style="font-family: monospace; font-size: 11px; color: #64748b; margin-top: 2px;">${m.formula}</div>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </section>
+    ` : ''}
 
     <!-- Analyst Team Reports -->
     <section class="section">

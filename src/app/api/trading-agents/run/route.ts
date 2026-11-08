@@ -78,6 +78,7 @@ export async function POST(req: NextRequest) {
             status: 'completed',
             marketData: executionResult.marketData,
             portfolio,
+            valuationSuite: executionResult.valuationSuite,
             analysts: executionResult.analysts,
             debate: executionResult.debate,
             traderProposal: executionResult.traderProposal,

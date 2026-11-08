@@ -12,6 +12,7 @@ export async function saveTradingSession(session: Partial<TradingAgentsSession> 
       market_data: session.marketData ?? {},
       portfolio_context: session.portfolio ?? null,
       analysts: session.analysts ?? {},
+      valuation_suite: session.valuationSuite ?? null,
       debate: session.debate ?? {},
       trader_proposal: session.traderProposal ?? null,
       risk_assessment: session.riskAssessment ?? null,
