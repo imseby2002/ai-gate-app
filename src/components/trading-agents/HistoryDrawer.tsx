@@ -11,16 +11,38 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { History, ExternalLink, CheckCircle2, TrendingUp, Sparkles } from 'lucide-react'
+import { History, ExternalLink, CheckCircle2 } from 'lucide-react'
+
+export interface TradingSessionItem {
+  id: string
+  ticker: string
+  analysis_date: string
+  final_decision?: {
+    action?: string
+    executionOrder?: {
+      targetPrice: number
+      stopLossPrice: number
+    }
+  }
+  market_data?: {
+    currentPrice: number
+  }
+  settlement?: {
+    isSettled: boolean
+    settlePrice: number
+    returnPct: number
+    reflection: string
+  }
+}
 
 interface HistoryDrawerProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSelectSession?: (session: any) => void
+  onSelectSession?: (session: TradingSessionItem) => void
 }
 
 export function HistoryDrawer({ open, onOpenChange }: HistoryDrawerProps) {
-  const [sessions, setSessions] = useState<any[]>([])
+  const [sessions, setSessions] = useState<TradingSessionItem[]>([])
   const [loading, setLoading] = useState(false)
   const [settlePriceInput, setSettlePriceInput] = useState<Record<string, string>>({})
   const [settlingId, setSettlingId] = useState<string | null>(null)

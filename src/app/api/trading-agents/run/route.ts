@@ -2,7 +2,8 @@ import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { runTradingAgents } from '@/lib/trading-agents/engine'
 import { saveTradingSession } from '@/lib/trading-agents/storage'
-import type { TradingAgentsEvent, TradingAgentsSession } from '@/lib/trading-agents/types'
+import type { TradingAgentsEvent, TradingAgentsSession, PortfolioContext } from '@/lib/trading-agents/types'
+import type { RunTradingAgentsParams } from '@/lib/trading-agents/engine'
 
 export const maxDuration = 300
 
@@ -32,8 +33,8 @@ export async function POST(req: NextRequest) {
   } = body as {
     ticker: string
     analysisDate?: string
-    portfolio?: any
-    config?: any
+    portfolio?: PortfolioContext
+    config?: RunTradingAgentsParams['config']
   }
 
   if (!ticker || !ticker.trim()) {

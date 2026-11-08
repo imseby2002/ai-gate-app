@@ -4,7 +4,7 @@ import React from 'react'
 import type { MarketDataSummary } from '@/lib/trading-agents/types'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { TrendingUp, TrendingDown, Activity, ShieldCheck, Target, Compass } from 'lucide-react'
+import { TrendingUp, TrendingDown, Activity } from 'lucide-react'
 
 interface MarketHeaderProps {
   data: MarketDataSummary

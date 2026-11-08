@@ -200,6 +200,16 @@ export function generateCompleteReportHtml(params: {
       </div>
     </div>
 
+    ${portfolio ? `
+    <div class="stat-card" style="margin-bottom: 24px; border-color: rgba(56, 189, 248, 0.3);">
+      <div class="label" style="color: var(--primary);">💼 投資組合情境 (Portfolio Context)</div>
+      <div style="font-size: 14px; color: #cbd5e1; margin-top: 4px;">
+        可用資金：<strong>${portfolio.currency} $${portfolio.cash.toLocaleString()}</strong> | 
+        現有持股：<strong>${portfolio.positions.map(p => `${p.ticker} (${p.quantity} 股 @ $${p.averagePrice})`).join(', ') || '無部位'}</strong>
+      </div>
+    </div>
+    ` : ''}
+
     <!-- Technical & Market Context -->
     <section class="section">
       <h2 class="section-title">📊 市場行情與技術指標摘要</h2>

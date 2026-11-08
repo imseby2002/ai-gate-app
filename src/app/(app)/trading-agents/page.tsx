@@ -11,11 +11,8 @@ import {
   Sparkles,
   Briefcase,
   History,
-  Sliders,
-  CheckCircle2,
   AlertCircle,
   Play,
-  RotateCcw,
   Users,
   ShieldCheck,
   Target,
@@ -27,7 +24,6 @@ import type {
   AnalystRole,
   AnalystReport,
   DebateStatement,
-  DebateSummary,
   TraderProposal,
   RiskAssessment,
   FinalDecision,
@@ -193,10 +189,11 @@ export default function TradingAgentsPage() {
           }
         }
       }
-    } catch (err: any) {
-      if (err.name !== 'AbortError') {
+    } catch (err: unknown) {
+      const isAbort = err instanceof Error && err.name === 'AbortError'
+      if (!isAbort) {
         console.error('[TradingAgents] run error:', err)
-        setErrorMessage(err.message || '執行分析時發生錯誤')
+        setErrorMessage(err instanceof Error ? err.message : '執行分析時發生錯誤')
       }
     } finally {
       setRunning(false)
@@ -380,6 +377,54 @@ export default function TradingAgentsPage() {
                 <span className="hidden sm:inline opacity-70 ml-1">({item.label.split(' ')[0]})</span>
               </button>
             ))}
+          </div>
+
+          {/* Model & Debate Settings Strip */}
+          <div className="mt-3 pt-3 border-t border-border/60 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-foreground">辯論輪數 (Debate Rounds)：</span>
+              {[1, 2, 3].map(r => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setDebateRounds(r)}
+                  className={`px-2 py-0.5 rounded text-xs font-bold transition-all cursor-pointer ${
+                    debateRounds === r
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted hover:bg-accent text-foreground'
+                  }`}
+                >
+                  {r} 輪
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-foreground">分析師模型 (Quick)：</span>
+              <select
+                value={quickModel}
+                onChange={e => setQuickModel(e.target.value)}
+                className="bg-muted px-2 py-1 rounded text-xs text-foreground font-mono cursor-pointer border border-border"
+              >
+                <option value="google/gemini-2.5-flash">Gemini 2.5 Flash (推薦·超高速)</option>
+                <option value="openai/gpt-4o">GPT-4o (OpenAI 旗艦)</option>
+                <option value="deepseek/deepseek-chat">DeepSeek V3 (金融邏輯)</option>
+                <option value="anthropic/claude-sonnet-4-6">Claude Sonnet 4.6 (Anthropic)</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-foreground">經理人模型 (Deep)：</span>
+              <select
+                value={deepModel}
+                onChange={e => setDeepModel(e.target.value)}
+                className="bg-muted px-2 py-1 rounded text-xs text-foreground font-mono cursor-pointer border border-border"
+              >
+                <option value="anthropic/claude-sonnet-4-6">Claude Sonnet 4.6 (深度推演·預設)</option>
+                <option value="google/gemini-2.5-pro">Gemini 2.5 Pro (長上下文精算)</option>
+                <option value="openai/gpt-4o">GPT-4o (頂級博弈裁決)</option>
+              </select>
+            </div>
           </div>
         </Card>
 

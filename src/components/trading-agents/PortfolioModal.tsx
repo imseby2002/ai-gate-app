@@ -30,7 +30,7 @@ export function PortfolioModal({ open, onOpenChange, portfolio, onSave }: Portfo
     setPositions([...positions, { ticker: '', quantity: 10, averagePrice: 100 }])
   }
 
-  const handleUpdatePosition = (idx: number, field: keyof PositionHolding, value: any) => {
+  const handleUpdatePosition = <K extends keyof PositionHolding>(idx: number, field: K, value: PositionHolding[K]) => {
     const updated = [...positions]
     updated[idx] = { ...updated[idx], [field]: value }
     setPositions(updated)

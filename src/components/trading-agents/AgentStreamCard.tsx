@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { ChevronDown, ChevronUp, Bot, Sparkles, CheckCircle2 } from 'lucide-react'
+import { ChevronDown, ChevronUp, Bot, CheckCircle2 } from 'lucide-react'
 
 interface AgentStreamCardProps {
   role: string
