@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import type { ValuationSuiteResult } from '@/lib/trading-agents/valuation-models'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Calculator, ChevronDown, ChevronUp } from 'lucide-react'
+import { Calculator, ChevronDown, ChevronUp, ShieldAlert, Star } from 'lucide-react'
 
 interface ValuationMatrixCardProps {
   suite: ValuationSuiteResult
@@ -30,11 +30,11 @@ export function ValuationMatrixCard({ suite }: ValuationMatrixCardProps) {
           <div className="flex items-center gap-2">
             <Calculator className="h-5 w-5 text-primary" />
             <h3 className="text-base font-bold text-foreground">
-              十大經典估值量化模型矩陣 (10 Valuation Models Matrix)
+              十二大經典估值量化模型矩陣 (12 Valuation Models Matrix)
             </h3>
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
-            涵蓋現金流折現、乘數相對估值、杜邦資本效率與資本資產定價之跨維度公允定價檢驗
+            涵蓋 DCF、CDS 信用違約利差折價、晨星護城河星等、乘數相對估值、杜邦資本效率與 CAPM
           </p>
         </div>
 
@@ -70,10 +70,10 @@ export function ValuationMatrixCard({ suite }: ValuationMatrixCardProps) {
                 : 'bg-muted hover:bg-accent text-muted-foreground'
             }`}
           >
-            {tab === 'All' && '全部 10 大模型'}
-            {tab === 'Intrinsic' && '內在價值 (DCF, FCF, EVA, DDM)'}
+            {tab === 'All' && `全部 12 大模型 (${suite.models.length})`}
+            {tab === 'Intrinsic' && '內在價值 (DCF, FCF, EVA, DDM, 晨星)'}
             {tab === 'Relative' && '相對倍數 (P/E, PEG, EV/EBITDA, P/BV)'}
-            {tab === 'Cost' && '資本回報 (ROE, CAPM)'}
+            {tab === 'Cost' && '資本成本與信用 (CDS, ROE, CAPM)'}
           </button>
         ))}
       </div>
@@ -87,30 +87,50 @@ export function ValuationMatrixCard({ suite }: ValuationMatrixCardProps) {
           return (
             <div
               key={m.id}
-              className="p-3.5 rounded-xl border border-border/70 bg-card hover:border-primary/40 transition-all space-y-2.5"
+              className={`p-3.5 rounded-xl border transition-all space-y-2.5 ${
+                m.id === 'cds'
+                  ? 'border-cyan-500/40 bg-cyan-950/10'
+                  : m.id === 'morningstar'
+                  ? 'border-amber-500/40 bg-amber-950/10'
+                  : 'border-border/70 bg-card hover:border-primary/40'
+              }`}
             >
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <div className="text-xs font-bold text-foreground">
-                    {m.chineseName}
+                  <div className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                    {m.id === 'cds' && <ShieldAlert className="h-3.5 w-3.5 text-cyan-400 shrink-0" />}
+                    {m.id === 'morningstar' && <Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400 shrink-0" />}
+                    <span>{m.chineseName}</span>
                   </div>
                   <div className="text-[11px] text-muted-foreground font-mono">
                     {m.name}
                   </div>
                 </div>
 
-                <Badge
-                  variant="outline"
-                  className={`text-[10px] shrink-0 ${
-                    m.applicability.startsWith('High')
-                      ? 'text-emerald-500 border-emerald-500/30 bg-emerald-500/5'
-                      : m.applicability.startsWith('Moderate')
-                      ? 'text-amber-500 border-amber-500/30 bg-amber-500/5'
-                      : 'text-muted-foreground border-border bg-muted/40'
-                  }`}
-                >
-                  {m.applicability.split(' ')[0]}
-                </Badge>
+                <div className="flex items-center gap-1 shrink-0">
+                  {m.id === 'morningstar' && m.starRating && (
+                    <Badge variant="outline" className="text-[10px] text-amber-400 border-amber-400/40 bg-amber-400/10 font-bold">
+                      {'★'.repeat(m.starRating)}{'☆'.repeat(5 - m.starRating)}
+                    </Badge>
+                  )}
+                  {m.id === 'cds' && (
+                    <Badge variant="outline" className="text-[10px] text-cyan-400 border-cyan-400/40 bg-cyan-400/10 font-bold">
+                      CDS 信用溢酬
+                    </Badge>
+                  )}
+                  <Badge
+                    variant="outline"
+                    className={`text-[10px] shrink-0 ${
+                      m.applicability.startsWith('High')
+                        ? 'text-emerald-500 border-emerald-500/30 bg-emerald-500/5'
+                        : m.applicability.startsWith('Moderate')
+                        ? 'text-amber-500 border-amber-500/30 bg-amber-500/5'
+                        : 'text-muted-foreground border-border bg-muted/40'
+                    }`}
+                  >
+                    {m.applicability.split(' ')[0]}
+                  </Badge>
+                </div>
               </div>
 
               {/* Price comparison row */}

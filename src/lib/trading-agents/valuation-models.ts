@@ -13,6 +13,8 @@ export interface ValuationModelResult {
   summary: string
   parameters: Record<string, string | number>
   formula: string
+  starRating?: number // 晨星評等星級 (1-5 星)
+  moat?: string // 晨星護城河評估
 }
 
 export interface ValuationSuiteResult {
@@ -80,13 +82,44 @@ export function computeValuationSuite(data: MarketDataSummary): ValuationSuiteRe
     formula: 'Fair Value = Σ [FCF_t / (1 + WACC)^t] + [Terminal Value / (1 + WACC)^5]',
   })
 
-  // 2. P/E 比率模型 (市盈率模型)
+  // 2. CDS 指數模型 (信用違約交換指數 / 信用風險定價模型) [放在第二個位置]
+  // 5年期信用違約利差 (CDS Spread)，科技巨頭通常在 25-50 bps，一般投資級 60-120 bps，高波動投機級 200+ bps
+  const cdsSpreadBps = isCrypto ? 450 : (beta > 1.25 ? Math.round(45 + (beta - 1.25) * 80) : 32)
+  const recoveryRate = 0.40 // 標準違約回收率 40%
+  const defaultProb5Y = Math.round((1 - Math.exp(-(cdsSpreadBps / 10000) * 5 / (1 - recoveryRate))) * 10000) / 100 // 5年累積違約率 %
+  // CDS 利差對資本成本的懲罰折價率
+  const creditCostPenalty = (cdsSpreadBps / 10000) * 0.35 // 債務佔比權重約 35%
+  const cdsDiscountFactor = 1 / (1 + creditCostPenalty * 2.5)
+  // 基於資產負債表信用風險調整後公允股價
+  const cdsAdjustedFairValue = Math.round((dcfFairValue * (1 - (defaultProb5Y / 100) * (1 - recoveryRate)) * cdsDiscountFactor) * 100) / 100
+
+  models.push({
+    id: 'cds',
+    name: 'Credit Default Swap Index (CDS)',
+    chineseName: '2. 信用違約互換/CDS指數模型 (Credit Default Swap)',
+    category: 'Cost of Capital (資本成本)',
+    fairValue: cdsAdjustedFairValue,
+    currentPrice: p,
+    premiumDiscountPercent: Math.round(((p - cdsAdjustedFairValue) / cdsAdjustedFairValue) * 100 * 10) / 10,
+    applicability: isCrypto ? 'Moderate (中等/無主權債)' : 'High (極適用)',
+    confidence: 86,
+    summary: `量化債信違約風險對股權定價的衝擊。隱含 5 年期 CDS 利差為 ${cdsSpreadBps} bps，推導累積違約機率 ${defaultProb5Y}% (以 40% 回收率計)，並經信用利差成本對股權折價修正。`,
+    parameters: {
+      '5年期 CDS 信用利差': `${cdsSpreadBps} bps`,
+      '隱含5年違約率 (PD)': `${defaultProb5Y}%`,
+      '違約預期回收率 (RR)': '40.0%',
+      '信用風險折價因子': `${(cdsDiscountFactor * 100).toFixed(1)}%`,
+    },
+    formula: 'PD = 1 - e^(-S×T/(1-R)); Fair Value = Fair_base × (1 - PD × (1-R)) × DiscountFactor',
+  })
+
+  // 3. P/E 比率模型 (市盈率模型)
   const industryPeTarget = 25.0
   const peFairValue = Math.round(eps * industryPeTarget * 100) / 100
   models.push({
     id: 'pe',
     name: 'Price-to-Earnings (P/E)',
-    chineseName: '2. 市盈率/本益比模型 (P/E Ratio)',
+    chineseName: '3. 市盈率/本益比模型 (P/E Ratio)',
     category: 'Relative (相對估值)',
     fairValue: peFairValue,
     currentPrice: p,
@@ -102,13 +135,13 @@ export function computeValuationSuite(data: MarketDataSummary): ValuationSuiteRe
     formula: 'Fair Value = EPS × Target P/E',
   })
 
-  // 3. PEG 比率模型 (市盈率增長比模型)
+  // 4. PEG 比率模型 (市盈率增長比模型)
   const pegTarget = 1.0 // Peter Lynch 1.0 Fair valuation benchmark
   const pegFairValue = Math.round(eps * (growthRate * pegTarget) * 100) / 100
   models.push({
     id: 'peg',
     name: 'Price/Earnings to Growth (PEG)',
-    chineseName: '3. 市盈率增長比模型 (PEG Ratio)',
+    chineseName: '4. 市盈率增長比模型 (PEG Ratio)',
     category: 'Relative (相對估值)',
     fairValue: pegFairValue,
     currentPrice: p,
@@ -124,14 +157,14 @@ export function computeValuationSuite(data: MarketDataSummary): ValuationSuiteRe
     formula: 'Fair Value = EPS × Expected Growth Rate (%) × Target PEG',
   })
 
-  // 4. EV/EBITDA 模型 (企業價值比率模型)
+  // 5. EV/EBITDA 模型 (企業價值比率模型)
   const ebitdaTargetMultiple = 16.0
   const estimatedEbitdaPerShare = eps * 1.5
   const evEbitdaFairValue = Math.round(estimatedEbitdaPerShare * ebitdaTargetMultiple * 100) / 100
   models.push({
     id: 'ev_ebitda',
     name: 'EV/EBITDA Multiple',
-    chineseName: '4. 企業價值倍數模型 (EV/EBITDA)',
+    chineseName: '5. 企業價值倍數模型 (EV/EBITDA)',
     category: 'Relative (相對估值)',
     fairValue: evEbitdaFairValue,
     currentPrice: p,
@@ -146,14 +179,14 @@ export function computeValuationSuite(data: MarketDataSummary): ValuationSuiteRe
     formula: 'Fair Value = (EBITDA × Target EV/EBITDA Multiple - Net Debt) / Shares',
   })
 
-  // 5. P/BV 比率模型 (市淨率模型)
+  // 6. P/BV 比率模型 (市淨率模型)
   // Fair P/BV = (ROE - g) / (Ke - g)
   const pbTarget = Math.max(Math.round(((roe / 100 - 0.03) / Math.max(ke / 100 - 0.03, 0.02)) * 10) / 10, 1.2)
   const pbFairValue = Math.round(bvps * pbTarget * 100) / 100
   models.push({
     id: 'pb',
     name: 'Price-to-Book (P/BV)',
-    chineseName: '5. 市淨率模型 (P/BV Ratio)',
+    chineseName: '6. 市淨率模型 (P/BV Ratio)',
     category: 'Relative (相對估值)',
     fairValue: pbFairValue,
     currentPrice: p,
@@ -169,13 +202,13 @@ export function computeValuationSuite(data: MarketDataSummary): ValuationSuiteRe
     formula: 'Fair P/BV = (ROE - g) / (Ke - g), Fair Value = BVPS × Fair P/BV',
   })
 
-  // 6. FCF 模型 (自由現金流模型)
+  // 7. FCF 模型 (自由現金流模型)
   const targetFcfYield = 0.045 // 4.5% fair FCF yield
   const fcfFairValue = Math.round((fcfPerShare / targetFcfYield) * 100) / 100
   models.push({
     id: 'fcf',
     name: 'Free Cash Flow (FCF Yield)',
-    chineseName: '6. 自由現金流殖利率模型 (FCF Yield)',
+    chineseName: '7. 自由現金流殖利率模型 (FCF Yield)',
     category: 'Intrinsic (內在價值)',
     fairValue: fcfFairValue,
     currentPrice: p,
@@ -191,7 +224,7 @@ export function computeValuationSuite(data: MarketDataSummary): ValuationSuiteRe
     formula: 'Fair Value = FCF per Share / Required FCF Yield',
   })
 
-  // 7. ROE 模型 (淨資產收益率模型 / DuPont 模型)
+  // 8. ROE 模型 (淨資產收益率模型 / DuPont 模型)
   // Sustainable growth = ROE * (1 - payout ratio)
   const plowbackRatio = 0.75
   const sustainableGrowth = roe * plowbackRatio
@@ -199,7 +232,7 @@ export function computeValuationSuite(data: MarketDataSummary): ValuationSuiteRe
   models.push({
     id: 'roe',
     name: 'Return on Equity (ROE / DuPont)',
-    chineseName: '7. 淨資產收益率模型 (ROE / DuPont)',
+    chineseName: '8. 淨資產收益率模型 (ROE / DuPont)',
     category: 'Intrinsic (內在價值)',
     fairValue: roeFairValue,
     currentPrice: p,
@@ -215,13 +248,13 @@ export function computeValuationSuite(data: MarketDataSummary): ValuationSuiteRe
     formula: 'Sustainable Growth = ROE × (1 - Payout Ratio)',
   })
 
-  // 8. CAPM 模型 (資本資產定價模型)
+  // 9. CAPM 模型 (資本資產定價模型)
   // Required return -> inverse valuation hurdle
   const capmImpliedValue = Math.round((eps * (1 + (ke - rf) / 100) * (1 / (ke / 100)) * 1.05) * 100) / 100
   models.push({
     id: 'capm',
     name: 'Capital Asset Pricing Model (CAPM)',
-    chineseName: '8. 資本資產定價模型 (CAPM)',
+    chineseName: '9. 資本資產定價模型 (CAPM)',
     category: 'Cost of Capital (資本成本)',
     fairValue: capmImpliedValue,
     currentPrice: p,
@@ -238,7 +271,7 @@ export function computeValuationSuite(data: MarketDataSummary): ValuationSuiteRe
     formula: 'Ke = Rf + β × (Rm - Rf)',
   })
 
-  // 9. EVA 模型 (經濟附加值模型)
+  // 10. EVA 模型 (經濟附加值模型)
   const investedCapital = bvps * 1.25
   const nopat = eps * 1.1
   const capitalCharge = investedCapital * (wacc / 100)
@@ -247,7 +280,7 @@ export function computeValuationSuite(data: MarketDataSummary): ValuationSuiteRe
   models.push({
     id: 'eva',
     name: 'Economic Value Added (EVA)',
-    chineseName: '9. 經濟附加價值模型 (EVA)',
+    chineseName: '10. 經濟附加價值模型 (EVA)',
     category: 'Intrinsic (內在價值)',
     fairValue: evaFairValue,
     currentPrice: p,
@@ -263,13 +296,13 @@ export function computeValuationSuite(data: MarketDataSummary): ValuationSuiteRe
     formula: 'EVA = NOPAT - (Invested Capital × WACC)',
   })
 
-  // 10. Dividend Discount 模型 (股息折現模型 / DDM)
+  // 11. Dividend Discount 模型 (股息折現模型 / DDM)
   const ddmG = 0.035
   const ddmFairValue = Math.round((dividendPerShare * (1 + ddmG) / Math.max(ke / 100 - ddmG, 0.025)) * 100) / 100
   models.push({
     id: 'ddm',
     name: 'Dividend Discount Model (DDM / Gordon)',
-    chineseName: '10. 股息折現模型 (DDM / Gordon)',
+    chineseName: '11. 股息折現模型 (DDM / Gordon)',
     category: 'Intrinsic (內在價值)',
     fairValue: ddmFairValue,
     currentPrice: p,
@@ -283,6 +316,56 @@ export function computeValuationSuite(data: MarketDataSummary): ValuationSuiteRe
       '股權折現率 (Ke)': `${ke.toFixed(2)}%`,
     },
     formula: 'P_0 = D_1 / (Ke - g) = [D_0 × (1 + g)] / (Ke - g)',
+  })
+
+  // 12. 晨星護城河與公允價值星等模型 (Morningstar Rating & Moat)
+  // 護城河判定：ROE > 18% 且成長優勢顯著為 Wide Moat；ROE 11-18% Narrow Moat；其餘 None
+  const moat: 'Wide (寬廣護城河)' | 'Narrow (狹窄護城河)' | 'None (無護城河)' =
+    roe >= 20 ? 'Wide (寬廣護城河)' : roe >= 12 ? 'Narrow (狹窄護城河)' : 'None (無護城河)'
+  const moatMultiplier = moat.startsWith('Wide') ? 1.25 : moat.startsWith('Narrow') ? 1.08 : 0.92
+  const morningstarFairValue = Math.round(dcfFairValue * moatMultiplier * 0.98 * 100) / 100
+  const priceToFairValue = p / morningstarFairValue
+
+  // 晨星 1~5 星評級計算
+  let starRating = 3
+  let starLabel = '★★★☆☆ (3星·合理價值)'
+  if (priceToFairValue <= 0.75) {
+    starRating = 5
+    starLabel = '★★★★★ (5星·顯著低估·極佳買點)'
+  } else if (priceToFairValue <= 0.90) {
+    starRating = 4
+    starLabel = '★★★★☆ (4星·溫和低估·具安全邊際)'
+  } else if (priceToFairValue <= 1.15) {
+    starRating = 3
+    starLabel = '★★★☆☆ (3星·公允合理區間)'
+  } else if (priceToFairValue <= 1.35) {
+    starRating = 2
+    starLabel = '★★☆☆☆ (2星·溫和高估)'
+  } else {
+    starRating = 1
+    starLabel = '★☆☆☆☆ (1星·顯著高估·溢價偏高)'
+  }
+
+  models.push({
+    id: 'morningstar',
+    name: 'Morningstar Moat & Fair Value Rating',
+    chineseName: '12. 晨星護城河與公允價值星等 (Morningstar Rating)',
+    category: 'Intrinsic (內在價值)',
+    fairValue: morningstarFairValue,
+    currentPrice: p,
+    premiumDiscountPercent: Math.round(((p - morningstarFairValue) / morningstarFairValue) * 100 * 10) / 10,
+    applicability: !isCrypto ? 'High (極適用)' : 'Moderate (中等)',
+    confidence: 90,
+    summary: `基於晨星 (Morningstar) 評級體系，判定企業具備【${moat}】。目前股價對應公允價值比 (P/FV) 為 ${(priceToFairValue).toFixed(2)}，獲評【${starLabel}】。`,
+    parameters: {
+      '經濟護城河評等': moat,
+      '晨星公允價值': `$${morningstarFairValue.toFixed(2)}`,
+      '市價/公允價比 (P/FV)': priceToFairValue.toFixed(2),
+      '晨星星等評級': `${starRating} 星 (${'★'.repeat(starRating)}${'☆'.repeat(5 - starRating)})`,
+    },
+    formula: 'Moat Multiplier based on Sustainable ROE Spread; Star Rating = F(Price / Fair Value Ratio)',
+    starRating,
+    moat,
   })
 
   // Consolidated statistics

@@ -18,6 +18,7 @@ import {
   Target,
   BarChart3,
   Flame,
+  Globe,
 } from 'lucide-react'
 import type {
   MarketDataSummary,
@@ -36,6 +37,7 @@ import { DecisionVerdictCard } from '@/components/trading-agents/DecisionVerdict
 import { AgentStreamCard } from '@/components/trading-agents/AgentStreamCard'
 import { HistoryDrawer } from '@/components/trading-agents/HistoryDrawer'
 import { ValuationMatrixCard } from '@/components/trading-agents/ValuationMatrixCard'
+import { TickerSelectModal } from '@/components/trading-agents/TickerSelectModal'
 import { type ValuationSuiteResult, computeValuationSuite } from '@/lib/trading-agents/valuation-models'
 
 const POPULAR_TICKERS = [
@@ -71,6 +73,7 @@ export default function TradingAgentsPage() {
   // Modals
   const [portfolioOpen, setPortfolioOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [tickerModalOpen, setTickerModalOpen] = useState(false)
 
   // Streaming State
   const [analystsStreaming, setAnalystsStreaming] = useState<Record<AnalystRole, { content: string; isStreaming: boolean; isDone: boolean; report?: AnalystReport }>>({
@@ -345,9 +348,20 @@ export default function TradingAgentsPage() {
             </div>
 
             <Button
+              variant="outline"
+              type="button"
+              onClick={() => setTickerModalOpen(true)}
+              className="h-10 px-3.5 text-xs font-semibold gap-1.5 border-primary/30 hover:border-primary text-foreground shrink-0"
+              title="選擇市場與股票 (美股、台股、加密貨幣、ETF、半導體)"
+            >
+              <Globe className="h-4 w-4 text-primary" />
+              <span>選擇市場與標的</span>
+            </Button>
+
+            <Button
               onClick={() => fetchQuote(tickerInput)}
               disabled={loadingMarket}
-              className="h-10 px-5 text-xs font-semibold"
+              className="h-10 px-5 text-xs font-semibold shrink-0"
             >
               {loadingMarket ? '載入行情中...' : '載入盤勢'}
             </Button>
@@ -385,6 +399,15 @@ export default function TradingAgentsPage() {
                 <span className="hidden sm:inline opacity-70 ml-1">({item.label.split(' ')[0]})</span>
               </button>
             ))}
+
+            <button
+              type="button"
+              onClick={() => setTickerModalOpen(true)}
+              className="px-2.5 py-1 rounded-md transition-all shrink-0 cursor-pointer text-xs font-medium text-primary hover:bg-primary/10 border border-primary/30 flex items-center gap-1"
+            >
+              <Globe className="h-3 w-3" />
+              更多市場與標的...
+            </button>
           </div>
 
           {/* Model & Debate Settings Strip */}
@@ -657,6 +680,16 @@ export default function TradingAgentsPage() {
       </div>
 
       {/* Modals */}
+      <TickerSelectModal
+        open={tickerModalOpen}
+        onOpenChange={setTickerModalOpen}
+        currentTicker={activeTicker}
+        onSelectTicker={(symbol) => {
+          setTickerInput(symbol)
+          fetchQuote(symbol)
+        }}
+      />
+
       <PortfolioModal
         open={portfolioOpen}
         onOpenChange={setPortfolioOpen}

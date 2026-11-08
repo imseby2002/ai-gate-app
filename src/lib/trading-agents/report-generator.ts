@@ -238,11 +238,11 @@ export function generateCompleteReportHtml(params: {
     </section>
 
     ${valuationSuite ? `
-    <!-- 10 Valuation Models Matrix -->
+    <!-- 12 Valuation Models Matrix -->
     <section class="section">
       <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 16px; flex-wrap: gap: 12px;">
         <h2 class="section-title" style="border-bottom: none; padding-bottom: 0; margin-bottom: 0;">
-          📐 十大經典估值量化模型診斷矩陣 (10 Valuation Models Matrix)
+          📐 十二大經典估值量化模型診斷矩陣 (12 Valuation Models Matrix)
         </h2>
         <div style="font-size: 13px; font-weight: bold; background: rgba(56, 189, 248, 0.15); color: #38bdf8; padding: 4px 12px; border-radius: 9999px;">
           綜合定價裁定：${valuationSuite.overallValuationVerdict} (平均公允價: $${valuationSuite.averageFairValue})
@@ -263,8 +263,12 @@ export function generateCompleteReportHtml(params: {
           </thead>
           <tbody>
             ${valuationSuite.models.map(m => `
-              <tr>
-                <td style="font-weight: 700; color: #fff;">${m.chineseName}</td>
+              <tr style="${m.id === 'cds' ? 'background: rgba(6, 182, 212, 0.05);' : m.id === 'morningstar' ? 'background: rgba(245, 158, 11, 0.05);' : ''}">
+                <td style="font-weight: 700; color: #fff;">
+                  ${m.chineseName}
+                  ${m.starRating ? `<span style="display: inline-block; margin-left: 6px; color: #fbbf24; font-size: 12px;">${'★'.repeat(m.starRating)}${'☆'.repeat(5 - m.starRating)}</span>` : ''}
+                  ${m.id === 'cds' ? `<span style="display: inline-block; margin-left: 6px; background: rgba(6, 182, 212, 0.2); color: #22d3ee; font-size: 10px; padding: 1px 5px; border-radius: 4px;">CDS 信用利差</span>` : ''}
+                </td>
                 <td><span style="font-size: 11px; color: var(--text-muted);">${m.category}</span></td>
                 <td style="font-weight: 800; color: #38bdf8;">$${m.fairValue.toFixed(2)}</td>
                 <td style="font-weight: 700; color: ${m.premiumDiscountPercent > 0 ? '#ef4444' : '#10b981'};">
