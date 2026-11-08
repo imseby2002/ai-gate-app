@@ -79,7 +79,7 @@ export interface ProxyLease {
 }
 
 
-export type SocialPlatform = 'facebook' | 'instagram' | 'threads' | 'tiktok' | 'dcard' | 'x'
+export type SocialPlatform = 'facebook' | 'instagram' | 'threads' | 'tiktok' | 'dcard' | 'x' | 'zalo'
 export type AccountStatus = 'warming' | 'mature' | 'cooling' | 'banned' | 'idle'
 
 export interface SocialAccount {

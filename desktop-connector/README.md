@@ -29,6 +29,10 @@
 - 啟動時與每 10 分鐘：讀取 AI-GATE 的社群帳號＋綁定代理 → 在 AdsPower「AI-GATE」群組建立／更新設定檔（一帳號一設定檔、代理自動帶入）→ 回寫設定檔 ID
 - 每 5 秒領取網頁任務：同步設定檔、開啟某帳號的瀏覽器
 - Copilot 帶入（網頁「發文」頁的「在電腦帶入」）：開啟該帳號的 AdsPower 瀏覽器 → 以 CDP（`ws.puppeteer`）新開目標社團分頁 → 文案寫入剪貼簿；使用者自行貼上（Ctrl+V）並按「發布」
+- 個人 LINE／Zalo 群組帶入（社群矩陣「個人 LINE／Zalo 群組帶入」）：
+  - LINE 電腦版：開啟 `%LOCALAPPDATA%\LINE\bin\LineLauncher.exe`（其他位置請設 `LINE_PATH`）→ 文案寫入剪貼簿
+  - Zalo 網頁：開啟該帳號（平台選 Zalo、已同步設定檔）的 AdsPower 瀏覽器 → 前往群組連結或 `https://chat.zalo.me/` → 文案寫入剪貼簿
+  - 選群組、貼上、送出一律由使用者操作
 - 設定（含裝置 token）存於 `%APPDATA%\ai-gate-connector\config.json`；網頁端可隨時撤銷此裝置
 
 ## AdsPower API 參考

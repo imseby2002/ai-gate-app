@@ -1,6 +1,8 @@
 // Copilot 帶入：在 AdsPower 瀏覽器開啟目標社團並把文案放進剪貼簿，發布由使用者自己按。
 // 瀏覽器 CDP 位址取自 AdsPower start 回傳的 ws.puppeteer（AdsPower 官方 local-api-mcp schemas.ts）。
-import { execFile } from 'node:child_process'
+import { execFile, spawn } from 'node:child_process'
+import fs from 'node:fs'
+import path from 'node:path'
 
 /** 透過 Chrome DevTools Protocol 在已開啟的瀏覽器新增分頁並切到前景 */
 export function openTab(wsUrl, url, timeoutMs = 15000) {
@@ -51,4 +53,23 @@ export function copyToClipboard(text) {
     child.on('error', () => resolve(false))
     child.stdin?.end(text)
   })
+}
+
+/** LINE 電腦版執行檔：LINE_PATH 環境變數，或預設安裝位置 %LOCALAPPDATA%\LINE\bin\LineLauncher.exe */
+export function findLinePc() {
+  const candidates = [
+    process.env.LINE_PATH,
+    process.env.LOCALAPPDATA && path.join(process.env.LOCALAPPDATA, 'LINE', 'bin', 'LineLauncher.exe'),
+  ].filter(Boolean)
+  return candidates.find(p => fs.existsSync(p)) ?? null
+}
+
+/** 開啟（或切到）LINE 電腦版；已開啟時 LINE 會把既有視窗帶到前景 */
+export function launchLinePc() {
+  const exe = findLinePc()
+  if (!exe) throw new Error('找不到 LINE 電腦版，請先安裝，或設定環境變數 LINE_PATH 指向 LineLauncher.exe')
+  const child = spawn(exe, [], { detached: true, stdio: 'ignore', windowsHide: false })
+  child.on('error', () => {})
+  child.unref()
+  return exe
 }

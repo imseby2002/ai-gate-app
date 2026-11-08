@@ -1,6 +1,6 @@
 // 任務處理：同步設定檔、開啟瀏覽器、Copilot 帶入文案（發布由使用者自己按）。
 import { createFields, updateFields } from './adspower.mjs'
-import { openTab, copyToClipboard } from './copilot.mjs'
+import { openTab, copyToClipboard, launchLinePc } from './copilot.mjs'
 
 /**
  * 取得要放設定檔的 AdsPower 分組。
@@ -74,6 +74,28 @@ export async function handleTask(task, ctx) {
       const copied = text ? await copyToClipboard(text) : false
       ctx.log(`已在 ${task.account.account_name} 的瀏覽器開啟「${groupName || url}」` +
         (copied ? '，文案已複製：請在發文框貼上（Ctrl+V）並自行按「發布」' : '，文案複製失敗，請從 AI-GATE 網頁複製'))
+      return { opened: true, copied, posted: false }
+    }
+    case 'copilot_chat': {
+      // 個人 LINE／Zalo 群組：開啟聊天程式並把文案放進剪貼簿；選群組、貼上、送出都由使用者自己操作
+      const { app, group_name: groupName, group_url: groupUrl, text } = task.payload ?? {}
+      const label = groupName ? `「${groupName}」` : '目標群組'
+      if (app === 'zalo_web') {
+        const profileId = task.account?.adspower_profile_id
+        if (!profileId) throw new Error('此帳號尚未建立 AdsPower 設定檔')
+        const started = await ctx.ads.startProfile(profileId)
+        const wsUrl = started?.ws?.puppeteer
+        if (!wsUrl) throw new Error('AdsPower 未回傳瀏覽器連線位址（ws.puppeteer）')
+        await openTab(wsUrl, /^https:\/\//.test(groupUrl ?? '') ? groupUrl : 'https://chat.zalo.me/')
+      } else if (app === 'line_pc') {
+        launchLinePc()
+      } else {
+        throw new Error(`不支援的聊天程式：${app}`)
+      }
+      const copied = text ? await copyToClipboard(text) : false
+      const where = app === 'zalo_web' ? `${task.account.account_name} 的 Zalo 網頁` : 'LINE 電腦版'
+      ctx.log(`已開啟${where}` +
+        (copied ? `，文案已複製：請打開${label}，貼上（Ctrl+V）並自行按送出` : '，文案複製失敗，請從 AI-GATE 網頁複製'))
       return { opened: true, copied, posted: false }
     }
     default:

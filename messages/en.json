@@ -13152,7 +13152,23 @@
     "companyManagedTitle": "Company shared AdsPower (managed)",
     "companyManagedPlan": "Your company shares {n} profiles · {seats} member seats, valid until {date}",
     "companyManagedSuspended": "Your company's shared AdsPower is suspended. Please contact your company admin or AI-GATE support.",
-    "companyManagedNoSeat": "You haven't been assigned an AdsPower member seat yet. Please contact your company admin."
+    "companyManagedNoSeat": "You haven't been assigned an AdsPower member seat yet. Please contact your company admin.",
+    "chat": {
+      "title": "Personal LINE / Zalo group assist",
+      "desc": "The connector opens LINE for PC or Zalo Web on your computer and copies the post; you pick the group, paste (Ctrl+V) and press send yourself.",
+      "app": {
+        "line_pc": "LINE for PC",
+        "zalo_web": "Zalo Web"
+      },
+      "groupName": "Group name (reminder)",
+      "groupNamePh": "e.g. Taichung travel tips",
+      "groupUrl": "Group link (optional)",
+      "text": "Post",
+      "warn": "Do not send the same post to many groups at once — LINE / Zalo may suspend the account. Vary the text per group and space out sends.",
+      "submit": "Open on PC and copy post",
+      "needText": "Post cannot be empty",
+      "queued": "Sent: your PC will open {app} and copy the post. Pick the group, paste and press send yourself."
+    }
   },
   "Knowledge": {
     "title": "Company Knowledge Base",
