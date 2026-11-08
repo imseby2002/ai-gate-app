@@ -23,6 +23,7 @@ export async function IntroNav() {
       <div className="ml-auto flex items-center gap-4 text-[14px] text-[#ddd5ee]">
         <Link href="/intro/features" className="hover:text-white">{tr("功能詳解")}</Link>
         <Link href="/intro/pricing" className="hover:text-white">{tr("方案比較")}</Link>
+        <Link href="/intro/enterprise" className="hover:text-white">{tr("企業方案")}</Link>
         <Link href="/login" className="hover:text-white">{tr("登入")}</Link>
         <span className="text-white [&_.bg-popover]:text-foreground"><LanguageSwitcher currentLocale={await getLocale()} /></span>
       </div>
