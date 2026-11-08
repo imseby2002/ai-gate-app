@@ -4,6 +4,11 @@ import { runTradingAgents } from '@/lib/trading-agents/engine'
 import { saveTradingSession } from '@/lib/trading-agents/storage'
 import type { TradingAgentsEvent, TradingAgentsSession, PortfolioContext } from '@/lib/trading-agents/types'
 import type { RunTradingAgentsParams } from '@/lib/trading-agents/engine'
+import { chargeUsage, precheckUsage } from '@/lib/marketing/billing'
+import { calculateModelCosts } from '@/lib/ai/token-cost-tracker'
+
+// 每次分析呼叫多個模型（分析師、多空辯論、交易員、經理），依實際 token 用量扣點；開始前先確認餘額
+const PRECHECK_USD = 0.1
 
 export const maxDuration = 300
 
@@ -41,6 +46,14 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: 'Ticker symbol is required' }), { status: 400 })
   }
 
+  const blocked = await precheckUsage(user.id, PRECHECK_USD)
+  if (blocked) return new Response(JSON.stringify(blocked), { status: 402 })
+
+  let costUsd = 0
+  const onUsage = (modelId: string, usage: { inputTokens?: number; outputTokens?: number }) => {
+    costUsd += calculateModelCosts(modelId, usage.inputTokens ?? 0, usage.outputTokens ?? 0).actualCostUsd
+  }
+
   const sessionId = crypto.randomUUID()
   const encoder = new TextEncoder()
 
@@ -59,6 +72,7 @@ export async function POST(req: NextRequest) {
             analysisDate,
             portfolio,
             config,
+            onUsage,
           },
           emit
         )
@@ -88,6 +102,8 @@ export async function POST(req: NextRequest) {
           }
           await saveTradingSession(sessionPayload)
         }
+        // 不論成功或中途失敗，已用掉的模型成本都要扣
+        if (costUsd > 0) await chargeUsage(user.id, costUsd, `[trading-agents] ${ticker.trim().toUpperCase()} 投資分析`).catch(() => {})
         controller.close()
       }
     },

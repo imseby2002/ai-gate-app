@@ -58,7 +58,7 @@ export default async function PortalPage() {
       enter: entryUrl(key),
       intro: HAS_INTRO.has(key) ? sub(SYSTEM_SUBDOMAIN[key]!, '/intro') : null,
     })),
-    { id: 'trading-agents', icon: LineChart, label: t('trading.label'), desc: t('trading.desc'), enter: sub('www', '/trading-agents'), intro: null },
+    { id: 'trading-agents', icon: LineChart, label: t('trading.label'), desc: t('trading.desc'), enter: sub('www', '/trading-agents'), intro: sub('www', '/portal/trading-agents') },
     { id: 'esim', icon: Smartphone, label: t('esim.label'), desc: t('esim.desc'), enter: sub('esim'), intro: null },
   ]
 
@@ -67,6 +67,7 @@ export default async function PortalPage() {
     { label: systems.cs.label, href: sub('cs', '/intro/pricing') },
     { label: systems.booking.label, href: sub('booking', '/intro/pricing') },
     { label: systems.reserve.label, href: sub('reserve', '/intro/pricing') },
+    { label: t('trading.label'), href: sub('www', '/portal/trading-agents#pricing') },
   ]
 
   return (
