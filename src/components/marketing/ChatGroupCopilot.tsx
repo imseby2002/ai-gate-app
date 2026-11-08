@@ -6,11 +6,15 @@
  * - 通知持有人：以持有人的 Telegram（個人設定）傳「群組＋文案＋一鍵帶入」；沒人設定 Telegram 時改用 LINE 官方帳號推給已綁定的專員
  * 選群組、按送出一律由使用者操作。
  */
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { MessageCircle } from 'lucide-react'
 
 type ChatApp = 'line' | 'zalo'
+interface Schedule {
+  id: string; app: ChatApp; group_name: string | null; text: string
+  next_run_at: string; repeat: 'once' | 'daily' | 'weekly'; status: 'active' | 'done' | 'canceled'; last_result: string | null
+}
 
 export function ChatGroupCopilot({
   defaultText,
@@ -26,6 +30,15 @@ export function ChatGroupCopilot({
   const [busy, setBusy] = useState<'' | 'local' | 'notify'>('')
   const [holders, setHolders] = useState<{ id: string; name: string }[]>([])
   const [holderId, setHolderId] = useState('')
+  const [when, setWhen] = useState('')
+  const [repeat, setRepeat] = useState<'once' | 'daily' | 'weekly'>('once')
+  const [schedules, setSchedules] = useState<Schedule[]>([])
+
+  const loadSchedules = useCallback(() => fetch('/api/marketing/share-schedules')
+    .then(r => (r.ok ? r.json() : { schedules: [] }))
+    .then(d => setSchedules(d.schedules ?? []))
+    .catch(() => {}), [])
+  useEffect(() => { loadSchedules() }, [loadSchedules])
 
   useEffect(() => { setText(defaultText) }, [defaultText])
   useEffect(() => {
@@ -84,6 +97,26 @@ export function ChatGroupCopilot({
     }
   }
 
+  const createSchedule = async () => {
+    if (!text.trim()) { showToast(t('chat.needText'), 'error'); return }
+    if (!when) { showToast(t('chat.needWhen'), 'error'); return }
+    const res = await fetch('/api/marketing/share-schedules', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ app, group_name: groupName, text, holder_id: holderId || undefined, run_at: new Date(when).toISOString(), repeat }),
+    })
+    const d = await res.json().catch(() => ({}))
+    if (!res.ok) { showToast(`${t('failed')}：${d.error ?? res.status}`, 'error'); return }
+    setWhen('')
+    showToast(t('chat.scheduled'), 'success')
+    loadSchedules()
+  }
+
+  const cancelSchedule = async (id: string) => {
+    await fetch(`/api/marketing/share-schedules?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+    loadSchedules()
+  }
+
   const field = 'mt-1 w-full px-2 py-1.5 rounded-lg border border-border bg-background text-xs font-normal'
 
   return (
@@ -136,6 +169,32 @@ export function ChatGroupCopilot({
         </button>
       </div>
       <p className="text-[10px] text-muted-foreground">{t('chat.holderHint')}</p>
+
+      <div className="pt-2 border-t border-border space-y-2">
+        <p className="text-[11px] font-semibold">{t('chat.scheduleTitle')}</p>
+        <div className="grid grid-cols-2 gap-2">
+          <input type="datetime-local" value={when} onChange={e => setWhen(e.target.value)} className={field} />
+          <select value={repeat} onChange={e => setRepeat(e.target.value as typeof repeat)} className={field}>
+            {(['once', 'daily', 'weekly'] as const).map(r => <option key={r} value={r}>{t(`chat.repeat.${r}`)}</option>)}
+          </select>
+        </div>
+        <button type="button" onClick={createSchedule}
+          className="w-full px-3 py-2 rounded-lg border border-emerald-600 text-emerald-700 font-bold text-[11px]">
+          {t('chat.schedule')}
+        </button>
+        {schedules.map(sc => (
+          <div key={sc.id} className="rounded-lg border border-border p-2 space-y-1">
+            <div className="flex items-center justify-between gap-2 text-[10px] text-muted-foreground">
+              <span>{sc.app === 'line' ? 'LINE' : 'Zalo'}{sc.group_name ? `「${sc.group_name}」` : ''} · {t(`chat.repeat.${sc.repeat}`)} · {sc.status === 'done' ? t('chat.done') : new Date(sc.next_run_at).toLocaleString()}</span>
+              {sc.status === 'active' && (
+                <button type="button" onClick={() => cancelSchedule(sc.id)} className="text-red-600 hover:underline">{t('chat.cancel')}</button>
+              )}
+            </div>
+            <p className="line-clamp-2">{sc.text}</p>
+            {sc.last_result === 'failed' && <p className="text-[10px] text-red-500">{t('chat.lastFailed')}</p>}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

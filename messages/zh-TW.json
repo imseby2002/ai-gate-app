@@ -13170,7 +13170,19 @@
       "holder": "通知持有人方式",
       "holderLineOa": "LINE 官方帳號（專員綁定名單）",
       "notifiedTg": "已用 Telegram 通知持有人",
-      "tgFailed": "Telegram 傳送失敗，請確認該持有人的 Telegram 設定"
+      "tgFailed": "Telegram 傳送失敗，請確認該持有人的 Telegram 設定",
+      "scheduleTitle": "排程通知持有人（例如每天的促銷）",
+      "needWhen": "請設定時間",
+      "schedule": "建立排程",
+      "scheduled": "已建立排程，時間到會通知持有人",
+      "repeat": {
+        "once": "只一次",
+        "daily": "每天",
+        "weekly": "每週"
+      },
+      "done": "已完成",
+      "cancel": "取消",
+      "lastFailed": "上次通知失敗，請確認持有人的 Telegram 設定"
     },
     "lineOa": {
       "title": "LINE 官方帳號群組排程推播",

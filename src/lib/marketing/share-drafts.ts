@@ -87,3 +87,49 @@ export async function notifyHolderTelegram(userId: string, holderId: string, dra
   const d = res ? await res.json().catch(() => ({})) : {}
   return d?.ok === true
 }
+
+// ── 行銷排程：時間到建立草稿並通知持有人 ────────────────────────────────
+const REPEAT_MS = { daily: 86_400_000, weekly: 7 * 86_400_000 } as const
+
+interface ShareSchedule {
+  id: string
+  user_id: string
+  app: ShareApp
+  group_name: string | null
+  text: string
+  holder_id: string | null
+  next_run_at: string
+  repeat: 'once' | 'daily' | 'weekly'
+}
+
+/** 領取並執行一筆到期排程：以 next_run_at 條件更新做原子領取，避免重複通知 */
+export async function runShareSchedule(s: ShareSchedule): Promise<{ id: string; notified: number } | null> {
+  const admin = createAdminClient()
+  let next: string | null = null
+  if (s.repeat !== 'once') {
+    // 補到未來的下一個時間點（停機補跑時不連發）
+    let t = new Date(s.next_run_at).getTime()
+    do { t += REPEAT_MS[s.repeat] } while (t <= Date.now())
+    next = new Date(t).toISOString()
+  }
+  const { data: claimed } = await admin.from('marketing_share_schedules')
+    .update(next ? { next_run_at: next } : { status: 'done' })
+    .eq('id', s.id).eq('status', 'active').eq('next_run_at', s.next_run_at)
+    .select('id').maybeSingle()
+  if (!claimed) return null
+
+  const { data: draft } = await admin.from('marketing_share_drafts')
+    .insert({ user_id: s.user_id, app: s.app, group_name: s.group_name, text: s.text })
+    .select('id, app, group_name, text').single()
+  let notified = 0
+  if (draft) {
+    notified = s.holder_id
+      ? ((await notifyHolderTelegram(s.user_id, s.holder_id, draft)) ? 1 : 0)
+      : await notifyHolders(s.user_id, draft)
+    await admin.from('marketing_share_drafts').update({ notified_count: notified }).eq('id', draft.id)
+  }
+  await admin.from('marketing_share_schedules')
+    .update({ last_sent_at: new Date().toISOString(), last_result: notified ? 'ok' : 'failed' })
+    .eq('id', s.id)
+  return { id: s.id, notified }
+}
