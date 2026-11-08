@@ -13154,20 +13154,19 @@
     "companyManagedSuspended": "Your company's shared AdsPower is suspended. Please contact your company admin or AI-GATE support.",
     "companyManagedNoSeat": "You haven't been assigned an AdsPower member seat yet. Please contact your company admin.",
     "chat": {
-      "title": "Personal LINE / Zalo group assist",
-      "desc": "The connector opens LINE for PC or Zalo Web on your computer and copies the post; you pick the group, paste (Ctrl+V) and press send yourself.",
-      "app": {
-        "line_pc": "LINE for PC",
-        "zalo_web": "Zalo Web"
-      },
+      "title": "Personal LINE / Zalo group one-tap fill",
+      "desc": "The post is filled in for you; pick the group and press send. No desktop connector needed.",
+      "openHere": "Fill on this computer",
+      "notifyHolder": "Notify account holder",
+      "holderHint": "\"Notify account holder\" sends the group and post via your LINE Official Account to bound staff (staff send \"綁定專員\" to the Official Account from their personal LINE). They tap the link to fill it on their phone.",
+      "zaloCopied": "Post copied. Open the group in Zalo, paste and send.",
+      "notified": "Notified {n} holder(s)",
+      "noHolder": "No holder to notify: staff should send \"綁定專員\" to the Official Account from their personal LINE",
+      "warn": "Do not send the same post to many groups at once — LINE / Zalo may suspend the account. Vary the text per group and space out sends.",
+      "needText": "Post cannot be empty",
       "groupName": "Group name (reminder)",
       "groupNamePh": "e.g. Taichung travel tips",
-      "groupUrl": "Group link (optional)",
-      "text": "Post",
-      "warn": "Do not send the same post to many groups at once — LINE / Zalo may suspend the account. Vary the text per group and space out sends.",
-      "submit": "Open on PC and copy post",
-      "needText": "Post cannot be empty",
-      "queued": "Sent: your PC will open {app} and copy the post. Pick the group, paste and press send yourself."
+      "text": "Post"
     },
     "lineOa": {
       "title": "LINE Official Account group scheduled push",
@@ -13191,6 +13190,19 @@
         "partial": "Partly sent",
         "failed": "Failed",
         "canceled": "Canceled"
+      }
+    },
+    "share": {
+      "to": "Post to {app} group",
+      "anyGroup": "(Choose a group)",
+      "openLine": "Fill in LINE (pick group, then send)",
+      "shareMenu": "Share to Zalo / other apps",
+      "copy": "Copy post",
+      "copied": "Copied",
+      "openZalo": "Open Zalo Web",
+      "hint": {
+        "line": "Tap \"Fill in LINE\" → pick the group → send.",
+        "zalo": "Phone: tap \"Share to Zalo\" → pick the group → send. Computer: copy → open Zalo → paste in the group and send."
       }
     }
   },

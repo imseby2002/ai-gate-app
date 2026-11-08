@@ -13154,20 +13154,19 @@
     "companyManagedSuspended": "貴公司的共享代管已暫停，請聯絡公司管理者或 AI-GATE 客服。",
     "companyManagedNoSeat": "您尚未被指派 AdsPower 成員席次，請聯絡公司管理者。",
     "chat": {
-      "title": "個人 LINE／Zalo 群組帶入",
-      "desc": "連接器會在電腦開啟 LINE 電腦版或 Zalo 網頁並複製文案；請自己選群組、貼上（Ctrl+V）並按送出。",
-      "app": {
-        "line_pc": "LINE 電腦版",
-        "zalo_web": "Zalo 網頁"
-      },
+      "title": "個人 LINE／Zalo 群組一鍵帶入",
+      "desc": "文案帶入後，自己選群組、按送出即可；不需安裝桌面連接器。",
+      "openHere": "在這台電腦帶入",
+      "notifyHolder": "通知持有人",
+      "holderHint": "「通知持有人」會由 LINE 官方帳號把群組與文案傳給已綁定的專員（專員用個人 LINE 傳「綁定專員」給官方帳號即可加入），專員點連結就能在手機一鍵帶入。",
+      "zaloCopied": "文案已複製，請在 Zalo 打開群組貼上並送出",
+      "notified": "已通知 {n} 位持有人",
+      "noHolder": "沒有可通知的持有人：請專員用個人 LINE 傳「綁定專員」給官方帳號",
+      "warn": "請勿對多個群組大量發送相同文案，LINE／Zalo 可能因此停權帳號；建議每個群組調整內容並間隔發送。",
+      "needText": "文案不可為空",
       "groupName": "群組名稱（提醒用）",
       "groupNamePh": "例如：台中自由行交流",
-      "groupUrl": "群組連結（選填）",
-      "text": "文案",
-      "warn": "請勿對多個群組大量發送相同文案，LINE／Zalo 可能因此停權帳號；建議每個群組調整內容並間隔發送。",
-      "submit": "在電腦開啟並複製文案",
-      "needText": "文案不可為空",
-      "queued": "已送出：電腦將開啟{app}並複製文案，請選群組、貼上後自行按送出"
+      "text": "文案"
     },
     "lineOa": {
       "title": "LINE 官方帳號群組排程推播",
@@ -13191,6 +13190,19 @@
         "partial": "部分送出",
         "failed": "送出失敗",
         "canceled": "已取消"
+      }
+    },
+    "share": {
+      "to": "發到 {app} 群組",
+      "anyGroup": "（請選擇群組）",
+      "openLine": "用 LINE 帶入（選群組後送出）",
+      "shareMenu": "分享到 Zalo／其他 App",
+      "copy": "複製文案",
+      "copied": "已複製",
+      "openZalo": "開啟 Zalo 網頁",
+      "hint": {
+        "line": "點「用 LINE 帶入」→ 選擇群組 → 按送出。",
+        "zalo": "手機：點「分享到 Zalo」→ 選擇群組 → 送出。電腦：複製文案 → 開啟 Zalo → 在群組貼上送出。"
       }
     }
   },

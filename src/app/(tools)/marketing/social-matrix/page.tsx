@@ -1842,7 +1842,6 @@ function SocialMatrixContent() {
                     const c = copies.find(x => x.id === selectedCopyId) || copies[0]
                     return (
                       <ChatGroupCopilot
-                        accounts={accounts}
                         defaultText={c ? `${c.title}\n\n${c.content}\n\n${c.hashtags.join(' ')}` : ''}
                         showToast={showToast}
                       />

@@ -13154,20 +13154,19 @@
     "companyManagedSuspended": "AdsPower dùng chung của công ty đã tạm dừng. Hãy liên hệ quản trị viên công ty hoặc bộ phận hỗ trợ AI-GATE.",
     "companyManagedNoSeat": "Bạn chưa được chỉ định chỗ thành viên AdsPower. Hãy liên hệ quản trị viên công ty.",
     "chat": {
-      "title": "Hỗ trợ đăng nhóm LINE / Zalo cá nhân",
-      "desc": "Trình kết nối sẽ mở LINE PC hoặc Zalo Web trên máy tính và sao chép nội dung; bạn tự chọn nhóm, dán (Ctrl+V) và bấm gửi.",
-      "app": {
-        "line_pc": "LINE PC",
-        "zalo_web": "Zalo Web"
-      },
+      "title": "Điền nhanh vào nhóm LINE / Zalo cá nhân",
+      "desc": "Nội dung được điền sẵn; bạn chỉ cần chọn nhóm và bấm gửi. Không cần cài trình kết nối.",
+      "openHere": "Điền trên máy này",
+      "notifyHolder": "Báo cho người giữ tài khoản",
+      "holderHint": "\"Báo cho người giữ tài khoản\" sẽ gửi tên nhóm và nội dung qua LINE Official Account cho nhân viên đã liên kết (nhân viên gửi \"綁定專員\" cho Official Account bằng LINE cá nhân). Họ bấm link để điền nhanh trên điện thoại.",
+      "zaloCopied": "Đã sao chép nội dung. Mở nhóm trên Zalo, dán và gửi.",
+      "notified": "Đã báo cho {n} người",
+      "noHolder": "Chưa có người nhận: nhân viên hãy gửi \"綁定專員\" cho Official Account bằng LINE cá nhân",
+      "warn": "Không gửi cùng một nội dung hàng loạt vào nhiều nhóm — LINE / Zalo có thể khóa tài khoản. Hãy thay đổi nội dung cho từng nhóm và gửi cách quãng.",
+      "needText": "Nội dung không được để trống",
       "groupName": "Tên nhóm (để nhắc)",
       "groupNamePh": "VD: Hội du lịch Đài Trung",
-      "groupUrl": "Link nhóm (tùy chọn)",
-      "text": "Nội dung",
-      "warn": "Không gửi cùng một nội dung hàng loạt vào nhiều nhóm — LINE / Zalo có thể khóa tài khoản. Hãy thay đổi nội dung cho từng nhóm và gửi cách quãng.",
-      "submit": "Mở trên máy tính và sao chép nội dung",
-      "needText": "Nội dung không được để trống",
-      "queued": "Đã gửi: máy tính sẽ mở {app} và sao chép nội dung. Hãy chọn nhóm, dán và tự bấm gửi."
+      "text": "Nội dung"
     },
     "lineOa": {
       "title": "Đẩy tin hẹn giờ vào nhóm LINE Official Account",
@@ -13191,6 +13190,19 @@
         "partial": "Gửi một phần",
         "failed": "Gửi thất bại",
         "canceled": "Đã hủy"
+      }
+    },
+    "share": {
+      "to": "Gửi vào nhóm {app}",
+      "anyGroup": "(Chọn nhóm)",
+      "openLine": "Điền vào LINE (chọn nhóm rồi gửi)",
+      "shareMenu": "Chia sẻ qua Zalo / ứng dụng khác",
+      "copy": "Sao chép nội dung",
+      "copied": "Đã sao chép",
+      "openZalo": "Mở Zalo Web",
+      "hint": {
+        "line": "Bấm \"Điền vào LINE\" → chọn nhóm → gửi.",
+        "zalo": "Điện thoại: bấm \"Chia sẻ qua Zalo\" → chọn nhóm → gửi. Máy tính: sao chép → mở Zalo → dán vào nhóm và gửi."
       }
     }
   },
