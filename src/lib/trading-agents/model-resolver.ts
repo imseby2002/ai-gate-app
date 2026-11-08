@@ -78,7 +78,14 @@ export function resolveTradingModel(modelId?: string, tier: 'quick' | 'deep' = '
     const baseURL = process.env.CLI_PROXY_API_URL ?? process.env.NEXT_PUBLIC_CLI_PROXY_API_URL
     const apiKey = process.env.CLI_PROXY_API_KEY ?? 'no-key'
     if (baseURL) {
-      return createOpenAI({ apiKey, baseURL }).chat(rawModel)
+      const targetModel = rawModel.includes('pro')
+        ? 'gemini-2.5-pro'
+        : rawModel.includes('claude')
+        ? 'claude-sonnet-4-6'
+        : rawModel.includes('deepseek')
+        ? 'deepseek-chat'
+        : 'gemini-2.5-flash'
+      return createOpenAI({ apiKey, baseURL }).chat(targetModel)
     }
   }
 
@@ -88,7 +95,8 @@ export function resolveTradingModel(modelId?: string, tier: 'quick' | 'deep' = '
     const baseURL = rawUrl ? (rawUrl.replace(/\/+$/, '').endsWith('/v1') ? rawUrl.replace(/\/+$/, '') : `${rawUrl.replace(/\/+$/, '')}/v1`) : rawUrl
     const apiKey = process.env.FREE_LLM_API_KEY ?? 'no-key'
     if (baseURL) {
-      return createOpenAI({ apiKey, baseURL }).chat(rawModel)
+      const targetModel = rawModel === 'auto' ? 'meta-llama/Llama-3.3-70B-Instruct' : rawModel
+      return createOpenAI({ apiKey, baseURL }).chat(targetModel)
     }
   }
 

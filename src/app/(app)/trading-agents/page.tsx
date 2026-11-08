@@ -58,9 +58,9 @@ export default function TradingAgentsPage() {
   const [currentPhase, setCurrentPhase] = useState<string>('idle')
   const [phaseLabel, setPhaseLabel] = useState<string>('')
 
-  // Settings
+  // Settings (預設採用組合二：分析師/辯論用 CLIProxy 免費代理，經理人由 Claude Sonnet 4.6 深度把關)
   const [debateRounds, setDebateRounds] = useState(1)
-  const [quickModel, setQuickModel] = useState('google/gemini-2.5-flash')
+  const [quickModel, setQuickModel] = useState('cliproxy/gemini-2.5-flash')
   const [deepModel, setDeepModel] = useState('anthropic/claude-sonnet-4-6')
   const [portfolio, setPortfolio] = useState<PortfolioContext>({
     cash: 25000,
@@ -414,10 +414,12 @@ export default function TradingAgentsPage() {
                 onChange={e => setQuickModel(e.target.value)}
                 className="bg-muted px-2 py-1 rounded text-xs text-foreground font-mono cursor-pointer border border-border"
               >
-                <option value="google/gemini-2.5-flash">Gemini 2.5 Flash (推薦·超高速)</option>
-                <option value="openai/gpt-4o">GPT-4o (OpenAI 旗艦)</option>
+                <option value="cliproxy/gemini-2.5-flash">⚡ CLIProxy · Gemini 2.5 Flash (推薦·免費代理零成本)</option>
+                <option value="freellm/auto">⚡ FreeLLM · Llama 3.3 70B (免費開源代理)</option>
+                <option value="google/gemini-2.5-flash">Google 原廠 · Gemini 2.5 Flash</option>
                 <option value="deepseek/deepseek-chat">DeepSeek V3 (金融邏輯)</option>
-                <option value="anthropic/claude-sonnet-4-6">Claude Sonnet 4.6 (Anthropic)</option>
+                <option value="openai/gpt-4o">OpenAI · GPT-4o</option>
+                <option value="anthropic/claude-sonnet-4-6">Anthropic · Claude Sonnet 4.6</option>
               </select>
             </div>
 
@@ -428,9 +430,11 @@ export default function TradingAgentsPage() {
                 onChange={e => setDeepModel(e.target.value)}
                 className="bg-muted px-2 py-1 rounded text-xs text-foreground font-mono cursor-pointer border border-border"
               >
-                <option value="anthropic/claude-sonnet-4-6">Claude Sonnet 4.6 (深度推演·預設)</option>
-                <option value="google/gemini-2.5-pro">Gemini 2.5 Pro (長上下文精算)</option>
-                <option value="openai/gpt-4o">GPT-4o (頂級博弈裁決)</option>
+                <option value="anthropic/claude-sonnet-4-6">Claude Sonnet 4.6 (深度推演·旗艦把關)</option>
+                <option value="deepseek/deepseek-chat">DeepSeek V3 (高性價比金融思維)</option>
+                <option value="cliproxy/gemini-2.5-pro">⚡ CLIProxy · Gemini 2.5 Pro (長上下文·免費代理)</option>
+                <option value="google/gemini-2.5-pro">Google 原廠 · Gemini 2.5 Pro</option>
+                <option value="openai/gpt-4o">OpenAI · GPT-4o (頂級博弈裁決)</option>
               </select>
             </div>
           </div>
