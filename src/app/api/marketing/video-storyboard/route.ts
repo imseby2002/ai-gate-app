@@ -13,7 +13,7 @@ import { generateText } from 'ai'
 import { langInstruction } from '@/lib/marketing/lang'
 import { chargeUsage, llmCost, precheckUsage } from '@/lib/marketing/billing'
 import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
-import { STORY_MAX_NARRATION } from '@/lib/marketing/story-video'
+import { STORY_DISABLED_MSG, STORY_MAX_NARRATION, storyVideoEnabled } from '@/lib/marketing/story-video'
 
 export const maxDuration = 60
 
@@ -49,6 +49,7 @@ scenes 必須剛好 ${n} 筆。`
 }
 
 export async function POST(req: NextRequest) {
+  if (!storyVideoEnabled()) return NextResponse.json({ error: STORY_DISABLED_MSG }, { status: 503 })
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

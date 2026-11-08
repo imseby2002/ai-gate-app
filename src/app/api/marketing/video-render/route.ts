@@ -2,7 +2,7 @@
  * 多分鏡配音影片合成任務
  * POST /api/marketing/video-render   建立任務（queued），由獨立 worker 領取產圖、配音、合成
  *   Body: { title?, scenes: [{ narration, visualPrompt, imageUrl? }], voiceId, template?, aspect?, bgm? }
- * GET  /api/marketing/video-render?id=xxx   查單一任務；不帶 id 回最近 10 筆
+ * GET  /api/marketing/video-render?id=xxx   查單一任務；不帶 id 回最近 10 筆（含 enabled，未開放時面板隱藏）
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
@@ -10,13 +10,14 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { precheckUsage } from '@/lib/marketing/billing'
 import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
 import {
-  STORY_ASPECTS, STORY_MAX_NARRATION, STORY_MAX_SCENES, STORY_TEMPLATES, estimateStoryCost,
+  STORY_ASPECTS, STORY_DISABLED_MSG, STORY_MAX_NARRATION, STORY_MAX_SCENES, STORY_TEMPLATES, estimateStoryCost, storyVideoEnabled,
   type StoryAspect, type StoryScene, type StoryTemplate,
 } from '@/lib/marketing/story-video'
 
 const COLUMNS = 'id, status, title, template, aspect, scenes, output_url, duration_sec, cost_usd, error, created_at, updated_at'
 
 export async function POST(req: NextRequest) {
+  if (!storyVideoEnabled()) return NextResponse.json({ error: STORY_DISABLED_MSG }, { status: 503 })
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -71,6 +72,8 @@ export async function GET(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  if (!storyVideoEnabled()) return NextResponse.json({ enabled: false, jobs: [] })
+
   const id = new URL(req.url).searchParams.get('id')
   if (id) {
     const { data } = await supabase.from('marketing_video_renders').select(COLUMNS).eq('id', id).maybeSingle()
@@ -82,5 +85,5 @@ export async function GET(req: NextRequest) {
     .select(COLUMNS)
     .order('created_at', { ascending: false })
     .limit(10)
-  return NextResponse.json({ jobs: data ?? [] })
+  return NextResponse.json({ enabled: true, jobs: data ?? [] })
 }

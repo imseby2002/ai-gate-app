@@ -45,12 +45,16 @@ export function StoryVideoPanel({ defaultContent = '', language }: { defaultCont
   const [busy, setBusy] = useState<'script' | 'render' | null>(null)
   const [error, setError] = useState('')
   const [jobs, setJobs] = useState<RenderJob[]>([])
+  const [enabled, setEnabled] = useState(false)
 
   useEffect(() => { if (defaultContent && !content) setContent(defaultContent) }, [defaultContent, content])
 
   const loadJobs = useCallback(async () => {
     const res = await fetch('/api/marketing/video-render')
-    if (res.ok) setJobs((await res.json()).jobs ?? [])
+    if (!res.ok) return
+    const data = await res.json()
+    setEnabled(data.enabled === true)
+    setJobs(data.jobs ?? [])
   }, [])
   useEffect(() => { loadJobs() }, [loadJobs])
 
@@ -102,6 +106,8 @@ export function StoryVideoPanel({ defaultContent = '', language }: { defaultCont
 
   const updateScene = (i: number, patch: Partial<Scene>) =>
     setScenes(prev => prev.map((s, idx) => (idx === i ? { ...s, ...patch } : s)))
+
+  if (!enabled) return null
 
   const input = 'w-full px-3 py-2 rounded-lg border text-sm outline-none focus:ring-2 bg-white'
 

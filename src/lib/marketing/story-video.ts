@@ -6,6 +6,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { NANO_BANANA_PRO_FAL_COST, ttsCost } from '@/lib/marketing/billing'
 
+/** 功能開關：worker VM 建好後於 Vercel 設 STORY_VIDEO_ENABLED=true 才開放 */
+export const storyVideoEnabled = () => process.env.STORY_VIDEO_ENABLED === 'true'
+export const STORY_DISABLED_MSG = '多分鏡配音影片尚未開放'
+
 export const STORY_TEMPLATES = ['classic', 'fullbleed', 'card'] as const
 export type StoryTemplate = (typeof STORY_TEMPLATES)[number]
 

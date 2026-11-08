@@ -58,6 +58,8 @@ node run.mjs ivt-upload --page purchase-order --store YL
 在 `tasks/` 新增 `xxx.mjs`（export `run(args)`），並在 `run.mjs` 的 `TASKS` 註冊即可共用同一台 VM。
 
 ## 第二個任務：多分鏡配音影片合成（video-render）
+> 功能開關：主 app（Vercel）設 `STORY_VIDEO_ENABLED=true` 才會顯示面板、接受任務；VM 建好前保持未設定。
+
 主 app 行銷自動化「影片產出」單元的「多分鏡配音影片」建立任務後，由此 worker 領取並合成：
 逐段請主 app 產圖＋ElevenLabs 配音（金鑰與扣點都在主 app）→ 套 HTML 版型截圖（標題＋畫面＋字幕）→ ffmpeg 每段緩慢放大、對齊配音長度 → 串接 → 選配背景音樂 → 上傳到主 app 的 Storage。
 
