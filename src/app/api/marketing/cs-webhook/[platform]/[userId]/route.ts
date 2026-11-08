@@ -5,6 +5,7 @@
  * 使用 service role key 繞過 RLS，因為 webhook 來自外部平台（無用戶 session）
  * AI 直接在此呼叫，不轉發至 cs-chat（cs-chat 需要 session auth）
  */
+import { trackLineGroupEvent } from '@/lib/marketing/line-groups'
 import { loadChannelCredentials } from '@/lib/channels/resolve'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
@@ -3018,6 +3019,8 @@ export async function POST(
     const body = JSON.parse(rawBody)
     const events = body?.events ?? []
     for (const event of events) {
+      // 記錄官方帳號所在的群組（行銷群組排程推播用）；失敗不影響客服
+      await trackLineGroupEvent(userId, token, event).catch(() => {})
       if (event.type !== 'message') continue
       const msgType: string = event.message?.type
       if (msgType !== 'text' && msgType !== 'image') continue

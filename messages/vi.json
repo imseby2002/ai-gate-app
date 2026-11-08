@@ -13168,6 +13168,30 @@
       "submit": "Mở trên máy tính và sao chép nội dung",
       "needText": "Nội dung không được để trống",
       "queued": "Đã gửi: máy tính sẽ mở {app} và sao chép nội dung. Hãy chọn nhóm, dán và tự bấm gửi."
+    },
+    "lineOa": {
+      "title": "Đẩy tin hẹn giờ vào nhóm LINE Official Account",
+      "desc": "Các nhóm đã mời Official Account sẽ tự hiện ở đây. Gửi ngay hoặc hẹn giờ — hoàn toàn tự động.",
+      "refresh": "Làm mới",
+      "unnamed": "(Nhóm chưa đặt tên)",
+      "noGroups": "Chưa phát hiện nhóm nào.\n1. LINE Developers → cài đặt Messaging API: bật \"Allow bot to join group chats\"\n2. Đảm bảo đã cài Webhook LINE Official Account cho hệ thống CSKH\n3. Mời Official Account vào nhóm (hoặc gửi một tin trong nhóm), rồi bấm làm mới",
+      "needGroup": "Hãy chọn ít nhất một nhóm",
+      "image": "Link ảnh (tùy chọn, https)",
+      "when": "Thời gian hẹn (để trống = gửi ngay)",
+      "quota": "Tin đẩy dùng hạn mức tin nhắn của LINE Official Account (mỗi nhóm tính một lần).",
+      "schedule": "Tạo lịch",
+      "sendNow": "Gửi ngay",
+      "scheduled": "Đã tạo lịch",
+      "recent": "Tin đẩy gần đây",
+      "cancel": "Hủy lịch",
+      "status": {
+        "scheduled": "Đã lên lịch",
+        "sending": "Đang gửi",
+        "sent": "Đã gửi",
+        "partial": "Gửi một phần",
+        "failed": "Gửi thất bại",
+        "canceled": "Đã hủy"
+      }
     }
   },
   "Knowledge": {

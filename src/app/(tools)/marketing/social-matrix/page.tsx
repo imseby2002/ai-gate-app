@@ -18,6 +18,7 @@ import { officialPriceUsd, resiPackUsd } from '@/lib/social-matrix/pricing'
 import { PlanGate } from '@/components/marketing/PlanGate'
 import { ConnectorPanel, queueConnectorTask } from '@/components/marketing/ConnectorPanel'
 import { ChatGroupCopilot } from '@/components/marketing/ChatGroupCopilot'
+import { LineGroupPush } from '@/components/marketing/LineGroupPush'
 
 export default function SocialMatrixPage() {
   return (
@@ -1847,6 +1848,14 @@ function SocialMatrixContent() {
                       />
                     )
                   })()}
+
+                  <LineGroupPush
+                    defaultText={(() => {
+                      const c = copies.find(x => x.id === selectedCopyId) || copies[0]
+                      return c ? `${c.title}\n\n${c.content}\n\n${c.hashtags.join(' ')}` : ''
+                    })()}
+                    showToast={showToast}
+                  />
                 </div>
 
                 {/* Right Col: Anti-Ban Varied Copies Matrix (7 cols) */}
