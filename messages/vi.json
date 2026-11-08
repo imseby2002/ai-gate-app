@@ -13158,7 +13158,7 @@
       "desc": "Nội dung được điền sẵn; bạn chỉ cần chọn nhóm và bấm gửi. Không cần cài trình kết nối.",
       "openHere": "Điền trên máy này",
       "notifyHolder": "Báo cho người giữ tài khoản",
-      "holderHint": "\"Báo cho người giữ tài khoản\" sẽ gửi tên nhóm và nội dung qua LINE Official Account cho nhân viên đã liên kết (nhân viên gửi \"綁定專員\" cho Official Account bằng LINE cá nhân). Họ bấm link để điền nhanh trên điện thoại.",
+      "holderHint": "\"Báo cho người giữ tài khoản\" gửi tên nhóm và nội dung tới Telegram của người giữ (chỉ hiện người đã cài Telegram trong hồ sơ). Họ bấm \"一鍵帶入\" để điền vào LINE / Zalo cá nhân trên điện thoại, chọn nhóm rồi gửi.",
       "zaloCopied": "Đã sao chép nội dung. Mở nhóm trên Zalo, dán và gửi.",
       "notified": "Đã báo cho {n} người",
       "noHolder": "Chưa có người nhận: nhân viên hãy gửi \"綁定專員\" cho Official Account bằng LINE cá nhân",
@@ -13166,7 +13166,11 @@
       "needText": "Nội dung không được để trống",
       "groupName": "Tên nhóm (để nhắc)",
       "groupNamePh": "VD: Hội du lịch Đài Trung",
-      "text": "Nội dung"
+      "text": "Nội dung",
+      "holder": "Báo cho người giữ qua",
+      "holderLineOa": "LINE Official Account (nhân viên đã liên kết)",
+      "notifiedTg": "Đã báo qua Telegram",
+      "tgFailed": "Gửi Telegram thất bại — kiểm tra cài đặt Telegram của người nhận"
     },
     "lineOa": {
       "title": "Đẩy tin hẹn giờ vào nhóm LINE Official Account",

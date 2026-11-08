@@ -1,5 +1,6 @@
 /**
- * 個人 LINE／Zalo 群組一鍵帶入：系統準備文案草稿 → 官方帳號通知持有人（已綁定的專員）→
+ * 個人 LINE／Zalo 群組一鍵帶入：系統準備文案草稿 → 通知持有人（優先 Telegram：個人設定的 bot＋chat_id；
+ * 未設定時改用 LINE 官方帳號推播給「專員綁定」名單）→
  * 持有人開啟 /gs/<id>，以 LINE 分享連結或手機分享選單帶入文案，自己選群組按送出。
  * LINE 分享連結：https://developers.line.biz/en/docs/messaging-api/using-line-url-scheme/
  */
@@ -50,4 +51,39 @@ export async function notifyHolders(userId: string, draft: { id: string; app: Sh
     }
   }
   return sent
+}
+
+/** 可用 Telegram 通知的持有人：本人＋同公司成員中，個人設定已填 Telegram bot token 與 chat_id 者 */
+export async function telegramHolders(userId: string): Promise<{ id: string; name: string }[]> {
+  const owners = await lineGroupOwnerIds(userId)
+  const { data } = await createAdminClient().from('profiles')
+    .select('id, full_name, email, telegram_bot_token, telegram_chat_id').in('id', owners)
+  return (data ?? [])
+    .filter(p => p.telegram_bot_token && p.telegram_chat_id)
+    .map(p => ({ id: p.id as string, name: (p.full_name as string) || (p.email as string) || '' }))
+    .sort((a, b) => (a.id === userId ? -1 : b.id === userId ? 1 : a.name.localeCompare(b.name)))
+}
+
+const escHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+/** 以持有人的 Telegram 通知：群組名稱＋文案＋「一鍵帶入」按鈕；holderId 須為本人或同公司成員 */
+export async function notifyHolderTelegram(userId: string, holderId: string, draft: { id: string; app: ShareApp; group_name: string | null; text: string }): Promise<boolean> {
+  if (!(await lineGroupOwnerIds(userId)).includes(holderId)) return false
+  const { data: p } = await createAdminClient().from('profiles')
+    .select('telegram_bot_token, telegram_chat_id').eq('id', holderId).maybeSingle()
+  if (!p?.telegram_bot_token || !p.telegram_chat_id) return false
+  const appName = draft.app === 'line' ? 'LINE' : 'Zalo'
+  const header = `📣 <b>請發到${appName}群組${draft.group_name ? `「${escHtml(draft.group_name)}」` : ''}</b>`
+  const res = await fetch(`https://api.telegram.org/bot${String(p.telegram_bot_token).trim()}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chat_id: String(p.telegram_chat_id).trim(),
+      text: `${header}\n\n${escHtml(draft.text)}`.slice(0, 4000),
+      parse_mode: 'HTML',
+      reply_markup: { inline_keyboard: [[{ text: '👉 一鍵帶入', url: shareDraftUrl(draft.id) }]] },
+    }),
+  }).catch(() => null)
+  const d = res ? await res.json().catch(() => ({})) : {}
+  return d?.ok === true
 }
