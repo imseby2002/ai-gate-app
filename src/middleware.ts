@@ -116,6 +116,7 @@ export async function middleware(request: NextRequest) {
       pathname.startsWith('/v/') ||
       pathname.startsWith('/vendor/') ||
       pathname.startsWith('/f/') ||
+      pathname.startsWith('/gs/') ||
       pathname.startsWith('/join/') ||
       pathname.startsWith('/mg/') ||
       pathname.startsWith('/api/worker/') ||
