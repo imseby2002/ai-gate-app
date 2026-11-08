@@ -15,6 +15,7 @@ import {
   Sparkles,
   TrendingUp,
   FileText,
+  Users,
 } from 'lucide-react'
 
 interface DecisionVerdictCardProps {
@@ -86,6 +87,39 @@ export function DecisionVerdictCard({ decision, marketData, sessionId, reportHtm
       const url = URL.createObjectURL(blob)
       window.open(url, '_blank')
     }
+  }
+
+  const handleSendToRoundtable = () => {
+    const topic = `針對 ${marketData.companyName} (${marketData.ticker}) 的 TradingAgents 投資提案進行董事會級深度覆審：
+
+【標的現況與行情】
+• 現價：${marketData.currency} ${marketData.currentPrice} (${marketData.changePercent > 0 ? '+' : ''}${marketData.changePercent}%)
+• 52週區間：${marketData.low52w} ~ ${marketData.high52w}
+• 技術指標：RSI(14)=${marketData.technicals.rsi14}, SMA200=${marketData.technicals.sma200}, 支撐=${marketData.technicals.supportLevel}, 壓力=${marketData.technicals.resistanceLevel}
+
+【TradingAgents 基金經理人最高決策】
+• 建議動作：★ ${decision.action} (信心度: ${decision.confidenceScore}%)
+• 目標價 (TP)：${marketData.currency} ${decision.executionOrder.targetPrice.toFixed(2)}
+• 嚴格停損 (SL)：${marketData.currency} ${decision.executionOrder.stopLossPrice.toFixed(2)}
+• 建議部位：總資金 ${decision.executionOrder.suggestedAllocationPercent}%
+• 核心論據：${decision.executiveSummary}
+
+【核心上行催化劑】
+${decision.keyCatalysts.map(c => `• ${c}`).join('\n')}
+
+【關鍵下行風險】
+${decision.keyRisks.map(r => `• ${r}`).join('\n')}
+
+請三位董事會成員（成長動能派、價值安全邊際派、護城河與商業本質派）深入檢視本筆交易提案，重點辯論其宏觀政經影響、油價/通膨傳導、估值安全邊際與部位風險！`
+
+    try {
+      sessionStorage.setItem('roundtable_initial_topic', topic)
+      sessionStorage.setItem('roundtable_initial_domain', 'finance')
+    } catch {
+      // ignore
+    }
+
+    window.open('/roundtable?domain=finance', '_blank')
   }
 
   return (
@@ -189,24 +223,37 @@ export function DecisionVerdictCard({ decision, marketData, sessionId, reportHtm
 
         {/* Action Buttons */}
         <div className="flex items-center justify-between pt-2 border-t border-border/60 flex-wrap gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleCopyOrder}
-            className="text-xs font-medium"
-          >
-            {copied ? (
-              <>
-                <CheckCircle2 className="h-3.5 w-3.5 mr-1 text-emerald-500" />
-                已複製下單委託指令！
-              </>
-            ) : (
-              <>
-                <Copy className="h-3.5 w-3.5 mr-1" />
-                複製下單指令單 (Ticket)
-              </>
-            )}
-          </Button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCopyOrder}
+              className="text-xs font-medium"
+            >
+              {copied ? (
+                <>
+                  <CheckCircle2 className="h-3.5 w-3.5 mr-1 text-emerald-500" />
+                  已複製下單委託指令！
+                </>
+              ) : (
+                <>
+                  <Copy className="h-3.5 w-3.5 mr-1" />
+                  複製下單指令單 (Ticket)
+                </>
+              )}
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSendToRoundtable}
+              className="text-xs font-medium border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
+            >
+              <Users className="h-3.5 w-3.5 mr-1.5 text-amber-500" />
+              送往智慧圓桌會議 (Roundtable) 繼續討論
+              <ExternalLink className="h-3 w-3 ml-1 opacity-70" />
+            </Button>
+          </div>
 
           <Button
             onClick={handleOpenReport}

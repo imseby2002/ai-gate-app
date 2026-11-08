@@ -271,6 +271,21 @@ export default function RoundtablePage() {
       const sessionFromUrl = urlParams.get('session')
       if (sessionFromUrl) {
         loadSession(sessionFromUrl)
+      } else {
+        // 支援從其他模組（例如 trading-agents）帶入初始議題與領域
+        const topicFromUrl = urlParams.get('topic')
+        const domainFromUrl = urlParams.get('domain')
+        const incomingTopic = topicFromUrl || sessionStorage.getItem('roundtable_initial_topic')
+        const incomingDomain = domainFromUrl || sessionStorage.getItem('roundtable_initial_domain')
+
+        if (incomingTopic) {
+          setInstruction(incomingTopic)
+          sessionStorage.removeItem('roundtable_initial_topic')
+        }
+        if (incomingDomain && incomingDomain in DOMAIN_PRESETS) {
+          setSelectedDomain(incomingDomain as RoundtableDomain)
+          sessionStorage.removeItem('roundtable_initial_domain')
+        }
       }
     } catch {
       // ignore
