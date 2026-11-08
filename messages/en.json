@@ -13687,7 +13687,53 @@
       "desc": "One plan enables ERP, marketing, customer service and AI tools for the whole company, priced by locations and users"
     },
     "pricingOf": "{name} plans",
-    "pricingOthers": "For other systems (reservations, ERP, AI Agent, etc.), see the Enterprise plan or check inside each system after logging in.",
-    "privacy": "Privacy policy"
+    "pricingOthers": "For other systems (ERP, AI Agent, etc.), see the Enterprise plan or check inside each system after logging in.",
+    "privacy": "Privacy policy",
+    "tradingPage": {
+      "metaTitle": "TradingAgents investment analysis | AI GATE",
+      "metaDesc": "Multi-agent AI investment analysis: four analysts, ten valuation models, bull/bear debate, trader, risk team and portfolio manager — billed by actual AI usage.",
+      "navPricing": "Pricing",
+      "title": "An AI research team that analyses a stock for you",
+      "desc": "Enter a ticker and AI analysts, bull/bear researchers, a trader, a risk team and a portfolio manager take turns to produce a full investment decision report.",
+      "start": "Start analysis",
+      "howTitle": "How it works",
+      "steps": {
+        "analysts": {
+          "title": "Four analysts",
+          "desc": "Fundamentals, technical, news and sentiment analysts each research the stock using live quotes and technical indicators."
+        },
+        "valuation": {
+          "title": "Ten valuation models",
+          "desc": "DCF, P/E, PEG, EV/EBITDA, P/B, FCF yield, ROE, CAPM, EVA and dividend discount, calculated in one go."
+        },
+        "debate": {
+          "title": "Bull vs bear debate",
+          "desc": "Bull and bear researchers debate the findings for 1–3 rounds."
+        },
+        "trader": {
+          "title": "Trader proposal",
+          "desc": "The trader proposes buy, hold or sell based on the debate."
+        },
+        "risk": {
+          "title": "Risk review",
+          "desc": "The risk team reviews the proposal against your risk preference (conservative, moderate, aggressive)."
+        },
+        "manager": {
+          "title": "Portfolio manager decision",
+          "desc": "The portfolio manager weighs everything, makes the final call and produces a full report you can keep."
+        }
+      },
+      "options": "Add your own holdings, choose the report language (Chinese, English, Vietnamese), and revisit past analyses in your history.",
+      "pricingTitle": "Pricing",
+      "pricingHead": "Billed by actual AI usage",
+      "pricingDesc": "No monthly fee. Each analysis calls several AI models; the cost is calculated from the tokens actually used and deducted from your credits.",
+      "pricing1": "Your credit balance is checked before each analysis starts.",
+      "pricing2": "If an analysis fails midway, only the part already used is charged.",
+      "pricing3": "For the whole company, the Enterprise plan bills everything from one credit pool.",
+      "enterprise": "See Enterprise plan →",
+      "disclaimer": "This tool is for research and learning only and is not investment advice. If live market data is unavailable, estimated data may be used. Make your own investment decisions and bear your own risk.",
+      "home": "Home",
+      "privacy": "Privacy policy"
+    }
   }
 }

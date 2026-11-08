@@ -28,6 +28,8 @@ export interface RunTradingAgentsParams {
     riskTolerance?: 'Conservative' | 'Moderate' | 'Aggressive'
     outputLanguage?: 'zh-TW' | 'en' | 'vi'
   }
+  /** 每次模型呼叫完成時回報實際 token 用量（供依用量扣點） */
+  onUsage?: (modelId: string, usage: { inputTokens?: number; outputTokens?: number }) => void
 }
 
 export async function runTradingAgents(
@@ -129,6 +131,7 @@ ${roleGuidance[role]}
                 model: candModel,
                 prompt,
                 maxOutputTokens: 4096,
+                onFinish: ({ usage, response }) => params.onUsage?.(response.modelId, usage),
               })
 
               for await (const chunk of stream.textStream) {
@@ -207,6 +210,7 @@ ${round > 1 ? `上一輪空方質疑：${debateStatements[debateStatements.lengt
           model: quickModel,
           prompt: bullPrompt,
           maxOutputTokens: 1024,
+          onFinish: ({ usage, response }) => params.onUsage?.(response.modelId, usage),
         })
         for await (const chunk of stream.textStream) {
           bullText += chunk
@@ -251,6 +255,7 @@ ${round > 1 ? `上一輪空方質疑：${debateStatements[debateStatements.lengt
           model: quickModel,
           prompt: bearPrompt,
           maxOutputTokens: 1024,
+          onFinish: ({ usage, response }) => params.onUsage?.(response.modelId, usage),
         })
         for await (const chunk of stream.textStream) {
           bearText += chunk
@@ -332,6 +337,7 @@ ${round > 1 ? `上一輪空方質疑：${debateStatements[debateStatements.lengt
         model: (deepModel || quickModel)!,
         prompt,
         maxOutputTokens: 512,
+        onFinish: ({ usage, response }) => params.onUsage?.(response.modelId, usage),
       })
       for await (const chunk of stream.textStream) {
         traderRationale += chunk
@@ -410,6 +416,7 @@ ${round > 1 ? `上一輪空方質疑：${debateStatements[debateStatements.lengt
           model: candModel,
           prompt,
           maxOutputTokens: 1024,
+          onFinish: ({ usage, response }) => params.onUsage?.(response.modelId, usage),
         })
         for await (const chunk of stream.textStream) {
           managerText += chunk

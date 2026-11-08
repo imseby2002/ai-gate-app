@@ -13687,7 +13687,53 @@
       "desc": "Một gói mở ERP, marketing, CSKH và công cụ AI cho cả công ty, tính theo số điểm kinh doanh và số người dùng"
     },
     "pricingOf": "Gói {name}",
-    "pricingOthers": "Các hệ thống khác (đặt lịch, ERP, AI Agent…), xem gói Doanh nghiệp hoặc đăng nhập để xem trong từng hệ thống.",
-    "privacy": "Chính sách bảo mật"
+    "pricingOthers": "Các hệ thống khác (ERP, AI Agent…), xem gói Doanh nghiệp hoặc đăng nhập để xem trong từng hệ thống.",
+    "privacy": "Chính sách bảo mật",
+    "tradingPage": {
+      "metaTitle": "TradingAgents phân tích đầu tư | AI GATE",
+      "metaDesc": "Phân tích đầu tư đa Agent AI: bốn chuyên viên phân tích, mười mô hình định giá, tranh luận tăng/giảm, nhà giao dịch, đội rủi ro và quản lý danh mục — tính theo mức dùng AI thực tế.",
+      "navPricing": "Chi phí",
+      "title": "Một đội nghiên cứu AI phân tích cổ phiếu cho bạn",
+      "desc": "Nhập mã cổ phiếu, các chuyên viên phân tích AI, nhà nghiên cứu tăng/giảm, nhà giao dịch, đội rủi ro và quản lý danh mục lần lượt làm việc để tạo báo cáo quyết định đầu tư đầy đủ.",
+      "start": "Bắt đầu phân tích",
+      "howTitle": "Quy trình",
+      "steps": {
+        "analysts": {
+          "title": "Bốn chuyên viên phân tích",
+          "desc": "Phân tích cơ bản, kỹ thuật, tin tức và tâm lý thị trường, dùng giá và chỉ báo kỹ thuật theo thời gian thực."
+        },
+        "valuation": {
+          "title": "Mười mô hình định giá",
+          "desc": "DCF, P/E, PEG, EV/EBITDA, P/B, FCF, ROE, CAPM, EVA và chiết khấu cổ tức được tính cùng lúc."
+        },
+        "debate": {
+          "title": "Tranh luận tăng/giảm",
+          "desc": "Nhà nghiên cứu phe tăng và phe giảm tranh luận 1–3 vòng."
+        },
+        "trader": {
+          "title": "Đề xuất giao dịch",
+          "desc": "Nhà giao dịch đề xuất mua, giữ hoặc bán dựa trên tranh luận."
+        },
+        "risk": {
+          "title": "Kiểm soát rủi ro",
+          "desc": "Đội rủi ro xem xét đề xuất theo khẩu vị rủi ro của bạn (thận trọng, vừa phải, mạo hiểm)."
+        },
+        "manager": {
+          "title": "Quyết định của quản lý danh mục",
+          "desc": "Quản lý danh mục tổng hợp mọi ý kiến, đưa ra quyết định cuối và tạo báo cáo đầy đủ để lưu."
+        }
+      },
+      "options": "Có thể thêm danh mục đang nắm giữ, chọn ngôn ngữ báo cáo (Trung, Anh, Việt) và xem lại lịch sử phân tích.",
+      "pricingTitle": "Chi phí",
+      "pricingHead": "Tính theo mức dùng AI thực tế",
+      "pricingDesc": "Không thu phí tháng. Mỗi lần phân tích gọi nhiều mô hình AI; chi phí được tính theo số token thực dùng và trừ vào điểm.",
+      "pricing1": "Hệ thống kiểm tra số dư điểm trước khi bắt đầu.",
+      "pricing2": "Nếu phân tích lỗi giữa chừng, chỉ trừ phần đã dùng.",
+      "pricing3": "Dùng cho cả công ty, gói Doanh nghiệp tính chung từ một quỹ điểm.",
+      "enterprise": "Xem gói Doanh nghiệp →",
+      "disclaimer": "Công cụ chỉ dùng cho nghiên cứu và học tập, không phải lời khuyên đầu tư. Nếu không lấy được dữ liệu thị trường thời gian thực, hệ thống có thể dùng dữ liệu ước tính. Hãy tự quyết định và tự chịu rủi ro khi đầu tư.",
+      "home": "Trang chủ",
+      "privacy": "Chính sách bảo mật"
+    }
   }
 }
