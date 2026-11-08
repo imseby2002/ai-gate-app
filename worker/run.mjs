@@ -6,6 +6,7 @@ import 'dotenv/config'
 
 const TASKS = {
   'ivt-upload': () => import('./tasks/ivt-upload.mjs'),
+  'video-render': () => import('./tasks/video-render.mjs'),
   // 日後其他部門：'xxx-download': () => import('./tasks/xxx-download.mjs'),
 }
 

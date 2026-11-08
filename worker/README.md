@@ -56,3 +56,35 @@ node run.mjs ivt-upload --page purchase-order --store YL
 
 ## 擴充其他部門任務
 在 `tasks/` 新增 `xxx.mjs`（export `run(args)`），並在 `run.mjs` 的 `TASKS` 註冊即可共用同一台 VM。
+
+## 第二個任務：多分鏡配音影片合成（video-render）
+主 app 行銷自動化「影片產出」單元的「多分鏡配音影片」建立任務後，由此 worker 領取並合成：
+逐段請主 app 產圖＋ElevenLabs 配音（金鑰與扣點都在主 app）→ 套 HTML 版型截圖（標題＋畫面＋字幕）→ ffmpeg 每段緩慢放大、對齊配音長度 → 串接 → 選配背景音樂 → 上傳到主 app 的 Storage。
+
+### VM 需求
+- 規格：2 vCPU / 4GB RAM 起（ffmpeg 轉檔吃 CPU；1 支 5 段約 30～40 秒的影片在 2 vCPU 上約 1～2 分鐘）
+- 系統套件：
+  ```bash
+  sudo apt-get install -y ffmpeg fonts-noto-cjk   # 合成用 ffmpeg/ffprobe；中文字型（沒裝字幕會變方塊）
+  ```
+- 其餘同上方 VM 建置（Node 20、`npm install`、`npx playwright install-deps`）
+
+### 設定（`.env`）
+| 變數 | 說明 |
+| --- | --- |
+| `APP_BASE_URL` | 主 app 網址，例 `https://www.im-tourist.com` |
+| `WORKER_SECRET` | 與主 app 相同的共用密鑰（主 app 也要設 `WORKER_SECRET`） |
+| `BGM_DIR` | 選填。背景音樂資料夾（mp3/m4a/aac/wav），每支影片隨機挑一首；**請放有授權的音樂** |
+| `BGM_VOLUME` | 選填。背景音樂音量，預設 `0.12` |
+| `POLL_SECONDS` | 選填。常駐模式檢查間隔，預設 15 |
+| `CHROMIUM_PATH` / `FFMPEG_PATH` / `FFPROBE_PATH` | 選填。非預設路徑時指定 |
+
+### 執行
+```bash
+node run.mjs video-render          # 處理一筆就結束（沒有任務直接結束）
+node run.mjs video-render --loop   # 常駐，建議用 systemd 或 pm2 守護
+```
+任務卡在「合成中」超過 30 分鐘（例如 VM 重開）會自動被重新領取；已產生的圖片與配音不會重複產生、不會重複扣點。
+
+### 授權聲明
+分鏡流程、旁白／畫面提示詞規範與版型概念參考 [Pixelle-Video](https://github.com/AIDC-AI/Pixelle-Video)（Copyright (C) 2025 AIDC-AI，Apache License 2.0）。本目錄程式碼與版型 HTML/CSS 為本專案自行撰寫，未複製其原始碼。
