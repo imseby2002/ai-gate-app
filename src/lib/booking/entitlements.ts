@@ -14,51 +14,59 @@ export interface BookingPlanFeatures {
   realtimeSync: boolean
   csIntegration: boolean
   promoCodes: boolean
+  /** AI 設計官網與撰寫文案（AI 成本）；false = 只能手動選固定模板 */
+  aiWebsiteDesign: boolean
   assistedSetup: { freePerMonth: number; priceUsd: number }
 }
 
 export const BOOKING_PLAN_FEATURES: Record<BookingPlan, BookingPlanFeatures> = {
+  // 免費為主：沒有額外成本的功能全開；有成本的（Email 轉單 AI 解析、即時通路同步、人工協助）才收費。
+  // 客服串接開放給所有方案，用來帶動 IMT 智能客服訂閱。
   free: {
-    propertyBaseLimit: 1,
+    propertyBaseLimit: 5,
     extraPropertyPriceUsd: 0,
     collaboratorLimit: 0,
-    dynamicPricing: false,
+    dynamicPricing: true,
     emailSync: false,
     realtimeSync: false,
-    csIntegration: false,
-    promoCodes: false,
+    csIntegration: true,
+    aiWebsiteDesign: false,
+    promoCodes: true,
     assistedSetup: { freePerMonth: 0, priceUsd: 20 },
   },
   core: {
-    propertyBaseLimit: 5,
+    propertyBaseLimit: 8,
     extraPropertyPriceUsd: 4,
     collaboratorLimit: 1,
     dynamicPricing: true,
     emailSync: true,
     realtimeSync: false,
-    csIntegration: false,
+    csIntegration: true,
+    aiWebsiteDesign: true,
     promoCodes: true,
     assistedSetup: { freePerMonth: 0, priceUsd: 20 },
   },
   pro: {
-    propertyBaseLimit: 5,
+    propertyBaseLimit: 10,
     extraPropertyPriceUsd: 3,
     collaboratorLimit: 2,
     dynamicPricing: true,
     emailSync: true,
     realtimeSync: true,
     csIntegration: true,
+    aiWebsiteDesign: true,
     promoCodes: true,
     assistedSetup: { freePerMonth: 1, priceUsd: 20 },
   },
   enterprise: {
-    propertyBaseLimit: 15,
+    propertyBaseLimit: 16,
     extraPropertyPriceUsd: 2,
     collaboratorLimit: Infinity,
     dynamicPricing: true,
     emailSync: true,
     realtimeSync: true,
     csIntegration: true,
+    aiWebsiteDesign: true,
     promoCodes: true,
     assistedSetup: { freePerMonth: 2, priceUsd: 20 },
   },

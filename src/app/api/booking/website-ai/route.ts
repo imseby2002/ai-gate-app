@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { generateText } from 'ai'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { trackAiUsage } from '@/lib/ai/universal-tracker'
+import { getBnbContext } from '@/lib/bnb/context'
+import { getBookingEntitlements } from '@/lib/booking/entitlements'
 import { CUSTOM_HEADING_FONTS, sanitizeCustomDesign } from '@/lib/booking/templates'
 import { getUiStyle, uiStylesPromptList } from '@/lib/booking/uiStyles'
 
@@ -93,6 +95,14 @@ export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  // AI 設計官網與撰寫文案有 AI 成本：CORE 以上才開放，FREE 只能手動選固定模板
+  const ctx = await getBnbContext(supabase, 'booking')
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { features } = await getBookingEntitlements(supabase, ctx.ownerId)
+  if (!features.aiWebsiteDesign) {
+    return NextResponse.json({ error: 'AI 設計官網需 CORE 以上方案；免費方案可直接選擇固定模板', upgrade: true }, { status: 403 })
+  }
 
   const { messages, profile } = await req.json()
 
