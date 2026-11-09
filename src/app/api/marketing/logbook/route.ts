@@ -4,8 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSkill } from '@/lib/skills/registry'
 import { marketingCompany } from '@/lib/marketing/company'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { createAnthropic } from '@ai-sdk/anthropic'
-import { generateText } from 'ai'
+import { chainText } from '@/lib/ai/proxy-fallback'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -453,9 +452,7 @@ ${calFacts || '（無排程紀錄）'}
 ${offFacts || '（無實體活動紀錄）'}`
 
   try {
-    const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-    const res = await generateText({
-      model: anthropic('claude-sonnet-4-5'),
+    const res = await chainText('content', {
       system,
       maxOutputTokens: 1500,
       messages: [{ role: 'user', content: userPrompt }],

@@ -16,8 +16,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createHash } from 'crypto'
 import { createClient } from '@/lib/supabase/server'
-import { createAnthropic } from '@ai-sdk/anthropic'
-import { generateText } from 'ai'
+import { chainText } from '@/lib/ai/proxy-fallback'
 import { outputLangInstruction } from '@/lib/ai/output-lang'
 import { enrichJsonLd, type Material } from '@/lib/geo/schema'
 import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
@@ -167,7 +166,6 @@ export const POST = withUsage('[marketing] GEO 產文', async function POST(req:
   const author = (project.author ?? '').trim() || mat.authors?.[0]?.name || defaultAuthorName
   const questions = qRows.map(r => r.question)
 
-  const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
   const promptText = `${SYSTEM}${outputLangInstruction(locale)}
 
@@ -187,12 +185,11 @@ ${author.trim() || defaultAuthorName}
   let json_ld: unknown = null
   let title = topic
   try {
-    const { text, usage } = await generateText({
-      model: anthropic('claude-sonnet-4-6'),
+    const { text, usage, usedModel } = await chainText('content', {
       messages: [{ role: 'user', content: promptText }],
       maxOutputTokens: 4000,
     })
-    trackLlm('claude-sonnet-4-6', usage)
+    trackLlm(usedModel, usage)
 
     const bodyMatch = text.match(/===ARTICLE_START===([\s\S]*?)===ARTICLE_END===/)
     const jsonldMatch = text.match(/===JSONLD_START===([\s\S]*?)===JSONLD_END===/)

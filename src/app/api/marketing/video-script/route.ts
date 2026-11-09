@@ -21,8 +21,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getCronOrUserAuth } from '@/lib/cron-auth'
-import { createAnthropic } from '@ai-sdk/anthropic'
-import { generateText } from 'ai'
+import { chainText } from '@/lib/ai/proxy-fallback'
 import { langInstruction } from '@/lib/marketing/lang'
 import { getSkillKnowledge } from '@/lib/skills/knowledge'
 import { loadKnowledgeContext } from '@/lib/knowledge/context'
@@ -199,10 +198,8 @@ ${feedbackSection}
     : ''
   const companyKnowledgeSection = companyKnowledge ? `\n\n【公司知識庫】\n${companyKnowledge}` : ''
 
-  const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
 
-  const { text } = await generateText({
-    model: anthropic('claude-sonnet-4-5'),
+  const { text } = await chainText('content', {
     system: `你是一位頂尖的影片行銷導演，擅長為各社群平台撰寫高轉換率的影片分鏡腳本。
 你熟知短影音的黃金法則：前3秒必須抓住觀眾、節奏明快、視覺衝擊強、CTA清晰。
 輸出格式：每個影片腳本用「===【影片 N】===」作為分隔標題，直接輸出腳本，不需其他說明。

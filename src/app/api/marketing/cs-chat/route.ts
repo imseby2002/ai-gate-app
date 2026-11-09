@@ -762,7 +762,7 @@ const systemPrompt = `${baseInstructions}
   let reply = ''
   let provider = 'FreeLLM'
 
-  // High-risk (投訴/退款) → Claude Sonnet directly, no proxy
+  // High-risk (投訴/退款) → Claude Sonnet 5.5 directly（A 組：重要情境只用 Claude）
   if (shouldEscalate) {
     const anthropicKey = process.env.ANTHROPIC_API_KEY
     if (anthropicKey) {
@@ -770,7 +770,8 @@ const systemPrompt = `${baseInstructions}
       try {
         const anthropic = createAnthropic({ apiKey: anthropicKey })
         const { text } = await generateText({
-          model: anthropic('claude-sonnet-4-6'),
+          model: anthropic('claude-sonnet-5-5'),
+          maxOutputTokens: 16000,
           system: systemPrompt,
           messages: msgHistory,
         })

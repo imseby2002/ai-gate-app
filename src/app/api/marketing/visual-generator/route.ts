@@ -3,10 +3,9 @@ import { createClient } from '@/lib/supabase/server'
 import { VISUAL_TEMPLATES, type VisualTemplate } from '@/lib/marketing/visual-templates'
 import { IMAGE_PROVIDER_COSTS, NANO_BANANA_PRO_FAL_COST, NANO_BANANA_PRO_FAL_REF_IMAGE_COST, checkCredits, deductCredits, getCostMultiplier, isBillableUser, llmCost, priceFromCost } from '@/lib/marketing/billing'
 import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
-import { createAnthropic } from '@ai-sdk/anthropic'
+import { chainText } from '@/lib/ai/proxy-fallback'
 import { generateNanoBananaWithCost } from '@/lib/ai/nano-banana'
 import { generateIdeogram } from '@/lib/ai/ideogram'
-import { generateText } from 'ai'
 
 export const maxDuration = 120
 
@@ -31,13 +30,8 @@ async function translateOrEnrichSubject(userText: string, spend?: Spend): Promis
     return trimmed
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY
-  if (!apiKey) return trimmed
-
   try {
-    const anthropic = createAnthropic({ apiKey })
-    const { text, usage } = await generateText({
-      model: anthropic('claude-haiku-4-5'),
+    const { text, usage, usedModel } = await chainText('translate', {
       messages: [{
         role: 'user',
         content: `Translate and describe the following product or marketing concept into concise, vivid English visual descriptors for an AI image prompt:
@@ -46,7 +40,7 @@ Focus on product subject, textures, appetizing or attractive details, and clear 
       }],
       maxOutputTokens: 120,
     })
-    if (spend) spend.usd += llmCost('claude-haiku-4-5', usage)
+    if (spend) spend.usd += llmCost(usedModel, usage)
     return text.trim() || trimmed
   } catch {
     return trimmed
@@ -96,14 +90,11 @@ async function directReferenceEdit(
   images: string[],
   spend?: Spend,
 ): Promise<string | null> {
-  const apiKey = process.env.ANTHROPIC_API_KEY
-  if (!apiKey) return null
   const isMulti = images.length > 1
 
   try {
-    const anthropic = createAnthropic({ apiKey })
-    const { text, usage } = await generateText({
-      model: anthropic('claude-sonnet-4-6'),
+    // 看圖寫指令：免費視覺模型優先 → Claude Haiku 5.5 → Sonnet 5.5（整體 25 秒內，逾時改用預設指令）
+    const { text, usage, usedModel } = await chainText('vision', {
       abortSignal: AbortSignal.timeout(25000),
       system: `You are an art director writing ONE instruction for the Nano Banana Pro (Gemini) image model, which creates a new design from the given input image(s).
 Goal: turn the input photo(s) into a finished design that unmistakably looks like the requested genre, not the original photo with text pasted on top.
@@ -133,7 +124,7 @@ User notes: ${userText?.trim() || '(none)'}`,
       }],
       maxOutputTokens: 400,
     })
-    if (spend) spend.usd += llmCost('claude-sonnet-4-6', usage)
+    if (spend) spend.usd += llmCost(usedModel, usage)
     const out = text.trim()
     return out || null
   } catch (e) {

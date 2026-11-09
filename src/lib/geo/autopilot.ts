@@ -4,7 +4,7 @@
  *  - runAutoPilot：選題 ➔ 探勘問句 ➔ 整合公司事實 ➔ 產出文章與 JSON-LD，寫入 geo_projects / geo_questions / geo_articles
  */
 import { createHash } from 'crypto'
-import { generateTextByChain, type ChainName } from '@/lib/ai/proxy-fallback'
+import { generateTextByChain, looksLikeJson, type ChainName } from '@/lib/ai/proxy-fallback'
 import type { createAdminClient } from '@/lib/supabase/admin'
 import { loadCompanyProfile, type CompanyProfile } from '@/lib/company/profile'
 import { outputLangInstruction } from '@/lib/ai/output-lang'
@@ -14,9 +14,9 @@ import { llmCost } from '@/lib/marketing/billing'
 type Admin = ReturnType<typeof createAdminClient>
 type Intent = 'info' | 'local' | 'compare' | 'transact'
 
-// 免費優先：短任務走 creative 鏈（不含 Claude），長文走 agent 鏈（Claude Haiku 只當最後保底）
-const AUTOPILOT_FAST_CHAIN: ChainName = 'creative'
-const AUTOPILOT_ARTICLE_CHAIN: ChainName = 'agent'
+// 免費優先：短任務（JSON）走 extraction 鏈，長文走 content 鏈（免費 → Claude Haiku 5.5 → Sonnet 5.5）
+const AUTOPILOT_FAST_CHAIN: ChainName = 'extraction'
+const AUTOPILOT_ARTICLE_CHAIN: ChainName = 'content'
 
 export interface SuggestedTopic {
   title: string
@@ -41,10 +41,14 @@ const ARTICLE_SYSTEM = `你是 GEO（Generative Engine Optimization）頂級專�
 - 嚴格只回傳這兩段標記包住的內容，不要其他開頭或結尾寒暄`
 
 async function gen(chain: ChainName, prompt: string, maxOutputTokens?: number) {
+  // 品質把關：JSON 任務要能解析、文章要有完整標記，否則換下一層模型
+  const validate = chain === AUTOPILOT_ARTICLE_CHAIN
+    ? (t: string) => t.includes('===ARTICLE_START===') && t.includes('===ARTICLE_END===')
+    : looksLikeJson
   const { result, usedModel, usedVia } = await generateTextByChain(chain, {
     messages: [{ role: 'user', content: prompt }],
     ...(maxOutputTokens ? { maxOutputTokens } : {}),
-  }, { timeoutMs: 180000 })
+  }, { timeoutMs: 180000, feature: 'geo', validate })
   // 只有付費直連才計費；免費通道成本為 0
   const cost = usedVia === 'direct' ? llmCost(usedModel, result.usage) : 0
   return { text: result.text, cost }

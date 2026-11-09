@@ -6,15 +6,15 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createAnthropic } from '@ai-sdk/anthropic'
-import { generateText } from 'ai'
+import { chainText } from '@/lib/ai/proxy-fallback'
 import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
 import { llmCost, precheckUsage, chargeUsage } from '@/lib/marketing/billing'
 
 export const maxDuration = 60
 
 const MAX_CONTEXT_CHARS = 180_000 // 知識庫塞進 system prompt 的上限
-const MODEL = 'claude-sonnet-4-6'
+// 預扣以最貴的保底模型估算；實際依使用的模型計費（免費通道為 0）
+const MODEL = 'claude-sonnet-5-5'
 const MAX_OUTPUT_TOKENS = 2000
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -32,8 +32,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const question = String(body.question ?? '').trim()
   if (!question) return NextResponse.json({ error: '請輸入問題' }, { status: 400 })
 
-  const apiKey = process.env.ANTHROPIC_API_KEY
-  if (!apiKey) return NextResponse.json({ error: 'ANTHROPIC_API_KEY 未設定' }, { status: 500 })
 
   // 讀專家與知識來源（RLS 保證擁有者）
   const { data: expert } = await supabase
@@ -74,19 +72,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   let answer = ''
   let usage: { inputTokens?: number; outputTokens?: number } | undefined
+  let usedModel = MODEL
   try {
-    const res = await generateText({
-      model: createAnthropic({ apiKey })(MODEL),
+    const res = await chainText('content', {
       system,
       messages: [{ role: 'user', content: question }],
       maxOutputTokens: MAX_OUTPUT_TOKENS,
     })
     answer = res.text
     usage = res.usage
+    usedModel = res.usedModel
   } catch (err) {
     return NextResponse.json({ error: `作答失敗：${String(err)}` }, { status: 500 })
   }
 
-  const cost = await chargeUsage(user.id, llmCost(MODEL, usage), `[marketing] 自製專家問答（${expert.name}）`)
+  const cost = await chargeUsage(user.id, llmCost(usedModel, usage), `[marketing] 自製專家問答（${expert.name}）`)
   return NextResponse.json({ answer, cost })
 }

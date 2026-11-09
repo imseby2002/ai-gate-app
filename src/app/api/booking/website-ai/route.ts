@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { generateText } from 'ai'
-import { createAnthropic } from '@ai-sdk/anthropic'
-import { trackAiUsage } from '@/lib/ai/universal-tracker'
+import { chainText } from '@/lib/ai/proxy-fallback'
 import { getBnbContext } from '@/lib/bnb/context'
 import { getBookingEntitlements } from '@/lib/booking/entitlements'
 import { CUSTOM_HEADING_FONTS, sanitizeCustomDesign } from '@/lib/booking/templates'
@@ -106,8 +104,6 @@ export async function POST(req: NextRequest) {
 
   const { messages, profile } = await req.json()
 
-  const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-
   const systemWithProfile = `${SYSTEM}
 
 【目前官網狀態】
@@ -118,8 +114,9 @@ export async function POST(req: NextRequest) {
 民宿故事：${profile.about ? profile.about.slice(0, 300) + '...' : '（未填）'}
 SEO 標題：${profile.seo_title || '（未填）'}`
 
-  const res = await generateText({
-    model: anthropic('claude-sonnet-4-6'),
+  // 免費模型優先 → Claude Haiku 5.5 → Sonnet 5.5；有附圖走 vision 鏈。<updates> 區塊被截斷就換下一層
+  const hasImages = (messages as { images?: unknown }[]).some(m => Array.isArray(m.images) && m.images.length > 0)
+  const res = await chainText(hasImages ? 'vision' : 'content', {
     system: systemWithProfile,
     messages: (messages as { role: string; content: string; images?: unknown }[]).map(m => {
       if (m.role !== 'user') return { role: 'assistant' as const, content: m.content }
@@ -138,17 +135,9 @@ SEO 標題：${profile.seo_title || '（未填）'}`
     }),
     // 一次產出多個長文案欄位（故事、FAQ…）很容易超過 2500，被截斷後 </updates> 不見、整段 JSON 直接露在對話裡
     maxOutputTokens: 8000,
-  })
+  }, { feature: 'booking', timeoutMs: 120000, validate: t => !t.includes('<updates>') || t.includes('</updates>') })
 
   const raw = res.text
-  const usage = (res as any).usage ?? {}
-  void trackAiUsage({
-    feature: 'other',
-    modelId: 'claude-sonnet-4-6',
-    inputTokens: Number(usage.inputTokens ?? usage.promptTokens ?? 0),
-    outputTokens: Number(usage.outputTokens ?? usage.completionTokens ?? 0),
-    sourceChannel: 'anthropic',
-  })
 
   // <updates> 之後的內容一律不顯示在對話裡；即使被截斷（沒有結尾標籤）或包了 ```json 也盡量解析
   const openIdx = raw.indexOf('<updates>')

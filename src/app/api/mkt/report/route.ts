@@ -1,7 +1,6 @@
 import { getUnitContext } from '@/lib/auth/unit-access'
 import { buildMktSnapshot, type MktSnapshot } from '@/lib/mkt/analytics'
-import { createAnthropic } from '@ai-sdk/anthropic'
-import { generateText } from 'ai'
+import { chainText } from '@/lib/ai/proxy-fallback'
 import { NextRequest, NextResponse } from 'next/server'
 
 export const maxDuration = 60
@@ -37,8 +36,7 @@ export async function POST(req: NextRequest) {
 原則：先講重點結論與需注意處（外送成長/衰退、行銷支出效率、內容產能），再給具體建議行動。
 用繁體中文、條列、務實，控制在 500 字內，不要編造資料裡沒有的數字。`
   try {
-    const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-    const res = await generateText({ model: anthropic('claude-sonnet-4-5'), system, maxOutputTokens: 1500, messages: [{ role: 'user', content: `以下是本期行銷彙整資料，請產出${kind}：\n\n${body}` }] })
+    const res = await chainText('content', { system, maxOutputTokens: 1500, messages: [{ role: 'user', content: `以下是本期行銷彙整資料，請產出${kind}：\n\n${body}` }] }, { feature: 'marketing' })
     return NextResponse.json({ report: res.text.trim(), snapshot: snap })
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 })

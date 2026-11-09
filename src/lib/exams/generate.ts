@@ -1,10 +1,8 @@
 // AI 依公司知識出題：指定各題型數量，產出中英越三語題目、答案、評分重點與說明。
-// 專案沒有安裝 Anthropic 官方 SDK（且不得新增套件），沿用既有的 @ai-sdk/anthropic。
-import { createAnthropic } from '@ai-sdk/anthropic'
-import { generateText } from 'ai'
+// 模型走免費優先鏈（content）：CLIProxy gemini-2.5-pro / gpt-5.5 / kimi-k2.5 → FreeLLM → Claude Haiku 5.5 → Sonnet 5.5
+import { chainText, looksLikeJson } from '@/lib/ai/proxy-fallback'
 import { normalizeQuestion, type ExamQuestion, type QuestionType } from './types'
 
-export const EXAM_MODEL = 'claude-opus-5-5'
 /** 一次出題的知識總長上限（字元）；超過時請使用者減少選用的知識檔案，不靜默截斷 */
 export const MAX_KNOWLEDGE_CHARS = 600_000
 export const MAX_QUESTIONS_PER_RUN = 40
@@ -27,14 +25,11 @@ const JSON_FORMAT = `只輸出一個 JSON 陣列，不要任何其他文字或 M
 沒有選項的題型 options 給 []；不需要 rubric 的題型 rubric 給空字串。`
 
 async function runModel(system: string, user: string, startPosition: number): Promise<ExamQuestion[]> {
-  const apiKey = process.env.ANTHROPIC_API_KEY
-  if (!apiKey) throw new Error('ANTHROPIC_API_KEY 未設定')
-  const res = await generateText({
-    model: createAnthropic({ apiKey })(EXAM_MODEL),
+  const res = await chainText('content', {
     system,
     messages: [{ role: 'user', content: user }],
     maxOutputTokens: 64000,
-  })
+  }, { feature: 'exams', validate: looksLikeJson, timeoutMs: 300000 })
   const text = res.text.trim()
   const start = text.indexOf('[')
   const end = text.lastIndexOf(']')

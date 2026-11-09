@@ -508,3 +508,189 @@ export function looksLikeJson(text: string): boolean {
   if (end <= start) return false
   try { JSON.parse(t.slice(start, end + 1)); return true } catch { return false }
 }
+
+/**
+ * generateText 的替代品：照鏈順序嘗試，回傳原本的 generateText 結果，並附上實際使用的模型。
+ * 計費請用 usedModel（免費通道在 llmCost / directCostUsd 中為 0）。
+ */
+export async function chainText(
+  chainName: ChainName,
+  args: Omit<Parameters<typeof generateText>[0], 'model'>,
+  opts?: GenerateFallbackOptions,
+) {
+  const r = await generateTextByChain(chainName, args, opts)
+  return Object.assign(r.result, { usedModel: r.usedModel, usedVia: r.usedVia })
+}
+
+/**
+ * streamText 的鏈式版本：逐一嘗試，偷看到第一段內容才算成功（錯誤在串流開頭才會出現）。
+ * 回傳 fullStream / textStream（皆可 for-await），以及實際使用的模型。
+ */
+export async function streamTextByChain(
+  chainName: ChainName,
+  args: Omit<Parameters<typeof streamText>[0], 'model'>,
+  opts: { timeoutMs?: number } = {},
+) {
+  const chain = FALLBACK_CHAINS[chainName]
+  let lastError: unknown = new Error('No providers available')
+  for (let i = 0; i < chain.length; i++) {
+    const attempt = chain[i]
+    let model: LanguageModel
+    try { model = buildModel(attempt) } catch (err) { lastError = err; continue }
+    const callArgs = { ...args } as Record<string, unknown>
+    if (isClaude5(attempt)) {
+      delete callArgs.temperature
+      delete callArgs.topP
+      delete callArgs.topK
+      if (callArgs.maxOutputTokens == null || Number(callArgs.maxOutputTokens) < 2000) {
+        callArgs.maxOutputTokens = Math.max(Number(callArgs.maxOutputTokens ?? 0), 16000)
+      }
+    }
+    try {
+      const stream = streamText({
+        ...callArgs,
+        model,
+        abortSignal: args.abortSignal ?? AbortSignal.timeout(opts.timeoutMs ?? 120000),
+      } as Parameters<typeof streamText>[0])
+      const iterator = stream.fullStream[Symbol.asyncIterator]()
+      const buffered: Array<Awaited<ReturnType<typeof iterator.next>>['value']> = []
+      let exhausted = false
+      for (let p = 0; p < 50; p++) {
+        const next = await iterator.next()
+        if (next.done) { exhausted = true; break }
+        buffered.push(next.value)
+        if (next.value.type === 'error') throw next.value.error
+        if (next.value.type === 'text-delta') break
+      }
+      if (exhausted && !buffered.some(b => b.type === 'text-delta')) throw new Error('empty response')
+
+      async function* fullStream() {
+        for (const part of buffered) yield part
+        if (exhausted) return
+        while (true) {
+          const next = await iterator.next()
+          if (next.done) return
+          yield next.value
+        }
+      }
+      const parts = fullStream()
+      async function* textStream() {
+        for await (const part of parts) {
+          if (part.type === 'text-delta') yield part.text
+          else if (part.type === 'error') throw part.error
+        }
+      }
+      return {
+        fullStream: parts,
+        textStream: textStream(),
+        usage: stream.usage,
+        usedModel: attemptModelId(attempt),
+        usedVia: attempt.via,
+      }
+    } catch (err) {
+      lastError = err
+      console.warn(`[fallback:stream] ${attemptModelId(attempt)} failed:`, err instanceof Error ? err.message : err)
+    }
+  }
+  throw lastError
+}
+
+// ── 鏈式 LanguageModel：給只能接受單一模型的地方用（generateText / streamText 皆可） ──
+
+type V3Model = Extract<LanguageModel, { specificationVersion: 'v3' }>
+type V3CallOptions = Parameters<V3Model['doGenerate']>[0]
+
+/**
+ * 把一條鏈包成單一 LanguageModel：doGenerate / doStream 依序嘗試，出錯就換下一個。
+ * 串流會先偷看到第一段文字或工具呼叫才算成功。onUsed 會告知實際使用的模型（可用來記錄用量）。
+ */
+export function createChainModel(chain: readonly Attempt[], onUsed?: (attempt: Attempt) => void): V3Model {
+  const label = chain.map(attemptModelId).join(' → ')
+
+  function prepare(attempt: Attempt, options: V3CallOptions): V3CallOptions {
+    if (!isClaude5(attempt)) return options
+    const o = { ...options } as V3CallOptions & Record<string, unknown>
+    delete o.temperature
+    delete o.topP
+    delete o.topK
+    if (o.maxOutputTokens == null) o.maxOutputTokens = 16000
+    else if (o.maxOutputTokens < 2000) o.maxOutputTokens = 2000
+    return o
+  }
+
+  function models() {
+    const out: { attempt: Attempt; model: V3Model }[] = []
+    for (const attempt of chain) {
+      try { out.push({ attempt, model: buildModel(attempt) as V3Model }) } catch { /* 未設定的通道略過 */ }
+    }
+    if (!out.length) throw new Error(`沒有可用的 AI 通道（${label}）`)
+    return out
+  }
+
+  return {
+    specificationVersion: 'v3',
+    provider: 'chain',
+    modelId: label,
+    supportedUrls: {},
+    async doGenerate(options) {
+      let lastError: unknown
+      for (const { attempt, model } of models()) {
+        try {
+          const res = await model.doGenerate(prepare(attempt, options))
+          const hasContent = res.content.some(c => (c.type === 'text' && c.text.trim()) || c.type === 'tool-call')
+          if (!hasContent) throw new Error('empty response')
+          onUsed?.(attempt)
+          return res
+        } catch (err) {
+          lastError = err
+          console.warn(`[chain-model] ${attemptModelId(attempt)} failed:`, err instanceof Error ? err.message : err)
+        }
+      }
+      throw lastError
+    },
+    async doStream(options) {
+      let lastError: unknown
+      for (const { attempt, model } of models()) {
+        try {
+          const res = await model.doStream(prepare(attempt, options))
+          const reader = res.stream.getReader()
+          const buffered: unknown[] = []
+          let done = false
+          for (let p = 0; p < 50; p++) {
+            const next = await reader.read()
+            if (next.done) { done = true; break }
+            const part = next.value as { type: string; error?: unknown }
+            if (part.type === 'error') throw part.error
+            buffered.push(next.value)
+            if (part.type === 'text-delta' || part.type === 'tool-call' || part.type === 'tool-input-start') break
+          }
+          if (done && !buffered.some(b => ['text-delta', 'tool-call'].includes((b as { type: string }).type))) {
+            throw new Error('empty response')
+          }
+          onUsed?.(attempt)
+          const stream = new ReadableStream({
+            async start(controller) {
+              for (const b of buffered) controller.enqueue(b)
+              if (done) { controller.close(); return }
+              try {
+                while (true) {
+                  const next = await reader.read()
+                  if (next.done) break
+                  controller.enqueue(next.value)
+                }
+                controller.close()
+              } catch (e) {
+                controller.error(e)
+              }
+            },
+          })
+          return { ...res, stream } as typeof res
+        } catch (err) {
+          lastError = err
+          console.warn(`[chain-model:stream] ${attemptModelId(attempt)} failed:`, err instanceof Error ? err.message : err)
+        }
+      }
+      throw lastError
+    },
+  }
+}

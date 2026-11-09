@@ -8,8 +8,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createAnthropic } from '@ai-sdk/anthropic'
-import { generateText } from 'ai'
+import { chainText } from '@/lib/ai/proxy-fallback'
 import { langInstruction } from '@/lib/marketing/lang'
 import { chargeUsage, llmCost, precheckUsage } from '@/lib/marketing/billing'
 import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
@@ -17,7 +16,6 @@ import { STORY_DISABLED_MSG, STORY_MAX_NARRATION, storyVideoEnabled } from '@/li
 
 export const maxDuration = 60
 
-const MODEL = 'claude-sonnet-4-6'
 
 function buildPrompt(content: string, n: number, mode: 'topic' | 'content', language: string | undefined, style: string): string {
   const task = mode === 'topic'
@@ -69,13 +67,11 @@ export async function POST(req: NextRequest) {
   const blocked = await precheckUsage(user.id, 0.05)
   if (blocked) return NextResponse.json(blocked, { status: 402 })
 
-  const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
-  const { text, usage } = await generateText({
-    model: anthropic(MODEL),
+  const { text, usage, usedModel } = await chainText('content', {
     prompt: buildPrompt(content, n, mode, body.language, style),
     maxOutputTokens: 4000,
   })
-  await chargeUsage(user.id, llmCost(MODEL, usage), '[marketing] 多分鏡影片腳本')
+  await chargeUsage(user.id, llmCost(usedModel, usage), '[marketing] 多分鏡影片腳本')
 
   let parsed: { title?: string; scenes?: { narration?: string; visualPrompt?: string }[] } | null = null
   try {

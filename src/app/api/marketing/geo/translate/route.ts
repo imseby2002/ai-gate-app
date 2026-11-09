@@ -10,8 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createHash } from 'crypto'
 import { createClient } from '@/lib/supabase/server'
-import { createAnthropic } from '@ai-sdk/anthropic'
-import { generateText } from 'ai'
+import { chainText } from '@/lib/ai/proxy-fallback'
 import { outputLangInstruction } from '@/lib/ai/output-lang'
 import { setUsageUser, trackLlm, withUsage } from '@/lib/marketing/usage'
 import { precheckUsage } from '@/lib/marketing/billing'
@@ -43,8 +42,6 @@ export const POST = withUsage('[marketing] GEO 翻譯', async function POST(req:
     .single()
   if (!src) return NextResponse.json({ error: '找不到原文章' }, { status: 404 })
 
-  const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-
   const promptText = `你是專業在地化譯者。請將以下 GEO 文章與其 JSON-LD 翻譯成目標語言，務必：
 - 保留所有 Markdown 結構（H1/H2/H3、清單、表格、FAQ），保留「開頭直接回答」段。
 - 翻譯要在地、自然，符合當地用語，而非逐字直譯。
@@ -65,12 +62,12 @@ ${src.json_ld ? (typeof src.json_ld === 'string' ? src.json_ld : JSON.stringify(
   let json_ld: unknown = null
   let title = ''
   try {
-    const { text, usage } = await generateText({
-      model: anthropic('claude-sonnet-4-6'),
+    // 翻譯：免費模型優先 → Claude Haiku 5.5；文章標記不完整就換下一層
+    const { text, usage, usedModel } = await chainText('translate', {
       messages: [{ role: 'user', content: promptText }],
-      maxOutputTokens: 4000,
-    })
-    trackLlm('claude-sonnet-4-6', usage)
+      maxOutputTokens: 8000,
+    }, { feature: 'geo', timeoutMs: 120000, validate: t => t.includes('===ARTICLE_START===') && t.includes('===ARTICLE_END===') })
+    trackLlm(usedModel, usage)
     const bodyMatch = text.match(/===ARTICLE_START===([\s\S]*?)===ARTICLE_END===/)
     const jsonldMatch = text.match(/===JSONLD_START===([\s\S]*?)===JSONLD_END===/)
     body_md = bodyMatch ? bodyMatch[1].trim() : text.trim()

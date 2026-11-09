@@ -1,7 +1,6 @@
 ﻿import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createAnthropic } from '@ai-sdk/anthropic'
-import { generateText } from 'ai'
+import { chainText } from '@/lib/ai/proxy-fallback'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -11,14 +10,12 @@ export async function POST(req: NextRequest) {
   const { copy, companyName, topic, feedback } = await req.json()
   if (!copy) return NextResponse.json({ error: 'copy required' }, { status: 400 })
 
-  const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
 
   const feedbackSection = feedback
     ? `\n\n上一版本的修改意見：${feedback}\n請根據以上意見調整腳本。`
     : ''
 
-  const { text } = await generateText({
-    model: anthropic('claude-sonnet-4-5'),
+  const { text } = await chainText('content', {
     system: '你是一位資深影片導演兼腳本撰寫人，擅長為品牌製作30秒行銷短片的分鏡腳本。',
     messages: [
       {
