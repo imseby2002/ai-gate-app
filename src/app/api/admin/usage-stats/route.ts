@@ -384,16 +384,30 @@ export async function GET(req: NextRequest) {
   // ─────────────────────────────────────────────────────────────────────────────
   if (filterService === 'all' || filterService === 'agent') {
     try {
-      let agentQuery = supabase!
-        .from('agent_run_steps')
-        .select('id, run_id, phase, model_id, input_tokens, output_tokens, credits_spent, created_at')
-        .order('created_at', { ascending: true })
-
-      if (startDateStr) {
-        agentQuery = agentQuery.gte('created_at', `${startDateStr}T00:00:00.000Z`)
+      // Supabase 單次最多回傳 1000 筆，需分頁讀完，否則最新的步驟會被截掉
+      const PAGE = 1000
+      const agentSteps: Array<{
+        id: string; run_id: string; phase: string | null; model_id: string | null
+        input_tokens: number | null; output_tokens: number | null
+        credits_spent: number | string | null; created_at: string
+      }> = []
+      let agentErr: { message: string } | null = null
+      for (let from = 0; ; from += PAGE) {
+        let agentQuery = supabase!
+          .from('agent_run_steps')
+          .select('id, run_id, phase, model_id, input_tokens, output_tokens, credits_spent, created_at')
+          .order('created_at', { ascending: true })
+          .order('id', { ascending: true })
+          .range(from, from + PAGE - 1)
+        if (startDateStr) {
+          agentQuery = agentQuery.gte('created_at', `${startDateStr}T00:00:00.000Z`)
+        }
+        const { data, error } = await agentQuery
+        if (error) { agentErr = error; break }
+        agentSteps.push(...(data ?? []))
+        if (!data || data.length < PAGE) break
       }
 
-      const { data: agentSteps, error: agentErr } = await agentQuery
       if (agentErr) {
         console.warn('[usage-stats] agent_run_steps warning:', agentErr.message)
       } else {
