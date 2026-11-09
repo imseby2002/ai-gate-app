@@ -799,13 +799,40 @@ export default function TradingAgentsPage() {
                   {riskText || (riskAssessment ? `壓力測試狀態：${riskAssessment.stressTestVerdict}。部位上限鎖定 ${riskAssessment.positionSizingCapPercent}%。` : '壓力測試評估中...')}
                 </div>
                 {riskAssessment && (
-                  <div className="pt-2 border-t text-xs space-y-1">
-                    <div className="text-muted-foreground">
-                      最大下行預估: <strong className="text-rose-500">-{riskAssessment.maxDrawdownEstimatePercent}%</strong>
+                  <div className="pt-2 border-t text-xs space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">最大下行預估:</span>
+                      <strong className="text-rose-500 font-mono">-{riskAssessment.maxDrawdownEstimatePercent}%</strong>
                     </div>
-                    <div className="text-muted-foreground">
-                      波動率評級: <strong>{riskAssessment.volatilityRating}</strong>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">波動率評級:</span>
+                      <strong className="text-foreground">{riskAssessment.volatilityRating}</strong>
                     </div>
+                    {riskAssessment.geopolitical && (
+                      <div className="p-2 rounded-lg bg-muted/60 border border-border/80 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-foreground flex items-center gap-1">
+                            <Globe className="h-3 w-3 text-sky-400" />
+                            地緣政治實質傳導：
+                          </span>
+                          <span className="text-[11px] font-bold px-1.5 py-0.5 rounded" style={{
+                            backgroundColor: `${riskAssessment.geopolitical.badgeColor}22`,
+                            color: riskAssessment.geopolitical.badgeColor,
+                            border: `1px solid ${riskAssessment.geopolitical.badgeColor}55`,
+                          }}>
+                            {riskAssessment.geopolitical.overallLevel.split(' ')[0]}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-muted-foreground">
+                          CDS 利差懲罰: <strong className="text-rose-400">+{riskAssessment.geopolitical.cdsSpreadPenaltyBps} bps</strong> · 估值折價: <strong className="text-rose-400">-{riskAssessment.geopolitical.valuationDiscountPercent}%</strong>
+                        </div>
+                        {riskAssessment.geopolitical.keyExposures[0] && (
+                          <div className="text-[11px] text-muted-foreground truncate" title={riskAssessment.geopolitical.keyExposures[0]}>
+                            曝險：{riskAssessment.geopolitical.keyExposures[0]}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </Card>

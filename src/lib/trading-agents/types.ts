@@ -166,6 +166,7 @@ export interface RiskAssessment {
   stressTestVerdict: 'Passed' | 'Caution' | 'Rejected'
   concerns: string[]
   hedgingRecommendations: string[]
+  geopolitical?: import('./geopolitical').GeopoliticalProfile // 地緣政治 4 大實質傳導與壓力測試
 }
 
 export interface FinalDecision {

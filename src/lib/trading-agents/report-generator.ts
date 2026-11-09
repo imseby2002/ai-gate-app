@@ -337,6 +337,81 @@ export function generateCompleteReportHtml(params: {
       </div>
     </section>
 
+    <!-- Geopolitical Transmission Analysis -->
+    ${(riskAssessment?.geopolitical || valuationSuite?.geopoliticalProfile) ? (() => {
+      const geo = riskAssessment?.geopolitical || valuationSuite?.geopoliticalProfile!
+      return `
+    <section class="section">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+        <h2 class="section-title" style="border-bottom: none; padding-bottom: 0; margin-bottom: 0;">
+          🌍 地緣政治 4 大實質傳導管道與風險溢酬評定 (Geopolitical Transmission Analysis)
+        </h2>
+        <div style="font-size: 13px; font-weight: bold; background: ${geo.badgeColor}22; color: ${geo.badgeColor}; border: 1px solid ${geo.badgeColor}; padding: 4px 14px; border-radius: 9999px;">
+          ${geo.overallLevel}
+        </div>
+      </div>
+
+      <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 16px;">
+        <div class="stat-card">
+          <div class="label">CDS 違約利差加成</div>
+          <div class="value" style="color: #ef4444;">+${geo.cdsSpreadPenaltyBps} bps</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">CAPM 股權溢酬加成</div>
+          <div class="value" style="color: #f59e0b;">+${geo.capmRiskPremiumAddon.toFixed(1)}%</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">公允估值折價修正</div>
+          <div class="value" style="color: #ef4444;">-${geo.valuationDiscountPercent}%</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">定價抗震能力</div>
+          <div class="value" style="color: #10b981;">${geo.mitigationFactors[0] ? '具實質護城河' : '需密切追蹤'}</div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-bottom: 16px;">
+        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border); border-radius: 10px; padding: 14px;">
+          <div style="font-size: 13px; font-weight: 700; color: #38bdf8; margin-bottom: 6px;">
+            ${geo.channels.exportControls.name}
+            <span style="font-size: 11px; float: right; padding: 1px 6px; border-radius: 4px; background: rgba(239, 68, 68, 0.2); color: #ef4444;">${geo.channels.exportControls.impactLevel}</span>
+          </div>
+          <p style="font-size: 12px; color: #cbd5e1; line-height: 1.5;">${geo.channels.exportControls.summary}</p>
+        </div>
+
+        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border); border-radius: 10px; padding: 14px;">
+          <div style="font-size: 13px; font-weight: 700; color: #38bdf8; margin-bottom: 6px;">
+            ${geo.channels.energyCommodity.name}
+            <span style="font-size: 11px; float: right; padding: 1px 6px; border-radius: 4px; background: rgba(245, 158, 11, 0.2); color: #f59e0b;">${geo.channels.energyCommodity.impactLevel}</span>
+          </div>
+          <p style="font-size: 12px; color: #cbd5e1; line-height: 1.5;">${geo.channels.energyCommodity.summary}</p>
+        </div>
+
+        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border); border-radius: 10px; padding: 14px;">
+          <div style="font-size: 13px; font-weight: 700; color: #38bdf8; margin-bottom: 6px;">
+            ${geo.channels.supplyChainReshoring.name}
+            <span style="font-size: 11px; float: right; padding: 1px 6px; border-radius: 4px; background: rgba(16, 185, 129, 0.2); color: #10b981;">${geo.channels.supplyChainReshoring.impactLevel}</span>
+          </div>
+          <p style="font-size: 12px; color: #cbd5e1; line-height: 1.5;">${geo.channels.supplyChainReshoring.summary}</p>
+        </div>
+
+        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border); border-radius: 10px; padding: 14px;">
+          <div style="font-size: 13px; font-weight: 700; color: #38bdf8; margin-bottom: 6px;">
+            ${geo.channels.creditSovereign.name}
+            <span style="font-size: 11px; float: right; padding: 1px 6px; border-radius: 4px; background: rgba(239, 68, 68, 0.2); color: #ef4444;">${geo.channels.creditSovereign.impactLevel}</span>
+          </div>
+          <p style="font-size: 12px; color: #cbd5e1; line-height: 1.5;">${geo.channels.creditSovereign.summary}</p>
+        </div>
+      </div>
+
+      <div style="background: rgba(30, 41, 59, 0.4); border-radius: 8px; padding: 12px; font-size: 12px; color: #94a3b8;">
+        <strong style="color: #f1f5f9;">🛡️ 抗震因子與主要曝險：</strong>
+        ${geo.mitigationFactors.map(m => `<span style="display: inline-block; margin-right: 12px; color: #34d399;">✓ ${m}</span>`).join('')}
+      </div>
+    </section>
+      `
+    })() : ''}
+
     <!-- Trader & Risk Management -->
     ${traderProposal && riskAssessment ? `
     <section class="section">

@@ -1,4 +1,5 @@
 import type { MarketDataSummary } from './types'
+import { evaluateGeopoliticalProfile, type GeopoliticalProfile } from './geopolitical'
 
 export interface ValuationModelResult {
   id: string
@@ -54,6 +55,7 @@ export interface ValuationSuiteResult {
   medianFairValue: number
   overallValuationVerdict: 'Undervalued (低估·具安全邊際)' | 'Fairly Valued (合理區間)' | 'Overvalued (高估·留意風險)'
   valuationRange: [number, number] // [最低公允, 最高公允]
+  geopoliticalProfile?: GeopoliticalProfile // 地緣政治 4 大傳導管道與風險溢酬評定
 }
 
 export function computeValuationSuite(data: MarketDataSummary, selectedModelIds?: string[]): ValuationSuiteResult {
@@ -61,6 +63,9 @@ export function computeValuationSuite(data: MarketDataSummary, selectedModelIds?
   const isCrypto = data.ticker.includes('BTC') || data.ticker.includes('ETH') || data.ticker.includes('SOL')
   const eps = data.eps ?? Math.max(p / (data.peRatio || 30), p * 0.035)
   const pe = data.peRatio ?? (p / Math.max(eps, 0.1))
+
+  // 計算標的地緣政治實質傳導管道與風險加成
+  const geoProfile = evaluateGeopoliticalProfile(data.ticker, data.companyName)
 
   // Estimate baseline financial inputs
   const bvps = p / 4.5 // Book value per share estimate
@@ -111,14 +116,15 @@ export function computeValuationSuite(data: MarketDataSummary, selectedModelIds?
   })
 
   // 2. CDS 指數模型 (信用違約交換指數 / 信用風險定價模型) [放在第二個位置]
-  // 5年期信用違約利差 (CDS Spread)，科技巨頭通常在 25-50 bps，一般投資級 60-120 bps，高波動投機級 200+ bps
-  const cdsSpreadBps = isCrypto ? 450 : (beta > 1.25 ? Math.round(45 + (beta - 1.25) * 80) : 32)
+  // 5年期信用違約利差 (CDS Spread)：基準利差 + 地緣政治傳導利差加成 (cdsSpreadPenaltyBps)
+  const baseCdsSpreadBps = isCrypto ? 450 : (beta > 1.25 ? Math.round(45 + (beta - 1.25) * 80) : 32)
+  const cdsSpreadBps = baseCdsSpreadBps + geoProfile.cdsSpreadPenaltyBps
   const recoveryRate = 0.40 // 標準違約回收率 40%
   const defaultProb5Y = Math.round((1 - Math.exp(-(cdsSpreadBps / 10000) * 5 / (1 - recoveryRate))) * 10000) / 100 // 5年累積違約率 %
   // CDS 利差對資本成本的懲罰折價率
   const creditCostPenalty = (cdsSpreadBps / 10000) * 0.35 // 債務佔比權重約 35%
   const cdsDiscountFactor = 1 / (1 + creditCostPenalty * 2.5)
-  // 基於資產負債表信用風險調整後公允股價
+  // 基於資產負債表信用風險與地緣政治折價調整後公允股價
   const cdsAdjustedFairValue = Math.round((dcfFairValue * (1 - (defaultProb5Y / 100) * (1 - recoveryRate)) * cdsDiscountFactor) * 100) / 100
 
   models.push({
@@ -131,14 +137,15 @@ export function computeValuationSuite(data: MarketDataSummary, selectedModelIds?
     premiumDiscountPercent: Math.round(((p - cdsAdjustedFairValue) / cdsAdjustedFairValue) * 100 * 10) / 10,
     applicability: isCrypto ? 'Moderate (中等/無主權債)' : 'High (極適用)',
     confidence: 86,
-    summary: `量化債信違約風險對股權定價的衝擊。隱含 5 年期 CDS 利差為 ${cdsSpreadBps} bps，推導累積違約機率 ${defaultProb5Y}% (以 40% 回收率計)，並經信用利差成本對股權折價修正。`,
+    summary: `量化債信違約風險對股權定價的衝擊。隱含 5 年期 CDS 利差為 ${cdsSpreadBps} bps (基準 ${baseCdsSpreadBps} bps + 地緣政治利差加成 +${geoProfile.cdsSpreadPenaltyBps} bps)，推導累積違約機率 ${defaultProb5Y}% (以 40% 回收率計)，地緣敏感評級：${geoProfile.overallLevel}。`,
     parameters: {
-      '5年期 CDS 信用利差': `${cdsSpreadBps} bps`,
+      '5年期 CDS 信用利差': `${cdsSpreadBps} bps (含地緣加成 +${geoProfile.cdsSpreadPenaltyBps} bps)`,
       '隱含5年違約率 (PD)': `${defaultProb5Y}%`,
       '違約預期回收率 (RR)': '40.0%',
+      '地緣政治敏感度': geoProfile.overallLevel,
       '信用風險折價因子': `${(cdsDiscountFactor * 100).toFixed(1)}%`,
     },
-    formula: 'PD = 1 - e^(-S×T/(1-R)); Fair Value = Fair_base × (1 - PD × (1-R)) × DiscountFactor',
+    formula: 'PD = 1 - e^(-(S_base + S_geo)×T/(1-R)); Fair Value = Fair_base × (1 - PD × (1-R)) × DiscountFactor',
   })
 
   // 3. P/E 比率模型 (市盈率模型)
@@ -277,8 +284,9 @@ export function computeValuationSuite(data: MarketDataSummary, selectedModelIds?
   })
 
   // 9. CAPM 模型 (資本資產定價模型)
-  // Required return -> inverse valuation hurdle
-  const capmImpliedValue = Math.round((eps * (1 + (ke - rf) / 100) * (1 / (ke / 100)) * 1.05) * 100) / 100
+  // Required return -> inverse valuation hurdle: 基準 Ke + 地緣政治股權風險溢酬加成
+  const capmKe = ke + geoProfile.capmRiskPremiumAddon
+  const capmImpliedValue = Math.round((eps * (1 + (capmKe - rf) / 100) * (1 / (capmKe / 100)) * 1.05) * 100) / 100
   models.push({
     id: 'capm',
     name: 'Capital Asset Pricing Model (CAPM)',
@@ -289,14 +297,15 @@ export function computeValuationSuite(data: MarketDataSummary, selectedModelIds?
     premiumDiscountPercent: Math.round(((p - capmImpliedValue) / capmImpliedValue) * 100 * 10) / 10,
     applicability: 'High (極適用)',
     confidence: 88,
-    summary: `計算該標的系統性風險 (Beta = ${beta.toFixed(2)}) 與市場風險溢酬，求得投資人持有該資產所必需的最低預期報酬率 (Ke = ${ke.toFixed(2)}%)。`,
+    summary: `計算該標的系統性風險 (Beta = ${beta.toFixed(2)})，疊加市場風險溢酬及地緣政治外生風險溢酬 (+${geoProfile.capmRiskPremiumAddon.toFixed(1)}%)，求得必要股權報酬率 (Ke = ${capmKe.toFixed(2)}%)。`,
     parameters: {
       '貝塔係數 (Beta)': beta.toFixed(2),
       '無風險利率 (Rf)': `${rf}% (10Y US Treasury)`,
       '市場風險溢酬 (ERP)': `${erp}%`,
-      '股權必要報酬率 (Ke)': `${ke.toFixed(2)}%`,
+      '地緣政治風險加成': `+${geoProfile.capmRiskPremiumAddon.toFixed(1)}%`,
+      '綜合股權必要報酬率 (Ke)': `${capmKe.toFixed(2)}%`,
     },
-    formula: 'Ke = Rf + β × (Rm - Rf)',
+    formula: 'Ke = Rf + β × ERP + Geo_Premium',
   })
 
   // 10. EVA 模型 (經濟附加值模型)
@@ -424,6 +433,7 @@ export function computeValuationSuite(data: MarketDataSummary, selectedModelIds?
     medianFairValue: medianFair,
     overallValuationVerdict: verdict,
     valuationRange: validValues.length > 0 ? [Math.min(...validValues), Math.max(...validValues)] : [p, p],
+    geopoliticalProfile: geoProfile,
   }
 }
 

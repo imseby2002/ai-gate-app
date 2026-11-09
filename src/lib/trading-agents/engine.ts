@@ -17,6 +17,7 @@ import { resolveTradingModel, getTradingModelCandidates, type ModelTierConfig } 
 import { generateCompleteReportHtml } from './report-generator'
 
 import { computeValuationSuite, type ValuationSuiteResult } from './valuation-models'
+import { evaluateGeopoliticalProfile } from './geopolitical'
 
 export interface RunTradingAgentsParams {
   ticker: string
@@ -128,11 +129,15 @@ export async function runTradingAgents(
 【動態動能與擺盪指標】（結合 RSI 與 MACD 柱狀體）
 【關鍵進出場點位】（明確給出支撐防守位與上方突破壓力位）
 【綜合評分】格式：評分：+XX / 100 或 -XX / 100`,
-            news: `重點分析全球總體經濟、地緣政治、政策法規與 3~5 年產業大週期催化劑。
+            news: `重點深入分析全球總體經濟與【地緣政治 4 大實質傳導管道】：
+1. 行政命令與出口管制（BIS 實體清單、晶片法案限制中國營收上限）。
+2. 大宗商品與能源通膨（關鍵海峽航運中斷、電力與晶圓造價推升）。
+3. 供應鏈在地化與高 Capex 負擔（赴美/歐/日設廠海外運營溢價與 FCF 壓抑）。
+4. 主權債信與違約利差衝擊（外資模型套用地緣折價、CDS 利差懲罰與 WACC 推升）。
 請包含：
 【核心結論】
-【地緣政治與全球總經傳導】（評估通膨、利率與長期資本支出循環）
-【政策法規與產業結構性紅利】（美中貿易、產業扶持或監管變更）
+【地緣政治 4 大實質傳導管道審計】（行政管制、能源通膨、在地化 Capex、CDS 違約利差）
+【政策法規與產業結構性紅利/制裁】
 【產業中長期關鍵催化劑 (Catalysts)】
 【綜合評分】格式：評分：+XX / 100 或 -XX / 100`,
             sentiment: `重點分析機構長期持倉籌碼、散戶輿情熱度與市場非理性恐慌貪婪。
@@ -449,28 +454,39 @@ ${round > 1 ? `上一輪空方質疑：${debateStatements[debateStatements.lengt
   emit({ type: 'phase', phase: 'risk', label: '風控團隊極限壓力測試與部位限額審核 (Risk Stress Test)' })
   emit({ type: 'risk-start', model: config?.modelConfig?.deepThinkModel || 'Auditor & Risk Team' })
 
+  const geoProfile = valuationSuite.geopoliticalProfile || evaluateGeopoliticalProfile(marketData.ticker, marketData.companyName)
+  const isSevereGeo = geoProfile.overallLevel.startsWith('Severe')
+  const isHighGeo = geoProfile.overallLevel.startsWith('High')
+
   let riskDelta = ''
-  const riskScore = Math.min(Math.max(Math.round(10 - (bullProb / 10) + (marketData.technicals.rsi14 > 75 || marketData.technicals.rsi14 < 25 ? 2 : 0)), 2), 9)
+  let riskScore = Math.min(Math.max(Math.round(10 - (bullProb / 10) + (marketData.technicals.rsi14 > 75 || marketData.technicals.rsi14 < 25 ? 2 : 0)), 2), 9)
+  if (isSevereGeo) riskScore = Math.min(riskScore + 2, 9)
+  else if (isHighGeo) riskScore = Math.min(riskScore + 1, 9)
+
   const maxDrawdown = Math.round((currentPrice - stopLossPrice) / currentPrice * 100 * 10) / 10
 
   const riskAssessment: RiskAssessment = {
     riskScore,
-    volatilityRating: marketData.technicals.atr14 / currentPrice > 0.04 ? 'High' : 'Moderate',
+    volatilityRating: (marketData.technicals.atr14 / currentPrice > 0.04 || isSevereGeo) ? 'High' : 'Moderate',
     maxDrawdownEstimatePercent: maxDrawdown,
     positionSizingCapPercent: investmentHorizon === 'position_value' ? (riskScore > 6 ? 12 : 20) : (riskScore > 6 ? 8 : 15),
     stressTestVerdict: riskScore > 7 ? 'Caution' : 'Passed',
+    geopolitical: geoProfile,
     concerns: investmentHorizon === 'position_value'
       ? [
           `長線最大下行容忍度為 ${maxDrawdown}%，需防範黑天鵝系統性估值壓縮`,
-          `債信違約利差與資產負債表償債能力（CDS 模型檢測）`,
+          `地緣政治評級【${geoProfile.overallLevel}】：CDS 利差懲罰 +${geoProfile.cdsSpreadPenaltyBps} bps，公允折價修正 -${geoProfile.valuationDiscountPercent}%`,
+          `實質傳導關注：${geoProfile.keyExposures[0] || '海外擴產 Capex 與出口管制風險'}`,
         ]
       : [
           `近期波動率 (ATR) 為 ${marketData.technicals.atr14}，單日震盪幅度顯著`,
+          `地緣政治曝險：${geoProfile.overallLevel} (CDS 利差加成 +${geoProfile.cdsSpreadPenaltyBps} bps)`,
           `下方防守關鍵位 ${marketData.technicals.supportLevel} 若失守將引發技術性停損賣壓`,
         ],
     hedgingRecommendations: investmentHorizon === 'position_value'
       ? [
           '嚴格遵守分批階梯建倉，不一次全額梭哈買滿',
+          `避險抗震因子儲備：${geoProfile.mitigationFactors[0] || '全球不可替代性與定價權'}`,
           '密切追蹤季度財報毛利率與護城河指標，論點未破不輕易被洗出場',
         ]
       : [
@@ -479,7 +495,7 @@ ${round > 1 ? `上一輪空方質疑：${debateStatements[debateStatements.lengt
         ],
   }
 
-  riskDelta = `風控審查核定：策略風格【${horizonNarrative.split(' ')[1]}】，風險評分 ${riskScore}/10，最大下行預估 -${maxDrawdown}%。部位上限建議鎖定在 ${riskAssessment.positionSizingCapPercent}% 內，壓力測試裁決：【${riskAssessment.stressTestVerdict}】。`
+  riskDelta = `風控審查核定：策略風格【${horizonNarrative.split(' ')[1]}】，風險評分 ${riskScore}/10，最大下行預估 -${maxDrawdown}%。地緣政治敏感度【${geoProfile.overallLevel}】（CDS 懲罰 +${geoProfile.cdsSpreadPenaltyBps} bps）。部位上限建議鎖定在 ${riskAssessment.positionSizingCapPercent}% 內，壓力測試裁決：【${riskAssessment.stressTestVerdict}】。`
   emit({ type: 'risk-delta', chunk: riskDelta })
   emit({ type: 'risk-assessment', assessment: riskAssessment })
 
