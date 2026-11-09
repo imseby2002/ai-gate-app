@@ -3,6 +3,7 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createOpenAI } from '@ai-sdk/openai'
 import { createGroq } from '@ai-sdk/groq'
 import type { LanguageModel } from 'ai'
+import { createChainModel } from '@/lib/ai/proxy-fallback'
 
 export interface ModelTierConfig {
   quickThinkModel?: string // For analysts, debaters, trader
@@ -10,13 +11,21 @@ export interface ModelTierConfig {
 }
 
 export function resolveTradingModel(modelId?: string, tier: 'quick' | 'deep' = 'quick'): LanguageModel | null {
-  const chosen = modelId || (tier === 'deep' ? 'anthropic/claude-sonnet-4-6' : 'google/gemini-2.5-flash')
+  const chosen = modelId || (tier === 'deep' ? 'anthropic/claude-sonnet-5-5' : 'google/gemini-2.5-flash')
   const slash = chosen.indexOf('/')
   const provider = slash === -1 ? '' : chosen.slice(0, slash)
   const rawModel = slash === -1 ? chosen : chosen.slice(slash + 1)
 
   // 1. Anthropic
-  if (provider === 'anthropic' || chosen.includes('claude')) {
+  if (provider === 'anthropic' || (chosen.includes('claude') && provider !== 'cliproxy')) {
+    // 舊版型號換成同系列新版（Sonnet 4.x $3/$15 → Sonnet 5.5 $2/$10；Opus 4.x $5/$25 → Opus 5.5 $4/$20），直連 Anthropic
+    const current = rawModel.includes('sonnet') ? 'claude-sonnet-5-5'
+      : rawModel.includes('opus') ? 'claude-opus-5-5'
+      : rawModel.includes('haiku') ? 'claude-haiku-5-5'
+      : rawModel
+    if (process.env.ANTHROPIC_API_KEY?.trim() && /^claude-(opus|sonnet|haiku|fable)-5/.test(current)) {
+      return createChainModel([{ via: 'direct', provider: 'anthropic', model: current }])
+    }
     if (process.env.OPENROUTER_API_KEY) {
       return createOpenAI({
         apiKey: process.env.OPENROUTER_API_KEY,
@@ -108,7 +117,7 @@ export function resolveTradingModel(modelId?: string, tier: 'quick' | 'deep' = '
     return createOpenAI({ apiKey: process.env.OPENAI_API_KEY }).chat('gpt-4o')
   }
   if (process.env.ANTHROPIC_API_KEY) {
-    return createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })('claude-sonnet-4-6')
+    return createChainModel([{ via: 'direct', provider: 'anthropic', model: 'claude-sonnet-5-5' }])
   }
   if (process.env.DEEPSEEK_API_KEY) {
     return createOpenAI({ apiKey: process.env.DEEPSEEK_API_KEY, baseURL: 'https://api.deepseek.com/v1' }).chat('deepseek-chat')
@@ -143,7 +152,7 @@ export function getTradingModelCandidates(chosenModelId?: string, tier: 'quick' 
     if (c5 && !models.includes(c5)) models.push(c5)
   } else {
     // Deep tier cascade: Claude Sonnet -> DeepSeek -> Gemini Pro -> GPT-4o -> CLIProxy
-    const d1 = resolveTradingModel('anthropic/claude-sonnet-4-6')
+    const d1 = resolveTradingModel('anthropic/claude-sonnet-5-5')
     if (d1 && !models.includes(d1)) models.push(d1)
 
     const d2 = resolveTradingModel('deepseek/deepseek-chat')

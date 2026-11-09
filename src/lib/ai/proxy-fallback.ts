@@ -284,7 +284,8 @@ export async function streamWithFallback(
         model,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         messages: messagesWithImage as any,
-        maxOutputTokens: params.maxTokens ?? 4096,
+        // Claude 5.x 的 thinking 也算在 max_tokens 內，給較高上限避免只剩思考沒有答案
+        maxOutputTokens: isClaude5(attempt) ? Math.max(params.maxTokens ?? 4096, 16000) : (params.maxTokens ?? 4096),
         abortSignal: AbortSignal.timeout(30000), // 30s per attempt
       })
 

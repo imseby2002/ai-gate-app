@@ -2743,7 +2743,7 @@ https://ciaohome.net/routeofciaohome/
       { role: 'user' as const, content: userContent },
     ]
 
-    // High risk → try Claude first (Claude also supports vision)
+    // High risk → Claude Sonnet 5.5（A 組：重要情境只用 Claude；Claude also supports vision）
     // 免費方案不解鎖 Claude 升級，一律用 Gemini 回覆（見 cs_subscriptions 方案設定）
     const HIGH_RISK_KEYWORDS = ['退款', '退貨', '投訴', '抱怨', '法律', 'refund', 'complaint', 'lawsuit']
     const isHighRisk = HIGH_RISK_KEYWORDS.some(kw => message.toLowerCase().includes(kw.toLowerCase()))
@@ -2756,9 +2756,10 @@ https://ciaohome.net/routeofciaohome/
         try {
           const anthropic = createAnthropic({ apiKey: anthropicKey })
           const { text } = await generateText({
-            model: anthropic('claude-sonnet-4-6'),
+            model: anthropic('claude-sonnet-5-5'),
             system: systemPrompt,
             messages,
+            maxOutputTokens: 16000,
           })
           return enforceCheckinTimeClaim(await enforceNoFabricatedReveal(cleanReply(text) || FALLBACK, externalDataSection, history, knowledge.knowledgeBase, userId, platform, customerId, knowledge.industry, message, knowledge.notifyWebhooks), checkinState)
         } catch { /* fall through to L2 chain */ }

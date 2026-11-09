@@ -11,7 +11,8 @@ import { deductCredits } from '@/lib/skills/billing'
 
 type Admin = ReturnType<typeof createAdminClient>
 
-export const MISSION_PLANNER_MODEL = 'claude-sonnet-4-6'
+// A 組：重要情境只用 Claude；Sonnet 5.5（$2/$10）比原 Sonnet 4.6（$3/$15）新且便宜
+export const MISSION_PLANNER_MODEL = 'claude-sonnet-5-5'
 // 長期任務（1–3 個月）需要比一般 run 多的 tick 額度；搭配 schedule_next_check 分散在整段期間
 export const MISSION_MAX_TICKS = 400
 
