@@ -957,5 +957,7 @@
 "預約系統基本功能免費": "Core booking features are free",
 "預約、排班、行事曆與顧客管理不限筆數免費使用；只有 AI 助理依實際用量扣點。": "Booking, scheduling, calendar and customer management are free with no limits; only the AI assistant is billed by actual usage.",
 "智慧排程推薦、回訪關懷訊息、產能分析，依每次實際使用的 AI 用量扣點，用多少扣多少。": "Smart slot recommendations, follow-up messages and capacity analysis — billed by the AI actually used each time, nothing more.",
-"IMT 服務預約系統基本功能免費：線上預約頁、人員排班、行事曆、預約與顧客管理、產業範本；AI 助理依用量扣點。": "IMT Service Booking core features are free: booking page, staff scheduling, calendar, booking and customer management, industry templates; the AI assistant is billed by usage."
+"IMT 服務預約系統基本功能免費：線上預約頁、人員排班、行事曆、預約與顧客管理、產業範本；AI 助理依用量扣點。": "IMT Service Booking core features are free: booking page, staff scheduling, calendar, booking and customer management, industry templates; the AI assistant is billed by usage.",
+"搭配 IMT 智能客服後，AI 客服會在 LINE、WhatsApp 等平台回答服務項目與價格、近期空檔，提供線上預約連結，客人留手機號碼還能查自己的預約。": "With IMT Smart CS, the AI agent answers questions about services, prices and upcoming availability on LINE, WhatsApp and more, shares your booking link, and looks up a customer's bookings by phone number.",
+"訂閱 IMT 智能客服後，AI 客服會直接讀取預約系統：回答服務與空檔、提供預約連結、依手機號碼查詢客人的預約。": "With IMT Smart CS, the AI agent reads your booking system directly: it answers about services and availability, shares the booking link and looks up bookings by phone number."
 }

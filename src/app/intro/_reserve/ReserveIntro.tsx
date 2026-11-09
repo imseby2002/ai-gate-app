@@ -35,7 +35,7 @@ const FAQ__ZH = [
   { q: '真的完全免費嗎？', a: '預約、排班、行事曆與顧客管理都免費，不限服務項目與預約筆數；只有 AI 助理依實際 AI 用量扣點。' },
   { q: '適合哪些店家？', a: '需要客人事先預約時段的服務業，例如美容美髮、美甲美睫、診所與物理治療、健身教練、寵物美容、法律與商務諮詢。' },
   { q: '需要另外架網站嗎？', a: '不用。系統會給你一個專屬預約網址，可以放在 LINE、Instagram、Google 商家或任何地方。' },
-  { q: '想讓客服自動回覆客人怎麼辦？', a: '可搭配 IMT 智能客服，在 LINE、WhatsApp 等平台用 AI 自動回覆客人訊息。' },
+  { q: '想讓客服自動回覆客人怎麼辦？', a: '搭配 IMT 智能客服後，AI 客服會在 LINE、WhatsApp 等平台回答服務項目與價格、近期空檔，提供線上預約連結，客人留手機號碼還能查自己的預約。' },
 ]
 
 function Header({ tr, locale }: { tr: (s: string) => string; locale: string }) {
@@ -170,7 +170,7 @@ export async function ReservePricing() {
           <div className="font-extrabold text-[16px]">{tr('AI 預約與營運助理')}</div>
           <p className="mt-2 text-[14.5px] text-slate-600">{tr('智慧排程推薦、回訪關懷訊息、產能分析，依每次實際使用的 AI 用量扣點，用多少扣多少。')}</p>
           <div className="mt-6 border-t pt-5 font-extrabold text-[16px]">{tr('搭配 IMT 智能客服')}</div>
-          <p className="mt-2 text-[14.5px] text-slate-600">{tr('想讓 LINE、WhatsApp 等平台的客人訊息由 AI 自動回覆，可另外訂閱 IMT 智能客服。')}</p>
+          <p className="mt-2 text-[14.5px] text-slate-600">{tr('訂閱 IMT 智能客服後，AI 客服會直接讀取預約系統：回答服務與空檔、提供預約連結、依手機號碼查詢客人的預約。')}</p>
           <a href="https://cs.im-tourist.com/intro/pricing" className="mt-4 inline-block font-bold text-[14px] text-blue-600 hover:underline">{tr('看客服方案 →')}</a>
           <div className="mt-6 border-t pt-5 font-extrabold text-[16px]">{tr('整間公司一起用')}</div>
           <p className="mt-2 text-[14.5px] text-slate-600">{tr('企業方案一次開通 ERP、行銷、客服與 AI 工具，依據點與人數計價。')}</p>

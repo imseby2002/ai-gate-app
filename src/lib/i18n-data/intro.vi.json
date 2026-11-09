@@ -957,5 +957,7 @@
 "預約系統基本功能免費": "Tính năng đặt lịch cơ bản miễn phí",
 "預約、排班、行事曆與顧客管理不限筆數免費使用；只有 AI 助理依實際用量扣點。": "Đặt lịch, xếp ca, lịch và quản lý khách hàng miễn phí không giới hạn; chỉ trợ lý AI tính theo mức dùng thực tế.",
 "智慧排程推薦、回訪關懷訊息、產能分析，依每次實際使用的 AI 用量扣點，用多少扣多少。": "Gợi ý khung giờ, tin nhắn chăm sóc và phân tích công suất — tính theo lượng AI thực dùng mỗi lần.",
-"IMT 服務預約系統基本功能免費：線上預約頁、人員排班、行事曆、預約與顧客管理、產業範本；AI 助理依用量扣點。": "Tính năng cơ bản của IMT Đặt lịch dịch vụ miễn phí: trang đặt lịch, xếp ca, lịch, quản lý lịch hẹn và khách hàng, mẫu theo ngành; trợ lý AI tính theo mức dùng."
+"IMT 服務預約系統基本功能免費：線上預約頁、人員排班、行事曆、預約與顧客管理、產業範本；AI 助理依用量扣點。": "Tính năng cơ bản của IMT Đặt lịch dịch vụ miễn phí: trang đặt lịch, xếp ca, lịch, quản lý lịch hẹn và khách hàng, mẫu theo ngành; trợ lý AI tính theo mức dùng.",
+"搭配 IMT 智能客服後，AI 客服會在 LINE、WhatsApp 等平台回答服務項目與價格、近期空檔，提供線上預約連結，客人留手機號碼還能查自己的預約。": "Khi dùng IMT CSKH thông minh, AI trả lời về dịch vụ, giá và lịch trống trên LINE, WhatsApp…, gửi đường dẫn đặt lịch và tra cứu lịch hẹn của khách theo số điện thoại.",
+"訂閱 IMT 智能客服後，AI 客服會直接讀取預約系統：回答服務與空檔、提供預約連結、依手機號碼查詢客人的預約。": "Khi đăng ký IMT CSKH thông minh, AI đọc trực tiếp hệ thống đặt lịch: trả lời về dịch vụ và lịch trống, gửi đường dẫn đặt lịch và tra cứu lịch hẹn theo số điện thoại."
 }
