@@ -102,7 +102,7 @@ export default function PayslipView({ data, confirmed, confirming, onConfirm, ba
                 <span className="font-semibold text-red-600">-{fmt(bhxh)}</span>
               </div>
               <div className="flex justify-between py-1 text-slate-600">
-                <span>Đoàn phí công đoàn (1% 工會費)</span>
+                <span>Đoàn phí công đoàn (0.5% 工會費)</span>
                 <span className="font-semibold text-red-600">-{fmt(union)}</span>
               </div>
               {pit > 0 && (
