@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from 'next-intl'
 import { ArrowLeft, Download, Loader2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { AutoTextarea } from '@/components/ui/auto-textarea'
 import type { ExamLang, ExamQuestion, L10n } from '@/lib/exams/types'
 
 interface Result { score: number; max: number; correct?: boolean; feedback?: string; pending?: boolean }
@@ -129,8 +130,8 @@ export function ExamResults({ id }: { id: string }) {
       </div>
 
       {open && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setOpen(null)}>
-          <div className="bg-card rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-2 sm:p-4" onClick={() => setOpen(null)}>
+          <div className="bg-card rounded-2xl w-full max-w-7xl h-[94vh] flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="p-4 border-b flex items-center gap-2">
               <div className="font-semibold flex-1">{open.taker_name} · {open.score} / {open.max_score}</div>
               <button onClick={() => setOpen(null)}><X className="h-5 w-5" /></button>
@@ -143,18 +144,24 @@ export function ExamResults({ id }: { id: string }) {
                 return (
                   <div key={q.id} className={`rounded-lg border p-3 space-y-2 ${r.pending ? 'border-amber-300' : r.correct ? 'border-emerald-200' : 'border-rose-200'}`}>
                     <div className="font-medium">{i + 1}. {pick(q.question)}</div>
-                    <div><span className="text-muted-foreground">{t('takerAnswer')}：</span><span className="whitespace-pre-line">{answerText(q, open.answers[q.id!])}</span></div>
-                    {/* 檢查人專用：正確／參考答案、評分重點、說明（不會給作答者） */}
-                    <div className="rounded-md bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/70 p-2 space-y-1">
-                      <div><span className="font-medium text-emerald-800 dark:text-emerald-300">{t('correctAnswer')}：</span><span className="whitespace-pre-line">{keyText(q)}</span></div>
-                      {(q.type === 'short' || q.type === 'essay') && pick(q.rubric) && (
-                        <div><span className="font-medium text-emerald-800 dark:text-emerald-300">{t('rubric')}：</span><span className="whitespace-pre-line">{pick(q.rubric)}</span></div>
-                      )}
-                      {pick(q.explanation) && (
-                        <div className="text-muted-foreground"><span className="font-medium">{t('explanation')}：</span><span className="whitespace-pre-line">{pick(q.explanation)}</span></div>
-                      )}
+                    {/* 左：作答內容；右：檢查人專用（正確／參考答案、評分重點、說明，不會給作答者）。寬螢幕並排，減少上下捲動 */}
+                    <div className="grid lg:grid-cols-2 gap-3 items-start">
+                      <div className="rounded-md border bg-background p-2.5">
+                        <div className="text-xs font-medium text-muted-foreground mb-1">{t('takerAnswer')}</div>
+                        <div className="whitespace-pre-line">{answerText(q, open.answers[q.id!])}</div>
+                      </div>
+                      <div className="rounded-md bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/70 p-2.5 space-y-1">
+                        <div><span className="font-medium text-emerald-800 dark:text-emerald-300">{t('correctAnswer')}：</span><span className="whitespace-pre-line">{keyText(q)}</span></div>
+                        {(q.type === 'short' || q.type === 'essay') && pick(q.rubric) && (
+                          <div><span className="font-medium text-emerald-800 dark:text-emerald-300">{t('rubric')}：</span><span className="whitespace-pre-line">{pick(q.rubric)}</span></div>
+                        )}
+                        {pick(q.explanation) && (
+                          <div className="text-muted-foreground"><span className="font-medium">{t('explanation')}：</span><span className="whitespace-pre-line">{pick(q.explanation)}</span></div>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex flex-col lg:flex-row gap-2 lg:gap-3 lg:items-start">
+                    <div className="flex flex-wrap items-center gap-2 shrink-0 lg:pt-1.5">
                       <span className="text-xs">{t('score')}</span>
                       <Input className="w-20 h-8" type="number" min={0} max={r.max} value={e.score}
                         onChange={ev => setEdits({ ...edits, [q.id!]: { ...e, score: Math.max(0, Math.min(r.max, Number(ev.target.value) || 0)) } })} />
@@ -162,9 +169,10 @@ export function ExamResults({ id }: { id: string }) {
                       {r.pending && <span className="text-xs text-amber-700">{t('needsGrading')}</span>}
                     </div>
                     {(q.type === 'short' || q.type === 'essay') && (
-                      <textarea rows={2} className="w-full rounded-md border bg-background p-2 text-sm" placeholder={t('feedbackPh')}
+                      <AutoTextarea minRows={2} placeholder={t('feedbackPh')}
                         value={e.feedback} onChange={ev => setEdits({ ...edits, [q.id!]: { ...e, feedback: ev.target.value } })} />
                     )}
+                    </div>
                   </div>
                 )
               })}
