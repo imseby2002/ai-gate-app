@@ -7929,7 +7929,13 @@
     "evalTierAmount": "評等獎金",
     "storeFilterAll": "全部門市／據點（{n}）",
     "storeFilterNone": "未指定門市（{n}）",
-    "storeFilterHint": "依門市／據點篩選員工"
+    "storeFilterHint": "依門市／據點篩選員工",
+    "payrollExportButton": "匯出 Excel",
+    "payrollExportTitle": "匯出本月完整薪資表（含明細與合計）",
+    "payrollExportFile": "薪資表",
+    "payrollExportNo": "序號",
+    "payrollExportPaidAt": "發放日期",
+    "payrollExportTotal": "合計"
   },
   "FinancePage": {
     "accountBalancesTitle": "各帳戶結餘",

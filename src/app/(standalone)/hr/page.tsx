@@ -452,7 +452,7 @@ function PayrollForm({ employees, initial, onSave, onCancel, saving, attHours, e
             const emp = employees.find(e => e.id === v)
             setD(prev => ({ ...prev, employee_id: v, base_salary: emp?.base_salary ?? prev.base_salary }))
           }}
-            options={[{ value: '', label: t('selectEmployee') }, ...employees.filter(e => e.status === 'active').map(e => ({ value: e.id, label: t('empDeptOption', { name: e.name, dept: e.department || t('noDepartment') }) }))]}
+            options={[{ value: '', label: t('selectEmployee') }, ...employees.filter(e => e.status === 'active').map(e => ({ value: e.id, label: t('empDeptOption', { name: e.name, dept: e.store || e.department || t('noDepartment') }) }))]}
             disabled={saving} />
         </Field>
         <Field label={t('yearMonthLabel')}>
@@ -528,7 +528,7 @@ function LeaveForm({ employees, initial, onSave, onCancel, saving }: {
       <div className="grid grid-cols-2 gap-3">
         <Field label={t('employeeRequiredLabel')}>
           <SelectEl value={d.employee_id} onChange={v => set('employee_id', v)}
-            options={[{ value: '', label: t('selectEmployee') }, ...employees.filter(e => e.status === 'active').map(e => ({ value: e.id, label: t('empDeptOption', { name: e.name, dept: e.department || t('noDepartment') }) }))]}
+            options={[{ value: '', label: t('selectEmployee') }, ...employees.filter(e => e.status === 'active').map(e => ({ value: e.id, label: t('empDeptOption', { name: e.name, dept: e.store || e.department || t('noDepartment') }) }))]}
             disabled={saving} />
         </Field>
         <Field label={t('leaveTypeLabel')}>
@@ -1173,6 +1173,36 @@ function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: 
     } catch { setErr(t('exportFailed')) } finally { setExporting(false) }
   }
 
+  // 匯出完整薪資表（當月全部員工；明細欄只列有數值的欄位）
+  async function exportPayrollXlsx() {
+    if (payroll.length === 0) return
+    const labels = getLabels(t)
+    const details = PAYROLL_DETAIL_FIELDS.filter(f => payroll.some(p => Number(p[f]) !== 0))
+    const header = [t('payrollExportNo'), t('payrollCodeLabel'), t('employeeLabel'), t('storeLabel'), t('positionLabel'),
+      t('baseSalaryLabel'), t('allowancesLabel'), t('deductionsLabel'), t('bonusLabel'), t('netPayLabel'), t('statusLabel'),
+      t('payrollExportPaidAt'), ...details.map(f => t(`payrollF_${f}`)), t('notesLabel')]
+    const rows: (string | number | null)[][] = [header]
+    const sum = { base: 0, allow: 0, ded: 0, bonus: 0, net: 0 }
+    const detailSum: Record<string, number> = {}
+    payroll.forEach((p, i) => {
+      const emp = employees.find(e => e.id === p.employee_id)
+      sum.base += Number(p.base_salary) || 0; sum.allow += Number(p.allowances) || 0; sum.ded += Number(p.deductions) || 0
+      sum.bonus += Number(p.bonus) || 0; sum.net += Number(p.net_pay) || 0
+      for (const f of details) detailSum[f] = (detailSum[f] ?? 0) + (Number(p[f]) || 0)
+      rows.push([i + 1, p.payroll_code || emp?.payroll_code || '', p.hr_employees?.name ?? emp?.name ?? '',
+        p.store || emp?.store || p.hr_employees?.department || '', p.position || p.hr_employees?.position || '',
+        Number(p.base_salary) || 0, Number(p.allowances) || 0, Number(p.deductions) || 0, Number(p.bonus) || 0, Number(p.net_pay) || 0,
+        labels[p.status] ?? p.status, p.paid_at ? p.paid_at.slice(0, 10) : '',
+        ...details.map(f => Number(p[f]) || 0), p.notes ?? ''])
+    })
+    rows.push(['', '', t('payrollExportTotal'), '', '', sum.base, sum.allow, sum.ded, sum.bonus, sum.net, '', '', ...details.map(f => detailSum[f]), ''])
+    const { downloadXlsx } = await import('@/lib/excel/export')
+    await downloadXlsx(`${t('payrollExportFile')}_${year}-${String(month).padStart(2, '0')}`, [{
+      name: `${year}-${String(month).padStart(2, '0')}`, rows,
+      widths: header.map((h, i) => (i === 2 ? 26 : i === 0 ? 6 : Math.max(12, String(h).length * 2 + 2))),
+    }])
+  }
+
   async function sendPayslips() {
     if (payroll.length === 0) return
     if (!confirm(t('confirmSendPayslips', { n: payroll.length }))) return
@@ -1214,6 +1244,9 @@ function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: 
         <div className="ml-auto flex items-center gap-2">
           <Button size="sm" variant="outline" className="gap-1 bg-indigo-50/70 border-indigo-200 text-indigo-700 hover:bg-indigo-100" onClick={sendPayslips} disabled={sendingPayslips || payroll.length === 0} title={t('sendPayslipTitle')}>
             {sendingPayslips ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}{t('sendPayslipButton')}
+          </Button>
+          <Button size="sm" variant="outline" className="gap-1" onClick={exportPayrollXlsx} disabled={payroll.length === 0} title={t('payrollExportTitle')}>
+            <Download className="h-4 w-4" />{t('payrollExportButton')}
           </Button>
           <Button size="sm" variant="outline" className="gap-1 text-emerald-700 border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100" onClick={exportBank} disabled={exporting || payroll.length === 0} title={t('downloadTpbankTitle')}>
             {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}{t('downloadTpbankButton')}

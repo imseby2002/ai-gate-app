@@ -7929,7 +7929,13 @@
     "evalTierAmount": "Rating bonus",
     "storeFilterAll": "All stores / locations ({n})",
     "storeFilterNone": "No store assigned ({n})",
-    "storeFilterHint": "Filter employees by store / location"
+    "storeFilterHint": "Filter employees by store / location",
+    "payrollExportButton": "Export Excel",
+    "payrollExportTitle": "Export this month's full payroll (with details and totals)",
+    "payrollExportFile": "Payroll",
+    "payrollExportNo": "No.",
+    "payrollExportPaidAt": "Paid on",
+    "payrollExportTotal": "Total"
   },
   "FinancePage": {
     "accountBalancesTitle": "Balance by account",
