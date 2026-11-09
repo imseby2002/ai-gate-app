@@ -6,8 +6,7 @@
  * 回傳格式與 lib/reserve/ai.ts 的型別相同。
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { generateText } from 'ai'
-import { createAnthropic } from '@ai-sdk/anthropic'
+import { generateTextByChain, looksLikeJson } from '@/lib/ai/proxy-fallback'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentStore } from '@/lib/reserve/current-store'
@@ -18,12 +17,11 @@ import type { ReserveAppointment, ReserveService, ReserveStaff, ReserveStore } f
 
 export const maxDuration = 60
 
-const MODEL = 'claude-haiku-4-5'
 const PRECHECK_USD = 0.02
 const DAY_NAMES = ['日', '一', '二', '三', '四', '五', '六']
 const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const
 
-type Usage = { inputTokens?: number; outputTokens?: number }
+type Usage = { inputTokens?: number; outputTokens?: number; model: string }
 type Util = 'optimal' | 'overloaded' | 'underutilized'
 
 function parseJson<T>(text: string): T {
@@ -32,10 +30,10 @@ function parseJson<T>(text: string): T {
   return JSON.parse(m[0]) as T
 }
 
+// 免費模型優先 → Claude Haiku 5.5 → DeepSeek；免費通道 llmCost 為 0，不向客戶扣點
 async function ask(system: string, prompt: string, maxOutputTokens = 1200): Promise<{ text: string; usage: Usage }> {
-  const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-  const res = await generateText({ model: anthropic(MODEL), system, prompt, maxOutputTokens })
-  return { text: res.text, usage: res.usage }
+  const { result, usedModel } = await generateTextByChain('extraction', { system, prompt, maxOutputTokens }, { feature: 'reserve', validate: looksLikeJson })
+  return { text: result.text, usage: { ...result.usage, model: usedModel } }
 }
 
 const localDate = (d: Date) =>
@@ -77,7 +75,7 @@ export async function POST(req: NextRequest) {
   const storeInfo = `店家：${store.name}（類別：${store.category}）`
 
   let costUsd = 0
-  const track = (u: Usage) => { costUsd += llmCost(MODEL, u) }
+  const track = (u: Usage) => { costUsd += llmCost(u.model, u) }
 
   try {
     if (action === 'followup_sms') {

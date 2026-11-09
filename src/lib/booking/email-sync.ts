@@ -5,7 +5,7 @@ import { decryptSecret, encryptSecret, isEncrypted } from '@/lib/crypto/secret'
 import { findOrCreateOrder } from './orders'
 import { calculateModelCosts, estimateTextTokens } from '@/lib/ai/token-cost-tracker'
 import { trackAiUsage } from '@/lib/ai/universal-tracker'
-import { generateTextWithFallback, type Attempt } from '@/lib/ai/proxy-fallback'
+import { generateTextWithFallback, looksLikeJson, type Attempt } from '@/lib/ai/proxy-fallback'
 
 interface AdditionalRoom {
   property_name: string | null
@@ -940,8 +940,8 @@ ${truncated}
 只回傳 JSON，不要其他說明：{"is_booking": true 或 false}`
 
   const providers: Array<AiProvider> = ['free']
-  if (process.env.DEEPSEEK_API_KEY) providers.push('deepseek')
-  if (process.env.ANTHROPIC_API_KEY) providers.push('claude') // 無可用模型時不篩選，安全預設全部送進 Stage 2
+  if (process.env.ANTHROPIC_API_KEY) providers.push('claude')
+  if (process.env.DEEPSEEK_API_KEY) providers.push('deepseek') // 無可用模型時不篩選，安全預設全部送進 Stage 2
 
   for (const provider of providers) {
     try {
@@ -1019,11 +1019,11 @@ ${roomListStr}${hint}${preLine}${fewShot}
 
 只回傳 JSON，不要其他說明。`
 
-  // 擷取順序：免費通道（FreeLLM / CLIProxy）→ DeepSeek → Claude Haiku 保底；
+  // 擷取順序：免費通道（FreeLLM / CLIProxy）→ Claude Haiku 5.5 → DeepSeek；
   // 一個失敗或回傳壞 JSON 時換下一個，而不是直接放棄整封信。
   const providers: Array<AiProvider> = ['free']
-  if (process.env.DEEPSEEK_API_KEY) providers.push('deepseek')
   if (process.env.ANTHROPIC_API_KEY) providers.push('claude')
+  if (process.env.DEEPSEEK_API_KEY) providers.push('deepseek')
 
   for (const provider of providers) {
     // One retry per provider for transient errors / truncated JSON.
@@ -1090,19 +1090,11 @@ const FREE_EXTRACTION_CHAIN: readonly Attempt[] = [
 
 async function callModel(provider: AiProvider, prompt: string, maxTokens = 1000): Promise<string> {
   if (provider === 'free') {
-    const { result, usedModel, usedVia } = await generateTextWithFallback(FREE_EXTRACTION_CHAIN, {
+    const { result } = await generateTextWithFallback(FREE_EXTRACTION_CHAIN, {
       messages: [{ role: 'user', content: prompt }],
       maxOutputTokens: maxTokens,
       temperature: 0,
-    }, { timeoutMs: 20000 })
-    const usage = (result.usage ?? {}) as unknown as Record<string, number | undefined>
-    void trackAiUsage({
-      feature: 'email_sync',
-      modelId: usedModel,
-      inputTokens: usage.inputTokens ?? estimateTextTokens(prompt),
-      outputTokens: usage.outputTokens ?? estimateTextTokens(result.text),
-      sourceChannel: usedVia === 'cli-proxy' ? 'cliproxy' : 'freellm',
-    })
+    }, { timeoutMs: 20000, feature: 'email_sync', validate: looksLikeJson })
     return result.text
   }
   if (provider === 'deepseek') {
@@ -1132,32 +1124,11 @@ async function callModel(provider: AiProvider, prompt: string, maxTokens = 1000)
     return reply
   }
 
-  // Anthropic Claude Haiku (高精準結構化提取，專門解析複雜 OTA 訂單格式)
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': process.env.ANTHROPIC_API_KEY ?? '',
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: maxTokens,
-      temperature: 0,
-      messages: [{ role: 'user', content: prompt }],
-    }),
-    signal: AbortSignal.timeout(20000),
-  })
-  const data = await res.json()
-  const reply = data.content?.[0]?.text ?? ''
-  const inTokens = (data.usage?.input_tokens ?? estimateTextTokens(prompt)) as number
-  const outTokens = (data.usage?.output_tokens ?? estimateTextTokens(reply)) as number
-  void trackAiUsage({
-    feature: 'email_sync',
-    modelId: 'claude-haiku-4-5-20251001',
-    inputTokens: inTokens,
-    outputTokens: outTokens,
-    sourceChannel: 'anthropic',
-  })
-  return reply
+  // Claude Haiku 5.5（最便宜的付費模型，$0.10/$0.50 每百萬 tokens）
+  const { result } = await generateTextWithFallback(
+    [{ via: 'direct', provider: 'anthropic', model: 'claude-haiku-5-5' }],
+    { messages: [{ role: 'user', content: prompt }], maxOutputTokens: maxTokens },
+    { feature: 'email_sync', timeoutMs: 30000 },
+  )
+  return result.text
 }

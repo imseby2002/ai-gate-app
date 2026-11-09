@@ -4,7 +4,8 @@ import { generateText, stepCountIs, type ModelMessage } from 'ai'
 import { cookies } from 'next/headers'
 import { trackAiUsage } from '@/lib/ai/universal-tracker'
 
-export const AFFAIRS_AI_MODEL = 'claude-sonnet-4-6'
+// 需要 Anthropic 官方 web search 工具，免費模型無法替代；改用較新且較便宜的 Sonnet 5.5（$2/$10，原 Sonnet 4.6 $3/$15）
+export const AFFAIRS_AI_MODEL = 'claude-sonnet-5-5'
 
 const LANG_NAME: Record<string, string> = { 'zh-TW': '繁體中文', en: 'English', vi: 'Tiếng Việt' }
 
@@ -30,7 +31,7 @@ export async function generateWithSearch(opts: {
     model: anthropic(AFFAIRS_AI_MODEL),
     system: opts.system,
     messages: opts.messages,
-    tools: { web_search: anthropic.tools.webSearch_20250305({ maxUses: opts.maxSearches ?? 5 }) },
+    tools: { web_search: anthropic.tools.webSearch_20260209({ maxUses: opts.maxSearches ?? 5 }) },
     stopWhen: stepCountIs(8),
     maxOutputTokens: opts.maxOutputTokens ?? 4000,
   })

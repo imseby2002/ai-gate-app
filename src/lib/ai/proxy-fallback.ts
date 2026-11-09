@@ -194,7 +194,7 @@ export function buildModel(attempt: Attempt) {
         return createOpenAI({ apiKey: key, baseURL: 'https://api.deepseek.com/v1' }).chat(attempt.model)
       }
       if (attempt.provider === 'google') {
-        const key = process.env.GOOGLE_AI_API_KEY
+        const key = process.env.GOOGLE_AI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY
         if (!key) throw new Error('GOOGLE_AI_API_KEY not set')
         return createGoogleGenerativeAI({ apiKey: key })(attempt.model)
       }
@@ -418,6 +418,8 @@ export async function generateTextWithFallback(
       delete callArgs.topP
       delete callArgs.topK
       if (callArgs.maxOutputTokens == null) callArgs.maxOutputTokens = 16000
+      // Claude 5.x 預設開啟 thinking，thinking 也算在 max_tokens 內；上限太小會只剩思考、沒有答案
+      else if (Number(callArgs.maxOutputTokens) < 2000) callArgs.maxOutputTokens = 2000
     }
     try {
       const result = await generateText({

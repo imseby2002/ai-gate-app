@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { generateText } from 'ai'
-import { createAnthropic } from '@ai-sdk/anthropic'
+import { generateTextByChain, looksLikeJson } from '@/lib/ai/proxy-fallback'
 import { safeFetch } from '@/lib/ssrf'
 
 export const maxDuration = 60 // seconds (Vercel Hobby max)
 
-const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 // Strip HTML to plain text, preserve JSON-LD blocks, extract image URLs
 function extractTextFromHtml(html: string): { text: string; jsonLd: string; images: string[] } {
@@ -183,12 +181,11 @@ export async function POST(req: NextRequest) {
   const prompt = `Platform: ${platform ?? 'unknown'}\n\nContent:\n${rawContent.slice(0, 14000)}`
 
   try {
-    const { text: aiResponse } = await generateText({
-      model: anthropic('claude-haiku-4-5-20251001'),
+    const { result: { text: aiResponse } } = await generateTextByChain('extraction', {
       system: SYSTEM_PROMPT,
       prompt,
       maxOutputTokens: 2000,
-    })
+    }, { feature: 'booking', validate: looksLikeJson })
 
     // Parse AI JSON response
     const jsonMatch = aiResponse.match(/\{[\s\S]*\}/)

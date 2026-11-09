@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createGoogleGenerativeAI } from '@ai-sdk/google'
-import { createAnthropic } from '@ai-sdk/anthropic'
+import { generateTextWithFallback, looksLikeJson } from '@/lib/ai/proxy-fallback'
 import { createOpenAI } from '@ai-sdk/openai'
 import { generateText } from 'ai'
 import { getUnitContext } from '@/lib/auth/unit-access'
@@ -57,68 +56,29 @@ export async function POST(req: NextRequest) {
 
   let jsonText = ''
 
-  // 1. 照片 / 文件影像掃描優先使用 Google Gemini 2.5 Flash (快速、成本極低且多模態強大)
-  const googleApiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY
-  if (googleApiKey) {
-    try {
-      const google = createGoogleGenerativeAI({ apiKey: googleApiKey })
-      const res = await generateText({
-        model: google('gemini-2.5-flash'),
-        messages: [
-          {
-            role: 'user',
-            content: [
-              { type: 'text', text: promptText },
-              { type: 'file', data: buf, mediaType },
-            ],
-          },
-        ],
-      })
-      jsonText = res.text
-      const usage = (res as any).usage ?? {}
-      void trackAiUsage({
-        feature: 'affairs',
-        modelId: 'gemini-2.5-flash',
-        inputTokens: Number(usage.inputTokens ?? usage.promptTokens ?? 0),
-        outputTokens: Number(usage.outputTokens ?? usage.completionTokens ?? 0),
-        sourceChannel: 'google',
-        metadata: { module: 'affairs_doc_extract', file: file.name },
-      })
-    } catch (e) {
-      console.warn('[affairs/ai-extract] Gemini Flash failed, trying Anthropic:', e)
-    }
-  }
-
-  // 2. 備援使用 Anthropic Claude Sonnet 4.6（Claude 3.5 Sonnet 已下架）
-  if (!jsonText && process.env.ANTHROPIC_API_KEY) {
-    try {
-      const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-      const res = await generateText({
-        model: anthropic('claude-sonnet-4-6'),
-        maxOutputTokens: 4000,
-        messages: [
-          {
-            role: 'user',
-            content: [
-              { type: 'text', text: promptText },
-              { type: 'file', data: buf, mediaType },
-            ],
-          },
-        ],
-      })
-      jsonText = res.text
-      const usage = (res as any).usage ?? {}
-      void trackAiUsage({
-        feature: 'affairs',
-        modelId: 'claude-sonnet-4-6',
-        inputTokens: Number(usage.inputTokens ?? usage.promptTokens ?? 0),
-        outputTokens: Number(usage.outputTokens ?? usage.completionTokens ?? 0),
-        sourceChannel: 'anthropic',
-        metadata: { module: 'affairs_doc_extract', file: file.name },
-      })
-    } catch (e) {
-      console.warn('[affairs/ai-extract] Anthropic failed, trying OpenAI:', e)
-    }
+  // 1. 免費視覺模型優先（CLIProxy Gemini）→ Claude Haiku 5.5 → Gemini 2.5 Flash 直連 → Claude Sonnet 5.5
+  try {
+    const { result: res } = await generateTextWithFallback([
+      { via: 'cli-proxy', model: 'gemini-2.5-pro' },
+      { via: 'cli-proxy', model: 'gemini-3-flash' },
+      { via: 'direct', provider: 'anthropic', model: 'claude-haiku-5-5' },
+      { via: 'direct', provider: 'google', model: 'gemini-2.5-flash' },
+      { via: 'direct', provider: 'anthropic', model: 'claude-sonnet-5-5' },
+    ], {
+      maxOutputTokens: 4000,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: promptText },
+            { type: 'file', data: buf, mediaType },
+          ],
+        },
+      ],
+    }, { feature: 'affairs', validate: looksLikeJson, timeoutMs: 90000 })
+    jsonText = res.text
+  } catch (e) {
+    console.warn('[affairs/ai-extract] fallback chain failed, trying OpenAI:', e)
   }
 
   // 2. 若 Anthropic 失敗或未設定，嘗試 OpenAI GPT-4o

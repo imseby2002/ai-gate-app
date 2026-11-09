@@ -15,8 +15,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { getCronOrUserAuth } from '@/lib/cron-auth'
-import { createAnthropic } from '@ai-sdk/anthropic'
-import { generateText } from 'ai'
+import { generateTextByChain, looksLikeJson } from '@/lib/ai/proxy-fallback'
 import { setUsageUser, trackLlm, withUsage } from '@/lib/marketing/usage'
 import { precheckUsage } from '@/lib/marketing/billing'
 
@@ -93,12 +92,10 @@ function normalizePhone(raw: string | undefined): string | undefined {
 // ─── AI parse + filter + classify ─────────────────────────────────────────────
 
 // 單批次 AI 解析（每批最多 CHUNK_SIZE 字元）
-// 抽取／分類屬機械任務，改用 Haiku 4.5（約 Sonnet 的 1/3 成本）
-const EXTRACT_MODEL = 'claude-haiku-4-5'
+// 抽取／分類屬機械任務：免費模型優先 → Claude Haiku 5.5 → DeepSeek（見 proxy-fallback extraction 鏈）
 const CHUNK_SIZE = 15000
 
 async function aiParseChunk(
-  anthropic: ReturnType<typeof createAnthropic>,
   chunk: string,
   filterCriteria: string,
   minEmployees: number,
@@ -129,13 +126,12 @@ ${chunk}
 
 萃取所有組織，回傳 JSON 陣列。`
 
-  const { text, usage } = await generateText({
-    model: anthropic(EXTRACT_MODEL),
+  const { result: { text, usage }, usedModel } = await generateTextByChain('extraction', {
     system: systemPrompt,
     prompt: userPrompt,
     maxOutputTokens: 16000,
-  })
-  trackLlm('claude-haiku-4-5', usage)
+  }, { feature: 'marketing', validate: looksLikeJson, timeoutMs: 120000 })
+  trackLlm(usedModel, usage) // 免費通道 llmCost 為 0
 
   // 嘗試提取 JSON 陣列（支援 markdown code block）
   const clean = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim()
@@ -157,8 +153,6 @@ async function aiParseOrgs(
   minEmployees: number,
 ): Promise<Omit<ProspectOrg, 'nearestBranch' | 'nearestBranchDistance' | 'selected' | 'filterReason'>[]> {
 
-  const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
-
   // 分批處理：每批 CHUNK_SIZE 字元，避免 AI 輸出超過 token 上限
   const chunks: string[] = []
   for (let i = 0; i < rawText.length; i += CHUNK_SIZE) {
@@ -168,7 +162,7 @@ async function aiParseOrgs(
   type ParsedOrg = { name: string; phone?: string; email?: string; address?: string; lat?: number | null; lng?: number | null; rawCategory?: string; aiCategory: string; employeeHint?: string; rating?: number | null; website?: string; passFilter: boolean; filterReason?: string }
   const allParsed: ParsedOrg[] = []
   for (const chunk of chunks) {
-    const parsed = await aiParseChunk(anthropic, chunk, filterCriteria, minEmployees)
+    const parsed = await aiParseChunk(chunk, filterCriteria, minEmployees)
     allParsed.push(...parsed)
   }
 

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createAnthropic } from '@ai-sdk/anthropic'
-import { generateText } from 'ai'
+import { generateTextByChain } from '@/lib/ai/proxy-fallback'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -16,10 +15,7 @@ export async function POST(req: NextRequest) {
       `${m.role === 'user' ? '客戶' : 'AI客服'}：${m.content}`)
     .join('\n')
 
-  const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
-
-  const { text } = await generateText({
-    model: anthropic('claude-haiku-4-5'),
+  const { result: { text } } = await generateTextByChain('extraction', {
     maxOutputTokens: 300,
     messages: [{
       role: 'user',
@@ -31,7 +27,7 @@ export async function POST(req: NextRequest) {
 對話內容：
 ${conversation}`,
     }],
-  })
+  }, { feature: 'cs', validate: t => t.includes('【問題】') })
 
   return NextResponse.json({ summary: text })
 }

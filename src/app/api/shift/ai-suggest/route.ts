@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { generateText } from 'ai'
-import { createAnthropic } from '@ai-sdk/anthropic'
+import { generateTextByChain, looksLikeJson } from '@/lib/ai/proxy-fallback'
 import { getShiftContext, storeAllowed } from '@/lib/shift/scope'
 import { isFulltime, pgQuote } from '@/lib/shift/staff'
 import { hourlyProfile } from '@/lib/shift/sales'
@@ -9,10 +8,8 @@ import {
   type AvailRule, type NeedRule,
 } from '@/lib/shift/time'
 import { outputLangInstruction } from '@/lib/ai/output-lang'
-import { trackAiUsage } from '@/lib/ai/universal-tracker'
 
 export const maxDuration = 120
-const MODEL = 'claude-sonnet-4-6'
 const WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 interface AiPlan { e: number; date: string; start: string; end: string; reason?: string }
@@ -95,11 +92,9 @@ weekdays use 0=Sun..6=Sat.${outputLangInstruction(locale)}`
 
   let text = ''
   try {
-    const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-    const res = await generateText({ model: anthropic(MODEL), prompt, maxOutputTokens: 8000, temperature: 0.2 })
+    // 排班需推理：強免費模型優先（gemini-2.5-pro / gpt-5.5 / kimi-k2.5）→ Claude Haiku 5.5 → Sonnet 5.5
+    const { result: res } = await generateTextByChain('tools', { prompt, maxOutputTokens: 8000, temperature: 0.2 }, { feature: 'shift', validate: looksLikeJson, timeoutMs: 120000 })
     text = res.text
-    const u = res.usage as { inputTokens?: number; outputTokens?: number } | undefined
-    void trackAiUsage({ feature: 'store_coach', modelId: MODEL, inputTokens: Number(u?.inputTokens ?? 0), outputTokens: Number(u?.outputTokens ?? 0), metadata: { kind: 'shift_suggest', store } })
   } catch (e) {
     return NextResponse.json({ error: `AI 失敗：${e instanceof Error ? e.message : String(e)}` }, { status: 502 })
   }
