@@ -7871,7 +7871,13 @@
     "evalTierAmount": "Thưởng xếp hạng",
     "storeFilterAll": "Tất cả cửa hàng / địa điểm ({n})",
     "storeFilterNone": "Chưa gán cửa hàng ({n})",
-    "storeFilterHint": "Lọc nhân viên theo cửa hàng / địa điểm"
+    "storeFilterHint": "Lọc nhân viên theo cửa hàng / địa điểm",
+    "payrollExportButton": "Xuất Excel",
+    "payrollExportTitle": "Xuất bảng lương đầy đủ tháng này (kèm chi tiết và tổng cộng)",
+    "payrollExportFile": "Bang_luong",
+    "payrollExportNo": "STT",
+    "payrollExportPaidAt": "Ngày chi trả",
+    "payrollExportTotal": "Tổng cộng"
   },
   "FinancePage": {
     "accountBalancesTitle": "Số dư theo tài khoản",
