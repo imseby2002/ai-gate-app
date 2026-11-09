@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type TextareaHTMLAttributes } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useLocale, useTranslations } from 'next-intl'
 import { ArrowDown, ArrowLeft, ArrowUp, BarChart3, Check, Copy, Loader2, PenLine, Plus, Sparkles, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { AutoTextarea } from '@/components/ui/auto-textarea'
 import { getLocalizedDepartments } from '@/lib/org-units'
 import { EXAM_LANGS, QUESTION_TYPES, emptyL10n, type ExamLang, type ExamQuestion, type L10n, type QuestionType } from '@/lib/exams/types'
 
@@ -29,20 +30,6 @@ interface Doc { id: string; department: string; title: string; char_count: numbe
 const LANG_LABEL: Record<ExamLang, string> = { zh: '中文', en: 'English', vi: 'Tiếng Việt' }
 
 // 依內容自動長高的輸入框：題目、選項、答案一次看完整，不用在小框裡捲動
-function AutoTextarea({ minRows = 2, className = '', value, ...rest }: TextareaHTMLAttributes<HTMLTextAreaElement> & { minRows?: number }) {
-  const ref = useRef<HTMLTextAreaElement>(null)
-  useLayoutEffect(() => {
-    const el = ref.current
-    if (!el) return
-    el.style.height = 'auto'
-    el.style.height = `${el.scrollHeight + 2}px`
-  }, [value])
-  return (
-    <textarea ref={ref} rows={minRows} value={value} {...rest}
-      className={`w-full resize-y overflow-hidden rounded-md border bg-background p-2.5 text-sm leading-relaxed disabled:opacity-70 ${className}`} />
-  )
-}
-
 function newQuestion(type: QuestionType, position: number): ExamQuestion {
   const base = { position, type, question: emptyL10n(), rubric: emptyL10n(), explanation: emptyL10n(), points: type === 'essay' ? 10 : type === 'short' ? 5 : 1 }
   if (type === 'single' || type === 'multi') {
