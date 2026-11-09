@@ -975,5 +975,19 @@
 "單店的預約、排班、行事曆與顧客管理都免費，不限服務項目與預約筆數；AI 助理與簡訊提醒依實際用量扣點。要管理多間分店或自訂簡訊內容，升級 CORE 每月 5 美元。": "Booking, scheduling, calendar and customer management for one location are free, with no limit on services or bookings. The AI assistant and SMS reminders are charged by actual usage. To run multiple branches or customize SMS text, upgrade to CORE for $5/month.",
 "單店預約、排班、行事曆與顧客管理不限筆數免費使用；多分店與自訂簡訊升級 CORE，AI 助理與簡訊依實際用量扣點。": "Booking, scheduling, calendar and customer management for one location are free with no limits. Multiple branches and custom SMS come with CORE; the AI assistant and SMS are charged by actual usage.",
 "IMT 服務預約系統單店免費：線上預約頁、人員排班、行事曆、預約與顧客管理、產業範本；多分店與自訂簡訊 CORE 每月 5 美元；AI 助理與簡訊依用量扣點。": "IMT Service Booking is free for one location: booking page, staff scheduling, calendar, booking and customer management, industry templates. Multiple branches and custom SMS with CORE at $5/month; the AI assistant and SMS are billed by usage.",
-"年繳 50 美元（省 10 美元）": "$50/year billed annually (save $10)"
+"年繳 50 美元（省 10 美元）": "$50/year billed annually (save $10)",
+"月費": "Monthly fee",
+"$5／月或 $50／年": "$5/month or $50/year",
+"門市／分店數": "Locations / branches",
+"1 間": "1",
+"最多 20 間": "Up to 20",
+"客服串接（查空檔、預約連結、依電話查預約）": "CS integration (availability, booking link, lookup by phone)",
+"簡訊提醒（依用量扣點）": "SMS reminders (charged by usage)",
+"固定內容": "Standard text",
+"可自訂內容": "Custom text",
+"AI 預約與營運助理（依用量扣點）": "AI booking and operations assistant (charged by usage)",
+"項目": "Feature",
+"有": "Included",
+"無": "Not included",
+"CORE 以綠界一次付款，月繳 30 天、年繳 365 天，不自動續扣。": "CORE is a one-time ECPay payment: 30 days monthly or 365 days yearly, with no automatic renewal."
 }
