@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getCurrentStore } from '@/lib/reserve/current-store'
 import { StoreCategory } from '@/lib/reserve/types'
 
 // 各行業預設模板資料庫
@@ -336,31 +337,28 @@ export async function POST(req: NextRequest) {
 
     const admin = createAdminClient()
 
-    // 1. 建立或更新店家
-    const slug = storeSlug || `${templateKey}-${user.id.slice(0, 5)}`
-    const { data: store, error: storeErr } = await admin
-      .from('reserve_stores')
-      .upsert({
-        user_id: user.id,
-        slug,
-        name: template.name,
-        category: template.category,
-        description: template.description,
-        phone: template.phone,
-        address: template.address,
-        notice: template.notice,
-        slot_interval_minutes: 30,
-        advance_booking_days: 30,
-        min_booking_hours: 2,
-        allow_any_staff: true,
-        deposit_required: false,
-        deposit_amount: 0,
-        currency: 'TWD',
-        is_active: true,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'user_id' })
-      .select()
-      .single()
+    // 1. 更新目前操作的門市（沒有門市時建立）；slug 只在新建時設定，避免改掉已分享的預約網址
+    const current = await getCurrentStore<{ id: string }>(user.id, req, 'id', admin)
+    const storeFields = {
+      name: template.name,
+      category: template.category,
+      description: template.description,
+      phone: template.phone,
+      address: template.address,
+      notice: template.notice,
+      slot_interval_minutes: 30,
+      advance_booking_days: 30,
+      min_booking_hours: 2,
+      allow_any_staff: true,
+      deposit_required: false,
+      deposit_amount: 0,
+      currency: 'TWD',
+      is_active: true,
+      updated_at: new Date().toISOString(),
+    }
+    const { data: store, error: storeErr } = current
+      ? await admin.from('reserve_stores').update(storeFields).eq('id', current.id).eq('user_id', user.id).select().single()
+      : await admin.from('reserve_stores').insert({ ...storeFields, user_id: user.id, slug: storeSlug || `${templateKey}-${user.id.slice(0, 5)}` }).select().single()
 
     if (storeErr || !store) {
       return NextResponse.json({ error: storeErr?.message || 'Failed to create store' }, { status: 500 })

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { ensureCurrentStore, getCurrentStore } from '@/lib/reserve/current-store'
 import { DEFAULT_SERVICES } from '@/lib/reserve/mock-data'
 
 export async function GET(req: NextRequest) {
@@ -11,11 +12,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ services: DEFAULT_SERVICES, isDemo: true })
     }
 
-    const { data: store } = await supabase
-      .from('reserve_stores')
-      .select('id')
-      .eq('user_id', user.id)
-      .maybeSingle()
+    const store = await getCurrentStore<{ id: string }>(user.id, req, 'id')
 
     if (!store) {
       return NextResponse.json({ services: DEFAULT_SERVICES, isDemo: true })
@@ -50,25 +47,8 @@ export async function POST(req: NextRequest) {
     const admin = createAdminClient()
 
     // Ensure store exists
-    let { data: store } = await admin
-      .from('reserve_stores')
-      .select('id')
-      .eq('user_id', user.id)
-      .maybeSingle()
-
-    if (!store) {
-      const { data: newStore } = await admin
-        .from('reserve_stores')
-        .insert({
-          user_id: user.id,
-          name: '我的預約門市',
-          slug: `store-${user.id.slice(0, 8)}`,
-          category: 'beauty',
-        })
-        .select()
-        .single()
-      store = newStore
-    }
+    const store = await ensureCurrentStore(user.id, req, admin)
+    if (!store) return NextResponse.json({ error: 'Store not found' }, { status: 500 })
 
     const { data, error } = await admin
       .from('reserve_services')
@@ -101,10 +81,13 @@ export async function PUT(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { id, ...updates } = body
+    const { id, store_id: _ignoredStoreId, ...updates } = body
+    void _ignoredStoreId
     if (!id) return NextResponse.json({ error: 'Missing service id' }, { status: 400 })
 
     const admin = createAdminClient()
+    const store = await getCurrentStore<{ id: string }>(user.id, req, 'id', admin)
+    if (!store) return NextResponse.json({ error: 'Store not found' }, { status: 404 })
     const { data, error } = await admin
       .from('reserve_services')
       .update({
@@ -112,6 +95,7 @@ export async function PUT(req: NextRequest) {
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)
+      .eq('store_id', store.id)
       .select()
       .single()
 
@@ -139,7 +123,9 @@ export async function DELETE(req: NextRequest) {
     if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
 
     const admin = createAdminClient()
-    const { error } = await admin.from('reserve_services').delete().eq('id', id)
+    const store = await getCurrentStore<{ id: string }>(user.id, req, 'id', admin)
+    if (!store) return NextResponse.json({ error: 'Store not found' }, { status: 404 })
+    const { error } = await admin.from('reserve_services').delete().eq('id', id).eq('store_id', store.id)
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
 
     return NextResponse.json({ success: true })

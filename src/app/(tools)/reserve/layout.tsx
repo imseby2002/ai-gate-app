@@ -9,6 +9,7 @@ import {
   ChevronRight, Menu, X, Clock, HeartHandshake
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
+import { StoreSwitcher } from '@/components/reserve/StoreSwitcher'
 
 interface NavItem {
   href: string
@@ -88,6 +89,11 @@ export default function ReserveLayout({ children }: { children: React.ReactNode 
           </button>
         </div>
 
+        {/* 分店切換 */}
+        <div className="px-2.5 py-2 border-b">
+          <StoreSwitcher compact={collapsed} />
+        </div>
+
         {/* Navigation list */}
         <nav className="flex-1 overflow-y-auto p-2 space-y-1">
           {NAV_ITEMS.map(item => {
@@ -151,6 +157,9 @@ export default function ReserveLayout({ children }: { children: React.ReactNode 
               <button onClick={() => setDrawerOpen(false)} className="p-1 rounded text-slate-400 hover:text-slate-600">
                 <X className="h-5 w-5" />
               </button>
+            </div>
+            <div className="pt-3">
+              <StoreSwitcher />
             </div>
             <nav className="flex-1 overflow-y-auto py-3 space-y-1">
               {NAV_ITEMS.map(item => {

@@ -10,6 +10,7 @@ import { generateText } from 'ai'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getCurrentStore } from '@/lib/reserve/current-store'
 import { chargeUsage, llmCost, precheckUsage } from '@/lib/marketing/billing'
 import { computeAvailableSlots } from '@/lib/reserve/slots'
 import type { CapacityAnalysisResult, FollowUpMessageResult, SmartScheduleResult } from '@/lib/reserve/ai'
@@ -59,9 +60,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
   }
 
-  const { data: storeRow } = await supabase.from('reserve_stores').select('*').eq('user_id', user.id).maybeSingle()
+  const storeRow = await getCurrentStore<ReserveStore>(user.id, req)
   if (!storeRow) return NextResponse.json({ error: '請先到「門市設定」建立店家，或套用產業範本' }, { status: 400 })
-  const store = storeRow as ReserveStore
+  const store: ReserveStore = storeRow
 
   const blocked = await precheckUsage(user.id, PRECHECK_USD)
   if (blocked) return NextResponse.json(blocked, { status: 402 })

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { ensureCurrentStore, getCurrentStore } from '@/lib/reserve/current-store'
 import { DEFAULT_CUSTOMERS } from '@/lib/reserve/mock-data'
 
 export async function GET(req: NextRequest) {
@@ -19,11 +20,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ customers: mock, isDemo: true })
     }
 
-    const { data: store } = await supabase
-      .from('reserve_stores')
-      .select('id')
-      .eq('user_id', user.id)
-      .maybeSingle()
+    const store = await getCurrentStore<{ id: string }>(user.id, req, 'id')
 
     if (!store) {
       return NextResponse.json({ customers: DEFAULT_CUSTOMERS, isDemo: true })
@@ -63,11 +60,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const admin = createAdminClient()
 
-    let { data: store } = await admin
-      .from('reserve_stores')
-      .select('id')
-      .eq('user_id', user.id)
-      .maybeSingle()
+    const store = await getCurrentStore<{ id: string }>(user.id, req, 'id', admin)
 
     if (!store) {
       return NextResponse.json({ error: 'Store not found' }, { status: 404 })
