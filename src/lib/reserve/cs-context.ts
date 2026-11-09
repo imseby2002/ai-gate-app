@@ -12,6 +12,8 @@ const PHONE_RE = /(?<!\d)(?:\+?\d{1,3}[-\s]?)?0?9\d{2}[-\s]?\d{3}[-\s]?\d{3}(?!\
 const DAY_NAMES = ['日', '一', '二', '三', '四', '五', '六']
 const TZ = 'Asia/Taipei'
 
+type Appt = ReserveAppointment & { service?: { name?: string } | null; staff?: { name?: string } | null }
+
 const STATUS_LABEL: Record<string, string> = {
   pending: '待確認', confirmed: '已確認', in_progress: '服務中', completed: '已完成', cancelled: '已取消', no_show: '未到',
 }
@@ -25,49 +27,61 @@ export async function reserveContextForCs(ownerId: string, message: string): Pro
   if (!RESERVE_INTENT_RE.test(message) && !phone) return ''
 
   const admin = createAdminClient()
-  const { data: storeRow } = await admin.from('reserve_stores').select('*').eq('user_id', ownerId).eq('is_active', true).maybeSingle()
-  if (!storeRow) return ''
-  const store = storeRow as ReserveStore
+  // 多分店：取該帳號所有營業中的門市（最多 5 間）
+  const { data: storeRows } = await admin.from('reserve_stores').select('*').eq('user_id', ownerId).eq('is_active', true)
+    .order('created_at', { ascending: true }).limit(5)
+  const stores = (storeRows ?? []) as ReserveStore[]
+  if (!stores.length) return ''
+  const multi = stores.length > 1
+  // 分店多時每間少放一點，控制 prompt 長度
+  const svcPerStore = multi ? 2 : 3
+  const slotsPerDay = multi ? 4 : 6
 
-  const [{ data: services }, { data: staff }, { data: upcoming }] = await Promise.all([
-    admin.from('reserve_services').select('*').eq('store_id', store.id).eq('is_active', true).order('sort_order'),
-    admin.from('reserve_staff').select('*').eq('store_id', store.id).eq('is_active', true),
-    admin.from('reserve_appointments').select('*, service:reserve_services(name), staff:reserve_staff(name)')
-      .eq('store_id', store.id).gte('start_time', new Date(Date.now() - 86400_000).toISOString()).order('start_time').limit(500),
-  ])
-  const svcList = (services ?? []) as ReserveService[]
-  const staffList = (staff ?? []) as ReserveStaff[]
-  const appts = (upcoming ?? []) as (ReserveAppointment & { service?: { name?: string } | null; staff?: { name?: string } | null })[]
+  const lines: string[] = [multi ? `\n\n【預約系統資料（共 ${stores.length} 間分店）】` : `\n\n【預約系統資料（${stores[0].name}）】`]
+  const allAppts: (Appt & { storeName: string })[] = []
 
-  const bookingUrl = `https://reserve.im-tourist.com/r/${store.slug}`
-  const lines: string[] = [
-    `\n\n【預約系統資料（${store.name}）】`,
-    `線上預約連結：${bookingUrl}`,
-    `服務項目：${svcList.slice(0, 15).map(s => `${s.name}（${s.duration_minutes} 分鐘，${s.sale_price ?? s.price} ${store.currency}）`).join('、') || '尚未建立'}`,
-  ]
+  for (const store of stores) {
+    const [{ data: services }, { data: staff }, { data: upcoming }] = await Promise.all([
+      admin.from('reserve_services').select('*').eq('store_id', store.id).eq('is_active', true).order('sort_order'),
+      admin.from('reserve_staff').select('*').eq('store_id', store.id).eq('is_active', true),
+      admin.from('reserve_appointments').select('*, service:reserve_services(name), staff:reserve_staff(name)')
+        .eq('store_id', store.id).gte('start_time', new Date(Date.now() - 86400_000).toISOString()).order('start_time').limit(500),
+    ])
+    const svcList = (services ?? []) as ReserveService[]
+    const staffList = (staff ?? []) as ReserveStaff[]
+    const appts = (upcoming ?? []) as Appt[]
+    allAppts.push(...appts.map(a => ({ ...a, storeName: store.name })))
 
-  // 近 3 天每個服務的前幾個空檔（最多 3 個服務），讓 AI 能回答「什麼時候有空」
-  const avail: string[] = []
-  for (const svc of svcList.slice(0, 3)) {
-    for (let i = 0; i < 3; i++) {
-      const d = new Date(Date.now() + i * 86400_000)
-      const slots = computeAvailableSlots({ dateStr: localDate(d), store, service: svc, staffList, appointments: appts })
-        .filter(s => s.available).slice(0, 6).map(s => s.time)
-      if (slots.length) avail.push(`${svc.name}｜${localDate(d)}（週${DAY_NAMES[d.getDay()]}）：${slots.join('、')}`)
+    if (multi) lines.push(`\n▍${store.name}${store.address ? `（${store.address}）` : ''}`)
+    lines.push(
+      `線上預約連結：https://reserve.im-tourist.com/r/${store.slug}`,
+      `服務項目：${svcList.slice(0, 15).map(s => `${s.name}（${s.duration_minutes} 分鐘，${s.sale_price ?? s.price} ${store.currency}）`).join('、') || '尚未建立'}`,
+    )
+
+    // 近 3 天前幾個服務的部分空檔，讓 AI 能回答「什麼時候有空」
+    const avail: string[] = []
+    for (const svc of svcList.slice(0, svcPerStore)) {
+      for (let i = 0; i < 3; i++) {
+        const d = new Date(Date.now() + i * 86400_000)
+        const slots = computeAvailableSlots({ dateStr: localDate(d), store, service: svc, staffList, appointments: appts })
+          .filter(s => s.available).slice(0, slotsPerDay).map(s => s.time)
+        if (slots.length) avail.push(`${svc.name}｜${localDate(d)}（週${DAY_NAMES[d.getDay()]}）：${slots.join('、')}`)
+      }
     }
+    lines.push(avail.length ? `近 3 天部分空檔：\n${avail.join('\n')}` : '近 3 天沒有查到空檔（可請客人到線上預約頁查看更多日期）')
   }
-  lines.push(avail.length ? `近 3 天部分空檔：\n${avail.join('\n')}` : '近 3 天沒有查到空檔（可請客人到線上預約頁查看更多日期）')
 
   if (phone) {
     const suffix = phone.replace(/\D/g, '').slice(-9)
-    const mine = appts.filter(a => (a.customer_phone ?? '').replace(/\D/g, '').endsWith(suffix))
+    const mine = allAppts.filter(a => (a.customer_phone ?? '').replace(/\D/g, '').endsWith(suffix))
+      .sort((a, b) => a.start_time.localeCompare(b.start_time))
     lines.push(mine.length
-      ? `找到電話 ${phone} 的預約：\n${mine.slice(0, 5).map(a => `• ${fmt(a.start_time)} ${a.service?.name ?? ''}${a.staff?.name ? `（${a.staff.name}）` : ''}，狀態：${STATUS_LABEL[a.status] ?? a.status}，預約編號 ${a.appointment_no}`).join('\n')}`
+      ? `找到電話 ${phone} 的預約：\n${mine.slice(0, 5).map(a => `• ${fmt(a.start_time)}${multi ? `【${a.storeName}】` : ''} ${a.service?.name ?? ''}${a.staff?.name ? `（${a.staff.name}）` : ''}，狀態：${STATUS_LABEL[a.status] ?? a.status}，預約編號 ${a.appointment_no}`).join('\n')}`
       : `電話 ${phone} 查無近期預約紀錄。`)
   }
 
   lines.push(
-    '【回覆規則】只能依上方資料回答；空檔只是參考，實際以預約頁為準。',
+    '【回覆規則】只能依上方資料回答；空檔只是參考，實際以預約頁為準。有多間分店時先確認客人要去哪一間，再給該分店的預約連結。',
     'AI 不能替客人建立、修改或取消預約，也不能承諾保留時段；請提供線上預約連結讓客人自行預約或改期，取消或特殊需求請客人留言由店家處理。',
     '查無資料時照實說明，不可捏造預約紀錄、時段或價格。',
   )
