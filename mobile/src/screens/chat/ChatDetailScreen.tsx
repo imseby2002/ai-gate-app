@@ -16,7 +16,9 @@ import {
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useRoute, useNavigation } from '@react-navigation/native'
+import * as ImagePicker from 'expo-image-picker'
 import { apiFetch, supabase } from '../../lib/supabase'
+import { CONFIG } from '../../lib/config'
 import { useAuth } from '../../context/AuthContext'
 
 interface Bubble {
@@ -184,6 +186,68 @@ export default function ChatDetailScreen() {
     }
   }
 
+  // 傳送圖片：先上傳到 cs-upload 取得路徑，再交給 cs-send 發到客人原平台（與網頁版同流程）
+  const handleSendImage = async () => {
+    if (sending) return
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync()
+    if (perm.status !== 'granted') {
+      Alert.alert('權限不足', '請允許存取相簿以傳送圖片')
+      return
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7 })
+    if (result.canceled || !result.assets[0]) return
+    const asset = result.assets[0]
+    if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) {
+      Alert.alert('圖片太大', '圖片上限 5MB')
+      return
+    }
+
+    setSending(true)
+    setBubbles((prev) => [...prev, { side: 'out', sender: 'agent', text: '', image: asset.uri, at: new Date().toISOString() }])
+    try {
+      const mime = asset.mimeType || 'image/jpeg'
+      const form = new FormData()
+      form.append('file', { uri: asset.uri, name: asset.fileName || `photo.${mime.includes('png') ? 'png' : 'jpg'}`, type: mime } as unknown as Blob)
+      form.append('to', from_id)
+      const { data: { session } } = await supabase.auth.getSession()
+      // FormData 不能用 apiFetch（它固定送 JSON 的 Content-Type）
+      const upRes = await fetch(`${CONFIG.API_BASE_URL}/api/marketing/cs-upload`, {
+        method: 'POST',
+        headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
+        body: form,
+      })
+      const upJson = await upRes.json().catch(() => ({}))
+      if (!upRes.ok || !upJson.path) {
+        Alert.alert('上傳失敗', upJson.error || '無法上傳圖片')
+        fetchThread()
+        return
+      }
+
+      const res = await apiFetch('/api/marketing/cs-send', {
+        method: 'POST',
+        body: JSON.stringify({
+          platform,
+          to: from_id,
+          text: '',
+          imagePath: upJson.path,
+          fromName: user?.email || '客服專員',
+        }),
+      })
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}))
+        Alert.alert('送訊失敗', errJson.error || '無法發送圖片至原平台')
+        fetchThread()
+      } else {
+        setTakeover(true)
+      }
+    } catch {
+      Alert.alert('發送錯誤', '請檢查網路連線')
+      fetchThread()
+    } finally {
+      setSending(false)
+    }
+  }
+
   const formatClock = (ts: string) => {
     try {
       const d = new Date(ts)
@@ -254,6 +318,9 @@ export default function ChatDetailScreen() {
 
       {/* 底部輸入列 */}
       <View style={styles.inputContainer}>
+        <TouchableOpacity style={styles.attachButton} onPress={handleSendImage} disabled={sending}>
+          <Ionicons name="image-outline" size={24} color={sending ? '#94A3B8' : '#2563EB'} />
+        </TouchableOpacity>
         <TextInput
           style={styles.textInput}
           placeholder="輸入回覆訊息（將發送至客人原平台）..."
@@ -444,6 +511,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#2563EB',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  attachButton: {
+    width: 36,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 4,
   },
   sendButtonDisabled: {
     backgroundColor: '#94A3B8',
