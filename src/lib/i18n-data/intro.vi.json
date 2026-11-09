@@ -959,5 +959,8 @@
 "智慧排程推薦、回訪關懷訊息、產能分析，依每次實際使用的 AI 用量扣點，用多少扣多少。": "Gợi ý khung giờ, tin nhắn chăm sóc và phân tích công suất — tính theo lượng AI thực dùng mỗi lần.",
 "IMT 服務預約系統基本功能免費：線上預約頁、人員排班、行事曆、預約與顧客管理、產業範本；AI 助理依用量扣點。": "Tính năng cơ bản của IMT Đặt lịch dịch vụ miễn phí: trang đặt lịch, xếp ca, lịch, quản lý lịch hẹn và khách hàng, mẫu theo ngành; trợ lý AI tính theo mức dùng.",
 "搭配 IMT 智能客服後，AI 客服會在 LINE、WhatsApp 等平台回答服務項目與價格、近期空檔，提供線上預約連結，客人留手機號碼還能查自己的預約。": "Khi dùng IMT CSKH thông minh, AI trả lời về dịch vụ, giá và lịch trống trên LINE, WhatsApp…, gửi đường dẫn đặt lịch và tra cứu lịch hẹn của khách theo số điện thoại.",
-"訂閱 IMT 智能客服後，AI 客服會直接讀取預約系統：回答服務與空檔、提供預約連結、依手機號碼查詢客人的預約。": "Khi đăng ký IMT CSKH thông minh, AI đọc trực tiếp hệ thống đặt lịch: trả lời về dịch vụ và lịch trống, gửi đường dẫn đặt lịch và tra cứu lịch hẹn theo số điện thoại."
+"訂閱 IMT 智能客服後，AI 客服會直接讀取預約系統：回答服務與空檔、提供預約連結、依手機號碼查詢客人的預約。": "Khi đăng ký IMT CSKH thông minh, AI đọc trực tiếp hệ thống đặt lịch: trả lời về dịch vụ và lịch trống, gửi đường dẫn đặt lịch và tra cứu lịch hẹn theo số điện thoại.",
+"預約簡訊提醒": "Nhắc lịch hẹn qua SMS",
+"預約前自動發簡訊提醒客人，提前時間與內容自己設定，減少爽約（簡訊依實際發送扣點）。": "Tự động gửi SMS nhắc khách trước giờ hẹn. Bạn tự chọn thời gian và nội dung, giảm khách bỏ hẹn (SMS trừ điểm theo số tin gửi thực tế).",
+"預約、排班、行事曆與顧客管理都免費，不限服務項目與預約筆數；只有 AI 助理與簡訊提醒依實際用量扣點。": "Đặt lịch, xếp ca, lịch làm việc và quản lý khách hàng đều miễn phí, không giới hạn dịch vụ hay số lượt đặt. Chỉ trợ lý AI và nhắc lịch SMS trừ điểm theo mức sử dụng thực tế."
 }

@@ -3,11 +3,12 @@
 import { useEffect, useState } from 'react'
 import {
   Settings, Building2, Clock, Globe, ShieldAlert,
-  Copy, Check, ExternalLink, Save, Sparkles, MapPin, Phone
+  Copy, Check, ExternalLink, Save, Sparkles, MapPin, Phone, MessageSquare
 } from 'lucide-react'
 import { ReserveStore, BusinessHours, DaySchedule } from '@/lib/reserve/types'
 import { DEFAULT_STORE } from '@/lib/reserve/mock-data'
 import { cn } from '@/lib/utils/cn'
+import { DEFAULT_REMINDER_TEMPLATE, REMINDER_HOURS_OPTIONS, renderReminder } from '@/lib/reserve/sms-template'
 
 const DAYS = [
   { key: 'mon', label: '週一' },
@@ -342,6 +343,56 @@ export default function ReserveSettingsPage() {
               placeholder="1. 請於預約時間前 5 分鐘抵達現場。&#10;2. 遲到超過 15 分鐘將自動釋出時段。"
               className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none leading-relaxed"
             />
+          </div>
+        </div>
+
+        {/* SMS Reminder */}
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <MessageSquare className="h-4 w-4 text-rose-600" />
+              預約簡訊提醒
+            </h2>
+            <label className="inline-flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={!!store.sms_reminder_enabled}
+                onChange={e => setStore(prev => ({ ...prev, sms_reminder_enabled: e.target.checked }))}
+                className="h-4 w-4 accent-rose-600"
+              />
+              開啟
+            </label>
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+            系統於預約開始前自動發簡訊提醒客人（待確認、已確認的預約，每筆只發一次）。簡訊費用依實際成功發送扣點，點數不足時不發送。
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+            <div>
+              <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">提前多久提醒</label>
+              <select
+                value={store.sms_reminder_hours || 24}
+                onChange={e => setStore(prev => ({ ...prev, sms_reminder_hours: Number(e.target.value) }))}
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none"
+              >
+                {REMINDER_HOURS_OPTIONS.map(h => <option key={h} value={h}>預約前 {h} 小時</option>)}
+              </select>
+            </div>
+            <div className="sm:col-span-2">
+              <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                簡訊內容（可用 {'{store}'} {'{name}'} {'{service}'} {'{time}'} {'{url}'}）
+              </label>
+              <textarea
+                rows={3}
+                value={store.sms_reminder_template ?? ''}
+                onChange={e => setStore(prev => ({ ...prev, sms_reminder_template: e.target.value }))}
+                placeholder={DEFAULT_REMINDER_TEMPLATE}
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none leading-relaxed"
+              />
+            </div>
+          </div>
+          <div className="text-xs rounded-2xl bg-slate-50 dark:bg-slate-800/60 p-3 text-slate-600 dark:text-slate-300">
+            <span className="font-semibold">預覽：</span>
+            {renderReminder(store.sms_reminder_template, store, { customer_name: '王小姐', start_time: new Date(Date.now() + 86400_000).toISOString(), service: { name: '範例服務' } })}
           </div>
         </div>
 
