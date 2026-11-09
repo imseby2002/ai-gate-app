@@ -5,6 +5,7 @@ import type { Metadata } from 'next'
 import { getLocale } from 'next-intl/server'
 import { ArrowRight, CalendarDays, Check, Clock, Globe, LayoutTemplate, MessageSquare, Scissors, Sparkles, Store, Users, UserCheck } from 'lucide-react'
 import { introTr, trDeep } from '@/lib/i18n-data/server'
+import type { Tr } from '@/lib/i18n-data/tr-core'
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
 
 const GRAD = 'linear-gradient(100deg,#0ea5a4,#2563eb)'
@@ -40,6 +41,56 @@ const FAQ__ZH = [
   { q: '需要另外架網站嗎？', a: '不用。系統會給你一個專屬預約網址，可以放在 LINE、Instagram、Google 商家或任何地方。' },
   { q: '想讓客服自動回覆客人怎麼辦？', a: '搭配 IMT 智能客服後，AI 客服會在 LINE、WhatsApp 等平台回答服務項目與價格、近期空檔，提供線上預約連結，客人留手機號碼還能查自己的預約。' },
 ]
+
+// 方案比對表（與 lib/reserve/entitlements.ts、lib/ecpay/reserve-plans.ts 一致）
+const COMPARE__ZH: { item: string; free: string | boolean; core: string | boolean }[] = [
+  { item: '月費', free: '$0', core: '$5／月或 $50／年' },
+  { item: '門市／分店數', free: '1 間', core: '最多 20 間' },
+  { item: '新分店一鍵複製設定、服務與人員', free: false, core: true },
+  { item: '線上預約頁', free: true, core: true },
+  { item: '服務項目與價格', free: true, core: true },
+  { item: '人員與排班', free: true, core: true },
+  { item: '行事曆與預約管理', free: true, core: true },
+  { item: '顧客名單', free: true, core: true },
+  { item: '產業範本一鍵套用', free: true, core: true },
+  { item: '營業時間與時段間隔設定', free: true, core: true },
+  { item: '客服串接（查空檔、預約連結、依電話查預約）', free: true, core: true },
+  { item: '簡訊提醒（依用量扣點）', free: '固定內容', core: '可自訂內容' },
+  { item: 'AI 預約與營運助理（依用量扣點）', free: true, core: true },
+]
+
+function CompareTable({ tr }: { tr: Tr }) {
+  const rows = trDeep(COMPARE__ZH, tr)
+  const cell = (v: string | boolean) => v === true
+    ? <Check className="h-4 w-4 mx-auto text-teal-600" aria-label={tr('有')} />
+    : v === false ? <span className="text-slate-300" aria-label={tr('無')}>—</span> : <span>{v}</span>
+  return (
+    <section className="max-w-5xl mx-auto px-6 pb-12">
+      <h2 className="text-[clamp(22px,3.6vw,30px)] font-black tracking-tight mb-5">{tr('方案比較')}</h2>
+      <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
+        <table className="w-full text-[14px]">
+          <thead>
+            <tr className="border-b bg-slate-50">
+              <th className="text-left font-bold px-4 py-3">{tr('項目')}</th>
+              <th className="font-extrabold tracking-widest px-4 py-3 w-28">FREE</th>
+              <th className="font-extrabold tracking-widest px-4 py-3 w-36 text-blue-600">CORE</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(r => (
+              <tr key={r.item} className="border-b last:border-0">
+                <td className="px-4 py-2.5 text-slate-700">{r.item}</td>
+                <td className="px-4 py-2.5 text-center">{cell(r.free)}</td>
+                <td className="px-4 py-2.5 text-center">{cell(r.core)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="mt-3 text-[13px] text-slate-500">{tr('CORE 以綠界一次付款，月繳 30 天、年繳 365 天，不自動續扣。')}</p>
+    </section>
+  )
+}
 
 function Header({ tr, locale }: { tr: (s: string) => string; locale: string }) {
   return (
@@ -141,6 +192,8 @@ export async function ReserveIntro() {
         </div>
       </section>
 
+      <CompareTable tr={tr} />
+
       <section className="max-w-5xl mx-auto px-6 pb-16">
         <h2 className="text-[clamp(22px,3.6vw,30px)] font-black tracking-tight mb-5">{tr('常見問題')}</h2>
         <FaqList items={FAQ} />
@@ -189,6 +242,8 @@ export async function ReservePricing() {
           <Link href="/intro/enterprise" className="mt-4 inline-block font-bold text-[14px] text-blue-600 hover:underline">{tr('看企業方案 →')}</Link>
         </div>
       </section>
+
+      <CompareTable tr={tr} />
 
       <section className="max-w-5xl mx-auto px-6 pb-16">
         <h2 className="text-[clamp(22px,3.6vw,30px)] font-black tracking-tight mb-5">{tr('常見問題')}</h2>
