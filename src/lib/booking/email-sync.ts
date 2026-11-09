@@ -5,6 +5,7 @@ import { decryptSecret, encryptSecret, isEncrypted } from '@/lib/crypto/secret'
 import { findOrCreateOrder } from './orders'
 import { calculateModelCosts, estimateTextTokens } from '@/lib/ai/token-cost-tracker'
 import { trackAiUsage } from '@/lib/ai/universal-tracker'
+import { generateTextWithFallback, type Attempt } from '@/lib/ai/proxy-fallback'
 
 interface AdditionalRoom {
   property_name: string | null
@@ -938,10 +939,9 @@ ${truncated}
 
 只回傳 JSON，不要其他說明：{"is_booking": true 或 false}`
 
-  const providers: Array<'deepseek' | 'claude'> = []
+  const providers: Array<AiProvider> = ['free']
   if (process.env.DEEPSEEK_API_KEY) providers.push('deepseek')
-  if (process.env.ANTHROPIC_API_KEY) providers.push('claude')
-  if (providers.length === 0) return true // 無可用模型時不篩選，安全預設全部送進 Stage 2
+  if (process.env.ANTHROPIC_API_KEY) providers.push('claude') // 無可用模型時不篩選，安全預設全部送進 Stage 2
 
   for (const provider of providers) {
     try {
@@ -1019,14 +1019,11 @@ ${roomListStr}${hint}${preLine}${fewShot}
 
 只回傳 JSON，不要其他說明。`
 
-  // Build the provider attempt order: Claude Haiku first（結構化多欄位擷取穩定度
-  // 明顯優於 DeepSeek，Stage 1 已經把大部分雜訊信篩掉，這裡數量少很多，值得用
-  // 較準的模型），DeepSeek 作為備援；一個失敗或回傳壞 JSON 時換另一個，而不是
-  // 直接放棄整封信。
-  const providers: Array<'deepseek' | 'claude'> = []
-  if (process.env.ANTHROPIC_API_KEY) providers.push('claude')
+  // 擷取順序：免費通道（FreeLLM / CLIProxy）→ DeepSeek → Claude Haiku 保底；
+  // 一個失敗或回傳壞 JSON 時換下一個，而不是直接放棄整封信。
+  const providers: Array<AiProvider> = ['free']
   if (process.env.DEEPSEEK_API_KEY) providers.push('deepseek')
-  if (providers.length === 0) return null
+  if (process.env.ANTHROPIC_API_KEY) providers.push('claude')
 
   for (const provider of providers) {
     // One retry per provider for transient errors / truncated JSON.
@@ -1082,7 +1079,32 @@ async function logAiSourceUsage(channel: string, modelId: string, inTokens: numb
   }
 }
 
-async function callModel(provider: 'deepseek' | 'claude', prompt: string, maxTokens = 1000): Promise<string> {
+type AiProvider = 'free' | 'deepseek' | 'claude'
+
+// 只含免費通道的擷取鏈（付費的 DeepSeek / Claude 由 callModel 另外處理）
+const FREE_EXTRACTION_CHAIN: readonly Attempt[] = [
+  { via: 'free-llm',  model: 'auto' },
+  { via: 'cli-proxy', model: 'gemini-3-flash' },
+  { via: 'cli-proxy', model: 'gpt-5.4-mini' },
+]
+
+async function callModel(provider: AiProvider, prompt: string, maxTokens = 1000): Promise<string> {
+  if (provider === 'free') {
+    const { result, usedModel, usedVia } = await generateTextWithFallback(FREE_EXTRACTION_CHAIN, {
+      messages: [{ role: 'user', content: prompt }],
+      maxOutputTokens: maxTokens,
+      temperature: 0,
+    }, { timeoutMs: 20000 })
+    const usage = (result.usage ?? {}) as unknown as Record<string, number | undefined>
+    void trackAiUsage({
+      feature: 'email_sync',
+      modelId: usedModel,
+      inputTokens: usage.inputTokens ?? estimateTextTokens(prompt),
+      outputTokens: usage.outputTokens ?? estimateTextTokens(result.text),
+      sourceChannel: usedVia === 'cli-proxy' ? 'cliproxy' : 'freellm',
+    })
+    return result.text
+  }
   if (provider === 'deepseek') {
     const res = await fetch('https://api.deepseek.com/chat/completions', {
       method: 'POST',

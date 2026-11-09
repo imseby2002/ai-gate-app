@@ -1,8 +1,8 @@
 // 可續跑的 Agent tick 引擎。
 // Vercel serverless 沒有長駐 process，因此一次「思考」被拆成有步數上限的一個 tick，
 // 由 cron（/api/cron/agent-tick）或核准回覆（resumeRunAfterApproval）觸發續跑。
-import { generateText, tool, jsonSchema } from 'ai'
-import { createAnthropic } from '@ai-sdk/anthropic'
+import { tool, jsonSchema } from 'ai'
+import { generateTextByChain } from '@/lib/ai/proxy-fallback'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createAgentContext } from './runtime'
 import { CORE_AGENT_TOOLS } from './tools'
@@ -19,7 +19,10 @@ const MAX_ATTEMPTS = 3
 // 核准的 run 不會被那個機制擋下，會被 cron 每分鐘一直撿起來無限期執行，唯一煞車
 // 是點數歸零。這裡加一個總 tick 次數上限，不論成功或失敗都算，超過就暫停通知真人。
 const MAX_TOTAL_TICKS = 50
-const TICK_MODEL_ID = 'claude-sonnet-4-6'
+// 模型走免費優先鏈（CLIProxy → FreeLLM → Gemini → Claude Haiku 保底），見 proxy-fallback.ts 的 agent 鏈
+// 執行紀錄只帶最近的部分進 prompt，避免每輪輸入 token 隨任務越跑越長
+const PRIOR_LOG_MAX_CHARS = 12000
+const PRIOR_LOG_MAX_ENTRIES = 15
 // 這兩個工具本身就是「請求核准/結束」的機制，不需要再被硬性核准關卡包一層
 const SELF_SUSPENDING_TOOL_IDS = new Set(['request_human_approval', 'finish_run', 'request_external_purchase', 'schedule_next_check'])
 
@@ -214,6 +217,7 @@ export async function tickRun(run: AgentRunRow): Promise<void> {
 
     // 本輪呼叫到的、被核准關卡擋下的工具（可能不只一個：模型可能在同一輪同時呼叫多個受管制工具）
     const gatedCallsThisTick: { toolId: string; input: unknown; approvalId: string }[] = []
+    let toolsExecutedThisTick = 0
 
     // 每個 tool() 呼叫的輸入/輸出型別都不同（來自各自的 JSON Schema），
     // 這裡刻意用 any 收斂成單一 map 傳給 generateText({ tools }) —
@@ -243,6 +247,7 @@ export async function tickRun(run: AgentRunRow): Promise<void> {
           }
           let output: unknown
           try {
+            toolsExecutedThisTick++
             output = await def.execute(input as Record<string, unknown>, ctx)
           } catch (e) {
             output = { error: e instanceof Error ? e.message : String(e) }
@@ -254,7 +259,11 @@ export async function tickRun(run: AgentRunRow): Promise<void> {
     }
 
     const suspendingIds = new Set([...SELF_SUSPENDING_TOOL_IDS, ...gatedToolIds])
-    const priorLog = log.length ? log.join('\n\n') : '（尚未開始）'
+    const recentLog = log.slice(-PRIOR_LOG_MAX_ENTRIES)
+    let priorLog = recentLog.join('\n\n')
+    if (priorLog.length > PRIOR_LOG_MAX_CHARS) priorLog = '…' + priorLog.slice(-PRIOR_LOG_MAX_CHARS)
+    if (log.length > recentLog.length) priorLog = `（較早的 ${log.length - recentLog.length} 筆紀錄已省略）\n\n${priorLog}`
+    if (!log.length) priorLog = '（尚未開始）'
 
     const systemPrompt =
       `你是公司聘用的「${role.label}」AI Agent，職責：${role.description}\n\n` +
@@ -279,11 +288,8 @@ export async function tickRun(run: AgentRunRow): Promise<void> {
       `目前為止的執行紀錄：\n${priorLog}\n\n` +
       '請規劃並執行下一步（可視需要呼叫工具），或在任務完成時呼叫 finish_run。'
 
-    if (!process.env.ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY 未設定')
-    const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-
-    const result = await generateText({
-      model: anthropic(TICK_MODEL_ID),
+    // 已執行過工具（可能有對外副作用）就不能再換模型重跑，避免重複發文/發訊息
+    const { result, usedModel, usedVia } = await generateTextByChain('agent', {
       system: systemPrompt,
       messages: [{ role: 'user', content: prompt }],
       tools: aiTools,
@@ -291,18 +297,18 @@ export async function tickRun(run: AgentRunRow): Promise<void> {
         steps.length >= MAX_STEPS_PER_TICK ||
         gatedCallsThisTick.length > 0 ||
         steps.some(s => s.toolCalls?.some(tc => suspendingIds.has(tc.toolName))),
-    })
+    }, { canFallback: () => toolsExecutedThisTick === 0 && gatedCallsThisTick.length === 0, timeoutMs: 120000 })
 
     const usage = (result.usage ?? {}) as unknown as Record<string, number | undefined>
     const inputTokens = usage.inputTokens ?? usage.promptTokens ?? 0
     const outputTokens = usage.outputTokens ?? usage.completionTokens ?? 0
-    const cost = calculateCost(TICK_MODEL_ID, inputTokens, outputTokens)
+    const cost = usedVia === 'direct' ? calculateCost(usedModel, inputTokens, outputTokens) : 0
     if (cost > 0) await ctx.deductCredits(cost, `agent:${run.role_id}:${run.id}`)
 
     await ctx.logStep({
       phase: 'plan',
       thought: result.text || '(此輪僅呼叫工具，無額外文字說明)',
-      modelId: TICK_MODEL_ID,
+      modelId: usedModel,
       inputTokens,
       outputTokens,
       creditsSpent: cost,
