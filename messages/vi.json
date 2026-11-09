@@ -13392,7 +13392,15 @@
     "externalLink": "Link người ngoài (không cần đăng nhập)",
     "externalLinkHint": "Để người ngoài làm bài, hãy chọn “Ứng viên (liên kết công khai)” trong trang chỉnh sửa và lưu.",
     "copyLink": "Sao chép",
-    "linkCopied": "Đã sao chép"
+    "linkCopied": "Đã sao chép",
+    "viewReview": "Xem bài chấm",
+    "showOptions": "▸ Hiện tất cả lựa chọn",
+    "hideOptions": "▾ Ẩn lựa chọn",
+    "takerChose": "Người làm chọn",
+    "releaseToTaker": "Công bố kết quả chấm cho người làm bài",
+    "releaseTip": "Khi chọn, nhân viên có thể bấm “Xem bài chấm” trong Bài kiểm tra của tôi hoặc Cổng nhân viên để xem điểm từng câu và nhận xét; đáp án đúng theo cài đặt “hiện đáp án sau khi nộp” của bài",
+    "releasedAt": "Đã công bố {time}",
+    "released": "Đã công bố"
   },
   "KnowledgePicker": {
     "tab": "Kho kiến thức công ty",

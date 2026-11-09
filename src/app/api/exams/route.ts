@@ -21,7 +21,7 @@ export async function GET() {
   const [{ data: qs }, { data: subs }, { data: mine }] = await Promise.all([
     ids.length ? access.admin.from('exam_questions').select('exam_id').in('exam_id', ids) : Promise.resolve({ data: [] }),
     ids.length ? access.admin.from('exam_submissions').select('exam_id').in('exam_id', ids) : Promise.resolve({ data: [] }),
-    ids.length ? access.admin.from('exam_submissions').select('exam_id, score, max_score, grading_status, created_at')
+    ids.length ? access.admin.from('exam_submissions').select('exam_id, score, max_score, grading_status, created_at, released_at')
       .in('exam_id', ids).eq('user_id', access.userId).order('created_at', { ascending: false }) : Promise.resolve({ data: [] }),
   ])
   const count = (list: { exam_id: string }[] | null, id: string) => (list ?? []).filter(x => x.exam_id === id).length
@@ -37,6 +37,7 @@ export async function GET() {
         question_count: count(qs as { exam_id: string }[] | null, r.id),
         submission_count: editable ? count(subs as { exam_id: string }[] | null, r.id) : undefined,
         my_last: last ?? null,
+        my_released: (mine ?? []).some(m => m.exam_id === r.id && m.released_at),
       }
     })
     // 不能管理的人只看得到開放員工作答的已發布考卷

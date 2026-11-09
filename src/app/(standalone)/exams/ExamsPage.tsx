@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useLocale, useTranslations } from 'next-intl'
-import { ArrowLeft, BarChart3, Check, ClipboardList, Copy, Link2, Loader2, Pencil, Plus, Play } from 'lucide-react'
+import { ArrowLeft, BarChart3, Check, ClipboardList, Copy, Eye, Link2, Loader2, Pencil, Plus, Play } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { getLocalizedDepartments } from '@/lib/org-units'
@@ -15,6 +15,7 @@ interface ExamItem {
   editable: boolean; public_token?: string | null; question_count: number; submission_count?: number
   opens_at: string | null; closes_at: string | null
   my_last: { score: number; max_score: number; grading_status: string; created_at: string } | null
+  my_released?: boolean
 }
 
 const fmtTime = (iso: string | null) => (iso ? new Date(iso).toLocaleString(undefined, { hour12: false, month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '')
@@ -118,6 +119,9 @@ export function ExamsPage() {
                 </div>
                 {(e.opens_at || e.closes_at) && <div className="text-xs text-muted-foreground">{t('openWindow')}：{fmtTime(e.opens_at) || '—'} ~ {fmtTime(e.closes_at) || '—'}</div>}
               </div>
+              {e.my_released && (
+                <Link href={`/exams/${e.id}/review`}><Button size="sm" variant="outline"><Eye className="h-3.5 w-3.5 mr-1" />{t('viewReview')}</Button></Link>
+              )}
               {windowState(e) === 'open'
                 ? <Link href={`/exams/${e.id}/take`}><Button size="sm"><Play className="h-3.5 w-3.5 mr-1" />{e.my_last ? t('retake') : t('start')}</Button></Link>
                 : <Button size="sm" variant="outline" disabled>{windowState(e) === 'not_yet' ? t('windowNotYet') : t('windowEnded')}</Button>}

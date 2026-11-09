@@ -13392,7 +13392,15 @@
     "externalLink": "External link (no login)",
     "externalLinkHint": "To let outside people take it, tick “Applicants (public link)” in the editor and save.",
     "copyLink": "Copy",
-    "linkCopied": "Copied"
+    "linkCopied": "Copied",
+    "viewReview": "View graded result",
+    "showOptions": "▸ Show all options",
+    "hideOptions": "▾ Hide options",
+    "takerChose": "Taker's choice",
+    "releaseToTaker": "Release graded result to the taker",
+    "releaseTip": "When checked, employees can open “View graded result” in My exams or the employee portal to see per-question scores and feedback; correct answers follow the exam's “show answers after submit” setting",
+    "releasedAt": "Released {time}",
+    "released": "Released"
   },
   "KnowledgePicker": {
     "tab": "Company knowledge",

@@ -13,7 +13,7 @@ interface Result { score: number; max: number; correct?: boolean; feedback?: str
 interface Sub {
   id: string; kind: string; taker_name: string; taker_contact: string | null; lang: string | null
   answers: Record<string, string | string[]>; results: Record<string, Result>
-  score: number; max_score: number; grading_status: string; created_at: string
+  score: number; max_score: number; grading_status: string; created_at: string; released_at: string | null
 }
 
 export function ExamResults({ id }: { id: string }) {
@@ -29,6 +29,8 @@ export function ExamResults({ id }: { id: string }) {
   const [open, setOpen] = useState<Sub | null>(null)
   const [edits, setEdits] = useState<Record<string, { score: number; feedback: string }>>({})
   const [saving, setSaving] = useState(false)
+  const [release, setRelease] = useState(true)
+  const [showOpts, setShowOpts] = useState<Record<string, boolean>>({})
   const [reloadKey, setReloadKey] = useState(0)
   // 作答來源篩選：員工（系統帳號）、員工專區、應徵者
   const [kindFilter, setKindFilter] = useState<string>('all')
@@ -48,6 +50,8 @@ export function ExamResults({ id }: { id: string }) {
 
   const openSub = (s: Sub) => {
     setOpen(s)
+    setRelease(true)
+    setShowOpts({})
     setEdits(Object.fromEntries(Object.entries(s.results).map(([qid, r]) => [qid, { score: r.score, feedback: r.feedback ?? '' }])))
   }
 
@@ -55,7 +59,7 @@ export function ExamResults({ id }: { id: string }) {
     if (!open) return
     setSaving(true)
     const res = await fetch(`/api/exams/${id}/submissions/${open.id}`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ results: edits }),
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ results: edits, release }),
     })
     setSaving(false)
     if (!res.ok) { alert(t('saveFailed')); return }
@@ -68,12 +72,14 @@ export function ExamResults({ id }: { id: string }) {
   const shown = kindFilter === 'all' ? subs : subs.filter(x => x.kind === kindFilter)
   const avg = shown.length ? shown.reduce((s, x) => s + (x.max_score ? x.score / x.max_score : 0), 0) / shown.length * 100 : 0
   const answerText = (q: ExamQuestion, a: string | string[] | undefined) => {
-    if (Array.isArray(a)) return a.join(', ') || t('noAnswer')
+    if (q.type === 'single' && typeof a === 'string' && a) return optText(q, a)
+    if (Array.isArray(a)) return (q.type === 'multi' ? a.map(k => optText(q, k)).join('；') : a.join(', ')) || t('noAnswer')
     return a?.trim() ? a : t('noAnswer')
   }
+  const optText = (q: ExamQuestion, k: string) => `${k}. ${pick(q.options.find(o => o.key === k)?.text)}`
   const keyText = (q: ExamQuestion) => {
-    if (q.type === 'single') return String(q.answer)
-    if (q.type === 'multi') return (q.answer as string[]).join(', ')
+    if (q.type === 'single') return optText(q, String(q.answer))
+    if (q.type === 'multi') return (q.answer as string[]).map(k => optText(q, k)).join('；')
     if (q.type === 'fill') return Object.values(q.answer as Record<string, string[]>).flat().join(' / ')
     return pick(q.answer as L10n)
   }
@@ -120,6 +126,7 @@ export function ExamResults({ id }: { id: string }) {
                   <td className="px-3 py-2 font-semibold whitespace-nowrap">{s.score} / {s.max_score}</td>
                   <td className="px-3 py-2 text-xs">
                     <span className={s.grading_status === 'pending' ? 'text-amber-700' : 'text-muted-foreground'}>{t(`grading_${s.grading_status}`)}</span>
+                    {s.released_at && <span className="ml-1.5 text-[11px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700">{t('released')}</span>}
                   </td>
                   <td className="px-3 py-2 text-right"><Button size="sm" variant="outline" onClick={() => openSub(s)}>{t('review')}</Button></td>
                 </tr>
@@ -152,6 +159,30 @@ export function ExamResults({ id }: { id: string }) {
                       </div>
                       <div className="rounded-md bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/70 p-2.5 space-y-1">
                         <div><span className="font-medium text-emerald-800 dark:text-emerald-300">{t('correctAnswer')}：</span><span className="whitespace-pre-line">{keyText(q)}</span></div>
+                        {(q.type === 'single' || q.type === 'multi') && (
+                          <div>
+                            <button type="button" className="text-xs text-indigo-700 hover:underline" onClick={() => setShowOpts(v => ({ ...v, [q.id!]: !v[q.id!] }))}>
+                              {showOpts[q.id!] ? t('hideOptions') : t('showOptions')}
+                            </button>
+                            {showOpts[q.id!] && (
+                              <div className="mt-1.5 space-y-1">
+                                {q.options.map(o => {
+                                  const keys = Array.isArray(q.answer) ? q.answer as string[] : [String(q.answer)]
+                                  const a = open.answers[q.id!]
+                                  const chosen = Array.isArray(a) ? a.includes(o.key) : a === o.key
+                                  const ok = keys.includes(o.key)
+                                  return (
+                                    <div key={o.key} className={`rounded border px-2 py-1 flex items-center gap-2 ${ok ? 'border-emerald-300 bg-emerald-50 dark:bg-emerald-950/30' : chosen ? 'border-rose-300 bg-rose-50 dark:bg-rose-950/30' : 'border-slate-200 bg-background'}`}>
+                                      <span className="flex-1">{o.key}. {pick(o.text)}</span>
+                                      {chosen && <span className="text-[11px] text-indigo-700">{t('takerChose')}</span>}
+                                      {ok && <span className="text-[11px] text-emerald-700">✓</span>}
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        )}
                         {(q.type === 'short' || q.type === 'essay') && pick(q.rubric) && (
                           <div><span className="font-medium text-emerald-800 dark:text-emerald-300">{t('rubric')}：</span><span className="whitespace-pre-line">{pick(q.rubric)}</span></div>
                         )}
@@ -177,7 +208,12 @@ export function ExamResults({ id }: { id: string }) {
                 )
               })}
             </div>
-            <div className="p-3 border-t flex justify-end">
+            <div className="p-3 border-t flex flex-wrap items-center justify-end gap-3">
+              <label className="flex items-center gap-1.5 text-sm cursor-pointer mr-auto" title={t('releaseTip')}>
+                <input type="checkbox" checked={release} onChange={e => setRelease(e.target.checked)} />
+                {t('releaseToTaker')}
+                {open.released_at && <span className="text-xs text-emerald-700">（{t('releasedAt', { time: new Date(open.released_at).toLocaleString(undefined, { hour12: false }) })}）</span>}
+              </label>
               <Button onClick={saveReview} disabled={saving}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : t('saveReview')}</Button>
             </div>
           </div>
