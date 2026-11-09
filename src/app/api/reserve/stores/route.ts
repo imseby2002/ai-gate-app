@@ -7,7 +7,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { MAX_STORES, STORE_COOKIE, getCurrentStore, listStores } from '@/lib/reserve/current-store'
+import { STORE_COOKIE, getCurrentStore, listStores } from '@/lib/reserve/current-store'
+import { getReserveEntitlements } from '@/lib/reserve/entitlements'
 
 const COOKIE_OPTS = { path: '/', httpOnly: true, sameSite: 'lax' as const, secure: true, maxAge: 60 * 60 * 24 * 365 }
 const COPY_STORE_FIELDS = ['category', 'description', 'phone', 'email', 'business_hours', 'slot_interval_minutes', 'advance_booking_days',
@@ -24,8 +25,8 @@ export async function GET(req: NextRequest) {
   const user = await authed()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const admin = createAdminClient()
-  const [stores, current] = await Promise.all([listStores(user.id, admin), getCurrentStore<{ id: string }>(user.id, req, 'id', admin)])
-  return NextResponse.json({ stores, currentId: current?.id ?? null, max: MAX_STORES })
+  const [stores, current, ent] = await Promise.all([listStores(user.id, admin), getCurrentStore<{ id: string }>(user.id, req, 'id', admin), getReserveEntitlements(user.id)])
+  return NextResponse.json({ stores, currentId: current?.id ?? null, max: ent.features.maxStores, plan: ent.plan })
 }
 
 export async function POST(req: NextRequest) {
@@ -39,7 +40,13 @@ export async function POST(req: NextRequest) {
 
   const admin = createAdminClient()
   const existing = await listStores(user.id, admin)
-  if (existing.length >= MAX_STORES) return NextResponse.json({ error: `最多 ${MAX_STORES} 間分店` }, { status: 400 })
+  const { plan, features } = await getReserveEntitlements(user.id)
+  if (existing.length >= features.maxStores) {
+    return NextResponse.json({
+      error: plan === 'free' ? 'FREE 方案只能建立 1 間門市，升級 CORE 可管理最多 20 間分店' : `最多 ${features.maxStores} 間分店`,
+      plan, upgrade: plan === 'free',
+    }, { status: 403 })
+  }
 
   const source = body.copyFrom ? await getCurrentStore<Record<string, unknown>>(user.id, req, '*', admin) : null
   const copied: Record<string, unknown> = {}

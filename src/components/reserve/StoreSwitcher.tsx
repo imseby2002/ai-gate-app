@@ -9,7 +9,8 @@ type StoreItem = { id: string; name: string; slug: string; is_active: boolean }
 export function StoreSwitcher({ compact = false }: { compact?: boolean }) {
   const [stores, setStores] = useState<StoreItem[]>([])
   const [currentId, setCurrentId] = useState<string | null>(null)
-  const [max, setMax] = useState(20)
+  const [max, setMax] = useState(1)
+  const [plan, setPlan] = useState<'free' | 'core'>('free')
   const [adding, setAdding] = useState(false)
   const [name, setName] = useState('')
   const [slug, setSlug] = useState('')
@@ -23,7 +24,8 @@ export function StoreSwitcher({ compact = false }: { compact?: boolean }) {
       if (!alive || !d) return
       setStores(d.stores ?? [])
       setCurrentId(d.currentId ?? null)
-      setMax(d.max ?? 20)
+      setMax(d.max ?? 1)
+      setPlan(d.plan ?? 'free')
     }).catch(() => {})
     return () => { alive = false }
   }, [])
@@ -74,10 +76,14 @@ export function StoreSwitcher({ compact = false }: { compact?: boolean }) {
         ) : (
           <span className="flex-1 text-xs text-slate-500">尚未建立門市</span>
         )}
-        {stores.length < max && (
+        {stores.length < max ? (
           <button type="button" onClick={() => setAdding(true)} className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-rose-600" title="新增分店">
             <Plus className="h-3.5 w-3.5" />
           </button>
+        ) : plan === 'free' && (
+          <a href="/reserve/plan" className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-rose-600" title="升級 CORE 可新增分店">
+            <Plus className="h-3.5 w-3.5" />
+          </a>
         )}
       </div>
 

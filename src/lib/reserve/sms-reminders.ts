@@ -6,6 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { chargeUsage, precheckUsage, smsCost } from '@/lib/marketing/billing'
 import { sendSmsMessage } from '@/lib/telephony/sms-service'
 import { renderReminder } from '@/lib/reserve/sms-template'
+import { getReserveEntitlements } from '@/lib/reserve/entitlements'
 
 type StoreRow = { id: string; user_id: string; slug: string; name: string; sms_reminder_hours: number; sms_reminder_template: string | null }
 type ApptRow = { id: string; customer_name: string; customer_phone: string; start_time: string; created_at: string; service: { name?: string } | null }
@@ -17,7 +18,13 @@ export async function runReserveSmsReminders(): Promise<{ sent: number; failed: 
     .select('id, user_id, slug, name, sms_reminder_hours, sms_reminder_template')
     .eq('is_active', true).eq('sms_reminder_enabled', true).limit(500)
 
+  const customTemplate = new Map<string, boolean>()
   for (const store of (stores ?? []) as StoreRow[]) {
+    if (!customTemplate.has(store.user_id)) {
+      customTemplate.set(store.user_id, (await getReserveEntitlements(store.user_id)).features.customSmsTemplate)
+    }
+    // 自訂簡訊內容限 CORE，FREE 用預設內容
+    const template = customTemplate.get(store.user_id) ? store.sms_reminder_template : null
     const hours = Math.min(Math.max(Number(store.sms_reminder_hours) || 24, 1), 72)
     const now = Date.now()
     const { data: appts } = await admin.from('reserve_appointments')
@@ -42,7 +49,7 @@ export async function runReserveSmsReminders(): Promise<{ sent: number; failed: 
         out.skipped++
         continue
       }
-      const text = renderReminder(store.sms_reminder_template, store, appt)
+      const text = renderReminder(template, store, appt)
       const cost = smsCost(phone, text)
       if (await precheckUsage(store.user_id, cost)) {
         await admin.from('reserve_sms_reminders').insert({ appointment_id: appt.id, store_id: store.id, phone, status: 'skipped', error: 'insufficient_credits' })

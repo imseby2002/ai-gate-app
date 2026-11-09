@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { DEFAULT_STORE } from '@/lib/reserve/mock-data'
 import { getCurrentStore } from '@/lib/reserve/current-store'
+import { getReserveEntitlements } from '@/lib/reserve/entitlements'
 
 // 店家可自行修改的欄位（不含 id、user_id 等）
 const EDITABLE = [
@@ -44,6 +45,8 @@ export async function POST(req: NextRequest) {
     const fields: Record<string, unknown> = {}
     for (const k of EDITABLE) if (k in body) fields[k] = body[k]
     if (typeof fields.slug === 'string') fields.slug = fields.slug.trim().toLowerCase()
+    // 自訂簡訊內容限 CORE；FREE 一律使用預設內容
+    if ('sms_reminder_template' in fields && !(await getReserveEntitlements(user.id)).features.customSmsTemplate) delete fields.sms_reminder_template
 
     const admin = createAdminClient()
     const current = await getCurrentStore<{ id: string }>(user.id, req, 'id', admin)
