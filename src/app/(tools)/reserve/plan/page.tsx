@@ -19,7 +19,8 @@ function ReservePlanContent() {
   const params = useSearchParams()
   const [ent, setEnt] = useState<Ent | null>(null)
   const [busy, setBusy] = useState(false)
-  const pkg = RESERVE_PLAN_PACKAGES[0]
+  const [cycle, setCycle] = useState<'monthly' | 'yearly'>('monthly')
+  const pkg = RESERVE_PLAN_PACKAGES.find(p => p.cycle === cycle) ?? RESERVE_PLAN_PACKAGES[0]
 
   useEffect(() => {
     let alive = true
@@ -80,7 +81,15 @@ function ReservePlanContent() {
         </div>
         <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border-2 border-rose-500 space-y-3">
           <div className="font-extrabold tracking-widest text-sm text-rose-600">CORE</div>
-          <div className="text-2xl font-extrabold">${pkg.usdPrice}<span className="text-xs font-semibold text-slate-500"> / 月</span></div>
+          <div className="flex gap-1 text-[11px] font-bold">
+            {(['monthly', 'yearly'] as const).map(c => (
+              <button key={c} type="button" onClick={() => setCycle(c)}
+                className={c === cycle ? 'px-3 py-1 rounded-full bg-rose-600 text-white' : 'px-3 py-1 rounded-full border border-slate-200 dark:border-slate-700 text-slate-500'}>
+                {c === 'monthly' ? '月繳' : '年繳（省 $10）'}
+              </button>
+            ))}
+          </div>
+          <div className="text-2xl font-extrabold">${pkg.usdPrice}<span className="text-xs font-semibold text-slate-500"> / {cycle === 'yearly' ? '年' : '月'}</span></div>
           <ul className="space-y-2 text-xs text-slate-600 dark:text-slate-300">
             {CORE_ITEMS.map(i => <li key={i} className="flex gap-2"><Check className="h-4 w-4 shrink-0 text-rose-600" />{i}</li>)}
           </ul>
@@ -89,9 +98,9 @@ function ReservePlanContent() {
             disabled={busy || !ent}
             className="w-full py-2.5 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold disabled:opacity-60"
           >
-            {busy ? '建立訂單中…' : isCore ? '續購 30 天' : '升級 CORE'}
+            {busy ? '建立訂單中…' : `${isCore ? '續購' : '升級 CORE'}（${cycle === 'yearly' ? '365' : '30'} 天）`}
           </button>
-          <p className="text-[11px] text-slate-400">一次付款 30 天，不會自動續扣；到期前續購會從原到期日往後延。以付款當下匯率換算台幣。</p>
+          <p className="text-[11px] text-slate-400">月繳 30 天、年繳 365 天，一次付款不會自動續扣；到期前續購會從原到期日往後延。以付款當下匯率換算台幣。</p>
         </div>
       </div>
     </div>

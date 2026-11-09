@@ -173,6 +173,7 @@ export async function ReservePricing() {
         <div className="rounded-2xl border border-slate-200 bg-white p-6">
           <div className="font-extrabold tracking-widest text-[14px]">CORE</div>
           <div className="mt-2"><span className="text-[40px] font-black leading-none">$5</span><span className="text-[13px] text-slate-500"> {tr('美元／月')}</span></div>
+          <div className="mt-1 text-[13px] text-slate-500">{tr('年繳 50 美元（省 10 美元）')}</div>
           <ul className="mt-5 space-y-2 text-[14.5px]">
             {CORE_ITEMS.map(i => <li key={i} className="flex gap-2"><Check className="h-4 w-4 mt-0.5 shrink-0 text-blue-600" />{i}</li>)}
           </ul>
