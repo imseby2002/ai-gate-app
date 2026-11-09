@@ -28,6 +28,7 @@ export interface RunTradingAgentsParams {
     riskTolerance?: 'Conservative' | 'Moderate' | 'Aggressive'
     outputLanguage?: 'zh-TW' | 'en' | 'vi'
     selectedModelIds?: string[]
+    investmentHorizon?: import('./types').InvestmentHorizonMode
   }
   /** 每次模型呼叫完成時回報實際 token 用量（供依用量扣點） */
   onUsage?: (modelId: string, usage: { inputTokens?: number; outputTokens?: number }) => void
@@ -48,9 +49,16 @@ export async function runTradingAgents(
 }> {
   const { ticker, analysisDate = new Date().toISOString().split('T')[0], portfolio, config } = params
   const debateRounds = Math.min(Math.max(config?.debateRounds ?? 1, 1), 3)
+  const investmentHorizon: import('./types').InvestmentHorizonMode = config?.investmentHorizon || 'position_value'
+
+  const horizonNarrative = investmentHorizon === 'position_value'
+    ? '💎 中長線價值投資 (3~12 個月·重視商業護城河、公允價值空間與安全邊際)'
+    : investmentHorizon === 'swing_trend'
+    ? '🌊 中線波段趨勢 (2~8 週·捕捉季度業績催化與大波段趨勢)'
+    : '⚡ 短線動量交易 (1~5 天·關鍵突破與動能)'
 
   // Step 1: Market Intelligence & Ingestion
-  emit({ type: 'phase', phase: 'analysts', label: '盤勢情資載入與即時技術指標解算' })
+  emit({ type: 'phase', phase: 'analysts', label: `盤勢情資載入與即時技術指標解算 [策略風格: ${horizonNarrative.split(' ')[1]}]` })
   const marketData = await fetchMarketData(ticker)
   emit({ type: 'market-data', data: marketData })
 
@@ -70,7 +78,7 @@ export async function runTradingAgents(
 
   const analystRoles: Array<{ role: AnalystRole; name: string; title: string }> = [
     { role: 'fundamentals', name: '基本面分析師 (Fundamental Analyst)', title: '財務報表、估值倍數與商業護城河審計' },
-    { role: 'technical', name: '技術面分析師 (Technical Analyst)', title: '量價結構、均線趨勢與動量擺盪指標評估' },
+    { role: 'technical', name: '技術面分析師 (Technical Analyst)', title: '量價結構、均線趨勢與長週期形態評估' },
     { role: 'news', name: '新聞與總經分析師 (News & Macro Analyst)', title: '全球總經週期、央行貨幣政策與產業重磅催化劑' },
     { role: 'sentiment', name: '市場情緒分析師 (Sentiment Analyst)', title: '散戶/機構籌碼分歧、社群輿情與恐慌貪婪量化' },
   ]
@@ -84,40 +92,64 @@ export async function runTradingAgents(
       if (quickModel) {
         try {
           const roleGuidance: Record<AnalystRole, string> = {
-            fundamentals: `重點審查財務體質、估值乘數（P/E, EV/EBITDA, DCF）、營收成長與獲利護城河。
+            fundamentals: investmentHorizon === 'position_value'
+              ? `本次決策依循【中長線價值投資思維】。重點審查：
+1. 企業核心商業護城河（定價權、客戶轉換成本、網絡效應）。
+2. 內在估值安全邊際（DCF 折現公允價、EV/EBITDA、ROE 杜邦分析可持續增長率）。
+3. 財務體質健全度與債信違約風險（CDS 信用利差、自由現金流創生能力）。
+請包含：
+【核心結論】
+【財務報表與獲利品質審計】（毛利率、自由現金流、負債比）
+【商業模式與長期護城河評估】
+【公允價值與安全邊際測算】（比較現價與內在公允價值）
+【綜合評分】格式：評分：+XX / 100 或 -XX / 100`
+              : `重點審查財務體質、估值乘數（P/E, EV/EBITDA, DCF）、營收成長與獲利護城河。
 請包含：
 【核心結論】
 【財務報表與獲利品質審計】（含營收毛利、自由現金流、負債比）
 【商業模式與護城河評估】
 【潛在風險與估值倍數修正】
 【綜合評分】格式：評分：+XX / 100 或 -XX / 100`,
-            technical: `重點評估量價結構、均線多空排列、支撐壓力突破與動量擺盪指標（RSI, MACD, 布林帶）。
+            technical: investmentHorizon === 'position_value'
+              ? `本次決策依循【中長線價值投資思維】，請**完全忽略短線日內分時雜訊與當沖指標**。重點評估：
+1. 長週期均線趨勢（SMA50、SMA200 長期年線牛熊分水嶺）。
+2. 長期週線/月線大級別支撐打底區間與機構長期吸籌形態。
+3. 即使短期技術面拉回，是否屬於極佳的價值買點？
+請包含：
+【核心結論】
+【長週期均線與宏觀趨勢解算】（以 SMA50/SMA200 及歷史波動帶研判）
+【大級別關鍵支撐與價值防守位】（長線機構防守底線）
+【進場節奏與分批梯隊指引】（避免單筆追高，指引左側分批低接區間）
+【綜合評分】格式：評分：+XX / 100 或 -XX / 100`
+              : `重點評估量價結構、均線多空排列、支撐壓力突破與動量擺盪指標（RSI, MACD, 布林帶）。
 請包含：
 【核心結論】
 【量價型態與均線趨勢解算】（以 SMA20/50/200 及現價研判）
 【動態動能與擺盪指標】（結合 RSI 與 MACD 柱狀體）
 【關鍵進出場點位】（明確給出支撐防守位與上方突破壓力位）
 【綜合評分】格式：評分：+XX / 100 或 -XX / 100`,
-            news: `重點分析全球總體經濟、地緣政治（如油田遇襲/能源衝擊/貿易關稅）、行政命令禁令（如出口管制）與產業重磅催化劑。
+            news: `重點分析全球總體經濟、地緣政治、政策法規與 3~5 年產業大週期催化劑。
 請包含：
 【核心結論】
-【地緣政治與全球總經傳導】（評估通膨、利率與突發衝突連鎖影響）
-【政策法規與行政禁令衝擊】（美中貿易、出口管制或產業補貼）
-【產業動態與近期催化劑 (Catalysts)】
+【地緣政治與全球總經傳導】（評估通膨、利率與長期資本支出循環）
+【政策法規與產業結構性紅利】（美中貿易、產業扶持或監管變更）
+【產業中長期關鍵催化劑 (Catalysts)】
 【綜合評分】格式：評分：+XX / 100 或 -XX / 100`,
-            sentiment: `重點分析機構持倉籌碼、散戶輿情熱度、多空分歧度與極端恐慌貪婪情緒。
+            sentiment: `重點分析機構長期持倉籌碼、散戶輿情熱度與市場非理性恐慌貪婪。
 請包含：
 【核心結論】
-【機構籌碼與主力動向】
-【社群輿情與散戶多空情緒分歧】
-【空頭擠壓 (Short Squeeze) 或恐慌拋售機率評估】
+【機構長線籌碼與主力動向】
+【市場情緒指標與極度悲觀/樂觀逆向思考】（市場恐慌是否創造巴菲特式好買點？）
+【估值修復催化契機】
 【綜合評分】格式：評分：+XX / 100 或 -XX / 100`,
           }
 
           const prompt = `你是頂級避險基金的「${name}」。
+本次投資目標週期設定為：【${horizonNarrative}】
 目標標的：${marketData.companyName} (${marketData.ticker})
 現價：${marketData.currency} ${marketData.currentPrice} (${marketData.changePercent > 0 ? '+' : ''}${marketData.changePercent}%)
-技術指標摘要：RSI(14)=${marketData.technicals.rsi14}, SMA20=${marketData.technicals.sma20}, SMA50=${marketData.technicals.sma50}, SMA200=${marketData.technicals.sma200}, MACD Histogram=${marketData.technicals.macdHistogram}, 支撐位=${marketData.technicals.supportLevel}, 壓力位=${marketData.technicals.resistanceLevel}
+估值矩陣公允均價：${valuationSuite.averageFairValue ? `$${valuationSuite.averageFairValue}` : '計算中'} (共 ${valuationSuite.models.length} 款模型產出，裁定：${valuationSuite.overallValuationVerdict})
+長週期技術摘要：SMA50=${marketData.technicals.sma50}, SMA200=${marketData.technicals.sma200}, RSI(14)=${marketData.technicals.rsi14}, 支撐位=${marketData.technicals.supportLevel}, 壓力位=${marketData.technicals.resistanceLevel}
 ${portfolio ? `投資組合現況：手頭現金 $${portfolio.cash}，已有部位：${JSON.stringify(portfolio.positions)}` : ''}
 
 ${roleGuidance[role]}
@@ -316,12 +348,53 @@ ${round > 1 ? `上一輪空方質疑：${debateStatements[debateStatements.lengt
   else proposedAction = 'STRONG SELL'
 
   const currentPrice = marketData.currentPrice
-  const targetPrice = proposedAction.includes('BUY')
-    ? Math.round(currentPrice * (1 + 0.08 + (bullProb - 50) * 0.003) * 100) / 100
-    : Math.round(currentPrice * 0.95 * 100) / 100
-  const stopLossPrice = proposedAction.includes('BUY')
-    ? Math.round(Math.min(currentPrice * 0.94, marketData.technicals.supportLevel * 0.98) * 100) / 100
-    : Math.round(currentPrice * 1.05 * 100) / 100
+  const avgFairValue = valuationSuite.averageFairValue || currentPrice
+
+  let targetPrice: number
+  let stopLossPrice: number
+  let timeHorizon: TraderProposal['timeHorizon']
+  let stagingPlan: string | undefined
+  let invalidationThesis: string | undefined
+
+  if (investmentHorizon === 'position_value') {
+    // 💎 中長線價值投資邏輯 (3~12 個月)
+    if (proposedAction.includes('BUY')) {
+      targetPrice = avgFairValue > currentPrice * 1.05
+        ? Math.round(avgFairValue * 100) / 100
+        : Math.round(currentPrice * 1.25 * 100) / 100
+      // 寬幅安全邊際防線：非當沖窄停損，而是防守估值崩潰或極端折價 -18%
+      stopLossPrice = Math.round(Math.min(currentPrice * 0.82, (valuationSuite.valuationRange[0] || currentPrice * 0.85) * 0.95) * 100) / 100
+    } else {
+      targetPrice = Math.round(Math.min(avgFairValue, currentPrice * 0.85) * 100) / 100
+      stopLossPrice = Math.round(currentPrice * 1.15 * 100) / 100
+    }
+    timeHorizon = 'Long-term (6-12+ months)'
+    stagingPlan = '金字塔分批佈局：第一梯隊 (40%) 現價建立底倉；第二梯隊 (30%) 回測估值安全邊際逆向加碼；第三梯隊 (30%) 待年線或景氣確認右側追增。'
+    invalidationThesis = '投資論點失效才離場：僅在營收毛利率連續2季實質崩跌、核心商業護城河喪失或 CDS 信用利差急遽飆升破 300 bps 時觸發停損，杜絕短期市場雜訊。'
+  } else if (investmentHorizon === 'swing_trend') {
+    // 🌊 中線波段趨勢邏輯 (2~8 週)
+    if (proposedAction.includes('BUY')) {
+      targetPrice = Math.round(Math.max(currentPrice * 1.18, Math.min(avgFairValue, currentPrice * 1.35)) * 100) / 100
+      stopLossPrice = Math.round(Math.min(currentPrice * 0.90, marketData.technicals.supportLevel * 0.96) * 100) / 100
+    } else {
+      targetPrice = Math.round(currentPrice * 0.90 * 100) / 100
+      stopLossPrice = Math.round(currentPrice * 1.08 * 100) / 100
+    }
+    timeHorizon = 'Swing (1-4 weeks)'
+    stagingPlan = '波段分批：突破波段支撐分 2 批進場 (50% / 50%)。'
+    invalidationThesis = '跌破週線關鍵均線防守位或季度業績嚴重不如預期時離場。'
+  } else {
+    // ⚡ 短線動量邏輯 (1~5 天)
+    targetPrice = proposedAction.includes('BUY')
+      ? Math.round(currentPrice * (1 + 0.08 + (bullProb - 50) * 0.003) * 100) / 100
+      : Math.round(currentPrice * 0.95 * 100) / 100
+    stopLossPrice = proposedAction.includes('BUY')
+      ? Math.round(Math.min(currentPrice * 0.94, marketData.technicals.supportLevel * 0.98) * 100) / 100
+      : Math.round(currentPrice * 1.05 * 100) / 100
+    timeHorizon = 'Short-term (1-5 days)'
+    stagingPlan = '短線單筆掛單進場。'
+    invalidationThesis = '跌破短線支撐或日內動能衰退嚴格停損。'
+  }
 
   const riskPerShare = Math.abs(currentPrice - stopLossPrice)
   const rewardPerShare = Math.abs(targetPrice - currentPrice)
@@ -329,11 +402,15 @@ ${round > 1 ? `上一輪空方質疑：${debateStatements[debateStatements.lengt
 
   if (deepModel || quickModel) {
     try {
-      const prompt = `你是頂級量化交易員 (Quantitative Trader)。
+      const prompt = `你是頂級機構投資組合交易員。
+本次決策週期模式：【${horizonNarrative}】
 針對標的 ${marketData.ticker} (現價 ${currentPrice})：
-多頭勝率估計：${bullProb}%，空頭風險：${bearProb}%。
-建議動作：${proposedAction}，目標價：${targetPrice}，停損價：${stopLossPrice}。
-請出具簡要俐落的進場節奏與執行計畫（約 150 字以內），包含限價區間、建議部位佔比與時程。`
+多頭勝率評估：${bullProb}%，空頭風險：${bearProb}%。
+估值矩陣公允價：$${avgFairValue} (上行空間約 ${(((targetPrice - currentPrice) / currentPrice) * 100).toFixed(1)}%)。
+建議動作：${proposedAction}，目標價：${targetPrice}，安全邊際防守位：${stopLossPrice}。
+建議分批規劃：${stagingPlan}
+
+請出具符合【${horizonNarrative.split(' ')[1]}】視角的建倉節奏與執行計畫（約 150 字以內），包含分批建倉步調、建議總部位佔比與持有耐心，杜絕短線日內當沖式的掛單指令。`
       const stream = streamText({
         model: (deepModel || quickModel)!,
         prompt,
@@ -345,11 +422,11 @@ ${round > 1 ? `上一輪空方質疑：${debateStatements[debateStatements.lengt
         emit({ type: 'trader-delta', chunk })
       }
     } catch {
-      traderRationale = `以現價 ${currentPrice} 區間佈局，目標停利設定在 ${targetPrice}，嚴格執行停損於 ${stopLossPrice}。風險報酬比約 1:${riskRewardRatio}。`
+      traderRationale = `以現價 ${currentPrice} 區間分批佈局，目標價錨定公允價值 ${targetPrice}，極限防守位設於 ${stopLossPrice}。${stagingPlan}`
       emit({ type: 'trader-delta', chunk: traderRationale })
     }
   } else {
-    traderRationale = `以現價 ${currentPrice} 區間佈局，目標停利設定在 ${targetPrice}，嚴格執行停損於 ${stopLossPrice}。風險報酬比約 1:${riskRewardRatio}。`
+    traderRationale = `以現價 ${currentPrice} 區間分批佈局，目標價錨定公允價值 ${targetPrice}，極限防守位設於 ${stopLossPrice}。${stagingPlan}`
     emit({ type: 'trader-delta', chunk: traderRationale })
   }
 
@@ -357,10 +434,13 @@ ${round > 1 ? `上一輪空方質疑：${debateStatements[debateStatements.lengt
     action: proposedAction,
     targetPrice,
     stopLossPrice,
-    entryPriceRange: [Math.round(currentPrice * 0.99 * 100) / 100, Math.round(currentPrice * 1.01 * 100) / 100],
+    entryPriceRange: [Math.round(currentPrice * 0.98 * 100) / 100, Math.round(currentPrice * 1.02 * 100) / 100],
     riskRewardRatio,
-    recommendedAllocationPercent: proposedAction === 'STRONG BUY' ? 15 : proposedAction === 'BUY' ? 10 : 5,
-    timeHorizon: 'Swing (1-4 weeks)',
+    recommendedAllocationPercent: proposedAction === 'STRONG BUY' ? 20 : proposedAction === 'BUY' ? 12 : 5,
+    timeHorizon,
+    investmentHorizonMode: investmentHorizon,
+    stagingPlan,
+    invalidationThesis,
     rationale: traderRationale,
   }
   emit({ type: 'trader-proposal', proposal: traderProposal })
@@ -370,26 +450,36 @@ ${round > 1 ? `上一輪空方質疑：${debateStatements[debateStatements.lengt
   emit({ type: 'risk-start', model: config?.modelConfig?.deepThinkModel || 'Auditor & Risk Team' })
 
   let riskDelta = ''
-  const riskScore = Math.min(Math.max(Math.round(10 - (bullProb / 10) + (marketData.technicals.rsi14 > 70 || marketData.technicals.rsi14 < 30 ? 2 : 0)), 2), 9)
+  const riskScore = Math.min(Math.max(Math.round(10 - (bullProb / 10) + (marketData.technicals.rsi14 > 75 || marketData.technicals.rsi14 < 25 ? 2 : 0)), 2), 9)
   const maxDrawdown = Math.round((currentPrice - stopLossPrice) / currentPrice * 100 * 10) / 10
 
   const riskAssessment: RiskAssessment = {
     riskScore,
     volatilityRating: marketData.technicals.atr14 / currentPrice > 0.04 ? 'High' : 'Moderate',
     maxDrawdownEstimatePercent: maxDrawdown,
-    positionSizingCapPercent: riskScore > 6 ? 8 : 15,
+    positionSizingCapPercent: investmentHorizon === 'position_value' ? (riskScore > 6 ? 12 : 20) : (riskScore > 6 ? 8 : 15),
     stressTestVerdict: riskScore > 7 ? 'Caution' : 'Passed',
-    concerns: [
-      `近期波動率 (ATR) 為 ${marketData.technicals.atr14}，單日震盪幅度顯著`,
-      `下方防守關鍵位 ${marketData.technicals.supportLevel} 若失守將引發技術性停損賣壓`,
-    ],
-    hedgingRecommendations: [
-      '嚴格執行預設停損線，不隨意加碼攤平',
-      '部位單筆曝險不超過總資產 10%',
-    ],
+    concerns: investmentHorizon === 'position_value'
+      ? [
+          `長線最大下行容忍度為 ${maxDrawdown}%，需防範黑天鵝系統性估值壓縮`,
+          `債信違約利差與資產負債表償債能力（CDS 模型檢測）`,
+        ]
+      : [
+          `近期波動率 (ATR) 為 ${marketData.technicals.atr14}，單日震盪幅度顯著`,
+          `下方防守關鍵位 ${marketData.technicals.supportLevel} 若失守將引發技術性停損賣壓`,
+        ],
+    hedgingRecommendations: investmentHorizon === 'position_value'
+      ? [
+          '嚴格遵守分批階梯建倉，不一次全額梭哈買滿',
+          '密切追蹤季度財報毛利率與護城河指標，論點未破不輕易被洗出場',
+        ]
+      : [
+          '嚴格執行預設停損線，不隨意加碼攤平',
+          '部位單筆曝險不超過總資產 10%',
+        ],
   }
 
-  riskDelta = `風控審查核定：風險分數 ${riskScore}/10，最大下行預估 -${maxDrawdown}%。部位上限上限建議鎖定在 ${riskAssessment.positionSizingCapPercent}% 內，壓力測試裁決：【${riskAssessment.stressTestVerdict}】。`
+  riskDelta = `風控審查核定：策略風格【${horizonNarrative.split(' ')[1]}】，風險評分 ${riskScore}/10，最大下行預估 -${maxDrawdown}%。部位上限建議鎖定在 ${riskAssessment.positionSizingCapPercent}% 內，壓力測試裁決：【${riskAssessment.stressTestVerdict}】。`
   emit({ type: 'risk-delta', chunk: riskDelta })
   emit({ type: 'risk-assessment', assessment: riskAssessment })
 
@@ -403,11 +493,14 @@ ${round > 1 ? `上一輪空方質疑：${debateStatements[debateStatements.lengt
   const allManagerCandidates = [...deepCandidates, ...quickCandidates]
   if (allManagerCandidates.length > 0) {
     const prompt = `你是管理數十億美金資產的「投資組合主管兼基金經理人 (Portfolio Manager)」。
-審查標的：${marketData.companyName} (${marketData.ticker})
-交易員提議：${traderProposal.action}，目標價：${traderProposal.targetPrice}，停損價：${traderProposal.stopLossPrice}。
+本次決策依循：【${horizonNarrative}】
+審查標的：${marketData.companyName} (${marketData.ticker}) 現價 ${marketData.currency} ${currentPrice}
+估值矩陣公允價：$${avgFairValue} (目標價 $${traderProposal.targetPrice})
+交易員提議：${traderProposal.action}，建議持有週期：${traderProposal.timeHorizon}。
+建倉指引：${stagingPlan}
 風控團隊建議：部位上限 ${riskAssessment.positionSizingCapPercent}%，風險評分 ${riskAssessment.riskScore}/10。
 
-請出具最終裁決白皮書摘要（約 180 字以內），宣告最終執行決定、下單指引與宏觀策略底定。`
+請出具最終裁決白皮書摘要（約 180 字以內），以宏觀資本配置格局宣告執行決定、分批佈局策略與投資耐心底定。`
 
     let managerSuccess = false
     for (const candModel of allManagerCandidates) {
@@ -433,13 +526,19 @@ ${round > 1 ? `上一輪空方質疑：${debateStatements[debateStatements.lengt
     }
 
     if (!managerSuccess) {
-      managerText = `經全體分析師研判、多空深度激辯與風控壓力測試，本基金裁決對 ${marketData.ticker} 發出【${traderProposal.action}】執行指令。進場上限設定在現價區間，建議總部位配置 ${Math.min(traderProposal.recommendedAllocationPercent, riskAssessment.positionSizingCapPercent)}%，嚴守停損紀律。`
+      managerText = `經全體分析師研判、多空深度激辯與風控壓力測試，本基金裁決對 ${marketData.ticker} 發出【${traderProposal.action}】執行指令。秉持【${horizonNarrative.split(' ')[1]}】原則，目標價錨定公允價值 $${traderProposal.targetPrice}。建議總部位配置上限 ${Math.min(traderProposal.recommendedAllocationPercent, riskAssessment.positionSizingCapPercent)}%，採分批金字塔建倉。`
       emit({ type: 'manager-delta', chunk: managerText })
     }
   } else {
-    managerText = `經全體分析師研判、多空深度激辯與風控壓力測試，本基金裁決對 ${marketData.ticker} 發出【${traderProposal.action}】執行指令。進場上限設定在現價區間，建議總部位配置 ${Math.min(traderProposal.recommendedAllocationPercent, riskAssessment.positionSizingCapPercent)}%，嚴守停損紀律。`
+    managerText = `經全體分析師研判、多空深度激辯與風控壓力測試，本基金裁決對 ${marketData.ticker} 發出【${traderProposal.action}】執行指令。秉持【${horizonNarrative.split(' ')[1]}】原則，目標價錨定公允價值 $${traderProposal.targetPrice}。建議總部位配置上限 ${Math.min(traderProposal.recommendedAllocationPercent, riskAssessment.positionSizingCapPercent)}%，採分批金字塔建倉。`
     emit({ type: 'manager-delta', chunk: managerText })
   }
+
+  const holdingPeriodGuidance = investmentHorizon === 'position_value'
+    ? '建議中長線佈局持有 3-12 個月，堅定持有直至估值回歸公允價，僅在商業護城河破裂或投資論點實質失效時才觸發停損離場。'
+    : investmentHorizon === 'swing_trend'
+    ? '預估波段持有 2-8 週，順應季度財報與景氣循環催化，達到波段目標時分批減碼獲利了結。'
+    : '預估短線持有 1-5 天，嚴格執行預設停損停利紀律。'
 
   const finalDecision: FinalDecision = {
     action: traderProposal.action,
@@ -458,15 +557,15 @@ ${round > 1 ? `上一輪空方質疑：${debateStatements[debateStatements.lengt
     },
     executiveSummary: managerText,
     keyCatalysts: [
-      `技術趨勢確認：${marketData.technicals.trendSignal}，支撐位於 ${marketData.technicals.supportLevel}`,
+      `估值公允定價：加權平均公允價 $${avgFairValue}，提供充足安全邊際`,
       `多空博弈共識勝率高達 ${bullProb}%`,
-      '整體風險報酬比符合機構交易標準',
+      `策略週期：${horizonNarrative.split(' ')[1]}，具備優異長期風險報酬比`,
     ],
     keyRisks: [
-      `總體市場系統性回調風險 (Beta 聯動)`,
-      `跌破停損線 ${traderProposal.stopLossPrice} 觸發嚴格平倉離場`,
+      `總體市場系統性估值壓縮風險 (Beta 聯動)`,
+      invalidationThesis || `失守極限安全邊際線 $${traderProposal.stopLossPrice} 觸發重新審定`,
     ],
-    holdingPeriodGuidance: '預估波段持有 2-4 週，或達到目標價時分批減碼獲利了結。',
+    holdingPeriodGuidance,
   }
 
   const reportHtml = generateCompleteReportHtml({

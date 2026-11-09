@@ -395,9 +395,21 @@ export function generateCompleteReportHtml(params: {
           <tr>
             <th>目標停利價</th>
             <td style="color: #10b981;">${marketData.currency} ${finalDecision.executionOrder.targetPrice.toFixed(2)}</td>
-            <th>嚴格停損價</th>
+            <th>安全防守位</th>
             <td style="color: #ef4444;">${marketData.currency} ${finalDecision.executionOrder.stopLossPrice.toFixed(2)}</td>
           </tr>
+          ${traderProposal?.stagingPlan ? `
+          <tr>
+            <th>建倉梯隊規劃</th>
+            <td colspan="3" style="color: #38bdf8;">${traderProposal.stagingPlan}</td>
+          </tr>
+          ` : ''}
+          ${traderProposal?.invalidationThesis ? `
+          <tr>
+            <th>投資論點失效條件</th>
+            <td colspan="3" style="color: #f59e0b;">${traderProposal.invalidationThesis}</td>
+          </tr>
+          ` : ''}
           <tr>
             <th>建議持有週期</th>
             <td colspan="3">${finalDecision.holdingPeriodGuidance}</td>

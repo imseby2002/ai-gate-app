@@ -102,6 +102,48 @@ export interface DebateSummary {
   consensusThesis: string
 }
 
+export type InvestmentHorizonMode = 'position_value' | 'swing_trend' | 'short_term'
+
+export interface InvestmentHorizonOption {
+  id: InvestmentHorizonMode
+  title: string
+  subtitle: string
+  horizonLabel: string
+  badgeLabel: string
+  icon: string
+  coreFocus: string
+}
+
+export const INVESTMENT_HORIZON_OPTIONS: InvestmentHorizonOption[] = [
+  {
+    id: 'position_value',
+    title: '中長線價值投資 (Position & Value)',
+    subtitle: '公允價值回歸·深厚商業護城河·金字塔分批建倉',
+    horizonLabel: '3~12 個月 (中長線投資)',
+    badgeLabel: '💎 中長線價值 (預設)',
+    icon: 'Gem',
+    coreFocus: '重視安全邊際、寬廣護城河與 12 大估值公允價，以投資論點失效為出場條件，無視短期市場雜訊',
+  },
+  {
+    id: 'swing_trend',
+    title: '中線波段趨勢 (Swing Trend)',
+    subtitle: '季度財報催化·大波段週線多頭·景氣週期順勢',
+    horizonLabel: '2~8 週 (波段交易)',
+    badgeLabel: '🌊 中線波段',
+    icon: 'Waves',
+    coreFocus: '捕捉季度財報爆發、產業景氣催化劑與週線均線多頭波段，預設合理寬停損守護大趨勢',
+  },
+  {
+    id: 'short_term',
+    title: '短線動量波段 (Short-term Momentum)',
+    subtitle: '關鍵價位突破·技術動能擺盪·高靈活快進快出',
+    horizonLabel: '1~5 天 (短線波段)',
+    badgeLabel: '⚡ 短線動量',
+    icon: 'Zap',
+    coreFocus: '依據短期支撐壓力、量價突破與即時消息快速操作，設置嚴格停損控管隔夜風險',
+  },
+]
+
 export interface TraderProposal {
   action: TradingAction
   targetPrice: number
@@ -110,6 +152,9 @@ export interface TraderProposal {
   riskRewardRatio: number
   recommendedAllocationPercent: number
   timeHorizon: 'Short-term (1-5 days)' | 'Swing (1-4 weeks)' | 'Medium-term (1-3 months)' | 'Long-term (6-12+ months)'
+  investmentHorizonMode?: InvestmentHorizonMode
+  stagingPlan?: string // 分批進場梯隊規劃
+  invalidationThesis?: string // 投資論點失效停損條件
   rationale: string
 }
 

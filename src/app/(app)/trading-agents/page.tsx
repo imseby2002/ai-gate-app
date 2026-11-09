@@ -20,6 +20,9 @@ import {
   Flame,
   Globe,
   SlidersHorizontal,
+  Gem,
+  Waves,
+  Zap,
 } from 'lucide-react'
 import type {
   MarketDataSummary,
@@ -31,7 +34,9 @@ import type {
   FinalDecision,
   PortfolioContext,
   TradingAgentsEvent,
+  InvestmentHorizonMode,
 } from '@/lib/trading-agents/types'
+import { INVESTMENT_HORIZON_OPTIONS } from '@/lib/trading-agents/types'
 import { MarketHeader } from '@/components/trading-agents/MarketHeader'
 import { PortfolioModal } from '@/components/trading-agents/PortfolioModal'
 import { DecisionVerdictCard } from '@/components/trading-agents/DecisionVerdictCard'
@@ -87,6 +92,9 @@ export default function TradingAgentsPage() {
   // Valuation Models Selection (預設只產出 DCF, CDS, EV/EBITDA, ROE 杜邦 4 大模型)
   const [selectedModelIds, setSelectedModelIds] = useState<string[]>(DEFAULT_SELECTED_MODEL_IDS)
 
+  // 投資決策週期風格 (預設為中長線價值投資)
+  const [investmentHorizon, setInvestmentHorizon] = useState<InvestmentHorizonMode>('position_value')
+
   // Streaming State
   const [analystsStreaming, setAnalystsStreaming] = useState<Record<AnalystRole, { content: string; isStreaming: boolean; isDone: boolean; report?: AnalystReport }>>({
     fundamentals: { content: '', isStreaming: false, isDone: false },
@@ -109,20 +117,33 @@ export default function TradingAgentsPage() {
 
   const abortControllerRef = useRef<AbortController | null>(null)
 
-  // 從 localStorage 載入使用者已選擇的估值模型
+  // 從 localStorage 載入使用者已選擇的估值模型與投資週期風格
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('trading_agents_selected_models')
-      if (saved) {
-        const parsed = JSON.parse(saved)
+      const savedModels = localStorage.getItem('trading_agents_selected_models')
+      if (savedModels) {
+        const parsed = JSON.parse(savedModels)
         if (Array.isArray(parsed) && parsed.length > 0) {
           setSelectedModelIds(parsed)
         }
+      }
+      const savedHorizon = localStorage.getItem('trading_agents_investment_horizon') as InvestmentHorizonMode | null
+      if (savedHorizon && ['position_value', 'swing_trend', 'short_term'].includes(savedHorizon)) {
+        setInvestmentHorizon(savedHorizon)
       }
     } catch {
       // ignore JSON parse error
     }
   }, [])
+
+  const handleUpdateHorizon = (horizon: InvestmentHorizonMode) => {
+    setInvestmentHorizon(horizon)
+    try {
+      localStorage.setItem('trading_agents_investment_horizon', horizon)
+    } catch {
+      // ignore
+    }
+  }
 
   const handleUpdateSelectedModels = (newIds: string[]) => {
     setSelectedModelIds(newIds)
@@ -194,6 +215,7 @@ export default function TradingAgentsPage() {
           config: {
             debateRounds,
             selectedModelIds,
+            investmentHorizon,
             modelConfig: {
               quickThinkModel: quickModel,
               deepThinkModel: deepModel,
@@ -450,6 +472,45 @@ export default function TradingAgentsPage() {
             </button>
           </div>
 
+          {/* Investment Horizon & Strategy Style Selection (預設為中長線價值投資) */}
+          <div className="mt-3 pt-3 border-t border-border/60">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-bold text-foreground flex items-center gap-1.5 shrink-0">
+                  <Gem className="h-3.5 w-3.5 text-emerald-400" /> 投資週期策略：
+                </span>
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
+                  {INVESTMENT_HORIZON_OPTIONS.map(opt => {
+                    const isSelected = investmentHorizon === opt.id
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => handleUpdateHorizon(opt.id)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                          isSelected
+                            ? 'bg-primary text-primary-foreground shadow-sm ring-1 ring-primary/40'
+                            : 'bg-muted hover:bg-accent text-muted-foreground hover:text-foreground border border-border/60'
+                        }`}
+                      >
+                        {opt.id === 'position_value' && <Gem className="h-3.5 w-3.5 text-emerald-400" />}
+                        {opt.id === 'swing_trend' && <Waves className="h-3.5 w-3.5 text-sky-400" />}
+                        {opt.id === 'short_term' && <Zap className="h-3.5 w-3.5 text-amber-400" />}
+                        <span>{opt.badgeLabel}</span>
+                        <span className="text-[10px] opacity-75 font-normal hidden sm:inline">({opt.horizonLabel.split(' ')[0]})</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div className="text-[11px] text-muted-foreground bg-muted/40 px-2.5 py-1 rounded-md border border-border/40">
+                <span className="text-foreground font-semibold">思維導引：</span>
+                {INVESTMENT_HORIZON_OPTIONS.find(o => o.id === investmentHorizon)?.coreFocus}
+              </div>
+            </div>
+          </div>
+
           {/* Model & Debate Settings Strip */}
           <div className="mt-3 pt-3 border-t border-border/60 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
             <div className="flex items-center gap-2">
@@ -697,12 +758,28 @@ export default function TradingAgentsPage() {
                   {traderProposal?.rationale || traderText || '擬定進場點位與損益比中...'}
                 </div>
                 {traderProposal && (
-                  <div className="pt-2 border-t text-xs grid grid-cols-2 gap-2 font-mono">
-                    <div>目標價: <strong className="text-emerald-500">${traderProposal.targetPrice}</strong></div>
-                    <div>停損價: <strong className="text-rose-500">${traderProposal.stopLossPrice}</strong></div>
-                    <div>風報比: <strong>1:{traderProposal.riskRewardRatio}</strong></div>
-                    <div>建議週期: <span className="text-muted-foreground font-sans">{traderProposal.timeHorizon.split(' ')[0]}</span></div>
-                  </div>
+                  <>
+                    <div className="pt-2 border-t text-xs grid grid-cols-2 gap-2 font-mono">
+                      <div>目標公允價: <strong className="text-emerald-500">${traderProposal.targetPrice}</strong></div>
+                      <div>安全防守位: <strong className="text-rose-500">${traderProposal.stopLossPrice}</strong></div>
+                      <div>風報比: <strong>1:{traderProposal.riskRewardRatio}</strong></div>
+                      <div>建議週期: <span className="text-primary font-sans font-bold">{traderProposal.timeHorizon}</span></div>
+                    </div>
+
+                    {traderProposal.stagingPlan && (
+                      <div className="p-2 rounded-lg bg-primary/5 border border-primary/20 text-xs">
+                        <span className="font-bold text-primary block mb-0.5">🏢 分批建倉規劃：</span>
+                        <p className="text-muted-foreground">{traderProposal.stagingPlan}</p>
+                      </div>
+                    )}
+
+                    {traderProposal.invalidationThesis && (
+                      <div className="p-2 rounded-lg bg-amber-500/5 border border-amber-500/20 text-xs">
+                        <span className="font-bold text-amber-500 block mb-0.5">🛡️ 投資論點失效才停損：</span>
+                        <p className="text-muted-foreground">{traderProposal.invalidationThesis}</p>
+                      </div>
+                    )}
+                  </>
                 )}
               </Card>
 
