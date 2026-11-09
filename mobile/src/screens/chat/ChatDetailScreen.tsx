@@ -10,6 +10,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Image,
+  Modal,
+  Pressable,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useRoute, useNavigation } from '@react-navigation/native'
@@ -21,6 +24,8 @@ interface Bubble {
   sender: 'customer' | 'ai' | 'agent'
   text: string
   at: string
+  /** 客人或客服傳的圖片（後端回傳 1 小時有效的簽名網址） */
+  image?: string
 }
 
 export default function ChatDetailScreen() {
@@ -36,6 +41,8 @@ export default function ChatDetailScreen() {
   const [takeover, setTakeover] = useState<boolean>(initialTakeover ?? false)
   const [togglingTakeover, setTogglingTakeover] = useState(false)
 
+  const [previewImage, setPreviewImage] = useState<string | null>(null)
+
   const flatListRef = useRef<FlatList>(null)
 
   const fetchThread = useCallback(async () => {
@@ -46,11 +53,7 @@ export default function ChatDetailScreen() {
       )
       if (res.ok) {
         const json = await res.json()
-        // App 尚未顯示圖片，圖片訊息以文字標示
-        setBubbles(((json.bubbles || []) as (Bubble & { image?: string })[]).map((b) => ({
-          side: b.side, sender: b.sender, at: b.at,
-          text: b.text || (b.image ? '【圖片】' : ''),
-        })))
+        setBubbles((json.bubbles || []) as Bubble[])
         if (typeof json.takeover === 'boolean') setTakeover(json.takeover)
       } else {
         console.log('載入對話訊息失敗:', res.status)
@@ -208,11 +211,17 @@ export default function ChatDetailScreen() {
           </View>
         )}
 
-        <View style={[styles.bubble, isMe ? styles.bubbleOut : styles.bubbleIn]}>
-          <Text style={[styles.bubbleText, isMe ? styles.bubbleTextOut : styles.bubbleTextIn]}>
-            {item.text}
-          </Text>
-        </View>
+        {item.image ? (
+          <TouchableOpacity activeOpacity={0.85} onPress={() => setPreviewImage(item.image!)}>
+            <Image source={{ uri: item.image }} style={styles.bubbleImage} resizeMode="cover" />
+          </TouchableOpacity>
+        ) : (
+          <View style={[styles.bubble, isMe ? styles.bubbleOut : styles.bubbleIn]}>
+            <Text style={[styles.bubbleText, isMe ? styles.bubbleTextOut : styles.bubbleTextIn]}>
+              {item.text}
+            </Text>
+          </View>
+        )}
 
         <Text style={[styles.timeText, isMe ? styles.timeRight : styles.timeLeft]}>
           {formatClock(item.at)}
@@ -266,6 +275,17 @@ export default function ChatDetailScreen() {
           )}
         </TouchableOpacity>
       </View>
+      {/* 點圖片放大 */}
+      <Modal visible={!!previewImage} transparent animationType="fade" onRequestClose={() => setPreviewImage(null)}>
+        <Pressable style={styles.previewBackdrop} onPress={() => setPreviewImage(null)}>
+          {previewImage && (
+            <Image source={{ uri: previewImage }} style={styles.previewImage} resizeMode="contain" />
+          )}
+          <View style={styles.previewClose}>
+            <Ionicons name="close" size={30} color="#FFFFFF" />
+          </View>
+        </Pressable>
+      </Modal>
     </KeyboardAvoidingView>
   )
 }
@@ -350,6 +370,27 @@ const styles = StyleSheet.create({
   bubbleOut: {
     backgroundColor: '#2563EB',
     borderTopRightRadius: 4,
+  },
+  bubbleImage: {
+    width: 220,
+    height: 220,
+    borderRadius: 14,
+    backgroundColor: '#E2E8F0',
+  },
+  previewBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.92)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  previewImage: {
+    width: '100%',
+    height: '85%',
+  },
+  previewClose: {
+    position: 'absolute',
+    top: 48,
+    right: 20,
   },
   bubbleText: {
     fontSize: 15,
