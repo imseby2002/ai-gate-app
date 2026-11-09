@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
   const list = records ?? []
 
   // 統計收支項目
-  let thuDoanPhi = 0 // 1% Đoàn phí
+  let thuDoanPhi = 0 // 0.5% Đoàn phí
   let thuKinhPhi = 0 // 2% Kinh phí công đoàn
   let thuKhac = 0
   let chiHoatDong = 0 // Hoạt động phong trào
@@ -64,7 +64,7 @@ export async function GET(req: NextRequest) {
     ['Mã số', 'Nội dung thu / chi', 'Dự toán năm', 'Thực hiện quyết toán'],
     ['A', 'PHẦN THU (收入部分)', '', ''],
     ['01', '1. Thu kinh phí công đoàn (2% Doanh nghiệp đóng)', '', Math.round(thuKinhPhi)],
-    ['02', '2. Thu đoàn phí công đoàn (1% Đoàn viên đóng)', '', Math.round(thuDoanPhi)],
+    ['02', '2. Thu đoàn phí công đoàn (0.5% Đoàn viên đóng)', '', Math.round(thuDoanPhi)],
     ['03', '3. Các khoản thu khác', '', Math.round(thuKhac)],
     ['10', 'TỔNG CỘNG THU (01 + 02 + 03)', '', Math.round(tongThu)],
     ['', '', '', ''],
