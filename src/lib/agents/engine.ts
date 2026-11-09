@@ -2,13 +2,12 @@
 // Vercel serverless 沒有長駐 process，因此一次「思考」被拆成有步數上限的一個 tick，
 // 由 cron（/api/cron/agent-tick）或核准回覆（resumeRunAfterApproval）觸發續跑。
 import { tool, jsonSchema } from 'ai'
-import { generateTextByChain } from '@/lib/ai/proxy-fallback'
+import { generateTextByChain, directCostUsd } from '@/lib/ai/proxy-fallback'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createAgentContext } from './runtime'
 import { CORE_AGENT_TOOLS } from './tools'
 import { getToolsForRole } from './roles'
 import { getBalance } from '@/lib/skills/billing'
-import { calculateCost } from '@/lib/ai/router'
 import { MISSION_CORE_TOOLS } from './tools/mission'
 import { MISSION_MAX_TICKS, buildMissionPrompt, loadMission, syncMissionExpenses, type MissionRow } from './missions'
 import type { AgentToolDef } from './types'
@@ -19,7 +18,7 @@ const MAX_ATTEMPTS = 3
 // 核准的 run 不會被那個機制擋下，會被 cron 每分鐘一直撿起來無限期執行，唯一煞車
 // 是點數歸零。這裡加一個總 tick 次數上限，不論成功或失敗都算，超過就暫停通知真人。
 const MAX_TOTAL_TICKS = 50
-// 模型走免費優先鏈（CLIProxy → FreeLLM → Gemini → Claude Haiku 保底），見 proxy-fallback.ts 的 agent 鏈
+// 模型走免費優先鏈（CLIProxy → FreeLLM → Claude Haiku 5.5 → Sonnet 5.5），見 proxy-fallback.ts 的 tools 鏈
 // 執行紀錄只帶最近的部分進 prompt，避免每輪輸入 token 隨任務越跑越長
 const PRIOR_LOG_MAX_CHARS = 12000
 const PRIOR_LOG_MAX_ENTRIES = 15
@@ -289,7 +288,7 @@ export async function tickRun(run: AgentRunRow): Promise<void> {
       '請規劃並執行下一步（可視需要呼叫工具），或在任務完成時呼叫 finish_run。'
 
     // 已執行過工具（可能有對外副作用）就不能再換模型重跑，避免重複發文/發訊息
-    const { result, usedModel, usedVia } = await generateTextByChain('agent', {
+    const { result, usedModel, usedVia } = await generateTextByChain('tools', {
       system: systemPrompt,
       messages: [{ role: 'user', content: prompt }],
       tools: aiTools,
@@ -297,12 +296,12 @@ export async function tickRun(run: AgentRunRow): Promise<void> {
         steps.length >= MAX_STEPS_PER_TICK ||
         gatedCallsThisTick.length > 0 ||
         steps.some(s => s.toolCalls?.some(tc => suspendingIds.has(tc.toolName))),
-    }, { canFallback: () => toolsExecutedThisTick === 0 && gatedCallsThisTick.length === 0, timeoutMs: 120000 })
+    }, { canFallback: () => toolsExecutedThisTick === 0 && gatedCallsThisTick.length === 0, timeoutMs: 120000, feature: 'agent' })
 
     const usage = (result.usage ?? {}) as unknown as Record<string, number | undefined>
     const inputTokens = usage.inputTokens ?? usage.promptTokens ?? 0
     const outputTokens = usage.outputTokens ?? usage.completionTokens ?? 0
-    const cost = usedVia === 'direct' ? calculateCost(usedModel, inputTokens, outputTokens) : 0
+    const cost = usedVia === 'direct' ? directCostUsd(usedModel, inputTokens, outputTokens) : 0
     if (cost > 0) await ctx.deductCredits(cost, `agent:${run.role_id}:${run.id}`)
 
     await ctx.logStep({

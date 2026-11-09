@@ -18,7 +18,7 @@ export interface SkillField {
 }
 
 export interface SkillRunContext {
-  // 呼叫 LLM（claude-sonnet-4-6），回傳文字與用量
+  // 呼叫 LLM（免費優先鏈，見 proxy-fallback content），回傳文字與用量
   callModel: (opts: {
     system: string
     prompt: string

@@ -12,6 +12,7 @@ import { streamText, generateText } from 'ai'
 import type { LanguageModel } from 'ai'
 import type { ChatParams } from './providers/cli-proxy'
 import { normalizeFreeLlmBaseUrl } from './providers/free-llm'
+import { trackAiUsage, type FeatureModule } from './universal-tracker'
 import { GROQ_MODEL_MAP, GROQ_AUTO_MODEL } from './providers/groq'
 
 // ── Attempt descriptor ────────────────────────────────────────────────────────
@@ -22,6 +23,16 @@ export type Attempt =
   | { via: 'direct';    provider: 'deepseek' | 'google' | 'anthropic' | 'groq'; model: string }
 
 // ── Chain definitions (ordered: cheapest/free first) ──────────────────────────
+//
+// 費用排序（每百萬 tokens，輸入/輸出）：
+//   免費：CLIProxy（Copilot/Kiro/Grok）、FreeLLM、Groq
+//   Claude Haiku 5.5 $0.10/$0.50（Anthropic 官方價；輸入 >100K 時 $0.50/$2.50）
+//   DeepSeek $0.27/$1.10、Gemini 2.5 Flash $0.30/$2.50（見 marketing/billing.ts）
+//   Claude Sonnet 5.5 $2/$10（Anthropic 官方價）
+// 免費模型輸出未通過驗證時會自動換下一層，見 generateTextWithFallback 的 validate。
+
+const HAIKU: Attempt  = { via: 'direct', provider: 'anthropic', model: 'claude-haiku-5-5' }
+const SONNET: Attempt = { via: 'direct', provider: 'anthropic', model: 'claude-sonnet-5-5' }
 
 export const FALLBACK_CHAINS = {
   /** General chat — fast, daily questions */
@@ -32,34 +43,36 @@ export const FALLBACK_CHAINS = {
     { via: 'free-llm',  model: 'qwen3-32b'         },
     { via: 'cli-proxy', model: 'gemini-3-flash'    },
     { via: 'cli-proxy', model: 'gpt-5.4-mini'      },
+    HAIKU,
   ],
 
-  /** Creative writing, marketing copy */
+  /** Creative writing, marketing copy (chat) */
   creative: [
     { via: 'cli-proxy', model: 'gemini-3-flash'    },
     { via: 'cli-proxy', model: 'kimi-k2'           },
     { via: 'cli-proxy', model: 'gpt-5.4-mini'      },
     { via: 'free-llm',  model: 'auto'              },
-    { via: 'direct',    provider: 'google',   model: 'gemini-3.0-flash' },
+    HAIKU,
   ],
 
   /** Financial calculations, math, reasoning */
   finance: [
-    { via: 'cli-proxy', model: 'deepseek-chat'     },  // Your DeepSeek key via proxy
-    { via: 'cli-proxy', model: 'kimi-k2.5'         },  // Kiro free, good at math
-    { via: 'cli-proxy', model: 'grok-3-mini'       },  // Grok free
+    { via: 'cli-proxy', model: 'deepseek-chat'     },
+    { via: 'cli-proxy', model: 'kimi-k2.5'         },
+    { via: 'cli-proxy', model: 'grok-3-mini'       },
     { via: 'free-llm',  model: 'auto'              },
+    HAIKU,
     { via: 'direct',    provider: 'deepseek', model: 'deepseek-chat' },
   ],
 
-  /** Deep analysis, research, comparison — 免費優先，Claude 只當最後保底 */
+  /** Deep analysis, research, comparison */
   analysis: [
-    { via: 'cli-proxy', model: 'kimi-k2.5'         },  // Kiro free, strong reasoning
-    { via: 'cli-proxy', model: 'gemini-2.5-pro'    },  // Copilot free, capable
-    { via: 'cli-proxy', model: 'gpt-5.5'           },  // Copilot free
+    { via: 'cli-proxy', model: 'kimi-k2.5'         },
+    { via: 'cli-proxy', model: 'gemini-2.5-pro'    },
+    { via: 'cli-proxy', model: 'gpt-5.5'           },
     { via: 'free-llm',  model: 'auto'              },
-    { via: 'direct',    provider: 'google',   model: 'gemini-2.5-flash' },
-    { via: 'direct',    provider: 'anthropic', model: 'claude-haiku-4-5-20251001' },
+    HAIKU,
+    SONNET,
   ],
 
   /** Legal / regulatory questions — Perplexity handled separately (needs web) */
@@ -68,50 +81,91 @@ export const FALLBACK_CHAINS = {
     { via: 'cli-proxy', model: 'gemini-2.5-pro'    },
     { via: 'cli-proxy', model: 'gpt-5.5'           },
     { via: 'free-llm',  model: 'auto'              },
-    { via: 'direct',    provider: 'google',   model: 'gemini-2.5-flash' },
-    { via: 'direct',    provider: 'anthropic', model: 'claude-haiku-4-5-20251001' },
+    HAIKU,
+    SONNET,
   ],
 
   /** CS customer service — high volume, FreeLLMAPI first to save CLI Proxy quota */
   cs: [
-    { via: 'free-llm',  model: 'auto'              },  // 12 platforms, high volume
-    { via: 'cli-proxy', model: 'gemini-3-flash'    },
-    { via: 'direct',    provider: 'google',   model: 'gemini-2.5-flash' },
-  ],
-
-  /** CS high-risk (complaints, refunds) — 重要情境，維持只用 Claude Sonnet */
-  cs_highrisk: [
-    { via: 'direct', provider: 'anthropic', model: 'claude-sonnet-4-6' },
-  ],
-
-  /** Data extraction (email sync, OTA import) — speed + precision */
-  extraction: [
     { via: 'free-llm',  model: 'auto'              },
     { via: 'cli-proxy', model: 'gemini-3-flash'    },
-    { via: 'direct',    provider: 'deepseek', model: 'deepseek-chat' },
+    HAIKU,
     { via: 'direct',    provider: 'google',   model: 'gemini-2.5-flash' },
-    { via: 'direct',    provider: 'anthropic', model: 'claude-haiku-4-5-20251001' },
   ],
 
-  /** Code generation (feedback system) — 免費強模型優先，Sonnet 保底 */
+  /** A 組：客服高風險（退款、投訴、法律）— 重要情境只用 Claude */
+  cs_highrisk: [SONNET],
+
+  /** A 組：重要且只用 Claude 的情境（Agent 任務計畫書等） */
+  premium: [SONNET],
+
+  /** B 組：工具呼叫 / 程式碼（Agent、autofix、skills） */
+  tools: [
+    { via: 'cli-proxy', model: 'gemini-2.5-pro'    },
+    { via: 'cli-proxy', model: 'gpt-5.5'           },
+    { via: 'cli-proxy', model: 'kimi-k2.5'         },
+    { via: 'cli-proxy', model: 'gemini-3-flash'    },
+    { via: 'free-llm',  model: 'auto'              },
+    HAIKU,
+    SONNET,
+  ],
+
+  /** Code generation (chat 的 coding 意圖) — 同 B 組 */
   coding: [
     { via: 'cli-proxy', model: 'gpt-5.5'           },
     { via: 'cli-proxy', model: 'gemini-2.5-pro'    },
     { via: 'cli-proxy', model: 'kimi-k2.5'         },
-    { via: 'direct', provider: 'anthropic', model: 'claude-sonnet-4-6' },
+    HAIKU,
+    SONNET,
   ],
 
-  /** Agent / 長文生成（需支援工具呼叫）— 免費優先，Claude Haiku 只當最後保底 */
+  /** C 組：結構化擷取（JSON 輸出，請搭配 validate） */
+  extraction: [
+    { via: 'free-llm',  model: 'auto'              },
+    { via: 'cli-proxy', model: 'gemini-3-flash'    },
+    { via: 'cli-proxy', model: 'gpt-5.4-mini'      },
+    { via: 'cli-proxy', model: 'gemini-2.5-pro'    },
+    HAIKU,
+    { via: 'direct',    provider: 'deepseek', model: 'deepseek-chat' },
+  ],
+
+  /** D 組：內容生成（行銷文案、腳本、文章、報告、摘要） */
+  content: [
+    { via: 'cli-proxy', model: 'gemini-2.5-pro'    },
+    { via: 'cli-proxy', model: 'gpt-5.5'           },
+    { via: 'cli-proxy', model: 'kimi-k2.5'         },
+    { via: 'free-llm',  model: 'auto'              },
+    HAIKU,
+    SONNET,
+  ],
+
+  /** E 組：翻譯 */
+  translate: [
+    { via: 'free-llm',  model: 'auto'              },
+    { via: 'cli-proxy', model: 'gemini-3-flash'    },
+    { via: 'cli-proxy', model: 'gpt-5.4-mini'      },
+    HAIKU,
+  ],
+
+  /** F 組：圖片辨識（只放支援圖片輸入的模型） */
+  vision: [
+    { via: 'cli-proxy', model: 'gemini-2.5-pro'    },
+    { via: 'cli-proxy', model: 'gemini-3-flash'    },
+    HAIKU,
+    SONNET,
+  ],
+
+  /** 舊名稱相容：agent = tools */
   agent: [
     { via: 'cli-proxy', model: 'gemini-2.5-pro'    },
     { via: 'cli-proxy', model: 'gpt-5.5'           },
     { via: 'cli-proxy', model: 'kimi-k2.5'         },
     { via: 'cli-proxy', model: 'gemini-3-flash'    },
     { via: 'free-llm',  model: 'auto'              },
-    { via: 'direct',    provider: 'google',   model: 'gemini-2.5-flash' },
-    { via: 'direct',    provider: 'anthropic', model: 'claude-haiku-4-5-20251001' },
+    HAIKU,
+    SONNET,
   ],
-} as const satisfies Record<string, Attempt[]>
+} as const satisfies Record<string, readonly Attempt[]>
 
 export type ChainName = keyof typeof FALLBACK_CHAINS
 
@@ -309,6 +363,18 @@ export function attemptModelId(attempt: Attempt): string {
   return attempt.via === 'direct' ? attempt.model : `${attempt.via}:${attempt.model}`
 }
 
+// Claude 5.x（Haiku 5.5 / Sonnet 5.5 / Opus 5.5）：非預設的 temperature/topP/topK 會回 400；
+// AI SDK 不認得新型號時預設 max_tokens 只有 4096（含 thinking），需要明確給上限。
+function isClaude5(attempt: Attempt) {
+  return attempt.via === 'direct' && attempt.provider === 'anthropic' && /^claude-(haiku|sonnet|opus|fable)-5/.test(attempt.model)
+}
+
+function sourceChannelOf(attempt: Attempt): 'cliproxy' | 'freellm' | 'groq' | 'anthropic' | 'google' | 'deepseek' {
+  if (attempt.via === 'cli-proxy') return 'cliproxy'
+  if (attempt.via === 'free-llm') return 'freellm'
+  return attempt.provider
+}
+
 export interface GenerateFallbackResult<T> {
   result: T
   usedModel: string
@@ -316,18 +382,29 @@ export interface GenerateFallbackResult<T> {
   attemptsCount: number
 }
 
+export interface GenerateFallbackOptions {
+  /** 回傳 false 時不再換模型（例如本次嘗試已執行過有副作用的工具），直接拋錯 */
+  canFallback?: () => boolean
+  /** 輸出品質驗證：回傳 false 視為失敗，換下一個模型（最後一個模型的輸出不驗證，直接回傳） */
+  validate?: (text: string) => boolean
+  /** 每次嘗試的逾時毫秒數 */
+  timeoutMs?: number
+  /** 有給就自動寫入 ai_feature_usage_daily */
+  feature?: FeatureModule
+}
+
 /**
- * 依鏈順序呼叫 generateText，可重試錯誤就換下一個。
- * canFallback 回傳 false 時（例如這次嘗試已執行過有副作用的工具）不再換模型，直接拋錯。
+ * 依鏈順序呼叫 generateText：通道未設定、出錯、空回應、驗證不過，都換下一個。
  */
 export async function generateTextWithFallback(
   chain: readonly Attempt[],
   args: Omit<Parameters<typeof generateText>[0], 'model'>,
-  opts: { canFallback?: () => boolean; timeoutMs?: number } = {},
+  opts: GenerateFallbackOptions = {},
 ): Promise<GenerateFallbackResult<Awaited<ReturnType<typeof generateText>>>> {
   let lastError: unknown = new Error('No providers available')
   for (let i = 0; i < chain.length; i++) {
     const attempt = chain[i]
+    const isLast = i === chain.length - 1
     let model: LanguageModel
     try {
       model = buildModel(attempt)
@@ -335,20 +412,39 @@ export async function generateTextWithFallback(
       lastError = err // 未設定的通道直接跳過
       continue
     }
+    const callArgs = { ...args } as Record<string, unknown>
+    if (isClaude5(attempt)) {
+      delete callArgs.temperature
+      delete callArgs.topP
+      delete callArgs.topK
+      if (callArgs.maxOutputTokens == null) callArgs.maxOutputTokens = 16000
+    }
     try {
       const result = await generateText({
-        ...args,
+        ...callArgs,
         model,
         abortSignal: args.abortSignal ?? AbortSignal.timeout(opts.timeoutMs ?? 60000),
       } as Parameters<typeof generateText>[0])
-      const hasOutput = !!result.text?.trim() || (result.steps ?? []).some(s => (s.toolCalls ?? []).length > 0)
-      if (!hasOutput) throw new Error('empty response (not found)')
+      const hasToolCalls = (result.steps ?? []).some(s => (s.toolCalls ?? []).length > 0)
+      if (!result.text?.trim() && !hasToolCalls) throw new Error('empty response')
+      if (opts.validate && !isLast && !hasToolCalls && !opts.validate(result.text)) {
+        throw new Error(`output failed validation (${attemptModelId(attempt)})`)
+      }
+      if (opts.feature) {
+        const usage = (result.usage ?? {}) as unknown as Record<string, number | undefined>
+        void trackAiUsage({
+          feature: opts.feature,
+          modelId: attemptModelId(attempt),
+          inputTokens: usage.inputTokens ?? 0,
+          outputTokens: usage.outputTokens ?? 0,
+          sourceChannel: sourceChannelOf(attempt),
+        })
+      }
       return { result, usedModel: attemptModelId(attempt), usedVia: attempt.via, attemptsCount: i + 1 }
     } catch (err) {
       lastError = err
+      console.warn(`[fallback] ${attemptModelId(attempt)} failed:`, err instanceof Error ? err.message : err)
       if (opts.canFallback && !opts.canFallback()) throw err
-      if (!isRetryable(err) && attempt.via === 'direct') throw err
-      // 免費通道的任何錯誤都換下一個；付費直連只有可重試錯誤才換
     }
   }
   throw lastError
@@ -357,7 +453,56 @@ export async function generateTextWithFallback(
 export function generateTextByChain(
   chainName: ChainName,
   args: Omit<Parameters<typeof generateText>[0], 'model'>,
-  opts?: { canFallback?: () => boolean; timeoutMs?: number },
+  opts?: GenerateFallbackOptions,
 ) {
   return generateTextWithFallback(FALLBACK_CHAINS[chainName], args, opts)
+}
+
+/** 簡便版：單一 prompt → 文字。只有付費直連才回傳 > 0 的 costUsd。 */
+export async function generateSimple(
+  chainName: ChainName,
+  input: { system?: string; prompt: string; maxOutputTokens?: number; temperature?: number },
+  opts?: GenerateFallbackOptions,
+): Promise<{ text: string; usedModel: string; usedVia: Attempt['via']; inputTokens: number; outputTokens: number; costUsd: number }> {
+  const { result, usedModel, usedVia } = await generateTextByChain(chainName, {
+    system: input.system,
+    messages: [{ role: 'user', content: input.prompt }],
+    ...(input.maxOutputTokens ? { maxOutputTokens: input.maxOutputTokens } : {}),
+    ...(input.temperature != null ? { temperature: input.temperature } : {}),
+  }, opts)
+  const usage = (result.usage ?? {}) as unknown as Record<string, number | undefined>
+  const inputTokens = usage.inputTokens ?? 0
+  const outputTokens = usage.outputTokens ?? 0
+  const costUsd = usedVia === 'direct' ? directCostUsd(usedModel, inputTokens, outputTokens) : 0
+  return { text: result.text, usedModel, usedVia, inputTokens, outputTokens, costUsd }
+}
+
+/** 付費直連模型價格（USD / 百萬 tokens）。Claude 為 Anthropic 官方價，其餘取自 marketing/billing.ts */
+export const DIRECT_PRICES: Record<string, { input: number; output: number }> = {
+  'claude-haiku-5-5':  { input: 0.1,  output: 0.5 },
+  'claude-sonnet-5-5': { input: 2,    output: 10 },
+  'claude-opus-5-5':   { input: 4,    output: 20 },
+  'deepseek-chat':     { input: 0.27, output: 1.1 },
+  'gemini-2.5-flash':  { input: 0.3,  output: 2.5 },
+}
+
+export function directCostUsd(model: string, inputTokens: number, outputTokens: number): number {
+  const p = DIRECT_PRICES[model]
+  if (!p) return 0
+  // Haiku 5.5 單次輸入超過 100K tokens 時改用較高單價
+  if (model === 'claude-haiku-5-5' && inputTokens > 100_000) {
+    return (inputTokens * 0.5 + outputTokens * 2.5) / 1_000_000
+  }
+  return (inputTokens * p.input + outputTokens * p.output) / 1_000_000
+}
+
+/** 常用驗證：輸出含可解析的 JSON 物件/陣列 */
+export function looksLikeJson(text: string): boolean {
+  const t = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '')
+  const start = t.search(/[[{]/)
+  if (start < 0) return false
+  const open = t[start]
+  const end = t.lastIndexOf(open === '{' ? '}' : ']')
+  if (end <= start) return false
+  try { JSON.parse(t.slice(start, end + 1)); return true } catch { return false }
 }

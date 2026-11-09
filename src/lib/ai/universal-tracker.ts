@@ -19,6 +19,17 @@ export type FeatureModule =
   | 'roundtable'
   | 'agent'
   | 'missions'
+  | 'booking'
+  | 'cs'
+  | 'geo'
+  | 'hr'
+  | 'resume'
+  | 'translate'
+  | 'exams'
+  | 'shift'
+  | 'reserve'
+  | 'office'
+  | 'trading'
   | 'other'
 
 export interface TrackAiUsageParams {
