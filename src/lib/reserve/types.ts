@@ -39,6 +39,9 @@ export interface ReserveStore {
   currency: string
   notice?: string | null
   is_active: boolean
+  sms_reminder_enabled?: boolean
+  sms_reminder_hours?: number
+  sms_reminder_template?: string | null
   created_at?: string
   updated_at?: string
 }

@@ -166,12 +166,7 @@ CREATE POLICY "Owners manage staff" ON public.reserve_staff
   );
 
 -- Policies for reserve_appointments
-CREATE POLICY "Public insert appointments" ON public.reserve_appointments
-  FOR INSERT WITH CHECK (true);
-
-CREATE POLICY "Public read own appointment by no and phone" ON public.reserve_appointments
-  FOR SELECT USING (true);
-
+-- 公開預約與查詢一律走 API（service role），不開放匿名直接讀寫顧客資料
 CREATE POLICY "Owners manage appointments" ON public.reserve_appointments
   FOR ALL USING (
     EXISTS (SELECT 1 FROM public.reserve_stores s WHERE s.id = store_id AND s.user_id = auth.uid())

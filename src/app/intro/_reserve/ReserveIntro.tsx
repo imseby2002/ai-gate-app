@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import { getLocale } from 'next-intl/server'
-import { ArrowRight, CalendarDays, Check, Clock, Globe, LayoutTemplate, Scissors, Sparkles, Users, UserCheck } from 'lucide-react'
+import { ArrowRight, CalendarDays, Check, Clock, Globe, LayoutTemplate, MessageSquare, Scissors, Sparkles, Users, UserCheck } from 'lucide-react'
 import { introTr, trDeep } from '@/lib/i18n-data/server'
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
 
@@ -25,14 +25,15 @@ const FEATURES__ZH = [
   { key: 'calendar', title: '行事曆與預約管理', desc: '用行事曆一眼看完當天、當週的預約，新增、改期與完成狀態都在同一處處理。' },
   { key: 'customers', title: '顧客名單', desc: '客人預約後自動建檔，累積聯絡方式與預約紀錄，回訪與關懷更方便。' },
   { key: 'template', title: '產業範本一鍵套用', desc: '診所、美髮、美容美甲、健身教練、寵物美容、顧問諮詢六種範本，服務與人員一次建好再微調。' },
+  { key: 'sms', title: '預約簡訊提醒', desc: '預約前自動發簡訊提醒客人，提前時間與內容自己設定，減少爽約（簡訊依實際發送扣點）。' },
   { key: 'ai', title: 'AI 預約與營運助理', desc: '依你門市的真實空檔推薦時段、撰寫回訪關懷訊息，並用近 30 天預約分析產能與尖離峰（依用量扣點）。' },
 ]
-const ICONS: Record<string, typeof Globe> = { page: Globe, services: Scissors, staff: Users, calendar: CalendarDays, customers: UserCheck, template: LayoutTemplate, ai: Sparkles }
+const ICONS: Record<string, typeof Globe> = { page: Globe, services: Scissors, staff: Users, calendar: CalendarDays, customers: UserCheck, template: LayoutTemplate, sms: MessageSquare, ai: Sparkles }
 
 const FREE_ITEMS__ZH = ['線上預約頁', '服務項目與價格', '人員與排班', '行事曆與預約管理', '顧客名單', '產業範本一鍵套用', '營業時間與時段間隔設定']
 
 const FAQ__ZH = [
-  { q: '真的完全免費嗎？', a: '預約、排班、行事曆與顧客管理都免費，不限服務項目與預約筆數；只有 AI 助理依實際 AI 用量扣點。' },
+  { q: '真的完全免費嗎？', a: '預約、排班、行事曆與顧客管理都免費，不限服務項目與預約筆數；只有 AI 助理與簡訊提醒依實際用量扣點。' },
   { q: '適合哪些店家？', a: '需要客人事先預約時段的服務業，例如美容美髮、美甲美睫、診所與物理治療、健身教練、寵物美容、法律與商務諮詢。' },
   { q: '需要另外架網站嗎？', a: '不用。系統會給你一個專屬預約網址，可以放在 LINE、Instagram、Google 商家或任何地方。' },
   { q: '想讓客服自動回覆客人怎麼辦？', a: '搭配 IMT 智能客服後，AI 客服會在 LINE、WhatsApp 等平台回答服務項目與價格、近期空檔，提供線上預約連結，客人留手機號碼還能查自己的預約。' },
