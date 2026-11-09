@@ -85,3 +85,25 @@ export function examWindow(exam: { opens_at?: string | null; closes_at?: string 
   if (exam.closes_at && now > Date.parse(exam.closes_at)) return 'ended'
   return 'open'
 }
+
+/** 作答者查看「已公布」的批改結果：最近一次已公布的作答；正確答案依考卷「交卷後顯示答案」設定 */
+export async function loadReleasedResult(
+  admin: DeptAccess['admin'],
+  exam: Pick<ExamRow, 'id' | 'title' | 'pass_score' | 'reveal_answers'>,
+  who: { user_id: string } | { hr_employee_id: string },
+) {
+  const [col, val] = 'user_id' in who ? ['user_id', who.user_id] : ['hr_employee_id', who.hr_employee_id]
+  const { data: sub } = await admin.from('exam_submissions')
+    .select('id, lang, answers, results, score, max_score, grading_status, created_at, released_at')
+    .eq('exam_id', exam.id).eq(col, val).not('released_at', 'is', null)
+    .order('created_at', { ascending: false }).limit(1).maybeSingle()
+  if (!sub) return null
+  const { publicQuestions, answerKey } = await import('./grade')
+  const questions = await loadQuestions(admin, exam.id)
+  return {
+    exam: { id: exam.id, title: exam.title, pass_score: exam.pass_score },
+    submission: sub,
+    questions: publicQuestions(questions),
+    key: exam.reveal_answers ? answerKey(questions) : null,
+  }
+}

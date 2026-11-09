@@ -19,7 +19,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ no: 
 
   const [{ data: qs, error: qErr }, { data: mine, error: mErr }] = await Promise.all([
     ctx.admin.from('exam_questions').select('exam_id').in('exam_id', ids),
-    ctx.admin.from('exam_submissions').select('exam_id, score, max_score, grading_status, created_at')
+    ctx.admin.from('exam_submissions').select('exam_id, score, max_score, grading_status, created_at, released_at')
       .in('exam_id', ids).eq('hr_employee_id', ctx.emp.id).order('created_at', { ascending: false }),
   ])
   if (qErr || mErr) return NextResponse.json({ error: (qErr ?? mErr)!.message }, { status: 500 })
@@ -30,6 +30,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ no: 
       opens_at: e.opens_at, closes_at: e.closes_at,
       question_count: (qs ?? []).filter(q => q.exam_id === e.id).length,
       my_last: (mine ?? []).find(m => m.exam_id === e.id) ?? null,
+      my_released: (mine ?? []).some(m => m.exam_id === e.id && m.released_at),
     })).filter(e => e.question_count > 0),
   })
 }

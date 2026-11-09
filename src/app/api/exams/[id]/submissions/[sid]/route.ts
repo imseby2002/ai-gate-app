@@ -1,6 +1,6 @@
 /**
  * PATCH /api/exams/[id]/submissions/[sid] — 人工覆核：調整各題分數與回饋
- * body: { results: { [questionId]: { score, feedback? } } }
+ * body: { results: { [questionId]: { score, feedback? } }, release?: boolean }（release＝公布／取消公布批改結果給作答者）
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { getDeptAccess, canManageDept } from '@/lib/company/dept-access'
@@ -21,7 +21,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     .eq('id', sid).eq('exam_id', exam.id).maybeSingle()
   if (!sub) return NextResponse.json({ error: 'not_found' }, { status: 404 })
 
-  const body = await req.json().catch(() => null) as { results?: Record<string, { score?: unknown; feedback?: unknown }> } | null
+  const body = await req.json().catch(() => null) as { results?: Record<string, { score?: unknown; feedback?: unknown }>; release?: unknown } | null
   const results = { ...(sub.results as Record<string, QuestionResult>) }
   for (const [qid, v] of Object.entries(body?.results ?? {})) {
     const cur = results[qid]
@@ -41,6 +41,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     score: s.score,
     max_score: s.max_score,
     grading_status: s.grading_status === 'pending' ? 'pending' : 'reviewed',
+    ...(typeof body?.release === 'boolean' ? { released_at: body.release ? new Date().toISOString() : null } : {}),
   }).eq('id', sid)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true, score: s.score, max_score: s.max_score })

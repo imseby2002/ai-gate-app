@@ -3,11 +3,12 @@
 // 員工專區：<公司子網域>/e/<打卡編號>。首次以生日（DDMMYYYY）登入並設定自己的密碼，之後用密碼登入。
 import { useCallback, useEffect, useRef, useState, use } from 'react'
 import Link from 'next/link'
-import { Loader2, LogOut, KeyRound, FileText, CheckCircle2, CalendarDays, Upload, Paperclip, Trash2, Clock, UserRound, Lock, Menu, ChevronDown, ChevronLeft, ClipboardList, Play } from 'lucide-react'
+import { Loader2, LogOut, KeyRound, FileText, CheckCircle2, CalendarDays, Upload, Paperclip, Trash2, Clock, UserRound, Lock, Menu, ChevronDown, ChevronLeft, ClipboardList, Play, Eye } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { SLOT_MIN } from '@/lib/shift/time'
 import { ExamTaker } from '@/components/exams/ExamTaker'
+import { ExamReview } from '@/components/exams/ExamReview'
 import type { ReactNode } from 'react'
 
 interface Me {
@@ -299,6 +300,7 @@ interface PortalExam {
   id: string; title: Record<string, string>; description: Record<string, string>; question_count: number
   opens_at: string | null; closes_at: string | null
   my_last: { score: number; max_score: number; grading_status: string; created_at: string } | null
+  my_released?: boolean
 }
 const examTitle = (l: Record<string, string>) => l.vi || l.zh || l.en || '-'
 const examTitleZh = (l: Record<string, string>) => (l.zh && l.zh !== l.vi ? l.zh : '')
@@ -314,6 +316,7 @@ const examState = (e: PortalExam) => {
 function ExamsCard({ api }: { api: string }) {
   const [exams, setExams] = useState<PortalExam[] | null>(null)
   const [taking, setTaking] = useState<string | null>(null)
+  const [reviewing, setReviewing] = useState<string | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
   const load = () => setReloadKey(k => k + 1)
   useEffect(() => {
@@ -323,6 +326,18 @@ function ExamsCard({ api }: { api: string }) {
     return () => { alive = false }
   }, [api, reloadKey])
 
+  if (reviewing) {
+    return (
+      <div className="space-y-3">
+        <button onClick={() => setReviewing(null)} className="flex items-center gap-1 text-sm text-indigo-700">
+          <ChevronLeft className="h-4 w-4" />Danh sách bài kiểm tra / 考試清單
+        </button>
+        <div className="-mx-4 sm:mx-0">
+          <ExamReview url={`${api}/exams/${reviewing}/result`} />
+        </div>
+      </div>
+    )
+  }
   if (taking) {
     return (
       <div className="space-y-3">
@@ -356,6 +371,11 @@ function ExamsCard({ api }: { api: string }) {
                 <div className="text-xs text-slate-500">Thời gian / 作答時間：{examTime(e.opens_at)} ~ {examTime(e.closes_at)}</div>
               )}
             </div>
+            {e.my_released && (
+              <Button size="sm" variant="outline" onClick={() => { setReviewing(e.id); window.scrollTo({ top: 0 }) }}>
+                <Eye className="h-3.5 w-3.5 mr-1" />Xem bài chấm / 查看批改
+              </Button>
+            )}
             {examState(e) === 'open' ? (
               <Button size="sm" onClick={() => { setTaking(e.id); window.scrollTo({ top: 0 }) }} variant={e.my_last ? 'outline' : 'default'}>
                 <Play className="h-3.5 w-3.5 mr-1" />{e.my_last ? 'Làm lại / 重考' : 'Làm bài / 作答'}

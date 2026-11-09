@@ -13392,7 +13392,15 @@
     "externalLink": "外部人員連結（免登入）",
     "externalLinkHint": "要給外部人員作答，請在編輯頁的作答對象勾選「應徵者公開連結」並儲存。",
     "copyLink": "複製",
-    "linkCopied": "已複製"
+    "linkCopied": "已複製",
+    "viewReview": "查看批改",
+    "showOptions": "▸ 顯示原始選項",
+    "hideOptions": "▾ 收起選項",
+    "takerChose": "作答者選",
+    "releaseToTaker": "公布批改結果給作答者",
+    "releaseTip": "勾選後，員工可在「我的考試」或員工專區按「查看批改」看到各題得分與評語；正確答案依考卷「交卷後顯示答案」設定",
+    "releasedAt": "已於 {time} 公布",
+    "released": "已公布"
   },
   "KnowledgePicker": {
     "tab": "公司知識庫",
