@@ -131,6 +131,10 @@ export function calculateCost(
     'claude-sonnet-4-5':       { in: 0.003,    out: 0.015    },
     'claude-sonnet-4-6':       { in: 0.003,    out: 0.015    },
     'claude-haiku-4-5-20251001': { in: 0.001,  out: 0.005    },
+    // Claude 5.x（Anthropic 官方價）
+    'claude-haiku-5-5':        { in: 0.0001,   out: 0.0005   },
+    'claude-sonnet-5-5':       { in: 0.002,    out: 0.01     },
+    'claude-opus-5-5':         { in: 0.004,    out: 0.02     },
     'perplexity-sonar-pro':    { in: 0.001,    out: 0.001    },
     // OpenRouter paid models
     'or-gpt-4o-mini':          { in: 0.00015,  out: 0.0006   },

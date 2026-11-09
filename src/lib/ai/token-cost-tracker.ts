@@ -131,11 +131,15 @@ const MODEL_PRICING_TABLE: Record<string, { in: number; out: number }> = {
   'gemini-3.0-flash':           { in: 0.000075, out: 0.0003   },
   'gemini-2.0-flash-vision':    { in: 0.00125,  out: 0.00375  },
 
-  // Anthropic Direct
+  // Anthropic Direct（Anthropic 官方價，每 1K tokens）
+  'claude-haiku-5-5':           { in: 0.0001,   out: 0.0005   },
+  'claude-sonnet-5-5':          { in: 0.002,    out: 0.01     },
+  'claude-opus-5-5':            { in: 0.004,    out: 0.02     },
+  'claude-fable-5-1':           { in: 0.01,     out: 0.05     },
   'claude-sonnet-4-6':          { in: 0.003,    out: 0.015    },
   'claude-sonnet-4-5':          { in: 0.003,    out: 0.015    },
   'claude-3-7-sonnet':          { in: 0.003,    out: 0.015    },
-  'claude-opus-4-8':            { in: 0.015,    out: 0.075    },
+  'claude-opus-4-8':            { in: 0.005,    out: 0.025    },
   'claude-opus-4-5':            { in: 0.015,    out: 0.075    },
   'claude-3-opus':              { in: 0.015,    out: 0.075    },
   'claude-haiku-4-5-20251001':  { in: 0.001,    out: 0.005    },
@@ -168,6 +172,10 @@ const MODEL_NAME_MAP: Record<string, string> = {
   'gemini-2.0-flash-thinking':  'Gemini Flash Thinking',
   'gemini-3.0-flash':           'Gemini 3.0 Flash',
   'gemini-2.0-flash-vision':    'Gemini Vision (OCR)',
+  'claude-haiku-5-5':           'Claude Haiku 5.5',
+  'claude-sonnet-5-5':          'Claude Sonnet 5.5',
+  'claude-opus-5-5':            'Claude Opus 5.5',
+  'claude-fable-5-1':           'Claude Fable 5.1',
   'claude-sonnet-4-6':          'Claude Sonnet 4.6',
   'claude-sonnet-4-5':          'Claude Sonnet 4.5',
   'claude-opus-4-8':            'Claude Opus 4.8',

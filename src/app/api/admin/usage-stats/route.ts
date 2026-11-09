@@ -519,7 +519,7 @@ export async function GET(req: NextRequest) {
           const desc = tx.description || ''
           if (!desc.startsWith('agent-mission-plan:')) continue
 
-          const rawModel = 'anthropic/claude-sonnet-4-6'
+          const rawModel = 'anthropic/claude-sonnet-5-5'
           const channel: SourceChannel = 'anthropic'
           const cleanId = cleanModelId(rawModel)
           const key = `${channel}:${cleanId}`
