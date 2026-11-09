@@ -964,5 +964,15 @@
 "預約前自動發簡訊提醒客人，提前時間與內容自己設定，減少爽約（簡訊依實際發送扣點）。": "Tự động gửi SMS nhắc khách trước giờ hẹn. Bạn tự chọn thời gian và nội dung, giảm khách bỏ hẹn (SMS trừ điểm theo số tin gửi thực tế).",
 "預約、排班、行事曆與顧客管理都免費，不限服務項目與預約筆數；只有 AI 助理與簡訊提醒依實際用量扣點。": "Đặt lịch, xếp ca, lịch làm việc và quản lý khách hàng đều miễn phí, không giới hạn dịch vụ hay số lượt đặt. Chỉ trợ lý AI và nhắc lịch SMS trừ điểm theo mức sử dụng thực tế.",
 "多分店管理": "Quản lý nhiều chi nhánh",
-"一個帳號管理多間分店，每間有自己的預約網址、服務、人員與營業時間；新分店可一鍵複製現有門市設定。": "Quản lý nhiều chi nhánh bằng một tài khoản. Mỗi chi nhánh có link đặt lịch, dịch vụ, nhân viên và giờ mở cửa riêng; chi nhánh mới có thể sao chép thiết lập hiện có chỉ với một cú nhấp."
+"一個帳號管理多間分店，每間有自己的預約網址、服務、人員與營業時間；新分店可一鍵複製現有門市設定。": "Quản lý nhiều chi nhánh bằng một tài khoản. Mỗi chi nhánh có link đặt lịch, dịch vụ, nhân viên và giờ mở cửa riêng; chi nhánh mới có thể sao chép thiết lập hiện có chỉ với một cú nhấp.",
+"1 間門市": "1 cửa hàng",
+"簡訊提醒（固定內容，依用量扣點）": "Nhắc lịch SMS (nội dung cố định, trừ điểm theo mức dùng)",
+"FREE 全部功能": "Toàn bộ tính năng FREE",
+"最多 20 間分店，各自獨立預約網址": "Tối đa 20 chi nhánh, mỗi chi nhánh có link đặt lịch riêng",
+"新分店一鍵複製設定、服務與人員": "Sao chép thiết lập, dịch vụ và nhân viên sang chi nhánh mới chỉ với một cú nhấp",
+"自訂簡訊提醒內容": "Tùy chỉnh nội dung SMS nhắc lịch",
+"CORE 方案一個帳號最多管理 20 間分店，每間有自己的預約網址、服務、人員與營業時間；新分店可一鍵複製現有門市設定。": "Với gói CORE, một tài khoản quản lý tối đa 20 chi nhánh, mỗi chi nhánh có link đặt lịch, dịch vụ, nhân viên và giờ mở cửa riêng; chi nhánh mới có thể sao chép thiết lập hiện có chỉ với một cú nhấp.",
+"單店的預約、排班、行事曆與顧客管理都免費，不限服務項目與預約筆數；AI 助理與簡訊提醒依實際用量扣點。要管理多間分店或自訂簡訊內容，升級 CORE 每月 5 美元。": "Đặt lịch, xếp ca, lịch làm việc và quản lý khách hàng cho một cửa hàng đều miễn phí, không giới hạn dịch vụ hay số lượt đặt. Trợ lý AI và nhắc lịch SMS trừ điểm theo mức dùng thực tế. Muốn quản lý nhiều chi nhánh hoặc tùy chỉnh SMS, nâng cấp CORE với 5 USD/tháng.",
+"單店預約、排班、行事曆與顧客管理不限筆數免費使用；多分店與自訂簡訊升級 CORE，AI 助理與簡訊依實際用量扣點。": "Đặt lịch, xếp ca, lịch làm việc và quản lý khách hàng cho một cửa hàng miễn phí không giới hạn. Nhiều chi nhánh và SMS tùy chỉnh có trong gói CORE; trợ lý AI và SMS trừ điểm theo mức dùng thực tế.",
+"IMT 服務預約系統單店免費：線上預約頁、人員排班、行事曆、預約與顧客管理、產業範本；多分店與自訂簡訊 CORE 每月 5 美元；AI 助理與簡訊依用量扣點。": "IMT Đặt lịch dịch vụ miễn phí cho một cửa hàng: trang đặt lịch, xếp ca nhân viên, lịch, quản lý lịch hẹn và khách hàng, mẫu theo ngành. Nhiều chi nhánh và SMS tùy chỉnh với gói CORE 5 USD/tháng; trợ lý AI và SMS tính theo mức dùng."
 }

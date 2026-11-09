@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import {
   Home, CalendarDays, ClipboardList, Sparkles, Users,
   UserCheck, Bot, Settings, ExternalLink, ChevronLeft,
-  ChevronRight, Menu, X, Clock, HeartHandshake
+  ChevronRight, Menu, X, Clock, HeartHandshake, Crown
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { StoreSwitcher } from '@/components/reserve/StoreSwitcher'
@@ -27,6 +27,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/reserve/customers', label: '客戶 CRM', icon: UserCheck },
   { href: '/reserve/ai-assistant', label: 'AI 智慧助理', icon: Bot, badge: 'AI' },
   { href: '/reserve/settings', label: '門市設定', icon: Settings },
+  { href: '/reserve/plan', label: '方案與費用', icon: Crown },
 ]
 
 export default function ReserveLayout({ children }: { children: React.ReactNode }) {

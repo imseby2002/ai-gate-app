@@ -365,6 +365,48 @@ export async function POST(req: NextRequest) {
     return new NextResponse('1|OK', { status: 200 })
   }
 
+  // 預約系統方案升級訂單：同方案續購從原到期日往後延
+  const { data: reservePurchase } = await supabase
+    .from('reserve_plan_purchases')
+    .select('id, user_id, plan, billing_cycle')
+    .eq('trade_no', MerchantTradeNo)
+    .eq('status', 'pending')
+    .maybeSingle()
+
+  if (reservePurchase) {
+    const days = reservePurchase.billing_cycle === 'yearly' ? 365 : 30
+    const { data: existingReserveSub } = await supabase
+      .from('reserve_subscriptions')
+      .select('plan, status, current_period_end')
+      .eq('user_id', reservePurchase.user_id)
+      .maybeSingle()
+    const nowMs = Date.now()
+    const reserveRemainingValid = existingReserveSub?.status === 'active'
+      && existingReserveSub.plan === reservePurchase.plan
+      && !!existingReserveSub.current_period_end
+      && new Date(existingReserveSub.current_period_end).getTime() > nowMs
+    const reserveBaseMs = reserveRemainingValid ? new Date(existingReserveSub!.current_period_end!).getTime() : nowMs
+
+    await supabase
+      .from('reserve_plan_purchases')
+      .update({ status: 'paid', paid_at: new Date().toISOString() })
+      .eq('id', reservePurchase.id)
+
+    await supabase
+      .from('reserve_subscriptions')
+      .upsert({
+        user_id: reservePurchase.user_id,
+        plan: reservePurchase.plan,
+        billing_cycle: reservePurchase.billing_cycle,
+        status: 'active',
+        current_period_end: new Date(reserveBaseMs + days * 86400000).toISOString(),
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id' })
+
+    console.log('[ECPay] 預約方案升級成功', { userId: reservePurchase.user_id, plan: reservePurchase.plan })
+    return new NextResponse('1|OK', { status: 200 })
+  }
+
   console.error('[ECPay] 找不到對應的訂單記錄', { MerchantTradeNo })
   return new NextResponse('1|OK', { status: 200 })
 }

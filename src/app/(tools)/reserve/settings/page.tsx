@@ -26,6 +26,13 @@ export default function ReserveSettingsPage() {
   const [saving, setSaving] = useState(false)
   const [savedSuccess, setSavedSuccess] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [customSms, setCustomSms] = useState(false)
+
+  useEffect(() => {
+    let alive = true
+    fetch('/api/reserve/plan').then(r => (r.ok ? r.json() : null)).then(d => { if (alive && d) setCustomSms(!!d.features?.customSmsTemplate) }).catch(() => {})
+    return () => { alive = false }
+  }, [])
 
   useEffect(() => {
     async function loadStore() {
@@ -381,9 +388,13 @@ export default function ReserveSettingsPage() {
               <label className="font-semibold text-slate-700 dark:text-slate-300 block mb-1">
                 簡訊內容（可用 {'{store}'} {'{name}'} {'{service}'} {'{time}'} {'{url}'}）
               </label>
+              {!customSms && (
+                <p className="text-[11px] text-amber-600 mb-1">FREE 方案使用預設內容，<a href="/reserve/plan" className="underline">升級 CORE</a> 可自訂。</p>
+              )}
               <textarea
                 rows={3}
-                value={store.sms_reminder_template ?? ''}
+                disabled={!customSms}
+                value={customSms ? (store.sms_reminder_template ?? '') : ''}
                 onChange={e => setStore(prev => ({ ...prev, sms_reminder_template: e.target.value }))}
                 placeholder={DEFAULT_REMINDER_TEMPLATE}
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none leading-relaxed"
@@ -392,7 +403,7 @@ export default function ReserveSettingsPage() {
           </div>
           <div className="text-xs rounded-2xl bg-slate-50 dark:bg-slate-800/60 p-3 text-slate-600 dark:text-slate-300">
             <span className="font-semibold">預覽：</span>
-            {renderReminder(store.sms_reminder_template, store, { customer_name: '王小姐', start_time: new Date(Date.now() + 86400_000).toISOString(), service: { name: '範例服務' } })}
+            {renderReminder(customSms ? store.sms_reminder_template : null, store, { customer_name: '王小姐', start_time: new Date(Date.now() + 86400_000).toISOString(), service: { name: '範例服務' } })}
           </div>
         </div>
 

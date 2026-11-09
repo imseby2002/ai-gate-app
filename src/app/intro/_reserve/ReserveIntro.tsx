@@ -15,7 +15,7 @@ export const reserveMetadata: Metadata = {
 }
 export const reservePricingMetadata: Metadata = {
   title: '費用｜IMT 服務預約系統',
-  description: 'IMT 服務預約系統基本功能免費：線上預約頁、人員排班、行事曆、預約與顧客管理、產業範本；AI 助理依用量扣點。',
+  description: 'IMT 服務預約系統單店免費：線上預約頁、人員排班、行事曆、預約與顧客管理、產業範本；多分店與自訂簡訊 CORE 每月 5 美元；AI 助理與簡訊依用量扣點。',
 }
 
 const FEATURES__ZH = [
@@ -25,16 +25,17 @@ const FEATURES__ZH = [
   { key: 'calendar', title: '行事曆與預約管理', desc: '用行事曆一眼看完當天、當週的預約，新增、改期與完成狀態都在同一處處理。' },
   { key: 'customers', title: '顧客名單', desc: '客人預約後自動建檔，累積聯絡方式與預約紀錄，回訪與關懷更方便。' },
   { key: 'template', title: '產業範本一鍵套用', desc: '診所、美髮、美容美甲、健身教練、寵物美容、顧問諮詢六種範本，服務與人員一次建好再微調。' },
-  { key: 'branches', title: '多分店管理', desc: '一個帳號管理多間分店，每間有自己的預約網址、服務、人員與營業時間；新分店可一鍵複製現有門市設定。' },
+  { key: 'branches', title: '多分店管理', desc: 'CORE 方案一個帳號最多管理 20 間分店，每間有自己的預約網址、服務、人員與營業時間；新分店可一鍵複製現有門市設定。' },
   { key: 'sms', title: '預約簡訊提醒', desc: '預約前自動發簡訊提醒客人，提前時間與內容自己設定，減少爽約（簡訊依實際發送扣點）。' },
   { key: 'ai', title: 'AI 預約與營運助理', desc: '依你門市的真實空檔推薦時段、撰寫回訪關懷訊息，並用近 30 天預約分析產能與尖離峰（依用量扣點）。' },
 ]
 const ICONS: Record<string, typeof Globe> = { page: Globe, services: Scissors, staff: Users, calendar: CalendarDays, customers: UserCheck, template: LayoutTemplate, sms: MessageSquare, branches: Store, ai: Sparkles }
 
-const FREE_ITEMS__ZH = ['線上預約頁', '服務項目與價格', '人員與排班', '行事曆與預約管理', '顧客名單', '產業範本一鍵套用', '營業時間與時段間隔設定', '多分店管理']
+const FREE_ITEMS__ZH = ['線上預約頁', '服務項目與價格', '人員與排班', '行事曆與預約管理', '顧客名單', '產業範本一鍵套用', '營業時間與時段間隔設定', '1 間門市', '簡訊提醒（固定內容，依用量扣點）']
+const CORE_ITEMS__ZH = ['FREE 全部功能', '最多 20 間分店，各自獨立預約網址', '新分店一鍵複製設定、服務與人員', '自訂簡訊提醒內容']
 
 const FAQ__ZH = [
-  { q: '真的完全免費嗎？', a: '預約、排班、行事曆與顧客管理都免費，不限服務項目與預約筆數；只有 AI 助理與簡訊提醒依實際用量扣點。' },
+  { q: '真的完全免費嗎？', a: '單店的預約、排班、行事曆與顧客管理都免費，不限服務項目與預約筆數；AI 助理與簡訊提醒依實際用量扣點。要管理多間分店或自訂簡訊內容，升級 CORE 每月 5 美元。' },
   { q: '適合哪些店家？', a: '需要客人事先預約時段的服務業，例如美容美髮、美甲美睫、診所與物理治療、健身教練、寵物美容、法律與商務諮詢。' },
   { q: '需要另外架網站嗎？', a: '不用。系統會給你一個專屬預約網址，可以放在 LINE、Instagram、Google 商家或任何地方。' },
   { q: '想讓客服自動回覆客人怎麼辦？', a: '搭配 IMT 智能客服後，AI 客服會在 LINE、WhatsApp 等平台回答服務項目與價格、近期空檔，提供線上預約連結，客人留手機號碼還能查自己的預約。' },
@@ -153,13 +154,14 @@ export async function ReservePricing() {
   const tr = await introTr()
   const locale = await getLocale()
   const FREE_ITEMS = trDeep(FREE_ITEMS__ZH, tr)
+  const CORE_ITEMS = trDeep(CORE_ITEMS__ZH, tr)
   const FAQ = trDeep(FAQ__ZH, tr)
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <Hero tr={tr} locale={locale} eyebrow={tr('費用')} title={tr('預約系統基本功能免費')}
-        sub={tr('預約、排班、行事曆與顧客管理不限筆數免費使用；只有 AI 助理依實際用量扣點。')} />
+        sub={tr('單店預約、排班、行事曆與顧客管理不限筆數免費使用；多分店與自訂簡訊升級 CORE，AI 助理與簡訊依實際用量扣點。')} />
 
-      <section className="max-w-5xl mx-auto px-6 py-12 grid gap-4 md:grid-cols-2">
+      <section className="max-w-5xl mx-auto px-6 py-12 grid gap-4 md:grid-cols-3">
         <div className="rounded-2xl border-2 border-teal-500 bg-white p-6">
           <div className="font-extrabold tracking-widest text-[14px]">FREE</div>
           <div className="mt-2"><span className="text-[40px] font-black leading-none">$0</span><span className="text-[13px] text-slate-500"> {tr('美元／月')}</span></div>
@@ -167,6 +169,13 @@ export async function ReservePricing() {
             {FREE_ITEMS.map(i => <li key={i} className="flex gap-2"><Check className="h-4 w-4 mt-0.5 shrink-0 text-teal-600" />{i}</li>)}
           </ul>
           <div className="mt-6"><Cta label={tr('免費開始')} /></div>
+        </div>
+        <div className="rounded-2xl border border-slate-200 bg-white p-6">
+          <div className="font-extrabold tracking-widest text-[14px]">CORE</div>
+          <div className="mt-2"><span className="text-[40px] font-black leading-none">$5</span><span className="text-[13px] text-slate-500"> {tr('美元／月')}</span></div>
+          <ul className="mt-5 space-y-2 text-[14.5px]">
+            {CORE_ITEMS.map(i => <li key={i} className="flex gap-2"><Check className="h-4 w-4 mt-0.5 shrink-0 text-blue-600" />{i}</li>)}
+          </ul>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-6">
           <div className="font-extrabold text-[16px]">{tr('AI 預約與營運助理')}</div>
