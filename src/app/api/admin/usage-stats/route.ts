@@ -412,7 +412,9 @@ export async function GET(req: NextRequest) {
         console.warn('[usage-stats] agent_run_steps warning:', agentErr.message)
       } else {
         for (const step of agentSteps ?? []) {
-          const rawModel = step.model_id || 'claude-sonnet-4-6'
+          // 只有呼叫模型的步驟才有 token 與費用；工具執行、核准等步驟（model_id 為空）不算一次 AI 請求
+          if (!step.model_id) continue
+          const rawModel = step.model_id
           const channel = detectSourceChannel(rawModel)
           const cleanId = cleanModelId(rawModel)
           const key = `${channel}:${cleanId}`
