@@ -19,8 +19,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getCronOrUserAuth } from '@/lib/cron-auth'
-import { createAnthropic } from '@ai-sdk/anthropic'
-import { generateText } from 'ai'
+import { chainText } from '@/lib/ai/proxy-fallback'
 import { langInstruction } from '@/lib/marketing/lang'
 import { setUsageUser, trackLlm, withUsage } from '@/lib/marketing/usage'
 import { precheckUsage } from '@/lib/marketing/billing'
@@ -121,10 +120,8 @@ export const POST = withUsage('[marketing] 文案產出', async function POST(re
   }
 
   try {
-    const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-    const { text, usage } = await generateText({
-      model: anthropic('claude-sonnet-4-6'),
+    const { text, usage, usedModel } = await chainText('content', {
       system: `你是一位頂尖的多平台行銷文案撰寫人，擅長根據品牌特性與受眾習慣，撰寫各平台最佳化的行銷文案。
 文案要：具感染力、清晰傳遞價值主張、符合各平台格式規範、促進轉換行動。
 輸出格式：每個文案類型用「===【類型名稱】===」作為分隔標題，直接輸出文案內容，不需其他說明。
@@ -152,7 +149,7 @@ ${typeSpecs}
       ],
       maxOutputTokens: 2000,
     })
-    trackLlm('claude-sonnet-4-6', usage)
+    trackLlm(usedModel, usage)
 
     // Parse sections by type
     const results: Record<string, string> = {}

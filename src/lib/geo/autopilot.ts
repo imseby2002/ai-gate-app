@@ -4,8 +4,7 @@
  *  - runAutoPilot：選題 ➔ 探勘問句 ➔ 整合公司事實 ➔ 產出文章與 JSON-LD，寫入 geo_projects / geo_questions / geo_articles
  */
 import { createHash } from 'crypto'
-import { createAnthropic } from '@ai-sdk/anthropic'
-import { generateText } from 'ai'
+import { generateTextByChain, looksLikeJson, type ChainName } from '@/lib/ai/proxy-fallback'
 import type { createAdminClient } from '@/lib/supabase/admin'
 import { loadCompanyProfile, type CompanyProfile } from '@/lib/company/profile'
 import { outputLangInstruction } from '@/lib/ai/output-lang'
@@ -15,8 +14,9 @@ import { llmCost } from '@/lib/marketing/billing'
 type Admin = ReturnType<typeof createAdminClient>
 type Intent = 'info' | 'local' | 'compare' | 'transact'
 
-export const AUTOPILOT_FAST_MODEL = 'claude-haiku-5-5'
-export const AUTOPILOT_ARTICLE_MODEL = 'claude-sonnet-4-6'
+// 免費優先：短任務（JSON）走 extraction 鏈，長文走 content 鏈（免費 → Claude Haiku 5.5 → Sonnet 5.5）
+const AUTOPILOT_FAST_CHAIN: ChainName = 'extraction'
+const AUTOPILOT_ARTICLE_CHAIN: ChainName = 'content'
 
 export interface SuggestedTopic {
   title: string
@@ -40,9 +40,18 @@ const ARTICLE_SYSTEM = `你是 GEO（Generative Engine Optimization）頂級專�
 - 接著輸出 Schema.org JSON-LD，使用標記 ===JSONLD_START=== 與 ===JSONLD_END=== 包住
 - 嚴格只回傳這兩段標記包住的內容，不要其他開頭或結尾寒暄`
 
-function anthropic() {
-  if (!process.env.ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY 未設定')
-  return createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+async function gen(chain: ChainName, prompt: string, maxOutputTokens?: number) {
+  // 品質把關：JSON 任務要能解析、文章要有完整標記，否則換下一層模型
+  const validate = chain === AUTOPILOT_ARTICLE_CHAIN
+    ? (t: string) => t.includes('===ARTICLE_START===') && t.includes('===ARTICLE_END===')
+    : looksLikeJson
+  const { result, usedModel, usedVia } = await generateTextByChain(chain, {
+    messages: [{ role: 'user', content: prompt }],
+    ...(maxOutputTokens ? { maxOutputTokens } : {}),
+  }, { timeoutMs: 180000, feature: 'geo', validate })
+  // 只有付費直連才計費；免費通道成本為 0
+  const cost = usedVia === 'direct' ? llmCost(usedModel, result.usage) : 0
+  return { text: result.text, cost }
 }
 
 function extractJson(text: string, open: '[' | '{', close: ']' | '}') {
@@ -122,9 +131,9 @@ ${outputLangInstruction(locale)}
   }
 ]`
   try {
-    const res = await generateText({ model: anthropic()(AUTOPILOT_FAST_MODEL), messages: [{ role: 'user', content: prompt }] })
+    const res = await gen(AUTOPILOT_FAST_CHAIN, prompt)
     const topics = (extractJson(res.text, '[', ']') as SuggestedTopic[]).filter(t => t && t.title)
-    return { topics, cost: llmCost(AUTOPILOT_FAST_MODEL, res.usage) }
+    return { topics, cost: res.cost }
   } catch (err) {
     console.error('[geo/autopilot] suggestTopics error', err)
     const firstProd = sampleProducts(profile, 1)[0]?.name
@@ -159,7 +168,6 @@ export async function runAutoPilot(opts: {
   const { admin, db, userId, ownerId } = opts
   const locale = opts.locale || 'zh-TW'
   const profile = await loadPromoProfile(admin, ownerId)
-  const ai = anthropic()
   let cost = 0
 
   // 1. 決定主題
@@ -196,8 +204,8 @@ export async function runAutoPilot(opts: {
 }`
   let rawQuestions: Array<{ question: string; intent: Intent }> = []
   try {
-    const qRes = await generateText({ model: ai(AUTOPILOT_FAST_MODEL), messages: [{ role: 'user', content: questionPrompt }] })
-    cost += llmCost(AUTOPILOT_FAST_MODEL, qRes.usage)
+    const qRes = await gen(AUTOPILOT_FAST_CHAIN, questionPrompt)
+    cost += qRes.cost
     rawQuestions = (extractJson(qRes.text, '{', '}').questions ?? []).filter((q: { question?: string }) => q?.question)
   } catch (err) {
     console.error('[geo/autopilot] questions error', err)
@@ -244,8 +252,9 @@ ${authorName}
 
 請嚴格依輸出規則產出文章（包含 Markdown 表格、FAQ）與 JSON-LD。`
 
-  const { text, usage } = await generateText({ model: ai(AUTOPILOT_ARTICLE_MODEL), messages: [{ role: 'user', content: promptText }], maxOutputTokens: 8000 })
-  cost += llmCost(AUTOPILOT_ARTICLE_MODEL, usage)
+  const art = await gen(AUTOPILOT_ARTICLE_CHAIN, promptText, 8000)
+  const { text } = art
+  cost += art.cost
   const artMatch = text.match(/===ARTICLE_START===([\s\S]*?)===ARTICLE_END===/)
   const jsonMatch = text.match(/===JSONLD_START===([\s\S]*?)===JSONLD_END===/)
   const body_md = (artMatch ? artMatch[1] : text).trim()

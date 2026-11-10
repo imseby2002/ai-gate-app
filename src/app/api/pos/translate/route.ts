@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createHash } from 'crypto'
-import { createAnthropic } from '@ai-sdk/anthropic'
-import { generateText } from 'ai'
+import { chainText, looksLikeJson } from '@/lib/ai/proxy-fallback'
 import { getPosOwner } from '@/lib/pos/auth'
 
 const LANGS: Record<string, string> = {
@@ -27,16 +26,15 @@ export async function POST(req: NextRequest) {
   const out: Record<string, { name: string; description: string }> = {}
 
   try {
-    const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
-    const { text } = await generateText({
-      model: anthropic('claude-sonnet-4-6'),
+    // 翻譯：免費模型優先 → Claude Haiku 5.5
+    const { text } = await chainText('translate', {
       system:
         'Translate menu item name and description into zh-TW, en, vi. ' +
         'Return ONLY JSON: {"zh-TW":{"name":"","description":""},"en":{...},"vi":{...}}. ' +
         'Keep brand names. If source is already in target language, copy as-is.',
       prompt: JSON.stringify(source),
       maxOutputTokens: 800,
-    })
+    }, { feature: 'translate', validate: looksLikeJson })
     const cleaned = text.trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim()
     const parsed = JSON.parse(cleaned) as Record<string, { name: string; description: string }>
     for (const loc of targets) {

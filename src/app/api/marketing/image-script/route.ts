@@ -21,8 +21,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getCronOrUserAuth } from '@/lib/cron-auth'
-import { createAnthropic } from '@ai-sdk/anthropic'
-import { generateText } from 'ai'
+import { chainText } from '@/lib/ai/proxy-fallback'
 import { langName, langInstruction } from '@/lib/marketing/lang'
 
 export async function POST(req: NextRequest) {
@@ -91,7 +90,6 @@ export async function POST(req: NextRequest) {
     ? `\n\n📌 使用者特別規定：\n${userInstructions}`
     : ''
 
-  const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
 
   const refImageNote = referenceImage
     ? `\n\n【參考圖片說明】\n以上圖片為品牌實際場景照片，請仔細觀察圖片中的空間、物件、色調與氛圍，腳本的視覺場景和 AI Prompt 必須以此圖片的風格為基礎進行延伸創作，生成的圖片應與此參考圖片保持視覺連貫性。`
@@ -172,8 +170,7 @@ ${feedbackSection}
 
 請確保每張圖片腳本風格各異，涵蓋不同訴求角度（如：產品展示/生活情境/數據/人物故事/促銷活動等）。`
 
-  const { text } = await generateText({
-    model: anthropic('claude-sonnet-4-5'),
+  const { text } = await chainText('content', {
     system: `你是一位頂尖的視覺行銷設計顧問，擅長根據品牌特性與行銷文案，撰寫清晰可執行的圖片視覺腳本。
 每張圖片的腳本應包含：視覺場景、色調風格、主要元素、文字疊加、情感訴求、設計建議，以及 AI 圖片生成的${isVi ? '越文' : '英文'} Prompt。
 輸出格式：每張圖片用「===【圖片 N】===」作為分隔標題，直接輸出腳本內容，不需其他說明。

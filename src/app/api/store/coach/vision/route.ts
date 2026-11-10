@@ -4,6 +4,7 @@ import type { VisionAnalysisResult } from '@/lib/types/store-coach'
 import { generateText } from 'ai'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createAnthropic } from '@ai-sdk/anthropic'
+import { chainText, looksLikeJson } from '@/lib/ai/proxy-fallback'
 import { createOpenAI } from '@ai-sdk/openai'
 import { trackAiUsage } from '@/lib/ai/universal-tracker'
 
@@ -85,6 +86,24 @@ export async function POST(req: NextRequest) {
 }`
 
     if (imageBase64 && (hasGoogle || hasAnthropic || hasOpenAI)) {
+      // 免費視覺模型優先（CLIProxy Gemini → Claude Haiku 5.5 → Sonnet 5.5），JSON 不合法就換下一層
+      try {
+        const r = await chainText('vision', {
+          messages: [{
+            role: 'user',
+            content: [
+              { type: 'text', text: systemPrompt },
+              { type: 'image', image: `data:${mimeType};base64,${imageBase64}` },
+            ],
+          }],
+          maxOutputTokens: 2500,
+        }, { feature: 'store_coach', validate: looksLikeJson, timeoutMs: 90000 })
+        visionResult = JSON.parse(r.text.replace(/```json/gi, '').replace(/```/g, '').trim())
+      } catch (e) {
+        console.warn('[store-coach/vision] 免費優先鏈失敗，改用備援:', e)
+      }
+    }
+    if (!visionResult && imageBase64 && (hasGoogle || hasAnthropic || hasOpenAI)) {
       try {
         if (hasGoogle) {
           const google = createGoogleGenerativeAI({
@@ -125,7 +144,7 @@ export async function POST(req: NextRequest) {
         } else if (hasAnthropic) {
           const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
           const res = await generateText({
-            model: anthropic('claude-sonnet-4-5'),
+            model: anthropic('claude-sonnet-5-5'),
             messages: [
               {
                 role: 'user',
@@ -150,7 +169,7 @@ export async function POST(req: NextRequest) {
           if (inTokens > 0 || outTokens > 0) {
             void trackAiUsage({
               feature: 'store_coach',
-              modelId: 'claude-sonnet-4-5',
+              modelId: 'claude-sonnet-5-5',
               inputTokens: inTokens,
               outputTokens: outTokens,
               sourceChannel: 'anthropic',

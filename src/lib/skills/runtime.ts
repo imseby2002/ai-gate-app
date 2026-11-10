@@ -1,8 +1,6 @@
 // Skill 執行環境：提供 LLM 呼叫與 fal-ai 圖片生成，注入給各 skill 的 run()。
-import { createAnthropic } from '@ai-sdk/anthropic'
-import { generateText } from 'ai'
+import { generateTextByChain } from '@/lib/ai/proxy-fallback'
 import { fal } from '@fal-ai/client'
-import { trackAiUsage } from '@/lib/ai/universal-tracker'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { generateNanoBanana } from '@/lib/ai/nano-banana'
 import type { SkillRunContext } from './registry'
@@ -18,36 +16,21 @@ const FAL_TTS_VOICES: Record<string, string> = {
 }
 
 export function createSkillContext(userId?: string, knowledge?: string): SkillRunContext {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    throw new Error('ANTHROPIC_API_KEY 未設定')
-  }
-  const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-
   return {
     knowledge,
     async callModel({ system, prompt, maxOutputTokens = 2000 }) {
       // 內建專家「知識附掛」：PRO+ 使用者為該專家掛載的知識，於此統一注入 system prompt，
       // 讓每個 skill 皆可套用；knowledge 為空時行為不變（見 /api/skills/run）。
       const finalSystem = knowledge ? `${system}\n\n${knowledge}` : system
-      const res = await generateText({
-        model: anthropic('claude-sonnet-4-6'),
+      // 免費優先（CLIProxy → FreeLLM → Claude Haiku 5.5 → Sonnet 5.5），用量由 fallback 自動記錄
+      const { result: res } = await generateTextByChain('content', {
         system: finalSystem,
         messages: [{ role: 'user', content: prompt }],
         maxOutputTokens,
-      })
+      }, { feature: 'skills', timeoutMs: 120000 })
       const usage = (res.usage ?? {}) as unknown as Record<string, number | undefined>
-      const inTokens = usage.inputTokens ?? usage.promptTokens ?? 0
-      const outTokens = usage.outputTokens ?? usage.completionTokens ?? 0
-
-      if (inTokens > 0 || outTokens > 0) {
-        void trackAiUsage({
-          feature: 'skills',
-          modelId: 'claude-sonnet-4-6',
-          inputTokens: inTokens,
-          outputTokens: outTokens,
-          sourceChannel: 'anthropic',
-        })
-      }
+      const inTokens = usage.inputTokens ?? 0
+      const outTokens = usage.outputTokens ?? 0
 
       return {
         text: res.text,

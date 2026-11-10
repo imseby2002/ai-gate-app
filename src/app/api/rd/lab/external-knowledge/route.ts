@@ -1,7 +1,6 @@
 import { getUnitContext } from '@/lib/auth/unit-access'
 import { NextRequest, NextResponse } from 'next/server'
-import { createAnthropic } from '@ai-sdk/anthropic'
-import { generateText } from 'ai'
+import { chainText } from '@/lib/ai/proxy-fallback'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -54,9 +53,8 @@ export async function POST(req: NextRequest) {
   let tags: string[] = []
 
   // 透過 AI 萃取技術細節
-  if (process.env.ANTHROPIC_API_KEY && (raw_content || title)) {
+  if (raw_content || title) {
     try {
-      const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
       const prompt = `請分析以下外部研發資料（來自 ${source_type}，實證等級 Evidence Level: ${evidenceLevel}）：
 標題：${title}
 來源：${source_url}
@@ -70,12 +68,11 @@ ${(raw_content || title).slice(0, 4000)}
 4. 【在 Feeling Tea 的應用可能性與實驗建議】：
 繁體中文，精煉實用。`
 
-      const res = await generateText({
-        model: anthropic('claude-sonnet-4-5'),
+      const res = await chainText('content', {
         system: '你是連鎖茶飲研發知識萃取專家，擅長將外部影片與文章轉為內部研發標準知識項目。',
         maxOutputTokens: 1000,
         messages: [{ role: 'user', content: prompt }],
-      })
+      }, { feature: 'rd' })
       aiSummary = res.text.trim()
     } catch {
       aiSummary = raw_content.slice(0, 300)

@@ -1,7 +1,5 @@
 ﻿import { NextRequest, NextResponse } from 'next/server'
-import { createOpenAI } from '@ai-sdk/openai'
-import { createAnthropic } from '@ai-sdk/anthropic'
-import { generateText, streamText } from 'ai'
+import { chainText, streamTextByChain } from '@/lib/ai/proxy-fallback'
 import { createClient } from '@/lib/supabase/server'
 import { deductCredits } from '@/lib/skills/billing'
 import { guardResumeAccess, checkResumePlan, RESUME_COSTS } from '@/lib/resume/billing'
@@ -42,39 +40,17 @@ ${experience || '（未提供）'}
 請給出具體分析，此分析將作為後續履歷撰寫的依據。`
 }
 
-// ── Phase 1: 分析（首選 DeepSeek-R1，失敗後備 Claude）──────────────
+// ── Phase 1: 分析（免費模型優先）──────────────
 async function runAnalysis(jd: string, experience: string): Promise<{ text: string; usedModel: string }> {
   const prompt = buildAnalysisPrompt(jd, experience)
 
   // 首選：DeepSeek-R1（推理型，分析性價比高）
-  if (process.env.DEEPSEEK_API_KEY) {
-    try {
-      const deepseek = createOpenAI({
-        apiKey: process.env.DEEPSEEK_API_KEY,
-        baseURL: 'https://api.deepseek.com/v1',
-      })
-      const { text } = await generateText({
-        model: deepseek.chat('deepseek-reasoner'),
-        prompt,
-        maxOutputTokens: 2000,
-      })
-      if (text.trim()) return { text, usedModel: '官方 DeepSeek-R1' }
-    } catch (err) {
-      console.error('[resume/optimize] DeepSeek 分析失敗，改用 Claude 後備:', err)
-    }
-  }
-
-  // 後備：Claude（Phase 2 撰寫也在用同一把金鑰，DeepSeek 掛掉時履歷功能仍可用）
-  const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
-  const { text } = await generateText({
-    model: anthropic('claude-sonnet-4-6'),
-    prompt,
-    maxOutputTokens: 2000,
-  })
-  return { text, usedModel: 'Claude Sonnet' }
+  // 免費模型優先 → Claude Haiku 5.5 → Sonnet 5.5（DeepSeek-R1 $0.55/$2.19 比 Haiku 5.5 貴，不再使用）
+  const r = await chainText('content', { prompt, maxOutputTokens: 2000 }, { feature: 'resume' })
+  return { text: r.text, usedModel: r.usedModel }
 }
 
-// ── Phase 2: Claude Sonnet 撰寫履歷 ──────────────────────────────
+// ── Phase 2: 撰寫履歷（免費模型優先）──────────────────────────────
 async function streamResumeWithClaude(
   jd: string,
   experience: string,
@@ -82,8 +58,6 @@ async function streamResumeWithClaude(
   analysisModel: string,
   imageBase64?: string,
 ) {
-  const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
-
   const systemPrompt = `你是一位頂尖的履歷撰寫專家，專精於台灣職場的履歷優化與 ATS 系統。
 你的文字簡練有力、重點突出，擅長將普通的工作經歷轉化為吸引眼球的成就敘述。
 請使用繁體中文（專有名詞可保留英文）撰寫，格式清晰易讀。`
@@ -130,8 +104,8 @@ ${experience || '（未提供）'}
     content[0].text += '\n\n（附件：求職者上傳的現有履歷圖片，請參考其格式與內容一併優化）'
   }
 
-  return streamText({
-    model: anthropic('claude-sonnet-4-6'),
+  // 免費模型優先 → Claude Haiku 5.5 → Sonnet 5.5（附圖時走 vision 鏈）
+  return streamTextByChain(imageBase64 ? 'vision' : 'content', {
     system: systemPrompt,
     messages: [{ role: 'user' as const, content }],
     maxOutputTokens: 3000,
@@ -211,7 +185,7 @@ export async function POST(req: NextRequest) {
         sse(controller, {
           type: 'phase',
           phase: 'writing',
-          label: `Claude Sonnet 正在生成優化履歷...（分析由 ${analysisModel} 完成）`,
+          label: `AI 正在生成優化履歷...（分析由 ${analysisModel} 完成）`,
         })
 
         const claudeStream = await streamResumeWithClaude(jd, experience, analysis, analysisModel, imageBase64)

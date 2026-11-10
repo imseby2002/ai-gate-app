@@ -1,16 +1,13 @@
 // 行銷一鍵整套產出：依品牌守則，為選定平台產生文案＋影片腳本＋圖片提示＋GEO 文章。
-import { createAnthropic } from '@ai-sdk/anthropic'
-import { generateText } from 'ai'
+import { chainText, looksLikeJson } from '@/lib/ai/proxy-fallback'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { assembleExpertKnowledge } from '@/lib/skills/expertKnowledge'
 
-import { trackAiUsage } from '@/lib/ai/universal-tracker'
 
 // 一鍵產出沿用的行銷專家（與行銷中心專家模式同源）：短影音爆款＋推廣文案＋社群人設
 const MKT_EXPERT_SKILLS = ['viral-video-copywriting', 'product-marketing-copywriter', 'kol-persona-writer']
 
 type Admin = ReturnType<typeof createAdminClient>
-export const MKT_MODEL = 'claude-sonnet-4-5'
 
 const CHANNEL_LABEL: Record<string, string> = {
   fb: 'Facebook 貼文', ig: 'Instagram 貼文', tiktok: 'TikTok 短影音', zalo: 'Zalo 貼文', line: 'LINE 官方帳號訊息',
@@ -71,24 +68,10 @@ ${brief ? `補充說明：${brief}\n` : ''}要產出的平台：\n${chDesc || '�
 請嚴格依下列 JSON 結構輸出（只回 JSON）：
 ${shape}`
 
-  const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-  const res = await generateText({ model: anthropic(MKT_MODEL), system, maxOutputTokens: 4000, messages: [{ role: 'user', content: user }] })
-
-  const usage = (res as any).usage ?? {}
-  const inTokens = Number(usage.inputTokens ?? usage.promptTokens ?? 0)
-  const outTokens = Number(usage.outputTokens ?? usage.completionTokens ?? 0)
-  if (inTokens > 0 || outTokens > 0) {
-    void trackAiUsage({
-      feature: 'marketing',
-      modelId: MKT_MODEL,
-      inputTokens: inTokens,
-      outputTokens: outTokens,
-      sourceChannel: 'anthropic',
-    })
-  }
+  const res = await chainText('content', { system, maxOutputTokens: 4000, messages: [{ role: 'user', content: user }] }, { feature: 'marketing', validate: looksLikeJson, timeoutMs: 120000 })
 
   const outputs = parseJson(res.text)
-  return { outputs, model: MKT_MODEL }
+  return { outputs, model: res.usedModel }
 }
 
 function parseJson(text: string): Record<string, unknown> {

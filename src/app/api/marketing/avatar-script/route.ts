@@ -11,8 +11,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createAnthropic } from '@ai-sdk/anthropic'
-import { generateText } from 'ai'
+import { chainText } from '@/lib/ai/proxy-fallback'
 import { langInstruction } from '@/lib/marketing/lang'
 
 export async function POST(req: NextRequest) {
@@ -96,10 +95,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '請提供 campaignId 或 companyData' }, { status: 400 })
   }
 
-  const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
 
-  const { text } = await generateText({
-    model: anthropic('claude-sonnet-4-6'),
+  const { text } = await chainText('content', {
     messages: [{
       role: 'user',
       content: `你是一位專業的行銷主播腳本撰寫師。請為以下品牌撰寫 ${count} 份 AI 虛擬主播（HeyGen）口播腳本。

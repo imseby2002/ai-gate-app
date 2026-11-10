@@ -3,7 +3,7 @@ import { getUnitContext } from '@/lib/auth/unit-access'
 import { STORE_COACH_KNOWLEDGE } from '@/lib/store-coach/knowledge-base'
 import type { DiagnosisOutput, DiagnosisLayer } from '@/lib/types/store-coach'
 import { generateText } from 'ai'
-import { createAnthropic } from '@ai-sdk/anthropic'
+import { chainText, looksLikeJson } from '@/lib/ai/proxy-fallback'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createOpenAI } from '@ai-sdk/openai'
 import { trackAiUsage } from '@/lib/ai/universal-tracker'
@@ -322,17 +322,16 @@ ${companyRegulationsContext}
         let usedChannel: 'anthropic' | 'google' | 'openai' = 'anthropic'
         let usageData: any = null
 
-        if (hasAnthropic) {
-          usedModel = 'claude-sonnet-4-5'
-          usedChannel = 'anthropic'
-          const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-          const res = await generateText({
-            model: anthropic('claude-sonnet-4-5'),
-            messages: [{ role: 'user', content: prompt }],
-            maxOutputTokens: 3500,
-          })
-          text = res.text
-          usageData = (res as any).usage
+        try {
+          // 免費優先鏈（CLIProxy → FreeLLM → Claude Haiku 5.5 → Sonnet 5.5），JSON 不合法就換下一層；用量由鏈自動記錄
+          const r = await chainText('content', { messages: [{ role: 'user', content: prompt }], maxOutputTokens: 3500 }, { feature: 'store_coach', validate: looksLikeJson, timeoutMs: 120000 })
+          text = r.text
+          usedModel = r.usedModel
+        } catch (e) {
+          console.warn('[store-coach] 免費優先鏈失敗，改用備援:', e)
+        }
+        if (text) {
+          // 已完成
         } else if (hasGoogle) {
           usedModel = 'gemini-2.0-flash'
           usedChannel = 'google'

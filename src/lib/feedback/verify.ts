@@ -3,10 +3,9 @@
  * 判斷需求是否已實作完成。判定完成時改為 verify_pending，交由管理者確認處理成功；
  * 管理者只負責確認，不自行判斷是否完成。
  */
-import { generateText } from 'ai'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { ghFetch, getClaudeSonnetModel } from '@/lib/feedback/autofix'
-import { trackAiUsage } from '@/lib/ai/universal-tracker'
+import { ghFetch } from '@/lib/feedback/autofix'
+import { generateTextByChain, looksLikeJson } from '@/lib/ai/proxy-fallback'
 
 export interface AiVerdict {
   done: boolean
@@ -76,7 +75,8 @@ ${prText}
 
 只輸出 JSON：{"done": true/false, "pr_number": 數字或 null, "evidence": "..."}`
     try {
-      const res = await generateText({ model: getClaudeSonnetModel(), maxOutputTokens: 600, messages: [{ role: 'user', content: prompt }] })
+      // 驗收判斷屬結構化擷取：免費模型優先，JSON 不合法就換下一層
+      const { result: res } = await generateTextByChain('extraction', { maxOutputTokens: 600, messages: [{ role: 'user', content: prompt }] }, { feature: 'autofix', validate: looksLikeJson })
       const j = extractJson(res.text)
       const pr = pulls.find(p => p.number === Number(j.pr_number)) ?? null
       verdict = {
@@ -86,12 +86,6 @@ ${prText}
         evidence: String(j.evidence ?? '').slice(0, 500),
         checked_at: checkedAt,
       }
-      const usage = res.usage as { inputTokens?: number; outputTokens?: number } | undefined
-      void trackAiUsage({
-        feature: 'autofix', modelId: 'claude-sonnet-4-6',
-        inputTokens: Number(usage?.inputTokens ?? 0), outputTokens: Number(usage?.outputTokens ?? 0),
-        sourceChannel: 'anthropic',
-      })
     } catch (e) {
       return { ok: false, error: `AI 驗收失敗：${e instanceof Error ? e.message : String(e)}` }
     }

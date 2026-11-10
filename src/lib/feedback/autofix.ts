@@ -1,35 +1,8 @@
 import { createAdminClient } from '@/lib/supabase/admin'
-import { createAnthropic } from '@ai-sdk/anthropic'
-import { createOpenAI } from '@ai-sdk/openai'
-import { generateText } from 'ai'
+import { generateTextByChain, looksLikeJson } from '@/lib/ai/proxy-fallback'
 import { notifyAdmin } from '@/lib/notify/adminAlert'
-import { trackAiUsage } from '@/lib/ai/universal-tracker'
 
-export const CODE_ENGINE_NAME = 'Claude Sonnet 4.6'
-
-/**
- * 取得 Claude Sonnet 4.6 程式碼修復引擎實例（Claude Sonnet 4.6 已下架）
- * 優先使用 ANTHROPIC_API_KEY 直連官方 claude-sonnet-4-6
- * 備用支援 OPENROUTER_API_KEY (anthropic/claude-sonnet-4.6)
- */
-export function getClaudeSonnetModel() {
-  const anthropicKey = process.env.ANTHROPIC_API_KEY?.trim()
-  if (anthropicKey) {
-    const anthropic = createAnthropic({ apiKey: anthropicKey })
-    return anthropic('claude-sonnet-4-6')
-  }
-
-  const openrouterKey = process.env.OPENROUTER_API_KEY?.trim()
-  if (openrouterKey) {
-    const openrouter = createOpenAI({
-      apiKey: openrouterKey,
-      baseURL: 'https://openrouter.ai/api/v1',
-    })
-    return openrouter.chat('anthropic/claude-sonnet-4.6')
-  }
-
-  throw new Error('未設定 ANTHROPIC_API_KEY 或 OPENROUTER_API_KEY，無法啟動 Claude Sonnet')
-}
+export const CODE_ENGINE_NAME = '免費模型優先（CLIProxy → FreeLLM → Claude Haiku 5.5 → Sonnet 5.5）'
 
 const REPO_OWNER = 'imseby2002'
 const REPO_NAME  = 'ai-gate-app'
@@ -147,9 +120,7 @@ async function classifyAndPlan(title: string, description: string, type: string,
   const contextStr = Object.entries(context).map(([p, c]) => `=== ${p} ===\n${c}`).join('\n\n')
 
   try {
-    const model = getClaudeSonnetModel()
-    const res = await generateText({
-      model,
+    const { result: res } = await generateTextByChain('coding', {
       messages: [{
         role: 'user',
         content: `你是 Next.js/TypeScript 高級架構分析師。根據以下使用者回饋，判斷是否可以「自動修改代碼」。
@@ -181,26 +152,14 @@ ${contextStr.slice(0, 12000)}
   "files": [{"path": "需要修改的檔案路徑", "description": "該檔案要做什麼修改"}]
 }`,
       }],
-    })
+    }, { feature: 'autofix', validate: looksLikeJson, timeoutMs: 120000 })
 
     const text = res.text
-    const usage = (res as any).usage ?? {}
-    const inTokens = Number(usage.inputTokens ?? usage.promptTokens ?? 0)
-    const outTokens = Number(usage.outputTokens ?? usage.completionTokens ?? 0)
-    if (inTokens > 0 || outTokens > 0) {
-      void trackAiUsage({
-        feature: 'autofix',
-        modelId: 'claude-sonnet-4-6',
-        inputTokens: inTokens,
-        outputTokens: outTokens,
-        sourceChannel: 'anthropic',
-      })
-    }
 
     const m = text.match(/\{[\s\S]*\}/)
     if (m) return JSON.parse(m[0]) as AiPlan
   } catch (err) {
-    return { complexity: 'manual', reason: `Claude Sonnet 分析失敗: ${String(err)}`, files: [] }
+    return { complexity: 'manual', reason: `AI 分析失敗: ${String(err)}`, files: [] }
   }
   return { complexity: 'manual', reason: '解析失敗', files: [] }
 }
@@ -217,13 +176,13 @@ async function generateCodeChanges(
   plan: AiPlan, context: Record<string, string>
 ): Promise<FileChange[]> {
   const changes: FileChange[] = []
-  const model = getClaudeSonnetModel()
 
   for (const fileTask of plan.files) {
     const existing = context[fileTask.path] ?? ''
-    const res = await generateText({
-      model,
-      maxOutputTokens: 8192,
+    // 品質把關：輸出不能是空的，也不能比原檔短太多（避免被截斷或只回片段）
+    const minLen = existing ? Math.floor(existing.length * 0.5) : 20
+    const { result: res } = await generateTextByChain('coding', {
+      maxOutputTokens: 16000,
       messages: [{
         role: 'user',
         content: `你是 Next.js/TypeScript 專業工程師。根據使用者需求修改以下檔案。
@@ -247,21 +206,13 @@ ${existing}
 
 直接輸出完整程式碼（不要加 \`\`\` 包裝）：`,
       }],
+    }, {
+      feature: 'autofix',
+      timeoutMs: 180000,
+      validate: t => t.replace(/^```[\w]*\n?/, '').replace(/\n?```$/, '').trim().length >= minLen,
     })
 
     const text = res.text
-    const usage = (res as any).usage ?? {}
-    const inTokens = Number(usage.inputTokens ?? usage.promptTokens ?? 0)
-    const outTokens = Number(usage.outputTokens ?? usage.completionTokens ?? 0)
-    if (inTokens > 0 || outTokens > 0) {
-      void trackAiUsage({
-        feature: 'autofix',
-        modelId: 'claude-sonnet-4-6',
-        inputTokens: inTokens,
-        outputTokens: outTokens,
-        sourceChannel: 'anthropic',
-      })
-    }
 
     // Strip possible code fences
     const code = text.replace(/^```[\w]*\n?/, '').replace(/\n?```$/, '')

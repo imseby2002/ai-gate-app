@@ -24,6 +24,7 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createOpenAI } from '@ai-sdk/openai'
 import { streamText } from 'ai'
 import type { LanguageModel } from 'ai'
+import { createChainModel } from './proxy-fallback'
 import { loadExpertContext } from '@/lib/experts/loader'
 
 // ── 用量記錄（供 API route 會後扣點）────────────────────────────────────────
@@ -275,7 +276,7 @@ export interface Seat {
 }
 
 export const DEFAULT_SEATS: Seat[] = [
-  { name: '員工A', model: 'anthropic/claude-sonnet-4-6', role: '資深管理合夥人' },
+  { name: '員工A', model: 'anthropic/claude-sonnet-5-5', role: '資深管理合夥人' },
   { name: '員工B', model: 'openai/gpt-4o',                role: '資深管理合夥人' },
   { name: '員工C', model: 'google/gemini-2.5-pro',      role: '資深管理合夥人' },
 ]
@@ -329,7 +330,7 @@ export const SYNTHESIS_STYLES: SynthesisStyleOption[] = [
 ]
 
 export const MODERATOR_MODELS = [
-  { id: 'anthropic/claude-opus-4-8', name: 'Claude Opus 4.8 (Anthropic)', shortName: 'Claude Opus 4.8', badge: '頂級旗艦 · 商業白皮書首選 (預設)' },
+  { id: 'anthropic/claude-opus-5-5', name: 'Claude Opus 5.5 (Anthropic)', shortName: 'Claude Opus 5.5', badge: '頂級旗艦 · 商業白皮書首選 (預設)' },
   { id: 'anthropic/claude-fable-5-1', name: 'Claude Fable 5.1 (Anthropic)', shortName: 'Claude Fable 5.1', badge: '全新世代 · 深度研究與高階裁斷' },
   { id: 'openai/gpt-6-astra', name: 'OpenAI Astra (GPT-6)', shortName: 'OpenAI Astra', badge: '遞歸深度推理 · 數理精算與博弈' },
   { id: 'google/gemini-2.5-pro', name: 'Gemini 2.5 Pro (Google)', shortName: 'Gemini 2.5 Pro', badge: '百萬超長上下文 · 跨文檔精確對齊' },
@@ -417,6 +418,8 @@ export function formatModelDisplayName(model?: string): string {
   }
   if (m.includes('fable')) return 'Claude Fable 5.1'
   if (m.includes('astra')) return 'OpenAI Astra (GPT-6)'
+  if (m.includes('claude-opus-5')) return 'Claude Opus 5.5'
+  if (m.includes('claude-sonnet-5')) return 'Claude Sonnet 5.5'
   if (m.includes('claude-opus') || m.includes('claude-3-opus') || m.includes('claude-3.7-opus')) return 'Claude Opus 4.8'
   if (m.includes('claude-sonnet-4-6') || m.includes('claude-3-7-sonnet') || m.includes('claude-3.7-sonnet')) return 'Claude Sonnet 4.6'
   if (m.includes('claude-3-5-sonnet') || m.includes('claude-3.5-sonnet')) return 'Claude 3.5 Sonnet'
@@ -433,7 +436,7 @@ export function formatModelDisplayName(model?: string): string {
 
 export const DEFAULT_MODERATOR: Seat = {
   name: '首席幕僚長',
-  model: 'anthropic/claude-opus-4-8',
+  model: 'anthropic/claude-opus-5-5',
   role: '董事會首席幕僚長，負責綜觀全場、公正裁斷分歧並彙整交付老闆的最高決策白皮書',
 }
 
@@ -472,6 +475,22 @@ function resolveModel(id: string): LanguageModel | string {
   const rawModel = slash === -1 ? id : id.slice(slash + 1)
 
   if (provider === 'anthropic') {
+    // 舊版型號（已存在的會議設定）一律換成同系列新版：Opus 4.8 $5/$25 → Opus 5.5 $4/$20；Sonnet 4.6 $3/$15 → Sonnet 5.5 $2/$10
+    const LEGACY_TO_NEW: Record<string, string> = {
+      'claude-opus-4-8': 'claude-opus-5-5',
+      'claude-opus-4-5': 'claude-opus-5-5',
+      'claude-sonnet-4-6': 'claude-sonnet-5-5',
+      'claude-sonnet-4-5': 'claude-sonnet-5-5',
+      'claude-3-7-sonnet-20250219': 'claude-sonnet-5-5',
+      'claude-3-opus-20240229': 'claude-opus-5-5',
+    }
+    const current = LEGACY_TO_NEW[rawModel] ?? (rawModel.includes('fable') ? 'claude-fable-5-1' : rawModel)
+    // Claude 5.x 直連 Anthropic，經鏈式模型自動處理參數（不送 temperature、max_tokens 下限）
+    const directKey = process.env.ANTHROPIC_API_KEY?.trim()
+    if (/^claude-(opus|sonnet|haiku|fable)-5/.test(current) && directKey && !anthropicDisabled) {
+      return createChainModel([{ via: 'direct', provider: 'anthropic', model: current }])
+    }
+
     // 優先策略 1：若有有效的 OPENROUTER_API_KEY，直連真實 Anthropic Claude 模型（Claude 3.7 / 4.6 Sonnet & Opus）
     if (process.env.OPENROUTER_API_KEY) {
       const openrouter = createOpenAI({
@@ -675,8 +694,17 @@ export async function fetchFactBriefing(
   // 是否已逐字串流給前端（Perplexity／OpenRouter 是邊收邊送；Gemini 直連是一次拿到全文，最後再分段送）
   let streamed = false
 
-  // 優先嘗試使用 Gemini 2.5 Flash 原廠 Google Search Grounding
-  if (process.env.GOOGLE_AI_API_KEY) {
+  // 先試免費搜尋通道（FreeLLM Compound Mini → CLIProxy gemini-3-flash-agent），都失敗才用下面的付費搜尋
+  try {
+    const { webSearchGenerate } = await import('./web-search')
+    const r = await webSearchGenerate({ system: systemPrompt, messages: [{ role: 'user', content: userPrompt }], maxOutputTokens: 4096, freeOnly: true, feature: 'roundtable' })
+    fullText = r.text
+  } catch (err) {
+    console.warn('[fact-briefing] 免費搜尋通道皆失敗，改用付費搜尋:', err instanceof Error ? err.message : err)
+  }
+
+  // 付費第一順位：Gemini 2.5 Flash 原廠 Google Search Grounding（每天前 1,500 次免費）
+  if (!fullText.trim() && process.env.GOOGLE_AI_API_KEY) {
     try {
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GOOGLE_AI_API_KEY}`
       const resp = await fetch(endpoint, {

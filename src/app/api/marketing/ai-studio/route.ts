@@ -16,8 +16,8 @@
 import { AI_QUOTA_CODE, isFalQuotaError } from '@/lib/ai/fal-errors'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createAnthropic } from '@ai-sdk/anthropic'
-import { generateText } from 'ai'
+import { chainText } from '@/lib/ai/proxy-fallback'
+import type { generateText } from 'ai'
 import zlib from 'node:zlib'
 import { AI_STUDIO_SUGGEST_ESTIMATE, AI_STUDIO_NODE_ESTIMATE, AI_STUDIO_FAL_COSTS, precheckUsage } from '@/lib/marketing/billing'
 import { setUsageUser, trackCost, trackLlm, withUsage } from '@/lib/marketing/usage'
@@ -27,12 +27,15 @@ import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
 export const maxDuration = 300
 
 const FAL_BASE = 'https://fal.run'
-const CLAUDE_MODEL = 'claude-sonnet-4-6'
-
-/** 呼叫 Claude 並記入本次請求用量（依實際 token 扣點） */
-async function claudeText(opts: Omit<Parameters<typeof generateText>[0], 'model'>, apiKey: string) {
-  const r = await generateText({ ...opts, model: createAnthropic({ apiKey })(CLAUDE_MODEL) } as Parameters<typeof generateText>[0])
-  trackLlm(CLAUDE_MODEL, r.usage)
+/**
+ * 文字生成並記入本次請求用量（依實際使用的模型扣點，免費通道為 0）。
+ * 含圖片走 vision 鏈，其餘走 content 鏈：免費模型優先 → Claude Haiku 5.5 → Sonnet 5.5。
+ * apiKey 參數保留相容，不再使用。
+ */
+async function claudeText(opts: Omit<Parameters<typeof generateText>[0], 'model'>, _apiKey?: string) {
+  const hasImage = JSON.stringify(opts.messages ?? []).includes('"type":"image"')
+  const r = await chainText(hasImage ? 'vision' : 'content', opts, { feature: 'marketing' })
+  trackLlm(r.usedModel, r.usage)
   return r
 }
 

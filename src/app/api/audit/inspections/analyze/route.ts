@@ -1,7 +1,6 @@
 import { getUnitContextAny } from '@/lib/auth/unit-access'
 import { NextRequest, NextResponse } from 'next/server'
-import { createAnthropic } from '@ai-sdk/anthropic'
-import { generateText } from 'ai'
+import { generateTextByChain, looksLikeJson } from '@/lib/ai/proxy-fallback'
 
 export const maxDuration = 60
 
@@ -89,13 +88,12 @@ ${catPrompt}
   }
 
   try {
-    const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-    const res = await generateText({
-      model: anthropic('claude-sonnet-4-5'),
+    // 有照片走視覺鏈、純文字走擷取鏈；免費優先，JSON 不合法就換下一層
+    const { result: res } = await generateTextByChain(userContent.length > 1 ? 'vision' : 'extraction', {
       system,
       maxOutputTokens: 2000,
       messages: [{ role: 'user', content: userContent }],
-    })
+    }, { feature: 'audit', validate: looksLikeJson, timeoutMs: 90000 })
 
     const raw = res.text
     let parsed: any = null

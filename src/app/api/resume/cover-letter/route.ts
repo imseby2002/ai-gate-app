@@ -1,7 +1,6 @@
 ﻿import { NextRequest } from 'next/server'
-import { createAnthropic } from '@ai-sdk/anthropic'
 import { createClient } from '@/lib/supabase/server'
-import { streamText } from 'ai'
+import { streamTextByChain } from '@/lib/ai/proxy-fallback'
 import { deductCredits } from '@/lib/skills/billing'
 import { guardResumeAccess, checkResumePlan, allowedCoverLetterTemplateIds, RESUME_COSTS } from '@/lib/resume/billing'
 
@@ -70,8 +69,6 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
-
   const systemPrompt = `你是一位頂尖的求職信（Cover Letter）撰寫專家，精通台灣與國際職場的求職信格式。
 你的文字真誠有力、重點突出，能精準匹配 JD 關鍵字，讓求職信通過 ATS 篩選。
 請使用繁體中文撰寫（專有名詞可保留英文），格式清晰易讀。`
@@ -101,10 +98,9 @@ ${customInstructions ? `【額外要求】\n${customInstructions}` : ''}
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        sse(controller, { type: 'phase', label: 'Claude Sonnet 撰寫求職信中...' })
+        sse(controller, { type: 'phase', label: 'AI 撰寫求職信中...' })
 
-        const claudeStream = await streamText({
-          model: anthropic('claude-sonnet-4-6'),
+        const claudeStream = await streamTextByChain('content', {
           system: systemPrompt,
           messages: [{ role: 'user', content: userPrompt }],
           maxOutputTokens: 2000,

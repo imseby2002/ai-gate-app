@@ -9,8 +9,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createAnthropic } from '@ai-sdk/anthropic'
-import { generateText } from 'ai'
+import { generateTextByChain, looksLikeJson } from '@/lib/ai/proxy-fallback'
 import { outputLangInstruction } from '@/lib/ai/output-lang'
 import { setUsageUser, trackLlm, withUsage } from '@/lib/marketing/usage'
 import { precheckUsage } from '@/lib/marketing/billing'
@@ -50,8 +49,6 @@ export const POST = withUsage('[marketing] GEO 問題發想', async function POS
     return NextResponse.json({ error: '請輸入主題' }, { status: 400 })
   }
 
-  const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-
   const promptText = `${SYSTEM}${outputLangInstruction(locale)}
 
 【主題】
@@ -60,12 +57,11 @@ ${exclusiveFacts?.trim() ? `\n【獨家資訊／可用素材】\n${exclusiveFact
 
   let parsed: { question: string; intent: Intent }[]
   try {
-    const { text, usage } = await generateText({
-      model: anthropic('claude-haiku-4-5'),
+    const { result: { text, usage }, usedModel } = await generateTextByChain('extraction', {
       messages: [{ role: 'user', content: promptText }],
       maxOutputTokens: 1500,
-    })
-    trackLlm('claude-haiku-4-5', usage)
+    }, { feature: 'geo', validate: looksLikeJson })
+    trackLlm(usedModel, usage)
 
     const jsonMatch = text.match(/\{[\s\S]*\}/)
     if (!jsonMatch) return NextResponse.json({ error: 'AI 回傳格式錯誤' }, { status: 500 })

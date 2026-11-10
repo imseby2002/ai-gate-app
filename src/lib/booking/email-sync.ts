@@ -3,8 +3,7 @@ import { simpleParser } from 'mailparser'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptSecret, encryptSecret, isEncrypted } from '@/lib/crypto/secret'
 import { findOrCreateOrder } from './orders'
-import { calculateModelCosts, estimateTextTokens } from '@/lib/ai/token-cost-tracker'
-import { trackAiUsage } from '@/lib/ai/universal-tracker'
+import { generateTextByChain, looksLikeJson } from '@/lib/ai/proxy-fallback'
 
 interface AdditionalRoom {
   property_name: string | null
@@ -938,10 +937,8 @@ ${truncated}
 
 只回傳 JSON，不要其他說明：{"is_booking": true 或 false}`
 
-  const providers: Array<'deepseek' | 'claude'> = []
-  if (process.env.DEEPSEEK_API_KEY) providers.push('deepseek')
-  if (process.env.ANTHROPIC_API_KEY) providers.push('claude')
-  if (providers.length === 0) return true // 無可用模型時不篩選，安全預設全部送進 Stage 2
+  // 擷取鏈已包含免費通道與付費備援（Haiku 5.5 → DeepSeek Flash），見 proxy-fallback extraction
+  const providers: Array<AiProvider> = ['chain']
 
   for (const provider of providers) {
     try {
@@ -1019,14 +1016,10 @@ ${roomListStr}${hint}${preLine}${fewShot}
 
 只回傳 JSON，不要其他說明。`
 
-  // Build the provider attempt order: Claude Haiku first（結構化多欄位擷取穩定度
-  // 明顯優於 DeepSeek，Stage 1 已經把大部分雜訊信篩掉，這裡數量少很多，值得用
-  // 較準的模型），DeepSeek 作為備援；一個失敗或回傳壞 JSON 時換另一個，而不是
-  // 直接放棄整封信。
-  const providers: Array<'deepseek' | 'claude'> = []
-  if (process.env.ANTHROPIC_API_KEY) providers.push('claude')
-  if (process.env.DEEPSEEK_API_KEY) providers.push('deepseek')
-  if (providers.length === 0) return null
+  // 擷取順序：免費通道（FreeLLM / CLIProxy）→ Claude Haiku 5.5 → DeepSeek；
+  // 一個失敗或回傳壞 JSON 時換下一個，而不是直接放棄整封信。
+  // 擷取鏈已包含免費通道與付費備援（Haiku 5.5 → DeepSeek Flash），見 proxy-fallback extraction
+  const providers: Array<AiProvider> = ['chain']
 
   for (const provider of providers) {
     // One retry per provider for transient errors / truncated JSON.
@@ -1082,60 +1075,15 @@ async function logAiSourceUsage(channel: string, modelId: string, inTokens: numb
   }
 }
 
-async function callModel(provider: 'deepseek' | 'claude', prompt: string, maxTokens = 1000): Promise<string> {
-  if (provider === 'deepseek') {
-    const res = await fetch('https://api.deepseek.com/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}` },
-      body: JSON.stringify({
-        model: 'deepseek-chat',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0,
-        max_tokens: maxTokens,
-        response_format: { type: 'json_object' },
-      }),
-      signal: AbortSignal.timeout(20000),
-    })
-    const data = await res.json()
-    const reply = data.choices?.[0]?.message?.content ?? ''
-    const inTokens = (data.usage?.prompt_tokens ?? estimateTextTokens(prompt)) as number
-    const outTokens = (data.usage?.completion_tokens ?? estimateTextTokens(reply)) as number
-    void trackAiUsage({
-      feature: 'email_sync',
-      modelId: 'deepseek-chat',
-      inputTokens: inTokens,
-      outputTokens: outTokens,
-      sourceChannel: 'deepseek',
-    })
-    return reply
-  }
+type AiProvider = 'chain'
 
-  // Anthropic Claude Haiku (高精準結構化提取，專門解析複雜 OTA 訂單格式)
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': process.env.ANTHROPIC_API_KEY ?? '',
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: maxTokens,
-      temperature: 0,
-      messages: [{ role: 'user', content: prompt }],
-    }),
-    signal: AbortSignal.timeout(20000),
-  })
-  const data = await res.json()
-  const reply = data.content?.[0]?.text ?? ''
-  const inTokens = (data.usage?.input_tokens ?? estimateTextTokens(prompt)) as number
-  const outTokens = (data.usage?.output_tokens ?? estimateTextTokens(reply)) as number
-  void trackAiUsage({
-    feature: 'email_sync',
-    modelId: 'claude-haiku-4-5-20251001',
-    inputTokens: inTokens,
-    outputTokens: outTokens,
-    sourceChannel: 'anthropic',
-  })
-  return reply
+// 擷取鏈：CLIProxy Gemini 3 Flash / GPT-5.4 mini / Claude Haiku → Groq / FreeLLM 指定模型
+// → Claude Haiku 5.5 → DeepSeek Flash（直連或 OpenRouter 依每日比價），輸出需為合法 JSON
+async function callModel(_provider: AiProvider, prompt: string, maxTokens = 1000): Promise<string> {
+  const { result } = await generateTextByChain('extraction', {
+    messages: [{ role: 'user', content: prompt }],
+    maxOutputTokens: maxTokens,
+    temperature: 0,
+  }, { timeoutMs: 30000, feature: 'email_sync', validate: looksLikeJson })
+  return result.text
 }

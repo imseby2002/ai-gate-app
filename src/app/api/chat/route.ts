@@ -12,7 +12,7 @@ import { streamOpenRouter } from '@/lib/ai/providers/openrouter'
 import { streamGroq } from '@/lib/ai/providers/groq'
 import { streamCliProxy } from '@/lib/ai/providers/cli-proxy'
 import { streamFreeLlm } from '@/lib/ai/providers/free-llm'
-import { streamByChain } from '@/lib/ai/proxy-fallback'
+import { streamByChain, costForUsedModel } from '@/lib/ai/proxy-fallback'
 import { calculateModelCosts, detectSourceChannel, cleanModelId, type SourceChannel } from '@/lib/ai/token-cost-tracker'
 import { isChatModelAllowed, getChatDailyUsage } from '@/lib/ai/chat-policy'
 import { getCompanyBillingContext } from '@/lib/company/billing-context'
@@ -316,7 +316,10 @@ export async function POST(req: NextRequest) {
             outputTokens,
             effectiveChannel
           )
-          const costUsd = isFree ? 0 : (actualCostUsd > 0 ? actualCostUsd : calculateCost(effectiveModelId, inputTokens, outputTokens))
+          // 經 OpenRouter 的模型依每日比價的實際價格（含儲值手續費）計算；免費模型為 0
+          const costUsd = effectiveModelId.startsWith('openrouter:')
+            ? costForUsedModel(effectiveModelId, inputTokens, outputTokens)
+            : isFree ? 0 : (actualCostUsd > 0 ? actualCostUsd : calculateCost(effectiveModelId, inputTokens, outputTokens))
           const latencyMs = Date.now() - startTime
 
           const finishReasonMeta = JSON.stringify({

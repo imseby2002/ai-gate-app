@@ -228,52 +228,19 @@ export async function generateCsReplyL3(
 }
 
 // ── 搜尋分支：客人問題需要即時網路資訊時使用（僅 PRO 以上，由 L1 的 needsSearch 觸發）──
-// 免費資源優先：FreeLLM 的 Compound Mini（額度遠高於 Groq 官方免費層的 250 次/日）
-// → CLIProxy 的 gemini-3-flash-agent（代理模式，內建 Google Search grounding）
-// → Perplexity Sonar 付費保底（purpose-built 搜尋，非全租戶都會設定 PERPLEXITY_API_KEY）
+// 走共用搜尋鏈（src/lib/ai/web-search.ts）：免費 FreeLLM Compound Mini → CLIProxy gemini-3-flash-agent
+// → Gemini＋Google 搜尋（免費額度優先）→ Perplexity Sonar → Claude 搜尋
 export async function generateCsReplySearch(
   system: string,
   messages: ChatMsg[],
 ): Promise<{ reply: string; provider: string } | null> {
-  // 1) FreeLLM：Compound Mini (Groq)。實測 /v1/models 確認正確 id 需帶 groq/ 前綴。
-  // 可用 FREE_LLM_SEARCH_MODEL 覆寫，避免以後又猜錯字串導致這個免費入口打不中。
-  const freeLlmUrlRaw = process.env.FREE_LLM_URL ?? process.env.NEXT_PUBLIC_FREE_LLM_URL
-  if (process.env.FREE_LLM_API_KEY && freeLlmUrlRaw) {
-    const searchModel = process.env.FREE_LLM_SEARCH_MODEL ?? 'groq/compound-mini'
-    const text = await tryOpenAiCompat(
-      { url: normalizeFreeLlmBaseUrl(freeLlmUrlRaw), key: process.env.FREE_LLM_API_KEY, model: searchModel, label: 'FreeLLM-CompoundMini' },
-      system, messages,
-    )
-    if (text) return { reply: text, provider: 'FreeLLM-CompoundMini' }
+  try {
+    const { webSearchGenerate } = await import('@/lib/ai/web-search')
+    const r = await webSearchGenerate({ system, messages, feature: 'cs', timeoutMs: 20000 })
+    return { reply: r.text, provider: r.usedModel }
+  } catch {
+    return null
   }
-
-  // 2) CLIProxy：gemini-3-flash-agent
-  const cliProxyUrl = process.env.CLI_PROXY_API_URL ?? process.env.NEXT_PUBLIC_CLI_PROXY_API_URL
-  if (cliProxyUrl) {
-    const text = await tryOpenAiCompat(
-      { url: cliProxyUrl, key: process.env.CLI_PROXY_API_KEY ?? 'no-key', model: 'gemini-3-flash-agent', label: 'CLIProxy-Agent' },
-      system, messages,
-    )
-    if (text) return { reply: text, provider: 'CLIProxy-Agent' }
-  }
-
-  // 3) Perplexity Sonar 保底（付費，只有設定 PERPLEXITY_API_KEY 才會用到）
-  const perplexityKey = process.env.PERPLEXITY_API_KEY
-  if (perplexityKey) {
-    try {
-      const { createOpenAI } = await import('@ai-sdk/openai')
-      const perplexity = createOpenAI({ apiKey: perplexityKey, baseURL: 'https://api.perplexity.ai' })
-      const { text } = await generateText({
-        model: perplexity.chat('sonar'),
-        system,
-        messages,
-        abortSignal: AbortSignal.timeout(20000),
-      })
-      if (text) return { reply: text, provider: 'Perplexity-Sonar' }
-    } catch { /* fall through */ }
-  }
-
-  return null
 }
 
 // 免費層收到客人照片時的降級回覆：不呼叫任何 AI（省成本），請客人改文字描述。

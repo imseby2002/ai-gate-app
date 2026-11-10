@@ -1,7 +1,5 @@
 // 稽核討論AI 自動日誌：把一段稽核對話用 AI 摘要成標準稽核日誌
-import { createAnthropic } from '@ai-sdk/anthropic'
-import { generateText } from 'ai'
-import { trackAiUsage } from '@/lib/ai/universal-tracker'
+import { chainText } from '@/lib/ai/proxy-fallback'
 import type { createClient } from '@/lib/supabase/server'
 
 type SB = Awaited<ReturnType<typeof createClient>>
@@ -28,27 +26,11 @@ export async function summarizeAuditChat(supabase: SB, ownerId: string, chatId: 
 
   let summary = ''
   try {
-    const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-    const res = await generateText({
-      model: anthropic('claude-sonnet-4-5'),
-      system,
+    const res = await chainText('content', { system,
       maxOutputTokens: 1000,
       messages: [{ role: 'user', content: transcript.slice(0, 14000) }]
-    })
+    }, { feature: 'audit' })
     summary = res.text.trim()
-
-    const usage = (res as any).usage ?? {}
-    const inTokens = Number(usage.inputTokens ?? usage.promptTokens ?? 0)
-    const outTokens = Number(usage.outputTokens ?? usage.completionTokens ?? 0)
-    if (inTokens > 0 || outTokens > 0) {
-      void trackAiUsage({
-        feature: 'audit',
-        modelId: 'claude-sonnet-4-5',
-        inputTokens: inTokens,
-        outputTokens: outTokens,
-        sourceChannel: 'anthropic',
-      })
-    }
   } catch {
     return false
   }

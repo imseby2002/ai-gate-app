@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAnthropic } from '@ai-sdk/anthropic'
-import { generateText } from 'ai'
+import { generateTextByChain } from '@/lib/ai/proxy-fallback'
 import { getUnitContext } from '@/lib/auth/unit-access'
 import { APPLY_BUCKET, DOC_LABEL } from '@/lib/hr/apply'
 
@@ -59,14 +58,13 @@ export async function POST(req: NextRequest) {
   }
   if (used === 0) return NextResponse.json({ error: `無可辨識的文件（${skipped.join('、')}）` }, { status: 400 })
 
-  const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
   let text = ''
   try {
-    const res = await generateText({
-      model: anthropic('claude-sonnet-4-5'),
+    // 文件/圖片辨識：免費視覺模型優先 → Claude Haiku 5.5 → Sonnet 5.5
+    const { result: res } = await generateTextByChain('vision', {
       maxOutputTokens: 6000,
       messages: [{ role: 'user', content: parts as never }],
-    })
+    }, { feature: 'hr', timeoutMs: 120000, validate: t => t.trim().length > 50 })
     text = res.text
   } catch (e) {
     return NextResponse.json({ error: `AI 辨識失敗：${e instanceof Error ? e.message : e}` }, { status: 500 })

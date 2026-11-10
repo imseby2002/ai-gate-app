@@ -1,7 +1,5 @@
-import { createAnthropic } from '@ai-sdk/anthropic'
-import { createGoogleGenerativeAI } from '@ai-sdk/google'
-import { createOpenAI } from '@ai-sdk/openai'
 import type { LanguageModel } from 'ai'
+import { FALLBACK_CHAINS, attemptModelId, createChainModel, type ChainName } from '@/lib/ai/proxy-fallback'
 import type { SourceChannel } from '@/lib/ai/token-cost-tracker'
 
 export type ModelTier = 'vision' | 'complex' | 'daily'
@@ -34,93 +32,39 @@ const DEFAULT_COMPLEX_KEYWORDS = [
 ]
 
 /**
- * 門市與辦公室 (Office) 各部門統一階梯式模型選擇器
- * 1. 📸 照片 / 圖片 / 視覺辨識：Gemini 2.5 Flash (快速、低成本、強大多模態)
- * 2. 🔴 高難度 / 深度推理 / 交叉檢核 / 配方設計 / 合約條款：Claude Sonnet 4.5 / 4.6
- * 3. 🟢 日常問答 / 資料庫檢索 / 規章查找 / 常規引導：DeepSeek-Chat (高性價比、極速)
+ * 門市與辦公室 (Office) 各部門統一階梯式模型選擇器（免費優先，依費用由低到高自動遞補）
+ * 1. 📸 照片 / 視覺辨識：CLIProxy Gemini → Claude Haiku 5.5 → Sonnet 5.5（vision 鏈）
+ * 2. 🔴 高難度 / 深度推理 / 配方設計 / 合約條款：CLIProxy gemini-2.5-pro / gpt-5.5 / kimi-k2.5 → Haiku 5.5 → Sonnet 5.5（content 鏈）
+ * 3. 🟢 日常問答 / 規章查找：FreeLLM / CLIProxy 輕量模型 → Haiku 5.5 → DeepSeek（extraction 鏈）
+ * 回傳的 model 是鏈式模型；實際生成後 modelId / sourceChannel 會更新為實際使用的模型，供呼叫端記錄用量。
  */
 export function getOfficeTieredModel(opts: TierOptions): TierDecision {
   const { hasImage, message = '', forceTier, additionalComplexKeywords = [] } = opts
 
-  // 1. 照片 / 圖片優先 -> Gemini 2.5 Flash
-  if (forceTier === 'vision' || hasImage) {
-    const googleApiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY
-    if (googleApiKey) {
-      const google = createGoogleGenerativeAI({ apiKey: googleApiKey })
-      return {
-        tier: 'vision',
-        modelId: 'gemini-2.5-flash',
-        sourceChannel: 'google',
-        reason: '包含照片或多模態視覺需求，採用 Gemini 2.5 Flash',
-        model: google('gemini-2.5-flash'),
-      }
-    }
-  }
-
-  // 2. 判斷是否為高難度
   const complexKeywords = [...DEFAULT_COMPLEX_KEYWORDS, ...additionalComplexKeywords]
   const isComplex = forceTier === 'complex' || complexKeywords.some(kw => message.toLowerCase().includes(kw.toLowerCase()))
 
-  if (isComplex && process.env.ANTHROPIC_API_KEY) {
-    const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-    return {
-      tier: 'complex',
-      modelId: 'claude-sonnet-4-5',
-      sourceChannel: 'anthropic',
-      reason: '高難度/深度分析/交叉檢核，採用 Claude Sonnet 4.5',
-      model: anthropic('claude-sonnet-4-5'),
-    }
-  }
+  const tier: ModelTier = (forceTier === 'vision' || hasImage) ? 'vision' : isComplex ? 'complex' : 'daily'
+  const chainName: ChainName = tier === 'vision' ? 'vision' : tier === 'complex' ? 'content' : 'extraction'
+  const reason = tier === 'vision'
+    ? '包含照片或多模態視覺需求，採用免費視覺模型優先'
+    : tier === 'complex'
+      ? '高難度/深度分析/交叉檢核，採用免費強模型優先，Claude Sonnet 5.5 保底'
+      : '日常諮詢/規章與資料庫檢索，採用免費輕量模型優先'
 
-  // 3. 日常對話 / 資料庫檢索 / 常規問答 -> 優先使用 DeepSeek-Chat
-  if (process.env.DEEPSEEK_API_KEY) {
-    const deepseek = createOpenAI({
-      apiKey: process.env.DEEPSEEK_API_KEY,
-      baseURL: 'https://api.deepseek.com/v1',
-    })
-    return {
-      tier: 'daily',
-      modelId: 'deepseek-chat',
-      sourceChannel: 'deepseek',
-      reason: '日常諮詢/規章與資料庫檢索，採用 DeepSeek-Chat',
-      model: deepseek.chat('deepseek-chat'),
-    }
+  const decision: TierDecision = {
+    tier,
+    modelId: attemptModelId(FALLBACK_CHAINS[chainName][0]),
+    sourceChannel: 'cliproxy',
+    reason,
+    model: null as unknown as LanguageModel,
   }
-
-  // Fallbacks: 如果缺少 DeepSeek Key，嘗試使用 Gemini Flash 或 Anthropic
-  const googleApiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY
-  if (googleApiKey) {
-    const google = createGoogleGenerativeAI({ apiKey: googleApiKey })
-    return {
-      tier: 'daily',
-      modelId: 'gemini-2.5-flash',
-      sourceChannel: 'google',
-      reason: 'DeepSeek 未配置，備援採用 Gemini 2.5 Flash',
-      model: google('gemini-2.5-flash'),
-    }
-  }
-
-  if (process.env.ANTHROPIC_API_KEY) {
-    const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-    return {
-      tier: 'complex',
-      modelId: 'claude-sonnet-4-5',
-      sourceChannel: 'anthropic',
-      reason: '備援採用 Claude Sonnet 4.5',
-      model: anthropic('claude-sonnet-4-5'),
-    }
-  }
-
-  if (process.env.OPENAI_API_KEY) {
-    const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY })
-    return {
-      tier: 'daily',
-      modelId: 'gpt-4o-mini',
-      sourceChannel: 'openai',
-      reason: '備援採用 GPT-4o Mini',
-      model: openai('gpt-4o-mini'),
-    }
-  }
-
-  throw new Error('未設定任何可用的 AI API 金鑰 (DEEPSEEK_API_KEY / GOOGLE_GENERATIVE_AI_API_KEY / ANTHROPIC_API_KEY)')
+  decision.model = createChainModel(FALLBACK_CHAINS[chainName], attempt => {
+    decision.modelId = attempt.via === 'direct' ? attempt.model : attemptModelId(attempt)
+    decision.sourceChannel = attempt.via === 'cli-proxy' ? 'cliproxy'
+      : attempt.via === 'free-llm' ? 'freellm'
+      : attempt.via === 'direct' ? attempt.provider
+      : 'openrouter'
+  })
+  return decision
 }

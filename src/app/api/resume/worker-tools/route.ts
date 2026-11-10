@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAnthropic } from '@ai-sdk/anthropic'
-import { streamText } from 'ai'
+import { streamTextByChain } from '@/lib/ai/proxy-fallback'
 import { createClient } from '@/lib/supabase/server'
 import { deductCredits } from '@/lib/skills/billing'
 import { guardResumeAccess, checkResumePlan, RESUME_COSTS } from '@/lib/resume/billing'
@@ -164,13 +163,10 @@ export async function POST(request: NextRequest) {
 
   const systemPrompt = buildPrompt(inputs)
 
-  const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
-
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        const result = streamText({
-          model: anthropic('claude-sonnet-4-6'),
+        const result = streamTextByChain('content', {
           system: systemPrompt,
           prompt: '請開始生成，直接輸出結果，不需要重複題目或額外說明。',
           maxOutputTokens: 2000,

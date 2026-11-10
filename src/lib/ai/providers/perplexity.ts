@@ -13,7 +13,8 @@ export async function streamPerplexity(params: ChatParams) {
     : params.messages
 
   return streamText({
-    model: perplexity.chat('llama-3.1-sonar-large-128k-online'),
+    // 舊型號 llama-3.1-sonar-* 已不在 Perplexity 官方型號清單；改用 sonar-pro（對應 ai_models 的 perplexity-sonar-pro）
+    model: perplexity.chat('sonar-pro'),
     messages,
     maxOutputTokens: params.maxTokens ?? 4096,
   })
