@@ -61,7 +61,10 @@ export function getOfficeTieredModel(opts: TierOptions): TierDecision {
   }
   decision.model = createChainModel(FALLBACK_CHAINS[chainName], attempt => {
     decision.modelId = attempt.via === 'direct' ? attempt.model : attemptModelId(attempt)
-    decision.sourceChannel = attempt.via === 'cli-proxy' ? 'cliproxy' : attempt.via === 'free-llm' ? 'freellm' : attempt.provider
+    decision.sourceChannel = attempt.via === 'cli-proxy' ? 'cliproxy'
+      : attempt.via === 'free-llm' ? 'freellm'
+      : attempt.via === 'direct' ? attempt.provider
+      : 'openrouter'
   })
   return decision
 }

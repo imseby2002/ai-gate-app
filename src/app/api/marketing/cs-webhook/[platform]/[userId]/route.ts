@@ -12,7 +12,7 @@ import { loadChannelCredentials } from '@/lib/channels/resolve'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
-import { createAnthropic } from '@ai-sdk/anthropic'
+import { chainText } from '@/lib/ai/proxy-fallback'
 import { generateText, type LanguageModel } from 'ai'
 import { buildDeterministicQuote } from '@/lib/cs/quote'
 import { buildBookingModuleQuote } from '@/lib/cs/booking-quote'
@@ -2751,16 +2751,14 @@ https://ciaohome.net/routeofciaohome/
     const claudeAllowed = planFeatures.claudeEscalation !== 'off'
 
     if (isHighRisk && claudeAllowed) {
-      const anthropicKey = process.env.ANTHROPIC_API_KEY
-      if (anthropicKey) {
+      {
         try {
-          const anthropic = createAnthropic({ apiKey: anthropicKey })
-          const { text } = await generateText({
-            model: anthropic('claude-sonnet-5-5'),
+          // 只用 Claude（premium 鏈）：CLIProxy 的 Claude Sonnet（有 5.5 就用 5.5）→ Sonnet 5.5 直連 / OpenRouter
+          const { text } = await chainText('premium', {
             system: systemPrompt,
             messages,
             maxOutputTokens: 16000,
-          })
+          }, { feature: 'cs', timeoutMs: 60000 })
           return enforceCheckinTimeClaim(await enforceNoFabricatedReveal(cleanReply(text) || FALLBACK, externalDataSection, history, knowledge.knowledgeBase, userId, platform, customerId, knowledge.industry, message, knowledge.notifyWebhooks), checkinState)
         } catch { /* fall through to L2 chain */ }
       }

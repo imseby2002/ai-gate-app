@@ -12,10 +12,12 @@ export const GROQ_MODEL_MAP: Record<string, string> = {
   'groq-qwq-32b':       'qwen-qwq-32b',               // 數學/邏輯推理
   'groq-llama-3.1-8b':  'llama-3.1-8b-instant',       // 最省成本，客服免費層候選
   'groq-gpt-oss-20b':   'openai/gpt-oss-20b',         // 低成本、品質高一階
+  'groq-gpt-oss-120b':  'openai/gpt-oss-120b',        // Groq 下架公告對 llama-3.3-70b 建議的替代之一
 }
 
 // 若模型 ID 為 "groq-auto"，自動選最佳通用模型
-export const GROQ_AUTO_MODEL = 'llama-3.3-70b-versatile'
+// llama-3.3-70b-versatile 依 Groq 下架公告已於 2026/8/16 停用，改用其建議替代 qwen/qwen3.6-27b
+export const GROQ_AUTO_MODEL = 'qwen/qwen3.6-27b'
 
 export async function streamGroq(params: ChatParams) {
   const groq = createGroq({

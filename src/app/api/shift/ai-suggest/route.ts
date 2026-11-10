@@ -92,8 +92,8 @@ weekdays use 0=Sun..6=Sat.${outputLangInstruction(locale)}`
 
   let text = ''
   try {
-    // 排班需推理：強免費模型優先（gemini-2.5-pro / gpt-5.5 / kimi-k2.5）→ Claude Haiku 5.5 → Sonnet 5.5
-    const { result: res } = await generateTextByChain('tools', { prompt, maxOutputTokens: 8000, temperature: 0.2 }, { feature: 'shift', validate: looksLikeJson, timeoutMs: 120000 })
+    // 排班屬推理：免費 Kimi K2.5 / GPT-5.5 / Grok 3 Mini / Groq → Haiku 5.5 → DeepSeek Flash → Sonnet 5.5
+    const { result: res } = await generateTextByChain('reasoning', { prompt, maxOutputTokens: 8000, temperature: 0.2 }, { feature: 'shift', validate: looksLikeJson, timeoutMs: 120000 })
     text = res.text
   } catch (e) {
     return NextResponse.json({ error: `AI 失敗：${e instanceof Error ? e.message : String(e)}` }, { status: 502 })

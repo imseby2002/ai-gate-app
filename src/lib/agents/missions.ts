@@ -1,17 +1,15 @@
 // Agent 目標任務（Mission）：真人只給「目標＋預算＋期限」，
 // Agent 先盤點 marketing.im-tourist.com 既有資源、產出計畫書（plan_ready），
 // 真人按「執行」後建立綁定 mission 的 agent_run，由 engine.ts 依計畫全程執行。
-import { generateText } from 'ai'
-import { createAnthropic } from '@ai-sdk/anthropic'
+import { chainText } from '@/lib/ai/proxy-fallback'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { resolveActiveCompanyId, resolveCompanyOwner } from '@/lib/company/activeCompany'
 import { getCompanyContextMd } from '@/lib/company/profile'
-import { calculateCost } from '@/lib/ai/router'
 import { deductCredits } from '@/lib/skills/billing'
 
 type Admin = ReturnType<typeof createAdminClient>
 
-// A 組：重要情境只用 Claude；Sonnet 5.5（$2/$10）比原 Sonnet 4.6（$3/$15）新且便宜
+// 只用 Claude（premium 鏈）；顯示用，實際模型見 proxy-fallback 的 PREMIUM
 export const MISSION_PLANNER_MODEL = 'claude-sonnet-5-5'
 // 長期任務（1–3 個月）需要比一般 run 多的 tick 額度；搭配 schedule_next_check 分散在整段期間
 export const MISSION_MAX_TICKS = 400
@@ -191,20 +189,17 @@ export async function generateMissionPlan(missionId: string): Promise<MissionRow
       `\nmarketing.im-tourist.com 資源盤點：\n${JSON.stringify(inventory).slice(0, 8000)}\n` +
       `\n請依下列 JSON 結構輸出計畫書：\n${shape}`
 
-    const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-    const charge = async (u: unknown) => {
-      const usage = (u ?? {}) as Record<string, number | undefined>
-      const cost = calculateCost(MISSION_PLANNER_MODEL, usage.inputTokens ?? 0, usage.outputTokens ?? 0)
-      if (cost > 0) await deductCredits(mission.user_id, cost, `agent-mission-plan:${mission.id}`)
+    // 只用 Claude（premium 鏈）：CLIProxy 的 Claude Sonnet（有 5.5 就用 5.5）→ Sonnet 5.5 直連 / OpenRouter
+    const charge = async (r: { costUsd: number }) => {
+      if (r.costUsd > 0) await deductCredits(mission.user_id, r.costUsd, `agent-mission-plan:${mission.id}`)
     }
 
-    const res = await generateText({
-      model: anthropic(MISSION_PLANNER_MODEL),
+    const res = await chainText('premium', {
       system,
       maxOutputTokens: 16000,
       messages: [{ role: 'user', content: user }],
-    })
-    await charge(res.usage)
+    }, { feature: 'missions', timeoutMs: 180000 })
+    await charge(res)
 
     let plan: Record<string, unknown>
     try {
@@ -212,8 +207,7 @@ export async function generateMissionPlan(missionId: string): Promise<MissionRow
     } catch (parseErr) {
       // 產出被截斷或 JSON 格式錯誤：請模型依同一內容修正成合法且精簡的 JSON
       const truncated = res.finishReason === 'length'
-      const fix = await generateText({
-        model: anthropic(MISSION_PLANNER_MODEL),
+      const fix = await chainText('premium', {
         system: '你是 JSON 修正器。只輸出一個合法 JSON 物件，不要 markdown 圍欄或其他文字；字串內的雙引號改用「」。',
         maxOutputTokens: 16000,
         messages: [{
@@ -225,8 +219,8 @@ export async function generateMissionPlan(missionId: string): Promise<MissionRow
             'phases 最多 4 個、每個 phase 的 tasks 最多 6 個，文字精簡。\n\n' +
             `結構：\n${shape}\n\n原始輸出：\n${res.text}`,
         }],
-      })
-      await charge(fix.usage)
+      }, { feature: 'missions', timeoutMs: 180000 })
+      await charge(fix)
       plan = extractJson(fix.text)
     }
     const kpis: MissionKpi[] = Array.isArray(plan.kpis)

@@ -120,7 +120,7 @@ async function classifyAndPlan(title: string, description: string, type: string,
   const contextStr = Object.entries(context).map(([p, c]) => `=== ${p} ===\n${c}`).join('\n\n')
 
   try {
-    const { result: res } = await generateTextByChain('tools', {
+    const { result: res } = await generateTextByChain('coding', {
       messages: [{
         role: 'user',
         content: `你是 Next.js/TypeScript 高級架構分析師。根據以下使用者回饋，判斷是否可以「自動修改代碼」。
@@ -181,7 +181,7 @@ async function generateCodeChanges(
     const existing = context[fileTask.path] ?? ''
     // 品質把關：輸出不能是空的，也不能比原檔短太多（避免被截斷或只回片段）
     const minLen = existing ? Math.floor(existing.length * 0.5) : 20
-    const { result: res } = await generateTextByChain('tools', {
+    const { result: res } = await generateTextByChain('coding', {
       maxOutputTokens: 16000,
       messages: [{
         role: 'user',

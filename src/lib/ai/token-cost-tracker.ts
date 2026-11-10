@@ -133,6 +133,8 @@ const MODEL_PRICING_TABLE: Record<string, { in: number; out: number }> = {
 
   // Anthropic Direct（Anthropic 官方價，每 1K tokens）
   'claude-haiku-5-5':           { in: 0.0001,   out: 0.0005   },
+  'gemini-3-flash-preview':     { in: 0.0005,   out: 0.003    },
+  'deepseek-flash':             { in: 0.0003,   out: 0.0012   },
   'claude-sonnet-5-5':          { in: 0.002,    out: 0.01     },
   'claude-opus-5-5':            { in: 0.004,    out: 0.02     },
   'claude-fable-5-1':           { in: 0.01,     out: 0.05     },

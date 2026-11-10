@@ -1,7 +1,5 @@
-// 網路搜尋工具：透過 Perplexity 線上模型取得具時效性的搜尋結果。
-// 沿用 src/lib/ai/providers/perplexity.ts 的 baseURL/模型設定，不重造 provider。
-import { createOpenAI } from '@ai-sdk/openai'
-import { generateText } from 'ai'
+// 網路搜尋工具：走共用搜尋鏈（免費 FreeLLM / CLIProxy → Gemini＋Google 搜尋 → Perplexity → Claude 搜尋）。
+import { webSearchGenerate } from '@/lib/ai/web-search'
 import type { AgentToolDef } from '../types'
 
 interface WebSearchInput {
@@ -20,16 +18,17 @@ export const webSearchTool: AgentToolDef = {
   },
   async execute(rawInput) {
     const input = rawInput as unknown as WebSearchInput
-    if (!process.env.PERPLEXITY_API_KEY) return { error: 'PERPLEXITY_API_KEY 未設定' }
-    const perplexity = createOpenAI({
-      apiKey: process.env.PERPLEXITY_API_KEY,
-      baseURL: 'https://api.perplexity.ai',
-    })
-    const res = await generateText({
-      model: perplexity.chat('llama-3.1-sonar-large-128k-online'),
-      messages: [{ role: 'user', content: input.query }],
-      maxOutputTokens: 1500,
-    })
-    return { summary: res.text }
+    try {
+      const r = await webSearchGenerate({
+        system: '你是研究助理。請用網路搜尋查證後，以繁體中文精簡回答，並列出參考來源網址。',
+        messages: [{ role: 'user', content: input.query }],
+        maxOutputTokens: 1500,
+        maxSearches: 3,
+        feature: 'agent',
+      })
+      return { summary: r.text, sources: r.sources.slice(0, 8) }
+    } catch (e) {
+      return { error: `搜尋失敗：${e instanceof Error ? e.message : String(e)}` }
+    }
   },
 }

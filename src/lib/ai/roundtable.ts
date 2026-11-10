@@ -694,8 +694,17 @@ export async function fetchFactBriefing(
   // 是否已逐字串流給前端（Perplexity／OpenRouter 是邊收邊送；Gemini 直連是一次拿到全文，最後再分段送）
   let streamed = false
 
-  // 優先嘗試使用 Gemini 2.5 Flash 原廠 Google Search Grounding
-  if (process.env.GOOGLE_AI_API_KEY) {
+  // 先試免費搜尋通道（FreeLLM Compound Mini → CLIProxy gemini-3-flash-agent），都失敗才用下面的付費搜尋
+  try {
+    const { webSearchGenerate } = await import('./web-search')
+    const r = await webSearchGenerate({ system: systemPrompt, messages: [{ role: 'user', content: userPrompt }], maxOutputTokens: 4096, freeOnly: true, feature: 'roundtable' })
+    fullText = r.text
+  } catch (err) {
+    console.warn('[fact-briefing] 免費搜尋通道皆失敗，改用付費搜尋:', err instanceof Error ? err.message : err)
+  }
+
+  // 付費第一順位：Gemini 2.5 Flash 原廠 Google Search Grounding（每天前 1,500 次免費）
+  if (!fullText.trim() && process.env.GOOGLE_AI_API_KEY) {
     try {
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GOOGLE_AI_API_KEY}`
       const resp = await fetch(endpoint, {

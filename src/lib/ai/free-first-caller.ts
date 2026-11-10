@@ -1,5 +1,5 @@
 import type { FeatureModule } from './universal-tracker'
-import { generateTextWithFallback, type Attempt } from './proxy-fallback'
+import { generateTextWithFallback, FALLBACK_CHAINS, type Attempt } from './proxy-fallback'
 
 export interface FreeFirstOptions {
   feature: FeatureModule
@@ -23,12 +23,11 @@ export async function generateWithFreeFirst(opts: FreeFirstOptions): Promise<str
     maxOutputTokens = 2000,
   } = opts
 
-  // 免費優先：CLIProxy → FreeLLM → Claude Haiku 5.5（最便宜的付費）→ DeepSeek
+  // 指定的 CLIProxy 模型優先，其後沿用擷取鏈：免費（CLIProxy / Groq / FreeLLM / OpenRouter 免費）
+  // → Claude Haiku 5.5 → DeepSeek Flash（直連或 OpenRouter 依每日比價）
   const chain: Attempt[] = [
-    { via: 'cli-proxy', model: preferredProxyModel === 'auto' ? 'gemini-2.5-flash' : preferredProxyModel },
-    { via: 'free-llm',  model: 'auto' },
-    { via: 'direct', provider: 'anthropic', model: 'claude-haiku-5-5' },
-    { via: 'direct', provider: 'deepseek',  model: 'deepseek-chat' },
+    { via: 'cli-proxy', model: preferredProxyModel === 'auto' ? 'gemini-3-flash' : preferredProxyModel },
+    ...FALLBACK_CHAINS.extraction,
   ]
   try {
     const { result } = await generateTextWithFallback(chain, {

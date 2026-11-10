@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createAnthropic } from '@ai-sdk/anthropic'
+import { chainText } from '@/lib/ai/proxy-fallback'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { generateText } from 'ai'
 import { isSafeWebhookUrl } from '@/lib/ssrf'
@@ -764,20 +764,16 @@ const systemPrompt = `${baseInstructions}
 
   // High-risk (投訴/退款) → Claude Sonnet 5.5 directly（A 組：重要情境只用 Claude）
   if (shouldEscalate) {
-    const anthropicKey = process.env.ANTHROPIC_API_KEY
-    if (anthropicKey) {
-      provider = 'Claude'
-      try {
-        const anthropic = createAnthropic({ apiKey: anthropicKey })
-        const { text } = await generateText({
-          model: anthropic('claude-sonnet-5-5'),
-          maxOutputTokens: 16000,
-          system: systemPrompt,
-          messages: msgHistory,
-        })
-        reply = text
-      } catch { /* fall through to CS chain */ }
-    }
+    try {
+      // 只用 Claude（premium 鏈）：CLIProxy 的 Claude Sonnet → Sonnet 5.5 直連 / OpenRouter
+      const r = await chainText('premium', {
+        maxOutputTokens: 16000,
+        system: systemPrompt,
+        messages: msgHistory,
+      }, { feature: 'cs', timeoutMs: 60000 })
+      reply = r.text
+      provider = `Claude (${r.usedModel})`
+    } catch { /* fall through to CS chain */ }
   }
 
   // Normal CS：advancedSupport 方案的搜尋需求走搜尋分支、圖片／中等複雜問題走 L3（gemini-3-flash），其餘走 L2（Groq Qwen3.6 27B 為主力）

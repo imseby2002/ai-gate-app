@@ -6,6 +6,7 @@
 // admin/employee 不計費 —— 比照全站既有慣例（api/chat、api/roundtable「Check
 // credits for external users」、lib/skills/billing.ts 的 skills/run route、
 // lib/resume/billing.ts）。這條規則晚於行銷模組原始設計，這裡補齊。
+import { costForUsedModel } from '@/lib/ai/proxy-fallback'
 import { getBalance, deductCredits as deductCreditsRaw } from '@/lib/skills/billing'
 import { getCompanyBillingContext } from '@/lib/company/billing-context'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -125,8 +126,10 @@ export const OUTSCRAPER_RECORD_COST = 0.003
 export const PUBLISH_PER_POST_CREDITS = 0.01
 /** 依實際 token 用量計算成本（usage 取自 AI SDK 回傳） */
 export function llmCost(model: string, usage?: { inputTokens?: number; outputTokens?: number } | null): number {
+  if (!usage) return 0
   const p = LLM_PRICES[model]
-  if (!p || !usage) return 0
+  // 不在表內的模型（模型鏈回傳的 openrouter:… / gemini-3-flash-preview / deepseek-flash 等）改用共用計價；免費通道為 0
+  if (!p) return costForUsedModel(model, usage.inputTokens ?? 0, usage.outputTokens ?? 0)
   return ((usage.inputTokens ?? 0) * p.input + (usage.outputTokens ?? 0) * p.output) / 1_000_000
 }
 

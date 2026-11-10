@@ -1,11 +1,8 @@
-// 外務 AI：以 Claude + 官方 web search 工具查即時公開資料（租金行情、人口、學校、申請流程等）。
-import { createAnthropic } from '@ai-sdk/anthropic'
-import { generateText, stepCountIs, type ModelMessage } from 'ai'
+// 外務 AI：以網路搜尋鏈查即時公開資料（租金行情、人口、學校、申請流程等）。
+import type { ModelMessage } from 'ai'
 import { cookies } from 'next/headers'
-import { trackAiUsage } from '@/lib/ai/universal-tracker'
+import { webSearchGenerate } from '@/lib/ai/web-search'
 
-// 需要 Anthropic 官方 web search 工具，免費模型無法替代；改用較新且較便宜的 Sonnet 5.5（$2/$10，原 Sonnet 4.6 $3/$15）
-export const AFFAIRS_AI_MODEL = 'claude-sonnet-5-5'
 
 const LANG_NAME: Record<string, string> = { 'zh-TW': '繁體中文', en: 'English', vi: 'Tiếng Việt' }
 
@@ -25,38 +22,17 @@ export async function generateWithSearch(opts: {
   maxSearches?: number
   maxOutputTokens?: number
 }): Promise<SearchResult> {
-  if (!process.env.ANTHROPIC_API_KEY) throw new Error('AI 金鑰未設定')
-  const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-  const res = await generateText({
-    model: anthropic(AFFAIRS_AI_MODEL),
+  // 共用搜尋鏈：免費（FreeLLM / CLIProxy）→ Gemini＋Google 搜尋（免費額度優先）→ Perplexity → Claude 搜尋
+  // 外務結果要列出參考來源，免費通道沒回傳網址時改用下一個
+  const r = await webSearchGenerate({
     system: opts.system,
     messages: opts.messages,
-    tools: { web_search: anthropic.tools.webSearch_20260209({ maxUses: opts.maxSearches ?? 5 }) },
-    stopWhen: stepCountIs(8),
+    maxSearches: opts.maxSearches ?? 5,
     maxOutputTokens: opts.maxOutputTokens ?? 4000,
+    feature: 'affairs',
+    requireSources: true,
   })
-
-  const usage = (res as any).usage ?? {}
-  const inTokens = Number(usage.inputTokens ?? usage.promptTokens ?? 0)
-  const outTokens = Number(usage.outputTokens ?? usage.completionTokens ?? 0)
-  if (inTokens > 0 || outTokens > 0) {
-    void trackAiUsage({
-      feature: 'affairs',
-      modelId: AFFAIRS_AI_MODEL,
-      inputTokens: inTokens,
-      outputTokens: outTokens,
-      sourceChannel: 'anthropic',
-    })
-  }
-
-  const seen = new Set<string>()
-  const sources: SearchResult['sources'] = []
-  for (const s of res.sources ?? []) {
-    if (s.sourceType !== 'url' || seen.has(s.url)) continue
-    seen.add(s.url)
-    sources.push({ url: s.url, title: s.title ?? s.url })
-  }
-  return { text: res.text, sources }
+  return { text: r.text, sources: r.sources }
 }
 
 // 從模型輸出取出第一個 JSON 物件

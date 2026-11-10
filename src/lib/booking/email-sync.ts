@@ -3,9 +3,7 @@ import { simpleParser } from 'mailparser'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptSecret, encryptSecret, isEncrypted } from '@/lib/crypto/secret'
 import { findOrCreateOrder } from './orders'
-import { calculateModelCosts, estimateTextTokens } from '@/lib/ai/token-cost-tracker'
-import { trackAiUsage } from '@/lib/ai/universal-tracker'
-import { generateTextWithFallback, looksLikeJson, type Attempt } from '@/lib/ai/proxy-fallback'
+import { generateTextByChain, looksLikeJson } from '@/lib/ai/proxy-fallback'
 
 interface AdditionalRoom {
   property_name: string | null
@@ -939,9 +937,8 @@ ${truncated}
 
 只回傳 JSON，不要其他說明：{"is_booking": true 或 false}`
 
-  const providers: Array<AiProvider> = ['free']
-  if (process.env.ANTHROPIC_API_KEY) providers.push('claude')
-  if (process.env.DEEPSEEK_API_KEY) providers.push('deepseek') // 無可用模型時不篩選，安全預設全部送進 Stage 2
+  // 擷取鏈已包含免費通道與付費備援（Haiku 5.5 → DeepSeek Flash），見 proxy-fallback extraction
+  const providers: Array<AiProvider> = ['chain']
 
   for (const provider of providers) {
     try {
@@ -1021,9 +1018,8 @@ ${roomListStr}${hint}${preLine}${fewShot}
 
   // 擷取順序：免費通道（FreeLLM / CLIProxy）→ Claude Haiku 5.5 → DeepSeek；
   // 一個失敗或回傳壞 JSON 時換下一個，而不是直接放棄整封信。
-  const providers: Array<AiProvider> = ['free']
-  if (process.env.ANTHROPIC_API_KEY) providers.push('claude')
-  if (process.env.DEEPSEEK_API_KEY) providers.push('deepseek')
+  // 擷取鏈已包含免費通道與付費備援（Haiku 5.5 → DeepSeek Flash），見 proxy-fallback extraction
+  const providers: Array<AiProvider> = ['chain']
 
   for (const provider of providers) {
     // One retry per provider for transient errors / truncated JSON.
@@ -1079,56 +1075,15 @@ async function logAiSourceUsage(channel: string, modelId: string, inTokens: numb
   }
 }
 
-type AiProvider = 'free' | 'deepseek' | 'claude'
+type AiProvider = 'chain'
 
-// 只含免費通道的擷取鏈（付費的 DeepSeek / Claude 由 callModel 另外處理）
-const FREE_EXTRACTION_CHAIN: readonly Attempt[] = [
-  { via: 'free-llm',  model: 'auto' },
-  { via: 'cli-proxy', model: 'gemini-3-flash' },
-  { via: 'cli-proxy', model: 'gpt-5.4-mini' },
-]
-
-async function callModel(provider: AiProvider, prompt: string, maxTokens = 1000): Promise<string> {
-  if (provider === 'free') {
-    const { result } = await generateTextWithFallback(FREE_EXTRACTION_CHAIN, {
-      messages: [{ role: 'user', content: prompt }],
-      maxOutputTokens: maxTokens,
-      temperature: 0,
-    }, { timeoutMs: 20000, feature: 'email_sync', validate: looksLikeJson })
-    return result.text
-  }
-  if (provider === 'deepseek') {
-    const res = await fetch('https://api.deepseek.com/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}` },
-      body: JSON.stringify({
-        model: 'deepseek-chat',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0,
-        max_tokens: maxTokens,
-        response_format: { type: 'json_object' },
-      }),
-      signal: AbortSignal.timeout(20000),
-    })
-    const data = await res.json()
-    const reply = data.choices?.[0]?.message?.content ?? ''
-    const inTokens = (data.usage?.prompt_tokens ?? estimateTextTokens(prompt)) as number
-    const outTokens = (data.usage?.completion_tokens ?? estimateTextTokens(reply)) as number
-    void trackAiUsage({
-      feature: 'email_sync',
-      modelId: 'deepseek-chat',
-      inputTokens: inTokens,
-      outputTokens: outTokens,
-      sourceChannel: 'deepseek',
-    })
-    return reply
-  }
-
-  // Claude Haiku 5.5（最便宜的付費模型，$0.10/$0.50 每百萬 tokens）
-  const { result } = await generateTextWithFallback(
-    [{ via: 'direct', provider: 'anthropic', model: 'claude-haiku-5-5' }],
-    { messages: [{ role: 'user', content: prompt }], maxOutputTokens: maxTokens },
-    { feature: 'email_sync', timeoutMs: 30000 },
-  )
+// 擷取鏈：CLIProxy Gemini 3 Flash / GPT-5.4 mini / Claude Haiku → Groq / FreeLLM 指定模型
+// → Claude Haiku 5.5 → DeepSeek Flash（直連或 OpenRouter 依每日比價），輸出需為合法 JSON
+async function callModel(_provider: AiProvider, prompt: string, maxTokens = 1000): Promise<string> {
+  const { result } = await generateTextByChain('extraction', {
+    messages: [{ role: 'user', content: prompt }],
+    maxOutputTokens: maxTokens,
+    temperature: 0,
+  }, { timeoutMs: 30000, feature: 'email_sync', validate: looksLikeJson })
   return result.text
 }
