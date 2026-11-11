@@ -4,7 +4,16 @@
 發布、互動一律由使用者自己操作；本程式不做無人值守的自動發文或養號。
 
 ## 需求
-- Windows 10/11（不需安裝 Node.js）
+- Windows（不需安裝 Node.js），依電腦選擇版本：
+  | 電腦 | 檔案 | 使用方式 |
+  |---|---|---|
+  | Win10／11 64 位元（大多數電腦） | `AI-GATE-Connector.exe` | 雙擊執行 |
+  | Win10／11 32 位元 | `AI-GATE-Connector-x86.exe` | 雙擊執行 |
+  | Win11 ARM（Surface Pro X 等） | `AI-GATE-Connector-arm64.exe` | 雙擊執行 |
+  | Win7／8／8.1 64 位元 | `AI-GATE-Connector-Win7-x64.zip` | 解壓縮後雙擊 `Start-Connector.cmd` |
+  | Win7／8／8.1 32 位元 | `AI-GATE-Connector-Win7-x86.zip` | 解壓縮後雙擊 `Start-Connector.cmd` |
+  - 不確定幾位元：「控制台 → 系統」看「系統類型」
+  - Win7／8 版內含最後支援 Win7 的 Node.js 12.22.12（官方已停止維護），僅建議無法升級系統的電腦使用
 - AdsPower 專業版以上（免費版不含 Local API；[推薦註冊連結](https://www.adspower.net/share/TnY8c0)），並於「設定 → Local API」確認 API 狀態為成功
   - 若 AdsPower 開啟了 API 金鑰驗證，設定環境變數 `ADSPOWER_API_KEY`
   - 若 API 埠不是 50325，設定 `ADSPOWER_API=http://127.0.0.1:<埠>`
@@ -22,7 +31,9 @@
 
 ## 打包（開發者）
 - `main` 上 `desktop-connector/**` 有變更時，GitHub Actions（`.github/workflows/desktop-connector.yml`）在 Windows 打包並上傳到 Release `connector-latest`
-- 本機：`npm install && npm run build:exe` → `dist/AI-GATE-Connector.exe`（Node 22 [Single Executable Applications](https://nodejs.org/api/single-executable-applications.html)）
+- 本機：`npm install && npm run build:exe` → 目前系統的單一執行檔；Windows 上 `npm run build:exe -- --windows` 產出上表全部版本
+  - Win10／11：Node 22 [Single Executable Applications](https://nodejs.org/api/single-executable-applications.html)，32 位元與 ARM 版下載同版本官方 `node.exe` 注入
+  - Win7／8：esbuild 以 `node12` 為目標打包，附官方 Node.js 12.22.12 `node.exe` 壓成 zip；`src/compat.mjs` 在沒有內建 fetch／WebSocket 時改用 http(s) 與 `ws`
 - 原始碼執行：`node src/index.mjs`（或 `pair <code>`／`run`／`status`），需 Node.js 22+
 
 ## 運作

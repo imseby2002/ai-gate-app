@@ -1,9 +1,11 @@
 // AI-GATE 主站 API（/api/connector/*），以裝置 token 驗證
+import { httpFetch } from './compat.mjs'
+
 export function createAigate(cfg) {
   const base = cfg.appUrl.replace(/\/$/, '')
 
   async function call(method, pathname, body) {
-    const res = await fetch(`${base}${pathname}`, {
+    const res = await httpFetch(`${base}${pathname}`, {
       method,
       headers: {
         'Content-Type': 'application/json',

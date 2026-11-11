@@ -2,6 +2,8 @@
 // 路徑與欄位依 AdsPower 官方 local-api-mcp-typescript（packages/core/src/constants/localApiContracts.ts、types/schemas.ts）。
 // Local API 限制每秒 1 次請求，這裡排隊送出。
 
+import { httpFetch } from './compat.mjs'
+
 const MIN_INTERVAL_MS = 1100
 
 export function createAdsPower(cfg) {
@@ -16,7 +18,7 @@ export function createAdsPower(cfg) {
       last = Date.now()
       let res
       try {
-        res = await fetch(`${base}${pathname}`, {
+        res = await httpFetch(`${base}${pathname}`, {
           method,
           headers: {
             'Content-Type': 'application/json',
