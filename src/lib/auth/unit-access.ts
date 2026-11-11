@@ -142,3 +142,20 @@ export async function getCompanyContext(): Promise<UnitContext> {
   return { ok: true, status: 200, userId: user.id, ownerId, isAdmin: isSuperAdmin || isCompanyAdmin, admin, storeCode, storeCodes, units: profile?.units ?? [] }
 }
 
+
+// ── 人事子權限 ──────────────────────────────────────────────────────────
+// profiles.units 含 'hr' ＝ 人事全部；或只給其中幾塊：'hr:recruit' 應徵、'hr:staff' 人員資料（含合約／考核／請假／出勤）、
+// 'hr:payroll' 薪資與勞健保、'hr:union' 工會。公司負責人／IT／總管理者一律全開。
+export const HR_AREAS = ['recruit', 'staff', 'payroll', 'union'] as const
+export type HrArea = (typeof HR_AREAS)[number]
+
+/** 驗證人事某一塊（或其中任一塊）的存取權 */
+export function getHrContext(...areas: HrArea[]): Promise<UnitContext> {
+  return getUnitContextAny(['hr', ...areas.map(a => `hr:${a}`)])
+}
+
+/** 已通過驗證的 ctx 是否具備某一塊人事權限 */
+export function hasHrArea(ctx: Pick<UnitContext, 'isAdmin' | 'units'>, area: HrArea): boolean {
+  const units = ctx.units ?? []
+  return ctx.isAdmin || units.includes('hr') || units.includes(`hr:${area}`)
+}

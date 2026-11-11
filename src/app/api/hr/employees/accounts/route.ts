@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
-import { getUnitContext } from '@/lib/auth/unit-access'
+import { getHrContext } from '@/lib/auth/unit-access'
 import { companyAccounts } from '@/lib/hr/account-sync'
 
 // 可綁定的系統帳號：本公司帳號與目前綁定的員工；另附門市清單（管理門市多選用）
 export async function GET() {
-  const ctx = await getUnitContext('hr')
+  const ctx = await getHrContext('staff')
   if (!ctx.ok) return NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status })
   const accounts = await companyAccounts(ctx.admin, ctx.ownerId)
   const { data: linked } = await ctx.admin.from('hr_employees').select('id, name, profile_id')

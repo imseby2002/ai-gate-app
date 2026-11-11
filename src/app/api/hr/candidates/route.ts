@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getUnitContext } from '@/lib/auth/unit-access'
+import { getHrContext } from '@/lib/auth/unit-access'
 import { openUntil, syncCandidateToEmployee } from '@/lib/hr/profile'
 
 async function getAdminUser() {
-  const ctx = await getUnitContext('hr')
+  const ctx = await getHrContext('recruit')
   if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin , status: ctx.status }
   return { user: { id: ctx.ownerId }, supabase: ctx.admin , status: ctx.status }
 }

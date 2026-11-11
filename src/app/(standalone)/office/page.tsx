@@ -330,6 +330,14 @@ export default function OfficePage() {
   )
 }
 
+// 人事子權限（見 lib/auth/unit-access.ts HR_AREAS）：沒勾「全部」時可只開其中幾塊
+const HR_SUB_AREAS = [
+  { key: 'hr:recruit', zh: '應徵', en: 'Recruiting', vi: 'Tuyển dụng' },
+  { key: 'hr:staff', zh: '人員資料', en: 'Staff records', vi: 'Hồ sơ NV' },
+  { key: 'hr:payroll', zh: '薪資保險', en: 'Payroll', vi: 'Lương/BH' },
+  { key: 'hr:union', zh: '工會', en: 'Union', vi: 'Công đoàn' },
+]
+
 function AssignPanel({
   isAdmin,
   isCompanyAdmin,
@@ -368,6 +376,9 @@ function AssignPanel({
     if (isMkt) {
       const has = cur.includes('marketing') || cur.includes('mkt')
       next = has ? cur.filter(x => x !== 'marketing' && x !== 'mkt') : [...cur, 'marketing', 'mkt']
+    } else if (key === 'hr') {
+      // 勾「人事全部」時清掉子權限；取消時一併清除
+      next = cur.includes('hr') ? cur.filter(x => x !== 'hr' && !x.startsWith('hr:')) : [...cur.filter(x => !x.startsWith('hr:')), 'hr']
     } else {
       next = cur.includes(key) ? cur.filter(x => x !== key) : [...cur, key]
     }
@@ -477,6 +488,31 @@ function AssignPanel({
                     </select>
                   </td>
                   {unitAreas.map(a => {
+                    if (a.key === 'hr') {
+                      const units = u.units ?? []
+                      const full = u.user_type === 'admin' || units.includes('hr')
+                      const locked = u.user_type === 'admin' && !isAdmin
+                      return (
+                        <td key={a.key} className="px-2 text-center align-top py-2">
+                          <label className="flex items-center justify-center gap-1 text-[11px] whitespace-nowrap cursor-pointer">
+                            <input type="checkbox" className="h-4 w-4 accent-primary cursor-pointer disabled:cursor-not-allowed"
+                              checked={full} disabled={locked} onChange={() => toggle(u, 'hr')} title={a.label} />
+                            {locale === 'vi' ? 'Tất cả' : locale === 'en' ? 'All' : '全部'}
+                          </label>
+                          {!full && (
+                            <div className="mt-1 grid grid-cols-2 gap-x-2 gap-y-0.5 text-left">
+                              {HR_SUB_AREAS.map(sa => (
+                                <label key={sa.key} className="flex items-center gap-1 text-[11px] whitespace-nowrap cursor-pointer">
+                                  <input type="checkbox" className="h-3.5 w-3.5 accent-primary cursor-pointer"
+                                    checked={units.includes(sa.key)} disabled={locked} onChange={() => toggle(u, sa.key)} />
+                                  {locale === 'vi' ? sa.vi : locale === 'en' ? sa.en : sa.zh}
+                                </label>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                      )
+                    }
                     const isMkt = a.key === 'marketing' || a.key === 'mkt'
                     const hasAccess = isMkt
                       ? ((u.units ?? []).includes('marketing') || (u.units ?? []).includes('mkt'))

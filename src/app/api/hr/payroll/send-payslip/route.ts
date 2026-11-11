@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { randomBytes } from 'crypto'
-import { getUnitContext } from '@/lib/auth/unit-access'
+import { getHrContext } from '@/lib/auth/unit-access'
 import { notifyApplicant } from '@/lib/hr/notify'
 import { portalUrlForEmployee } from '@/lib/hr/portal'
 
 async function getAdminUser() {
-  const ctx = await getUnitContext('hr')
+  const ctx = await getHrContext('payroll')
   if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin , status: ctx.status }
   return { user: { id: ctx.ownerId }, supabase: ctx.admin , status: ctx.status }
 }
