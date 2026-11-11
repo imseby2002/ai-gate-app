@@ -627,7 +627,7 @@ export const MEETING_DISCUSSION_RULES = `
 2. 像真人開會一樣說話：用第一人稱「我」，點名回應同事（例如「剛才 B 提到的…我同意，另外補充…」、「C 的顧慮有道理，我想追問…」）。
 3. 先承認對方說得對的地方，再提出你的補充、疑問或不同看法；有不同意見時說明理由與資料，並盡量附上替代做法或折衷方案。
 4. 被說服就直接說「這點我修正看法」，不要為了守立場硬拗。
-5. 主動找共識：指出大家已經一致的部分、真正還有分歧的關鍵點，以及要釐清分歧需要什麼資料或試點。
+5. 尋找共識但不強求共識：指出大家已經一致的部分；若證據不足以說服彼此，就清楚保留分歧，說明各自的依據、代價，以及要釐清分歧需要什麼資料或驗證，不要為了和諧而硬湊結論。
 6. 禁止辯論賽用語與攻擊性措辭：不用「我方」「對手」「開火」「死穴」「致命傷」「猛烈批判」等字眼，不做人身或情緒化評價。
 `
 
@@ -681,6 +681,21 @@ export function detectDomain(instruction: string, specifiedDomain?: RoundtableDo
 
 // ── 階段 0：資料專員 (Fact Briefing) ──────────────────────────────────────────
 
+// 部分模型畫 Markdown 表格時會失控輸出大量空白直到 token 用盡，先壓縮多餘空白
+export function cleanBriefing(text: string): string {
+  return text
+    .replace(/[ \t\u3000]{3,}/g, ' ')
+    .replace(/(\|\s*){4,}$/gm, '|')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+// 有效簡報：清洗後至少 400 字，避免只有標題或表頭就開會
+function isUsableBriefing(text: string): boolean {
+  return cleanBriefing(text).length >= 400
+}
+
+
 export async function fetchFactBriefing(
   instruction: string,
   domain: RoundtableDomain,
@@ -710,7 +725,11 @@ export async function fetchFactBriefing(
   try {
     const { webSearchGenerate } = await import('./web-search')
     const r = await webSearchGenerate({ system: systemPrompt, messages: [{ role: 'user', content: userPrompt }], maxOutputTokens: 4096, freeOnly: true, feature: 'roundtable' })
-    fullText = r.text
+    fullText = cleanBriefing(r.text ?? '')
+    if (!isUsableBriefing(fullText)) {
+      console.warn('[fact-briefing] 免費通道內容不足，改用付費搜尋，長度:', fullText.length)
+      fullText = ''
+    }
   } catch (err) {
     console.warn('[fact-briefing] 免費搜尋通道皆失敗，改用付費搜尋:', err instanceof Error ? err.message : err)
   }
@@ -732,7 +751,8 @@ export async function fetchFactBriefing(
 
       if (resp.ok) {
         const data = await resp.json()
-        fullText = data.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
+        fullText = cleanBriefing(data.candidates?.[0]?.content?.parts?.[0]?.text ?? '')
+        if (!isUsableBriefing(fullText)) fullText = ''
         addUsage('google/gemini-2.5-flash', data.usageMetadata?.promptTokenCount, data.usageMetadata?.candidatesTokenCount)
       } else {
         console.warn('[fact-briefing] Gemini Google Search returned non-200:', resp.status, (await resp.text().catch(() => '')).slice(0, 500))
@@ -765,6 +785,8 @@ export async function fetchFactBriefing(
       }
       const usage = await result.totalUsage
       addUsage('perplexity-sonar-pro', usage.inputTokens, usage.outputTokens)
+      fullText = cleanBriefing(fullText)
+      if (!isUsableBriefing(fullText)) fullText = ''
     } catch (pErr) {
       console.warn('[fact-briefing] Perplexity fallback error:', pErr)
     }
@@ -793,6 +815,8 @@ export async function fetchFactBriefing(
       }
       const usage = await result.totalUsage
       addUsage('openrouter/google/gemini-2.5-flash:online', usage.inputTokens, usage.outputTokens)
+      fullText = cleanBriefing(fullText)
+      if (!isUsableBriefing(fullText)) fullText = ''
     } catch (oErr) {
       console.warn('[fact-briefing] OpenRouter Gemini fallback error:', oErr)
     }
@@ -820,8 +844,11 @@ export async function fetchFactBriefing(
         }
         const usage = await result.totalUsage
         addUsage(modelId, usage.inputTokens, usage.outputTokens)
+        fullText = cleanBriefing(fullText)
+        if (!isUsableBriefing(fullText)) fullText = ''
       } catch (err) {
         console.error(`[fact-briefing] fallback ${modelId} error:`, err)
+        fullText = ''
       }
       if (fullText.trim()) break
     }
@@ -998,6 +1025,7 @@ export function resolveSeatStance(seat: Seat, idx: number, domainPreset: DomainP
 
 export function formatStatements(statements: Statement[]): string {
   return statements
+    .filter(s => s.name !== '資料專員')
     .map(s => {
       const roundLabel = s.round ? `[第 ${s.round} 輪] ` : ''
       return `### ${roundLabel}${s.name} (${s.role}${s.stance ? ` · ${s.stance}` : ''})\n${s.content?.trim() || '(未發言)'}`
