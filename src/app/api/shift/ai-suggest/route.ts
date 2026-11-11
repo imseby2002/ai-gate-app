@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { generateTextByChain, looksLikeJson } from '@/lib/ai/proxy-fallback'
 import { getShiftContext, storeAllowed } from '@/lib/shift/scope'
 import { isFulltime, pgQuote } from '@/lib/shift/staff'
+import { leaveOn, leavesBetween } from '@/lib/shift/leave'
 import { hourlyProfile } from '@/lib/shift/sales'
 import {
   SLOT_MIN, availableOn, fmtMin, isDate, listDates, needsOn, parseHHMM, weekdayOf,
@@ -48,8 +49,11 @@ export async function POST(req: NextRequest) {
   const { data: offs } = await db.from('shift_dayoff_requests').select('employee_id, off_date')
     .eq('owner_id', owner).in('employee_id', staff.map(e => e.id)).gte('off_date', from).lte('off_date', to)
   const offSet = new Set((offs ?? []).map(o => `${o.employee_id}|${o.off_date}`))
+  // 請假（待審核／已核准）當天不排
+  const leaves = await leavesBetween(db, owner, staff.map(e => e.id), from, to)
+  const onLeave = (id: string, d: string) => !!leaveOn(leaves, id, d)
   const availFor = (e: { id: string; staff_category?: string | null; employment_type?: string | null }, d: string) =>
-    isFulltime(e) ? (offSet.has(`${e.id}|${d}`) ? [] : [{ start: 6 * 60, end: 24 * 60 }]) : availableOn(R, e.id, d)
+    onLeave(e.id, d) ? [] : isFulltime(e) ? (offSet.has(`${e.id}|${d}`) ? [] : [{ start: 6 * 60, end: 24 * 60 }]) : availableOn(R, e.id, d)
   const idx = new Map(staff.map((e, i) => [e.id, i]))
 
   // 精簡資料給 AI（員工以編號表示，避免回傳不存在的 id）
@@ -62,6 +66,7 @@ export async function POST(req: NextRequest) {
         date: d, weekday: WD[weekdayOf(d)],
         available: staff.map((e, i) => ({ e: i, times: availFor(e, d).map(iv => `${fmtMin(iv.start)}-${fmtMin(iv.end)}`) })).filter(x => x.times.length),
         requested_day_off: staff.map((e, i) => offSet.has(`${e.id}|${d}`) ? i : -1).filter(i => i >= 0),
+        on_leave: staff.map((e, i) => onLeave(e.id, d) ? i : -1).filter(i => i >= 0),
         already_scheduled: P.filter(p => p.work_date === d && idx.has(p.employee_id))
           .map(p => ({ e: idx.get(p.employee_id), time: `${fmtMin(p.start_min)}-${fmtMin(p.end_min)}`, store: p.store })),
         needs: [...need.entries()].map(([m, n]) => `${fmtMin(m)}:${n}`).join(' ') || undefined,
@@ -78,7 +83,7 @@ export async function POST(req: NextRequest) {
 Rules (must follow):
 1. Only schedule a person inside one of their "available" times for that date. Start and end must be on ${SLOT_MIN}-minute boundaries and within the available range.
 2. Never overlap with "already_scheduled" for the same person (any store); do not repeat existing shifts.
-3. Prefer one continuous shift per person per day, 3–8 hours; part-time usually 3–5 hours, full-time about 8 hours. Full-time staff appear available 06:00-24:00 except on their requested_day_off dates, where they must not be scheduled; give full-time staff roughly 5–6 working days per week.
+3. Prefer one continuous shift per person per day, 3–8 hours; part-time usually 3–5 hours, full-time about 8 hours. Full-time staff appear available 06:00-24:00 except on their requested_day_off dates, where they must not be scheduled; give full-time staff roughly 5–6 working days per week. Staff listed in on_leave for a day have an approved or pending leave request and must not be scheduled that day.
 4. Meet "needs" (time:headcount per ${SLOT_MIN}-minute slot) when possible. If needs are missing, infer staffing from hourly sales (busier hours need more people; at least 1 person whenever someone is available during likely opening hours).
 5. Balance total hours fairly across staff.
 6. If sales data exists, propose "suggested_needs" (weekday groups, time ranges, headcount) derived from it; otherwise return an empty array.

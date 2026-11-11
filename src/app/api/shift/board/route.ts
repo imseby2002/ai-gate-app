@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getShiftContext, storeAllowed } from '@/lib/shift/scope'
 import { pgQuote } from '@/lib/shift/staff'
 import { isDate } from '@/lib/shift/time'
+import { leavesBetween } from '@/lib/shift/leave'
 
 // 店長排班總表：門市員工、可上班規則、人力需求、班表。?store=&from=&to=（最多 31 天）
 export async function GET(req: NextRequest) {
@@ -35,5 +36,7 @@ export async function GET(req: NextRequest) {
     ? await db.from('shift_dayoff_requests').select('employee_id, off_date, note').eq('owner_id', owner)
       .in('employee_id', all.map(e => e.id)).gte('off_date', from).lte('off_date', to)
     : { data: [] }
-  return NextResponse.json({ employees: all, rules: rules ?? [], plans: plans ?? [], needs: needs ?? [], dayoffs: dayoffs ?? [] })
+  // 請假系統：待審核與已核准的請假
+  const leaves = await leavesBetween(db, owner, all.map(e => e.id), from, to)
+  return NextResponse.json({ employees: all, rules: rules ?? [], plans: plans ?? [], needs: needs ?? [], dayoffs: dayoffs ?? [], leaves })
 }

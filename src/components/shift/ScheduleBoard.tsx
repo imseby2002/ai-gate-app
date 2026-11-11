@@ -17,7 +17,8 @@ import { isFulltime } from '@/lib/shift/staff'
 
 interface Emp { id: string; name: string; employment_type: string | null; staff_category?: string | null; position: string | null }
 interface DayOff { employee_id: string; off_date: string; note: string }
-interface Board { employees: Emp[]; rules: AvailRule[]; plans: PlanRow[]; needs: NeedRule[]; dayoffs?: DayOff[] }
+interface Leave { id: string; employee_id: string; leave_type: string; start_date: string; end_date: string; days: number; reason: string; status: 'pending' | 'approved' }
+interface Board { employees: Emp[]; rules: AvailRule[]; plans: PlanRow[]; needs: NeedRule[]; dayoffs?: DayOff[]; leaves?: Leave[] }
 
 const WD_ORDER = [1, 2, 3, 4, 5, 6, 0]
 const DAY_START = 6 * 60 // 營業可能時段 06:00–24:00
@@ -42,6 +43,7 @@ export function ScheduleBoard({ store }: { store: string }) {
   const [showOthers, setShowOthers] = useState(false)
   const [editing, setEditing] = useState<PlanRow | null>(null)
   const [pending, setPending] = useState(false) // 新增班送出中，避免連點重複新增
+  const [reviewing, setReviewing] = useState<Leave | null>(null) // 審核請假
   const weekEnd = addDays(weekStart, 6)
   const key = `${store}|${weekStart}|${tick}`
 
@@ -72,14 +74,22 @@ export function ScheduleBoard({ store }: { store: string }) {
   const slots = useMemo(() => { const o: number[] = []; for (let m = rangeStart; m < rangeEnd; m += SLOT_MIN) o.push(m); return o }, [rangeStart, rangeEnd])
 
   const dayInfo = useCallback((d: string) => {
-    if (!data) return { avail: new Map<string, Interval[]>(), plans: [] as PlanRow[], need: new Map<number, number>(), short: 0, drafts: 0, off: new Set<string>() }
+    if (!data) return { avail: new Map<string, Interval[]>(), plans: [] as PlanRow[], need: new Map<number, number>(), short: 0, drafts: 0, off: new Set<string>(), leave: new Map<string, Leave>() }
     const avail = new Map(data.employees.map(e => [e.id, availableOn(data.rules, e.id, d)]))
     const plans = data.plans.filter(p => p.work_date === d)
     const need = needsOn(data.needs, d)
     let short = 0
     for (const [m, n] of need) if (plans.filter(p => covers({ start: p.start_min, end: p.end_min }, m)).length < n) short++
     const off = new Set((data.dayoffs ?? []).filter(o => o.off_date === d).map(o => o.employee_id))
-    return { avail, plans, need, short, drafts: plans.filter(p => p.status === 'draft').length, off }
+    // 請假系統（待審核／已核准）：當天不能排，已核准優先顯示
+    const leave = new Map<string, Leave>()
+    for (const l of data.leaves ?? []) {
+      if (l.start_date > d || l.end_date < d) continue
+      const cur = leave.get(l.employee_id)
+      if (!cur || (cur.status === 'pending' && l.status === 'approved')) leave.set(l.employee_id, l)
+    }
+    for (const id of leave.keys()) avail.set(id, [])
+    return { avail, plans, need, short, drafts: plans.filter(p => p.status === 'draft').length, off, leave }
   }, [data])
   const info = dayInfo(selDate)
   const weekDrafts = data ? data.plans.filter(p => p.status === 'draft').length : 0
@@ -87,7 +97,7 @@ export function ScheduleBoard({ store }: { store: string }) {
   // 員工排序：今天可上班或有班的在上面，其餘收合
   const emps = data?.employees ?? []
   // 正職預設可排（除非當天希望休假），永遠列在上面
-  const active = emps.filter(e => isFulltime(e) || (info.avail.get(e.id)?.length ?? 0) > 0 || info.plans.some(p => p.employee_id === e.id))
+  const active = emps.filter(e => isFulltime(e) || info.leave.has(e.id) || (info.avail.get(e.id)?.length ?? 0) > 0 || info.plans.some(p => p.employee_id === e.id))
   const others = emps.filter(e => !active.includes(e))
   const weekHours = (id: string) => (data?.plans ?? []).filter(p => p.employee_id === id).reduce((s, p) => s + (p.end_min - p.start_min), 0) / 60
 
@@ -122,6 +132,8 @@ export function ScheduleBoard({ store }: { store: string }) {
   }
 
   async function createPlan(emp: string, start: number, end: number) {
+    const lv = info.leave.get(emp)
+    if (lv && !confirm(t(lv.status === 'approved' ? 'leaveConflictApproved' : 'leaveConflictPending', { name: nameOf(emp) }))) return
     setErr('')
     setPending(true)
     const r = await jsonPost('/api/shift/plans', 'POST', { store, employee_id: emp, work_date: selDate, start_min: start, end_min: end })
@@ -136,7 +148,8 @@ export function ScheduleBoard({ store }: { store: string }) {
     }
   }
   async function publish() {
-    if (!confirm(t('publishConfirm', { from: weekStart, to: weekEnd, n: weekDrafts }))) return
+    const onLeave = (data?.plans ?? []).filter(p => p.status === 'draft' && dayInfo(p.work_date).leave.has(p.employee_id)).length
+    if (!confirm(t('publishConfirm', { from: weekStart, to: weekEnd, n: weekDrafts }) + (onLeave ? '\n\n' + t('publishLeaveWarn', { n: onLeave }) : ''))) return
     setBusy(true); setErr('')
     const r = await jsonPost('/api/shift/publish', 'POST', { store, from: weekStart, to: weekEnd })
     const d = await r.json().catch(() => ({}))
@@ -148,28 +161,51 @@ export function ScheduleBoard({ store }: { store: string }) {
 
   const nameOf = (id: string) => emps.find(e => e.id === id)?.name ?? ''
 
+  // 店長代正職設定／取消當天休假
+  async function toggleDayOff(emp: string) {
+    setErr('')
+    const r = await jsonPost('/api/shift/dayoff', 'POST', { store, employee_id: emp, date: selDate })
+    if (!r.ok) setErr((await r.json().catch(() => ({}))).error ?? t('saveFailed'))
+    reload()
+  }
+  async function reviewLeave(status: 'approved' | 'rejected') {
+    if (!reviewing) return
+    setErr('')
+    const r = await jsonPost('/api/shift/leave', 'PATCH', { id: reviewing.id, status })
+    if (!r.ok) setErr((await r.json().catch(() => ({}))).error ?? t('saveFailed'))
+    setReviewing(null)
+    reload()
+  }
+
   const row = (e: Emp) => {
     const av = info.avail.get(e.id) ?? []
     const mine = info.plans.filter(p => p.employee_id === e.id)
-    const ft = isFulltime(e), off = info.off.has(e.id)
+    const ft = isFulltime(e), off = info.off.has(e.id), lv = info.leave.get(e.id)
     return (
       <tr key={e.id} className="border-t">
         <td className="sticky left-0 z-10 bg-white dark:bg-gray-950 pr-2 py-1 whitespace-nowrap overflow-hidden">
           <div className="text-sm font-medium leading-tight">{e.name}</div>
           <div className="text-[10px] text-gray-400 flex items-center gap-1">
+            {lv && (
+              <button type="button" onClick={() => setReviewing(lv)} title={`${lv.start_date} ~ ${lv.end_date}${lv.reason ? ' · ' + lv.reason : ''}`}
+                className={`rounded px-1 ${lv.status === 'approved' ? 'bg-rose-600 text-white' : 'bg-amber-100 text-amber-800 ring-1 ring-amber-300'}`}>
+                {lv.status === 'approved' ? t('leaveBadge') : t('leavePendingBadge')}
+              </button>
+            )}
             {off && <span className="rounded bg-rose-100 px-1 text-rose-700">{t('dayOffBadge')}</span>}
+            {ft && !lv && <button type="button" onClick={() => toggleDayOff(e.id)} className="text-rose-600 hover:underline" title={t('setDayOffHint')}>{off ? t('unsetDayOff') : t('setDayOff')}</button>}
             {ft ? t('fullTime') : t('partTime')} · {t('weekHours', { h: Math.round(weekHours(e.id) * 10) / 10 })}
             {av.length > 0 && <button onClick={() => fillFromAvail(e.id)} className="text-primary hover:underline" title={t('fillFromAvailHint')}>{t('fillFromAvail')}</button>}
           </div>
         </td>
         {slots.map(m => {
-          const isAv = ft ? !off : av.some(iv => covers(iv, m))
+          const isAv = lv ? false : ft ? !off : av.some(iv => covers(iv, m))
           const plan = mine.find(p => covers({ start: p.start_min, end: p.end_min }, m))
           const inDrag = drag && drag.emp === e.id && m >= Math.min(drag.a, drag.b) && m <= Math.max(drag.a, drag.b)
           const cls = plan
             ? (plan.status === 'published' ? 'bg-blue-600' : 'bg-blue-400') + (isAv ? '' : ' ring-1 ring-inset ring-orange-400')
             : inDrag ? 'bg-blue-200'
-              : off ? 'bg-rose-50 dark:bg-rose-950/40' : ft ? 'bg-sky-50 dark:bg-sky-950/30' : isAv ? 'bg-emerald-100 dark:bg-emerald-900/40' : 'bg-gray-50 dark:bg-gray-900'
+              : lv ? 'bg-rose-200/70 dark:bg-rose-900/50' : off ? 'bg-rose-50 dark:bg-rose-950/40' : ft ? 'bg-sky-50 dark:bg-sky-950/30' : isAv ? 'bg-emerald-100 dark:bg-emerald-900/40' : 'bg-gray-50 dark:bg-gray-900'
           const first = plan && plan.start_min === m
           const selected = plan && editing?.id === plan.id
           return (
@@ -215,6 +251,7 @@ export function ScheduleBoard({ store }: { store: string }) {
                 {di.short > 0 && <span className="block text-red-500">{t('dayShort', { n: di.short })}</span>}
                 {di.drafts > 0 && <span className="block text-amber-600">{t('dayDrafts', { n: di.drafts })}</span>}
                 {di.off.size > 0 && <span className="block text-rose-600">{t('dayOffCount', { n: di.off.size })}</span>}
+                {di.leave.size > 0 && <span className="block text-rose-700 font-medium">{t('dayLeaveCount', { n: di.leave.size })}</span>}
               </div>
             </button>
           )
@@ -231,8 +268,21 @@ export function ScheduleBoard({ store }: { store: string }) {
           <span className="flex items-center gap-1"><i className="inline-block w-3 h-3 rounded-sm ring-1 ring-orange-400" />{t('legendOutside')}</span>
           <span className="flex items-center gap-1"><i className="inline-block w-3 h-3 rounded-sm bg-sky-50 ring-1 ring-sky-200" />{t('legendFulltime')}</span>
           <span className="flex items-center gap-1"><i className="inline-block w-3 h-3 rounded-sm bg-rose-100" />{t('legendDayOff')}</span>
+          <span className="flex items-center gap-1"><i className="inline-block w-3 h-3 rounded-sm bg-rose-200" />{t('legendLeave')}</span>
           <span className="ml-auto">{t('dragHint')}</span>
         </div>
+        {reviewing && (
+          <div className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-3 text-sm space-y-2">
+            <div className="font-medium">{nameOf(reviewing.employee_id)} · {t(`leaveType_${reviewing.leave_type}`)} · {reviewing.start_date}{reviewing.end_date !== reviewing.start_date ? ` ~ ${reviewing.end_date}` : ''}（{t('leaveDays', { n: reviewing.days })}）</div>
+            {reviewing.reason && <div className="text-gray-600 dark:text-gray-300 whitespace-pre-line">{t('leaveReason')}：{reviewing.reason}</div>}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs text-gray-500 mr-auto">{reviewing.status === 'approved' ? t('leaveStatusApproved') : t('leaveStatusPending')}</span>
+              {reviewing.status === 'pending' && <Button size="sm" onClick={() => reviewLeave('approved')}>{t('leaveApprove')}</Button>}
+              <Button size="sm" variant="outline" className="text-rose-700" onClick={() => reviewLeave('rejected')}>{reviewing.status === 'approved' ? t('leaveRevoke') : t('leaveReject')}</Button>
+              <Button size="sm" variant="ghost" onClick={() => setReviewing(null)}><X className="h-4 w-4" /></Button>
+            </div>
+          </div>
+        )}
         {editing && <PlanEditor key={editing.id} plan={editing} name={nameOf(editing.employee_id)} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); reload() }} />}
         {loading ? <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div> : (
           <div className="overflow-x-auto" style={{ touchAction: drag ? 'none' : 'pan-x pan-y' }}
