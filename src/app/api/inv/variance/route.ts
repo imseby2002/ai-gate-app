@@ -4,7 +4,7 @@ import { notifyHR } from '@/lib/hr/notify'
 import { computeInventoryVariance } from '@/lib/inv/variance-engine'
 
 async function getAdminUser() {
-  const ctx = await getUnitContextAny(['store', 'audit', 'rd', 'finance'])
+  const ctx = await getUnitContextAny(['store', 'audit', 'rd', 'finance', 'finance:pricing'])
   if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin, storeCode: null , status: ctx.status }
   return { user: { id: ctx.ownerId }, supabase: ctx.admin, storeCode: ctx.storeCode , status: ctx.status }
 }

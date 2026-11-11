@@ -6,7 +6,7 @@ import { normalizeSettings, DEFAULT_PIT_SETTINGS, PIT_SOURCES } from '@/lib/acc/
 const deny = (status: number) => NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
 
 export async function GET() {
-  const ctx = await getUnitContextAny(['finance', 'hr'])
+  const ctx = await getUnitContextAny(['finance', 'finance:tax', 'hr'])
   if (!ctx.ok) return deny(ctx.status)
   const { admin, ownerId } = ctx
 
@@ -30,7 +30,7 @@ export async function GET() {
 
 // 更新稅率設定
 export async function PUT(req: NextRequest) {
-  const ctx = await getUnitContextAny(['finance', 'hr'])
+  const ctx = await getUnitContextAny(['finance', 'finance:tax', 'hr'])
   if (!ctx.ok) return deny(ctx.status)
   const body = await req.json().catch(() => ({}))
   const s = normalizeSettings({ ...DEFAULT_PIT_SETTINGS, ...body })
@@ -42,7 +42,7 @@ export async function PUT(req: NextRequest) {
 
 // 更新員工稅籍（MST、計稅方式）
 export async function PATCH(req: NextRequest) {
-  const ctx = await getUnitContextAny(['finance', 'hr'])
+  const ctx = await getUnitContextAny(['finance', 'finance:tax', 'hr'])
   if (!ctx.ok) return deny(ctx.status)
   const body = await req.json().catch(() => ({}))
   const id = String(body.id ?? '')

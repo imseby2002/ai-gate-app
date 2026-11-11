@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getUnitContext } from '@/lib/auth/unit-access'
+import { getFinanceContext } from '@/lib/auth/unit-access'
 import { syncPnlStores, computeAutoPnl, periodsBetween } from '@/lib/finance/pnl-auto'
 import type { createAdminClient } from '@/lib/supabase/admin'
 
@@ -20,7 +20,7 @@ async function actorName(admin: Admin, userId: string) {
 // GET /api/hr/pnl?period=YYYY-MM          多店比較：門市、自動值、人工值、修改次數
 // GET /api/hr/pnl?store_id=…&months=12   單店趨勢：近 N 個月的自動值與人工值
 export async function GET(req: NextRequest) {
-  const ctx = await getUnitContext('finance')
+  const ctx = await getFinanceContext('cashier')
   if (!ctx.ok) return NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status })
   const { admin, ownerId } = ctx
   const sp = req.nextUrl.searchParams
@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
 // PUT /api/hr/pnl  人工修改（覆蓋自動值），每格留痕
 // body: { period, source?, reason?, values: { store_id, line_code, amount }[] }
 export async function PUT(req: NextRequest) {
-  const ctx = await getUnitContext('finance')
+  const ctx = await getFinanceContext('cashier')
   if (!ctx.ok) return NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status })
   const { admin, ownerId, userId } = ctx
 
@@ -121,7 +121,7 @@ export async function PUT(req: NextRequest) {
 // DELETE /api/hr/pnl  改回自動值（刪除人工值），留痕
 // body: { period, store_id, line_code, reason }
 export async function DELETE(req: NextRequest) {
-  const ctx = await getUnitContext('finance')
+  const ctx = await getFinanceContext('cashier')
   if (!ctx.ok) return NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status })
   const { admin, ownerId, userId } = ctx
 

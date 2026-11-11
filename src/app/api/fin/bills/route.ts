@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getUnitContextAny } from '@/lib/auth/unit-access'
 
 async function getAdminUser() {
-  const ctx = await getUnitContextAny(['finance', 'store'])
+  const ctx = await getUnitContextAny(['finance', 'finance:expenses', 'store'])
   if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin, storeCode: null as string | null , status: ctx.status }
   return { user: { id: ctx.ownerId }, supabase: ctx.admin, storeCode: ctx.storeCode ?? null , status: ctx.status }
 }

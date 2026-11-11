@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect, type ComponentType } from 'react'
+import { useState, useEffect, useRef, type ComponentType } from 'react'
 import Link from 'next/link'
 import {
   Building2, Loader2, ChevronRight, ShieldCheck, ArrowUpRight, ArrowRight, ExternalLink,
-  Users, Wallet, FlaskConical, Store, Briefcase, Wrench, Crown, LayoutGrid, Megaphone,
+  Users, Wallet, FlaskConical, ChevronDown, Store, Briefcase, Wrench, Crown, LayoutGrid, Megaphone,
   Lightbulb, Scale,
 } from 'lucide-react'
 import { useTranslations, useLocale } from 'next-intl'
@@ -44,6 +44,11 @@ const UNIT_STYLE: Record<string, { icon: ComponentType<{ className?: string }>; 
   marketing: { icon: Megaphone,    chip: 'bg-pink-500/10 text-pink-600 dark:text-pink-400',           ring: 'hover:border-pink-400/60' },
   mkt:       { icon: Megaphone,    chip: 'bg-pink-500/10 text-pink-600 dark:text-pink-400',           ring: 'hover:border-pink-400/60' },
 }
+// 總務頁面 → 子權限（見 lib/auth/unit-access.ts FINANCE_AREAS）
+const FIN_PAGE_AREA: Record<string, string> = {
+  '/finance': 'cashier', '/finance/tax': 'tax', '/finance?tab=pricing': 'pricing', '/store-expenses': 'expenses', '/vendors': 'vendors',
+}
+
 const fallbackStyle = { icon: LayoutGrid, chip: 'bg-primary/10 text-primary', ring: 'hover:border-primary/50' }
 
 export default function OfficePage() {
@@ -106,7 +111,10 @@ export default function OfficePage() {
     ? t('roles.itAdmin')
     : null
 
-  // 門市領班不另外顯示卡片，功能併入「門市營運」；只有領班權限的人，門市營運卡只含領班可用的頁面
+  // 總務子權限：沒有「總務全部」時，卡片只列出有開的子功能
+  const finFull = canManage || (access.units ?? []).includes('finance')
+  const finPageAllowed = (href: string) => finFull || (access.units ?? []).includes(`finance:${FIN_PAGE_AREA[href] ?? ''}`)
+  // 領班不另外顯示卡片，功能併入「門市」；只有領班權限的人，門市卡只含領班可用的頁面
   const canStore = isSuperAdmin || hasUnit(canManage, access.units, 'store')
   const canStoreLeader = isSuperAdmin || hasUnit(canManage, access.units, 'store_leader')
   const leaderArea = unitAreas.find(a => a.key === 'store_leader')
@@ -116,9 +124,10 @@ export default function OfficePage() {
       ? { ...a, homeHref: leaderArea.homeHref, pages: leaderArea.pages }
       : a))
     .filter(a => isSuperAdmin || hasUnit(canManage, access.units, a.key) || (a.key === 'store' && canStoreLeader))
-    .map(a => ({ ...a, pages: a.pages.filter(p => canManage || !p.adminOnly) }))
+    .map(a => ({ ...a, pages: a.pages.filter(p => (canManage || !p.adminOnly) && (a.key !== 'finance' || finPageAllowed(p.href))) }))
     .filter(a => a.pages.length > 0)
-  // 門市點單 POS 是門市獨立使用的前台，門市營運管不到，只放在管理者（主帳號）的公司入口
+    .map(a => (a.key === 'finance' && !finFull ? { ...a, homeHref: a.pages[0].href } : a))
+  // 門市點單 POS 是門市獨立使用的前台，門市管不到，只放在管理者（主帳號）的公司入口
   if (canManage && access.posEnabled) {
     const posLabel = locale === 'vi' ? 'POS Bán hàng tại quầy' : locale === 'en' ? 'Counter POS' : '門市點單 POS'
     visibleAreas.push({ key: 'pos', label: posLabel, homeHref: '/pos', description: '', pages: [{ href: '/pos', label: posLabel }] })
@@ -330,13 +339,104 @@ export default function OfficePage() {
   )
 }
 
-// 人事子權限（見 lib/auth/unit-access.ts HR_AREAS）：沒勾「全部」時可只開其中幾塊
-const HR_SUB_AREAS = [
-  { key: 'hr:recruit', zh: '應徵', en: 'Recruiting', vi: 'Tuyển dụng' },
-  { key: 'hr:staff', zh: '人員資料', en: 'Staff records', vi: 'Hồ sơ NV' },
-  { key: 'hr:payroll', zh: '薪資保險', en: 'Payroll', vi: 'Lương/BH' },
-  { key: 'hr:union', zh: '工會', en: 'Union', vi: 'Công đoàn' },
-]
+type SubOpt = { key: string; zh: string; en: string; vi: string }
+
+// 可細分的部門：勾「全部」＝整個部門；不勾時可只開其中幾塊
+const SUB_GROUPS: Record<string, { full: string; subs: SubOpt[]; fullLabel?: SubOpt }> = {
+  hr: {
+    full: 'hr',
+    subs: [
+      { key: 'hr:recruit', zh: '應徵', en: 'Recruiting', vi: 'Tuyển dụng' },
+      { key: 'hr:staff', zh: '人員資料', en: 'Staff records', vi: 'Hồ sơ NV' },
+      { key: 'hr:payroll', zh: '薪資保險', en: 'Payroll', vi: 'Lương/BH' },
+      { key: 'hr:union', zh: '工會', en: 'Union', vi: 'Công đoàn' },
+    ],
+  },
+  finance: {
+    full: 'finance',
+    subs: [
+      { key: 'finance:cashier', zh: '出納・損益', en: 'Cashier & P&L', vi: 'Thu chi & lãi lỗ' },
+      { key: 'finance:tax', zh: '會計・個人稅', en: 'Accounting & PIT', vi: 'Kế toán & TNCN' },
+      { key: 'finance:pricing', zh: '物料定價', en: 'Material pricing', vi: 'Định giá NL' },
+      { key: 'finance:expenses', zh: '門市費用', en: 'Store expenses', vi: 'Chi phí CH' },
+      { key: 'finance:vendors', zh: '廠商資料', en: 'Vendors', vi: 'Nhà cung cấp' },
+    ],
+  },
+  // 門市＝門市全部功能；領班＝只看所屬門市的排班與員工評分
+  store: {
+    full: 'store',
+    fullLabel: { key: 'store', zh: '門市（全部功能）', en: 'Store (all)', vi: 'Cửa hàng (tất cả)' },
+    subs: [{ key: 'store_leader', zh: '領班（所屬門市排班・評分）', en: 'Leader (own store shifts & reviews)', vi: 'Tổ trưởng (ca & đánh giá)' }],
+  },
+}
+
+function SubPermDropdown({
+  units, group, locked, locale, onToggle,
+}: {
+  units: string[]
+  group: { full: string; subs: SubOpt[]; fullLabel?: SubOpt }
+  locked: boolean
+  locale: string
+  onToggle: (key: string) => void
+}) {
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const boxRef = useRef<HTMLDivElement>(null)
+  const lbl = (o: SubOpt) => (locale === 'vi' ? o.vi : locale === 'en' ? o.en : o.zh)
+  const full = units.includes(group.full)
+  const picked = group.subs.filter(o => units.includes(o.key))
+  const allText = locale === 'vi' ? 'Tất cả' : locale === 'en' ? 'All' : '全部'
+  const summary = full ? allText : picked.length === 0 ? '—' : picked.length === 1 ? lbl(picked[0]).replace(/（.*$/, '') : `${picked.length}/${group.subs.length}`
+
+  useEffect(() => {
+    if (!pos) return
+    const close = (e: Event) => {
+      if (e.type === 'mousedown' && (boxRef.current?.contains(e.target as Node) || btnRef.current?.contains(e.target as Node))) return
+      setPos(null)
+    }
+    document.addEventListener('mousedown', close)
+    window.addEventListener('scroll', close, true)
+    window.addEventListener('resize', close)
+    return () => {
+      document.removeEventListener('mousedown', close)
+      window.removeEventListener('scroll', close, true)
+      window.removeEventListener('resize', close)
+    }
+  }, [pos])
+
+  const open = () => {
+    if (pos) { setPos(null); return }
+    const r = btnRef.current?.getBoundingClientRect()
+    if (r) setPos({ top: r.bottom + 4, left: Math.min(r.left, window.innerWidth - 220) })
+  }
+
+  return (
+    <>
+      <button ref={btnRef} type="button" onClick={open} disabled={locked}
+        className={`inline-flex h-7 min-w-[64px] items-center justify-between gap-1 rounded-md border px-2 text-[11px] whitespace-nowrap disabled:opacity-50 ${full || picked.length ? 'border-primary/50 bg-primary/5 text-primary font-medium' : 'bg-background text-muted-foreground'}`}>
+        {summary}
+        <ChevronDown className="h-3 w-3 shrink-0" />
+      </button>
+      {pos && (
+        <div ref={boxRef} style={{ top: pos.top, left: pos.left }}
+          className="fixed z-50 w-52 rounded-lg border bg-popover p-1.5 text-left shadow-lg">
+          <label className="flex items-center gap-2 rounded px-2 py-1.5 text-xs font-semibold cursor-pointer hover:bg-muted">
+            <input type="checkbox" className="h-3.5 w-3.5 accent-primary" checked={full} onChange={() => onToggle(group.full)} />
+            {group.fullLabel ? lbl(group.fullLabel) : locale === 'vi' ? 'Chọn tất cả' : locale === 'en' ? 'Select all' : '全選'}
+          </label>
+          <div className="my-1 border-t" />
+          {group.subs.map(o => (
+            <label key={o.key} className="flex items-center gap-2 rounded px-2 py-1.5 text-xs cursor-pointer hover:bg-muted">
+              <input type="checkbox" className="h-3.5 w-3.5 accent-primary"
+                checked={full || units.includes(o.key)} disabled={full && !!group.fullLabel} onChange={() => onToggle(o.key)} />
+              {lbl(o)}
+            </label>
+          ))}
+        </div>
+      )}
+    </>
+  )
+}
 
 function AssignPanel({
   isAdmin,
@@ -372,13 +472,18 @@ function AssignPanel({
   const toggle = async (u: UserRow, key: string) => {
     const cur = u.units ?? []
     const isMkt = key === 'marketing' || key === 'mkt'
+    const group = Object.values(SUB_GROUPS).find(g => g.full === key || g.subs.some(o => o.key === key))
+    const subKeys = group?.subs.map(o => o.key) ?? []
     let next: string[]
     if (isMkt) {
       const has = cur.includes('marketing') || cur.includes('mkt')
       next = has ? cur.filter(x => x !== 'marketing' && x !== 'mkt') : [...cur, 'marketing', 'mkt']
-    } else if (key === 'hr') {
-      // 勾「人事全部」時清掉子權限；取消時一併清除
-      next = cur.includes('hr') ? cur.filter(x => x !== 'hr' && !x.startsWith('hr:')) : [...cur.filter(x => !x.startsWith('hr:')), 'hr']
+    } else if (group && key === group.full) {
+      // 勾「全部」時清掉子權限；取消時一併清除
+      next = cur.includes(key) ? cur.filter(x => x !== key && !subKeys.includes(x)) : [...cur.filter(x => !subKeys.includes(x)), key]
+    } else if (group && cur.includes(group.full)) {
+      // 原本是「全部」，取消其中一塊 → 改成其餘子權限
+      next = [...cur.filter(x => x !== group.full && !subKeys.includes(x)), ...subKeys.filter(k => k !== key)]
     } else {
       next = cur.includes(key) ? cur.filter(x => x !== key) : [...cur, key]
     }
@@ -399,6 +504,9 @@ function AssignPanel({
     })
     setSaving('')
   }
+
+  // 領班併入「門市」下拉，不另開欄位
+  const columns = unitAreas.filter(a => a.key !== 'store_leader')
 
   const filteredUsers = users.filter(u => {
     if (!searchTerm.trim()) return true
@@ -449,10 +557,10 @@ function AssignPanel({
               <thead>
                 <tr className="bg-muted/50 text-left text-muted-foreground border-b">
                   <th className="py-2.5 px-3 font-medium sticky left-0 bg-muted/50">{t('colName')}</th>
-                  <th className="px-3 py-2.5 font-medium whitespace-nowrap text-left">
-                    {locale === 'vi' ? 'Chi nhánh trực thuộc (Khóa cửa hàng)' : locale === 'en' ? 'Assigned Store (Locked)' : '所屬門市 (Store 鎖定)'}
+                  <th className="px-2 py-2.5 font-medium whitespace-nowrap text-left">
+                    {locale === 'vi' ? 'Chi nhánh' : locale === 'en' ? 'Store' : '所屬門市'}
                   </th>
-                  {unitAreas.map(a => <th key={a.key} className="px-2 text-center font-medium whitespace-nowrap">{a.label}</th>)}
+                  {columns.map(a => <th key={a.key} className="px-2 text-center font-medium whitespace-nowrap">{a.label}</th>)}
                 </tr>
               </thead>
               <tbody>{filteredUsers.map(u => (
@@ -470,46 +578,32 @@ function AssignPanel({
                     {u.email && <div className="text-[11px] text-muted-foreground">{u.email}</div>}
                     {u.hr_employee_name && <div className="text-[11px] text-emerald-700">{t('linkedEmployee', { name: u.hr_employee_name })}</div>}
                   </td>
-                  <td className="px-3 py-2 whitespace-nowrap">
+                  <td className="px-2 py-2 whitespace-nowrap">
                     <select
                       value={u.store_code || ''}
                       onChange={e => changeStore(u, e.target.value)}
                       disabled={u.user_type === 'admin' && !isAdmin}
-                      className="h-8 rounded-md border bg-background px-2 text-xs font-medium focus:ring-1 focus:ring-primary disabled:opacity-50"
+                      title={locale === 'vi' ? 'Trụ sở chính / Tất cả chi nhánh' : locale === 'en' ? 'HQ / All Stores (Unlocked)' : '總部 / 全門市（不鎖定）'}
+                      className="h-7 w-28 rounded-md border bg-background px-1.5 text-[11px] font-medium focus:ring-1 focus:ring-primary disabled:opacity-50"
                     >
                       <option value="">
-                        {locale === 'vi' ? 'Trụ sở chính / Tất cả chi nhánh' : locale === 'en' ? 'HQ / All Stores (Unlocked)' : '總部 / 全門市（不鎖定）'}
+                        {locale === 'vi' ? 'Tất cả' : locale === 'en' ? 'All stores' : '總部／全門市'}
                       </option>
                       {storeList.map(s => (
                         <option key={s.code} value={s.code}>
-                          [{s.code}] {s.name}
+                          {s.name}
                         </option>
                       ))}
                     </select>
                   </td>
-                  {unitAreas.map(a => {
-                    if (a.key === 'hr') {
-                      const units = u.units ?? []
-                      const full = u.user_type === 'admin' || units.includes('hr')
-                      const locked = u.user_type === 'admin' && !isAdmin
+                  {columns.map(a => {
+                    const group = SUB_GROUPS[a.key]
+                    if (group) {
+                      // 管理者帳號本來就全開，不需指派
+                      const units = u.user_type === 'admin' ? [...(u.units ?? []), group.full] : (u.units ?? [])
                       return (
-                        <td key={a.key} className="px-2 text-center align-top py-2">
-                          <label className="flex items-center justify-center gap-1 text-[11px] whitespace-nowrap cursor-pointer">
-                            <input type="checkbox" className="h-4 w-4 accent-primary cursor-pointer disabled:cursor-not-allowed"
-                              checked={full} disabled={locked} onChange={() => toggle(u, 'hr')} title={a.label} />
-                            {locale === 'vi' ? 'Tất cả' : locale === 'en' ? 'All' : '全部'}
-                          </label>
-                          {!full && (
-                            <div className="mt-1 grid grid-cols-2 gap-x-2 gap-y-0.5 text-left">
-                              {HR_SUB_AREAS.map(sa => (
-                                <label key={sa.key} className="flex items-center gap-1 text-[11px] whitespace-nowrap cursor-pointer">
-                                  <input type="checkbox" className="h-3.5 w-3.5 accent-primary cursor-pointer"
-                                    checked={units.includes(sa.key)} disabled={locked} onChange={() => toggle(u, sa.key)} />
-                                  {locale === 'vi' ? sa.vi : locale === 'en' ? sa.en : sa.zh}
-                                </label>
-                              ))}
-                            </div>
-                          )}
+                        <td key={a.key} className="px-2 py-2 text-center">
+                          <SubPermDropdown units={units} group={group} locked={u.user_type === 'admin'} locale={locale} onToggle={k => toggle(u, k)} />
                         </td>
                       )
                     }

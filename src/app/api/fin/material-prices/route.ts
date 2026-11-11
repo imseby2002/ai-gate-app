@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 
 async function getAdminUser() {
-  const ctx = await getUnitContextAny(['finance', 'rd', 'store', 'audit'])
+  const ctx = await getUnitContextAny(['finance', 'finance:pricing', 'rd', 'store', 'audit'])
   if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin , status: ctx.status }
   return { user: { id: ctx.ownerId }, supabase: ctx.admin , status: ctx.status }
 }

@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { readXlsx, type Cell } from '@/lib/inv/xlsxRead'
 
 async function getAdminUser() {
-  const ctx = await getUnitContextAny(['rd', 'store', 'audit', 'finance'])
+  const ctx = await getUnitContextAny(['rd', 'store', 'audit', 'finance', 'finance:pricing'])
   if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin , status: ctx.status }
   return { user: { id: ctx.ownerId }, supabase: ctx.admin , status: ctx.status }
 }
