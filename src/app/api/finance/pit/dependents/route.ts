@@ -18,7 +18,7 @@ function pick(body: Record<string, unknown>) {
 }
 
 export async function POST(req: NextRequest) {
-  const ctx = await getUnitContextAny(['finance', 'hr'])
+  const ctx = await getUnitContextAny(['finance', 'finance:tax', 'hr'])
   if (!ctx.ok) return deny(ctx.status)
   const body = await req.json().catch(() => ({}))
   const employee_id = String(body.employee_id ?? '')
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const ctx = await getUnitContextAny(['finance', 'hr'])
+  const ctx = await getUnitContextAny(['finance', 'finance:tax', 'hr'])
   if (!ctx.ok) return deny(ctx.status)
   const body = await req.json().catch(() => ({}))
   const id = String(body.id ?? '')
@@ -49,7 +49,7 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const ctx = await getUnitContextAny(['finance', 'hr'])
+  const ctx = await getUnitContextAny(['finance', 'finance:tax', 'hr'])
   if (!ctx.ok) return deny(ctx.status)
   const body = await req.json().catch(() => ({}))
   const id = String(body.id ?? '')

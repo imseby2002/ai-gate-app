@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { randomBytes } from 'crypto'
-import { getUnitContext } from '@/lib/auth/unit-access'
+import { getFinanceContext } from '@/lib/auth/unit-access'
 import { hashPin } from '@/lib/hr/portal'
 import { VENDOR_SLUG_PATTERN } from '@/lib/fin/vendor-portal'
 import { companySlugForOwner } from '@/lib/company/fromHost'
 
 async function getAdminUser() {
-  const ctx = await getUnitContext('finance')
+  const ctx = await getFinanceContext('vendors', 'expenses')
   if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin , status: ctx.status }
   return { user: { id: ctx.ownerId }, supabase: ctx.admin , status: ctx.status }
 }

@@ -383,6 +383,8 @@ export default function FinancePage() {
   const [mainTab, setMainTab] = useState<MainTab>('cashflow')
   const [subTab, setSubTab] = useState<SubTab>('journal')
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
+  // 總務子權限：'finance' 全部，或 finance:cashier / finance:pricing / finance:expenses / finance:vendors 個別開放
+  const [finAreas, setFinAreas] = useState<{ cashier: boolean; pricing: boolean; expenses: boolean; vendors: boolean }>({ cashier: true, pricing: true, expenses: true, vendors: true })
 
   // 年月狀態（Zero.Net 風格）
   const [year, setYear] = useState<number>(2026)
@@ -475,7 +477,16 @@ export default function FinancePage() {
   }, [year, month, subTab])
 
   useEffect(() => {
-    fetch('/api/hr/accounts').then(res => setIsAdmin(res.status !== 403))
+    fetch('/api/org/access').then(r => r.ok ? r.json() : null).then(d => {
+      const units: string[] = d?.units ?? []
+      const full = !!(d?.isAdmin || d?.canManage || units.includes('finance'))
+      const has = (a: string) => full || units.includes(`finance:${a}`)
+      const areas = { cashier: has('cashier'), pricing: has('pricing'), expenses: has('expenses'), vendors: has('vendors') }
+      setFinAreas(areas)
+      setIsAdmin(areas.cashier || areas.pricing)
+      const wantPricing = new URLSearchParams(window.location.search).get('tab') === 'pricing'
+      if ((wantPricing || !areas.cashier) && areas.pricing) setMainTab('pricing')
+    }).catch(() => setIsAdmin(false))
     loadSubjects()
     loadAccounts()
     loadImportLogs()
@@ -711,43 +722,43 @@ export default function FinancePage() {
 
         {/* 主功能 Tab 切換 (出納帳務、物料定價、業績報表) */}
         <div className="flex items-center gap-1 bg-muted p-1 rounded-xl">
-          <button
+          {finAreas.cashier && <button
             onClick={() => setMainTab('cashflow')}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
               mainTab === 'cashflow' ? 'bg-card text-foreground font-bold shadow-xs' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             {t('cf.tabCashflow')}
-          </button>
-          <button
+          </button>}
+          {finAreas.pricing && <button
             onClick={() => setMainTab('pricing')}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
               mainTab === 'pricing' ? 'bg-card text-foreground font-bold shadow-xs' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             {t('cf.tabPricing')}
-          </button>
-          <button
+          </button>}
+          {finAreas.cashier && <button
             onClick={() => setMainTab('pnl')}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
               mainTab === 'pnl' ? 'bg-card text-foreground font-bold shadow-xs' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             {t('cf.tabPnl')}
-          </button>
+          </button>}
         </div>
 
         <div className="flex items-center gap-2">
-          <Link href="/store-expenses">
+          {finAreas.expenses && <Link href="/store-expenses">
             <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5">
               <Store className="h-3.5 w-3.5" />{t('cf.tabStoreExpenses')}
             </Button>
-          </Link>
-          <Link href="/vendors">
+          </Link>}
+          {finAreas.vendors && <Link href="/vendors">
             <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5">
               <Truck className="h-3.5 w-3.5" />{t('cf.tabVendors')}
             </Button>
-          </Link>
+          </Link>}
         </div>
       </div>
 
@@ -756,13 +767,13 @@ export default function FinancePage() {
           <PricingTab />
         </div>
       )}
-      {mainTab === 'pnl' && (
+      {mainTab === 'pnl' && finAreas.cashier && (
         <div className="flex-1 overflow-y-auto min-h-0 pt-2">
           <PnlReport />
         </div>
       )}
 
-      {mainTab === 'cashflow' && (
+      {mainTab === 'cashflow' && finAreas.cashier && (
         <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4 flex-1 min-h-0 pt-2 items-stretch overflow-hidden">
           {/* 左側：科目樹狀結構與年月導覽（Zero.Net 左欄） - 獨立上下捲動 */}
           <div className="h-full min-h-0 overflow-hidden flex flex-col">

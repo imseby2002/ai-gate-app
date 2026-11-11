@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getUnitContext } from '@/lib/auth/unit-access'
+import { getFinanceContext } from '@/lib/auth/unit-access'
 import crypto from 'crypto'
 
 async function getFinanceUser() {
-  const ctx = await getUnitContext('finance')
+  const ctx = await getFinanceContext('vendors', 'expenses')
   if (!ctx.ok) return { user: null, supabase: ctx.admin , status: ctx.status }
   return { user: { id: ctx.ownerId }, supabase: ctx.admin , status: ctx.status }
 }

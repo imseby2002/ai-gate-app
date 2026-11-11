@@ -7,7 +7,7 @@ const deny = (status: number) => NextResponse.json({ error: status === 401 ? 'Un
 const n = (v: unknown) => Number(v) || 0
 
 export async function GET(req: NextRequest) {
-  const ctx = await getUnitContextAny(['finance', 'hr'])
+  const ctx = await getUnitContextAny(['finance', 'finance:tax', 'hr'])
   if (!ctx.ok) return deny(ctx.status)
   const sp = new URL(req.url).searchParams
   const year = parseInt(sp.get('year') ?? '')
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
 // 由該月 hr_payroll 產生／重算（保留已手動填的免稅所得、備註）
 // 由會計薪資表匯入的列（source = import:*）直接採用表上實際扣繳數字，不重算
 export async function POST(req: NextRequest) {
-  const ctx = await getUnitContextAny(['finance', 'hr'])
+  const ctx = await getUnitContextAny(['finance', 'finance:tax', 'hr'])
   if (!ctx.ok) return deny(ctx.status)
   const { admin, ownerId } = ctx
   const body = await req.json().catch(() => ({}))
@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
 
 // 手動調整單筆後重算
 export async function PATCH(req: NextRequest) {
-  const ctx = await getUnitContextAny(['finance', 'hr'])
+  const ctx = await getUnitContextAny(['finance', 'finance:tax', 'hr'])
   if (!ctx.ok) return deny(ctx.status)
   const { admin, ownerId } = ctx
   const body = await req.json().catch(() => ({}))

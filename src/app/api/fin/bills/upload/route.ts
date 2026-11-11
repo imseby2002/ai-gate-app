@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
   let ownerId: string | null = null
   let adminClient: any = null
 
-  const ctx = await getUnitContextAny(['finance', 'store'])
+  const ctx = await getUnitContextAny(['finance', 'finance:expenses', 'store'])
   if (ctx.ok) {
     ownerId = ctx.ownerId
     adminClient = ctx.admin

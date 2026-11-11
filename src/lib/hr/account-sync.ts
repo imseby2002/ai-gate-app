@@ -7,6 +7,8 @@ type Admin = ReturnType<typeof createAdminClient>
 export const UNIT_KEYS = ['hr', 'finance', 'rd', 'store', 'store_leader', 'affairs', 'audit', 'marketing', 'mkt', 'repair', 'gm']
 // 人事子權限（見 lib/auth/unit-access.ts HR_AREAS）
 UNIT_KEYS.push('hr:recruit', 'hr:staff', 'hr:payroll', 'hr:union')
+// 總務子權限（見 lib/auth/unit-access.ts FINANCE_AREAS）
+UNIT_KEYS.push('finance:cashier', 'finance:tax', 'finance:pricing', 'finance:expenses', 'finance:vendors')
 
 export function cleanUnits(v: unknown): string[] {
   if (!Array.isArray(v)) return []

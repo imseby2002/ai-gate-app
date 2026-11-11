@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getUnitContext } from '@/lib/auth/unit-access'
+import { getFinanceContext } from '@/lib/auth/unit-access'
 import { syncPnlStores, computeAutoPnl } from '@/lib/finance/pnl-auto'
 
 // GET /api/hr/pnl/detail?period=YYYY-MM&store_id=…&line_code=…
 // 單一格的來源明細（出納／薪資／門市費用）、目前人工值、修改紀錄
 export async function GET(req: NextRequest) {
-  const ctx = await getUnitContext('finance')
+  const ctx = await getFinanceContext('cashier')
   if (!ctx.ok) return NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status })
   const { admin, ownerId } = ctx
   const sp = req.nextUrl.searchParams

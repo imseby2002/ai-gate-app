@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 
 // 產品售價與成本比例（Excel「GIÁ THÀNH ĐỒ UỐNG」白珍珠版 / 「Bảng giá sản phẩm」全加料組合版）
 export async function GET() {
-  const ctx = await getUnitContextAny(['rd', 'store', 'audit', 'finance'])
+  const ctx = await getUnitContextAny(['rd', 'store', 'audit', 'finance', 'finance:pricing'])
   if (!ctx.ok) return NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status })
 
   const rows: Record<string, unknown>[] = []

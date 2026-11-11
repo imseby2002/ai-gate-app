@@ -159,3 +159,14 @@ export function hasHrArea(ctx: Pick<UnitContext, 'isAdmin' | 'units'>, area: HrA
   const units = ctx.units ?? []
   return ctx.isAdmin || units.includes('hr') || units.includes(`hr:${area}`)
 }
+
+// ── 總務子權限 ──────────────────────────────────────────────────────────
+// profiles.units 含 'finance' ＝ 總務全部；或只給其中幾塊：'finance:cashier' 出納（收支、帳戶、損益）、
+// 'finance:tax' 會計・個人稅、'finance:pricing' 物料定價、'finance:expenses' 門市費用、'finance:vendors' 廠商資料。
+export const FINANCE_AREAS = ['cashier', 'tax', 'pricing', 'expenses', 'vendors'] as const
+export type FinanceArea = (typeof FINANCE_AREAS)[number]
+
+/** 驗證總務某一塊（或其中任一塊）的存取權 */
+export function getFinanceContext(...areas: FinanceArea[]): Promise<UnitContext> {
+  return getUnitContextAny(['finance', ...areas.map(a => `finance:${a}`)])
+}

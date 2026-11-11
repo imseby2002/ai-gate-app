@@ -56,7 +56,7 @@ export const UNIT_AREAS: UnitArea[] = [
   },
   {
     key: 'store',
-    label: '門市營運',
+    label: '門市',
     homeHref: '/store',
     description: '門市報表・盤點訂貨・水電瓦斯冰塊・現場報修排班',
     pages: [
@@ -71,7 +71,7 @@ export const UNIT_AREAS: UnitArea[] = [
   },
   {
     key: 'store_leader',
-    label: '門市領班',
+    label: '領班',
     homeHref: '/shift',
     description: '僅限所屬門市：排班與員工評分',
     pages: [
@@ -80,7 +80,7 @@ export const UNIT_AREAS: UnitArea[] = [
   },
   {
     key: 'affairs',
-    label: '外務・證照',
+    label: '外務',
     homeHref: '/affairs',
     description: '門市租約・營業執照・到期提醒，另有法律合規 AI 子功能',
     pages: [
@@ -428,13 +428,13 @@ export function getLocalizedUnitLabel(locale?: string): Record<string, string> {
 export function getLocalizedDepartments(locale?: string): { key: string; label: string; icon: string }[] {
   const labels = getLocalizedUnitLabel(locale)
   return [
-    { key: 'store',     label: labels.store || '門市營運',     icon: '🏪' },
+    { key: 'store',     label: labels.store || '門市',     icon: '🏪' },
     { key: 'finance',   label: labels.finance || '出納總務',   icon: '💰' },
     { key: 'rd',        label: labels.rd || '研發配方',       icon: '🧪' },
     { key: 'hr',        label: labels.hr || '人事管理',       icon: '👥' },
     { key: 'audit',     label: labels.audit || '稽核巡檢',     icon: '🛡️' },
     { key: 'repair',    label: labels.repair || '設備維修',    icon: '🔧' },
-    { key: 'affairs',   label: labels.affairs || '外務證照',   icon: '📑' },
+    { key: 'affairs',   label: labels.affairs || '外務',   icon: '📑' },
     { key: 'marketing', label: labels.marketing || '品牌行銷', icon: '📣' },
     { key: 'gm',        label: labels.gm || '總經理室',       icon: '👑' },
     { key: 'system',    label: labels.system || '全系統共用',   icon: '🌐' },
@@ -453,7 +453,7 @@ export function hasUnit(isAdmin: boolean, units: string[] | null | undefined, ke
   if (key === 'marketing' || key === 'mkt') {
     return list.includes('marketing') || list.includes('mkt')
   }
-  // 人事可只給部分子權限（hr:recruit 等），有任一塊就顯示人事入口
-  if (key === 'hr') return list.some(u => u === 'hr' || u.startsWith('hr:'))
+  // 人事／總務可只給部分子權限（hr:recruit、finance:tax 等），有任一塊就顯示該部門入口
+  if (key === 'hr' || key === 'finance') return list.some(u => u === key || u.startsWith(`${key}:`))
   return list.includes(key)
 }

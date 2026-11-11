@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getUnitContext } from '@/lib/auth/unit-access'
+import { getFinanceContext } from '@/lib/auth/unit-access'
 import { similarity, FUZZY_MATCH_THRESHOLD } from '@/lib/fin/fuzzy-match'
 
 async function getAdminUser() {
-  const ctx = await getUnitContext('finance')
+  const ctx = await getFinanceContext('vendors')
   if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin , status: ctx.status }
   return { user: { id: ctx.ownerId }, supabase: ctx.admin , status: ctx.status }
 }

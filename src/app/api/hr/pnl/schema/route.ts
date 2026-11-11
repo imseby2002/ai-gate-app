@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getUnitContext } from '@/lib/auth/unit-access'
+import { getFinanceContext } from '@/lib/auth/unit-access'
 import { PNL_LINES } from '@/app/(standalone)/finance/pnl-schema'
 
 async function getAdminUser() {
-  const ctx = await getUnitContext('finance')
+  const ctx = await getFinanceContext('cashier')
   if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin , status: ctx.status }
   return { user: { id: ctx.ownerId }, supabase: ctx.admin , status: ctx.status }
 }
