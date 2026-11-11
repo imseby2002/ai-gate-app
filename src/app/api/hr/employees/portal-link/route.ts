@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
-import { getUnitContext } from '@/lib/auth/unit-access'
+import { getHrContext } from '@/lib/auth/unit-access'
 import { companySlugForOwner } from '@/lib/company/fromHost'
 import { portalMessage, portalUrl } from '@/lib/hr/portal-link'
 
@@ -8,7 +8,7 @@ export const maxDuration = 120
 
 // 以 Email 寄員工專區連結給員工。body: { employee_ids: string[] }（最多 300）
 export async function POST(req: NextRequest) {
-  const ctx = await getUnitContext('hr')
+  const ctx = await getHrContext('staff')
   if (!ctx.ok) return NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status })
   if (!process.env.RESEND_API_KEY) return NextResponse.json({ error: 'Email 未設定（RESEND_API_KEY）' }, { status: 503 })
   const b = await req.json().catch(() => ({}))

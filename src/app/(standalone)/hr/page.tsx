@@ -2447,6 +2447,16 @@ export default function HRPage() {
   const [empLoading, setEmpLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
   const [settings, setSettings] = useState<InsSettings>(DEFAULT_INS_SETTINGS)
+  // 人事子權限：null＝全部可用；否則為可用的子權限（recruit / staff / payroll / union）
+  const [hrAreas, setHrAreas] = useState<string[] | null>(null)
+  useEffect(() => {
+    fetch('/api/org/access').then(r => r.ok ? r.json() : null).then(d => {
+      if (!d || d.canManage || d.isAdmin) return
+      const units: string[] = d.units ?? []
+      if (units.includes('hr')) return
+      setHrAreas(units.filter(u => u.startsWith('hr:')).map(u => u.slice(3)))
+    }).catch(() => {})
+  }, [])
 
   const loadSettings = useCallback(async () => {
     const res = await fetch('/api/hr/settings')
@@ -2473,7 +2483,7 @@ export default function HRPage() {
 
   useEffect(() => { loadEmployees() }, [loadEmployees])
 
-  const TABS: { id: Tab; label: string; icon: ReactNode }[] = [
+  const ALL_TABS: { id: Tab; label: string; icon: ReactNode }[] = [
     { id: 'recruitment', label: t('tabRecruitment'), icon: <UserPlus className="h-4 w-4" /> },
     { id: 'attendance',  label: t('tabAttendance'), icon: <Clock className="h-4 w-4" /> },
     { id: 'payroll',     label: t('tabPayroll'), icon: <DollarSign className="h-4 w-4" /> },
@@ -2484,6 +2494,14 @@ export default function HRPage() {
     { id: 'employees',   label: t('tabEmployees'), icon: <Users className="h-4 w-4" /> },
     { id: 'leave',       label: t('tabLeave'), icon: <Calendar className="h-4 w-4" /> },
   ]
+  const TAB_AREA: Record<Tab, string> = {
+    recruitment: 'recruit', attendance: 'staff', evaluation: 'staff', contracts: 'staff', employees: 'staff', leave: 'staff',
+    payroll: 'payroll', insurance: 'payroll', union: 'union',
+  }
+  const TABS = hrAreas ? ALL_TABS.filter(tb => hrAreas.includes(TAB_AREA[tb.id])) : ALL_TABS
+  const canStaff = !hrAreas || hrAreas.includes('staff')
+  // 目前分頁沒有權限時，切到第一個可用的分頁
+  const activeTab: Tab = TABS.some(tb => tb.id === tab) ? tab : (TABS[0]?.id ?? tab)
 
   if (isAdmin === false) {
     return (
@@ -2511,11 +2529,13 @@ export default function HRPage() {
           <span className="text-sm text-gray-400 mr-1">
             {t('activeEmployeesPrefix')} <span className="font-semibold text-gray-700">{employees.filter(e => e.status === 'active').length}</span> {t('activeEmployeesSuffix')}
           </span>
-          <Link href="/personnel">
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <Users className="h-4 w-4" />{t('personnelDataLink')}
-            </Button>
-          </Link>
+          {canStaff && (
+            <Link href="/personnel">
+              <Button variant="outline" size="sm" className="gap-1.5">
+                <Users className="h-4 w-4" />{t('personnelDataLink')}
+              </Button>
+            </Link>
+          )}
           <a href="/api/docs/hr-manual" target="_blank" rel="noreferrer"><Button variant="outline" size="sm" className="gap-1.5"><BookOpen className="h-4 w-4" />{t('manualDoc')}</Button></a>
           <a href="/api/docs/hr-manual?download=1" title={t('manualDownload')}><Button variant="outline" size="sm" className="px-2"><Download className="h-4 w-4" /></Button></a>
         </div>
@@ -2526,7 +2546,7 @@ export default function HRPage() {
         {TABS.map(tb => (
           <button key={tb.id} onClick={() => setTab(tb.id)}
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition-all"
-            style={tab === tb.id ? { background: 'white', color: 'var(--primary)', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' } : { color: '#6b7280' }}>
+            style={activeTab === tb.id ? { background: 'white', color: 'var(--primary)', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' } : { color: '#6b7280' }}>
             {tb.icon}{tb.label}
           </button>
         ))}
@@ -2534,15 +2554,15 @@ export default function HRPage() {
 
       {/* Tab Content */}
       <Card className="p-5">
-        {tab === 'recruitment' && <RecruitmentTab onHired={loadEmployees} />}
-        {tab === 'attendance' && <AttendanceTab />}
-        {tab === 'payroll'   && <PayrollTab employees={employees} loading={empLoading} onRefresh={loadEmployees} />}
-        {tab === 'evaluation' && <EvaluationTab employees={employees} loading={empLoading} canEditTiers />}
-        {tab === 'contracts' && <ContractsTab employees={employees} />}
-        {tab === 'insurance' && <InsuranceTab onRefresh={loadEmployees} />}
-        {tab === 'union'     && <UnionTab />}
-        {tab === 'employees' && <EmployeesTab employees={employees} loading={empLoading} onRefresh={loadEmployees} settings={settings} onSettingsChange={setSettings} portalBase={portalBase} />}
-        {tab === 'leave'     && <LeaveTab employees={employees} loading={empLoading} />}
+        {activeTab === 'recruitment' && <RecruitmentTab onHired={loadEmployees} />}
+        {activeTab === 'attendance' && <AttendanceTab />}
+        {activeTab === 'payroll'   && <PayrollTab employees={employees} loading={empLoading} onRefresh={loadEmployees} />}
+        {activeTab === 'evaluation' && <EvaluationTab employees={employees} loading={empLoading} canEditTiers />}
+        {activeTab === 'contracts' && <ContractsTab employees={employees} />}
+        {activeTab === 'insurance' && <InsuranceTab onRefresh={loadEmployees} />}
+        {activeTab === 'union'     && <UnionTab />}
+        {activeTab === 'employees' && <EmployeesTab employees={employees} loading={empLoading} onRefresh={loadEmployees} settings={settings} onSettingsChange={setSettings} portalBase={portalBase} />}
+        {activeTab === 'leave'     && <LeaveTab employees={employees} loading={empLoading} />}
       </Card>
     </div>
   )

@@ -453,5 +453,7 @@ export function hasUnit(isAdmin: boolean, units: string[] | null | undefined, ke
   if (key === 'marketing' || key === 'mkt') {
     return list.includes('marketing') || list.includes('mkt')
   }
+  // 人事可只給部分子權限（hr:recruit 等），有任一塊就顯示人事入口
+  if (key === 'hr') return list.some(u => u === 'hr' || u.startsWith('hr:'))
   return list.includes(key)
 }

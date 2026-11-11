@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { generateTextByChain } from '@/lib/ai/proxy-fallback'
-import { getUnitContext } from '@/lib/auth/unit-access'
+import { getHrContext } from '@/lib/auth/unit-access'
 import { APPLY_BUCKET, DOC_LABEL } from '@/lib/hr/apply'
 
 export const maxDuration = 120
@@ -19,7 +19,7 @@ function mediaTypeOf(name: string): string | null {
 
 // AI 將該人員上傳的文件轉文字並彙整成「完整基本資料」，存入 profile_text（日後選材）。
 export async function POST(req: NextRequest) {
-  const ctx = await getUnitContext('hr')
+  const ctx = await getHrContext('staff')
   if (!ctx.ok) return NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status })
   if (!process.env.ANTHROPIC_API_KEY) return NextResponse.json({ error: 'ANTHROPIC_API_KEY 未設定' }, { status: 400 })
   const { admin, ownerId } = ctx

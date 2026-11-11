@@ -1,19 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { profileOpen } from '@/lib/hr/profile'
 import { ATTENDANCE_ERR, attendanceTaken, cleanAttendanceNo, validAttendanceNo } from '@/lib/hr/attendance'
-import { getUnitContext } from '@/lib/auth/unit-access'
+import { getHrContext, hasHrArea } from '@/lib/auth/unit-access'
 import { companySlugForOwner } from '@/lib/company/fromHost'
 import { adoptProfileAccess, cleanStores, cleanUnits, checkProfileLink, syncProfileFromEmployee } from '@/lib/hr/account-sync'
 
 async function getAdminUser() {
-  const ctx = await getUnitContext('hr')
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin , status: ctx.status }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin , status: ctx.status }
+  const ctx = await getHrContext('recruit', 'staff', 'payroll', 'union')
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin , status: ctx.status, ctx }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin , status: ctx.status, ctx }
 }
 
+// 薪資／銀行／稅務欄位：沒有人事「薪資」權限的人看不到、也不能改
+const PAY_FIELDS = ['base_salary', 'hourly_rate', 'bank_account', 'bank_name', 'insurance_salary', 'payroll_code', 'pit_method', 'tax_code']
+// 帳號權限欄位：只有人事全權（或公司負責人／IT）能改，避免子權限的人替自己加權限
+const ACCESS_FIELDS = ['units', 'managed_stores', 'store_locked']
+type HrCtx = Awaited<ReturnType<typeof getAdminUser>>['ctx']
+const fullHr = (ctx: HrCtx) => ctx.isAdmin || (ctx.units ?? []).includes('hr')
+
 export async function GET() {
-  const { user, supabase , status: authStatus } = await getAdminUser()
+  const { user, supabase , status: authStatus, ctx } = await getAdminUser()
   if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
+  const canPay = hasHrArea(ctx, 'payroll')
 
   const { data, error } = await supabase
     .from('hr_employees')
@@ -32,16 +40,21 @@ export async function GET() {
   const employees = (data ?? []).map(e => {
     const c = pe.get(e.id)
     const open = profileOpen(c ?? {})
-    return { ...e, profile_edit: { open, until: open ? c?.profile_edit_until ?? null : null, updated_at: c?.resume_updated_at ?? null } }
+    const row: Record<string, unknown> = { ...e, profile_edit: { open, until: open ? c?.profile_edit_until ?? null : null, updated_at: c?.resume_updated_at ?? null } }
+    if (!canPay) for (const f of PAY_FIELDS) delete row[f]
+    return row
   })
   return NextResponse.json({ employees, portal_base: slug ? `https://${slug}.im-tourist.com` : null })
 }
 
 export async function POST(req: NextRequest) {
-  const { user, supabase , status: authStatus } = await getAdminUser()
+  const { user, supabase , status: authStatus, ctx } = await getAdminUser()
   if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
+  if (!hasHrArea(ctx, 'staff')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const body = await req.json()
+  if (!hasHrArea(ctx, 'payroll')) for (const f of PAY_FIELDS) delete body[f]
+  if (!fullHr(ctx)) for (const f of ACCESS_FIELDS) delete body[f]
   const {
     name, email, phone, department, position, employment_type, hire_date, base_salary,
     bank_account, id_number, notes, status,
@@ -95,11 +108,14 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const { user, supabase , status: authStatus } = await getAdminUser()
+  const { user, supabase , status: authStatus, ctx } = await getAdminUser()
   if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
+  if (!hasHrArea(ctx, 'staff')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const body = await req.json()
   const { id, owner_id: _owner, created_at: _created, ...updates } = body
+  if (!hasHrArea(ctx, 'payroll')) for (const f of PAY_FIELDS) delete updates[f]
+  if (!fullHr(ctx)) for (const f of ACCESS_FIELDS) delete updates[f]
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
   // 只讀／衍生欄位不寫回（列表 API 附帶的 profile_edit、舊工號紀錄由下方計算）
   delete updates.profile_edit
@@ -152,8 +168,9 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const { user, supabase , status: authStatus } = await getAdminUser()
+  const { user, supabase , status: authStatus, ctx } = await getAdminUser()
   if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
+  if (!hasHrArea(ctx, 'staff')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { id } = await req.json()
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })

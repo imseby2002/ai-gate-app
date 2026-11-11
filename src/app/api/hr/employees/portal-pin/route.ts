@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { randomInt } from 'crypto'
-import { getUnitContext } from '@/lib/auth/unit-access'
+import { getHrContext } from '@/lib/auth/unit-access'
 import { hashPin, portalUrlForEmployee } from '@/lib/hr/portal'
 
 // 人事發臨時密碼給員工專區（例如沒有生日的員工）：產生 8 位數字密碼，
 // 舊密碼失效、解除鎖定；員工用它登入後必須改成自己的密碼。body: { employee_id }
 export async function POST(req: NextRequest) {
-  const ctx = await getUnitContext('hr')
+  const ctx = await getHrContext('staff')
   if (!ctx.ok) return NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status })
   const { employee_id } = await req.json().catch(() => ({}))
   if (!employee_id) return NextResponse.json({ error: 'employee_id required' }, { status: 400 })

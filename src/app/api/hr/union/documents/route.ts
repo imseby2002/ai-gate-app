@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { randomUUID } from 'crypto'
-import { getUnitContext } from '@/lib/auth/unit-access'
+import { getHrContext } from '@/lib/auth/unit-access'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 const BUCKET = 'affair-docs' // reuse documents bucket or hr bucket
 
 async function getAdminUser() {
-  const ctx = await getUnitContext('hr')
+  const ctx = await getHrContext('union')
   if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin , status: ctx.status }
   return { user: { id: ctx.ownerId }, supabase: ctx.admin , status: ctx.status }
 }

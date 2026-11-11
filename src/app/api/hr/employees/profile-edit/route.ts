@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getUnitContext } from '@/lib/auth/unit-access'
+import { getHrContext } from '@/lib/auth/unit-access'
 import { candidateForEmployee, setProfileEdit } from '@/lib/hr/profile'
 
 // 人事開放／關閉員工在員工專區修改履歷。body: { employee_id, open: boolean }
 export async function PUT(req: NextRequest) {
-  const ctx = await getUnitContext('hr')
+  const ctx = await getHrContext('staff')
   if (!ctx.ok) return NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status })
   const { employee_id, open } = await req.json().catch(() => ({}))
   const { data: emp } = await ctx.admin.from('hr_employees').select('id, name, store, staff_category, phone, email')

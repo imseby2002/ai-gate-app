@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { syncCandidateToEmployee } from '@/lib/hr/profile'
-import { getUnitContext } from '@/lib/auth/unit-access'
+import { getHrContext, hasHrArea } from '@/lib/auth/unit-access'
 import { DOC_CATALOG, APPLY_BUCKET } from '@/lib/hr/apply'
 
 const s = (v: unknown) => String(v ?? '').trim()
@@ -11,7 +11,7 @@ const REQUIRED_TYPES = DOC_CATALOG.filter(d => d.type !== 'other' && !d.optional
 const PERSON_FIELDS = ['name', 'gender', 'native_place', 'birthday', 'id_number', 'education', 'email', 'company_email', 'zalo_user_id', 'payroll_no', 'position', 'store', 'staff_category', 'address', 'phone'] as const
 
 export async function GET(req: NextRequest) {
-  const ctx = await getUnitContext('hr')
+  const ctx = await getHrContext('staff')
   if (!ctx.ok) return NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status })
   const { admin, ownerId } = ctx
   const id = s(new URL(req.url).searchParams.get('id'))
@@ -73,6 +73,11 @@ export async function GET(req: NextRequest) {
       admin.from('hr_evaluations').select('year, month, rating, bonus, reward_total, penalty_total').eq('employee_id', person.hired_employee_id).eq('owner_id', ownerId).order('year', { ascending: false }).order('month', { ascending: false }).limit(12),
     ])
     employee = emp; payroll = pay ?? []; evaluations = ev ?? []
+    // 沒有人事「薪資」權限：不回傳薪資、銀行與薪資單
+    if (!hasHrArea(ctx, 'payroll')) {
+      if (employee) for (const f of ['base_salary', 'hourly_rate', 'insurance_salary', 'bank_name', 'bank_account'] as const) delete (employee as Record<string, unknown>)[f]
+      payroll = []
+    }
   }
 
   return NextResponse.json({ person, documents: docList, checklist: checklist ?? [], contracts: contractList, employee, payroll, evaluations, catalog: DOC_CATALOG })
@@ -80,7 +85,7 @@ export async function GET(req: NextRequest) {
 
 // 更新人員基本資料。body: { id, ...fields }
 export async function PATCH(req: NextRequest) {
-  const ctx = await getUnitContext('hr')
+  const ctx = await getHrContext('staff')
   if (!ctx.ok) return NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status })
   const b = await req.json().catch(() => ({}))
   const id = s(b.id)
@@ -95,7 +100,7 @@ export async function PATCH(req: NextRequest) {
 
 // 刪除應徵者/人員名單。body: { id }
 export async function DELETE(req: NextRequest) {
-  const ctx = await getUnitContext('hr')
+  const ctx = await getHrContext('staff')
   if (!ctx.ok) return NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status })
   const { admin, ownerId } = ctx
   const b = await req.json().catch(() => ({}))

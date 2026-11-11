@@ -4,9 +4,9 @@ import { normKind, normTiers, tierAmount } from '@/lib/hr/eval-tiers'
 
 // 人事可評全部員工；門市／門市領班只能評所屬門市的員工（未綁門市的門市帳號不限門市）
 async function getAdminUser() {
-  const ctx = await getUnitContextAny(['hr', 'store', 'store_leader'])
+  const ctx = await getUnitContextAny(['hr', 'hr:staff', 'store', 'store_leader'])
   if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin , status: ctx.status, ctx }
-  const fullHr = ctx.isAdmin || (ctx.units ?? []).includes('hr')
+  const fullHr = ctx.isAdmin || (ctx.units ?? []).includes('hr') || (ctx.units ?? []).includes('hr:staff')
   // 只有領班身分卻沒綁門市：不給看
   if (!fullHr && !(ctx.units ?? []).includes('store') && !ctx.storeCodes) return { user: null, supabase: ctx.admin, status: 403 as const, ctx }
   return { user: { id: ctx.ownerId }, supabase: ctx.admin , status: ctx.status, ctx, fullHr }

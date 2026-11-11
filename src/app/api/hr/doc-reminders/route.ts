@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
-import { getUnitContext } from '@/lib/auth/unit-access'
+import { getHrContext } from '@/lib/auth/unit-access'
 import { runDocReminders } from '@/lib/hr/doc-reminders'
 
 // 後台「立即寄缺件提醒」：處理公司人員（沿用週節流，不會重複轟炸）。
 export async function POST() {
-  const ctx = await getUnitContext('hr')
+  const ctx = await getHrContext('staff')
   if (!ctx.ok) return NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status })
   const result = await runDocReminders(ctx.admin, ctx.ownerId)
   return NextResponse.json({ ok: true, ...result })
