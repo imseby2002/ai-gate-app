@@ -4,7 +4,7 @@
 // 在員工那一列拖曳即可排班；點已排的班可調整或刪除。
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { ChevronLeft, ChevronRight, Loader2, Send, Users, CalendarPlus, Trash2, X, Wand2, Sparkles, BarChart3 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Loader2, Send, Users, CalendarPlus, Trash2, X, Wand2, Sparkles, BarChart3, Settings2 } from 'lucide-react'
 import { ExcelImportModal } from '@/components/common/ExcelImportModal'
 import type { ImportColumn } from '@/lib/excel/universal-import'
 import { Button } from '@/components/ui/button'
@@ -18,7 +18,7 @@ import { isFulltime } from '@/lib/shift/staff'
 interface Emp { id: string; name: string; employment_type: string | null; staff_category?: string | null; position: string | null }
 interface DayOff { employee_id: string; off_date: string; note: string }
 interface Leave { id: string; employee_id: string; leave_type: string; start_date: string; end_date: string; days: number; reason: string; status: 'pending' | 'approved' }
-interface Board { employees: Emp[]; rules: AvailRule[]; plans: PlanRow[]; needs: NeedRule[]; dayoffs?: DayOff[]; leaves?: Leave[] }
+interface Board { employees: Emp[]; rules: AvailRule[]; plans: PlanRow[]; needs: NeedRule[]; dayoffs?: DayOff[]; leaves?: Leave[]; holidays?: { date: string; name: string }[] }
 
 const WD_ORDER = [1, 2, 3, 4, 5, 6, 0]
 const DAY_START = 6 * 60 // 營業可能時段 06:00–24:00
@@ -37,6 +37,7 @@ export function ScheduleBoard({ store }: { store: string }) {
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
   const [showNeeds, setShowNeeds] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
   const [showAvail, setShowAvail] = useState(false)
   const [showSales, setShowSales] = useState(false)
   const [showAi, setShowAi] = useState(false)
@@ -227,6 +228,7 @@ export function ScheduleBoard({ store }: { store: string }) {
         <Button size="sm" variant="outline" onClick={() => goWeek(1)}><ChevronRight className="h-4 w-4" /></Button>
         <Button size="sm" variant="ghost" onClick={() => { const ws = mondayOf(todayStr()); setWeekStart(ws); setDate(todayStr()) }}>{t('thisWeek')}</Button>
         <div className="ml-auto flex flex-wrap gap-2">
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowSettings(true)}><Settings2 className="h-4 w-4" />{t('settingsBtn')}</Button>
           <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowNeeds(true)}><Users className="h-4 w-4" />{t('needs')}</Button>
           <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowAvail(true)}><CalendarPlus className="h-4 w-4" />{t('availForStaff')}</Button>
           <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowSales(true)}><BarChart3 className="h-4 w-4" />{t('hourlySales')}</Button>
@@ -246,6 +248,7 @@ export function ScheduleBoard({ store }: { store: string }) {
               className={`rounded-lg border px-1 py-1.5 text-center ${on ? 'border-primary bg-primary/10' : 'bg-white dark:bg-gray-950'}`}>
               <div className="text-xs text-gray-500">{WD[weekdayOf(d)]}</div>
               <div className="text-sm font-semibold">{d.slice(5)}</div>
+              {(() => { const h = data?.holidays?.find(x => x.date === d); return h ? <div className="text-[10px] leading-tight text-rose-600 truncate" title={h.name}>🎌 {h.name || t('holiday')}</div> : null })()}
               <div className="text-[10px] leading-tight">
                 {t('dayCount', { n: new Set(di.plans.map(p => p.employee_id)).size })}
                 {di.short > 0 && <span className="block text-red-500">{t('dayShort', { n: di.short })}</span>}
@@ -329,7 +332,8 @@ export function ScheduleBoard({ store }: { store: string }) {
         )}
       </Card>
 
-      {showNeeds && <NeedsModal store={store} needs={data?.needs ?? []} WD={WD} onClose={() => setShowNeeds(false)} onChanged={reload} />}
+      {showNeeds && <NeedsModal store={store} needs={data?.needs ?? []} WD={WD} from={weekStart} to={weekEnd} onClose={() => setShowNeeds(false)} onChanged={reload} />}
+      {showSettings && <SettingsModal store={store} onClose={() => setShowSettings(false)} onChanged={reload} />}
       {showAvail && <AvailModal store={store} emps={emps} rules={data?.rules ?? []} WD={WD} onClose={() => setShowAvail(false)} onChanged={reload} />}
       {showSales && <SalesModal store={store} WD={WD} onClose={() => setShowSales(false)} />}
       {showAi && <AiSuggestModal store={store} from={weekStart} to={weekEnd} WD={WD} onClose={() => setShowAi(false)} onApplied={reload} />}
@@ -396,32 +400,100 @@ function PlanEditor({ plan, name, onClose, onSaved }: { plan: PlanRow; name: str
   )
 }
 
-function NeedsModal({ store, needs, WD, onClose, onChanged }: { store: string; needs: NeedRule[]; WD: string[]; onClose: () => void; onChanged: () => void }) {
+interface EstDay { date: string; holiday: string | null; factor: number; peak: number | null; ranges: { start_min: number; end_min: number; headcount: number }[] }
+
+function NeedsModal({ store, needs, WD, from, to, onClose, onChanged }: { store: string; needs: NeedRule[]; WD: string[]; from: string; to: string; onClose: () => void; onChanged: () => void }) {
   const t = useTranslations('Shift')
-  const [f, setF] = useState({ weekdays: [] as number[], start: 11 * 60, end: 14 * 60, headcount: 2 })
+  const [f, setF] = useState({ weekdays: [] as number[], start: 11 * 60, end: 14 * 60, headcount: 2, dated: false, start_date: from, end_date: from, note: '' })
   const [err, setErr] = useState('')
+  const [est, setEst] = useState<{ salesDays: number; unit: string; holidayFactor: number; factorSource: string; days: EstDay[]; settings: { cupsPerStaffHour: number } } | null>(null)
+  const [estBusy, setEstBusy] = useState(false)
+  const [msg, setMsg] = useState('')
   const wdText = (w: number[]) => w.length === 0 || w.length === 7 ? t('everyDay') : WD_ORDER.filter(n => w.includes(n)).map(n => WD[n]).join(' ')
   const add = async () => {
     setErr('')
-    const r = await jsonPost('/api/shift/needs', 'POST', { store, weekdays: f.weekdays, start: fmtMin(f.start), end: fmtMin(f.end), headcount: f.headcount })
+    const r = await jsonPost('/api/shift/needs', 'POST', {
+      store, weekdays: f.weekdays, start: fmtMin(f.start), end: fmtMin(f.end), headcount: f.headcount,
+      ...(f.dated ? { start_date: f.start_date, end_date: f.end_date, note: f.note } : {}),
+    })
     if (!r.ok) { setErr((await r.json().catch(() => ({}))).error ?? t('saveFailed')); return }
     onChanged()
   }
   const del = async (id: string) => { await jsonPost('/api/shift/needs', 'DELETE', { id }); onChanged() }
+  const estimate = async (apply: boolean) => {
+    if (apply && !confirm(t('estApplyConfirm', { from, to }))) return
+    setEstBusy(true); setErr(''); setMsg('')
+    const r = await jsonPost('/api/shift/needs/estimate', 'POST', { store, from, to, apply })
+    const d = await r.json().catch(() => ({}))
+    setEstBusy(false)
+    if (!r.ok) { setErr(d.error ?? t('saveFailed')); return }
+    if (apply) { setMsg(t('estApplied', { n: d.saved ?? 0 })); setEst(null); onChanged() } else setEst(d)
+  }
+  const weekly = needs.filter(n => !n.start_date)
+  const dated = needs.filter(n => n.start_date).sort((a, b) => String(a.start_date).localeCompare(String(b.start_date)) || a.start_min - b.start_min)
+  const row = (n: NeedRule) => (
+    <div key={n.id} className="flex items-center justify-between border rounded-lg px-3 py-1.5 text-sm">
+      <span>
+        {n.start_date ? <b className="mr-1">{n.start_date === n.end_date ? n.start_date.slice(5) : `${n.start_date.slice(5)}~${String(n.end_date).slice(5)}`}</b> : null}
+        {(!n.start_date || n.weekdays.length > 0) && <>{wdText(n.weekdays)} · </>}{fmtMin(n.start_min)}–{fmtMin(n.end_min)} · <b>{t('people', { n: n.headcount })}</b>
+        {n.note && <span className="text-xs text-gray-500"> · {n.note}</span>}
+      </span>
+      <button onClick={() => del(n.id)} className="text-gray-400 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
+    </div>
+  )
   return (
     <Modal title={t('needsTitle', { store })} onClose={onClose}>
-      <p className="text-xs text-gray-500">{t('needsDesc')}</p>
-      <div className="space-y-1">
-        {needs.length === 0 && <p className="text-sm text-gray-400">{t('needsEmpty')}</p>}
-        {needs.map(n => (
-          <div key={n.id} className="flex items-center justify-between border rounded-lg px-3 py-2 text-sm">
-            <span>{wdText(n.weekdays)} · {fmtMin(n.start_min)}–{fmtMin(n.end_min)} · <b>{t('people', { n: n.headcount })}</b></span>
-            <button onClick={() => del(n.id)} className="text-gray-400 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
+      <p className="text-xs text-gray-500">{t('needsDesc')} {t('needsDatedDesc')}</p>
+
+      <div className="rounded-lg border border-violet-200 bg-violet-50/60 dark:bg-violet-950/20 p-3 space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm font-medium flex-1">{t('estTitle', { from: from.slice(5), to: to.slice(5) })}</span>
+          <Button size="sm" variant="outline" onClick={() => estimate(false)} disabled={estBusy}>{estBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1" />}{t('estRun')}</Button>
+        </div>
+        <p className="text-[11px] text-gray-500">{t('estDesc')}</p>
+        {est && (
+          <div className="space-y-1.5">
+            <p className="text-xs text-gray-600">
+              {est.salesDays ? t('estBasis', { days: est.salesDays, unit: est.unit === 'cups' ? t('unitCups') : t('unitOrders'), cap: est.settings.cupsPerStaffHour }) : t('estNoSales')}
+              {' · '}{t(est.factorSource === 'history' ? 'estFactorHistory' : 'estFactorSetting', { f: est.holidayFactor })}
+            </p>
+            {est.days.map(d => (
+              <div key={d.date} className="text-xs border-t pt-1">
+                <b>{d.date.slice(5)} ({WD[weekdayOf(d.date)]})</b>
+                {d.holiday != null && <span className="ml-1 text-rose-600">🎌 {d.holiday || t('holiday')} ×{d.factor}</span>}
+                {d.peak != null && <span className="ml-1 text-gray-500">{t('estPeak', { n: d.peak })}</span>}
+                <div className="text-gray-600">{d.ranges.map(r => `${fmtMin(r.start_min)}–${fmtMin(r.end_min)} ${r.headcount}${t('peopleUnit')}`).join('、') || '—'}</div>
+              </div>
+            ))}
+            <div className="flex justify-end"><Button size="sm" onClick={() => estimate(true)} disabled={estBusy}>{t('estApply')}</Button></div>
           </div>
-        ))}
+        )}
+        {msg && <p className="text-xs text-emerald-700">{msg}</p>}
       </div>
+
+      <div className="space-y-1">
+        <div className="text-xs font-medium text-gray-500">{t('needsWeekly')}</div>
+        {weekly.length === 0 && <p className="text-sm text-gray-400">{t('needsEmpty')}</p>}
+        {weekly.map(row)}
+      </div>
+      {dated.length > 0 && (
+        <div className="space-y-1">
+          <div className="text-xs font-medium text-gray-500">{t('needsDated')}</div>
+          {dated.map(row)}
+        </div>
+      )}
       <div className="border rounded-lg p-3 space-y-2 bg-gray-50 dark:bg-gray-900">
-        <div className="text-xs text-gray-500">{t('weekdaysHint')}</div>
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={f.dated} onChange={e => setF({ ...f, dated: e.target.checked })} />{t('needsUseDates')}
+        </label>
+        {f.dated && (
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <input type="date" value={f.start_date} onChange={e => setF({ ...f, start_date: e.target.value, end_date: f.end_date < e.target.value ? e.target.value : f.end_date })} className="h-9 rounded-md border px-2" />
+            ~ <input type="date" value={f.end_date} min={f.start_date} onChange={e => setF({ ...f, end_date: e.target.value })} className="h-9 rounded-md border px-2" />
+            <input value={f.note} maxLength={80} placeholder={t('needsNotePh')} onChange={e => setF({ ...f, note: e.target.value })} className="h-9 flex-1 min-w-[8rem] rounded-md border px-2" />
+          </div>
+        )}
+        <div className="text-xs text-gray-500">{f.dated ? t('weekdaysHintDated') : t('weekdaysHint')}</div>
         <WeekdayPicker value={f.weekdays} onChange={v => setF({ ...f, weekdays: v })} WD={WD} />
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <TimeSelect value={f.start} onChange={v => setF({ ...f, start: v })} /> – <TimeSelect value={f.end} onChange={v => setF({ ...f, end: v })} end />
@@ -434,6 +506,133 @@ function NeedsModal({ store, needs, WD, onClose, onChanged }: { store: string; n
     </Modal>
   )
 }
+
+type SettingsForm = Record<string, string>
+const SETTING_FIELDS: { key: string; kind: 'time' | 'num'; step?: number }[] = [
+  { key: 'openStart', kind: 'time' }, { key: 'openEnd', kind: 'time' },
+  { key: 'partMinHours', kind: 'num' }, { key: 'partMaxHours', kind: 'num' }, { key: 'fullShiftHours', kind: 'num' },
+  { key: 'fullDaysMin', kind: 'num' }, { key: 'fullDaysMax', kind: 'num' }, { key: 'maxConsecutiveDays', kind: 'num' },
+  { key: 'minRestHours', kind: 'num' }, { key: 'minStaff', kind: 'num' }, { key: 'maxStaff', kind: 'num' },
+  { key: 'cupsPerStaffHour', kind: 'num' }, { key: 'holidayFactor', kind: 'num', step: 0.1 },
+]
+
+function SettingsModal({ store, onClose, onChanged }: { store: string; onClose: () => void; onChanged: () => void }) {
+  const t = useTranslations('Shift')
+  const [scope, setScope] = useState<string>(store)
+  const [info, setInfo] = useState<{ settings: Record<string, number | string>; company: Record<string, number | string>; own: Record<string, number | string>; defaults: Record<string, number | string>; canEditCompany: boolean } | null>(null)
+  const [form, setForm] = useState<SettingsForm>({})
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState('')
+  const [holidays, setHolidays] = useState<{ id: string; date: string; name: string }[]>([])
+  const [hol, setHol] = useState({ date: '', name: '' })
+  const [tick, setTick] = useState(0)
+
+  useEffect(() => {
+    let alive = true
+    fetch(`/api/shift/settings?store=${encodeURIComponent(scope)}`).then(r => (r.ok ? r.json() : null)).then(d => {
+      if (!alive || !d) return
+      setInfo(d)
+      const own = scope === '*' ? d.company : d.own
+      const f: SettingsForm = {}
+      for (const fl of SETTING_FIELDS) f[fl.key] = own[fl.key] == null ? '' : fl.kind === 'time' ? fmtMin(Number(own[fl.key])) : String(own[fl.key])
+      f.aiNotes = String(own.aiNotes ?? '')
+      setForm(f)
+    })
+    return () => { alive = false }
+  }, [scope])
+  useEffect(() => {
+    let alive = true
+    fetch('/api/shift/holidays').then(r => (r.ok ? r.json() : { holidays: [] })).then(d => { if (alive) setHolidays(d.holidays ?? []) })
+    return () => { alive = false }
+  }, [tick])
+
+  // 空白＝沿用上一層（門市沿用公司預設，公司預設沿用系統預設）
+  const inherited = (key: string) => {
+    if (!info) return ''
+    const v = scope === '*' ? info.defaults[key] : (info.company[key] ?? info.defaults[key])
+    const fl = SETTING_FIELDS.find(x => x.key === key)
+    return v == null ? '' : fl?.kind === 'time' ? fmtMin(Number(v)) : String(v)
+  }
+  const save = async () => {
+    setBusy(true); setMsg('')
+    const settings: Record<string, unknown> = { aiNotes: form.aiNotes ?? '' }
+    for (const fl of SETTING_FIELDS) {
+      const v = (form[fl.key] ?? '').trim()
+      if (!v) continue
+      settings[fl.key] = fl.kind === 'time' ? parseHHMMClient(v) : Number(v)
+    }
+    const r = await jsonPost('/api/shift/settings', 'PUT', { store: scope, settings })
+    const d = await r.json().catch(() => ({}))
+    setBusy(false)
+    if (!r.ok) { setMsg(d.error ?? t('saveFailed')); return }
+    setMsg(t('settingsSaved')); onChanged()
+  }
+  const addHoliday = async (body: Record<string, unknown>) => {
+    const r = await jsonPost('/api/shift/holidays', 'POST', body)
+    if (!r.ok) { setMsg((await r.json().catch(() => ({}))).error ?? t('saveFailed')); return }
+    setHol({ date: '', name: '' }); setTick(x => x + 1); onChanged()
+  }
+  const delHoliday = async (id: string) => { await jsonPost('/api/shift/holidays', 'DELETE', { id }); setTick(x => x + 1); onChanged() }
+  const year = new Date().getFullYear()
+
+  return (
+    <Modal title={t('settingsTitle')} onClose={onClose}>
+      <p className="text-xs text-gray-500">{t('settingsDesc')}</p>
+      <div className="flex gap-1 text-sm">
+        <button onClick={() => setScope(store)} className={`px-3 py-1 rounded-full border ${scope === store ? 'bg-primary text-primary-foreground' : ''}`}>{t('settingsScopeStore', { store })}</button>
+        {info?.canEditCompany !== false && <button onClick={() => setScope('*')} className={`px-3 py-1 rounded-full border ${scope === '*' ? 'bg-primary text-primary-foreground' : ''}`}>{t('settingsScopeCompany')}</button>}
+      </div>
+      {!info ? <Loader2 className="h-5 w-5 animate-spin text-gray-400" /> : (
+        <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-2">
+            {SETTING_FIELDS.map(fl => (
+              <label key={fl.key} className="text-xs text-gray-600 space-y-0.5">
+                <span>{t(`set_${fl.key}`)}</span>
+                <input type={fl.kind === 'time' ? 'time' : 'number'} step={fl.kind === 'time' ? 1800 : fl.step ?? 1} value={form[fl.key] ?? ''}
+                  placeholder={inherited(fl.key)} onChange={e => setForm({ ...form, [fl.key]: e.target.value })}
+                  className="w-full h-8 rounded-md border px-2 text-sm bg-white dark:bg-gray-900" />
+              </label>
+            ))}
+          </div>
+          <label className="block text-xs text-gray-600 space-y-0.5">
+            <span>{t('set_aiNotes')}</span>
+            <textarea rows={3} value={form.aiNotes ?? ''} maxLength={1000} placeholder={t('set_aiNotesPh')} onChange={e => setForm({ ...form, aiNotes: e.target.value })}
+              className="w-full rounded-md border p-2 text-sm bg-white dark:bg-gray-900" />
+          </label>
+          <p className="text-[11px] text-gray-400">{scope === '*' ? t('settingsInheritCompany') : t('settingsInheritStore')}</p>
+          <div className="flex items-center justify-end gap-2">
+            {msg && <span className="text-xs text-emerald-700 mr-auto">{msg}</span>}
+            <Button size="sm" onClick={save} disabled={busy}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : t('save')}</Button>
+          </div>
+        </div>
+      )}
+
+      <div className="border-t pt-3 space-y-2">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium flex-1">{t('holidaysTitle')}</span>
+          <Button size="sm" variant="outline" onClick={() => addHoliday({ seedYear: year })}>{t('holidaysSeed', { y: year })}</Button>
+        </div>
+        <p className="text-[11px] text-gray-500">{t('holidaysDesc')}</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <input type="date" value={hol.date} onChange={e => setHol({ ...hol, date: e.target.value })} className="h-8 rounded-md border px-2 text-sm" />
+          <input value={hol.name} maxLength={80} placeholder={t('holidayNamePh')} onChange={e => setHol({ ...hol, name: e.target.value })} className="h-8 flex-1 min-w-[8rem] rounded-md border px-2 text-sm" />
+          <Button size="sm" onClick={() => hol.date && addHoliday(hol)} disabled={!hol.date}>{t('add')}</Button>
+        </div>
+        <div className="max-h-48 overflow-y-auto space-y-1">
+          {holidays.length === 0 && <p className="text-sm text-gray-400">{t('holidaysEmpty')}</p>}
+          {holidays.map(h => (
+            <div key={h.id} className="flex items-center justify-between text-sm border rounded px-2 py-1">
+              <span><b>{h.date}</b> {h.name}</span>
+              <button onClick={() => delHoliday(h.id)} className="text-gray-400 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Modal>
+  )
+}
+
+const parseHHMMClient = (v: string) => { const [h, m] = v.split(':').map(Number); return (h || 0) * 60 + (m || 0) }
 
 function AvailModal({ store, emps, rules, WD, onClose, onChanged }: { store: string; emps: Emp[]; rules: AvailRule[]; WD: string[]; onClose: () => void; onChanged: () => void }) {
   const t = useTranslations('Shift')

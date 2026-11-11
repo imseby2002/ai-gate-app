@@ -3,6 +3,7 @@ import { getShiftContext, storeAllowed } from '@/lib/shift/scope'
 import { pgQuote } from '@/lib/shift/staff'
 import { isDate } from '@/lib/shift/time'
 import { leavesBetween } from '@/lib/shift/leave'
+import { holidaysBetween } from '@/lib/shift/settings'
 
 // 店長排班總表：門市員工、可上班規則、人力需求、班表。?store=&from=&to=（最多 31 天）
 export async function GET(req: NextRequest) {
@@ -22,7 +23,8 @@ export async function GET(req: NextRequest) {
       .eq('owner_id', owner).eq('store', store).lte('start_date', to).gte('end_date', from),
     db.from('shift_plans').select('id, employee_id, work_date, start_min, end_min, status')
       .eq('owner_id', owner).eq('store', store).gte('work_date', from).lte('work_date', to),
-    db.from('shift_needs').select('id, weekdays, start_min, end_min, headcount').eq('owner_id', owner).eq('store', store).order('start_min'),
+    db.from('shift_needs').select('id, weekdays, start_min, end_min, headcount, start_date, end_date, note, source').eq('owner_id', owner).eq('store', store)
+      .or(`start_date.is.null,and(start_date.lte.${to},end_date.gte.${from})`).order('start_min'),
   ])
   // 已不在本店但仍有可上班規則或班表的員工也列出，避免資料看不到
   const known = new Set((emps ?? []).map(e => e.id))
@@ -37,6 +39,6 @@ export async function GET(req: NextRequest) {
       .in('employee_id', all.map(e => e.id)).gte('off_date', from).lte('off_date', to)
     : { data: [] }
   // 請假系統：待審核與已核准的請假
-  const leaves = await leavesBetween(db, owner, all.map(e => e.id), from, to)
-  return NextResponse.json({ employees: all, rules: rules ?? [], plans: plans ?? [], needs: needs ?? [], dayoffs: dayoffs ?? [], leaves })
+  const [leaves, holidays] = await Promise.all([leavesBetween(db, owner, all.map(e => e.id), from, to), holidaysBetween(db, owner, from, to)])
+  return NextResponse.json({ employees: all, rules: rules ?? [], plans: plans ?? [], needs: needs ?? [], dayoffs: dayoffs ?? [], leaves, holidays })
 }

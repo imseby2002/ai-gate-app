@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getShiftContext, storeAllowed } from '@/lib/shift/scope'
-import { parseHHMM, SLOT_MIN } from '@/lib/shift/time'
+import { isDate, parseHHMM, SLOT_MIN } from '@/lib/shift/time'
 
-// 門市人力需求：某些星期幾的某段時間需要幾個人。body: { store, weekdays: number[]（空＝每天）, start: "HH:MM", end: "HH:MM", headcount }
+// 門市人力需求：某些星期幾的某段時間需要幾個人。body: { store, weekdays: number[]（空＝每天）, start: "HH:MM", end: "HH:MM", headcount, start_date?, end_date?, note? }
+// 有 start_date／end_date 的需求只在該期間生效，且當天優先於依星期重複的需求
 export async function POST(req: NextRequest) {
   const ctx = await getShiftContext()
   if (!ctx.ok) return NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status })
@@ -15,8 +16,11 @@ export async function POST(req: NextRequest) {
   if (!Number.isFinite(headcount) || headcount < 0 || headcount > 50) return NextResponse.json({ error: '人數錯誤' }, { status: 400 })
   const raw: unknown[] = Array.isArray(b.weekdays) ? b.weekdays : []
   const weekdays = [...new Set(raw.map(Number).filter(n => Number.isInteger(n) && n >= 0 && n <= 6))].sort()
+  const sd = isDate(b.start_date) ? b.start_date : null
+  const ed = sd ? (isDate(b.end_date) && b.end_date >= sd ? b.end_date : sd) : null
+  const note = String(b.note ?? '').trim().slice(0, 80) || null
   const { data, error } = await ctx.admin.from('shift_needs')
-    .insert({ owner_id: ctx.ownerId, store, weekdays, start_min, end_min, headcount }).select('*').single()
+    .insert({ owner_id: ctx.ownerId, store, weekdays, start_min, end_min, headcount, start_date: sd, end_date: ed, note, source: 'manual' }).select('*').single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ need: data })
 }
@@ -49,7 +53,8 @@ export async function PUT(req: NextRequest) {
   }).filter(n => Number.isInteger(n.start_min) && Number.isInteger(n.end_min) && n.start_min >= 0 && n.end_min <= 1440 && n.end_min > n.start_min
     && n.start_min % SLOT_MIN === 0 && n.end_min % SLOT_MIN === 0 && n.headcount >= 0 && n.headcount <= 50)
   if (rows.length === 0) return NextResponse.json({ error: '沒有可套用的需求' }, { status: 400 })
-  await ctx.admin.from('shift_needs').delete().eq('owner_id', ctx.ownerId).eq('store', store)
+  // 只取代依星期重複的需求，指定日期的需求保留
+  await ctx.admin.from('shift_needs').delete().eq('owner_id', ctx.ownerId).eq('store', store).is('start_date', null)
   const { error } = await ctx.admin.from('shift_needs').insert(rows)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ saved: rows.length })
