@@ -379,7 +379,7 @@ function SubPermDropdown({
   locale: string
   onToggle: (key: string) => void
 }) {
-  const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
+  const [pos, setPos] = useState<{ top?: number; bottom?: number; left: number; maxHeight: number } | null>(null)
   const btnRef = useRef<HTMLButtonElement>(null)
   const boxRef = useRef<HTMLDivElement>(null)
   const lbl = (o: SubOpt) => (locale === 'vi' ? o.vi : locale === 'en' ? o.en : o.zh)
@@ -407,7 +407,14 @@ function SubPermDropdown({
   const open = () => {
     if (pos) { setPos(null); return }
     const r = btnRef.current?.getBoundingClientRect()
-    if (r) setPos({ top: r.bottom + 4, left: Math.min(r.left, window.innerWidth - 220) })
+    if (!r) return
+    const left = Math.max(8, Math.min(r.left, window.innerWidth - 220))
+    const below = window.innerHeight - r.bottom - 12
+    const above = r.top - 12
+    const need = 44 + (group.subs.length + 1) * 34
+    // 下方放不下且上方空間較大 → 往上展開
+    if (below < need && above > below) setPos({ bottom: window.innerHeight - r.top + 4, left, maxHeight: above })
+    else setPos({ top: r.bottom + 4, left, maxHeight: below })
   }
 
   return (
@@ -418,8 +425,8 @@ function SubPermDropdown({
         <ChevronDown className="h-3 w-3 shrink-0" />
       </button>
       {pos && (
-        <div ref={boxRef} style={{ top: pos.top, left: pos.left }}
-          className="fixed z-50 w-52 rounded-lg border bg-popover p-1.5 text-left shadow-lg">
+        <div ref={boxRef} style={{ top: pos.top, bottom: pos.bottom, left: pos.left, maxHeight: pos.maxHeight }}
+          className="fixed z-50 w-52 overflow-y-auto rounded-lg border bg-popover p-1.5 text-left shadow-lg">
           <label className="flex items-center gap-2 rounded px-2 py-1.5 text-xs font-semibold cursor-pointer hover:bg-muted">
             <input type="checkbox" className="h-3.5 w-3.5 accent-primary" checked={full} onChange={() => onToggle(group.full)} />
             {group.fullLabel ? lbl(group.fullLabel) : locale === 'vi' ? 'Chọn tất cả' : locale === 'en' ? 'Select all' : '全選'}
