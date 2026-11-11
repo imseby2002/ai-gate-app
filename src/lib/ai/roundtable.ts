@@ -24,7 +24,7 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createOpenAI } from '@ai-sdk/openai'
 import { streamText } from 'ai'
 import type { LanguageModel } from 'ai'
-import { createChainModel } from './proxy-fallback'
+import { createChainModel, type Attempt } from './proxy-fallback'
 import { loadExpertContext } from '@/lib/experts/loader'
 
 // ── 用量記錄（供 API route 會後扣點）────────────────────────────────────────
@@ -868,6 +868,32 @@ export async function fetchFactBriefing(
   return fullText
 }
 
+// ── 免費通道優先：同一個選定模型先走 CLIProxy → FreeLLM ────────────────────────
+
+// CLIProxy 清單裡的 Claude 5.5 名稱帶 -high；舊版號一併導到 5.5
+const SONNET_FREE = ['claude-sonnet-5-5-high', 'claude-sonnet-5-5']
+const OPUS_FREE = ['claude-opus-5-5-high', 'claude-opus-5-5']
+const FREE_ALIASES: Record<string, string[]> = {
+  'claude-sonnet-5-5': SONNET_FREE,
+  'claude-sonnet-4-6': SONNET_FREE,
+  'claude-sonnet-4-5': SONNET_FREE,
+  'claude-opus-5-5': OPUS_FREE,
+  'claude-opus-4-8': OPUS_FREE,
+  'claude-opus-4-5': OPUS_FREE,
+}
+
+function freeAttemptsFor(seatModel: string): Attempt[] {
+  const slash = seatModel.indexOf('/')
+  const provider = slash === -1 ? '' : seatModel.slice(0, slash)
+  const raw = slash === -1 ? seatModel : seatModel.slice(slash + 1)
+  // 本來就選免費通道的席位，照原本路徑走
+  if (provider === 'cliproxy' || provider === 'freellm') return []
+  return [
+    { via: 'cli-proxy', model: raw, prefer: FREE_ALIASES[raw] },
+    { via: 'free-llm', model: raw },
+  ]
+}
+
 // ── 單一席位發言 (支援多模型串流) ─────────────────────────────────────────────
 
 async function speak(
@@ -883,6 +909,36 @@ async function speak(
   emit({ type: 'seat-start', round, name: seat.name, model: seat.model, stance: stanceTitle })
   const fullSystem = expertContext ? `${systemPrompt}\n\n${expertContext}` : systemPrompt
   let full = ''
+
+  // 先用免費通道跑同一個模型；沒有這個模型、額度用完或失敗才改走付費（免費通道不計費）
+  const freeAttempts = freeAttemptsFor(seat.model)
+  if (freeAttempts.length) {
+    try {
+      const freeResult = await streamText({
+        model: createChainModel(freeAttempts),
+        system: fullSystem,
+        prompt: userPrompt,
+        maxOutputTokens: maxTokens,
+        abortSignal: AbortSignal.timeout(120000),
+      })
+      for await (const part of freeResult.fullStream) {
+        if (part.type === 'text-delta') {
+          full += part.text
+          emit({ type: 'delta', round, name: seat.name, content: part.text })
+        } else if (part.type === 'error') {
+          throw part.error
+        }
+      }
+    } catch (err) {
+      console.warn(`[roundtable] free channel failed for ${seat.name} (${seat.model}), using paid:`, err instanceof Error ? err.message : err)
+    }
+    if (full.trim().length >= 30) {
+      emit({ type: 'seat-end', round, name: seat.name })
+      return full
+    }
+    full = ''
+  }
+
   try {
     const resolved = resolveModel(seat.model) as LanguageModel
     const result = await streamText({
