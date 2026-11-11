@@ -4,6 +4,7 @@ import { getShiftContext, storeAllowed } from '@/lib/shift/scope'
 import { isFulltime, pgQuote } from '@/lib/shift/staff'
 import { leaveOn, leavesBetween } from '@/lib/shift/leave'
 import { hourlyProfile } from '@/lib/shift/sales'
+import { holidaysBetween, loadSettings } from '@/lib/shift/settings'
 import {
   SLOT_MIN, availableOn, fmtMin, isDate, listDates, needsOn, parseHHMM, weekdayOf,
   type AvailRule, type NeedRule,
@@ -36,9 +37,11 @@ export async function POST(req: NextRequest) {
       .eq('owner_id', owner).eq('store', store).lte('start_date', to).gte('end_date', from),
     db.from('shift_plans').select('employee_id, work_date, start_min, end_min, store')
       .eq('owner_id', owner).gte('work_date', from).lte('work_date', to),
-    db.from('shift_needs').select('id, weekdays, start_min, end_min, headcount').eq('owner_id', owner).eq('store', store),
+    db.from('shift_needs').select('id, weekdays, start_min, end_min, headcount, start_date, end_date').eq('owner_id', owner).eq('store', store),
     hourlyProfile(db, owner, store, from),
   ])
+  const [{ merged: cfg }, holidays] = await Promise.all([loadSettings(db, owner, store), holidaysBetween(db, owner, from, to)])
+  const holidayOf = new Map(holidays.map(h => [h.date, h.name || 'holiday']))
   const staff = emps ?? []
   if (staff.length === 0) return NextResponse.json({ error: '此門市沒有在職員工' }, { status: 400 })
   const R = (rules ?? []) as AvailRule[]
@@ -53,7 +56,7 @@ export async function POST(req: NextRequest) {
   const leaves = await leavesBetween(db, owner, staff.map(e => e.id), from, to)
   const onLeave = (id: string, d: string) => !!leaveOn(leaves, id, d)
   const availFor = (e: { id: string; staff_category?: string | null; employment_type?: string | null }, d: string) =>
-    onLeave(e.id, d) ? [] : isFulltime(e) ? (offSet.has(`${e.id}|${d}`) ? [] : [{ start: 6 * 60, end: 24 * 60 }]) : availableOn(R, e.id, d)
+    onLeave(e.id, d) ? [] : isFulltime(e) ? (offSet.has(`${e.id}|${d}`) ? [] : [{ start: cfg.openStart, end: cfg.openEnd }]) : availableOn(R, e.id, d)
   const idx = new Map(staff.map((e, i) => [e.id, i]))
 
   // 精簡資料給 AI（員工以編號表示，避免回傳不存在的 id）
@@ -63,7 +66,7 @@ export async function POST(req: NextRequest) {
     days: dates.map(d => {
       const need = needsOn(N, d)
       return {
-        date: d, weekday: WD[weekdayOf(d)],
+        date: d, weekday: WD[weekdayOf(d)], holiday: holidayOf.get(d) || undefined,
         available: staff.map((e, i) => ({ e: i, times: availFor(e, d).map(iv => `${fmtMin(iv.start)}-${fmtMin(iv.end)}`) })).filter(x => x.times.length),
         requested_day_off: staff.map((e, i) => offSet.has(`${e.id}|${d}`) ? i : -1).filter(i => i >= 0),
         on_leave: staff.map((e, i) => onLeave(e.id, d) ? i : -1).filter(i => i >= 0),
@@ -81,13 +84,14 @@ export async function POST(req: NextRequest) {
   const prompt = `You are a scheduling assistant for a bubble-tea store. Build a draft shift schedule for ${from} ~ ${to}.
 
 Rules (must follow):
-1. Only schedule a person inside one of their "available" times for that date. Start and end must be on ${SLOT_MIN}-minute boundaries and within the available range.
+1. Only schedule a person inside one of their "available" times for that date. Start and end must be on ${SLOT_MIN}-minute boundaries and within the available range. Store opening hours: ${fmtMin(cfg.openStart)}-${fmtMin(cfg.openEnd)}.
 2. Never overlap with "already_scheduled" for the same person (any store); do not repeat existing shifts.
-3. Prefer one continuous shift per person per day, 3–8 hours; part-time usually 3–5 hours, full-time about 8 hours. Full-time staff appear available 06:00-24:00 except on their requested_day_off dates, where they must not be scheduled; give full-time staff roughly 5–6 working days per week. Staff listed in on_leave for a day have an approved or pending leave request and must not be scheduled that day.
-4. Meet "needs" (time:headcount per ${SLOT_MIN}-minute slot) when possible. If needs are missing, infer staffing from hourly sales (busier hours need more people; at least 1 person whenever someone is available during likely opening hours).
-5. Balance total hours fairly across staff.
-6. If sales data exists, propose "suggested_needs" (weekday groups, time ranges, headcount) derived from it; otherwise return an empty array.
-
+3. One continuous shift per person per day. Part-time shifts: ${cfg.partMinHours}–${cfg.partMaxHours} hours. Full-time shifts: about ${cfg.fullShiftHours} hours, ${cfg.fullDaysMin}–${cfg.fullDaysMax} working days per week. Nobody works more than ${cfg.maxConsecutiveDays} days in a row. Leave at least ${cfg.minRestHours} hours of rest between one person's shifts on consecutive days.
+4. Full-time staff appear available during opening hours except on their requested_day_off dates, where they must not be scheduled. Staff listed in on_leave for a day have an approved or pending leave request and must not be scheduled that day.
+5. Meet "needs" (time:headcount per ${SLOT_MIN}-minute slot) when possible. Keep at least ${cfg.minStaff} person(s) on duty during opening hours and never more than ${cfg.maxStaff} at the same time. If needs are missing, infer staffing from hourly sales (about ${cfg.cupsPerStaffHour} cups per person per hour); days marked "holiday" are usually busier (about ${cfg.holidayFactor}x).
+6. Balance total hours fairly across staff.
+7. If sales data exists, propose "suggested_needs" (weekday groups, time ranges, headcount) derived from it; otherwise return an empty array.
+${cfg.aiNotes ? `8. Store manager's extra rules (follow them): ${cfg.aiNotes}\n` : ''}
 Data (JSON):
 ${JSON.stringify(input)}
 

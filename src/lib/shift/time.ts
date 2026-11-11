@@ -5,7 +5,7 @@ export const SLOT_MIN = 30 // 每格分鐘數；改成 15 即為 15 分鐘一格
 
 export interface Interval { start: number; end: number }
 export interface AvailRule { id: string; employee_id: string; start_date: string; end_date: string; weekdays: number[]; start_min: number; end_min: number; note?: string }
-export interface NeedRule { id: string; weekdays: number[]; start_min: number; end_min: number; headcount: number }
+export interface NeedRule { id: string; weekdays: number[]; start_min: number; end_min: number; headcount: number; start_date?: string | null; end_date?: string | null; note?: string | null; source?: string | null }
 export interface PlanRow { id: string; employee_id: string; work_date: string; start_min: number; end_min: number; status: 'draft' | 'published' }
 
 export const fmtMin = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
@@ -73,10 +73,13 @@ export function availableOn(rules: AvailRule[], employeeId: string, date: string
   return mergeIntervals(rules.filter(r => r.employee_id === employeeId && ruleCovers(r, date)).map(r => ({ start: r.start_min, end: r.end_min })))
 }
 
-// 某天每一格需要的人數（同一格多條規則取最大值）
+// 某天每一格需要的人數（同一格多條規則取最大值）。
+// 有指定日期區間且涵蓋當天的需求優先：當天只用這些規則；沒有才用依星期重複的規則。
 export function needsOn(needs: NeedRule[], date: string): Map<number, number> {
   const out = new Map<number, number>()
-  for (const n of needs) {
+  const dated = needs.filter(n => n.start_date && n.end_date && n.start_date <= date && n.end_date >= date && matchesDay(n.weekdays, date))
+  const use = dated.length ? dated : needs.filter(n => !n.start_date)
+  for (const n of use) {
     if (!matchesDay(n.weekdays, date)) continue
     for (let m = Math.floor(n.start_min / SLOT_MIN) * SLOT_MIN; m < n.end_min; m += SLOT_MIN) {
       out.set(m, Math.max(out.get(m) ?? 0, n.headcount))
