@@ -7,6 +7,7 @@ import {
 import { BkNav, BkFooter, BkPrimaryCta, BkGradText as GradText, BK_GRAD as GRAD, BALANCE } from './_booking/ui'
 import { BK_PLANS, PLAN_NAME, PLAN_HIGHLIGHTS as PLAN_HIGHLIGHTS__ZH, planPrice } from './_booking/data'
 import { introTr, trDeep } from '@/lib/i18n-data/server'
+import { BookingComparison } from './_booking/BookingComparison'
 
 export const bookingMetadata: Metadata = {
   title: 'IMT 智能訂房系統｜民宿官網、訂單、定價與通路同步一站搞定',
@@ -127,6 +128,8 @@ export async function BookingIntro() {
           </Link>
         </div>
       </section>
+
+      <div className="pt-6"><BookingComparison /></div>
 
       {/* FINAL CTA */}
       <section className="max-w-5xl mx-auto px-6 py-16 text-center">
