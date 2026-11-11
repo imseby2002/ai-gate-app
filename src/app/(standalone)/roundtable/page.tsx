@@ -62,6 +62,7 @@ export interface CustomSeatConfig {
 
 export const AVAILABLE_SEAT_MODELS = [
   { id: 'anthropic/claude-sonnet-5-5', label: 'Claude Sonnet 5.5 (Anthropic 原廠)' },
+  { id: 'openai/gpt-5.6-terra', label: 'GPT-5.6 Terra (免費優先，備援 GPT-4o)' },
   { id: 'openai/gpt-4o', label: 'GPT-4o (OpenAI 原廠)' },
   { id: 'google/gemini-2.5-pro', label: 'Gemini 2.5 Pro (Google 原廠)' },
   { id: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash (Google 原廠)' },
@@ -494,7 +495,7 @@ export default function RoundtablePage() {
           content: bossInput.trim(),
         },
       ])
-      // 若已有前次決策報告，暫存至 previousReport，讓畫面聚焦最新辯論
+      // 若已有前次決策報告，暫存至 previousReport，讓畫面聚焦最新討論
       if (report) {
         setPreviousReport(report)
         setReport('')
@@ -684,7 +685,7 @@ export default function RoundtablePage() {
               <Badge variant="outline" className="text-xs">Interactive Virtual Boardroom</Badge>
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              客觀事實查核先行，三大戰略學派平行激辯。老闆全程掌握主持權，隨時追問挑刺、一鍵收斂決策報告。
+              客觀事實查核先行，三種專業視角開會討論、交叉補位。老闆全程掌握主持權，隨時追問、一鍵收斂決策報告。
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -924,7 +925,7 @@ export default function RoundtablePage() {
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-[11px] font-medium text-muted-foreground">挑刺開砲觸發點 (選填)</label>
+                        <label className="text-[11px] font-medium text-muted-foreground">特別留意的風險 (選填)</label>
                         <input
                           type="text"
                           value={seat.attackTriggers}
@@ -1156,7 +1157,7 @@ export default function RoundtablePage() {
                     <>
                       <span className="text-amber-500 font-bold">第二輪</span>
                       <span>·</span>
-                      <span>針鋒相對 (互評挑刺輪 · 平行)</span>
+                      <span>交叉討論 (回應與補充 · 平行)</span>
                     </>
                   ) : roundNum % 2 === 1 ? (
                     <>
@@ -1168,7 +1169,7 @@ export default function RoundtablePage() {
                     <>
                       <span className="text-amber-500 font-bold">第 {roundNum} 輪</span>
                       <span>·</span>
-                      <span>針鋒相對 (針對新方案互評挑刺)</span>
+                      <span>交叉討論 (針對新方案回應與修正)</span>
                     </>
                   )}
                 </h2>
@@ -1322,7 +1323,7 @@ export default function RoundtablePage() {
                   全體深入討論 (論述輪 + 互評輪)
                 </p>
                 <p className="text-[11px] text-muted-foreground mt-1">
-                  輸入新指示，三位合夥人將針對老闆最新導向展開【第 {nextDiscussRound} 輪深化論述】，隨後自動進入【第 {nextRebutRound} 輪針鋒相對互評】
+                  輸入新指示，三位合夥人將針對老闆最新導向展開【第 {nextDiscussRound} 輪深化論述】，隨後自動進入【第 {nextRebutRound} 輪交叉討論】
                 </p>
               </button>
 
@@ -1340,7 +1341,7 @@ export default function RoundtablePage() {
                   點名單獨發言
                 </p>
                 <p className="text-[11px] text-muted-foreground mt-1">
-                  點名某位合夥人在【第 {nextDiscussRound} 輪】單挑作答，隨後其他合夥人在【第 {nextRebutRound} 輪】展開質詢反駁
+                  點名某位合夥人在【第 {nextDiscussRound} 輪】作答，隨後其他合夥人在【第 {nextRebutRound} 輪】回應與補充
                 </p>
               </button>
 
@@ -1371,7 +1372,7 @@ export default function RoundtablePage() {
                     👑 首席幕僚長收斂設定：
                   </span>
                   <span className="text-[11px] text-muted-foreground">
-                    可依本場辯論氛圍，隨時微調主筆模型與收斂風格
+                    可依本場討論內容，隨時微調主筆模型與收斂風格
                   </span>
                 </div>
                 <div className="space-y-1">
@@ -1450,7 +1451,7 @@ export default function RoundtablePage() {
                     onChange={e => setCrossExamine(e.target.checked)}
                     className="rounded border-gray-300"
                   />
-                  <span>作答後允許其他合夥人針對此回答反駁</span>
+                  <span>作答後允許其他合夥人針對此回答回應補充</span>
                 </label>
               </div>
             )}

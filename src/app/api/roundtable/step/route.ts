@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import {
   executeBossStep,
   executeSynthesize,
+  cleanBriefing,
   DOMAIN_PRESETS,
   DEFAULT_SEATS,
   DEFAULT_MODERATOR,
@@ -90,10 +91,16 @@ export async function POST(req: NextRequest) {
   }
 
   const seats: Seat[] = bodySeats?.length ? bodySeats : (session.seats?.length ? session.seats : DEFAULT_SEATS)
-  const domain: RoundtableDomain = session.domain ?? 'auto'
-  const preset = DOMAIN_PRESETS[domain] ?? DOMAIN_PRESETS.auto
-  const factBriefing: string = session.fact_briefing ?? ''
   const priorTranscript: Statement[] = session.transcript ?? []
+  // 舊紀錄沒有 domain / fact_briefing 欄位時，從逐字稿還原，避免續會時換掉學派、簡報變空白
+  const r1Stances = priorTranscript.filter(t => Number(t.round) === 1).map(t => t.stance ?? '')
+  const inferredDomain = (Object.keys(DOMAIN_PRESETS) as RoundtableDomain[])
+    .find(d => DOMAIN_PRESETS[d].stances.some(st => r1Stances.some(x => x.startsWith(st.title))))
+  const domain: RoundtableDomain = session.domain ?? inferredDomain ?? 'auto'
+  const preset = DOMAIN_PRESETS[domain] ?? DOMAIN_PRESETS.auto
+  const factBriefing: string = cleanBriefing(
+    session.fact_briefing || priorTranscript.find(t => t.name === '資料專員')?.content || '',
+  )
 
   // 計算新一輪次編號 (取既有最大 round + 1)
   const maxRound = priorTranscript.reduce((max, item) => Math.max(max, Number(item.round) || 1), 2)
