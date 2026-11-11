@@ -13116,7 +13116,7 @@
   "DesktopConnector": {
     "title": "桌面連接器（AdsPower）",
     "desc": "在 Windows 電腦安裝 AdsPower 與 AI-GATE 連接器，即可自動建立瀏覽器設定檔（含代理）並從這裡一鍵開啟。發文一律由您親自按下。",
-    "download": "下載連接器（Windows）",
+    "download": "下載連接器（Win10／11）",
     "otherVersions": "其他 Windows 版本",
     "dlX86": "Win10／11 32 位元",
     "dlArm64": "Win11 ARM",

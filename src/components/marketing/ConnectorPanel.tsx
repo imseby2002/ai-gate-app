@@ -137,17 +137,9 @@ export function ConnectorPanel({ showToast }: { showToast: Toast }) {
           </div>
           <ManagedAdspower showToast={showToast} />
           <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1">{t('smartscreen')}</p>
-          <details className="text-[11px] text-muted-foreground mt-1">
-            <summary className="cursor-pointer hover:text-foreground">{t('otherVersions')}</summary>
-            <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
-              {CONNECTOR_OTHER_DOWNLOADS.map(d => (
-                <a key={d.key} href={`${CONNECTOR_RELEASE}/${d.file}`} className="text-indigo-600 hover:underline font-medium">{t(d.key)}</a>
-              ))}
-            </div>
-            <p className="mt-1">{t('win7Note')}</p>
-          </details>
         </div>
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
+        <div className="shrink-0 flex flex-col gap-2 md:items-end">
+        <div className="flex flex-wrap items-center gap-2">
           <a
             href={CONNECTOR_DOWNLOAD_URL}
             className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl border border-border hover:bg-muted transition-colors"
@@ -171,6 +163,18 @@ export function ConnectorPanel({ showToast }: { showToast: Toast }) {
             <RefreshCw className={`h-3.5 w-3.5 ${busy === 'sync' ? 'animate-spin' : ''}`} />
             <span>{t('sync')}</span>
           </button>
+        </div>
+        {/* 其他 Windows 版本（32 位元、ARM、Win7／8） */}
+        <div className="text-[11px] text-muted-foreground md:text-right">
+          <span className="font-semibold text-foreground">{t('otherVersions')}：</span>
+          {CONNECTOR_OTHER_DOWNLOADS.map((d, i) => (
+            <React.Fragment key={d.key}>
+              {i > 0 && <span className="mx-1 text-border">|</span>}
+              <a href={`${CONNECTOR_RELEASE}/${d.file}`} className="text-indigo-600 hover:underline font-medium">{t(d.key)}</a>
+            </React.Fragment>
+          ))}
+          <p className="mt-0.5">{t('win7Note')}</p>
+        </div>
         </div>
       </div>
 

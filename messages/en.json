@@ -13116,7 +13116,7 @@
   "DesktopConnector": {
     "title": "Desktop Connector (AdsPower)",
     "desc": "Install AdsPower and the AI-GATE Connector on a Windows PC to auto-create browser profiles (with proxies) and open them from here. Posting is always clicked by you.",
-    "download": "Download Connector (Windows)",
+    "download": "Download Connector (Win10/11)",
     "otherVersions": "Other Windows versions",
     "dlX86": "Win10/11 32-bit",
     "dlArm64": "Win11 ARM",
