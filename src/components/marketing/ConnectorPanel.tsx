@@ -5,8 +5,15 @@ import { useTranslations } from 'next-intl'
 import { Monitor, Download, KeyRound, RefreshCw, Trash2, Copy, Check, Eye } from 'lucide-react'
 import { MANAGED_PACKAGES, monthlyPrice, periodPrice, type BillingCycle } from '@/lib/connector/managed-pricing'
 
-export const CONNECTOR_DOWNLOAD_URL =
-  'https://github.com/imseby2002/ai-gate-app/releases/download/connector-latest/AI-GATE-Connector.exe'
+const CONNECTOR_RELEASE = 'https://github.com/imseby2002/ai-gate-app/releases/download/connector-latest'
+export const CONNECTOR_DOWNLOAD_URL = `${CONNECTOR_RELEASE}/AI-GATE-Connector.exe`
+// 其他 Windows 版本（GitHub Actions 打包，見 desktop-connector/scripts/build-exe.mjs）
+const CONNECTOR_OTHER_DOWNLOADS = [
+  { key: 'dlX86', file: 'AI-GATE-Connector-x86.exe' },
+  { key: 'dlArm64', file: 'AI-GATE-Connector-arm64.exe' },
+  { key: 'dlWin7x64', file: 'AI-GATE-Connector-Win7-x64.zip' },
+  { key: 'dlWin7x86', file: 'AI-GATE-Connector-Win7-x86.zip' },
+] as const
 
 // AdsPower 推薦註冊連結（自備 AdsPower 方案）
 export const ADSPOWER_SIGNUP_URL = 'https://www.adspower.net/share/TnY8c0'
@@ -130,6 +137,15 @@ export function ConnectorPanel({ showToast }: { showToast: Toast }) {
           </div>
           <ManagedAdspower showToast={showToast} />
           <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1">{t('smartscreen')}</p>
+          <details className="text-[11px] text-muted-foreground mt-1">
+            <summary className="cursor-pointer hover:text-foreground">{t('otherVersions')}</summary>
+            <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
+              {CONNECTOR_OTHER_DOWNLOADS.map(d => (
+                <a key={d.key} href={`${CONNECTOR_RELEASE}/${d.file}`} className="text-indigo-600 hover:underline font-medium">{t(d.key)}</a>
+              ))}
+            </div>
+            <p className="mt-1">{t('win7Note')}</p>
+          </details>
         </div>
         <div className="flex flex-wrap items-center gap-2 shrink-0">
           <a

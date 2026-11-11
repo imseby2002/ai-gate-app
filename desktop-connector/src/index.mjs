@@ -5,7 +5,7 @@
 //   node src/index.mjs sync             立即同步一次
 //   node src/index.mjs status           檢查 AI-GATE 與 AdsPower 連線
 import os from 'node:os'
-import readline from 'node:readline/promises'
+import { ask } from './compat.mjs'
 import { loadConfig, saveConfig, CONFIG_PATH } from './config.mjs'
 import { createAigate } from './aigate.mjs'
 import { createAdsPower } from './adspower.mjs'
@@ -85,9 +85,7 @@ async function cmdDefault() {
   if (!cfg.token) {
     console.log('歡迎使用 AI-GATE 桌面連接器')
     console.log('請到 AI-GATE「社群矩陣 → 帳號矩陣 → 桌面連接器」按「產生配對碼」')
-    const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
-    const code = (await rl.question('請輸入配對碼（XXXX-XXXX）：')).trim()
-    rl.close()
+    const code = (await ask('請輸入配對碼（XXXX-XXXX）：')).trim()
     await cmdPair(code)
   }
   await cmdRun()
@@ -96,9 +94,7 @@ async function cmdDefault() {
 async function pauseOnError(e) {
   console.error(`\n錯誤：${e.message}`)
   if (process.stdin.isTTY) {
-    const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
-    await rl.question('按 Enter 關閉視窗…')
-    rl.close()
+    await ask('按 Enter 關閉視窗…')
   }
   process.exit(1)
 }

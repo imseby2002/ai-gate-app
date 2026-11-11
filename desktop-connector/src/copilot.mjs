@@ -3,11 +3,12 @@
 import { execFile, spawn } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
+import { openWebSocket } from './compat.mjs'
 
 /** 透過 Chrome DevTools Protocol 在已開啟的瀏覽器新增分頁並切到前景 */
 export function openTab(wsUrl, url, timeoutMs = 15000) {
   return new Promise((resolve, reject) => {
-    const ws = new WebSocket(wsUrl)
+    const ws = openWebSocket(wsUrl)
     const timer = setTimeout(() => { ws.close(); reject(new Error('連線瀏覽器逾時')) }, timeoutMs)
     let id = 0
     const pending = new Map()
@@ -38,13 +39,26 @@ export function openTab(wsUrl, url, timeoutMs = 15000) {
   })
 }
 
-/** 寫入系統剪貼簿；Windows 以 PowerShell Set-Clipboard（Base64 傳遞避免編碼與跳脫問題） */
+/** Windows 內建 clip.exe（Win7 起都有）：以 UTF-16LE＋BOM 傳入才能正確處理中文 */
+function clipExe(text) {
+  return new Promise(resolve => {
+    const child = execFile('clip.exe', [], { windowsHide: true }, err => resolve(!err))
+    child.on('error', () => resolve(false))
+    child.stdin.end(Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(text, 'utf16le')]))
+  })
+}
+
+/**
+ * 寫入系統剪貼簿；Windows 先用 PowerShell Set-Clipboard（Base64 傳遞避免編碼與跳脫問題），
+ * Win7 內建的 PowerShell 2.0 沒有 Set-Clipboard，失敗時改用 clip.exe
+ */
 export function copyToClipboard(text) {
   return new Promise(resolve => {
     if (process.platform === 'win32') {
       const b64 = Buffer.from(text, 'utf8').toString('base64')
       const script = `Set-Clipboard -Value ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${b64}')))`
-      execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], { windowsHide: true }, err => resolve(!err))
+      execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], { windowsHide: true },
+        err => (err ? clipExe(text).then(resolve) : resolve(true)))
       return
     }
     const cmd = process.platform === 'darwin' ? 'pbcopy' : 'xclip'
