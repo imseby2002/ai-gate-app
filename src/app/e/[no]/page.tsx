@@ -285,6 +285,7 @@ function PortalBody({ api, company, name, payslips, onChangePin, onLogout }: {
             )}
             {data?.store && data.kind === 'fulltime' && <DayOffCard api={api} dayoffs={data.dayoffs} onChanged={load} />}
             {data?.store && data.kind === 'parttime' && <AvailCard api={api} rules={data.rules} onChanged={load} />}
+            {data && <LeaveCard api={api} onChanged={load} />}
           </div>
         </div>
       )}
@@ -833,6 +834,101 @@ function DocsCard({ api }: { api: string }) {
   )
 }
 
+// 請假申請：原本要上班的日子請假 → 送到請假系統（待審核），店長／人事核准；排班會避開
+const LEAVE_TYPE_LABEL: Record<string, string> = {
+  annual: 'Nghỉ phép năm / 特休', sick: 'Nghỉ ốm / 病假', personal: 'Việc riêng / 事假', maternity: 'Thai sản / 產假',
+  paternity: 'Vợ sinh / 陪產假', unpaid: 'Không lương / 無薪假', other: 'Khác / 其他',
+}
+const LEAVE_STATUS_LABEL: Record<string, { text: string; cls: string }> = {
+  pending: { text: 'Chờ duyệt / 待審核', cls: 'bg-amber-100 text-amber-800' },
+  approved: { text: 'Đã duyệt / 已核准', cls: 'bg-emerald-100 text-emerald-800' },
+  rejected: { text: 'Từ chối / 已駁回', cls: 'bg-slate-100 text-slate-600' },
+}
+interface MyLeave { id: string; leave_type: string; start_date: string; end_date: string; days: number; reason: string; status: string }
+
+function LeaveCard({ api, onChanged }: { api: string; onChanged: () => void }) {
+  const [leaves, setLeaves] = useState<MyLeave[] | null>(null)
+  const [reloadKey, setReloadKey] = useState(0)
+  const [open, setOpen] = useState(false)
+  const [form, setForm] = useState({ leave_type: 'personal', start_date: today(), end_date: today(), reason: '' })
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  useEffect(() => {
+    let alive = true
+    fetch(`${api}/leave`).then(r => (r.ok ? r.json() : { leaves: [] })).then(d => { if (alive) setLeaves(d.leaves ?? []) }).catch(() => { if (alive) setLeaves([]) })
+    return () => { alive = false }
+  }, [api, reloadKey])
+  const refresh = () => { setReloadKey(k => k + 1); onChanged() }
+  async function submit() {
+    setBusy(true); setErr('')
+    const r = await fetch(`${api}/leave`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
+    const j = await r.json().catch(() => ({}))
+    setBusy(false)
+    if (!r.ok) { setErr(j.error ?? 'Lỗi / 錯誤'); return }
+    setOpen(false); setForm({ leave_type: 'personal', start_date: today(), end_date: today(), reason: '' })
+    refresh()
+  }
+  async function withdraw(id: string) {
+    if (!confirm('Rút đơn xin nghỉ này? / 撤回這筆請假申請？')) return
+    const r = await fetch(`${api}/leave`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
+    const j = await r.json().catch(() => ({}))
+    if (!r.ok) { alert(j.error ?? 'Lỗi / 錯誤'); return }
+    refresh()
+  }
+  const input = 'w-full h-10 rounded-lg border px-2 text-sm bg-white'
+  return (
+    <Card className="p-5 space-y-3">
+      <div className="flex items-center gap-2">
+        <h2 className="font-bold flex items-center gap-2 flex-1"><FileText className="h-4 w-4" /> Xin nghỉ phép / 請假申請</h2>
+        {!open && <Button size="sm" onClick={() => setOpen(true)}>+ Xin nghỉ / 申請</Button>}
+      </div>
+      <p className="text-xs text-slate-500">Ngày đã có ca hoặc ngày làm việc mà bạn cần nghỉ: gửi đơn ở đây. Sau khi quản lý duyệt, ngày đó sẽ không được xếp ca. 原本要上班的日子要請假，請在這裡申請；主管核准後，當天不會被排班。</p>
+      {open && (
+        <div className="rounded-xl border p-3 space-y-2 bg-slate-50">
+          <label className="block text-xs text-slate-600">Loại nghỉ / 假別
+            <select className={input} value={form.leave_type} onChange={e => setForm({ ...form, leave_type: e.target.value })}>
+              {Object.entries(LEAVE_TYPE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="block text-xs text-slate-600">Từ ngày / 開始
+              <input type="date" className={input} value={form.start_date} onChange={e => setForm({ ...form, start_date: e.target.value, end_date: form.end_date < e.target.value ? e.target.value : form.end_date })} />
+            </label>
+            <label className="block text-xs text-slate-600">Đến ngày / 結束
+              <input type="date" className={input} min={form.start_date} value={form.end_date} onChange={e => setForm({ ...form, end_date: e.target.value })} />
+            </label>
+          </div>
+          <label className="block text-xs text-slate-600">Lý do / 事由
+            <textarea rows={2} className="w-full rounded-lg border p-2 text-sm bg-white" value={form.reason} maxLength={300} onChange={e => setForm({ ...form, reason: e.target.value })} />
+          </label>
+          {err && <p className="text-sm text-red-600">{err}</p>}
+          <div className="flex justify-end gap-2">
+            <Button size="sm" variant="outline" onClick={() => { setOpen(false); setErr('') }}>Hủy / 取消</Button>
+            <Button size="sm" onClick={submit} disabled={busy || !form.reason.trim()}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Gửi / 送出'}</Button>
+          </div>
+        </div>
+      )}
+      {!leaves && <Loader2 className="h-5 w-5 animate-spin text-slate-400" />}
+      {leaves && leaves.length === 0 && !open && <p className="text-sm text-slate-500">Chưa có đơn / 尚無請假紀錄</p>}
+      <div className="divide-y text-sm">
+        {leaves?.map(l => {
+          const st = LEAVE_STATUS_LABEL[l.status] ?? { text: l.status, cls: 'bg-slate-100' }
+          return (
+            <div key={l.id} className="py-2 flex items-center gap-2">
+              <div className="flex-1 min-w-0">
+                <div className="font-medium">{l.start_date.slice(5)}{l.end_date !== l.start_date ? ` ~ ${l.end_date.slice(5)}` : ''} · {LEAVE_TYPE_LABEL[l.leave_type] ?? l.leave_type}</div>
+                {l.reason && <div className="text-xs text-slate-500 truncate">{l.reason}</div>}
+              </div>
+              <span className={`text-[11px] px-2 py-0.5 rounded-full ${st.cls}`}>{st.text}</span>
+              {l.status === 'pending' && <button onClick={() => withdraw(l.id)} className="text-xs text-rose-600 hover:underline">Rút / 撤回</button>}
+            </div>
+          )
+        })}
+      </div>
+    </Card>
+  )
+}
+
 // 正職：點日期選擇期待休假日（今天起約 3 個月），再點一次取消
 function DayOffCard({ api, dayoffs, onChanged }: { api: string; dayoffs: { id: string; off_date: string }[]; onChanged: () => void }) {
   const [offset, setOffset] = useState(0)
@@ -858,7 +954,7 @@ function DayOffCard({ api, dayoffs, onChanged }: { api: string; dayoffs: { id: s
   return (
     <Card className="p-5 space-y-3">
       <h2 className="font-bold flex items-center gap-2"><CalendarDays className="h-4 w-4" /> Ngày muốn nghỉ / 期待休假日</h2>
-      <p className="text-xs text-slate-500">Bấm vào ngày bạn muốn nghỉ, bấm lại để bỏ. Cửa hàng trưởng sẽ tham khảo khi xếp ca. 點選希望休假的日期，再點一次取消；店長排班時會參考。</p>
+      <p className="text-xs text-slate-500">Trước khi xếp ca: bấm vào ngày bạn muốn nghỉ, bấm lại để bỏ. Ngày đã có ca mà cần nghỉ thì dùng “Xin nghỉ phép”. 排班前：點選希望休假的日期，再點一次取消；已排班的日子要休，請用「請假申請」。</p>
       <div className="flex items-center justify-between">
         <button onClick={() => setOffset(o => Math.max(0, o - 1))} disabled={offset === 0} className="px-3 py-1 rounded-lg border disabled:opacity-30">‹</button>
         <b className="text-sm">{m + 1}/{y}</b>
