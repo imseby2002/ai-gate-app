@@ -141,7 +141,7 @@ export default function EmployeePortalPage({ params }: { params: Promise<{ no: s
 
 interface AvailRuleRow { id: string; start_date: string; end_date: string; weekdays: number[]; start_min: number; end_min: number; note: string }
 interface MyPlan { id: string; store: string; work_date: string; start_min: number; end_min: number }
-interface ShiftData { store: string | null; kind: 'fulltime' | 'parttime'; rules: AvailRuleRow[]; plans: MyPlan[]; dayoffs: { id: string; off_date: string }[] }
+interface ShiftData { store: string | null; schedulable?: boolean; homeStore?: string | null; kind: 'fulltime' | 'parttime'; rules: AvailRuleRow[]; plans: MyPlan[]; dayoffs: { id: string; off_date: string }[] }
 type Range = { start: number; end: number }
 
 const WD = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7']
@@ -219,7 +219,7 @@ function PortalBody({ api, company, name, payslips, onChangePin, onLogout }: {
   const setView = (v: View) => { setViewState(v); setMenu(false); history.replaceState(null, '', `#${v}`); window.scrollTo({ top: 0 }) }
 
   const tabs: [View, string, ReactNode][] = [
-    ['shift', 'Lịch làm / 班表', <CalendarDays key="i" className="h-4 w-4" />],
+    ['shift', data && data.schedulable === false ? 'Nghỉ phép / 請假' : 'Lịch làm / 班表', <CalendarDays key="i" className="h-4 w-4" />],
     ['pay', 'Phiếu lương / 薪資條', <FileText key="i" className="h-4 w-4" />],
     ['exam', 'Bài kiểm tra / 我的考試', <ClipboardList key="i" className="h-4 w-4" />],
   ]
@@ -274,13 +274,17 @@ function PortalBody({ api, company, name, payslips, onChangePin, onLogout }: {
         </button>
       )}
 
-      {view === 'shift' && (
+      {view === 'shift' && data && data.schedulable === false && (
+        // 辦公室人員：不排班，只有請假
+        <div className="max-w-2xl"><LeaveCard api={api} onChanged={load} /></div>
+      )}
+      {view === 'shift' && (!data || data.schedulable !== false) && (
         <div className="flex flex-col gap-4 md:grid md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] md:items-start">
           <div className="space-y-4">
             {data ? <ScheduleCard plans={data.plans} /> : <Card className="p-5"><Loader2 className="h-5 w-5 animate-spin text-slate-400" /></Card>}
           </div>
           <div className="space-y-4">
-            {data && !data.store && (
+            {data && !data.store && !data.homeStore && (
               <Card className="p-5"><p className="text-sm text-amber-700">Chưa có cửa hàng, vui lòng liên hệ nhân sự để được xếp ca. / 尚未設定門市，請聯絡人事後才能排班。</p></Card>
             )}
             {data?.store && data.kind === 'fulltime' && <DayOffCard api={api} dayoffs={data.dayoffs} onChanged={load} />}
