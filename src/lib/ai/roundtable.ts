@@ -277,7 +277,7 @@ export interface Seat {
 
 export const DEFAULT_SEATS: Seat[] = [
   { name: '員工A', model: 'anthropic/claude-sonnet-5-5', role: '資深管理合夥人' },
-  { name: '員工B', model: 'openai/gpt-4o',                role: '資深管理合夥人' },
+  { name: '員工B', model: 'openai/gpt-5.6-terra',         role: '資深管理合夥人' },
   { name: '員工C', model: 'google/gemini-2.5-pro',      role: '資深管理合夥人' },
 ]
 
@@ -423,6 +423,7 @@ export function formatModelDisplayName(model?: string): string {
   if (m.includes('claude-opus') || m.includes('claude-3-opus') || m.includes('claude-3.7-opus')) return 'Claude Opus 4.8'
   if (m.includes('claude-sonnet-4-6') || m.includes('claude-3-7-sonnet') || m.includes('claude-3.7-sonnet')) return 'Claude Sonnet 4.6'
   if (m.includes('claude-3-5-sonnet') || m.includes('claude-3.5-sonnet')) return 'Claude 3.5 Sonnet'
+  if (m.includes('gpt-5.6-terra')) return 'GPT-5.6 Terra'
   if (m.includes('gpt-5') || m.includes('gpt-4o')) return 'GPT-4o (OpenAI)'
   if (m.includes('o1')) return 'o1 (OpenAI)'
   if (m.includes('o3-mini')) return 'o3-mini (OpenAI)'
@@ -973,7 +974,8 @@ async function speak(
       }
     }
     const usage = await result.totalUsage
-    addUsage(seat.model, usage.inputTokens, usage.outputTokens)
+    // 付費通道的 gpt-5.x 實際走 gpt-4o，依 gpt-4o 計費
+    addUsage(seat.model.startsWith('openai/gpt-5') ? 'openai/gpt-4o' : seat.model, usage.inputTokens, usage.outputTokens)
   } catch (err) {
     console.warn(`[roundtable] primary model failed for ${seat.name} (${seat.model}):`, err)
     if (seat.model.startsWith('anthropic/')) {
