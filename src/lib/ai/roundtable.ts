@@ -7,8 +7,8 @@
  *    - 支援四大領域專屬檢核表 (金融/行銷/技術/組織) 與通用 5W2H 事實矩陣。
  *    - 嚴禁主觀評價，無數據標記 N/A，杜絕幻覺。
  *
- * 2. ⚔️ 獨立合夥人辯論 (Debate Layer)：
- *    - 席位具備戰略學派哲學對立 (不可能三角)。
+ * 2. 🤝 合夥人會議討論 (Discussion Layer)：
+ *    - 席位具備不同專業視角 (不可能三角)，以真實會議方式交流：回應、補充、修正、收斂共識。
  *    - 植入【反阿諛討好協議】與【嚴格防幻覺協議】。
  *    - 嚴禁抄背景廢話，直奔核心觀點，釋放 Token 配額。
  *
@@ -78,19 +78,19 @@ export const DOMAIN_PRESETS: Record<RoundtableDomain, DomainPreset> = {
         name: '員工A',
         title: '學術基石 · 理論真理派 (Academic Rigor & Epistemic Truth)',
         philosophy: '大學是追求真理與原創思想的殿堂。沒有深刻的理論根基與獨立批判思維，任何熱門技術或政策都只是泡沫。',
-        attackTriggers: '砲轟他人迎合市場短視近利、出賣學術靈魂；抨擊行政官僚指標主義扼殺純粹思想原創性。',
+        attackTriggers: '提醒討論中是否過度迎合市場短期需求、犧牲學術品質；行政指標是否壓縮原創研究空間。',
       },
       {
         name: '員工B',
         title: '經世致用 · 實證創新派 (Empirical & Pragmatic Utility)',
         philosophy: '學術必須解決真實世界難題。無法落地驗證、不能讓學生在就業市場脫穎而出的理論，只是象牙塔裡的自我陶醉。',
-        attackTriggers: '砲轟他人自命清高、不知民間疾苦的玄學空談；痛批學校行政流程拖沓喪失時代先機。',
+        attackTriggers: '提醒方案是否脫離真實需求、無法驗證落地；行政流程是否過慢而錯失時機。',
       },
       {
         name: '員工C',
         title: '倫理法治 · 永續治理派 (Ethical & Institutional Governance)',
         philosophy: '守住底線才能長青。再崇高的理想或突破，一旦觸犯學術倫理紅線、違反法規或導致少子化退場破產，一切歸零。',
-        attackTriggers: '抨擊他人忽視少子化生源雪崩與財務現實；痛批為求速度踐踏倫理規範，導致百年校譽毀於一旦。',
+        attackTriggers: '提醒是否考慮少子化生源與財務現實；求快時是否觸及倫理規範與校譽風險。',
       },
     ],
   },
@@ -113,19 +113,19 @@ export const DOMAIN_PRESETS: Record<RoundtableDomain, DomainPreset> = {
         name: '員工A',
         title: '成長動能派 (Growth & Momentum)',
         philosophy: '市場空間 (TAM) 與飛輪效應最重要，只要營收增速領先、市場份額在擴大，高估值就是合理的。',
-        attackTriggers: '質疑他人過度保守、短視流動性、錯失顛覆性市場紅利。',
+        attackTriggers: '提醒是否因過度保守而錯失市場成長機會。',
       },
       {
         name: '員工B',
         title: '價值安全邊際派 (Value & Margin of Safety)',
         philosophy: '沒有任何公司值得用瘋狂溢價購買。看重真實的自由現金流 (FCF)、估值乘數與下行防禦。',
-        attackTriggers: '質疑他人拿 Non-GAAP EBITDA 灌水自嗨、忽略景氣反轉時高估值崩盤的毀滅性風險。',
+        attackTriggers: '提醒是否過度依賴 Non-GAAP 指標、低估景氣反轉時高估值的下行風險。',
       },
       {
         name: '員工C',
         title: '護城河與商業本質派 (Moat & Business Reality)',
         philosophy: '短期成長與低估值都是假的，客戶的轉換成本 (Switching Cost)、定價權與技術壁壘才是真的。',
-        attackTriggers: '質疑他人只看一兩季財報數字，忽視產品正在被開源或競爭對手侵蝕底層生態。',
+        attackTriggers: '提醒是否只看短期財報，忽略產品被開源或競品侵蝕的長期威脅。',
       },
     ],
   },
@@ -146,19 +146,19 @@ export const DOMAIN_PRESETS: Record<RoundtableDomain, DomainPreset> = {
         name: '員工A',
         title: '效果數據與 ROI 派 (Performance & Growth)',
         philosophy: '無法衡量的東西就不存在。看重 CAC、ROAS、即時轉換率與短週期現金回流。',
-        attackTriggers: '質疑他人大談品牌形象與情懷，但拿不出真實訂單轉化數字的玄學行銷。',
+        attackTriggers: '提醒方案是否有可衡量的轉化指標，而非只談品牌形象。',
       },
       {
         name: '員工B',
         title: '心智與品牌資產派 (Brand Equity & Pricing Power)',
         philosophy: '流量買得到點擊，買不到偏好；定價權來自心智護城河，降價促銷是毒藥。',
-        attackTriggers: '質疑他人動不動就打折滿千送百，把品牌做成地攤貨；為了點擊率發布低俗吸睛廣告。',
+        attackTriggers: '提醒頻繁促銷或追求點擊率是否會稀釋品牌與定價權。',
       },
       {
         name: '員工C',
         title: '產品驅動與 LTV 留存派 (Product-Led & Retention)',
         philosophy: '最好的行銷是產品本身會說話；留不住用戶，前端引流都是往破桶裡倒水。',
-        attackTriggers: '質疑他人產品一團糟卻拼命燒錢洗新用戶進來割韭菜；只管首購、不管回購。',
+        attackTriggers: '提醒產品體驗與留存是否跟得上獲客投入；是否只重首購忽略回購。',
       },
     ],
   },
@@ -179,19 +179,19 @@ export const DOMAIN_PRESETS: Record<RoundtableDomain, DomainPreset> = {
         name: '員工A',
         title: '極速交付派 (Speed & Shipping)',
         philosophy: '能跑起來驗證商業價值最重要。不能上線換取市場回饋的完美架構都是負債。',
-        attackTriggers: '質疑他人過度設計 (Over-engineering)，為了想像中的高併發拖延幾個月不上線。',
+        attackTriggers: '提醒是否過度設計 (Over-engineering)，為尚未出現的需求延誤上線。',
       },
       {
         name: '員工B',
         title: '高可用與架構純粹派 (Robustness & Scalability)',
         philosophy: '垃圾架構會毀了公司。今天欠下的技術債，明天會用 10 倍當機代價償還。',
-        attackTriggers: '質疑他人為趕工東拼西湊代碼，缺乏架構邊界、單元測試與安全防護。',
+        attackTriggers: '提醒趕工是否累積技術債，缺少架構邊界、測試與安全防護。',
       },
       {
         name: '員工C',
         title: '商業實用與成本防禦派 (Pragmatic & Cost Control)',
         philosophy: '別當開源義工。技術是為了幫公司賺錢省錢，能買現成 SaaS / API 絕不自研。',
-        attackTriggers: '質疑工程師自嗨造輪子，拿公司的伺服器預算與薪水去玩冷門新技術。',
+        attackTriggers: '提醒是否有現成方案可用，自研的成本與維護負擔是否值得。',
       },
     ],
   },
@@ -211,19 +211,19 @@ export const DOMAIN_PRESETS: Record<RoundtableDomain, DomainPreset> = {
         name: '員工A',
         title: '殘酷菁英與狼性結果派 (Meritocracy)',
         philosophy: '公司是職業球隊不是家庭。只有頂級產出者配留下來，庸才必須快速淘汰。',
-        attackTriggers: '質疑他人講苦勞、講年資情分、保護老員工；容忍平庸就是懲罰優秀。',
+        attackTriggers: '提醒制度是否真正獎勵績效，避免以年資取代產出。',
       },
       {
         name: '員工B',
         title: '組織文化與心理安全派 (Culture & Trust)',
         philosophy: '恐懼換不來創新。長期勝仗靠的是使命感、互信與心理安全感。',
-        attackTriggers: '質疑末位淘汰搞得人人自危、內捲甩鍋、不敢承擔創新風險。',
+        attackTriggers: '提醒高壓淘汰是否損害信任與創新意願。',
       },
       {
         name: '員工C',
         title: '制度標準化與 SOP 派 (Process & Governance)',
         philosophy: '好制度讓普通人也能產出及格成果。不依賴個人英雄，流程大於個人。',
-        attackTriggers: '質疑人治、權力任性、制度朝令夕改，核心骨幹一離職業務就癱瘓。',
+        attackTriggers: '提醒是否過度依賴個人、制度是否穩定、關鍵人員離職的備援。',
       },
     ],
   },
@@ -245,19 +245,19 @@ export const DOMAIN_PRESETS: Record<RoundtableDomain, DomainPreset> = {
         name: '員工A',
         title: '極端進攻 / 規模擴張派',
         philosophy: '先做大再說。市場窗口轉瞬即逝，必須激進壓上資源奪取支配性先發優勢。',
-        attackTriggers: '攻擊另外兩人過度保守、動作遲緩、錯失歷史性戰略窗口期。',
+        attackTriggers: '提醒是否因過度保守而錯失時機窗口。',
       },
       {
         name: '員工B',
         title: '極端防禦 / 風控與護城河派',
         philosophy: '活下去最重要。防範最壞情境、合規合法、構築不可替代的護城河是第一優先。',
-        attackTriggers: '攻擊 A 盲目冒險、忽視單點崩潰風險與致命黑天鵝事件。',
+        attackTriggers: '提醒擴張方案的單點失敗風險與極端情境。',
       },
       {
         name: '員工C',
         title: '落地可行性 / 現金流與實用派',
         philosophy: '算清帳本才能打仗。所有的戰略都必須落實到可執行的預算、人力與正現金流。',
-        attackTriggers: '攻擊 A 畫大餅無法落地、攻擊 B 過度恐懼導致寸步難行。',
+        attackTriggers: '提醒方案是否有可執行的預算、人力與現金流，避免過度樂觀或過度保守。',
       },
     ],
   },
@@ -356,13 +356,13 @@ export const VERBOSITY_OPTIONS: VerbosityOption[] = [
     label: '⚡ 極簡電梯版 (約 150 字)',
     shortLabel: '極簡電梯版',
     targetWords: '約 150 字 / 席',
-    description: '極速瀏覽、秒抓態度與核心衝突。',
+    description: '極速瀏覽、秒抓各方看法與重點。',
     instruction:
       `【嚴格篇幅限制：極簡電梯簡報，總字數嚴格控制在 150 字以內】\n` +
       `強制輸出三段格式，嚴禁任何開場白、寒暄與官僚套話：\n` +
-      `1. 【核心定調】：30字以內，直接亮出底牌立場。\n` +
+      `1. 【核心看法】：30字以內，直接說出你的看法。\n` +
       `2. 【核心論據】：條列 2 點，每點不超過 30 字，純硬數據或因果邏輯。\n` +
-      `3. 【死穴質疑】：40字以內，直戳對手致命傷或自身不妥協底線。`,
+      `3. 【提醒/待釐清】：40字以內，點出最需要大家注意的風險或待確認問題。`,
     maxOutputTokens: 600,
   },
   {
@@ -616,7 +616,19 @@ export const ANTI_SYCOPHANCY_AND_HALLUCINATION_RULES = `
 2. 你的職責不是取悅老闆或附和老闆，而是維護商業客觀性與決策勝率。
 3. 當老闆中途介入提出的觀點或假設存在盲點、過度樂觀或與客觀數據相違背時，你必須第一時間給予專業、有據的反駁與風險警告，絕不允許阿諛奉承盲從。
 4. 【無據不言】：凡提及具體財務指標、數字或事實，必須嚴格依據《會前客觀事實簡報》。若無公開數據，嚴禁憑空編造，必須明確註明「⚠️ 缺乏客觀數據佐證」。
-5. 【嚴禁重複背景】：公司基本介紹已由資料專員在會前簡報提供，你嚴禁花費篇幅重複介紹公司歷史或產品背景，必須直接切入你的戰略立場與攻防論點！
+5. 【嚴禁重複背景】：公司基本介紹已由資料專員在會前簡報提供，你嚴禁花費篇幅重複介紹公司歷史或產品背景，直接切入你的看法。
+`
+
+// ── 會議討論規則（避免變成辯論賽）──────────────────────────────────────────
+
+export const MEETING_DISCUSSION_RULES = `
+【會議討論方式：這是內部決策會議，不是辯論賽】
+1. 大家的共同目標是幫老闆做出最好的決定，不是要贏過其他合夥人。你的專業視角是「補足盲點」，不是「陣營」。
+2. 像真人開會一樣說話：用第一人稱「我」，點名回應同事（例如「剛才 B 提到的…我同意，另外補充…」、「C 的顧慮有道理，我想追問…」）。
+3. 先承認對方說得對的地方，再提出你的補充、疑問或不同看法；有不同意見時說明理由與資料，並盡量附上替代做法或折衷方案。
+4. 被說服就直接說「這點我修正看法」，不要為了守立場硬拗。
+5. 主動找共識：指出大家已經一致的部分、真正還有分歧的關鍵點，以及要釐清分歧需要什麼資料或試點。
+6. 禁止辯論賽用語與攻擊性措辭：不用「我方」「對手」「開火」「死穴」「致命傷」「猛烈批判」等字眼，不做人身或情緒化評價。
 `
 
 // ── 智能領域判定 ─────────────────────────────────────────────────────────────
@@ -978,7 +990,7 @@ export function resolveSeatStance(seat: Seat, idx: number, domainPreset: DomainP
   const attackTriggers =
     seat.customAttackTriggers?.trim() ||
     (seat.stance?.trim()
-      ? `無情檢驗其他合夥人是否忽視了【${title}】所重視的關鍵維度、假設是否脫離客觀現實。`
+      ? `留意討論是否忽略了【${title}】所重視的關鍵維度、假設是否脫離客觀現實。`
       : preset.attackTriggers)
 
   return { title, philosophy, attackTriggers }
@@ -1015,19 +1027,20 @@ export async function executeRound1(
         `你是一家頂尖決策委員會的資深合夥人，你的席位與身分代表：【${seat.name}】。\n` +
         `你的核心戰略學派與觀點立場：【${stance.title}】。\n` +
         `你的底層信仰與立論依據：${stance.philosophy}\n` +
-        `你的挑刺觸發點：${stance.attackTriggers}\n\n` +
+        `你特別會留意的風險：${stance.attackTriggers}\n\n` +
         ANTI_SYCOPHANCY_AND_HALLUCINATION_RULES +
+        MEETING_DISCUSSION_RULES +
         `\n${verbosityOption.instruction}`
       const userPrompt =
         `老闆的指令：\n${boss}\n\n` +
         `【會前客觀事實簡報 (Fact Sheet)】：\n${factBriefing}\n\n` +
-        `請完全依據你代表的【${seat.name}】（${stance.title}）戰略立場與客觀事實簡報，提出你最犀利、最具深度、有數據支撐的觀點。\n` +
+        `這是會議的第一輪，請從你【${seat.name}】（${stance.title}）的專業角度與客觀事實簡報，提出你對這件事的初步看法與建議做法，以及你認為大家需要一起確認的關鍵問題。\n` +
         `直奔核心，嚴禁重複背景介紹與客套寒暄。遵守篇幅要求（${verbosityOption.targetWords}）。`
 
       let content = await speak(seat, system, userPrompt, 1, emit, verbosityOption.maxOutputTokens, expertCtx, stance.title)
       if (!content || content.trim().length === 0) {
         console.warn(`[roundtable] seat ${seat.name} produced empty content in R1, generating emergency stance view`)
-        content = `【學派基本立場：${stance.title}】\n本席位秉持「${stance.philosophy}」之核心哲學，強烈關注「${stance.attackTriggers}」。在本次議題中，我方堅持以此維度嚴格審視各項方案代價。`
+        content = `【學派基本立場：${stance.title}】\n我的出發點是「${stance.philosophy}」，這次會特別留意：${stance.attackTriggers}`
         emit({ type: 'delta', round: 1, name: seat.name, content })
       }
       return { round: 1, name: seat.name, role: seat.role, stance: stance.title, content }
@@ -1037,7 +1050,7 @@ export async function executeRound1(
   return results
 }
 
-// ── 執行第二輪：針鋒相對 (⚡ 同輪平行併發) ─────────────────────────────────────
+// ── 執行第二輪：交叉討論 (⚡ 同輪平行併發) ─────────────────────────────────────
 
 export async function executeRound2(
   boss: string,
@@ -1049,7 +1062,7 @@ export async function executeRound2(
   expertContextMap: Map<string, string>,
   verbosity: VerbosityMode = 'standard_300',
 ): Promise<Statement[]> {
-  emit({ type: 'phase', phase: 'rebut', label: '第二輪 · 針鋒相對 (平行進行)' })
+  emit({ type: 'phase', phase: 'rebut', label: '第二輪 · 交叉討論 (平行進行)' })
   const verbosityOption = VERBOSITY_OPTIONS.find(v => v.id === verbosity) ?? VERBOSITY_OPTIONS[1]
   const transcript1 = formatStatements(round1Statements)
 
@@ -1061,23 +1074,25 @@ export async function executeRound2(
         `你是一家頂尖決策委員會的資深合夥人，你的席位與身分代表：【${seat.name}】。\n` +
         `你的核心戰略學派與觀點立場：【${stance.title}】。\n` +
         `你的底層信仰與立論依據：${stance.philosophy}\n` +
-        `你的挑刺觸發點：${stance.attackTriggers}\n\n` +
-        `【本輪核心任務】：針鋒相對、無情挑刺！\n` +
-        `1. 請仔細檢驗其他合夥人在第一輪發言中的邏輯盲點、過度樂觀的虛假假設或漏洞。\n` +
-        `2. 查核對方引用的事實或數據是否有誤。\n` +
-        `3. 捍衛並補強自身立場，針對根本性分歧正面開火。\n\n` +
+        `你特別會留意的風險：${stance.attackTriggers}\n\n` +
+        `【本輪任務】：聽完大家第一輪的看法後，進行交叉討論。\n` +
+        `1. 點名回應其他合夥人：哪些觀點你認同、可以接著補充或結合。\n` +
+        `2. 對你有疑慮的假設或數據，具體說明疑慮與理由，並提出替代做法或需要驗證的方式。\n` +
+        `3. 如果別人的論點讓你調整想法，直接說明你修正了什麼。\n` +
+        `4. 最後指出目前大家的共識與尚待決定的關鍵分歧。\n\n` +
         ANTI_SYCOPHANCY_AND_HALLUCINATION_RULES +
+        MEETING_DISCUSSION_RULES +
         `\n${verbosityOption.instruction}`
       const userPrompt =
         `老闆的指令：\n${boss}\n\n` +
         `【會前客觀事實簡報 (Fact Sheet)】：\n${factBriefing}\n\n` +
         `【第一輪全體發言】：\n${transcript1}\n\n` +
-        `請直接對其他合夥人的推論開砲，補強你自己立場。只談新增反駁與修正，嚴禁重複第一輪已說過的內容。遵守篇幅要求（${verbosityOption.targetWords}）。`
+        `請回應其他合夥人的看法，進行補充、追問或修正。只談新的回應與調整，嚴禁重複第一輪已說過的內容。遵守篇幅要求（${verbosityOption.targetWords}）。`
 
       let content = await speak(seat, system, userPrompt, 2, emit, verbosityOption.maxOutputTokens, expertCtx, stance.title)
       if (!content || content.trim().length === 0) {
         console.warn(`[roundtable] seat ${seat.name} produced empty content in R2, generating emergency stance view`)
-        content = `【學派本輪深化：${stance.title}】\n針對同僚所提出的論據，我方重申：任何未考慮「${stance.attackTriggers}」的方案都具有重大致命傷，呼籲老闆切勿輕信過度樂觀之假設。`
+        content = `【學派本輪深化：${stance.title}】\n聽完大家的看法，我想再提醒一點：${stance.attackTriggers}這部分建議在決定前先確認。`
         emit({ type: 'delta', round: 2, name: seat.name, content })
       }
       return { round: 2, name: seat.name, role: seat.role, stance: stance.title, content }
@@ -1132,8 +1147,9 @@ export async function executeBossStep(
     const system =
       `你是資深合夥人【${targetSeat.name}】，核心學派與觀點立場：【${stance.title}】。\n` +
       `老闆現在親自點名你回答問題。\n` +
-      `請針對老闆的最新指示，依據你的戰略學派與客觀數據，正面且深入作答。\n\n` +
+      `請針對老闆的最新指示，依據你的專業角度與客觀數據，正面且深入作答；可引用先前同事的發言。\n\n` +
       ANTI_SYCOPHANCY_AND_HALLUCINATION_RULES +
+      MEETING_DISCUSSION_RULES +
       `\n${verbosityOption.instruction}`
 
     const userPrompt =
@@ -1144,7 +1160,7 @@ export async function executeBossStep(
 
     let content = await speak(targetSeat, system, userPrompt, currentRound, emit, verbosityOption.maxOutputTokens, expertCtx, stance.title)
     if (!content || content.trim().length === 0) {
-      content = `【學派應對裁示：${stance.title}】\n遵照老闆最新裁示，我方堅持以「${stance.philosophy}」之核心準則貫徹落實，並嚴密防範「${stance.attackTriggers}」。`
+      content = `【學派應對裁示：${stance.title}】\n回應老闆的指示：我的出發點是「${stance.philosophy}」，執行時需特別留意：${stance.attackTriggers}`
       emit({ type: 'delta', round: currentRound, name: targetSeat.name, content })
     }
     const firstReply: Statement = { round: currentRound, name: targetSeat.name, role: targetSeat.role, stance: stance.title, content }
@@ -1153,7 +1169,7 @@ export async function executeBossStep(
     // 若開啟同儕反駁 (crossExamine)，其他合夥人在第 rebutRound (currentRound + 1) 質詢
     if (crossExamine) {
       const otherSeats = seats.filter(s => s.name !== targetSeatName)
-      emit({ type: 'phase', phase: 'rebut', label: `第 ${rebutRound} 輪 · 同儕質詢反駁 (${targetSeat.name}的回答)` })
+      emit({ type: 'phase', phase: 'rebut', label: `第 ${rebutRound} 輪 · 同事回應 (${targetSeat.name}的回答)` })
 
       const crossResults = await Promise.all(
         otherSeats.map(async (seat) => {
@@ -1162,21 +1178,22 @@ export async function executeBossStep(
           const otherExpert = seat.expertId ? expertContextMap.get(seat.expertId) : undefined
           const crossSystem =
             `你是資深合夥人【${seat.name}】，核心學派與觀點立場：【${otherStance.title}】。\n` +
-            `老闆剛才點名了【${targetSeat.name}】，現在請你針對【${targetSeat.name}】在第 ${currentRound} 輪的回答提出反駁、質疑或補充。\n\n` +
+            `老闆剛才點名了【${targetSeat.name}】，現在請你針對【${targetSeat.name}】在第 ${currentRound} 輪的回答，從你的專業角度回應：認同的部分、需要補充的、有疑慮的地方與建議做法。\n\n` +
             ANTI_SYCOPHANCY_AND_HALLUCINATION_RULES +
+            MEETING_DISCUSSION_RULES +
             `\n${verbosityOption.instruction}`
           const crossPrompt =
             `【會前客觀事實簡報】：\n${factBriefing}\n\n` +
             `【👑 老闆的指示】：\n${bossGuidance}\n\n` +
             `【${targetSeat.name} 在第 ${currentRound} 輪的最新回答】：\n${content}\n\n` +
-            `請從你的學派立場無情檢視其邏輯漏洞，指出死穴。遵守篇幅要求（${verbosityOption.targetWords}）。`
+            `請像開會一樣接著他的話回應：先說認同與補充，再具體說明疑慮與替代做法。遵守篇幅要求（${verbosityOption.targetWords}）。`
 
           let crossContent = await speak(seat, crossSystem, crossPrompt, rebutRound, emit, verbosityOption.maxOutputTokens, otherExpert, otherStance.title)
           if (!crossContent || crossContent.trim().length === 0) {
-            crossContent = `【質詢挑刺：${otherStance.title}】\n我方必須指出：剛才提出的方案仍忽視了「${otherStance.attackTriggers}」之根本風險，缺乏扎實的數據支撐。`
+            crossContent = `【同事回應：${otherStance.title}】\n補充一點：${otherStance.attackTriggers}這部分目前還缺乏數據支撐，建議再確認。`
             emit({ type: 'delta', round: rebutRound, name: seat.name, content: crossContent })
           }
-          return { round: rebutRound, name: seat.name, role: seat.role, stance: `${otherStance.title} (反駁)`, content: crossContent }
+          return { round: rebutRound, name: seat.name, role: seat.role, stance: `${otherStance.title} (回應)`, content: crossContent }
         })
       )
       results.push(...crossResults)
@@ -1192,18 +1209,19 @@ export async function executeBossStep(
         const system =
           `你是資深合夥人【${seat.name}】，核心學派與觀點立場：【${stance.title}】。\n` +
           `老闆剛剛介入了會議並給予了最新的戰略指示。\n` +
-          `請針對老闆的最新導向，依據你的戰略學派進一步深化推進你的方案，並回應先前的爭議焦點。\n\n` +
+          `請針對老闆的最新導向，從你的專業角度進一步深化方案，並回應先前討論中尚未解決的分歧點，盡量往可執行的共識推進。\n\n` +
           ANTI_SYCOPHANCY_AND_HALLUCINATION_RULES +
+          MEETING_DISCUSSION_RULES +
           `\n${verbosityOption.instruction}`
         const userPrompt =
           `【會前客觀事實簡報】：\n${factBriefing}\n\n` +
           `【先前的會議發言紀錄】：\n${priorTranscript}\n\n` +
           `【👑 老闆的最新裁示/方向指引】：\n${bossGuidance}\n\n` +
-          `請深入推進方案，直擊痛點。遵守篇幅要求（${verbosityOption.targetWords}）。`
+          `請深入推進方案，聚焦關鍵問題。遵守篇幅要求（${verbosityOption.targetWords}）。`
 
         let content = await speak(seat, system, userPrompt, currentRound, emit, verbosityOption.maxOutputTokens, expertCtx, stance.title)
         if (!content || content.trim().length === 0) {
-          content = `【學派深化觀點：${stance.title}】\n遵照老闆最新裁示，我方進一步將「${stance.philosophy}」之核心準則貫徹於推演中。`
+          content = `【學派深化觀點：${stance.title}】\n依老闆的最新指示，我會從「${stance.philosophy}」的角度繼續把方案細化。`
           emit({ type: 'delta', round: currentRound, name: seat.name, content })
         }
         return { round: currentRound, name: seat.name, role: seat.role, stance: stance.title, content }
@@ -1211,9 +1229,9 @@ export async function executeBossStep(
     )
     results.push(...allResults)
 
-    // 拍子 2：同儕互評挑刺 —— 針對彼此在第 currentRound 輪剛交出的新深化方案，無情挑刺、刺刀見紅 (第 rebutRound 輪)
+    // 拍子 2：交叉討論 —— 針對彼此在第 currentRound 輪的新方案回應、修正並收斂 (第 rebutRound 輪)
     if (crossExamine !== false) {
-      emit({ type: 'phase', phase: 'rebut', label: `第 ${rebutRound} 輪 · 針對新方案互評挑刺 (平行進行)` })
+      emit({ type: 'phase', phase: 'rebut', label: `第 ${rebutRound} 輪 · 針對新方案交叉討論 (平行進行)` })
       const roundTranscript = formatStatements(allResults)
 
       const rebuttalResults = await Promise.all(
@@ -1223,24 +1241,26 @@ export async function executeBossStep(
           const system =
             `你是資深合夥人【${seat.name}】，核心學派與觀點立場：【${stance.title}】。\n` +
             `你的底層信仰與立論依據：${stance.philosophy}\n` +
-            `你的挑刺觸發點：${stance.attackTriggers}\n\n` +
-            `【本輪核心任務】：針對其他合夥人在第 ${currentRound} 輪剛交出的深化方案，無情挑刺、刺刀見紅！\n` +
-            `1. 仔細檢驗其他人在老闆最新指示下，是否提出了不切實際的假設、是否在偷換概念或存在隱性風險。\n` +
-            `2. 正面開火反駁，指出對手方案的死穴，並捍衛我方方案的不可替代性。\n\n` +
+            `你特別會留意的風險：${stance.attackTriggers}\n\n` +
+            `【本輪任務】：針對其他合夥人在第 ${currentRound} 輪的深化方案進行交叉討論。\n` +
+            `1. 點名回應：哪些做法你認同、可以和你的方案整合。\n` +
+            `2. 對不切實際的假設或隱性風險，具體說明理由並提出修正建議。\n` +
+            `3. 嘗試整合出大家都能接受的版本，並列出仍需老闆拍板的取捨。\n\n` +
             ANTI_SYCOPHANCY_AND_HALLUCINATION_RULES +
+            MEETING_DISCUSSION_RULES +
             `\n${verbosityOption.instruction}`
           const userPrompt =
             `【👑 老闆的最新裁示】：\n${bossGuidance}\n\n` +
             `【會前客觀事實簡報】：\n${factBriefing}\n\n` +
             `【第 ${currentRound} 輪各合夥人最新深化方案】：\n${roundTranscript}\n\n` +
-            `請直接點名其他合夥人，對其剛剛在第 ${currentRound} 輪提出的新論點進行毫不留情之猛烈批判與反駁！遵守篇幅要求（${verbosityOption.targetWords}）。`
+            `請點名回應其他合夥人在第 ${currentRound} 輪提出的新論點：認同、補充、疑慮與修正建議，並往共識收斂。遵守篇幅要求（${verbosityOption.targetWords}）。`
 
-          let content = await speak(seat, system, userPrompt, rebutRound, emit, verbosityOption.maxOutputTokens, expertCtx, `${stance.title} · 互評挑刺`)
+          let content = await speak(seat, system, userPrompt, rebutRound, emit, verbosityOption.maxOutputTokens, expertCtx, `${stance.title} · 交叉討論`)
           if (!content || content.trim().length === 0) {
-            content = `【互評挑刺：${stance.title}】\n綜觀同僚的新版方案，依然存在嚴重盲點，未嚴格防範「${stance.attackTriggers}」，切忌盲目樂觀。`
+            content = `【交叉討論：${stance.title}】\n看了大家的新版方案，方向大致可行，但仍建議補上：${stance.attackTriggers}`
             emit({ type: 'delta', round: rebutRound, name: seat.name, content })
           }
-          return { round: rebutRound, name: seat.name, role: seat.role, stance: `${stance.title} (互評挑刺)`, content }
+          return { round: rebutRound, name: seat.name, role: seat.role, stance: `${stance.title} (交叉討論)`, content }
         })
       )
       results.push(...rebuttalResults)
@@ -1280,13 +1300,13 @@ export async function executeSynthesize(
 
   const moderatorSystem =
     `你是董事會【首席幕僚長】，代表職責：${moderator.role}。\n` +
-    `全體資深合夥人已針對老闆的指令展開激烈辯論，現在請把全體研議收斂成一份結構完整、可直接落地的最高決策報告。\n\n` +
+    `全體資深合夥人已針對老闆的指令完成會議討論，現在請把全體研議收斂成一份結構完整、可直接落地的最高決策報告。\n\n` +
     `【本次收斂風格指導原則】：\n${styleConfig.instruction}\n\n` +
     `${lengthGuide}\n\n` +
     `報告必須包含以下結構：\n` +
     `1. 💡 30 秒高層結論 (讓老闆在 30 秒內看懂最核心定論與推薦路徑)\n` +
     `2. 📊 客觀事實與關鍵指標矩陣摘要 (引用 Fact Sheet 數據)\n` +
-    `3. ⚔️ 各學派核心觀點與關鍵分歧點 (梳理大家吵得最兇的點，以及各自的代價)\n` +
+    `3. 🤝 各方共識與關鍵分歧點 (先列已達成的共識，再梳理仍待取捨的分歧與各自代價)\n` +
     `4. 🎯 最終推薦執行方案與資源配置 (給出明確的優先級與取捨理由)\n` +
     `5. ⚠️ 關鍵風險監控與預警清單 (標註不可忽視的黑天鵝與盲點)\n\n` +
     `語言風格：繁體中文、極高資訊密度、條理清晰、具備頂級商業顧問水平。`
@@ -1364,7 +1384,7 @@ export async function runRoundtable(
   // ── 階段 1：第一輪獨立發言 (⚡ 平行併發) ────────────────────────────────────
   const round1 = await executeRound1(boss, factBriefing, seats, preset, emit, expertContextMap, verbosity)
 
-  // ── 階段 2：第二輪互評挑刺 (⚡ 平行併發) ────────────────────────────────────
+  // ── 階段 2：第二輪交叉討論 (⚡ 平行併發) ────────────────────────────────────
   let allStatements = [...round1]
   if (config.rebuttal !== false) {
     const round2 = await executeRound2(boss, factBriefing, round1, seats, preset, emit, expertContextMap, verbosity)
