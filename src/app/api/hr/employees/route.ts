@@ -134,6 +134,8 @@ export async function PATCH(req: NextRequest) {
   // 只讀／衍生欄位不寫回（列表 API 附帶的 profile_edit、舊工號紀錄由下方計算）
   delete updates.profile_edit
   delete updates.prev_attendance_nos
+  delete updates.company_email_pending
+  delete updates.company_email_requested_at
   delete updates.updated_at
   if (updates.units !== undefined) updates.units = cleanUnits(updates.units)
   // 打卡工號：只能數字、不可重複；變更時保留舊號，舊的員工專區連結會導向新號
@@ -163,6 +165,8 @@ export async function PATCH(req: NextRequest) {
       if (taken) return NextResponse.json({ error: taken }, { status: 400 })
     }
     updates.company_email = ce
+    // 人事直接填好公司 Email，員工自填的待確認就不需要了
+    if (ce) { updates.company_email_pending = null; updates.company_email_requested_at = null }
   }
   if (updates.managed_stores !== undefined) updates.managed_stores = cleanStores(updates.managed_stores)
   // 所屬門市空白但有勾管理門市：以第一家為所屬門市（排班、員工專區以所屬門市為準）

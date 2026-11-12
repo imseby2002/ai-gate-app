@@ -8016,7 +8016,10 @@
     "companyEmailCreate": "Create ERP account",
     "companyEmailCreateConfirm": "Create an ERP account for {email} with the company initial password and link it to this employee?",
     "companyEmailCreated": "Account created and linked. The employee can log in with the company email and initial password.",
-    "companyEmailNeedInitPw": "Set the employee initial password in the employee email whitelist first"
+    "companyEmailNeedInitPw": "Set the employee initial password in the employee email whitelist first",
+    "companyEmailPending": "Employee submitted company email: {email}",
+    "companyEmailApprove": "Approve",
+    "companyEmailReject": "Reject"
   },
   "FinancePage": {
     "accountBalancesTitle": "Balance by account",

@@ -8016,7 +8016,10 @@
     "companyEmailCreate": "建立 ERP 帳號",
     "companyEmailCreateConfirm": "用公司員工初始密碼建立 {email} 的 ERP 帳號並綁定這位員工？",
     "companyEmailCreated": "已建立帳號並綁定。員工可用公司 Email 與初始密碼登入。",
-    "companyEmailNeedInitPw": "請先在「員工 Email 白名單」設定員工初始密碼"
+    "companyEmailNeedInitPw": "請先在「員工 Email 白名單」設定員工初始密碼",
+    "companyEmailPending": "員工自填公司 Email 待確認：{email}",
+    "companyEmailApprove": "確認",
+    "companyEmailReject": "退回"
   },
   "FinancePage": {
     "accountBalancesTitle": "各帳戶結餘",

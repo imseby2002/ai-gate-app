@@ -295,7 +295,7 @@ function PortalBody({ api, company, name, payslips, onChangePin, onLogout }: {
       )}
       {view === 'pay' && <div className="max-w-2xl">{payslips}</div>}
       {view === 'exam' && <div className="max-w-3xl"><ExamsCard api={api} /></div>}
-      {view === 'profile' && <div className="max-w-3xl"><ProfileCard api={api} /></div>}
+      {view === 'profile' && <div className="max-w-3xl space-y-4"><CompanyEmailCard api={api} /><ProfileCard api={api} /></div>}
       {view === 'docs' && <div className="max-w-3xl"><DocsCard api={api} /></div>}
     </div>
   )
@@ -834,6 +834,45 @@ function DocsCard({ api }: { api: string }) {
         ))}
       </div>
       <button onClick={() => setShowAll(v => !v)} className="w-full text-xs text-indigo-700 py-1">{showAll ? 'Thu gọn / 收合' : 'Tài liệu khác / 其他文件'}</button>
+    </Card>
+  )
+}
+
+// 公司 Email（登入 ERP 用）：員工自填，人事確認後才綁定帳號
+function CompanyEmailCard({ api }: { api: string }) {
+  const [info, setInfo] = useState<{ company_email: string | null; pending: string | null } | null>(null)
+  const [val, setVal] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState('')
+  const [reloadKey, setReloadKey] = useState(0)
+  useEffect(() => {
+    let alive = true
+    fetch(`${api}/company-email`).then(r => (r.ok ? r.json() : null)).then(d => { if (alive && d) { setInfo(d); setVal(d.pending ?? '') } }).catch(() => {})
+    return () => { alive = false }
+  }, [api, reloadKey])
+  async function send(email: string) {
+    setBusy(true); setMsg('')
+    const r = await fetch(`${api}/company-email`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) })
+    const j = await r.json().catch(() => ({}))
+    setBusy(false)
+    if (!r.ok) { setMsg(j.error ?? 'Lỗi / 錯誤'); return }
+    setMsg(email ? 'Đã gửi, chờ nhân sự xác nhận / 已送出，等待人事確認' : 'Đã rút / 已撤回')
+    setReloadKey(k => k + 1)
+  }
+  if (!info) return null
+  return (
+    <Card className="p-5 space-y-2">
+      <h2 className="font-bold flex items-center gap-2"><KeyRound className="h-4 w-4" /> Email công ty / 公司 Email</h2>
+      <p className="text-xs text-slate-500">Dùng để đăng nhập ERP. Nhân sự xác nhận xong mới liên kết tài khoản. 用來登入 ERP；人事確認後才會綁定帳號。</p>
+      {info.company_email && <p className="text-sm">Đã xác nhận / 已確認：<b>{info.company_email}</b></p>}
+      <div className="flex flex-wrap items-center gap-2">
+        <input type="email" value={val} onChange={e => setVal(e.target.value)} placeholder="name@company.com"
+          className="flex-1 min-w-[12rem] h-10 rounded-lg border px-2 text-sm" />
+        <Button size="sm" onClick={() => send(val.trim())} disabled={busy || !val.trim()}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Gửi / 送出'}</Button>
+        {info.pending && <Button size="sm" variant="outline" onClick={() => send('')} disabled={busy}>Rút / 撤回</Button>}
+      </div>
+      {info.pending && <p className="text-xs text-amber-700">Chờ xác nhận / 待人事確認：{info.pending}</p>}
+      {msg && <p className="text-xs text-slate-600">{msg}</p>}
     </Card>
   )
 }
