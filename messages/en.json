@@ -8007,7 +8007,16 @@
     "payrollExportFile": "Payroll",
     "payrollExportNo": "No.",
     "payrollExportPaidAt": "Paid on",
-    "payrollExportTotal": "Total"
+    "payrollExportTotal": "Total",
+    "companyEmailLabel": "Company email (ERP login)",
+    "companyEmailHint": "For office staff and store managers: the company email links automatically to the system account with the same email (access follows HR data)",
+    "companyEmailLinked": "✓ Linked to the system account with this email",
+    "companyEmailWillLink": "The account with this email will be linked on save",
+    "companyEmailNoAccount": "No system account with this email yet",
+    "companyEmailCreate": "Create ERP account",
+    "companyEmailCreateConfirm": "Create an ERP account for {email} with the company initial password and link it to this employee?",
+    "companyEmailCreated": "Account created and linked. The employee can log in with the company email and initial password.",
+    "companyEmailNeedInitPw": "Set the employee initial password in the employee email whitelist first"
   },
   "FinancePage": {
     "accountBalancesTitle": "Balance by account",

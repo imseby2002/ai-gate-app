@@ -8007,7 +8007,16 @@
     "payrollExportFile": "Bang_luong",
     "payrollExportNo": "STT",
     "payrollExportPaidAt": "Ngày chi trả",
-    "payrollExportTotal": "Tổng cộng"
+    "payrollExportTotal": "Tổng cộng",
+    "companyEmailLabel": "Email công ty (đăng nhập ERP)",
+    "companyEmailHint": "Nhân viên văn phòng và quản lý cửa hàng: email công ty tự liên kết với tài khoản cùng email (quyền theo dữ liệu nhân sự)",
+    "companyEmailLinked": "✓ Đã liên kết tài khoản của email này",
+    "companyEmailWillLink": "Lưu xong sẽ tự liên kết tài khoản của email này",
+    "companyEmailNoAccount": "Chưa có tài khoản cho email này",
+    "companyEmailCreate": "Tạo tài khoản ERP",
+    "companyEmailCreateConfirm": "Tạo tài khoản ERP cho {email} bằng mật khẩu ban đầu của công ty và liên kết với nhân viên này?",
+    "companyEmailCreated": "Đã tạo và liên kết tài khoản. Nhân viên đăng nhập bằng email công ty và mật khẩu ban đầu.",
+    "companyEmailNeedInitPw": "Vui lòng đặt mật khẩu ban đầu ở danh sách email nhân viên trước"
   },
   "FinancePage": {
     "accountBalancesTitle": "Số dư theo tài khoản",
