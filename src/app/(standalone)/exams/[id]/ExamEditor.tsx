@@ -53,9 +53,13 @@ export function ExamEditor({ id }: { id: string }) {
   const [editLang, setEditLang] = useState<ExamLang>(locale === 'vi' ? 'vi' : locale === 'en' ? 'en' : 'zh')
   const [counts, setCounts] = useState<Record<QuestionType, number>>({ single: 5, multi: 2, fill: 2, short: 1, essay: 0 })
   const [topic, setTopic] = useState('')
+  const [scope, setScope] = useState('')
   const [manual, setManual] = useState('')
   const [polishing, setPolishing] = useState(false)
   const [generating, setGenerating] = useState(false)
+  const [regenIdx, setRegenIdx] = useState<number | null>(null)
+  const [regenFeedback, setRegenFeedback] = useState('')
+  const [regenerating, setRegenerating] = useState(false)
   const [saving, setSaving] = useState(false)
   const [dirty, setDirty] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -108,15 +112,48 @@ export function ExamEditor({ id }: { id: string }) {
     setGenerating(true)
     const res = await fetch(`/api/exams/${id}/generate`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ counts, topic, knowledge_doc_ids: exam.knowledge_doc_ids }),
+      body: JSON.stringify({ counts, topic, scope, knowledge_doc_ids: exam.knowledge_doc_ids }),
     }).catch(() => null)
     setGenerating(false)
     const d = await res?.json().catch(() => ({}))
     if (!res?.ok) {
-      alert(d?.error === 'knowledge_too_long' ? t('knowledgeTooLong') : d?.error === 'too_many' ? t('tooMany', { max: d.max }) : t('generateFailed'))
+      alert(d?.error === 'knowledge_too_long' ? t('knowledgeTooLong') : d?.error === 'too_many' ? t('tooMany', { max: d.max }) : d?.detail ? `${t('generateFailed')} (${d.detail})` : t('generateFailed'))
       return
     }
     setReloadKey(k => k + 1)
+  }
+
+  // AI 單題重新出題（可給意見或不給意見）
+  const regenerateQuestion = async (i: number) => {
+    const q = questions[i]
+    if (!q) return
+    if (!exam.knowledge_doc_ids.length) { alert(t('needKnowledge')); return }
+    setRegenerating(true)
+    const res = await fetch(`/api/exams/${id}/regenerate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        question_id: q.id,
+        position: i,
+        type: q.type,
+        points: q.points,
+        current_question: q.question,
+        feedback: regenFeedback.trim() || undefined,
+        topic: topic.trim() || undefined,
+        scope: scope.trim() || undefined,
+        knowledge_doc_ids: exam.knowledge_doc_ids,
+      }),
+    }).catch(() => null)
+    setRegenerating(false)
+    const d = await res?.json().catch(() => ({}))
+    if (!res?.ok || !d?.question) {
+      alert(d?.detail ? `${t('generateFailed')} (${d.detail})` : t('generateFailed'))
+      return
+    }
+    setQuestions(qs => qs.map((item, j) => (j === i ? d.question : item)))
+    setRegenIdx(null)
+    setRegenFeedback('')
+    setDirty(true)
   }
 
   // 人工出題、AI 修飾：手寫題目交給 AI 整理成三語正式題目，新增在題目最後
@@ -247,6 +284,41 @@ export function ExamEditor({ id }: { id: string }) {
           </div>
           {!readOnly && (
             <>
+              {/* 出題範圍與章節限定 */}
+              <div className="space-y-2 p-3 rounded-xl border bg-muted/30 text-xs">
+                <div className="flex flex-wrap items-center justify-between gap-1.5">
+                  <span className="font-medium text-foreground flex items-center gap-1">
+                    {t('scope')}
+                  </span>
+                  <div className="flex flex-wrap gap-1">
+                    {[
+                      { label: t('scopeAll'), val: '' },
+                      { label: t('scopeFirst3'), val: '前3章' },
+                      { label: t('scopeFirst5'), val: '前5章' },
+                      { label: t('scopeFirst30Pct'), val: '前30%' },
+                    ].map(p => (
+                      <button
+                        key={p.val}
+                        type="button"
+                        onClick={() => setScope(p.val)}
+                        className={`px-2 py-0.5 rounded text-[11px] border transition-colors ${
+                          scope === p.val ? 'bg-primary text-primary-foreground border-primary font-medium' : 'bg-background hover:bg-accent text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <Input
+                  className="h-8 text-xs bg-background"
+                  placeholder={t('scopePh')}
+                  value={scope}
+                  maxLength={200}
+                  onChange={e => setScope(e.target.value)}
+                />
+              </div>
+
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                 {QUESTION_TYPES.map(qt => (
                   <label key={qt} className="space-y-1 text-xs">
@@ -313,13 +385,57 @@ export function ExamEditor({ id }: { id: string }) {
                   <Input className="w-16 h-7" type="number" min={1} max={100} disabled={readOnly} value={q.points} onChange={e => setQ(i, { points: Math.max(1, Number(e.target.value) || 1) })} />
                 </label>
                 {!readOnly && (
-                  <div className="flex gap-1">
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      title={t('regenerateQuestion')}
+                      onClick={() => {
+                        if (regenIdx === i) { setRegenIdx(null); setRegenFeedback('') }
+                        else { setRegenIdx(i); setRegenFeedback('') }
+                      }}
+                      className={`h-7 px-2 rounded border flex items-center gap-1 text-xs transition-colors ${
+                        regenIdx === i ? 'bg-indigo-50 border-indigo-300 text-indigo-700 dark:bg-indigo-950/60 font-medium' : 'hover:bg-accent text-indigo-600'
+                      }`}
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">{t('regenerateQuestion')}</span>
+                    </button>
                     <button disabled={i === 0} onClick={() => { setQuestions(qs => { const c = [...qs]; [c[i - 1], c[i]] = [c[i], c[i - 1]]; return c }); setDirty(true) }} className="p-1 rounded border disabled:opacity-30"><ArrowUp className="h-3.5 w-3.5" /></button>
                     <button disabled={i === questions.length - 1} onClick={() => { setQuestions(qs => { const c = [...qs]; [c[i + 1], c[i]] = [c[i], c[i + 1]]; return c }); setDirty(true) }} className="p-1 rounded border disabled:opacity-30"><ArrowDown className="h-3.5 w-3.5" /></button>
                     <button onClick={() => { setQuestions(qs => qs.filter((_, j) => j !== i)); setDirty(true) }} className="p-1 rounded border text-red-600"><Trash2 className="h-3.5 w-3.5" /></button>
                   </div>
                 )}
               </div>
+
+              {regenIdx === i && (
+                <div className="rounded-xl border border-indigo-200 bg-indigo-50/50 dark:bg-indigo-950/30 p-3 space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-1 text-xs">
+                    <span className="font-semibold text-indigo-900 dark:text-indigo-200 flex items-center gap-1.5">
+                      <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
+                      {t('regenerateTitle')}
+                    </span>
+                    <span className="text-[11px] text-muted-foreground">{t('regenerateHint')}</span>
+                  </div>
+                  <Input
+                    className="h-8 text-xs bg-background"
+                    placeholder={t('regenerateFeedbackPh')}
+                    value={regenFeedback}
+                    maxLength={500}
+                    disabled={regenerating}
+                    onChange={e => setRegenFeedback(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') void regenerateQuestion(i) }}
+                  />
+                  <div className="flex items-center justify-end gap-2">
+                    <Button size="sm" variant="ghost" className="h-7 text-xs" disabled={regenerating} onClick={() => { setRegenIdx(null); setRegenFeedback('') }}>
+                      {t('cancel')}
+                    </Button>
+                    <Button size="sm" className="h-7 text-xs bg-indigo-600 hover:bg-indigo-700 text-white" disabled={regenerating} onClick={() => regenerateQuestion(i)}>
+                      {regenerating ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-1" />}
+                      {regenerating ? t('regenerating') : t('regenerateConfirm')}
+                    </Button>
+                  </div>
+                </div>
+              )}
 
               <AutoTextarea minRows={3} disabled={readOnly} className="text-base" placeholder={t('questionPh')}
                 value={q.question[editLang]} onChange={e => setQ(i, { question: setL(q.question, e.target.value) })} />

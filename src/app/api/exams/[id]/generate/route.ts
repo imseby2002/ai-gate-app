@@ -22,7 +22,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { count: subCount } = await access.admin.from('exam_submissions').select('id', { count: 'exact', head: true }).eq('exam_id', exam.id)
   if ((subCount ?? 0) > 0) return NextResponse.json({ error: 'has_submissions' }, { status: 409 })
 
-  const body = await req.json().catch(() => null) as { counts?: Record<string, unknown>; topic?: unknown; knowledge_doc_ids?: unknown; manual?: unknown } | null
+  const body = await req.json().catch(() => null) as { counts?: Record<string, unknown>; topic?: unknown; scope?: unknown; knowledge_doc_ids?: unknown; manual?: unknown } | null
   const manual = typeof body?.manual === 'string' ? body.manual.trim() : ''
   if (manual.length > MAX_MANUAL_CHARS) return NextResponse.json({ error: 'manual_too_long', max: MAX_MANUAL_CHARS }, { status: 400 })
 
@@ -66,6 +66,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         knowledge,
         counts,
         topic: typeof body?.topic === 'string' ? body.topic.slice(0, 500) : undefined,
+        scope: typeof body?.scope === 'string' ? body.scope.slice(0, 500) : undefined,
         startPosition: existing ?? 0,
       })
   } catch (e) {
