@@ -3,6 +3,7 @@ import { portalEmployee } from '../_auth'
 import { insertRule, parseRule, todayVN } from '@/lib/shift/rules'
 import { addDays, isDate } from '@/lib/shift/time'
 import { isFulltime } from '@/lib/shift/staff'
+import { schedulableStore } from '@/lib/shift/schedulable'
 
 type Ctx = { params: Promise<{ no: string }> }
 
@@ -23,7 +24,10 @@ export async function GET(req: NextRequest, { params }: Ctx) {
     admin.from('shift_dayoff_requests').select('id, off_date, note')
       .eq('owner_id', company.ownerId).eq('employee_id', emp.id).gte('off_date', today).order('off_date'),
   ])
-  return NextResponse.json({ store: emp.store || null, kind, rules: rules ?? [], plans: plans ?? [], dayoffs: dayoffs ?? [] })
+  // 辦公室人員不排班：只有請假，沒有可上班時段／期待休假日
+  const store = await schedulableStore(admin, company.ownerId, emp)
+  // 沒填門市的員工仍視為要排班（顯示請聯絡人事設定門市）
+  return NextResponse.json({ store, schedulable: !!store || !String(emp.store ?? '').trim(), homeStore: emp.store || null, kind, rules: rules ?? [], plans: plans ?? [], dayoffs: dayoffs ?? [] })
 }
 
 // 新增可上班時段（每週固定）。body: { start_date, end_date, weekdays: number[]（空＝每天）, start, end, note? }
@@ -33,10 +37,11 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   const ctx = await portalEmployee(req, decodeURIComponent(no))
   if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { admin, company, emp } = ctx
-  if (!emp.store) return NextResponse.json({ error: 'Chưa có cửa hàng / 尚未設定門市，請聯絡人事' }, { status: 400 })
+  const store = await schedulableStore(admin, company.ownerId, emp)
+  if (!store) return NextResponse.json({ error: 'Không thuộc cửa hàng xếp ca / 不屬於需排班的門市，請聯絡人事' }, { status: 400 })
   const b = await req.json().catch(() => ({}))
   if (!Array.isArray(b.ranges)) {
-    const r = await insertRule(admin, company.ownerId, emp.id, emp.store, b)
+    const r = await insertRule(admin, company.ownerId, emp.id, store, b)
     if ('error' in r) return NextResponse.json({ error: r.error }, { status: r.status })
     return NextResponse.json({ rule: r.rule })
   }
@@ -44,7 +49,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   for (const g of (b.ranges as Record<string, unknown>[]).slice(0, 24)) {
     const p = parseRule({ ...b, start: g.start, end: g.end })
     if (!p.ok) return NextResponse.json({ error: p.error }, { status: 400 })
-    rows.push({ owner_id: company.ownerId, employee_id: emp.id, store: emp.store, ...p.rule })
+    rows.push({ owner_id: company.ownerId, employee_id: emp.id, store, ...p.rule })
   }
   if (rows.length === 0) return NextResponse.json({ error: 'Chưa chọn giờ / 請先點選時段' }, { status: 400 })
   const { error } = await admin.from('shift_avail_rules').insert(rows)
@@ -59,7 +64,8 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
   const ctx = await portalEmployee(req, decodeURIComponent(no))
   if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { admin, company, emp } = ctx
-  if (!emp.store) return NextResponse.json({ error: 'Chưa có cửa hàng / 尚未設定門市，請聯絡人事' }, { status: 400 })
+  const store = await schedulableStore(admin, company.ownerId, emp)
+  if (!store) return NextResponse.json({ error: 'Không thuộc cửa hàng xếp ca / 不屬於需排班的門市，請聯絡人事' }, { status: 400 })
   const b = await req.json().catch(() => ({}))
   const today = todayVN(), limit = addDays(today, 92)
   const dates = [...new Set((Array.isArray(b.dates) ? b.dates : []).filter(isDate) as string[])].filter(d => d >= today && d <= limit).slice(0, 92) as string[]
@@ -69,7 +75,7 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
     for (const g of (Array.isArray(b.ranges) ? b.ranges as Record<string, unknown>[] : []).slice(0, 24)) {
       const p = parseRule({ start_date: d, end_date: d, weekdays: [], start: g.start, end: g.end })
       if (!p.ok) return NextResponse.json({ error: p.error }, { status: 400 })
-      rows.push({ owner_id: company.ownerId, employee_id: emp.id, store: emp.store, ...p.rule })
+      rows.push({ owner_id: company.ownerId, employee_id: emp.id, store, ...p.rule })
     }
   }
   const { data: old } = await admin.from('shift_avail_rules').select('id, start_date, end_date')
