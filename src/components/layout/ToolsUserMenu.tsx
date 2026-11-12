@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { LogOut, ChevronDown, Settings, Wallet, LayoutDashboard, Building2 } from 'lucide-react'
+import { LogOut, ChevronDown, Settings, Wallet, LayoutDashboard, Building2, IdCard } from 'lucide-react'
 import { useTranslations, useLocale } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { systemForPath, systemForHost } from '@/lib/systems'
@@ -20,6 +20,7 @@ export function ToolsUserMenu({ displayName, hasCompany }: { displayName: string
     credits: locale === 'vi' ? 'Nạp điểm' : locale === 'en' ? 'Buy Credits' : '儲值點數',
     csHub: locale === 'vi' ? 'Về trang CS' : locale === 'en' ? 'Back to CS' : '返回客服統整頁',
     signOut: t('signOut') || (locale === 'vi' ? 'Đăng xuất' : '登出'),
+    portal: locale === 'vi' ? 'Trang nhân viên của tôi' : locale === 'en' ? 'My employee page' : '我的員工專區',
   }
 
   // 儲值頁返回時要回到「進來的那個模組」，帶上目前路徑
@@ -27,6 +28,14 @@ export function ToolsUserMenu({ displayName, hasCompany }: { displayName: string
   const settingsHref = pathname?.startsWith('/booking') ? '/booking/account' : '/settings'
   const creditsHref = `/credits?from=${encodeURIComponent(pathname || '/apps')}`
   const [open, setOpen] = useState(false)
+  // 帳號有綁定人事資料的員工：可一鍵進員工專區（班表、薪資條、請假…）
+  const [portalUrl, setPortalUrl] = useState<string | null>(null)
+  useEffect(() => {
+    if (!open || portalUrl !== null) return
+    let alive = true
+    fetch('/api/me/employee-portal').then(r => (r.ok ? r.json() : { url: '' })).then(d => { if (alive) setPortalUrl(d.url || '') }).catch(() => {})
+    return () => { alive = false }
+  }, [open, portalUrl])
 
   const handleSignOut = async () => {
     const supabase = createClient()
@@ -58,6 +67,12 @@ export function ToolsUserMenu({ displayName, hasCompany }: { displayName: string
               >
                 <LayoutDashboard className="h-3.5 w-3.5 text-blue-500" />
                 {labels.csHub}
+              </a>
+            )}
+            {portalUrl && (
+              <a href={portalUrl} className="flex items-center gap-2 w-full px-3 py-2 text-xs text-indigo-700 hover:bg-indigo-50 transition-colors font-medium">
+                <IdCard className="h-3.5 w-3.5 text-indigo-500" />
+                {labels.portal}
               </a>
             )}
             <a

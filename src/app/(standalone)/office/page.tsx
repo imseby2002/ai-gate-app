@@ -11,6 +11,7 @@ import { useTranslations, useLocale } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { MyPortalButton } from '@/components/hr/MyPortalButton'
 import {
   getLocalizedUnitAreas,
   getLocalizedCommonPages,
@@ -146,6 +147,7 @@ export default function OfficePage() {
               <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
               {access.companyName && <Badge variant="secondary" className="font-medium">{access.companyName}</Badge>}
               {roleLabel && <Badge variant="outline" className="gap-1"><ShieldCheck className="h-3 w-3" />{roleLabel}</Badge>}
+              <MyPortalButton />
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
               {t('subtitle')}
