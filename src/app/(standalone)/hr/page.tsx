@@ -50,6 +50,7 @@ interface Employee {
   store_locked: boolean
   managed_stores?: string[]
   profile_id: string | null
+  company_email?: string | null
   created_at: string
   profile_edit?: { open: boolean; until: string | null; updated_at: string | null }
 }
@@ -134,7 +135,7 @@ const EMPTY_EMP: Omit<Employee, 'id' | 'created_at'> = {
   staff_category: 'fulltime', insurance_required: false, insurance_status: 'none',
   insurance_number: '', insurance_salary: 0,
   hourly_rate: 0, attendance_no: '', payroll_code: '', store: '', bank_name: '',
-  birthday: null, units: [], store_locked: true, managed_stores: [], profile_id: null,
+  birthday: null, units: [], store_locked: true, managed_stores: [], profile_id: null, company_email: '',
 }
 
 const getLabels = (t: (key: string) => string): Record<string, string> => ({
@@ -363,6 +364,40 @@ function EmployeeForm({ initial, onSave, onCancel, saving, settings, accounts, s
             <p className="text-[11px] text-gray-400">{t('managedStoresHint', { store: d.store || '—' })}</p>
           </div>
         )}
+        <Field label={t('companyEmailLabel')}>
+          <InputEl value={d.company_email ?? ''} type="email" placeholder="name@company.com" disabled={saving}
+            onChange={v => setD(prev => {
+              // 填公司 Email 時，若有同 Email 的系統帳號且尚未選帳號，直接帶入
+              const hit = !prev.profile_id ? accounts.find(a => (a.email ?? '').toLowerCase() === v.trim().toLowerCase() && !(a.employee && a.employee.id !== employeeId)) : undefined
+              return { ...prev, company_email: v, ...(hit ? { profile_id: hit.id } : {}) }
+            })} />
+        </Field>
+        {(() => {
+          const ce = (d.company_email ?? '').trim().toLowerCase()
+          if (!ce) return <p className="text-xs text-gray-500">{t('companyEmailHint')}</p>
+          const acc = accounts.find(a => (a.email ?? '').toLowerCase() === ce)
+          if (d.profile_id && acc?.id === d.profile_id) return <p className="text-xs text-emerald-700">{t('companyEmailLinked')}</p>
+          if (acc) return <p className="text-xs text-amber-700">{acc.employee && acc.employee.id !== employeeId ? t('linkedToOther', { name: acc.employee.name }) : t('companyEmailWillLink')}</p>
+          return (
+            <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600">
+              <span>{t('companyEmailNoAccount')}</span>
+              {employeeId && (
+                <button type="button" disabled={saving} className="rounded-md border border-indigo-300 bg-white px-2 py-1 text-indigo-700 hover:bg-indigo-50"
+                  onClick={async () => {
+                    if (!confirm(t('companyEmailCreateConfirm', { email: ce }))) return
+                    // 先存公司 Email，再建立帳號
+                    const r1 = await fetch('/api/hr/employees', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: employeeId, company_email: ce }) })
+                    if (!r1.ok) { alert((await r1.json().catch(() => ({}))).error ?? 'error'); return }
+                    const r = await fetch('/api/hr/employees/company-account', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: employeeId }) })
+                    const j = await r.json().catch(() => ({}))
+                    if (!r.ok) { alert(j.error === 'no_initial_password' ? t('companyEmailNeedInitPw') : j.error ?? 'error'); return }
+                    alert(t('companyEmailCreated'))
+                    location.reload()
+                  }}>{t('companyEmailCreate')}</button>
+              )}
+            </div>
+          )
+        })()}
         <Field label={t('systemAccountLabel')}>
           <select value={d.profile_id ?? ''} onChange={e => set('profile_id', e.target.value || null)} disabled={saving}
             className="h-9 w-full rounded-md border px-2 text-sm bg-white">
@@ -873,6 +908,7 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-semibold text-sm">{emp.name}</span>
                     {emp.department && <span className="text-xs text-gray-400">{emp.department}</span>}
+                    {emp.company_email && <span className="text-xs text-indigo-600" title={t('companyEmailLabel')}>{emp.company_email}</span>}
                     {emp.position && <span className="text-xs text-gray-400">· {emp.position}</span>}
                     {emp.store && <Badge variant="outline" className="gap-1 text-xs"><Store className="h-3 w-3" />{emp.store}</Badge>}
                     <StatusBadge value={emp.status} kind="emp" />

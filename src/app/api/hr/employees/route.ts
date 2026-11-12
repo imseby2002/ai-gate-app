@@ -3,7 +3,7 @@ import { profileOpen } from '@/lib/hr/profile'
 import { ATTENDANCE_ERR, attendanceTaken, cleanAttendanceNo, validAttendanceNo } from '@/lib/hr/attendance'
 import { getHrContext, hasHrArea } from '@/lib/auth/unit-access'
 import { companySlugForOwner } from '@/lib/company/fromHost'
-import { adoptProfileAccess, cleanStores, cleanUnits, checkProfileLink, syncProfileFromEmployee } from '@/lib/hr/account-sync'
+import { adoptProfileAccess, autoLinkByCompanyEmail, cleanCompanyEmail, cleanStores, cleanUnits, checkProfileLink, companyEmailTaken, syncProfileFromEmployee } from '@/lib/hr/account-sync'
 
 async function getAdminUser() {
   const ctx = await getHrContext('recruit', 'staff', 'payroll', 'union')
@@ -22,6 +22,8 @@ export async function GET() {
   const { user, supabase , status: authStatus, ctx } = await getAdminUser()
   if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
   const canPay = hasHrArea(ctx, 'payroll')
+  // 公司 Email 與系統帳號自動綁定（帳號後來才建立的也會補綁）
+  await autoLinkByCompanyEmail(supabase, user.id).catch(e => console.error('[hr/employees] autoLink', e))
 
   const { data, error } = await supabase
     .from('hr_employees')
@@ -63,6 +65,12 @@ export async function POST(req: NextRequest) {
     birthday, units, store_locked, profile_id, managed_stores,
   } = body
   if (!name?.trim()) return NextResponse.json({ error: 'name required' }, { status: 400 })
+  const companyEmail = cleanCompanyEmail(body.company_email)
+  if (companyEmail === undefined) return NextResponse.json({ error: '公司 Email 格式不正確' }, { status: 400 })
+  if (companyEmail) {
+    const taken = await companyEmailTaken(supabase, user.id, companyEmail)
+    if (taken) return NextResponse.json({ error: taken }, { status: 400 })
+  }
   let access: { units: string[]; store?: string; store_locked?: boolean; managed_stores?: string[] } = { units: cleanUnits(units) }
   if (profile_id) {
     const linkErr = await checkProfileLink(supabase, user.id, profile_id)
@@ -99,11 +107,17 @@ export async function POST(req: NextRequest) {
       store_locked: access.store_locked ?? store_locked !== false,
       managed_stores: access.managed_stores ?? cleanStores(managed_stores),
       profile_id: profile_id || null,
+      company_email: companyEmail,
     })
     .select('*').single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   await syncProfileFromEmployee(supabase, data)
+  // 沒選帳號但有公司 Email：自動綁定同 Email 的系統帳號
+  if (!data.profile_id && companyEmail && await autoLinkByCompanyEmail(supabase, user.id, data.id)) {
+    const { data: linked } = await supabase.from('hr_employees').select('*').eq('id', data.id).single()
+    return NextResponse.json({ employee: linked ?? data })
+  }
   return NextResponse.json({ employee: data })
 }
 
@@ -141,6 +155,15 @@ export async function PATCH(req: NextRequest) {
     }
   }
   if (updates.birthday !== undefined) updates.birthday = updates.birthday || null
+  if (updates.company_email !== undefined) {
+    const ce = cleanCompanyEmail(updates.company_email)
+    if (ce === undefined) return NextResponse.json({ error: '公司 Email 格式不正確' }, { status: 400 })
+    if (ce) {
+      const taken = await companyEmailTaken(supabase, user.id, ce, id)
+      if (taken) return NextResponse.json({ error: taken }, { status: 400 })
+    }
+    updates.company_email = ce
+  }
   if (updates.managed_stores !== undefined) updates.managed_stores = cleanStores(updates.managed_stores)
   // 所屬門市空白但有勾管理門市：以第一家為所屬門市（排班、員工專區以所屬門市為準）
   if (updates.store !== undefined && !String(updates.store ?? '').trim() && Array.isArray(updates.managed_stores) && updates.managed_stores.length) updates.store = updates.managed_stores[0]
@@ -164,6 +187,10 @@ export async function PATCH(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   await syncProfileFromEmployee(supabase, data)
+  if (!data.profile_id && data.company_email && await autoLinkByCompanyEmail(supabase, user.id, data.id)) {
+    const { data: linked } = await supabase.from('hr_employees').select('*').eq('id', data.id).single()
+    return NextResponse.json({ employee: linked ?? data, attendance_changed: attendanceChanged })
+  }
   return NextResponse.json({ employee: data, attendance_changed: attendanceChanged })
 }
 

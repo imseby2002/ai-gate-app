@@ -95,3 +95,54 @@ export async function adoptProfileAccess(admin: Admin, profileId: string, units:
     ...(dept ? { store: dept, store_locked: true, managed_stores: codes.length ? codes : [dept] } : { store_locked: false }),
   }
 }
+
+// ── 公司 Email（登入 ERP 用）與系統帳號串接 ───────────────────────────
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+/** 公司 Email 正規化：去空白、小寫；空字串回 null；格式錯誤回 undefined */
+export function cleanCompanyEmail(v: unknown): string | null | undefined {
+  const s = String(v ?? '').trim().toLowerCase()
+  if (!s) return null
+  return EMAIL_RE.test(s) ? s : undefined
+}
+
+/** 檢查公司 Email 是否已被其他員工使用；回傳錯誤訊息或 null */
+export async function companyEmailTaken(admin: Admin, ownerId: string, email: string, employeeId?: string): Promise<string | null> {
+  let q = admin.from('hr_employees').select('id, name').eq('owner_id', ownerId).ilike('company_email', email)
+  if (employeeId) q = q.neq('id', employeeId)
+  const { data } = await q.limit(1)
+  return data?.length ? `公司 Email ${email} 已被員工「${data[0].name}」使用` : null
+}
+
+/** 找本公司裡 Email 相同的系統帳號 */
+export async function accountByEmail(admin: Admin, ownerId: string, email: string) {
+  const accounts = await companyAccounts(admin, ownerId)
+  return accounts.find(a => (a.email ?? '').toLowerCase() === email) ?? null
+}
+
+/**
+ * 自動綁定：有公司 Email、尚未綁帳號的員工，若本公司有同 Email 的系統帳號且該帳號未綁其他員工，就綁定並同步權限。
+ * 回傳綁定的人數。
+ */
+export async function autoLinkByCompanyEmail(admin: Admin, ownerId: string, onlyEmployeeId?: string): Promise<number> {
+  let q = admin.from('hr_employees').select('id, company_email, units, store, store_locked, managed_stores, profile_id')
+    .eq('owner_id', ownerId).is('profile_id', null).not('company_email', 'is', null).neq('company_email', '')
+  if (onlyEmployeeId) q = q.eq('id', onlyEmployeeId)
+  const { data: emps } = await q
+  if (!emps?.length) return 0
+  const accounts = await companyAccounts(admin, ownerId)
+  const byEmail = new Map(accounts.filter(a => a.email).map(a => [String(a.email).toLowerCase(), a.id]))
+  const { data: bound } = await admin.from('hr_employees').select('profile_id').eq('owner_id', ownerId).not('profile_id', 'is', null)
+  const used = new Set((bound ?? []).map(b => b.profile_id as string))
+  let n = 0
+  for (const e of emps) {
+    const pid = byEmail.get(String(e.company_email).toLowerCase())
+    if (!pid || used.has(pid)) continue
+    const access = await adoptProfileAccess(admin, pid, cleanUnits(e.units))
+    const { data: row } = await admin.from('hr_employees')
+      .update({ profile_id: pid, ...access, updated_at: new Date().toISOString() })
+      .eq('id', e.id).eq('owner_id', ownerId).is('profile_id', null).select('*').maybeSingle()
+    if (row) { used.add(pid); n++; await syncProfileFromEmployee(admin, row) }
+  }
+  return n
+}

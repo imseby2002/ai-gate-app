@@ -8007,7 +8007,16 @@
     "payrollExportFile": "薪資表",
     "payrollExportNo": "序號",
     "payrollExportPaidAt": "發放日期",
-    "payrollExportTotal": "合計"
+    "payrollExportTotal": "合計",
+    "companyEmailLabel": "公司 Email（登入 ERP）",
+    "companyEmailHint": "辦公室人員、門市管理請填公司 Email，會自動綁定同 Email 的系統帳號（權限以人事資料為準）",
+    "companyEmailLinked": "✓ 已綁定此 Email 的系統帳號",
+    "companyEmailWillLink": "儲存後會自動綁定此 Email 的系統帳號",
+    "companyEmailNoAccount": "系統還沒有這個 Email 的帳號",
+    "companyEmailCreate": "建立 ERP 帳號",
+    "companyEmailCreateConfirm": "用公司員工初始密碼建立 {email} 的 ERP 帳號並綁定這位員工？",
+    "companyEmailCreated": "已建立帳號並綁定。員工可用公司 Email 與初始密碼登入。",
+    "companyEmailNeedInitPw": "請先在「員工 Email 白名單」設定員工初始密碼"
   },
   "FinancePage": {
     "accountBalancesTitle": "各帳戶結餘",
