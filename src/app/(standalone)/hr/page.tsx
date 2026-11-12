@@ -51,6 +51,7 @@ interface Employee {
   managed_stores?: string[]
   profile_id: string | null
   company_email?: string | null
+  company_email_pending?: string | null
   created_at: string
   profile_edit?: { open: boolean; until: string | null; updated_at: string | null }
 }
@@ -909,6 +910,20 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
                     <span className="font-semibold text-sm">{emp.name}</span>
                     {emp.department && <span className="text-xs text-gray-400">{emp.department}</span>}
                     {emp.company_email && <span className="text-xs text-indigo-600" title={t('companyEmailLabel')}>{emp.company_email}</span>}
+                    {emp.company_email_pending && (
+                      <span className="inline-flex items-center gap-1 text-xs rounded border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-amber-800">
+                        {t('companyEmailPending', { email: emp.company_email_pending })}
+                        <button type="button" className="text-emerald-700 hover:underline" onClick={async () => {
+                          const r = await fetch('/api/hr/employees/company-email', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: emp.id, approve: true }) })
+                          if (!r.ok) { alert((await r.json().catch(() => ({}))).error ?? 'error'); return }
+                          onRefresh(); loadAccounts()
+                        }}>{t('companyEmailApprove')}</button>
+                        <button type="button" className="text-rose-700 hover:underline" onClick={async () => {
+                          await fetch('/api/hr/employees/company-email', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: emp.id, approve: false }) })
+                          onRefresh(); loadAccounts()
+                        }}>{t('companyEmailReject')}</button>
+                      </span>
+                    )}
                     {emp.position && <span className="text-xs text-gray-400">· {emp.position}</span>}
                     {emp.store && <Badge variant="outline" className="gap-1 text-xs"><Store className="h-3 w-3" />{emp.store}</Badge>}
                     <StatusBadge value={emp.status} kind="emp" />

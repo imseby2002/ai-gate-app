@@ -8016,7 +8016,10 @@
     "companyEmailCreate": "Tạo tài khoản ERP",
     "companyEmailCreateConfirm": "Tạo tài khoản ERP cho {email} bằng mật khẩu ban đầu của công ty và liên kết với nhân viên này?",
     "companyEmailCreated": "Đã tạo và liên kết tài khoản. Nhân viên đăng nhập bằng email công ty và mật khẩu ban đầu.",
-    "companyEmailNeedInitPw": "Vui lòng đặt mật khẩu ban đầu ở danh sách email nhân viên trước"
+    "companyEmailNeedInitPw": "Vui lòng đặt mật khẩu ban đầu ở danh sách email nhân viên trước",
+    "companyEmailPending": "Nhân viên gửi email công ty: {email}",
+    "companyEmailApprove": "Xác nhận",
+    "companyEmailReject": "Từ chối"
   },
   "FinancePage": {
     "accountBalancesTitle": "Số dư theo tài khoản",
