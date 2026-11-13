@@ -60,14 +60,18 @@ export async function POST(req: NextRequest) {
       if (!userId) break
 
       // Stripe's subscription object has these as unix timestamps
+      // Newer API versions moved the period fields from the subscription to its items.
       const raw = sub as unknown as Record<string, number>
+      const item = sub.items?.data?.[0] as unknown as Record<string, number> | undefined
+      const periodStart = item?.current_period_start ?? raw.current_period_start
+      const periodEnd = item?.current_period_end ?? raw.current_period_end
       await supabase.from('subscriptions').update({
         status: sub.status as string,
-        current_period_start: raw.current_period_start
-          ? new Date(raw.current_period_start * 1000).toISOString()
+        current_period_start: periodStart
+          ? new Date(periodStart * 1000).toISOString()
           : null,
-        current_period_end: raw.current_period_end
-          ? new Date(raw.current_period_end * 1000).toISOString()
+        current_period_end: periodEnd
+          ? new Date(periodEnd * 1000).toISOString()
           : null,
         cancel_at_period_end: sub.cancel_at_period_end,
       }).eq('user_id', userId)
