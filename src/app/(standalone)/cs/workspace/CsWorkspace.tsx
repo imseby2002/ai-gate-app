@@ -5391,7 +5391,7 @@ function Unit12CustomerService({
                                       </>
                                     )
                                   })()}
-                                  {isOut && !isAgent && (
+                                  {isOut && !!bubble.text.trim() && (
                                     <button
                                       type="button"
                                       onClick={() => {
