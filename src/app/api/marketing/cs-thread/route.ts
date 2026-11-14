@@ -279,6 +279,23 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // 每位客人最後一則訊息預覽（比照 LINE 官方帳號名單：名字下方顯示最新一則對話）
+  const previewMap = new Map<string, string>()
+  try {
+    let pq = supabase.from('cs_messages')
+      .select('platform, from_id, message, reply, created_at')
+      .eq('user_id', ctx.ownerId)
+      .order('created_at', { ascending: false }).limit(3000)
+    if (platform && platform !== 'all') pq = pq.eq('platform', platform)
+    const { data: recent } = await pq
+    for (const m of recent ?? []) {
+      const key = `${m.platform}:${m.from_id}`
+      if (previewMap.has(key)) continue
+      const text = String((m.reply || m.message) ?? '').replace(/\[圖片\]\s*\S+/g, '[圖片]').replace(/\s+/g, ' ').trim()
+      if (text) previewMap.set(key, text.slice(0, 60))
+    }
+  } catch { /* 預覽取不到就不顯示 */ }
+
   const conversations = (customers ?? []).map(c => ({
     platform: c.platform,
     from_id: c.from_id,
@@ -289,6 +306,7 @@ export async function GET(req: NextRequest) {
     takeover: takeoverSet.has(c.from_id),
     match: matchMap.get(`${c.platform}:${c.from_id}`) ?? null,
     matchAt: matchAtMap.get(`${c.platform}:${c.from_id}`) ?? null,
+    preview: previewMap.get(`${c.platform}:${c.from_id}`) ?? null,
   }))
 
   return NextResponse.json({ conversations, convos: conversations })
