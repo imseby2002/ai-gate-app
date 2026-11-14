@@ -547,10 +547,10 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
                         )}
                         <div className={`rounded-2xl px-3.5 py-2 text-sm whitespace-pre-wrap break-words ${
                           b.side === 'in'
-                            ? 'bg-card border rounded-tl-sm'
+                            ? 'bg-[#f1f2f4] text-gray-800 rounded-tl-sm'
                             : b.sender === 'agent'
-                              ? 'bg-amber-500 text-white rounded-tr-sm'
-                              : 'bg-blue-500 text-white rounded-tr-sm'
+                              ? 'bg-[#fdf0d5] text-gray-800 rounded-tr-sm'
+                              : 'bg-[#d6e9ff] text-gray-800 rounded-tr-sm'
                         }`}>
                           {b.image ? (
                             <a href={b.image} target="_blank" rel="noreferrer">

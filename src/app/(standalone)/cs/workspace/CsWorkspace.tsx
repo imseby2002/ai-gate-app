@@ -1963,7 +1963,7 @@ function Unit12CustomerService({
         )}
         <nav
           onClickCapture={() => setMobileNavOpen(false)}
-          className={`${mobileNavOpen ? 'flex fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-xl p-3 overflow-y-auto flex-col gap-1.5' : 'hidden'} sm:flex sm:static sm:z-auto sm:shadow-none sm:p-0 sm:bg-transparent sm:overflow-visible sm:flex-col sm:flex-nowrap sm:gap-1.5 ${sidebarCollapsed ? 'sm:w-14' : 'sm:w-48'} sm:shrink-0 transition-all duration-200`}
+          className={`${mobileNavOpen ? 'flex fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-xl p-3 overflow-y-auto flex-col gap-1.5' : 'hidden'} sm:flex sm:sticky sm:top-4 sm:self-start sm:max-h-[calc(100vh-2rem)] sm:overflow-y-auto sm:overscroll-contain sm:z-auto sm:shadow-none sm:p-0 sm:bg-transparent sm:flex-col sm:flex-nowrap sm:gap-1.5 ${sidebarCollapsed ? 'sm:w-14' : 'sm:w-48'} sm:shrink-0 transition-all duration-200`}
         >
           {/* 折疊/展開按鈕 */}
           <div className="hidden sm:flex items-center justify-between pb-1 border-b border-gray-100 mb-1 w-full">
@@ -5220,7 +5220,7 @@ function Unit12CustomerService({
                       </div>
 
                       {/* 訊息對話區 */}
-                      <div ref={inboxThreadRef} className="flex-1 min-h-0 overflow-y-auto p-3 md:p-4 space-y-3 bg-gray-50/30">
+                      <div ref={inboxThreadRef} className="flex-1 min-h-0 overflow-y-auto p-3 md:p-4 space-y-3 bg-white">
                         {threadLoading && threadBubbles.length === 0 ? (
                           <div className="flex items-center justify-center h-full text-gray-400 text-xs">
                             <Loader2 className="h-4 w-4 animate-spin mr-2" /> {t('loadingConvHistory')}
@@ -5244,14 +5244,14 @@ function Unit12CustomerService({
                             return (
                               <div key={idx} data-hit={searchQ && bubble.text.toLowerCase().includes(searchQ.toLowerCase()) ? '1' : undefined}
                                 className={`flex ${isOut ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-xs shadow-xs ${
+                                <div className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-sm text-gray-800 ${
                                   isOut
                                     ? isAgent
-                                      ? 'bg-amber-700 text-white rounded-tr-xs'
-                                      : 'bg-primary text-white rounded-tr-xs'
-                                    : 'bg-white border border-gray-200 text-gray-800 rounded-tl-xs'
+                                      ? 'bg-[#fdf0d5] rounded-tr-xs'
+                                      : 'bg-[#d6e9ff] rounded-tr-xs'
+                                    : 'bg-[#f1f2f4] rounded-tl-xs'
                                 }`}>
-                                  <div className="text-[10px] opacity-80 mb-1 flex items-center justify-between gap-4 font-medium">
+                                  <div className="text-[10px] text-gray-500 mb-1 flex items-center justify-between gap-4 font-medium">
                                     <span>
                                       {!isOut
                                         ? `👤 ${formatCustomerName(activeConvo.name, activeConvo.from_id, t)}`
@@ -5291,7 +5291,7 @@ function Unit12CustomerService({
                                         const prevCust = [...threadBubbles.slice(0, idx)].reverse().find(b => b.side === 'in')
                                         setFaqDialog({ open: true, q: prevCust?.text || '', a: bubble.text, keywords: '', saving: false })
                                       }}
-                                      className="mt-1.5 text-[10px] underline opacity-80 hover:opacity-100 flex items-center gap-1"
+                                      className="mt-1.5 text-[10px] text-blue-600 underline opacity-80 hover:opacity-100 flex items-center gap-1"
                                     >
                                       📚 {t('addToFaqLibrary')}
                                     </button>
