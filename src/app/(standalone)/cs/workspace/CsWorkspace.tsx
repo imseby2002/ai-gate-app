@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect, useRef, useMemo, type ReactNode } from 'react'
+import { splitBubbleImages } from '@/lib/cs/bubble-images'
 import { useTranslations, useLocale } from 'next-intl'
 import {
   BarChart3, Upload, Headphones, Plus, Loader2, CheckCircle2, RefreshCw, Star,
@@ -5269,9 +5270,20 @@ function Unit12CustomerService({
                                       {/* eslint-disable-next-line @next/next/no-img-element */}
                                       <img src={bubble.image} alt="" className="max-w-full max-h-72 rounded-lg" />
                                     </a>
-                                  ) : (
-                                    <div className="whitespace-pre-wrap leading-relaxed break-words">{highlightText(bubble.text, searchQ)}</div>
-                                  )}
+                                  ) : (() => {
+                                    const parts = splitBubbleImages(bubble.text)
+                                    return (
+                                      <>
+                                        {parts.text && <div className="whitespace-pre-wrap leading-relaxed break-words">{highlightText(parts.text, searchQ)}</div>}
+                                        {parts.images.map(url => (
+                                          <a key={url} href={url} target="_blank" rel="noreferrer" className="block mt-1.5">
+                                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                                            <img src={url} alt="" loading="lazy" className="max-w-full max-h-72 rounded-lg" />
+                                          </a>
+                                        ))}
+                                      </>
+                                    )
+                                  })()}
                                   {isOut && !isAgent && (
                                     <button
                                       type="button"
