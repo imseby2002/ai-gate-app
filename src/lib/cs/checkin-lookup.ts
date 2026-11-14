@@ -222,6 +222,29 @@ export function evaluateCheckinTiming(
   return { canReleasePassword: true, reason: 'READY', checkIn, checkOut, checkinTime: cTime, nowHHMM }
 }
 
+// 查詢結果帶這個標記＝已核對這位客人入住日已過、仍在住宿期間，可以提供密碼。
+// webhook 看到它就不套用「今日尚未到密碼開放時間」的通用限制（例如 14 號入住、15 號凌晨才抵達）。
+export const PASSWORD_READY_MARKER = '【密碼可提供】'
+
+function readyNote(checkIn: string, checkOut: string, todayDate: string): string {
+  return todayDate > checkIn
+    ? `${PASSWORD_READY_MARKER}這位客人 ${checkIn} 入住、${checkOut} 退房，目前仍在住宿期間（入住日已過密碼開放時間，例如凌晨才抵達），請直接提供下方密碼；「今日尚未到密碼開放時間」只適用於今天才入住的客人。`
+    : `${PASSWORD_READY_MARKER}今天入住且已過密碼開放時間，請直接提供下方密碼。`
+}
+
+function shiftDate(ymd: string, days: number): string {
+  const d = new Date(`${ymd}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + days)
+  return d.toISOString().slice(0, 10)
+}
+
+// 客人「目前這一晚」的日期：還沒到今天的密碼開放時間（例如凌晨）就算昨晚，不早於入住日。
+// 用來取對的那一天的房門密碼——凌晨抵達的客人不能拿到當天下午下一組客人的新密碼。
+export function currentStayNight(checkIn: string, todayDate: string, nowHHMM: string, checkinTime: string): string {
+  const night = nowHHMM < checkinTime ? shiftDate(todayDate, -1) : todayDate
+  return night < checkIn ? checkIn : night
+}
+
 export function formatFutureBookingPrompt(
   orderLabel: string,
   guestName: string | null | undefined,
@@ -476,20 +499,22 @@ export async function queryBnbCheckin(supabase: any, userId: string, orderNum: s
       }
     }
 
-    // 已到入住時間，可提供密碼
-    const todayDaily = dailyRows.find((r: any) => r.date === todayDate) || dailyRows[0]
+    // 已到入住時間，可提供密碼（凌晨抵達的客人用昨晚那一天的紀錄）
+    const night = currentStayNight(checkIn, todayDate, nowHHMM, checkinTime)
+    const todayDaily = dailyRows.find((r: any) => r.date === night) || dailyRows[dailyRows.length - 1]
     const pw = await resolveRoomAndGatePassword(
       supabase,
       userId,
       todayDaily.room_name,
       todayDaily.room_password,
       todayDaily.gate_password,
-      todayDate
+      night
     )
 
     const lines = [
       `【入住資訊查詢結果】`,
-      `找到訂單「${orderNum}」的今日入住資訊：`,
+      readyNote(checkIn, checkOut, todayDate),
+      `找到訂單「${orderNum}」的入住資訊：`,
       todayDaily.guest_name ? `・旅客姓名：${todayDaily.guest_name}` : null,
       `・房間：${todayDaily.room_name || '（尚未設定，請聯繫工作人員）'}`,
       `・房門密碼：${pw.room_password}`,
@@ -510,6 +535,9 @@ interface MatchedBookingRow { property_id: string | null; guest_name?: string | 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function formatBookingsWithPassword(supabase: any, userId: string, rows: MatchedBookingRow[], todayDate: string): Promise<string[]> {
   const lines: string[] = []
+  const { checkinTime, nowHHMM } = await checkBeforeCheckin(supabase, userId)
+  const night = currentStayNight(rows[0].check_in, todayDate, nowHHMM, checkinTime)
+  if (todayDate >= rows[0].check_in) lines.push(readyNote(rows[0].check_in, rows[0].check_out, todayDate))
   const realName = rows[0].guest_name && rows[0].guest_name !== '(Not available)' ? rows[0].guest_name : ''
   lines.push(realName ? `・旅客姓名：${realName}` : '')
   lines.push(`・入住：${rows[0].check_in}　退房：${rows[0].check_out}`)
@@ -536,10 +564,10 @@ async function formatBookingsWithPassword(supabase: any, userId: string, rows: M
           .from('bnb_daily_records')
           .select('room_password, gate_password')
           .eq('user_id', userId)
-          .eq('date', todayDate)
+          .eq('date', night)
           .eq('room_name', prop.name)
           .maybeSingle()
-        const pw = await resolveRoomAndGatePassword(supabase, userId, prop.name, daily?.room_password, daily?.gate_password, todayDate)
+        const pw = await resolveRoomAndGatePassword(supabase, userId, prop.name, daily?.room_password, daily?.gate_password, night)
         lines.push(`　房門密碼：${pw.room_password}`)
         lines.push(`　大門密碼：${pw.gate_password}`)
       } else {
@@ -881,12 +909,18 @@ export async function queryBookingByGuestName(supabase: any, userId: string, can
           }
         }
 
-        const lines = [`【訂單查詢結果】`, `找到旅客「${lookupName}」的入住資訊：`, `・旅客姓名：${dailyMatched[0].guest_name}`]
-        if (group.length > 1) lines.push(`・共訂了 ${group.length} 個房型，以下逐一列出：`)
-        for (const r of group as any[]) {
+        const lines = [`【訂單查詢結果】`, readyNote(checkIn, checkOut, todayDate), `找到旅客「${lookupName}」的入住資訊：`, `・旅客姓名：${dailyMatched[0].guest_name}`]
+        // 多晚住宿只列「目前這一晚」的房間密碼（凌晨抵達算昨晚）
+        const night = currentStayNight(checkIn, todayDate, nowHHMM, checkinTime)
+        type NightRow = { date: string; room_name: string | null; room_password?: string | null; gate_password?: string | null }
+        const nightRows = group as NightRow[]
+        const tonight = nightRows.filter(r => r.date === night)
+        const rowsToShow = tonight.length ? tonight : nightRows.filter(r => r.date === dates[dates.length - 1])
+        if (rowsToShow.length > 1) lines.push(`・共訂了 ${rowsToShow.length} 個房型，以下逐一列出：`)
+        for (const r of rowsToShow) {
           const roomName = r.room_name || '（尚未設定，請聯繫工作人員）'
           lines.push(`・房間：${roomName}`)
-          const pw = await resolveRoomAndGatePassword(supabase, userId, r.room_name, r.room_password, r.gate_password, r.date)
+          const pw = await resolveRoomAndGatePassword(supabase, userId, r.room_name ?? '', r.room_password, r.gate_password, r.date)
           lines.push(`　房門密碼：${pw.room_password}`)
           lines.push(`　大門密碼：${pw.gate_password}`)
         }

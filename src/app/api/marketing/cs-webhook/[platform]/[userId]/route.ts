@@ -21,7 +21,7 @@ import { queryGoogleSheet, type SheetConfig, type SheetQueryOpts } from '@/lib/c
 import { buildBookingSystemPrompt, BOOKING_HUMAN_CONFIRM_NOTICE, type BookingFlowDef } from '@/lib/cs/booking-prompt'
 import { sendTicketNotification, type NotifyWebhook } from '@/lib/cs/ticket-notify'
 import { buildSellSection, type CsCustomerRow } from '@/lib/cs/sell-section'
-import { queryBnbCheckin, checkBeforeCheckin, queryBookingByGuestName, queryBookingByPhone, noDataFoundSuffix, NAME_VERIFY_ASK_RE, wrapImageDerivedResultForConfirm, looksLikeGuestName, isAffirmativeReply, detectBookingPlatform, stripPlatformMention, orderLookupAltMethods, platformReplyGuidance } from '@/lib/cs/checkin-lookup'
+import { queryBnbCheckin, checkBeforeCheckin, PASSWORD_READY_MARKER, queryBookingByGuestName, queryBookingByPhone, noDataFoundSuffix, NAME_VERIFY_ASK_RE, wrapImageDerivedResultForConfirm, looksLikeGuestName, isAffirmativeReply, detectBookingPlatform, stripPlatformMention, orderLookupAltMethods, platformReplyGuidance } from '@/lib/cs/checkin-lookup'
 import { getCsEntitlements } from '@/lib/cs/entitlements'
 import { commitCsRoomBooking, getCsBookingMode, getOfficialBookingUrl, buildReferInstruction, buildReferStandingRule, ROOM_BOOKING_TEXT_RE, type CsBookingMode } from '@/lib/cs/booking-commit'
 import { generateCsReplyL2, generateCsReplyL3, generateCsReplySearch, IMAGE_DOWNGRADE_REPLY, notifyOwnerUpgradeNudge } from '@/lib/cs/csReply'
@@ -2301,8 +2301,8 @@ async function getAIReply(
         const ci = await checkBeforeCheckin(getServiceClient(), userId)
         checkinState = ci
         checkinTimeLine = ci.checkinTime === ci.stayTime
-          ? `\n- 【入住時間——唯一依據，優先於知識庫與任何其他文字】入住時間為每日 ${ci.stayTime}，密碼／房號同一時間開放查詢；目前台灣時間 ${ci.nowHHMM}，今日${ci.before ? '尚未到' : '已到'}入住時間。知識庫或提示詞中寫的其他入住時間一律以此為準。`
-          : `\n- 【入住時間與密碼開放時間——唯一依據，優先於知識庫與任何其他文字】入住時間為每日 ${ci.stayTime}（客人問幾點入住、幾點可以進房，一律回答 ${ci.stayTime}）；大門／房門密碼與房號每日 ${ci.checkinTime} 起開放查詢（判斷能否提供密碼只看這個時間）。目前台灣時間 ${ci.nowHHMM}，今日${ci.before ? '尚未到' : '已到'}密碼開放時間。知識庫或提示詞中寫的其他時間一律以此為準。`
+          ? `\n- 【入住時間——唯一依據，優先於知識庫與任何其他文字】入住時間為每日 ${ci.stayTime}，密碼／房號同一時間開放查詢；目前台灣時間 ${ci.nowHHMM}，今日${ci.before ? '尚未到' : '已到'}入住時間${ci.before ? '（只限今天才入住的客人；入住日在今天之前、仍在住宿期間的客人，例如凌晨才抵達，不受此限，以查詢結果為準）' : ''}。知識庫或提示詞中寫的其他入住時間一律以此為準。`
+          : `\n- 【入住時間與密碼開放時間——唯一依據，優先於知識庫與任何其他文字】入住時間為每日 ${ci.stayTime}（客人問幾點入住、幾點可以進房，一律回答 ${ci.stayTime}）；大門／房門密碼與房號每日 ${ci.checkinTime} 起開放查詢（判斷能否提供密碼只看這個時間）。目前台灣時間 ${ci.nowHHMM}，今日${ci.before ? '尚未到' : '已到'}密碼開放時間${ci.before ? '（只限今天才入住的客人；入住日在今天之前、仍在住宿期間的客人，例如凌晨才抵達，不受此限，以查詢結果為準）' : ''}。知識庫或提示詞中寫的其他時間一律以此為準。`
       } catch { /* 取不到設定就不加 */ }
     }
 
@@ -2760,7 +2760,7 @@ https://ciaohome.net/routeofciaohome/
             messages,
             maxOutputTokens: 16000,
           }, { feature: 'cs', timeoutMs: 60000 })
-          return enforceCheckinTimeClaim(await enforceNoFabricatedReveal(cleanReply(text) || FALLBACK, externalDataSection, history, knowledge.knowledgeBase, userId, platform, customerId, knowledge.industry, message, knowledge.notifyWebhooks), checkinState)
+          return enforceCheckinTimeClaim(await enforceNoFabricatedReveal(cleanReply(text) || FALLBACK, externalDataSection, history, knowledge.knowledgeBase, userId, platform, customerId, knowledge.industry, message, knowledge.notifyWebhooks), externalDataSection.includes(PASSWORD_READY_MARKER) ? null : checkinState)
         } catch { /* fall through to L2 chain */ }
       }
     }
@@ -2777,7 +2777,7 @@ https://ciaohome.net/routeofciaohome/
         ? await generateCsReplyL3(systemPrompt, messages)
         : await generateCsReplyL2(systemPrompt, messages)
     const finalReply = (result ? cleanReply(result.reply) : '') || FALLBACK
-    return enforceCheckinTimeClaim(await enforceNoFabricatedReveal(finalReply, externalDataSection, history, knowledge.knowledgeBase, userId, platform, customerId, knowledge.industry, message, knowledge.notifyWebhooks), checkinState)
+    return enforceCheckinTimeClaim(await enforceNoFabricatedReveal(finalReply, externalDataSection, history, knowledge.knowledgeBase, userId, platform, customerId, knowledge.industry, message, knowledge.notifyWebhooks), externalDataSection.includes(PASSWORD_READY_MARKER) ? null : checkinState)
   } catch (err) {
     console.error('[cs-webhook] getAIReply failed, falling back to canned reply:', err)
     return FALLBACK
