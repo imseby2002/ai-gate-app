@@ -1,7 +1,9 @@
 {
   "Nav": {
     "backHome": "Back to Home",
-    "backToMenu": "Back to Menu"
+    "backToMenu": "Back to Menu",
+    "csSloganLine1": "Live Like a Tourist",
+    "csSloganLine2": "Run Like an Empire"
   },
   "Landing": {
     "sloganLine1": "Live Like a Tourist",

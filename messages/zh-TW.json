@@ -1,7 +1,9 @@
 {
   "Nav": {
     "backHome": "返回首頁",
-    "backToMenu": "返回主選單"
+    "backToMenu": "返回主選單",
+    "csSloganLine1": "行如旅人",
+    "csSloganLine2": "業如帝國"
   },
   "Landing": {
     "sloganLine1": "像旅人一樣生活",
