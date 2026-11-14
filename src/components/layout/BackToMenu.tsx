@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { useTranslations, useLocale } from 'next-intl'
-import { BrandLogo, BrandSlogan } from '@/components/layout/BrandLogo'
+import { BrandLogo } from '@/components/layout/BrandLogo'
 import { SYSTEMS, SCOPE_SESSION_KEY, systemForHost, isSystemKey, systemForPath, getLocalizedSystemDef } from '@/lib/systems'
 
 export function BackToMenu() {
@@ -85,14 +85,26 @@ export function BackToMenu() {
 
   const isCs = pathname.startsWith('/cs')
 
-  // 客服系統（cs.im-tourist.com）左上角只放品牌 Slogan，不放 LOGO 與「返回收件匣」
-  if (isCs) {
-    return <BrandSlogan line1={tl('sloganLine1')} line2={tl('sloganLine2')} className="text-sm" />
-  }
-
-  const titleSys = systemForPath(pathname)
+  const titleSys = isCs ? 'cs' : systemForPath(pathname)
   const titleText = titleSys ? getLocalizedSystemDef(titleSys, locale).label : 'IMT'
   const subText = `← ${t('backToMenu')}`
+
+  // 客服系統（cs.im-tourist.com）：LOGO 與系統名稱保留，原本「← 返回收件匣」那行改成品牌 Slogan（不連結）
+  if (isCs) {
+    return (
+      <div className="flex items-center gap-3">
+        <BrandLogo className="h-8 w-8" />
+        <div className="leading-none">
+          <span className="font-bold text-base">{titleText}</span>
+          <span className="block text-xs mt-0.5 font-medium">
+            <span className="text-[#111827]">{tl('sloganLine1')}</span>
+            <span className="text-muted-foreground"> · </span>
+            <span className="text-[#139488]">{tl('sloganLine2')}</span>
+          </span>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <a href={href} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
