@@ -2043,7 +2043,16 @@
       "aiGenerateTitle": "AI tạo tiêu đề",
       "promoFocus": "Trọng tâm quảng bá (tùy chọn)",
       "promoFocusPh": "VD: Trân châu đường đen mới, khai trương cửa hàng mới",
-      "generateTitles": "Tạo tiêu đề quảng bá"
+      "generateTitles": "Tạo tiêu đề quảng bá",
+      "publishOther": "Đăng lên:",
+      "platformsSection": "Nền tảng khác",
+      "platConnected": "Đã kết nối",
+      "fbNotConnected": "Chưa liên kết Trang Facebook (dùng Trang đã liên kết trong cài đặt mạng xã hội)",
+      "bloggerUrlPh": "URL Blogger (để trống = blog đầu tiên của tài khoản)",
+      "connectBlogger": "Kết nối Blogger",
+      "reconnect": "Kết nối lại",
+      "notionParentPh": "URL hoặc ID trang cha trên Notion (chia sẻ trang với integration trước)",
+      "platformsHelp": "Facebook đăng tóm tắt kèm liên kết trang đích; các nền tảng khác đăng toàn bài. Để trống khóa để giữ giá trị đã lưu."
     },
     "features": {
       "templates": {
