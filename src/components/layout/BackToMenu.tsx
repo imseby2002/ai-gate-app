@@ -3,12 +3,13 @@
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { useTranslations, useLocale } from 'next-intl'
-import { BrandLogo } from '@/components/layout/BrandLogo'
+import { BrandLogo, BrandSlogan } from '@/components/layout/BrandLogo'
 import { SYSTEMS, SCOPE_SESSION_KEY, systemForHost, isSystemKey, systemForPath, getLocalizedSystemDef } from '@/lib/systems'
 
 export function BackToMenu() {
   const pathname = usePathname()
   const t = useTranslations('Nav')
+  const tl = useTranslations('Landing')
   const locale = useLocale()
   const [href, setHref] = useState('/apps')
 
@@ -84,10 +85,14 @@ export function BackToMenu() {
 
   const isCs = pathname.startsWith('/cs')
 
-  const titleSys = isCs ? 'cs' : systemForPath(pathname)
+  // 客服系統（cs.im-tourist.com）左上角只放品牌 Slogan，不放 LOGO 與「返回收件匣」
+  if (isCs) {
+    return <BrandSlogan line1={tl('sloganLine1')} line2={tl('sloganLine2')} className="text-sm" />
+  }
+
+  const titleSys = systemForPath(pathname)
   const titleText = titleSys ? getLocalizedSystemDef(titleSys, locale).label : 'IMT'
-  const csInboxText = locale === 'vi' ? 'Quay lại Hộp thư' : locale === 'en' ? 'Back to Inbox' : '返回收件匣'
-  const subText = isCs ? `← ${csInboxText}` : `← ${t('backToMenu')}`
+  const subText = `← ${t('backToMenu')}`
 
   return (
     <a href={href} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
