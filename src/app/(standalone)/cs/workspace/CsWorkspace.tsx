@@ -308,9 +308,20 @@ interface InboxConvo {
   takeover?: boolean
   match?: string | null
   matchAt?: string | null
+  preview?: string | null
 }
 
 // 把搜尋字詞在文字中標黃
+// 名單時間：今天顯示時:分，其他天顯示月/日（比照 LINE 官方帳號）
+function formatListTime(iso: string, locale: string): string {
+  const d = new Date(iso)
+  const tz = 'Asia/Taipei'
+  const day = (x: Date) => x.toLocaleDateString('sv-SE', { timeZone: tz })
+  return day(d) === day(new Date())
+    ? d.toLocaleTimeString(locale, { timeZone: tz, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+    : d.toLocaleDateString(locale, { timeZone: tz, month: 'numeric', day: 'numeric' })
+}
+
 function highlightText(text: string, q: string): ReactNode {
   if (!q) return text
   const lower = text.toLowerCase()
@@ -5082,7 +5093,7 @@ function Unit12CustomerService({
                     同一個固定高度的盒子裡，手機螢幕根本不夠放，客戶名單完全滑不下去
                     （真實案例：商家反映「無法往下拉名單」）。桌面版（md 以上）維持
                     原本並排雙欄不變。 */}
-                <div className={`${activeConvo ? 'hidden md:flex' : 'flex'} md:w-80 shrink-0 border-b md:border-b-0 md:border-r flex-col bg-gray-50/50`}>
+                <div className={`${activeConvo ? 'hidden md:flex' : 'flex'} md:w-64 lg:w-72 shrink-0 border-b md:border-b-0 md:border-r flex-col bg-white`}>
                   {/* 搜尋列與計數 */}
                   <div className="p-2.5 border-b bg-white space-y-2 shrink-0">
                     <div className="relative">
@@ -5113,7 +5124,7 @@ function Unit12CustomerService({
                   </div>
 
                   {/* 滾動客戶名單列表 */}
-                  <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
+                  <div className="flex-1 overflow-y-auto">
                     {filteredConvos.length === 0 ? (
                       <div className="p-6 text-center text-xs text-gray-400">
                         {inboxSearch ? t('noMatchingCustomers') : t('noConvLog')}
@@ -5131,35 +5142,28 @@ function Unit12CustomerService({
                               inboxScrollToHit.current = !!searchQ
                               void loadThreadBubbles(convo.platform, convo.from_id, searchQ ? convo.matchAt : null)
                             }}
-                            className={`w-full text-left p-3 hover:bg-white transition-colors border-l-4 ${
-                              active ? 'bg-white border-l-primary shadow-xs' : 'border-l-transparent bg-transparent'
+                            className={`w-full text-left px-3 py-2.5 transition-colors ${
+                              active ? 'bg-[#eaf2ff]' : 'hover:bg-gray-50'
                             }`}
                           >
-                            <div className="flex items-center gap-1.5 mb-1">
-                              <span className="text-xs font-semibold text-gray-900 truncate flex-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[15px] font-semibold text-gray-900 truncate flex-1">
                                 {highlightText(displayName, searchQ)}
                               </span>
-                              {convo.takeover && (
-                                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-medium shrink-0">
-                                  {t('humanTakeoverBadge')}
-                                </span>
-                              )}
                               {convo.lastMessageAt && (
-                                <span className="text-[10px] text-gray-400 shrink-0">
-                                  {new Date(convo.lastMessageAt).toLocaleDateString(locale, { month: 'numeric', day: 'numeric' })}
+                                <span className="text-[11px] text-gray-400 shrink-0">
+                                  {formatListTime(convo.lastMessageAt, locale)}
                                 </span>
                               )}
                             </div>
-                            <div className="flex items-center justify-between gap-1 text-[11px] text-gray-500">
-                              <span className="truncate flex items-center gap-1 font-mono text-[10px] text-gray-400">
-                                {platformEmoji(convo.platform)} {convo.from_id.slice(0, 16)}{convo.from_id.length > 16 ? '…' : ''}
+                            {!searchQ && convo.preview && (
+                              <div className="mt-0.5 text-[13px] text-gray-500 truncate">{convo.preview}</div>
+                            )}
+                            {convo.takeover && (
+                              <span className="inline-block mt-1 text-[11px] px-2 py-0.5 rounded-full border border-amber-300 text-amber-700">
+                                {t('humanTakeoverBadge')}
                               </span>
-                              {convo.messageCount != null && (
-                                <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full shrink-0">
-                                  {t('messageCountSuffix', { n: convo.messageCount })}
-                                </span>
-                              )}
-                            </div>
+                            )}
                             {searchQ && convo.match && (
                               <div className="mt-1 text-[11px] text-gray-500 line-clamp-2 break-all">{highlightText(convo.match, searchQ)}</div>
                             )}
