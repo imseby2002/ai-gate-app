@@ -46,6 +46,7 @@ interface EmailSyncResult {
     skipped_not_booking: number
     skipped_by_prefilter: number
     skipped_duplicate: number
+    skipped_no_property: number
     ai_null: number
     since_date: string
     log: string[]
@@ -193,7 +194,7 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
   const supabase = createAdminClient()
   const result: EmailSyncResult = {
     processed: 0, added: 0, errors: [],
-    debug: { found_uids: 0, no_source: 0, skipped_no_checkin: 0, skipped_not_booking: 0, skipped_by_prefilter: 0, skipped_duplicate: 0, ai_null: 0, since_date: '', log: [] },
+    debug: { found_uids: 0, no_source: 0, skipped_no_checkin: 0, skipped_not_booking: 0, skipped_by_prefilter: 0, skipped_duplicate: 0, skipped_no_property: 0, ai_null: 0, since_date: '', log: [] },
   }
   function addLog(entry: string) {
     if (result.debug.log.length < 60) result.debug.log.push(entry)
@@ -753,6 +754,15 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
             }
             continue
           }
+        }
+
+        // 配不到房型就不要新增佔位訂單：沒有房號的「(待補充)」只會讓每日入住表多出一堆
+        // 看不出是哪間房的空殼。此信已處理過的重複／取消情形在上面都已 continue，到這裡
+        // 代表是「全新、但房型未知」的訂單——直接略過不寫入。
+        if (!resolvedPropertyId) {
+          addLog(`[略過：房型未知] ${confId} ${checkIn ?? ''} | ${subj80}`)
+          result.debug.skipped_no_property++
+          continue
         }
 
         const { error: bkErr } = await supabase
