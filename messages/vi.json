@@ -9827,7 +9827,8 @@
     "summaryCollapse": "Thu gọn",
     "bookingOpenOrder": "Mở đơn đặt phòng",
     "guestsCount": "{n} khách",
-    "bookingNotFound": "Không tìm thấy đơn đặt phòng"
+    "bookingNotFound": "Không tìm thấy đơn đặt phòng",
+    "reservationOpen": "Mở lịch hẹn"
   },
   "Pit": {
     "title": "Kế toán・Thuế TNCN",

@@ -87,3 +87,70 @@ export async function reserveContextForCs(ownerId: string, message: string): Pro
   )
   return lines.join('\n')
 }
+
+export interface GuestReservation {
+  id: string
+  appointmentNo: string
+  startTime: string
+  endTime: string
+  service: string | null
+  staff: string | null
+  store: string | null
+  status: string
+  statusLabel: string
+  customerName: string | null
+}
+
+/**
+ * 收件匣客人資訊卡用：在預約系統（reserve.im-tourist.com）找這位客人最相關的一筆預約
+ * （進行中或即將到來優先，否則最近一筆）。以手機號碼比對（客人核對過的手機、或對話中出現的手機）；
+ * 沒有手機時退而用姓名比對，且只在恰好一位客人符合時採用，避免同名誤配。
+ */
+export async function findGuestReservation(
+  ownerId: string,
+  opts: { phones?: string[]; names?: Array<string | null | undefined> },
+): Promise<GuestReservation | null> {
+  const admin = createAdminClient()
+  const { data: storeRows } = await admin.from('reserve_stores').select('id, name').eq('user_id', ownerId).limit(20)
+  const stores = (storeRows ?? []) as Array<{ id: string; name: string }>
+  if (!stores.length) return null
+  const storeName = new Map(stores.map(s => [s.id, s.name]))
+
+  const { data } = await admin.from('reserve_appointments')
+    .select('id, appointment_no, store_id, customer_name, customer_phone, start_time, end_time, status, service:reserve_services(name), staff:reserve_staff(name)')
+    .in('store_id', stores.map(s => s.id))
+    .gte('start_time', new Date(Date.now() - 30 * 86400_000).toISOString())
+    .order('start_time', { ascending: true }).limit(1000)
+  type Row = { id: string; appointment_no: string; store_id: string; customer_name: string | null; customer_phone: string | null; start_time: string; end_time: string; status: string; service: { name?: string } | null; staff: { name?: string } | null }
+  const rows = (data ?? []) as unknown as Row[]
+  if (!rows.length) return null
+
+  const digits = (s?: string | null) => (s ?? '').replace(/\D/g, '')
+  const suffixes = [...new Set((opts.phones ?? []).map(p => digits(p).slice(-9)).filter(s => s.length >= 8))]
+  let mine = suffixes.length ? rows.filter(r => suffixes.some(s => digits(r.customer_phone).endsWith(s))) : []
+  if (!mine.length) {
+    const norm = (s?: string | null) => (s ?? '').toLowerCase().replace(/\s+/g, '')
+    for (const n of opts.names ?? []) {
+      const want = norm(n)
+      if (want.length < 2) continue
+      const ms = rows.filter(r => norm(r.customer_name) === want)
+      if (ms.length && new Set(ms.map(r => digits(r.customer_phone))).size === 1) { mine = ms; break }
+    }
+  }
+  if (!mine.length) return null
+
+  const now = Date.now()
+  const active = mine.filter(r => r.status !== 'cancelled' && Date.parse(r.end_time) >= now - 3600_000)
+  const hit = active[0] ?? mine[mine.length - 1]
+  return {
+    id: hit.id, appointmentNo: hit.appointment_no, startTime: hit.start_time, endTime: hit.end_time,
+    service: hit.service?.name ?? null, staff: hit.staff?.name ?? null, store: storeName.get(hit.store_id) ?? null,
+    status: hit.status, statusLabel: STATUS_LABEL[hit.status] ?? hit.status, customerName: hit.customer_name,
+  }
+}
+
+/** 從客人訊息中擷取手機號碼（給 findGuestReservation 比對用） */
+export function extractPhones(texts: Array<string | null | undefined>): string[] {
+  const re = new RegExp(PHONE_RE.source, 'g')
+  return [...new Set(texts.flatMap(t => (t ?? '').match(re) ?? []))]
+}

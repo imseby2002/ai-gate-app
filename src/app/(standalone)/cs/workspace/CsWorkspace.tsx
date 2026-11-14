@@ -314,6 +314,7 @@ interface InboxConvo {
 interface ThreadProfile {
   summary: string | null
   booking: { id: string; guestName: string | null; checkIn: string; checkOut: string; room: string | null; orderNo: string | null; guests: number | null; platform: string | null } | null
+  reservation: { id: string; appointmentNo: string; startTime: string; service: string | null; staff: string | null; store: string | null; statusLabel: string; customerName: string | null } | null
 }
 
 // 把搜尋字詞在文字中標黃
@@ -1708,7 +1709,7 @@ function Unit12CustomerService({
         setThreadBubbles(d.bubbles)
         setThreadHasOlder(!!d.hasOlder)
         setThreadHasNewer(!!d.hasNewer)
-        setThreadProfile({ summary: d.summary ?? null, booking: d.booking ?? null })
+        setThreadProfile({ summary: d.summary ?? null, booking: d.booking ?? null, reservation: d.reservation ?? null })
       }
       if (typeof d.takeover === 'boolean') {
         setActiveConvo(prev => prev && prev.from_id === to ? { ...prev, takeover: d.takeover, alert: d.alert ?? null } : prev)
@@ -5279,7 +5280,7 @@ function Unit12CustomerService({
                           </button>
                         </div>
                       )}
-                      {threadProfile && (threadProfile.booking || threadProfile.summary) && (
+                      {threadProfile && (threadProfile.booking || threadProfile.reservation || threadProfile.summary) && (
                         <div className="px-3 py-2 border-b bg-[#f7f9fc] shrink-0 text-[13px] text-gray-700 space-y-1">
                           {threadProfile.booking && (() => {
                             const b = threadProfile.booking
@@ -5293,6 +5294,23 @@ function Unit12CustomerService({
                                 {b.guestName && <span>· {b.guestName}</span>}
                                 {b.guests ? <span>· {t('guestsCount', { n: b.guests })}</span> : null}
                                 {b.orderNo && <span className="text-gray-400">#{b.orderNo}</span>}
+                              </a>
+                            )
+                          })()}
+                          {threadProfile.reservation && (() => {
+                            const r = threadProfile.reservation
+                            const when = new Date(r.startTime).toLocaleString(locale, { timeZone: 'Asia/Taipei', month: 'numeric', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+                            return (
+                              <a href={`/reserve/appointments?id=${encodeURIComponent(r.id)}`} target="_blank" rel="noopener noreferrer"
+                                title={t('reservationOpen')}
+                                className="flex items-center gap-1.5 flex-wrap text-[#1a73e8] hover:underline">
+                                <span>📅 {when}</span>
+                                {r.service && <span>· {r.service}</span>}
+                                {r.staff && <span>· {r.staff}</span>}
+                                {r.store && <span>· {r.store}</span>}
+                                {r.customerName && <span>· {r.customerName}</span>}
+                                <span className="text-gray-500">· {r.statusLabel}</span>
+                                <span className="text-gray-400">#{r.appointmentNo}</span>
                               </a>
                             )
                           })()}

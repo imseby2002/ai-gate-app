@@ -13,6 +13,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getBnbContext } from '@/lib/bnb/context'
 import { isHandoffActive, getHumanIdleMinutes, STAFF_ACTIVE_SUBJECT } from '@/lib/cs/handoff'
 import { findGuestBooking } from '@/lib/cs/stay-nights'
+import { findGuestReservation, extractPhones } from '@/lib/reserve/cs-context'
 
 // 需要真人處理的提醒：7 天內未結案、且不是「員工正在回覆」自動開的接管工單
 // （客人要求真人、現場狀況、付款待確認、查無訂單、發票等）。按「已處理」會把這些工單結案。
@@ -153,15 +154,20 @@ export async function GET(req: NextRequest) {
       .select('summary, summarized_at, name, facts')
       .eq('user_id', ctx.ownerId).eq('platform', platform).eq('from_id', to).eq('industry', industry)
       .maybeSingle()
-    // 往前翻頁時不重查訂房
-    const booking = before ? undefined : await findGuestBooking(
-      createAdminClient(), ctx.ownerId, custRow?.facts as Record<string, unknown> | null, custRow?.name,
-    ).catch(() => null)
+    // 往前翻頁時不重查訂房／預約
+    const facts = custRow?.facts as Record<string, unknown> | null
+    const [booking, reservation] = before ? [undefined, undefined] : await Promise.all([
+      findGuestBooking(createAdminClient(), ctx.ownerId, facts, custRow?.name).catch(() => null),
+      findGuestReservation(ctx.ownerId, {
+        phones: [String(facts?.phone ?? ''), ...extractPhones(rows.map(r => r.message))],
+        names: [String(facts?.confirmedName ?? ''), custRow?.name],
+      }).catch(() => null),
+    ])
 
     return NextResponse.json({
       bubbles, hasOlder, hasNewer, takeover: takeoverSet.has(to),
       summary: custRow?.summary ?? null, summarizedAt: custRow?.summarized_at ?? null,
-      booking, alert: alertMap.get(to) ?? null,
+      booking, reservation, alert: alertMap.get(to) ?? null,
     })
   }
 
