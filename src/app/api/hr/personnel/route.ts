@@ -8,7 +8,7 @@ const s = (v: unknown) => String(v ?? '').trim()
 const REQUIRED_TYPES = DOC_CATALOG.filter(d => d.type !== 'other' && !d.optional).map(d => d.type)
 
 // 人員可編輯的基本資料欄位
-const PERSON_FIELDS = ['name', 'gender', 'native_place', 'birthday', 'id_number', 'education', 'email', 'company_email', 'zalo_user_id', 'payroll_no', 'position', 'store', 'staff_category', 'address', 'phone'] as const
+const PERSON_FIELDS = ['name', 'gender', 'native_place', 'birthday', 'id_number', 'education', 'email', 'company_email', 'zalo_user_id', 'payroll_no', 'position', 'store', 'staff_category', 'address', 'phone', 'resume_text'] as const
 
 export async function GET(req: NextRequest) {
   const ctx = await getHrContext('staff')
