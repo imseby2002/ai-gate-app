@@ -9827,7 +9827,8 @@
     "summaryCollapse": "收合",
     "bookingOpenOrder": "開啟訂房系統訂單",
     "guestsCount": "{n} 位",
-    "bookingNotFound": "訂房系統查無對應訂單"
+    "bookingNotFound": "訂房系統查無對應訂單",
+    "reservationOpen": "開啟預約系統紀錄"
   },
   "Pit": {
     "title": "會計・個人所得稅",

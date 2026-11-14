@@ -30,7 +30,13 @@ export default function ReserveAppointmentsPage() {
           fetch('/api/reserve/staff').then(r => r.json()).catch(() => ({ staff: DEFAULT_STAFF })),
           fetch('/api/reserve/services').then(r => r.json()).catch(() => ({ services: DEFAULT_SERVICES })),
         ])
-        if (apptRes.appointments) setAppointments(apptRes.appointments)
+        if (apptRes.appointments) {
+          setAppointments(apptRes.appointments)
+          // 從客服收件匣的客人資訊卡點進來（?id=預約 ID）→ 直接打開該筆預約
+          const openId = new URLSearchParams(window.location.search).get('id')
+          const target = openId ? (apptRes.appointments as ReserveAppointment[]).find(a => a.id === openId) : undefined
+          if (target) { setSelectedAppt(target); setSearchQuery(target.appointment_no) }
+        }
         if (staffRes.staff) setStaffList(staffRes.staff)
         if (srvRes.services) setServices(srvRes.services)
       } catch (e) {

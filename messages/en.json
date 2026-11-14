@@ -9827,7 +9827,8 @@
     "summaryCollapse": "Collapse",
     "bookingOpenOrder": "Open booking order",
     "guestsCount": "{n} guests",
-    "bookingNotFound": "No matching booking found"
+    "bookingNotFound": "No matching booking found",
+    "reservationOpen": "Open reservation"
   },
   "Pit": {
     "title": "Accounting · Personal Income Tax",
