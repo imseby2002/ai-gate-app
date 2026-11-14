@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { ChevronLeft, ChevronRight, X, Trash2 } from 'lucide-react'
 import { createPortal } from 'react-dom'
@@ -86,6 +86,9 @@ export default function CalendarPage() {
   })
   const [saving, setSaving] = useState(false)
   const [orderTotal, setOrderTotal] = useState('')
+  // 快速加入訂單：依定價規則（週末／假日加價、每日覆蓋價、加人／加床）試算的實際金額
+  const [quotes, setQuotes] = useState<Record<string, number>>({})
+  const quoteKeyRef = useRef<Record<string, string>>({})
   // Mobile: toggle between calendar view and detail view
   const [mobileView, setMobileView] = useState<'calendar' | 'detail'>('calendar')
   // 房東手動關房（blocked_dates, reason=owner_block），key = `${property_id}|${date}`
@@ -205,6 +208,7 @@ export default function CalendarPage() {
   function openQuick(p: Property, ds: string) {
     setQuickOpen(true)
     setOrderTotal('')
+    quoteKeyRef.current = {}
     const defaultGuests = p.base_guests ?? 2
     setQuickForm({
       guest_name: '', guest_phone: '', guest_email: '',
@@ -233,6 +237,31 @@ export default function CalendarPage() {
   function updateRoomLine(propertyId: string, patch: Partial<RoomLine>) {
     setQuickForm(f => ({ ...f, rooms: f.rooms.map(r => r.property_id === propertyId ? { ...r, ...patch } : r) }))
   }
+
+  // 房型／日期／人數／加床變動時，向後端取「含定價規則」的實際總價，自動帶入金額欄位。
+  // 以 composite key 比對，避免重複請求或蓋掉使用者手動改過又沒變動參數的金額。
+  const roomsSig = quickForm.rooms.map(r => `${r.property_id}:${r.num_guests}:${r.extra_beds}`).join(',')
+  useEffect(() => {
+    if (!quickOpen) return
+    const ci = quickForm.check_in, co = quickForm.check_out
+    if (!ci || !co) return
+    for (const r of quickForm.rooms) {
+      const key = `${r.property_id}|${ci}|${co}|${r.num_guests}|${r.extra_beds}`
+      if (quoteKeyRef.current[r.property_id] === key) continue
+      quoteKeyRef.current[r.property_id] = key
+      const pid = r.property_id
+      fetch(`/api/booking/quote?property_id=${pid}&check_in=${ci}&check_out=${co}&num_guests=${r.num_guests}&extra_beds=${r.extra_beds}`)
+        .then(res => res.json())
+        .then(d => {
+          const total = d?.quote?.total
+          if (typeof total !== 'number') return
+          setQuotes(q => ({ ...q, [key]: total }))
+          setQuickForm(f => ({ ...f, rooms: f.rooms.map(x => x.property_id === pid ? { ...x, total_price: String(total) } : x) }))
+        })
+        .catch(() => {})
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quickOpen, quickForm.check_in, quickForm.check_out, roomsSig])
 
   // 多間房型合訂常常整單有折扣，房東自己去算每間該分多少很麻煩——
   // 直接輸入折扣後的訂單總額，平均分配到目前選的每個房型（除不盡的差額算到最後一間），
@@ -609,7 +638,9 @@ export default function CalendarPage() {
                   ? Math.max(0, r.num_guests - baseGuests) * extraGuestFee * calcNights
                   : 0
                 const extraBedCharge = r.extra_beds * extraBedFee * calcNights
-                const calcTotal = basePrice * calcNights + extraPersonCharge + extraBedCharge
+                const quotedTotal = quotes[`${r.property_id}|${quickForm.check_in}|${quickForm.check_out}|${r.num_guests}|${r.extra_beds}`]
+                const hasQuote = typeof quotedTotal === 'number'
+                const calcTotal = hasQuote ? quotedTotal : basePrice * calcNights + extraPersonCharge + extraBedCharge
                 const hasExtraBeds = (prop?.max_extra_beds ?? 0) > 0
                 void nights // suppress unused warning
 
@@ -671,9 +702,15 @@ export default function CalendarPage() {
                     {prop && calcTotal > 0 && (
                       <div className="flex items-center justify-between text-[11px] text-gray-400 bg-white rounded px-2 py-1 border">
                         <span>
-                          底 {basePrice.toLocaleString()} × {calcNights}晚
-                          {extraPersonCharge > 0 && ` + 加人 ${extraPersonCharge.toLocaleString()}`}
-                          {extraBedCharge > 0 && ` + 加床 ${extraBedCharge.toLocaleString()}`}
+                          {hasQuote ? (
+                            `依定價規則${calcNights > 1 ? ` · ${calcNights}晚` : ''}`
+                          ) : (
+                            <>
+                              底 {basePrice.toLocaleString()} × {calcNights}晚
+                              {extraPersonCharge > 0 && ` + 加人 ${extraPersonCharge.toLocaleString()}`}
+                              {extraBedCharge > 0 && ` + 加床 ${extraBedCharge.toLocaleString()}`}
+                            </>
+                          )}
                         </span>
                         <button type="button"
                           onClick={() => updateRoomLine(r.property_id, { total_price: String(calcTotal) })}
