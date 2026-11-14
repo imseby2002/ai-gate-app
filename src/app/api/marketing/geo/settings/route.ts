@@ -1,28 +1,27 @@
 /**
  * GET/POST /api/marketing/geo/settings
  * GEO Writer — 每位使用者的發佈設定（WordPress 憑證 / 通用 Webhook）。
+ * 設定跟著「目前切換的公司」走（存在公司 owner 名下），同一個登入帳號切換公司就用各自的設定；
+ * 公司還沒有設定時沿用登入者自己舊的設定。
  * 另含第三方平台（Medium、Ghost、Notion、Dev.to、Blogger）設定，存在 platforms jsonb。
  * GET 不回傳密碼明文，只回傳是否已設定；POST 密碼/Token 留空代表沿用既有值。
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import type { GeoPlatformSettings } from '@/lib/geo/platforms'
+import { marketingCompany } from '@/lib/marketing/company'
+import { loadGeoSettings } from '@/lib/geo/settings'
 import { BLOGGER_PROVIDER } from '@/lib/geo/blogger-token'
 
 export async function GET() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const mkt = await marketingCompany()
+  if (!mkt) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data } = await supabase
-    .from('geo_publish_settings')
-    .select('wp_base_url, wp_user, wp_app_password, webhook_url, webhook_token, platforms')
-    .eq('user_id', user.id)
-    .single()
+  const data = await loadGeoSettings(mkt)
   const p = (data?.platforms ?? {}) as GeoPlatformSettings
   const [{ data: blogger }, { data: fb }] = await Promise.all([
-    supabase.from('user_integrations').select('email').eq('user_id', user.id).eq('provider', BLOGGER_PROVIDER).maybeSingle(),
-    supabase.from('social_platform_credentials').select('credentials').eq('user_id', user.id).eq('platform', 'Facebook').limit(1).maybeSingle(),
+    mkt.admin.from('user_integrations').select('email').eq('user_id', mkt.ownerId).eq('provider', BLOGGER_PROVIDER).maybeSingle(),
+    mkt.admin.from('social_platform_credentials').select('credentials').eq('user_id', mkt.ownerId).eq('platform', 'Facebook')
+      .order('updated_at', { ascending: false }).limit(1).maybeSingle(),
   ])
   const fbCred = (fb?.credentials ?? null) as { page_id?: string; page_access_token?: string } | null
 
@@ -47,18 +46,13 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const mkt = await marketingCompany()
+  if (!mkt) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { wpBaseUrl, wpUser, wpAppPassword, webhookUrl, webhookToken, platforms: pIn } = await req.json()
 
   // 取既有值，密碼/Token 留空時沿用
-  const { data: prev } = await supabase
-    .from('geo_publish_settings')
-    .select('wp_app_password, webhook_token, platforms')
-    .eq('user_id', user.id)
-    .single()
+  const prev = await loadGeoSettings(mkt)
 
   // 第三方平台：金鑰留空沿用舊值，非機密欄位直接覆蓋
   const old = (prev?.platforms ?? {}) as GeoPlatformSettings
@@ -73,7 +67,7 @@ export async function POST(req: NextRequest) {
   }
 
   const row = {
-    user_id: user.id,
+    user_id: mkt.ownerId,
     wp_base_url: wpBaseUrl?.trim() || null,
     wp_user: wpUser?.trim() || null,
     wp_app_password: wpAppPassword?.trim() ? wpAppPassword.trim() : (prev?.wp_app_password ?? null),
@@ -83,7 +77,7 @@ export async function POST(req: NextRequest) {
     updated_at: new Date().toISOString(),
   }
 
-  const { error } = await supabase.from('geo_publish_settings').upsert(row, { onConflict: 'user_id' })
+  const { error } = await mkt.admin.from('geo_publish_settings').upsert(row, { onConflict: 'user_id' })
   if (error) {
     console.error('[geo/settings] upsert', error)
     return NextResponse.json({ error: '儲存失敗' }, { status: 500 })

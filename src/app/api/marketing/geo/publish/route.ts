@@ -21,6 +21,8 @@ import {
   type GeoPlatform, type GeoPlatformSettings,
 } from '@/lib/geo/platforms'
 import { getValidBloggerAccessToken } from '@/lib/geo/blogger-token'
+import { marketingCompany } from '@/lib/marketing/company'
+import { loadGeoSettings } from '@/lib/geo/settings'
 
 export const maxDuration = 60
 
@@ -39,12 +41,10 @@ export async function POST(req: NextRequest) {
     .single()
   if (!article) return NextResponse.json({ error: '找不到文章' }, { status: 404 })
 
-  // 每位使用者自己的發佈設定（優先），未設則退回 env
-  const { data: settings } = await supabase
-    .from('geo_publish_settings')
-    .select('wp_base_url, wp_user, wp_app_password, webhook_url, webhook_token, platforms')
-    .eq('user_id', user.id)
-    .single()
+  // 目前切換公司的發佈設定（存在公司 owner 名下；沒有則用登入者自己的），未設則退回 env
+  const mkt = await marketingCompany()
+  if (!mkt) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const settings = await loadGeoSettings(mkt)
 
   const bodyHtml = mdToHtml(article.body_md)
   const jsonLdStr = article.json_ld
@@ -144,10 +144,11 @@ export async function POST(req: NextRequest) {
       else if (platform === 'ghost') url = await publishGhost(cfg.ghost, input)
       else if (platform === 'devto') url = await publishDevto(cfg.devto, input)
       else if (platform === 'notion') url = await publishNotion(cfg.notion, input)
-      else if (platform === 'blogger') url = await publishBlogger(await getValidBloggerAccessToken(user.id), cfg.blogger, input)
+      else if (platform === 'blogger') url = await publishBlogger(await getValidBloggerAccessToken(mkt.ownerId), cfg.blogger, input)
       else if (platform === 'facebook') {
-        const { data: fb } = await supabase.from('social_platform_credentials')
-          .select('credentials').eq('user_id', user.id).eq('platform', 'Facebook')
+        // 社群平台憑證存在公司 owner 名下
+        const { data: fb } = await mkt.admin.from('social_platform_credentials')
+          .select('credentials').eq('user_id', mkt.ownerId).eq('platform', 'Facebook')
           .order('updated_at', { ascending: false }).limit(1).maybeSingle()
         url = await publishFacebook((fb?.credentials ?? null) as { page_id?: string; page_access_token?: string } | null, input)
       }
