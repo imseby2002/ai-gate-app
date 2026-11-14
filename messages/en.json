@@ -9840,7 +9840,11 @@
     "bookingOpenOrder": "Open booking order",
     "guestsCount": "{n} guests",
     "bookingNotFound": "No matching booking found",
-    "reservationOpen": "Open reservation"
+    "reservationOpen": "Open reservation",
+    "flagNeedsAction": "Flag for follow-up",
+    "flagNeedsActionTitle": "Flag this customer for staff follow-up (close it with “Handled”)",
+    "flagNotePrompt": "What needs to be done? (e.g. register the tour after payment)",
+    "flagDefaultNote": "Flagged for follow-up"
   },
   "Pit": {
     "title": "Accounting · Personal Income Tax",

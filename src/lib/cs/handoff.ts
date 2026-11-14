@@ -7,6 +7,10 @@ export const STAFF_ACTIVE_SUBJECT = '真人接管中'
 // 客人反映的現場狀況（沒熱水、送錯餐等）工單。真人處理中時 AI 照常接回回答其他問題，
 // 但這件事只能說「管家處理中」（見 webhook 的 buildOnsiteInProgressInstruction）。
 export const ONSITE_ISSUE_INTENT = '現場狀況待處理'
+// 員工在收件匣手動按「標記需處理」開的工單（例如：等客人匯款後才幫他報名）
+export const MANUAL_FLAG_INTENT = '人工標記待處理'
+// 這些工單要等真人處理完才結案：收件匣提醒不受 7 天窗口限制，也不會被 48 小時自動結案
+export const PERSISTENT_TICKET_INTENTS = [MANUAL_FLAG_INTENT, '付款確認待跟進']
 const ONSITE_OPEN_HOURS = 12
 export const DEFAULT_HUMAN_IDLE_MINUTES = 1
 const ESCALATION_STALE_HOURS = 2

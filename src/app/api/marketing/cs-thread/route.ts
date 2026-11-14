@@ -11,14 +11,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getBnbContext } from '@/lib/bnb/context'
-import { isHandoffActive, getHumanIdleMinutes, STAFF_ACTIVE_SUBJECT } from '@/lib/cs/handoff'
+import { isHandoffActive, getHumanIdleMinutes, STAFF_ACTIVE_SUBJECT, MANUAL_FLAG_INTENT, PERSISTENT_TICKET_INTENTS } from '@/lib/cs/handoff'
 import { findGuestBooking } from '@/lib/cs/stay-nights'
 import { findGuestReservation, extractPhones } from '@/lib/reserve/cs-context'
 
 // 需要真人處理的提醒：7 天內未結案、且不是「員工正在回覆」自動開的接管工單
 // （客人要求真人、現場狀況、付款待確認、查無訂單、發票等）。按「已處理」會把這些工單結案。
 const ALERT_DAYS = 7
-interface AlertInfo { intents: string[]; ticketIds: string[] }
+interface AlertInfo { intents: string[]; ticketIds: string[]; notes: string[] }
 
 interface Bubble {
   side: 'in' | 'out'
@@ -70,17 +70,20 @@ export async function GET(req: NextRequest) {
   const alertMap = new Map<string, AlertInfo>()
   {
     let aq = supabase
-      .from('cs_tickets').select('id, from_id, intent, subject')
+      .from('cs_tickets').select('id, from_id, intent, subject, created_at')
       .eq('user_id', ctx.ownerId)
       .in('status', ['open', 'in_progress'])
-      .gte('created_at', new Date(Date.now() - ALERT_DAYS * 86_400_000).toISOString())
       .order('created_at', { ascending: false }).limit(500)
     if (to) aq = aq.eq('from_id', to)
     const { data: alertRows } = await aq
     for (const r of alertRows ?? []) {
       if (!r.from_id || r.subject === STAFF_ACTIVE_SUBJECT) continue
-      const a = alertMap.get(r.from_id) ?? { intents: [], ticketIds: [] }
+      // 一般工單只提醒 7 天內的；手動標記與付款確認要等處理完才消失
+      const recent = new Date(r.created_at).getTime() >= Date.now() - ALERT_DAYS * 86_400_000
+      if (!recent && !PERSISTENT_TICKET_INTENTS.includes(r.intent ?? '')) continue
+      const a = alertMap.get(r.from_id) ?? { intents: [], ticketIds: [], notes: [] }
       a.ticketIds.push(r.id)
+      if (r.intent === MANUAL_FLAG_INTENT && r.subject) a.notes.push(r.subject)
       if (r.intent && !a.intents.includes(r.intent)) a.intents.push(r.intent)
       alertMap.set(r.from_id, a)
     }

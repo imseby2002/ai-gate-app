@@ -9840,7 +9840,11 @@
     "bookingOpenOrder": "開啟訂房系統訂單",
     "guestsCount": "{n} 位",
     "bookingNotFound": "訂房系統查無對應訂單",
-    "reservationOpen": "開啟預約系統紀錄"
+    "reservationOpen": "開啟預約系統紀錄",
+    "flagNeedsAction": "標記需處理",
+    "flagNeedsActionTitle": "把這位客人標成需要真人處理（處理完按「已處理」關閉）",
+    "flagNotePrompt": "要處理什麼？（例如：等匯款後再報名登島）",
+    "flagDefaultNote": "人工標記待處理"
   },
   "Pit": {
     "title": "會計・個人所得稅",
