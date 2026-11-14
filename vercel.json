@@ -116,6 +116,10 @@
     {
       "path": "/api/cron/model-prices",
       "schedule": "15 3 * * *"
+    },
+    {
+      "path": "/api/cron/cs-ticket-autoclose",
+      "schedule": "40 * * * *"
     }
   ]
 }
