@@ -5954,7 +5954,8 @@
     "confirmDeleteContract": "Xóa hợp đồng này?",
     "categoryRecruit": "Lao động",
     "categoryInsurance": "Bảo hiểm",
-    "categoryTax": "Thuế thu nhập"
+    "categoryTax": "Thuế thu nhập",
+    "fieldResume": "Kinh nghiệm làm việc, giới thiệu bản thân"
   },
   "Audit": {
     "adminOnly": "Chỉ bộ phận kiểm toán được sử dụng",

@@ -5954,7 +5954,8 @@
     "confirmDeleteContract": "Delete this contract?",
     "categoryRecruit": "Labor",
     "categoryInsurance": "Insurance",
-    "categoryTax": "Income Tax"
+    "categoryTax": "Income Tax",
+    "fieldResume": "Work experience & self-introduction (text résumé)"
   },
   "Audit": {
     "adminOnly": "Only the Audit unit can use this",

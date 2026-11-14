@@ -38,7 +38,7 @@ interface Checklist { doc_key: string; original_received: boolean; copy_received
 interface Contract { id: string; contract_no: string; sign_date: string | null; start_date: string | null; end_date: string | null; file_name: string; url: string; note: string }
 interface Employee { base_salary: number; hourly_rate: number; employment_type: string; insurance_required: boolean; insurance_status: string; insurance_salary: number; attendance_no: string; bank_name: string; bank_account: string; department: string; position: string }
 interface Payroll { year: number; month: number; base_salary: number; allowances: number; deductions: number; bonus: number; net_pay: number; status: string }
-interface Person { id: string; name: string; gender: string; native_place: string; birthday: string | null; id_number: string; education: string; email: string; company_email: string; zalo_user_id: string; payroll_no: string; position: string; store: string; staff_category: string; address: string; phone: string; apply_token: string; profile_text: string; hired_employee_id?: string | null }
+interface Person { id: string; name: string; gender: string; native_place: string; birthday: string | null; id_number: string; education: string; email: string; company_email: string; zalo_user_id: string; payroll_no: string; position: string; store: string; staff_category: string; address: string; phone: string; apply_token: string; profile_text: string; resume_text: string; hired_employee_id?: string | null }
 
 export default function PersonnelPage() {
   const t = useTranslations('Personnel')
@@ -287,6 +287,9 @@ function PersonDetail({ id, onBack }: { id: string; onBack: () => void }) {
         <div className="grid md:grid-cols-3 gap-2">
           {([[t('fieldName'), 'name'], [t('fieldGender'), 'gender'], [t('fieldNativePlace'), 'native_place'], [t('fieldBirthday'), 'birthday', 'date'], [t('fieldIdNumber'), 'id_number'], [t('fieldEducation'), 'education'], [t('fieldPosition'), 'position'], [t('fieldStore'), 'store'], [t('fieldPayrollNo'), 'payroll_no'], [t('fieldStaffCategory'), 'staff_category'], [t('fieldPhone'), 'phone'], [t('fieldEmail'), 'email', 'email'], [t('fieldCompanyEmail'), 'company_email', 'email'], ['ZALO', 'zalo_user_id'], [t('fieldAddress'), 'address']] as [string, keyof Person, string?][]).map(f => <div key={f[1]}>{F(f)}</div>)}
         </div>
+        <label className="block space-y-1"><span className="text-xs text-gray-500">{t('fieldResume')}</span>
+          <textarea value={String(form.resume_text ?? '')} onChange={e => set({ resume_text: e.target.value })} rows={5}
+            className="w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500" /></label>
         <p className="text-[11px] text-gray-400">{t('personalLink')}<code>/apply/edit/{data.person.apply_token}</code></p>
       </Card>
 

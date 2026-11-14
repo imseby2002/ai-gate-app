@@ -5954,7 +5954,8 @@
     "confirmDeleteContract": "刪除此合同？",
     "categoryRecruit": "勞動",
     "categoryInsurance": "保險",
-    "categoryTax": "所得稅"
+    "categoryTax": "所得稅",
+    "fieldResume": "工作經歷、自我介紹（文字履歷）"
   },
   "Audit": {
     "adminOnly": "僅稽核單位可使用",
