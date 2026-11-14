@@ -3,11 +3,13 @@
  *
  * 客服工單（cs_tickets）建立超過 48 小時仍未結案（open / in_progress）→ 自動設為 resolved，
  * 避免收件匣「需要真人」提醒與工單列表被過期工單塞滿。
+ * 手動「標記需處理」與「付款確認待跟進」除外，要真人處理完才結案。
  * 48 小時遠超過真人接管時效（員工閒置分鐘、客人要求真人 2 小時），結案不影響 AI 是否回覆。
  */
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { verifyCronAuth } from '@/lib/cron/auth'
+import { PERSISTENT_TICKET_INTENTS } from '@/lib/cs/handoff'
 
 const AUTO_CLOSE_HOURS = 48
 
@@ -21,6 +23,7 @@ export async function GET(req: Request) {
     .update({ status: 'resolved', updated_at: new Date().toISOString() })
     .in('status', ['open', 'in_progress'])
     .lt('created_at', cutoff)
+    .or(`intent.is.null,intent.not.in.(${PERSISTENT_TICKET_INTENTS.map(i => `"${i}"`).join(',')})`)
     .select('id')
   if (error) {
     console.error('[cs-ticket-autoclose]', error)

@@ -9840,7 +9840,11 @@
     "bookingOpenOrder": "Mở đơn đặt phòng",
     "guestsCount": "{n} khách",
     "bookingNotFound": "Không tìm thấy đơn đặt phòng",
-    "reservationOpen": "Mở lịch hẹn"
+    "reservationOpen": "Mở lịch hẹn",
+    "flagNeedsAction": "Đánh dấu cần xử lý",
+    "flagNeedsActionTitle": "Đánh dấu khách này cần nhân viên xử lý (đóng bằng “Đã xử lý”)",
+    "flagNotePrompt": "Cần xử lý việc gì? (vd: đăng ký tour sau khi khách chuyển khoản)",
+    "flagDefaultNote": "Cần xử lý"
   },
   "Pit": {
     "title": "Kế toán・Thuế TNCN",

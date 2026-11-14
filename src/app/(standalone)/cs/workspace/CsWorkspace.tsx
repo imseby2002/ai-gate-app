@@ -309,7 +309,7 @@ interface InboxConvo {
   match?: string | null
   matchAt?: string | null
   preview?: string | null
-  alert?: { intents: string[]; ticketIds: string[] } | null
+  alert?: { intents: string[]; ticketIds: string[]; notes?: string[] } | null
 }
 interface ThreadProfile {
   summary: string | null
@@ -1796,6 +1796,30 @@ function Unit12CustomerService({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ platform: activeConvo.platform, to: activeConvo.from_id, industry: ind, takeover: true, typing: true }),
     }).catch(() => {})
+  }
+
+  // 員工手動標記這位客人「需處理」（例如：等客人匯款後才報名），開一張不會自動結案的工單
+  const [flagging, setFlagging] = useState(false)
+  async function flagInboxConvo() {
+    const convo = activeConvo
+    if (!convo || flagging) return
+    const note = window.prompt(t('flagNotePrompt'), '')
+    if (note === null) return
+    setFlagging(true)
+    try {
+      const res = await fetch('/api/marketing/cs-tickets', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          industry: ind, platform: convo.platform, from_id: convo.from_id, from_name: convo.name ?? undefined,
+          subject: note.trim() || t('flagDefaultNote'), description: note.trim(),
+          priority: 'high', intent: '人工標記待處理',
+        }),
+      })
+      if (res.ok) void loadThreadBubbles(convo.platform, convo.from_id)
+      void loadTickets()
+    } finally {
+      setFlagging(false)
+    }
   }
 
   // 「需要真人」提醒按「已處理」：把這位客人的待處理工單結案，名單的紅色標示隨之消失
@@ -5248,6 +5272,16 @@ function Unit12CustomerService({
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
+                            onClick={() => void flagInboxConvo()}
+                            disabled={flagging}
+                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium border border-rose-300 bg-white text-rose-700 hover:bg-rose-50 disabled:opacity-50"
+                            title={t('flagNeedsActionTitle')}
+                          >
+                            {flagging ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                            {t('flagNeedsAction')}
+                          </button>
+                          <button
+                            type="button"
                             onClick={toggleInboxTakeover}
                             className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium border shadow-xs transition-colors cursor-pointer ${
                               activeConvo.takeover
@@ -5273,7 +5307,9 @@ function Unit12CustomerService({
                       {activeConvo.alert && (
                         <div className="px-3 py-2 border-b bg-rose-50 shrink-0 flex items-center gap-2 text-[13px] text-rose-800">
                           <span className="font-semibold shrink-0">{t('needsHumanBadge')}</span>
-                          <span className="truncate flex-1">{activeConvo.alert.intents.join('、')}</span>
+                          <span className="truncate flex-1" title={[...activeConvo.alert.intents, ...(activeConvo.alert.notes ?? [])].join('、')}>
+                            {activeConvo.alert.intents.filter(i => i !== '人工標記待處理').concat(activeConvo.alert.notes ?? []).join('、') || activeConvo.alert.intents.join('、')}
+                          </span>
                           <button type="button" onClick={() => void dismissInboxAlert()} disabled={dismissingAlert}
                             className="shrink-0 text-[12px] px-2.5 py-1 rounded-full border border-rose-300 bg-white text-rose-700 hover:bg-rose-100 disabled:opacity-50">
                             {dismissingAlert ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t('alertDismiss')}
