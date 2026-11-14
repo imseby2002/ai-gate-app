@@ -82,3 +82,63 @@ export async function countGuestStays(supabase: Supa, userId: string, facts?: Re
   }
   return stays
 }
+
+export interface GuestBooking {
+  id: string
+  guestName: string | null
+  checkIn: string
+  checkOut: string
+  room: string | null
+  orderNo: string | null
+  guests: number | null
+  platform: string | null
+}
+
+// 收件匣客人摘要用：依客人已核對的身份（訂單號碼／手機／姓名）找訂房系統中最相關的一筆訂單
+// （進行中或即將入住優先）。身份都沒有時，退而用 LINE 顯示名稱比對，但只在恰好一位旅客符合時採用，避免同名誤配。
+export async function findGuestBooking(supabase: Supa, userId: string, facts?: Record<string, unknown> | null, displayName?: string | null): Promise<GuestBooking | null> {
+  const orderNumber = String(facts?.orderNumber ?? '').trim()
+  const phone = String(facts?.phone ?? '').replace(/\D/g, '')
+  const confirmedName = String(facts?.confirmedName ?? '').trim()
+
+  const since = new Date(Date.now() - 2 * DAY).toLocaleDateString('sv-SE', { timeZone: 'Asia/Taipei' })
+  const { data } = await supabase
+    .from('bookings')
+    .select('id, guest_name, guest_phone, platform, platform_booking_id, check_in, check_out, num_guests, status, property_id')
+    .eq('user_id', userId)
+    .gte('check_out', since)
+    .order('check_in', { ascending: true })
+    .limit(500)
+  type Row = { id: string; guest_name: string | null; guest_phone: string | null; platform: string | null; platform_booking_id: string | null; check_in: string; check_out: string; num_guests: number | null; status: string | null; property_id: string | null }
+  const rows = ((data ?? []) as Row[]).filter(r => r.status !== 'cancelled' && r.check_in && r.check_out)
+
+  let hit: Row | undefined
+  if (orderNumber) hit = rows.find(r => r.platform_booking_id === orderNumber)
+  if (!hit && phone.length >= 8) hit = rows.find(r => (r.guest_phone ?? '').replace(/\D/g, '').endsWith(phone.slice(-9)))
+  const nameHit = (n: string) => {
+    const want = nameKeys(n)
+    const ms = rows.filter(r => normName(r.guest_name) && [...nameKeys(r.guest_name)].some(k => want.has(k)))
+    return new Set(ms.map(r => normName(r.guest_name))).size === 1 ? ms[0] : undefined
+  }
+  if (!hit && confirmedName) hit = nameHit(confirmedName)
+  if (!hit && displayName && normName(displayName).length >= 2) hit = nameHit(displayName)
+  if (!hit) return null
+
+  // 同一張訂單訂多間房（訂房系統每間房一筆）→ 房間名稱合併顯示
+  const seed = hit
+  const siblings = rows.filter(r => seed.platform_booking_id
+    ? r.platform_booking_id === seed.platform_booking_id && r.check_in === seed.check_in
+    : r.id === seed.id)
+  const propIds = [...new Set(siblings.map(r => r.property_id).filter((x): x is string => !!x))]
+  let room: string | null = null
+  if (propIds.length) {
+    const { data: ps } = await supabase.from('properties').select('id, name').in('id', propIds)
+    const names = new Map(((ps ?? []) as Array<{ id: string; name: string | null }>).map(p => [p.id, p.name]))
+    room = propIds.map(id => names.get(id)).filter(Boolean).join('、') || null
+  }
+  const guestName = hit.guest_name && !/^[(（]/.test(hit.guest_name.trim()) ? hit.guest_name : null
+  return {
+    id: hit.id, guestName, checkIn: hit.check_in, checkOut: hit.check_out, room,
+    orderNo: hit.platform_booking_id, guests: siblings.reduce((n, r) => n + (r.num_guests ?? 0), 0) || null, platform: hit.platform,
+  }
+}
