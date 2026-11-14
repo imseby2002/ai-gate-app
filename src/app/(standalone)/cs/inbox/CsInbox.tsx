@@ -5,6 +5,7 @@ import { useTranslations, useLocale } from 'next-intl'
 import Link from 'next/link'
 import { ArrowLeft, RefreshCw, Loader2, Send, Bot, UserRound, Inbox, ChevronLeft, Search, X, ImagePlus } from 'lucide-react'
 import { uploadInboxImage, formatBubbleTime } from '@/lib/cs/resize-image'
+import { splitBubbleImages } from '@/lib/cs/bubble-images'
 import { InstallInboxButton } from './InstallInboxButton'
 
 const PLATFORM_LABELS: Record<string, { name: string; emoji: string }> = {
@@ -556,7 +557,20 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img src={b.image} alt="" className="max-w-full max-h-72 rounded-lg" />
                             </a>
-                          ) : highlight(b.text, searchQ)}
+                          ) : (() => {
+                            const parts = splitBubbleImages(b.text)
+                            return (
+                              <>
+                                {parts.text && highlight(parts.text, searchQ)}
+                                {parts.images.map(url => (
+                                  <a key={url} href={url} target="_blank" rel="noreferrer" className="block mt-1.5">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={url} alt="" loading="lazy" className="max-w-full max-h-72 rounded-lg" />
+                                  </a>
+                                ))}
+                              </>
+                            )
+                          })()}
                         </div>
                         <div className={`text-[10px] text-muted-foreground mt-0.5 ${b.side === 'out' ? 'text-right' : ''}`}>{fmtClock(b.at)}</div>
                       </div>
