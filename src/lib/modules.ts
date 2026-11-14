@@ -71,6 +71,15 @@ export const MODULES = [
     standalone: true,
   },
   {
+    id: 'crm',
+    label: '客戶系統',
+    desc: '整合預約、訂房、eSIM 與 LINE / WhatsApp 的客人完整資料',
+    href: '/crm',
+    emoji: '👥',
+    color: 'from-indigo-500 to-blue-600',
+    standalone: true,
+  },
+  {
     id: 'agent',
     label: 'AI Agent',
     desc: '全自動 AI 員工：自主研究、規劃、執行，重要動作交真人核准',
