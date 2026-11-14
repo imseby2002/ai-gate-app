@@ -1,7 +1,7 @@
 'use client'
 
 import { usePathname } from 'next/navigation'
-import { useLocale } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { BrandLogo } from '@/components/layout/BrandLogo'
 import { systemForPath, getLocalizedSystemDef } from '@/lib/systems'
 
@@ -10,13 +10,21 @@ import { systemForPath, getLocalizedSystemDef } from '@/lib/systems'
 export function ToolsBrand() {
   const pathname = usePathname()
   const locale = useLocale()
+  const t = useTranslations('Nav')
   const sys = systemForPath(pathname)
   const label = sys ? getLocalizedSystemDef(sys, locale).label : 'IMT'
 
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex items-center gap-2">
       <BrandLogo className="h-7 w-7" />
-      <span className="text-xs font-bold text-gray-800">{label}</span>
+      <div className="leading-none">
+        <span className="block text-xs font-bold text-gray-800">{label}</span>
+        <span className="block text-[10px] mt-0.5 font-medium whitespace-nowrap">
+          <span className="text-[#111827]">{t('csSloganLine1')}</span>
+          <span className="text-gray-400">{locale.startsWith('zh') ? '｜' : ' | '}</span>
+          <span className="text-[#139488]">{t('csSloganLine2')}</span>
+        </span>
+      </div>
     </div>
   )
 }
