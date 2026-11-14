@@ -11,6 +11,7 @@ export function BackToMenu() {
   const t = useTranslations('Nav')
   const locale = useLocale()
   const [href, setHref] = useState('/apps')
+  const [csModule, setCsModule] = useState(false)
 
   useEffect(() => {
     // 1. Office 系統任一地方（/office, /hr, /personnel, /finance, /store-expenses,
@@ -34,6 +35,7 @@ export function BackToMenu() {
     // /marketing-auto 同時被行銷與客服系統共用，靠 ?module=cs 區分。
     const isCsMode = typeof window !== 'undefined'
       && new URLSearchParams(window.location.search).get('module') === 'cs'
+    setCsModule(isCsMode)
     if (pathname.startsWith('/marketing-auto') && isCsMode) {
       setHref(SYSTEMS.cs.home); return
     }
@@ -84,34 +86,31 @@ export function BackToMenu() {
 
   const isCs = pathname.startsWith('/cs')
 
-  const titleSys = isCs ? 'cs' : systemForPath(pathname)
+  // /marketing-auto 同時屬客服與行銷，靠 ?module=cs 區分
+  const titleSys = isCs || (pathname.startsWith('/marketing-auto') && csModule)
+    ? 'cs'
+    : pathname.startsWith('/marketing') ? 'marketing' : systemForPath(pathname)
   const titleText = titleSys ? getLocalizedSystemDef(titleSys, locale).label : 'IMT'
-  const subText = `← ${t('backToMenu')}`
 
-  // 客服系統（cs.im-tourist.com）：LOGO 與系統名稱保留，原本「← 返回收件匣」那行改成品牌 Slogan（不連結）
-  if (isCs) {
-    return (
-      <div className="flex items-center gap-2">
-        <BrandLogo className="h-7 w-7" />
-        <div className="leading-none">
-          <span className="block text-xs font-bold text-gray-800">{titleText}</span>
-          <span className="block text-[10px] mt-0.5 font-medium whitespace-nowrap">
-            <span className="text-[#111827]">{t('csSloganLine1')}</span>
-            <span className="text-gray-400">{locale.startsWith('zh') ? '｜' : ' | '}</span>
-            <span className="text-[#139488]">{t('csSloganLine2')}</span>
-          </span>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <a href={href} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-      <BrandLogo className="h-8 w-8" />
+  // 各系統左上角統一：LOGO＋系統名稱＋品牌 Slogan（與工具頁 ToolsBrand 同尺寸）。
+  // 客服系統不連結；其他系統點擊回該系統首頁。
+  const brand = (
+    <>
+      <BrandLogo className="h-7 w-7" />
       <div className="leading-none">
-        <span className="font-bold text-base">{titleText}</span>
-        <span className="block text-xs text-muted-foreground mt-0.5">{subText}</span>
+        <span className="block text-xs font-bold text-gray-800">{titleText}</span>
+        <span className="block text-[10px] mt-0.5 font-medium whitespace-nowrap">
+          <span className="text-[#111827]">{t('csSloganLine1')}</span>
+          <span className="text-gray-400">{locale.startsWith('zh') ? '｜' : ' | '}</span>
+          <span className="text-[#139488]">{t('csSloganLine2')}</span>
+        </span>
       </div>
+    </>
+  )
+  if (isCs) return <div className="flex items-center gap-2">{brand}</div>
+  return (
+    <a href={href} title={t('backToMenu')} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+      {brand}
     </a>
   )
 }
