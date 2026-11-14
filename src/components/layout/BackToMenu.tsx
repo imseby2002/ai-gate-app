@@ -9,7 +9,6 @@ import { SYSTEMS, SCOPE_SESSION_KEY, systemForHost, isSystemKey, systemForPath, 
 export function BackToMenu() {
   const pathname = usePathname()
   const t = useTranslations('Nav')
-  const tl = useTranslations('Landing')
   const locale = useLocale()
   const [href, setHref] = useState('/apps')
 
@@ -97,9 +96,9 @@ export function BackToMenu() {
         <div className="leading-none">
           <span className="font-bold text-base">{titleText}</span>
           <span className="block text-xs mt-0.5 font-medium">
-            <span className="text-[#111827]">{tl('sloganLine1')}</span>
-            <span className="text-muted-foreground"> · </span>
-            <span className="text-[#139488]">{tl('sloganLine2')}</span>
+            <span className="text-[#111827]">{t('csSloganLine1')}</span>
+            <span className="text-muted-foreground">{locale.startsWith('zh') ? '｜' : ' | '}</span>
+            <span className="text-[#139488]">{t('csSloganLine2')}</span>
           </span>
         </div>
       </div>

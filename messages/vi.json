@@ -1,7 +1,9 @@
 {
   "Nav": {
     "backHome": "Về Trang chủ",
-    "backToMenu": "Về Menu chính"
+    "backToMenu": "Về Menu chính",
+    "csSloganLine1": "Sống như một du khách",
+    "csSloganLine2": "Vận hành như một đế chế"
   },
   "Landing": {
     "sloganLine1": "Sống như một du khách",
