@@ -2043,7 +2043,16 @@
       "aiGenerateTitle": "AI 產生標題",
       "promoFocus": "推廣重點（選填）",
       "promoFocusPh": "例：新品黑糖珍珠、Royal 新門市開幕、外送優惠",
-      "generateTitles": "產生推廣標題"
+      "generateTitles": "產生推廣標題",
+      "publishOther": "發到其他平台：",
+      "platformsSection": "其他平台",
+      "platConnected": "已連結",
+      "fbNotConnected": "尚未綁定粉專（使用社群平台設定裡綁定的 Facebook 粉專）",
+      "bloggerUrlPh": "Blogger 網址（留空用帳號下第一個部落格）",
+      "connectBlogger": "連結 Blogger",
+      "reconnect": "重新連結",
+      "notionParentPh": "Notion 上層頁面網址或 ID（需先把該頁分享給 Integration）",
+      "platformsHelp": "Facebook 會貼文章摘要＋本站落地頁連結；其他平台發佈全文。金鑰留空表示沿用已儲存的值。"
     },
     "features": {
       "templates": {

@@ -2043,7 +2043,16 @@
       "aiGenerateTitle": "AI title",
       "promoFocus": "Promotion focus (optional)",
       "promoFocusPh": "e.g. new brown sugar boba, new store opening",
-      "generateTitles": "Generate titles"
+      "generateTitles": "Generate titles",
+      "publishOther": "Publish to:",
+      "platformsSection": "Other platforms",
+      "platConnected": "Connected",
+      "fbNotConnected": "No Facebook Page linked (uses the Page linked in social platform settings)",
+      "bloggerUrlPh": "Blogger URL (empty = first blog on the account)",
+      "connectBlogger": "Connect Blogger",
+      "reconnect": "Reconnect",
+      "notionParentPh": "Notion parent page URL or ID (share it with the integration first)",
+      "platformsHelp": "Facebook posts an excerpt plus the landing page link; other platforms get the full article. Leave a key empty to keep the saved one."
     },
     "features": {
       "templates": {

@@ -8,12 +8,19 @@
  *                      需 GEO_WORDPRESS_WEBHOOK（選用 GEO_WORDPRESS_TOKEN）
  *  - mode='export'   ：回傳獨立 HTML 文件字串供下載（情境二B/C，靜態網站/無後台）
  *
- * Body: { articleId: string; mode?: 'landing'|'wordpress'|'webhook'|'export' }
+ *  - mode='facebook'|'blogger'|'medium'|'ghost'|'notion'|'devto'：發佈到第三方平台（見 lib/geo/platforms.ts）
+ *
+ * Body: { articleId: string; mode?: 'landing'|'wordpress'|'webhook'|'export'|GeoPlatform }
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { mdToHtml, buildStandaloneHtml, escapeJsonLd } from '@/lib/geo/md'
 import { safeFetch } from '@/lib/ssrf'
+import {
+  GEO_PLATFORMS, publishBlogger, publishDevto, publishFacebook, publishGhost, publishMedium, publishNotion,
+  type GeoPlatform, type GeoPlatformSettings,
+} from '@/lib/geo/platforms'
+import { getValidBloggerAccessToken } from '@/lib/geo/blogger-token'
 
 export const maxDuration = 60
 
@@ -27,7 +34,7 @@ export async function POST(req: NextRequest) {
 
   const { data: article } = await supabase
     .from('geo_articles')
-    .select('id, title, body_md, json_ld')
+    .select('id, title, body_md, json_ld, published_url')
     .eq('id', articleId)
     .single()
   if (!article) return NextResponse.json({ error: '找不到文章' }, { status: 404 })
@@ -35,7 +42,7 @@ export async function POST(req: NextRequest) {
   // 每位使用者自己的發佈設定（優先），未設則退回 env
   const { data: settings } = await supabase
     .from('geo_publish_settings')
-    .select('wp_base_url, wp_user, wp_app_password, webhook_url, webhook_token')
+    .select('wp_base_url, wp_user, wp_app_password, webhook_url, webhook_token, platforms')
     .eq('user_id', user.id)
     .single()
 
@@ -120,6 +127,37 @@ export async function POST(req: NextRequest) {
     }
     await markPublished(publishedUrl || null)
     return NextResponse.json({ mode, url: publishedUrl })
+  }
+
+  // ── 第三方平台 ──
+  if ((GEO_PLATFORMS as string[]).includes(mode)) {
+    const platform = mode as GeoPlatform
+    const cfg = (settings?.platforms ?? {}) as GeoPlatformSettings
+    const origin = new URL(req.url).origin
+    const input = {
+      title: article.title, bodyMd: article.body_md, bodyHtml,
+      landingUrl: article.published_url && /^https?:/.test(article.published_url) ? article.published_url : `${origin}/geo/${articleId}`,
+    }
+    let url = ''
+    try {
+      if (platform === 'medium') url = await publishMedium(cfg.medium, input)
+      else if (platform === 'ghost') url = await publishGhost(cfg.ghost, input)
+      else if (platform === 'devto') url = await publishDevto(cfg.devto, input)
+      else if (platform === 'notion') url = await publishNotion(cfg.notion, input)
+      else if (platform === 'blogger') url = await publishBlogger(await getValidBloggerAccessToken(user.id), cfg.blogger, input)
+      else if (platform === 'facebook') {
+        const { data: fb } = await supabase.from('social_platform_credentials')
+          .select('credentials').eq('user_id', user.id).eq('platform', 'Facebook')
+          .order('updated_at', { ascending: false }).limit(1).maybeSingle()
+        url = await publishFacebook((fb?.credentials ?? null) as { page_id?: string; page_access_token?: string } | null, input)
+      }
+    } catch (err) {
+      console.error(`[geo/publish] ${platform}`, err)
+      return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 502 })
+    }
+    // 第三方平台是額外曝光管道，不覆蓋文章原本的發佈網址（落地頁／WordPress）
+    if (!article.published_url) await markPublished(url || null)
+    return NextResponse.json({ mode: platform, url })
   }
 
   // ── 預設：本站 SSR 落地頁 ──

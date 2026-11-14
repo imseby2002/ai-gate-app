@@ -98,6 +98,15 @@ const INTENT_STYLES: Record<Intent, string> = {
   transact: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
 }
 
+const GEO_PLATFORM_BUTTONS = [
+  { key: 'facebook', label: 'Facebook' },
+  { key: 'blogger', label: 'Blogger' },
+  { key: 'medium', label: 'Medium' },
+  { key: 'ghost', label: 'Ghost' },
+  { key: 'notion', label: 'Notion' },
+  { key: 'devto', label: 'Dev.to' },
+] as const
+
 export default function GeoWriterPage() {
   const t = useTranslations('Marketing')
   const locale = useLocale()
@@ -231,6 +240,11 @@ export default function GeoWriterPage() {
   const [webhookUrl, setWebhookUrl] = useState('')
   const [webhookToken, setWebhookToken] = useState('')
   const [webhookConfigured, setWebhookConfigured] = useState(false)
+  // 第三方平台（Facebook 粉專、Blogger、Medium、Ghost、Notion、Dev.to）
+  const [platStatus, setPlatStatus] = useState<Record<string, string | boolean | null>>({})
+  const [platInput, setPlatInput] = useState<Record<string, string>>({})
+  const [platLinks, setPlatLinks] = useState<Record<string, string>>({})
+  const [platLoading, setPlatLoading] = useState<string | null>(null)
   const [savingSettings, setSavingSettings] = useState(false)
   const [settingsSaved, setSettingsSaved] = useState(false)
 
@@ -383,6 +397,10 @@ export default function GeoWriterPage() {
         setWpConfigured(!!d.wpConfigured)
         setWebhookUrl(d.webhookUrl ?? '')
         setWebhookConfigured(!!d.webhookConfigured)
+        if (d.platforms) {
+          setPlatStatus(d.platforms)
+          setPlatInput({ ghostUrl: d.platforms.ghostUrl ?? '', notionParentPageId: d.platforms.notionParentPageId ?? '', bloggerUrl: d.platforms.bloggerUrl ?? '' })
+        }
       })
       .catch(() => {})
   }, [])
@@ -392,10 +410,18 @@ export default function GeoWriterPage() {
     try {
       const res = await fetch('/api/marketing/geo/settings', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ wpBaseUrl, wpUser, wpAppPassword, webhookUrl, webhookToken }),
+        body: JSON.stringify({ wpBaseUrl, wpUser, wpAppPassword, webhookUrl, webhookToken, platforms: platInput }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'error')
+      setPlatStatus(prev => ({
+        ...prev,
+        mediumConfigured: prev.mediumConfigured || !!platInput.mediumToken?.trim(),
+        ghostConfigured: prev.ghostConfigured || !!platInput.ghostAdminKey?.trim(),
+        notionConfigured: prev.notionConfigured || !!platInput.notionToken?.trim(),
+        devtoConfigured: prev.devtoConfigured || !!platInput.devtoApiKey?.trim(),
+      }))
+      setPlatInput(prev => ({ ...prev, mediumToken: '', ghostAdminKey: '', notionToken: '', devtoApiKey: '' }))
       if (wpAppPassword.trim()) setWpConfigured(true)
       if (webhookToken.trim()) setWebhookConfigured(true)
       setWpAppPassword(''); setWebhookToken('')
@@ -609,6 +635,22 @@ export default function GeoWriterPage() {
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e))
     } finally { setLoadingP(false) }
+  }
+
+  async function publishPlatform(platform: string) {
+    if (!article?.articleId) return
+    setError(''); setPlatLoading(platform)
+    try {
+      const res = await fetch('/api/marketing/geo/publish', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ articleId: article.articleId, mode: platform }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'error')
+      setPlatLinks(prev => ({ ...prev, [platform]: data.url || '' }))
+    } catch (e) {
+      setError(String(e instanceof Error ? e.message : e))
+    } finally { setPlatLoading(null) }
   }
 
   async function translate(targetLocale: 'zh-TW' | 'en' | 'vi') {
@@ -1102,6 +1144,45 @@ export default function GeoWriterPage() {
                 placeholder={webhookConfigured ? t('geo.secretSetPh') : t('geo.webhookTokenPh')} />
             </div>
 
+            <div className="space-y-3 border-t pt-4">
+              <p className="text-xs font-medium text-muted-foreground">{t('geo.platformsSection')}</p>
+              <p className="text-[11px] text-muted-foreground">
+                Facebook：{platStatus.facebookConnected ? t('geo.platConnected') : t('geo.fbNotConnected')}
+              </p>
+              <div className="space-y-2">
+                <p className="text-[11px] font-medium">Blogger {platStatus.bloggerEmail ? `· ${t('geo.platConnected')}（${platStatus.bloggerEmail}）` : ''}</p>
+                <div className="flex gap-2">
+                  <Input value={platInput.bloggerUrl ?? ''} onChange={e => setPlatInput(p => ({ ...p, bloggerUrl: e.target.value }))} placeholder={t('geo.bloggerUrlPh')} />
+                  <a href="/api/integrations/blogger/auth" className="shrink-0 inline-flex items-center px-3 rounded-md border text-xs hover:bg-muted">
+                    {platStatus.bloggerEmail ? t('geo.reconnect') : t('geo.connectBlogger')}
+                  </a>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <p className="text-[11px] font-medium">Medium</p>
+                <Input type="password" value={platInput.mediumToken ?? ''} onChange={e => setPlatInput(p => ({ ...p, mediumToken: e.target.value }))}
+                  placeholder={platStatus.mediumConfigured ? t('geo.secretSetPh') : 'Integration Token'} />
+              </div>
+              <div className="space-y-2">
+                <p className="text-[11px] font-medium">Ghost</p>
+                <Input value={platInput.ghostUrl ?? ''} onChange={e => setPlatInput(p => ({ ...p, ghostUrl: e.target.value }))} placeholder="https://your-blog.ghost.io" />
+                <Input type="password" value={platInput.ghostAdminKey ?? ''} onChange={e => setPlatInput(p => ({ ...p, ghostAdminKey: e.target.value }))}
+                  placeholder={platStatus.ghostConfigured ? t('geo.secretSetPh') : 'Admin API Key（id:secret）'} />
+              </div>
+              <div className="space-y-2">
+                <p className="text-[11px] font-medium">Notion</p>
+                <Input type="password" value={platInput.notionToken ?? ''} onChange={e => setPlatInput(p => ({ ...p, notionToken: e.target.value }))}
+                  placeholder={platStatus.notionConfigured ? t('geo.secretSetPh') : 'Internal Integration Token'} />
+                <Input value={platInput.notionParentPageId ?? ''} onChange={e => setPlatInput(p => ({ ...p, notionParentPageId: e.target.value }))} placeholder={t('geo.notionParentPh')} />
+              </div>
+              <div className="space-y-2">
+                <p className="text-[11px] font-medium">Dev.to</p>
+                <Input type="password" value={platInput.devtoApiKey ?? ''} onChange={e => setPlatInput(p => ({ ...p, devtoApiKey: e.target.value }))}
+                  placeholder={platStatus.devtoConfigured ? t('geo.secretSetPh') : 'API Key'} />
+              </div>
+              <p className="text-[11px] text-muted-foreground">{t('geo.platformsHelp')}</p>
+            </div>
+
             <Button onClick={saveSettings} disabled={savingSettings} size="sm">
               {savingSettings ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : settingsSaved ? <Check className="h-3.5 w-3.5" /> : <Save className="h-3.5 w-3.5" />}
               {settingsSaved ? t('geo.saved') : t('geo.save')}
@@ -1399,6 +1480,21 @@ export default function GeoWriterPage() {
                 <ExternalLink className="h-3.5 w-3.5 shrink-0" /> {publishedUrl}
               </a>
             )}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs text-muted-foreground">{t('geo.publishOther')}</span>
+              {GEO_PLATFORM_BUTTONS.map(p => (
+                <Button key={p.key} variant="outline" size="sm" onClick={() => publishPlatform(p.key)} disabled={platLoading !== null}>
+                  {platLoading === p.key ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : platLinks[p.key] !== undefined ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <ExternalLink className="h-3.5 w-3.5" />}
+                  {p.label}
+                </Button>
+              ))}
+            </div>
+            {Object.entries(platLinks).filter(([, u]) => u).map(([k, u]) => (
+              <a key={k} href={u} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-xs text-indigo-600 hover:underline break-all">
+                <ExternalLink className="h-3.5 w-3.5 shrink-0" /> {GEO_PLATFORM_BUTTONS.find(p => p.key === k)?.label}：{u}
+              </a>
+            ))}
 
             <div>
               <div className="flex items-center justify-between mb-1.5">
