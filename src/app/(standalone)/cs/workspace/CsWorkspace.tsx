@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect, useRef, useMemo, type ReactNode } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo, type ReactNode, type CSSProperties } from 'react'
 import { splitBubbleImages } from '@/lib/cs/bubble-images'
 import { useTranslations, useLocale } from 'next-intl'
 import {
@@ -309,6 +309,11 @@ interface InboxConvo {
   match?: string | null
   matchAt?: string | null
   preview?: string | null
+  alert?: { intents: string[]; ticketIds: string[] } | null
+}
+interface ThreadProfile {
+  summary: string | null
+  booking: { id: string; guestName: string | null; checkIn: string; checkOut: string; room: string | null; orderNo: string | null; guests: number | null; platform: string | null } | null
 }
 
 // 把搜尋字詞在文字中標黃
@@ -912,6 +917,9 @@ function Unit12CustomerService({
   const [activeConvo, setActiveConvo] = useState<InboxConvo | null>(null)
   const [threadBubbles, setThreadBubbles] = useState<Array<{ side: 'in' | 'out'; sender: 'customer' | 'ai' | 'agent'; text: string; at: string; image?: string }>>([])
   const [threadLoading, setThreadLoading] = useState(false)
+  const [threadProfile, setThreadProfile] = useState<ThreadProfile | null>(null)
+  const [summaryOpen, setSummaryOpen] = useState(false)
+  const [dismissingAlert, setDismissingAlert] = useState(false)
   const [inboxMessages, setInboxMessages] = useState<CsInboxMessage[]>([])
   const [inboxLoading, setInboxLoading] = useState(false)
   const [inboxPlatformFilter, setInboxPlatformFilter] = useState<string>('all')
@@ -1689,6 +1697,7 @@ function Unit12CustomerService({
   const threadRequestKey = useRef<string | null>(null)
   async function loadThreadBubbles(platform: string, to: string, around?: string | null) {
     const key = `${platform}:${to}`
+    if (threadRequestKey.current !== key) { setThreadProfile(null); setSummaryOpen(false) }
     threadRequestKey.current = key
     setThreadLoading(true)
     try {
@@ -1699,9 +1708,11 @@ function Unit12CustomerService({
         setThreadBubbles(d.bubbles)
         setThreadHasOlder(!!d.hasOlder)
         setThreadHasNewer(!!d.hasNewer)
+        setThreadProfile({ summary: d.summary ?? null, booking: d.booking ?? null })
       }
       if (typeof d.takeover === 'boolean') {
-        setActiveConvo(prev => prev && prev.from_id === to ? { ...prev, takeover: d.takeover } : prev)
+        setActiveConvo(prev => prev && prev.from_id === to ? { ...prev, takeover: d.takeover, alert: d.alert ?? null } : prev)
+        setInboxConvos(prev => prev.map(c => c.platform === platform && c.from_id === to ? { ...c, alert: d.alert ?? null } : c))
       }
     } finally {
       setThreadLoading(false)
@@ -1784,6 +1795,29 @@ function Unit12CustomerService({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ platform: activeConvo.platform, to: activeConvo.from_id, industry: ind, takeover: true, typing: true }),
     }).catch(() => {})
+  }
+
+  // 「需要真人」提醒按「已處理」：把這位客人的待處理工單結案，名單的紅色標示隨之消失
+  async function dismissInboxAlert() {
+    const convo = activeConvo
+    if (!convo?.alert?.ticketIds.length || dismissingAlert) return
+    setDismissingAlert(true)
+    try {
+      const results = await Promise.all(convo.alert.ticketIds.map(id =>
+        fetch(`/api/marketing/cs-tickets/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'resolved' }),
+        }).then(r => r.ok).catch(() => false)))
+      if (results.every(Boolean)) {
+        const same = (c: InboxConvo) => c.platform === convo.platform && c.from_id === convo.from_id
+        setActiveConvo(prev => prev && same(prev) ? { ...prev, alert: null } : prev)
+        setInboxConvos(prev => prev.map(c => same(c) ? { ...c, alert: null } : c))
+      }
+      void loadTickets()
+    } finally {
+      setDismissingAlert(false)
+    }
   }
 
   async function toggleInboxTakeover() {
@@ -1974,7 +2008,7 @@ function Unit12CustomerService({
         )}
         <nav
           onClickCapture={() => setMobileNavOpen(false)}
-          className={`${mobileNavOpen ? 'flex fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-xl p-3 overflow-y-auto flex-col gap-1.5' : 'hidden'} sm:flex sm:sticky sm:top-4 sm:self-start sm:max-h-[calc(100vh-2rem)] sm:overflow-y-auto sm:overscroll-contain sm:z-auto sm:shadow-none sm:p-0 sm:bg-transparent sm:flex-col sm:flex-nowrap sm:gap-1.5 ${sidebarCollapsed ? 'sm:w-14' : 'sm:w-48'} sm:shrink-0 transition-all duration-200`}
+          className={`${mobileNavOpen ? 'flex fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-xl p-3 overflow-y-auto flex-col gap-1.5' : 'hidden'} sm:flex sm:sticky sm:top-4 sm:self-start sm:max-h-[calc(var(--cs-h,100vh)-3rem)] sm:overflow-y-auto sm:overscroll-contain sm:z-auto sm:shadow-none sm:p-0 sm:bg-transparent sm:flex-col sm:flex-nowrap sm:gap-1.5 ${sidebarCollapsed ? 'sm:w-14' : 'sm:w-48'} sm:shrink-0 transition-all duration-200`}
         >
           {/* 折疊/展開按鈕 */}
           <div className="hidden sm:flex items-center justify-between pb-1 border-b border-gray-100 mb-1 w-full">
@@ -5048,8 +5082,8 @@ function Unit12CustomerService({
           return name.includes(q) || fromId.includes(q)
         })
         return (
-          <div className="space-y-4">
-            <div className="flex items-center gap-3 flex-wrap">
+          <div className="space-y-4 md:space-y-0 md:flex md:flex-col md:gap-4 md:h-[calc(var(--cs-h,100vh)-3rem)]">
+            <div className="flex items-center gap-3 flex-wrap shrink-0">
               <span className="text-sm font-semibold text-gray-800">{t('unifiedInbox')}</span>
               <HelpTip title={t('helpInboxTitle')} href="/cs/help#inbox">
                 {t('helpInboxBody')}
@@ -5087,7 +5121,7 @@ function Unit12CustomerService({
                 <div className="text-[11px]">{t('noInboxHint')}</div>
               </div>
             ) : (
-              <div className="flex flex-col md:flex-row border rounded-xl overflow-hidden bg-white shadow-sm h-[calc(100dvh-260px)] min-h-[380px] md:h-[calc(100vh-210px)] md:min-h-[600px]">
+              <div className="flex flex-col md:flex-row border rounded-xl overflow-hidden bg-white shadow-sm h-[calc(100dvh-260px)] min-h-[380px] md:h-auto md:flex-1 md:min-h-0">
                 {/* 左側：客戶列表（支援搜尋、垂直滾動、全部客戶）——手機版一次只顯示
                     列表或對話串其中一個（比照 CsInbox.tsx 的做法），不然兩個都塞進
                     同一個固定高度的盒子裡，手機螢幕根本不夠放，客戶名單完全滑不下去
@@ -5142,8 +5176,10 @@ function Unit12CustomerService({
                               inboxScrollToHit.current = !!searchQ
                               void loadThreadBubbles(convo.platform, convo.from_id, searchQ ? convo.matchAt : null)
                             }}
-                            className={`w-full text-left px-3 py-2.5 transition-colors ${
-                              active ? 'bg-[#eaf2ff]' : 'hover:bg-gray-50'
+                            className={`w-full text-left px-3 py-2.5 transition-colors border-l-4 ${
+                              convo.alert ? 'border-l-rose-500' : 'border-l-transparent'
+                            } ${
+                              active ? 'bg-[#eaf2ff]' : convo.alert ? 'bg-rose-50 hover:bg-rose-100' : 'hover:bg-gray-50'
                             }`}
                           >
                             <div className="flex items-center gap-1.5">
@@ -5159,10 +5195,20 @@ function Unit12CustomerService({
                             {!searchQ && convo.preview && (
                               <div className="mt-0.5 text-[13px] text-gray-500 truncate">{convo.preview}</div>
                             )}
-                            {convo.takeover && (
-                              <span className="inline-block mt-1 text-[11px] px-2 py-0.5 rounded-full border border-amber-300 text-amber-700">
-                                {t('humanTakeoverBadge')}
-                              </span>
+                            {(convo.alert || convo.takeover) && (
+                              <div className="mt-1 flex flex-wrap gap-1">
+                                {convo.alert && (
+                                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-rose-500 text-white font-medium"
+                                    title={convo.alert.intents.join('、')}>
+                                    {t('needsHumanBadge')}{convo.alert.intents.length ? `：${convo.alert.intents[0]}` : ''}
+                                  </span>
+                                )}
+                                {convo.takeover && (
+                                  <span className="text-[11px] px-2 py-0.5 rounded-full border border-amber-300 text-amber-700">
+                                    {t('humanTakeoverBadge')}
+                                  </span>
+                                )}
+                              </div>
                             )}
                             {searchQ && convo.match && (
                               <div className="mt-1 text-[11px] text-gray-500 line-clamp-2 break-all">{highlightText(convo.match, searchQ)}</div>
@@ -5222,6 +5268,45 @@ function Unit12CustomerService({
                           </button>
                         </div>
                       </div>
+
+                      {activeConvo.alert && (
+                        <div className="px-3 py-2 border-b bg-rose-50 shrink-0 flex items-center gap-2 text-[13px] text-rose-800">
+                          <span className="font-semibold shrink-0">{t('needsHumanBadge')}</span>
+                          <span className="truncate flex-1">{activeConvo.alert.intents.join('、')}</span>
+                          <button type="button" onClick={() => void dismissInboxAlert()} disabled={dismissingAlert}
+                            className="shrink-0 text-[12px] px-2.5 py-1 rounded-full border border-rose-300 bg-white text-rose-700 hover:bg-rose-100 disabled:opacity-50">
+                            {dismissingAlert ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t('alertDismiss')}
+                          </button>
+                        </div>
+                      )}
+                      {threadProfile && (threadProfile.booking || threadProfile.summary) && (
+                        <div className="px-3 py-2 border-b bg-[#f7f9fc] shrink-0 text-[13px] text-gray-700 space-y-1">
+                          {threadProfile.booking && (() => {
+                            const b = threadProfile.booking
+                            const md = (d: string) => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`
+                            return (
+                              <a href={`/booking/bookings/${b.id}`} target="_blank" rel="noopener noreferrer"
+                                title={t('bookingOpenOrder')}
+                                className="flex items-center gap-1.5 flex-wrap text-[#1a73e8] hover:underline">
+                                <span>🗓 {md(b.checkIn)}–{md(b.checkOut)}</span>
+                                {b.room && <span>· {b.room}</span>}
+                                {b.guestName && <span>· {b.guestName}</span>}
+                                {b.guests ? <span>· {t('guestsCount', { n: b.guests })}</span> : null}
+                                {b.orderNo && <span className="text-gray-400">#{b.orderNo}</span>}
+                              </a>
+                            )
+                          })()}
+                          {threadProfile.summary && (
+                            <button type="button" onClick={() => setSummaryOpen(o => !o)}
+                              className="flex items-start gap-2 w-full text-left hover:text-gray-900" title={summaryOpen ? t('summaryCollapse') : t('summaryExpand')}>
+                              <div className={`flex-1 min-w-0 ${summaryOpen ? 'whitespace-pre-wrap' : 'line-clamp-1'}`}>
+                                <span className="font-semibold text-gray-800">{t('customerSummaryTitle')}：</span>{threadProfile.summary}
+                              </div>
+                              <span className="text-[11px] text-[#1a73e8] shrink-0 mt-0.5">{summaryOpen ? t('summaryCollapse') : t('summaryExpand')}</span>
+                            </button>
+                          )}
+                        </div>
+                      )}
 
                       {/* 訊息對話區 */}
                       <div ref={inboxThreadRef} className="flex-1 min-h-0 overflow-y-auto p-3 md:p-4 space-y-3 bg-white">
@@ -5586,6 +5671,22 @@ export function CsWorkspace({ industry, initialTab }: { industry?: string; initi
   const [unit12Data, setUnit12Data] = useState<Unit12Data | undefined>(undefined)
   const [companyData, setCompanyData] = useState<Unit2Data>({})
   const [loaded, setLoaded] = useState(false)
+  // 工作區高度＝視窗高度扣掉上方選單列（實際量測，不寫死），整頁不會再多出一截可捲動的空白；
+  // 收件匣用 --cs-h 撐滿剩餘高度，只有名單與對話各自捲動。
+  const wrapRef = useRef<HTMLDivElement>(null)
+  const [wrapH, setWrapH] = useState<number | null>(null)
+  useEffect(() => {
+    if (!loaded) return
+    const measure = () => {
+      const el = wrapRef.current
+      if (!el) return
+      const top = el.getBoundingClientRect().top + window.scrollY
+      setWrapH(Math.max(320, Math.floor(window.innerHeight - top)))
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [loaded])
 
   // 共用公司資料（Unit 2），全站共用，非各 campaign 獨立
   useEffect(() => {
@@ -5684,7 +5785,8 @@ export function CsWorkspace({ industry, initialTab }: { industry?: string; initi
   if (!loaded) return <div className="h-[calc(100vh-53px)] bg-white" />
 
   return (
-    <div className="h-[calc(100vh-53px)] overflow-y-auto bg-white p-4 sm:p-6">
+    <div ref={wrapRef} className="h-[calc(100vh-53px)] overflow-y-auto bg-white p-4 sm:p-6"
+      style={wrapH ? ({ height: wrapH, '--cs-h': `${wrapH}px` } as CSSProperties) : undefined}>
       <Unit12CustomerService
         campaignId={campaignId}
         savedData={unit12Data}

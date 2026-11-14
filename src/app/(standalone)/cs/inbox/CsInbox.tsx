@@ -57,6 +57,7 @@ interface Conversation {
   takeover: boolean
   match?: string | null
   matchAt?: string | null
+  preview?: string | null
 }
 interface Bubble {
   side: 'in' | 'out'
@@ -69,10 +70,15 @@ interface Bubble {
 export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: string; initialTarget?: { platform: string; from_id: string } | null }) {
   const t = useTranslations('CsInbox')
   const locale = useLocale()
-  const stageLabel = (s: string) => t.has(`stages.${s}`) ? t(`stages.${s}`) : ''
   const fmtTime = (ts: string) => {
-    try { return new Date(ts).toLocaleString(locale, { timeZone: 'Asia/Taipei', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) }
-    catch { return ts }
+    try {
+      const d = new Date(ts)
+      const tz = 'Asia/Taipei'
+      const day = (x: Date) => x.toLocaleDateString('sv-SE', { timeZone: tz })
+      return day(d) === day(new Date())
+        ? d.toLocaleTimeString(locale, { timeZone: tz, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+        : d.toLocaleDateString(locale, { timeZone: tz, month: 'numeric', day: 'numeric' })
+    } catch { return ts }
   }
   const fmtClock = (ts: string) => formatBubbleTime(ts, locale)
   const industry = initialIndustry
@@ -392,7 +398,7 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
         {/* Body: 雙欄 */}
         <div className="flex-1 min-h-0 flex">
           {/* 左：對話清單 */}
-          <aside className={`${active ? 'hidden md:flex' : 'flex'} flex-col w-full md:w-80 border-r bg-card/40 shrink-0`}>
+          <aside className={`${active ? 'hidden md:flex' : 'flex'} flex-col w-full md:w-72 border-r bg-white shrink-0`}>
             {searchOpen && (
               <div className="p-2 border-b bg-card shrink-0">
                 <div className="relative">
@@ -420,35 +426,26 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
                   <span className="text-xs">{t('emptyList2')}</span>
                 </div>
               ) : convos.map(c => {
-                const p = plat(c.platform)
                 const isActive = active?.from_id === c.from_id && active?.platform === c.platform
                 return (
                   <button key={`${c.platform}:${c.from_id}`} onClick={() => openConvo(c)}
-                    className={`w-full text-left px-4 py-3 border-b hover:bg-accent/40 transition-colors ${isActive ? 'bg-accent/60' : ''}`}>
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-base shrink-0">{p.emoji}</span>
-                        <span className="font-medium truncate">{highlight(formatCustomerName(c.name, c.from_id, t), searchQ)}</span>
-                      </div>
-                      <span className="text-[10px] text-muted-foreground whitespace-nowrap shrink-0">{fmtTime(c.lastMessageAt)}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 mt-1 pl-6">
-                      <span className="text-[11px] text-muted-foreground">{p.name}</span>
-                      {stageLabel(c.stage) && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{stageLabel(c.stage)}</span>
-                      )}
-                      {c.takeover ? (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400 inline-flex items-center gap-0.5">
-                          <UserRound className="h-2.5 w-2.5" /> {t('humanTakeoverBadge')}
-                        </span>
-                      ) : (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400 inline-flex items-center gap-0.5">
-                          <Bot className="h-2.5 w-2.5" /> {t('aiRunningBadge')}
-                        </span>
+                    className={`w-full text-left px-4 py-3 transition-colors ${isActive ? 'bg-[#eaf2ff]' : 'hover:bg-gray-50'}`}>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[16px] font-semibold text-gray-900 truncate flex-1">{highlight(formatCustomerName(c.name, c.from_id, t), searchQ)}</span>
+                      {c.lastMessageAt && (
+                        <span className="text-[12px] text-gray-400 whitespace-nowrap shrink-0">{fmtTime(c.lastMessageAt)}</span>
                       )}
                     </div>
+                    {!searchQ && c.preview && (
+                      <div className="mt-0.5 text-[14px] text-gray-500 truncate">{c.preview}</div>
+                    )}
+                    {c.takeover && (
+                      <span className="inline-block mt-1 text-[11px] px-2 py-0.5 rounded-full border border-amber-300 text-amber-700">
+                        {t('humanTakeoverBadge')}
+                      </span>
+                    )}
                     {searchQ && c.match && (
-                      <div className="mt-1 pl-6 text-[11px] text-muted-foreground line-clamp-2 break-all">{highlight(c.match, searchQ)}</div>
+                      <div className="mt-1 text-[12px] text-gray-500 line-clamp-2 break-all">{highlight(c.match, searchQ)}</div>
                     )}
                   </button>
                 )

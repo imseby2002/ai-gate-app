@@ -9819,7 +9819,15 @@
       "csConfigTitle": "{name} 客服設定"
     },
     "participantNamePlaceholder": "王小明",
-    "envHint": "需要設定的環境變數："
+    "envHint": "需要設定的環境變數：",
+    "needsHumanBadge": "需要真人",
+    "alertDismiss": "已處理，關閉提醒",
+    "customerSummaryTitle": "客人摘要",
+    "summaryExpand": "展開完整摘要",
+    "summaryCollapse": "收合",
+    "bookingOpenOrder": "開啟訂房系統訂單",
+    "guestsCount": "{n} 位",
+    "bookingNotFound": "訂房系統查無對應訂單"
   },
   "Pit": {
     "title": "會計・個人所得稅",

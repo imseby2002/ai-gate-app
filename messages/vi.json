@@ -9819,7 +9819,15 @@
       "csConfigTitle": "Cấu hình CSKH {name}"
     },
     "participantNamePlaceholder": "Nguyễn Văn A",
-    "envHint": "Cần cài biến môi trường:"
+    "envHint": "Cần cài biến môi trường:",
+    "needsHumanBadge": "Cần nhân viên",
+    "alertDismiss": "Đã xử lý, tắt nhắc",
+    "customerSummaryTitle": "Tóm tắt khách",
+    "summaryExpand": "Xem tóm tắt đầy đủ",
+    "summaryCollapse": "Thu gọn",
+    "bookingOpenOrder": "Mở đơn đặt phòng",
+    "guestsCount": "{n} khách",
+    "bookingNotFound": "Không tìm thấy đơn đặt phòng"
   },
   "Pit": {
     "title": "Kế toán・Thuế TNCN",

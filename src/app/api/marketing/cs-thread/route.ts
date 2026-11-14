@@ -11,7 +11,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getBnbContext } from '@/lib/bnb/context'
-import { isHandoffActive, getHumanIdleMinutes } from '@/lib/cs/handoff'
+import { isHandoffActive, getHumanIdleMinutes, STAFF_ACTIVE_SUBJECT } from '@/lib/cs/handoff'
+import { findGuestBooking } from '@/lib/cs/stay-nights'
+
+// 需要真人處理的提醒：7 天內未結案、且不是「員工正在回覆」自動開的接管工單
+// （客人要求真人、現場狀況、付款待確認、查無訂單、發票等）。按「已處理」會把這些工單結案。
+const ALERT_DAYS = 7
+interface AlertInfo { intents: string[]; ticketIds: string[] }
 
 interface Bubble {
   side: 'in' | 'out'
@@ -59,6 +65,25 @@ export async function GET(req: NextRequest) {
   const takeoverSet = new Set((openTickets ?? [])
     .filter(t => isHandoffActive(t as { subject: string | null; created_at: string }, idleMinutes))
     .map(t => t.from_id))
+
+  const alertMap = new Map<string, AlertInfo>()
+  {
+    let aq = supabase
+      .from('cs_tickets').select('id, from_id, intent, subject')
+      .eq('user_id', ctx.ownerId)
+      .in('status', ['open', 'in_progress'])
+      .gte('created_at', new Date(Date.now() - ALERT_DAYS * 86_400_000).toISOString())
+      .order('created_at', { ascending: false }).limit(500)
+    if (to) aq = aq.eq('from_id', to)
+    const { data: alertRows } = await aq
+    for (const r of alertRows ?? []) {
+      if (!r.from_id || r.subject === STAFF_ACTIVE_SUBJECT) continue
+      const a = alertMap.get(r.from_id) ?? { intents: [], ticketIds: [] }
+      a.ticketIds.push(r.id)
+      if (r.intent && !a.intents.includes(r.intent)) a.intents.push(r.intent)
+      alertMap.set(r.from_id, a)
+    }
+  }
 
   // ── 單一對話 thread ────────────────────────────────────────────────────────
   if (to && platform) {
@@ -125,11 +150,19 @@ export async function GET(req: NextRequest) {
     }
     const { data: custRow } = await supabase
       .from('cs_customers')
-      .select('summary')
+      .select('summary, summarized_at, name, facts')
       .eq('user_id', ctx.ownerId).eq('platform', platform).eq('from_id', to).eq('industry', industry)
       .maybeSingle()
+    // 往前翻頁時不重查訂房
+    const booking = before ? undefined : await findGuestBooking(
+      createAdminClient(), ctx.ownerId, custRow?.facts as Record<string, unknown> | null, custRow?.name,
+    ).catch(() => null)
 
-    return NextResponse.json({ bubbles, hasOlder, hasNewer, takeover: takeoverSet.has(to), summary: custRow?.summary ?? null })
+    return NextResponse.json({
+      bubbles, hasOlder, hasNewer, takeover: takeoverSet.has(to),
+      summary: custRow?.summary ?? null, summarizedAt: custRow?.summarized_at ?? null,
+      booking, alert: alertMap.get(to) ?? null,
+    })
   }
 
   // ── 對話清單 ────────────────────────────────────────────────────────────────
@@ -307,6 +340,7 @@ export async function GET(req: NextRequest) {
     match: matchMap.get(`${c.platform}:${c.from_id}`) ?? null,
     matchAt: matchAtMap.get(`${c.platform}:${c.from_id}`) ?? null,
     preview: previewMap.get(`${c.platform}:${c.from_id}`) ?? null,
+    alert: alertMap.get(c.from_id) ?? null,
   }))
 
   return NextResponse.json({ conversations, convos: conversations })

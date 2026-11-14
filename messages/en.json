@@ -9819,7 +9819,15 @@
       "csConfigTitle": "{name} CS Config"
     },
     "participantNamePlaceholder": "John Doe",
-    "envHint": "Environment variables required:"
+    "envHint": "Environment variables required:",
+    "needsHumanBadge": "Needs staff",
+    "alertDismiss": "Handled, dismiss",
+    "customerSummaryTitle": "Customer summary",
+    "summaryExpand": "Show full summary",
+    "summaryCollapse": "Collapse",
+    "bookingOpenOrder": "Open booking order",
+    "guestsCount": "{n} guests",
+    "bookingNotFound": "No matching booking found"
   },
   "Pit": {
     "title": "Accounting · Personal Income Tax",
