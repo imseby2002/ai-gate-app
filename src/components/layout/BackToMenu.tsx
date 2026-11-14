@@ -91,13 +91,13 @@ export function BackToMenu() {
   // 客服系統（cs.im-tourist.com）：LOGO 與系統名稱保留，原本「← 返回收件匣」那行改成品牌 Slogan（不連結）
   if (isCs) {
     return (
-      <div className="flex items-center gap-3">
-        <BrandLogo className="h-8 w-8" />
+      <div className="flex items-center gap-2">
+        <BrandLogo className="h-7 w-7" />
         <div className="leading-none">
-          <span className="font-bold text-base">{titleText}</span>
-          <span className="block text-xs mt-0.5 font-medium">
+          <span className="block text-xs font-bold text-gray-800">{titleText}</span>
+          <span className="block text-[10px] mt-0.5 font-medium whitespace-nowrap">
             <span className="text-[#111827]">{t('csSloganLine1')}</span>
-            <span className="text-muted-foreground">{locale.startsWith('zh') ? '｜' : ' | '}</span>
+            <span className="text-gray-400">{locale.startsWith('zh') ? '｜' : ' | '}</span>
             <span className="text-[#139488]">{t('csSloganLine2')}</span>
           </span>
         </div>
