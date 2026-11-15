@@ -795,6 +795,14 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
           result.added++
         }
       }
+
+      // 這封信跑完後，若這張訂單一個房型都沒掛上（例如房型全配不到而略過），就把空殼
+      // 訂單刪掉——留著它只會佔住平台單號，之後手動輸入同一筆訂單時會誤判成單號衝突。
+      const { count: orderBookingCount } = await supabase
+        .from('bookings').select('id', { count: 'exact', head: true }).eq('order_id', orderId)
+      if (!orderBookingCount) {
+        await supabase.from('booking_orders').delete().eq('id', orderId)
+      }
       result.processed++
     } catch (e) {
       result.errors.push(`處理郵件 ${seq} 失敗: ${String(e)}`)
