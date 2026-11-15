@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { Megaphone, Palette, LayoutDashboard, Phone, Menu, Search, Wand2, Crown, Brain, NotebookPen, CalendarCheck, Fingerprint, GitBranch, Share2, Sparkles, Building2, PanelLeftClose, PanelLeftOpen, FileText, Download } from 'lucide-react'
+import { Megaphone, Palette, LayoutDashboard, Phone, Menu, Search, Wand2, Crown, Brain, NotebookPen, CalendarCheck, Fingerprint, GitBranch, Share2, Sparkles, Building2, PanelLeftClose, PanelLeftOpen, FileText, Download, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 interface NavItem {
@@ -151,6 +151,12 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             ${collapse ? 'justify-center py-2.5' : 'gap-2 px-3 py-2'}`}>
           <Megaphone className="h-3.5 w-3.5 shrink-0" />
           {!collapse && <span>{t('nav.erpMkt')} ↗</span>}
+        </Link>
+        <Link href="/crm" title={collapse ? '客戶系統' : undefined}
+          className={`flex items-center rounded-lg text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition-colors
+            ${collapse ? 'justify-center py-2.5' : 'gap-2 px-3 py-2'}`}>
+          <Users className="h-3.5 w-3.5 shrink-0" />
+          {!collapse && <span>客戶系統 ↗</span>}
         </Link>
         <Link href="/office" title={collapse ? 'IMT ERP' : undefined}
           className={`flex items-center rounded-lg text-xs font-medium text-gray-500 hover:bg-gray-100 transition-colors

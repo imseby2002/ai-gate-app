@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCrmUser } from '@/lib/crm/auth'
+import { denyIfReadOnly, getCrmUser } from '@/lib/crm/auth'
 import { companyAccounts, syncCrmForScope } from '@/lib/crm/sync'
 
 export const maxDuration = 300
@@ -9,6 +9,8 @@ export const maxDuration = 300
 export async function POST(req: NextRequest) {
   const auth = await getCrmUser(req)
   if ('error' in auth) return auth.error
+  const readOnly = denyIfReadOnly(auth.access)
+  if (readOnly) return readOnly
   try {
     const result = auth.ownerId
       ? await syncCrmForScope(auth.ownerId, await companyAccounts(auth.supabase, auth.ownerId))

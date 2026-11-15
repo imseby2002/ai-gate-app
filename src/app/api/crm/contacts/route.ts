@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCrmUser } from '@/lib/crm/auth'
+import { denyIfReadOnly, getCrmUser } from '@/lib/crm/auth'
 import { nameKey, normalizeEmail, normalizePhone } from '@/lib/crm/normalize'
 
 const LIST_SELECT = 'id, display_name, phone, email, tags, traits, order_count, total_spent, last_activity_at, crm_identities(kind, value, label), added_by_profile:profiles!crm_contacts_added_by_fkey(display_name:full_name, email)'
@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
     const pageRows = sameAs ? list.slice(0, 20) : list.slice(page * size, page * size + size)
     return NextResponse.json({
       contacts: pageRows.map(r => ({ ...r, name_key: keyOf(r) })),
-      total: list.length, page, size,
+      total: list.length, page, size, access: auth.access,
     })
   }
 
@@ -78,13 +78,15 @@ export async function GET(req: NextRequest) {
   const { data, error, count } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   // 總管理員可切換查看各公司的客人
-  return NextResponse.json({ contacts: data ?? [], total: count ?? 0, page, size })
+  return NextResponse.json({ contacts: data ?? [], total: count ?? 0, page, size, access: auth.access })
 }
 
 // POST /api/crm/contacts → 手動新增客人
 export async function POST(req: NextRequest) {
   const auth = await getCrmUser(req)
   if ('error' in auth) return auth.error
+  const readOnly = denyIfReadOnly(auth.access)
+  if (readOnly) return readOnly
   const { supabase, user, ownerId } = auth
   const body = await req.json().catch(() => ({}))
   const phone = normalizePhone(body.phone)
