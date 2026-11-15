@@ -148,6 +148,11 @@ export default function OfficePage() {
               {access.companyName && <Badge variant="secondary" className="font-medium">{access.companyName}</Badge>}
               {roleLabel && <Badge variant="outline" className="gap-1"><ShieldCheck className="h-3 w-3" />{roleLabel}</Badge>}
               <MyPortalButton />
+              <Link href="/crm">
+                <Button variant="outline" size="sm" className="gap-1 text-xs">
+                  {locale === 'vi' ? 'Khách hàng (CRM)' : locale === 'en' ? 'Customers (CRM)' : '客戶系統'} <ArrowUpRight className="h-3.5 w-3.5" />
+                </Button>
+              </Link>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
               {t('subtitle')}

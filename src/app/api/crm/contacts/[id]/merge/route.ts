@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { getCrmUser } from '@/lib/crm/auth'
+import { denyIfReadOnly, getCrmUser } from '@/lib/crm/auth'
 import { recomputeContacts } from '@/lib/crm/sync'
 import { mergeContacts } from '@/lib/crm/merge'
 
@@ -10,6 +10,8 @@ type Ctx = { params: Promise<{ id: string }> }
 export async function POST(req: NextRequest, { params }: Ctx) {
   const auth = await getCrmUser(req)
   if ('error' in auth) return auth.error
+  const readOnly = denyIfReadOnly(auth.access)
+  if (readOnly) return readOnly
   const { supabase, ownerId, own } = auth
   const { id } = await params
   const body = await req.json().catch(() => ({}))

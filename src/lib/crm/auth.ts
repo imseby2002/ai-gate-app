@@ -34,11 +34,36 @@ export async function getCrmUser(req?: NextRequest) {
     return { error: NextResponse.json({ error: '沒有這個範圍的權限' }, { status: 403 }) } as const
   }
   let ownerId: string | null = null
+  let companyId: string | null = null
   if (scope === PLATFORM_SCOPE) {
     ownerId = null
   } else {
-    const companyId = await resolveActiveCompanyId(supabase as never, user.id, isAdmin, (profile?.company_id as string | null) ?? null)
+    companyId = await resolveActiveCompanyId(supabase as never, user.id, isAdmin, (profile?.company_id as string | null) ?? null)
     ownerId = (await resolveCompanyOwner(supabase as never, companyId)) ?? user.id
   }
-  return { supabase, user, isAdmin, ownerId, own: ownerFilter(ownerId) } as const
+
+  // 權限：總管理員、公司負責人（或個人帳號自己）、公司管理員 = manage；其他成員要由前者在客戶系統開通 view / edit
+  let access: CrmAccess | null = null
+  if (isAdmin || ownerId === user.id) access = 'manage'
+  if (!access && companyId) {
+    const { data: cm } = await supabase.from('company_members').select('role')
+      .eq('company_id', companyId).eq('member_id', user.id).eq('status', 'active').maybeSingle()
+    if (cm?.role === 'owner' || cm?.role === 'admin') access = 'manage'
+  }
+  if (!access && ownerId) {
+    const { data: grant } = await supabase.from('crm_access').select('role')
+      .eq('owner_id', ownerId).eq('member_id', user.id).maybeSingle()
+    if (grant?.role === 'edit' || grant?.role === 'view') access = grant.role
+  }
+  if (!access) {
+    return { error: NextResponse.json({ error: '沒有客戶系統權限，請公司負責人或管理員到客戶系統的「權限設定」開通' }, { status: 403 }) } as const
+  }
+  return { supabase, user, isAdmin, ownerId, companyId, access, own: ownerFilter(ownerId) } as const
+}
+
+export type CrmAccess = 'manage' | 'edit' | 'view'
+
+/** 寫入類操作（新增、編輯、綁定、合併、同步）需要 edit 以上 */
+export function denyIfReadOnly(access: CrmAccess): NextResponse | null {
+  return access === 'view' ? NextResponse.json({ error: '你的客戶系統權限是「只能查看」' }, { status: 403 }) : null
 }

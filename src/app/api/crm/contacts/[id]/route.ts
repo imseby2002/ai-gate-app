@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCrmUser } from '@/lib/crm/auth'
+import { denyIfReadOnly, getCrmUser } from '@/lib/crm/auth'
 import { normalizeEmail, normalizePhone } from '@/lib/crm/normalize'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -23,6 +23,8 @@ export async function GET(req: NextRequest, { params }: Ctx) {
 export async function PATCH(req: NextRequest, { params }: Ctx) {
   const auth = await getCrmUser(req)
   if ('error' in auth) return auth.error
+  const readOnly = denyIfReadOnly(auth.access)
+  if (readOnly) return readOnly
   const { supabase, user, ownerId, own } = auth
   const { id } = await params
   const body = await req.json().catch(() => ({}))
@@ -51,6 +53,8 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
 export async function DELETE(req: NextRequest, { params }: Ctx) {
   const auth = await getCrmUser(req)
   if ('error' in auth) return auth.error
+  const readOnly = denyIfReadOnly(auth.access)
+  if (readOnly) return readOnly
   const { supabase, own } = auth
   const { id } = await params
   const { error } = await supabase.from('crm_contacts').delete().eq('id', id).filter('owner_id', ...own)

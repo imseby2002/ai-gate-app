@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { RefreshCw, Search, Plus, X, Link2, Trash2, Merge, CalendarDays, BedDouble, Smartphone, MessageCircle, StickyNote, Users } from 'lucide-react'
+import { RefreshCw, Search, Plus, X, Link2, Trash2, Merge, CalendarDays, BedDouble, Smartphone, MessageCircle, StickyNote, Users, ShieldCheck } from 'lucide-react'
 import { IDENTITY_KINDS } from '@/lib/crm/normalize'
 
 interface Identity { id?: string; kind: string; value: string; label: string | null; cs?: { platform: string; from_id: string; industry: string | null } | null }
@@ -68,6 +68,9 @@ export default function CrmPage() {
   const [scope, setScopeState] = useState<string | null>(null)
   const [sort, setSort] = useState<'recent' | 'name'>('recent')
   const [dupOnly, setDupOnly] = useState(false)
+  const [access, setAccess] = useState<'manage' | 'edit' | 'view'>('view')
+  const [showAccess, setShowAccess] = useState(false)
+  const canEdit = access !== 'view'
   // 讀網址上的 ?scope=platform（eSIM 管理頁的連結）
   useEffect(() => {
     const s = new URLSearchParams(window.location.search).get('scope') === 'platform' ? 'platform' : ''
@@ -86,7 +89,7 @@ export default function CrmPage() {
       if (sort === 'name') sp.set('sort', 'name')
       if (dupOnly) sp.set('dup', '1')
       const d = await api(`/api/crm/contacts?${sp}`)
-      setRows(d.contacts); setTotal(d.total); setPage(p)
+      setRows(d.contacts); setTotal(d.total); setPage(p); if (d.access) setAccess(d.access)
     } catch (e) { setMsg(errMsg(e)) } finally { setLoading(false) }
     // scope 透過 currentScope 帶入 api()，列在相依中讓切換時重新載入
   }, [q, kind, scope, sort, dupOnly])
@@ -135,12 +138,18 @@ export default function CrmPage() {
           <input type="checkbox" checked={dupOnly} onChange={e => setDupOnly(e.target.checked)} className="accent-amber-600" />
           同名可能重複
         </label>
-        <button onClick={() => setCreating(true)} className="flex items-center gap-1 text-sm px-3 py-2 rounded-lg border hover:bg-gray-50">
+        {access === 'manage' && scope !== 'platform' && (
+          <button onClick={() => setShowAccess(true)} className="flex items-center gap-1 text-sm px-3 py-2 rounded-lg border hover:bg-gray-50" title="設定公司成員的客戶系統權限">
+            <ShieldCheck className="w-4 h-4" />權限設定
+          </button>
+        )}
+        {canEdit && <button onClick={() => setCreating(true)} className="flex items-center gap-1 text-sm px-3 py-2 rounded-lg border hover:bg-gray-50">
           <Plus className="w-4 h-4" />新增客人
-        </button>
-        <button onClick={sync} disabled={syncing} className="flex items-center gap-1 text-sm px-3 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-60">
+        </button>}
+        {canEdit && <button onClick={sync} disabled={syncing} className="flex items-center gap-1 text-sm px-3 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-60">
           <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />{syncing ? '同步中…' : '同步各系統資料'}
-        </button>
+        </button>}
+        {!canEdit && <span className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-500">只能查看</span>}
       </div>
       {msg && <div className="shrink-0 px-4 py-2 text-sm bg-indigo-50 text-indigo-800 border-b flex justify-between">{msg}<button onClick={() => setMsg('')}><X className="w-4 h-4" /></button></div>}
 
@@ -165,7 +174,7 @@ export default function CrmPage() {
                 <td className="px-4 py-2.5">
                   <div className="font-medium flex items-center gap-2">
                     {r.display_name || '（未命名）'}
-                    {sameAsPrev && (
+                    {sameAsPrev && canEdit && (
                       <button onClick={e => { e.stopPropagation(); mergeIntoPrev(prev!, r) }}
                         className="text-[11px] px-2 py-0.5 rounded border border-amber-300 text-amber-700 hover:bg-amber-50" title="同一人：把這一位併入上一位">
                         ↑ 併入上一位
@@ -206,7 +215,8 @@ export default function CrmPage() {
         )}
       </div>
 
-      {selected && <ContactDrawer id={selected} onClose={() => setSelected(null)} onChanged={() => load(page)} />}
+      {selected && <ContactDrawer id={selected} readOnly={!canEdit} onClose={() => setSelected(null)} onChanged={() => load(page)} />}
+      {showAccess && <AccessDialog onClose={() => setShowAccess(false)} />}
       {creating && <CreateDialog onClose={() => setCreating(false)} onCreated={id => { setCreating(false); load(0); setSelected(id) }} />}
     </div>
   )
@@ -237,7 +247,7 @@ function CreateDialog({ onClose, onCreated }: { onClose: () => void; onCreated: 
   )
 }
 
-function ContactDrawer({ id, onClose, onChanged }: { id: string; onClose: () => void; onChanged: () => void }) {
+function ContactDrawer({ id, readOnly, onClose, onChanged }: { id: string; readOnly: boolean; onClose: () => void; onChanged: () => void }) {
   const [data, setData] = useState<{ contact: ContactFull; identities: Identity[]; activities: Activity[] } | null>(null)
   const [form, setForm] = useState<Partial<ContactFull> & { tagsText?: string }>({})
   const [dirty, setDirty] = useState(false)
@@ -337,8 +347,8 @@ function ContactDrawer({ id, onClose, onChanged }: { id: string; onClose: () => 
       <div className="bg-white w-full max-w-2xl h-full overflow-y-auto shadow-xl" onClick={e => e.stopPropagation()}>
         <div className="sticky top-0 bg-white border-b px-5 py-3 flex items-center gap-2 z-10">
           <h2 className="font-semibold text-lg flex-1 truncate">{c?.display_name || '（未命名）'}</h2>
-          {dirty && <button onClick={save} className="px-3 py-1.5 text-sm rounded-lg bg-indigo-600 text-white">儲存</button>}
-          <button onClick={remove} title="刪除" className="p-1.5 rounded hover:bg-red-50 text-red-500"><Trash2 className="w-4 h-4" /></button>
+          {dirty && !readOnly && <button onClick={save} className="px-3 py-1.5 text-sm rounded-lg bg-indigo-600 text-white">儲存</button>}
+          {!readOnly && <button onClick={remove} title="刪除" className="p-1.5 rounded hover:bg-red-50 text-red-500"><Trash2 className="w-4 h-4" /></button>}
           <button onClick={onClose} className="p-1.5 rounded hover:bg-gray-100"><X className="w-5 h-5" /></button>
         </div>
         {err && <div className="mx-5 mt-3 text-sm text-red-600 bg-red-50 px-3 py-2 rounded">{err}</div>}
@@ -395,17 +405,17 @@ function ContactDrawer({ id, onClose, onChanged }: { id: string; onClose: () => 
                   </div>
                 ))}
               </div>
-              <div className="flex gap-2 mt-2">
+              {!readOnly && <div className="flex gap-2 mt-2">
                 <select value={newIdent.kind} onChange={e => setNewIdent({ ...newIdent, kind: e.target.value })} className="border rounded-lg px-2 py-1.5 text-sm">
                   {IDENTITY_KINDS.map(k => <option key={k.id} value={k.id}>{k.label}</option>)}
                 </select>
                 <input value={newIdent.value} onChange={e => setNewIdent({ ...newIdent, value: e.target.value })} placeholder="帳號 ID／電話" className="flex-1 min-w-0 border rounded-lg px-2 py-1.5 text-sm" />
                 <input value={newIdent.label} onChange={e => setNewIdent({ ...newIdent, label: e.target.value })} placeholder="顯示名稱" className="w-28 border rounded-lg px-2 py-1.5 text-sm" />
                 <button onClick={() => addIdent()} className="px-3 py-1.5 text-sm rounded-lg border hover:bg-gray-50">綁定</button>
-              </div>
+              </div>}
             </section>
 
-            <section>
+            {!readOnly && <section>
               <h3 className="font-medium mb-2 flex items-center gap-1"><Merge className="w-4 h-4" />合併重複客人</h3>
               {[...sameName, ...mergeHits.filter(h => !sameName.some(s => s.id === h.id))].map(h => (
                 <div key={h.id} className="flex items-center gap-2 text-sm py-1.5 border-b last:border-0">
@@ -418,7 +428,7 @@ function ContactDrawer({ id, onClose, onChanged }: { id: string; onClose: () => 
               ))}
               {!sameName.length && !mergeHits.length && <div className="text-xs text-gray-400 mb-1">沒有同名的客人</div>}
               <input value={mergeQ} onChange={e => { setMergeQ(e.target.value); if (!e.target.value.trim()) setMergeHits([]) }} placeholder="找其他名字的同一人…" className="mt-2 w-full border rounded-lg px-3 py-1.5 text-sm" />
-            </section>
+            </section>}
 
             <section>
               <div className="flex items-center gap-2 mb-2 flex-wrap">
@@ -428,10 +438,10 @@ function ContactDrawer({ id, onClose, onChanged }: { id: string; onClose: () => 
                   <button key={s} onClick={() => setSrcFilter(s)} className={`text-xs px-2 py-0.5 rounded-full border ${srcFilter === s ? 'bg-gray-800 text-white' : ''}`}>{SOURCE_META[s]?.label ?? s} {n}</button>
                 ))}
               </div>
-              <div className="flex gap-2 mb-3">
+              {!readOnly && <div className="flex gap-2 mb-3">
                 <input value={note} onChange={e => setNote(e.target.value)} onKeyDown={e => e.key === 'Enter' && addNote()} placeholder="新增備註紀錄（例如：來電詢問、客訴處理）" className="flex-1 border rounded-lg px-3 py-1.5 text-sm" />
                 <button onClick={addNote} className="px-3 py-1.5 text-sm rounded-lg border hover:bg-gray-50">新增</button>
-              </div>
+              </div>}
               <ol className="space-y-2">
                 {acts.map(a => {
                   const m = SOURCE_META[a.source] ?? SOURCE_META.manual
@@ -463,6 +473,58 @@ function ContactDrawer({ id, onClose, onChanged }: { id: string; onClose: () => 
             </section>
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+interface AccessMember { member_id: string; name: string; email: string; company_role: string; crm_role: 'manage' | 'edit' | 'view' | 'none'; built_in: boolean }
+const COMPANY_ROLE_LABEL: Record<string, string> = { owner: '負責人', admin: '管理員', manager: '主管', viewer: '成員' }
+
+function AccessDialog({ onClose }: { onClose: () => void }) {
+  const [members, setMembers] = useState<AccessMember[] | null>(null)
+  const [note, setNote] = useState('')
+  const [err, setErr] = useState('')
+  const load = useCallback(async () => {
+    try { const d = await api('/api/crm/access'); setMembers(d.members); setNote(d.note ?? '') } catch (e) { setErr(errMsg(e)) }
+  }, [])
+  useEffect(() => { const t = setTimeout(load, 0); return () => clearTimeout(t) }, [load])
+  async function setRole(m: AccessMember, role: string) {
+    setErr('')
+    try {
+      await api('/api/crm/access', { method: 'PUT', body: JSON.stringify({ member_id: m.member_id, role }) })
+      setMembers(ms => (ms ?? []).map(x => (x.member_id === m.member_id ? { ...x, crm_role: role as AccessMember['crm_role'] } : x)))
+    } catch (e) { setErr(errMsg(e)) }
+  }
+  return (
+    <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-xl w-full max-w-lg max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="px-5 py-3 border-b flex items-center gap-2">
+          <ShieldCheck className="w-5 h-5 text-indigo-600" />
+          <h2 className="font-semibold flex-1">客戶系統權限設定</h2>
+          <button onClick={onClose} className="p-1 rounded hover:bg-gray-100"><X className="w-5 h-5" /></button>
+        </div>
+        <div className="px-5 py-2 text-xs text-gray-500 border-b">公司負責人與管理員預設可管理；其他成員設為「可編輯」或「只能查看」才看得到客戶資料。</div>
+        {err && <div className="mx-5 mt-2 text-sm text-red-600">{err}</div>}
+        <div className="flex-1 overflow-y-auto px-5 py-2">
+          {!members ? <div className="py-8 text-center text-gray-400 text-sm">載入中…</div>
+            : !members.length ? <div className="py-8 text-center text-gray-400 text-sm">{note || '公司目前沒有其他成員'}</div>
+            : members.map(m => (
+              <div key={m.member_id} className="flex items-center gap-3 py-2 border-b last:border-0 text-sm">
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium truncate">{m.name || m.email}</div>
+                  <div className="text-xs text-gray-500 truncate">{m.email} · {COMPANY_ROLE_LABEL[m.company_role] ?? m.company_role}</div>
+                </div>
+                {m.built_in
+                  ? <span className="text-xs px-2 py-1 rounded bg-indigo-50 text-indigo-700">可管理</span>
+                  : <select value={m.crm_role} onChange={e => setRole(m, e.target.value)} className="text-sm border rounded-lg px-2 py-1">
+                      <option value="none">無權限</option>
+                      <option value="view">只能查看</option>
+                      <option value="edit">可編輯</option>
+                    </select>}
+              </div>
+            ))}
+        </div>
       </div>
     </div>
   )
