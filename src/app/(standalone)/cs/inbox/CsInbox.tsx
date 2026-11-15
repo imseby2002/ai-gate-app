@@ -58,7 +58,15 @@ interface Conversation {
   match?: string | null
   matchAt?: string | null
   preview?: string | null
+  alert?: { intents: string[]; ticketIds: string[]; notes?: string[] } | null
 }
+interface ThreadExtras {
+  alert: { intents: string[]; ticketIds: string[]; notes?: string[] } | null
+  booking: { id: string; guestName: string | null; checkIn: string; checkOut: string; room: string | null; guests: number | null; orderNo: string | null } | null
+  reservation: { id: string; appointmentNo: string; startTime: string; service: string | null; staff: string | null; store: string | null; statusLabel: string } | null
+  crmContactId: string | null
+}
+const MANUAL_FLAG_INTENT = '人工標記待處理'
 interface Bubble {
   side: 'in' | 'out'
   sender: 'customer' | 'ai' | 'agent'
@@ -103,6 +111,10 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
   const [hasOlder, setHasOlder] = useState(false)
   const [hasNewer, setHasNewer] = useState(false)
   const [loadingOlder, setLoadingOlder] = useState(false)
+  // 與桌面版收件匣一致：需要真人提醒、標記需處理、訂房／預約資訊、客戶檔案連結
+  const [extras, setExtras] = useState<ThreadExtras | null>(null)
+  const [summaryOpen, setSummaryOpen] = useState(false)
+  const [flagBusy, setFlagBusy] = useState(false)
   const prevScrollHeight = useRef<number | null>(null)
   useEffect(() => {
     const id = setTimeout(() => setSearchQ(searchInput.trim()), 400)
@@ -141,7 +153,7 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
   const loadThread = useCallback(async (c: Conversation, silent = false, around?: string | null) => {
     if (!silent) setLoadingThread(true)
     try {
-      const res = await fetch(threadUrl(c) + (around ? `&around=${encodeURIComponent(around)}` : ''))
+      const res = await fetch(threadUrl(c) + (around ? `&around=${encodeURIComponent(around)}` : '') + (silent ? '&lite=1' : ''))
       const data = await res.json()
       if (activeKeyRef.current !== `${c.platform}:${c.from_id}`) return
       const fresh: Bubble[] = data.bubbles ?? []
@@ -158,6 +170,14 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
       }
       setTakeover(!!data.takeover)
       setCustomerSummary(data.summary ?? null)
+      setExtras(prev => ({
+        alert: data.alert ?? null,
+        // 輪詢時伺服器仍會回傳訂房／預約；回傳缺少時保留上一次的
+        booking: data.booking !== undefined ? data.booking : prev?.booking ?? null,
+        reservation: data.reservation !== undefined ? data.reservation : prev?.reservation ?? null,
+        crmContactId: data.crmContactId !== undefined ? data.crmContactId : prev?.crmContactId ?? null,
+      }))
+      setConvos(prev => prev.map(x => x.platform === c.platform && x.from_id === c.from_id ? { ...x, alert: data.alert ?? null } : x))
     } catch { /* ignore */ }
     finally { if (!silent) setLoadingThread(false) }
   }, [threadUrl])
@@ -243,6 +263,8 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
     setBubbles([])
     setErr(null)
     setCustomerSummary(null)
+    setExtras(null)
+    setSummaryOpen(false)
     nearBottomRef.current = true
     scrollToHit.current = !!searchQ
     setHasOlder(false)
@@ -296,6 +318,41 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
     } finally {
       setSending(false)
     }
+  }
+
+  // 標記需處理：開一張不會自動結案的工單，名單變紅，處理完按「已處理」
+  const flagConvo = async () => {
+    if (!active || flagBusy) return
+    const note = window.prompt(t('flagNotePrompt'), '')
+    if (note === null) return
+    const c = active
+    setFlagBusy(true)
+    try {
+      const res = await fetch('/api/marketing/cs-tickets', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          industry, platform: c.platform, from_id: c.from_id, from_name: c.name ?? undefined,
+          subject: note.trim() || t('flagDefaultNote'), description: note.trim(), priority: 'high', intent: MANUAL_FLAG_INTENT,
+        }),
+      })
+      if (res.ok) await loadThread(c, true)
+    } finally { setFlagBusy(false) }
+  }
+
+  const dismissAlert = async () => {
+    const ids = extras?.alert?.ticketIds ?? []
+    if (!active || !ids.length || flagBusy) return
+    const c = active
+    setFlagBusy(true)
+    try {
+      const ok = await Promise.all(ids.map(id => fetch(`/api/marketing/cs-tickets/${id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'resolved' }),
+      }).then(r => r.ok).catch(() => false)))
+      if (ok.every(Boolean)) {
+        setExtras(prev => prev ? { ...prev, alert: null } : prev)
+        setConvos(prev => prev.map(x => x.platform === c.platform && x.from_id === c.from_id ? { ...x, alert: null } : x))
+      }
+    } finally { setFlagBusy(false) }
   }
 
   const toggleTakeover = async () => {
@@ -429,7 +486,7 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
                 const isActive = active?.from_id === c.from_id && active?.platform === c.platform
                 return (
                   <button key={`${c.platform}:${c.from_id}`} onClick={() => openConvo(c)}
-                    className={`w-full text-left px-4 py-3 transition-colors ${isActive ? 'bg-[#eaf2ff]' : 'hover:bg-gray-50'}`}>
+                    className={`w-full text-left px-4 py-3 transition-colors border-l-4 ${c.alert ? 'border-l-rose-500' : 'border-l-transparent'} ${isActive ? 'bg-[#eaf2ff]' : c.alert ? 'bg-rose-50' : 'hover:bg-gray-50'}`}>
                     <div className="flex items-center gap-2">
                       <span className="text-[16px] font-semibold text-gray-900 truncate flex-1">{highlight(formatCustomerName(c.name, c.from_id, t), searchQ)}</span>
                       {c.lastMessageAt && (
@@ -438,6 +495,11 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
                     </div>
                     {!searchQ && c.preview && (
                       <div className="mt-0.5 text-[14px] text-gray-500 truncate">{c.preview}</div>
+                    )}
+                    {c.alert && (
+                      <span className="inline-block mt-1 mr-1 text-[11px] px-2 py-0.5 rounded-full bg-rose-500 text-white font-medium">
+                        {t('needsHumanBadge')}{c.alert.intents[0] && c.alert.intents[0] !== MANUAL_FLAG_INTENT ? `：${c.alert.intents[0]}` : ''}
+                      </span>
                     )}
                     {c.takeover && (
                       <span className="inline-block mt-1 text-[11px] px-2 py-0.5 rounded-full border border-amber-300 text-amber-700">
@@ -510,11 +572,62 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
                   </button>
                 </div>
 
-                {/* 客戶摘要（AI 依對話累積自動生成，非即時） */}
-                {customerSummary && (
-                  <div className="px-4 py-2 border-b bg-violet-50/60 dark:bg-violet-950/30 text-[11px] text-violet-800 dark:text-violet-300 flex items-start gap-1.5">
-                    <span className="shrink-0">📝</span>
-                    <span className="line-clamp-2">{customerSummary}</span>
+                {/* 操作列：標記需處理、客戶檔案（CRM） */}
+                <div className="flex items-center gap-2 px-4 py-1.5 border-b bg-card/40 text-[12px]">
+                  <button type="button" onClick={() => void flagConvo()} disabled={flagBusy}
+                    className="px-2.5 py-1 rounded-full border border-rose-300 text-rose-700 bg-white disabled:opacity-50">
+                    {t('flagNeedsAction')}
+                  </button>
+                  <a href={extras?.crmContactId ? `/crm?contact=${encodeURIComponent(extras.crmContactId)}` : `/crm?q=${encodeURIComponent(active.name || active.from_id)}`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="px-2.5 py-1 rounded-full border border-indigo-300 text-indigo-700 bg-white">
+                    {t('crmLink')}
+                  </a>
+                </div>
+
+                {/* 需要真人提醒 */}
+                {extras?.alert && (
+                  <div className="flex items-center gap-2 px-4 py-2 border-b bg-rose-50 text-[13px] text-rose-800">
+                    <span className="font-semibold shrink-0">{t('needsHumanBadge')}</span>
+                    <span className="flex-1 min-w-0 truncate">
+                      {extras.alert.intents.filter(i => i !== MANUAL_FLAG_INTENT).concat(extras.alert.notes ?? []).join('、') || extras.alert.intents.join('、')}
+                    </span>
+                    <button type="button" onClick={() => void dismissAlert()} disabled={flagBusy}
+                      className="shrink-0 px-2.5 py-1 rounded-full border border-rose-300 bg-white text-rose-700 text-[12px] disabled:opacity-50">
+                      {t('alertDismiss')}
+                    </button>
+                  </div>
+                )}
+
+                {/* 訂房／預約資訊與客人摘要（AI 依對話累積自動生成，非即時） */}
+                {(extras?.booking || extras?.reservation || customerSummary) && (
+                  <div className="px-4 py-2 border-b bg-[#f7f9fc] text-[13px] text-gray-700 space-y-1">
+                    {extras?.booking && (() => {
+                      const b = extras.booking
+                      const md = (d: string) => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`
+                      return (
+                        <a href={`/booking/bookings/${b.id}`} target="_blank" rel="noopener noreferrer" className="block text-[#1a73e8]">
+                          🗓 {md(b.checkIn)}–{md(b.checkOut)}{b.room ? ` · ${b.room}` : ''}{b.guestName ? ` · ${b.guestName}` : ''}{b.guests ? ` · ${b.guests}` : ''}
+                        </a>
+                      )
+                    })()}
+                    {extras?.reservation && (() => {
+                      const r = extras.reservation
+                      const when = new Date(r.startTime).toLocaleString(locale, { timeZone: 'Asia/Taipei', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+                      return (
+                        <a href={`/reserve/appointments?id=${encodeURIComponent(r.id)}`} target="_blank" rel="noopener noreferrer" className="block text-[#1a73e8]">
+                          📅 {when}{r.service ? ` · ${r.service}` : ''}{r.staff ? ` · ${r.staff}` : ''}{r.store ? ` · ${r.store}` : ''} · {r.statusLabel}
+                        </a>
+                      )
+                    })()}
+                    {customerSummary && (
+                      <button type="button" onClick={() => setSummaryOpen(o => !o)} className="flex items-start gap-2 w-full text-left">
+                        <span className={`flex-1 min-w-0 ${summaryOpen ? 'whitespace-pre-wrap' : 'line-clamp-1'}`}>
+                          <span className="font-semibold text-gray-800">{t('customerSummaryTitle')}：</span>{customerSummary}
+                        </span>
+                        <span className="shrink-0 text-[11px] text-[#1a73e8] mt-0.5">{summaryOpen ? t('summaryCollapse') : t('summaryExpand')}</span>
+                      </button>
+                    )}
                   </div>
                 )}
 

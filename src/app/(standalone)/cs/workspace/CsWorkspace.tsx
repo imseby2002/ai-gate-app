@@ -315,6 +315,7 @@ interface ThreadProfile {
   summary: string | null
   booking: { id: string; guestName: string | null; checkIn: string; checkOut: string; room: string | null; orderNo: string | null; guests: number | null; platform: string | null } | null
   reservation: { id: string; appointmentNo: string; startTime: string; service: string | null; staff: string | null; store: string | null; statusLabel: string; customerName: string | null } | null
+  crmContactId: string | null
 }
 
 // 把搜尋字詞在文字中標黃
@@ -1709,7 +1710,7 @@ function Unit12CustomerService({
         setThreadBubbles(d.bubbles)
         setThreadHasOlder(!!d.hasOlder)
         setThreadHasNewer(!!d.hasNewer)
-        setThreadProfile({ summary: d.summary ?? null, booking: d.booking ?? null, reservation: d.reservation ?? null })
+        setThreadProfile({ summary: d.summary ?? null, booking: d.booking ?? null, reservation: d.reservation ?? null, crmContactId: d.crmContactId ?? null })
       }
       if (typeof d.takeover === 'boolean') {
         setActiveConvo(prev => prev && prev.from_id === to ? { ...prev, takeover: d.takeover, alert: d.alert ?? null } : prev)
@@ -5270,6 +5271,16 @@ function Unit12CustomerService({
                         </div>
 
                         <div className="flex items-center gap-2">
+                          <a
+                            href={threadProfile?.crmContactId
+                              ? `/crm?contact=${encodeURIComponent(threadProfile.crmContactId)}`
+                              : `/crm?q=${encodeURIComponent(activeConvo.name || activeConvo.from_id)}`}
+                            target="_blank" rel="noopener noreferrer"
+                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium border border-indigo-300 bg-white text-indigo-700 hover:bg-indigo-50"
+                            title={t('crmLinkTitle')}
+                          >
+                            {t('crmLink')}
+                          </a>
                           <button
                             type="button"
                             onClick={() => void flagInboxConvo()}

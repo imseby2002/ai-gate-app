@@ -452,7 +452,16 @@
     "takeoverActiveHint": "目前<b>真人接管中</b>",
     "resumeAiTakeoverButton": "恢復 AI 接手",
     "aiReplyingHint": "目前<b>AI 自動回覆中</b>",
-    "silenceAiButton": "讓 AI 閉嘴 (手動接手)"
+    "silenceAiButton": "讓 AI 閉嘴 (手動接手)",
+    "crmLink": "客戶檔案",
+    "needsHumanBadge": "需要真人",
+    "alertDismiss": "已處理",
+    "flagNeedsAction": "標記需處理",
+    "flagNotePrompt": "要處理什麼？（例如：等匯款後再報名登島）",
+    "flagDefaultNote": "人工標記待處理",
+    "summaryExpand": "展開",
+    "summaryCollapse": "收合",
+    "customerSummaryTitle": "客人摘要"
   },
   "CsDashboard": {
     "running": "系統運行中",
@@ -9857,7 +9866,9 @@
     "flagNeedsAction": "標記需處理",
     "flagNeedsActionTitle": "把這位客人標成需要真人處理（處理完按「已處理」關閉）",
     "flagNotePrompt": "要處理什麼？（例如：等匯款後再報名登島）",
-    "flagDefaultNote": "人工標記待處理"
+    "flagDefaultNote": "人工標記待處理",
+    "crmLink": "客戶檔案",
+    "crmLinkTitle": "在統一客戶系統（CRM）開啟這位客人"
   },
   "Pit": {
     "title": "會計・個人所得稅",

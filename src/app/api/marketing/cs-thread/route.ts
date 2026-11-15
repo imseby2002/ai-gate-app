@@ -14,6 +14,20 @@ import { getBnbContext } from '@/lib/bnb/context'
 import { isHandoffActive, getHumanIdleMinutes, STAFF_ACTIVE_SUBJECT, MANUAL_FLAG_INTENT, PERSISTENT_TICKET_INTENTS } from '@/lib/cs/handoff'
 import { findGuestBooking } from '@/lib/cs/stay-nights'
 import { findGuestReservation, extractPhones } from '@/lib/reserve/cs-context'
+import { csPlatformToKind, normalizeIdentity } from '@/lib/crm/normalize'
+import { scopeOwnerOf } from '@/lib/crm/scope'
+
+// 這位客人在統一客戶系統（CRM）的客戶檔案 id，供收件匣「客戶檔案」連結直接開啟
+async function findCrmContactId(ownerId: string, platform: string, fromId: string): Promise<string | null> {
+  const kind = csPlatformToKind(platform)
+  const value = kind ? normalizeIdentity(kind, fromId) : null
+  if (!kind || !value) return null
+  const admin = createAdminClient()
+  const scopeOwner = await scopeOwnerOf(admin, ownerId)
+  const { data } = await admin.from('crm_identities').select('contact_id')
+    .eq('owner_id', scopeOwner).eq('kind', kind).eq('value', value).maybeSingle()
+  return (data?.contact_id as string | undefined) ?? null
+}
 
 // 需要真人處理的提醒：7 天內未結案、且不是「員工正在回覆」自動開的接管工單
 // （客人要求真人、現場狀況、付款待確認、查無訂單、發票等）。按「已處理」會把這些工單結案。
@@ -157,20 +171,22 @@ export async function GET(req: NextRequest) {
       .select('summary, summarized_at, name, facts')
       .eq('user_id', ctx.ownerId).eq('platform', platform).eq('from_id', to).eq('industry', industry)
       .maybeSingle()
-    // 往前翻頁時不重查訂房／預約
+    // 往前翻頁、或前端輪詢（lite=1）時不重查訂房／預約／CRM
+    const lite = sp.get('lite') === '1'
     const facts = custRow?.facts as Record<string, unknown> | null
-    const [booking, reservation] = before ? [undefined, undefined] : await Promise.all([
+    const [booking, reservation, crmContactId] = before || lite ? [undefined, undefined, undefined] : await Promise.all([
       findGuestBooking(createAdminClient(), ctx.ownerId, facts, custRow?.name).catch(() => null),
       findGuestReservation(ctx.ownerId, {
         phones: [String(facts?.phone ?? ''), ...extractPhones(rows.map(r => r.message))],
         names: [String(facts?.confirmedName ?? ''), custRow?.name],
       }).catch(() => null),
+      findCrmContactId(ctx.ownerId, platform, to).catch(() => null),
     ])
 
     return NextResponse.json({
       bubbles, hasOlder, hasNewer, takeover: takeoverSet.has(to),
       summary: custRow?.summary ?? null, summarizedAt: custRow?.summarized_at ?? null,
-      booking, reservation, alert: alertMap.get(to) ?? null,
+      booking, reservation, crmContactId, alert: alertMap.get(to) ?? null,
     })
   }
 

@@ -452,7 +452,16 @@
     "takeoverActiveHint": "Hiện đang <b>người thật tiếp quản</b>",
     "resumeAiTakeoverButton": "Khôi phục AI tiếp quản",
     "aiReplyingHint": "Hiện tại <b>AI đang tự động trả lời</b>",
-    "silenceAiButton": "Tắt tiếng AI (tiếp quản thủ công)"
+    "silenceAiButton": "Tắt tiếng AI (tiếp quản thủ công)",
+    "crmLink": "Hồ sơ",
+    "needsHumanBadge": "Cần nhân viên",
+    "alertDismiss": "Đã xử lý",
+    "flagNeedsAction": "Đánh dấu",
+    "flagNotePrompt": "Cần xử lý việc gì? (vd: đăng ký tour sau khi khách chuyển khoản)",
+    "flagDefaultNote": "Cần xử lý",
+    "summaryExpand": "Xem thêm",
+    "summaryCollapse": "Thu gọn",
+    "customerSummaryTitle": "Tóm tắt"
   },
   "CsDashboard": {
     "running": "Hệ thống đang hoạt động",
@@ -9857,7 +9866,9 @@
     "flagNeedsAction": "Đánh dấu cần xử lý",
     "flagNeedsActionTitle": "Đánh dấu khách này cần nhân viên xử lý (đóng bằng “Đã xử lý”)",
     "flagNotePrompt": "Cần xử lý việc gì? (vd: đăng ký tour sau khi khách chuyển khoản)",
-    "flagDefaultNote": "Cần xử lý"
+    "flagDefaultNote": "Cần xử lý",
+    "crmLink": "Hồ sơ khách",
+    "crmLinkTitle": "Mở khách này trong CRM"
   },
   "Pit": {
     "title": "Kế toán・Thuế TNCN",

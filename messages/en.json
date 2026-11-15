@@ -452,7 +452,16 @@
     "takeoverActiveHint": "Currently in <b>human takeover</b>",
     "resumeAiTakeoverButton": "Resume AI",
     "aiReplyingHint": "AI is currently <b>auto-replying</b>",
-    "silenceAiButton": "Silence AI (manual takeover)"
+    "silenceAiButton": "Silence AI (manual takeover)",
+    "crmLink": "Profile",
+    "needsHumanBadge": "Needs staff",
+    "alertDismiss": "Handled",
+    "flagNeedsAction": "Flag",
+    "flagNotePrompt": "What needs to be done? (e.g. register the tour after payment)",
+    "flagDefaultNote": "Flagged for follow-up",
+    "summaryExpand": "More",
+    "summaryCollapse": "Less",
+    "customerSummaryTitle": "Summary"
   },
   "CsDashboard": {
     "running": "System Running",
@@ -9857,7 +9866,9 @@
     "flagNeedsAction": "Flag for follow-up",
     "flagNeedsActionTitle": "Flag this customer for staff follow-up (close it with “Handled”)",
     "flagNotePrompt": "What needs to be done? (e.g. register the tour after payment)",
-    "flagDefaultNote": "Flagged for follow-up"
+    "flagDefaultNote": "Flagged for follow-up",
+    "crmLink": "Customer profile",
+    "crmLinkTitle": "Open this customer in the CRM"
   },
   "Pit": {
     "title": "Accounting · Personal Income Tax",
