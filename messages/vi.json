@@ -8032,8 +8032,9 @@
     "companyEmailPending": "Nhân viên gửi email công ty: {email}",
     "companyEmailApprove": "Xác nhận",
     "companyEmailReject": "Từ chối",
-    "resumeTextLabel": "Kinh nghiệm làm việc, giới thiệu bản thân",
-    "resumeTextPlaceholder": "Nhân viên điền trong trang cá nhân / link ứng tuyển; nhân sự có thể sửa tại đây"
+    "editTabJob": "Thông tin tuyển dụng",
+    "editTabProfile": "Hồ sơ · Giấy tờ · Hợp đồng",
+    "editTabNoProfile": "Nhân viên này không có hồ sơ ứng tuyển (tạo không qua quy trình ứng tuyển), nên không có hồ sơ/giấy tờ để hiển thị."
   },
   "FinancePage": {
     "accountBalancesTitle": "Số dư theo tài khoản",

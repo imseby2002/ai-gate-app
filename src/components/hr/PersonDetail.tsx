@@ -1,0 +1,243 @@
+'use client'
+
+// 員工完整人事資料（基本資料、文字履歷、文件清單、合同、薪資）——人員資料頁與人事系統員工名冊共用
+import { useState, useEffect, useRef, type ChangeEvent } from 'react'
+import { useTranslations, useLocale } from 'next-intl'
+import { ArrowLeft, Loader2, FileText, Upload, Trash2, ExternalLink, Save, CheckCircle2, XCircle, DollarSign } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+
+const fmt = (n: number, locale: string) => Math.round(Number(n) || 0).toLocaleString(locale === 'vi' ? 'vi-VN' : locale === 'en' ? 'en-US' : 'zh-TW')
+
+
+interface DocSpec { type: string; label: string; copy: string; categories: string[] }
+interface DocRow { id: string; doc_type: string; label: string; file_name: string; url: string; uploaded_at: string }
+interface Checklist { doc_key: string; original_received: boolean; copy_received: boolean; note: string }
+interface Contract { id: string; contract_no: string; sign_date: string | null; start_date: string | null; end_date: string | null; file_name: string; url: string; note: string }
+interface Employee { base_salary: number; hourly_rate: number; employment_type: string; insurance_required: boolean; insurance_status: string; insurance_salary: number; attendance_no: string; bank_name: string; bank_account: string; department: string; position: string }
+interface Payroll { year: number; month: number; base_salary: number; allowances: number; deductions: number; bonus: number; net_pay: number; status: string }
+interface Person { id: string; name: string; gender: string; native_place: string; birthday: string | null; id_number: string; education: string; email: string; company_email: string; zalo_user_id: string; payroll_no: string; position: string; store: string; staff_category: string; address: string; phone: string; apply_token: string; profile_text: string; resume_text: string; hired_employee_id?: string | null }
+export function PersonDetail({ id, onBack, embedded = false }: { id: string; onBack: () => void; embedded?: boolean }) {
+  const t = useTranslations('Personnel')
+  const locale = useLocale()
+  const CATEGORY_LABEL: Record<string, string> = { recruit: t('categoryRecruit'), insurance: t('categoryInsurance'), tax: t('categoryTax') }
+  const [data, setData] = useState<{ person: Person; documents: DocRow[]; checklist: Checklist[]; contracts: Contract[]; employee: Employee | null; payroll: Payroll[]; evaluations: unknown[]; catalog: DocSpec[] } | null>(null)
+  const [tick, setTick] = useState(0)
+  const [form, setForm] = useState<Partial<Person>>({})
+  const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [msg, setMsg] = useState('')
+
+  useEffect(() => {
+    fetch(`/api/hr/personnel?id=${id}`).then(r => r.ok ? r.json() : null).then(d => { if (d) { setData(d); setForm(d.person) } })
+  }, [id, tick])
+  const reload = () => setTick(x => x + 1)
+
+  if (!data) return <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
+  const set = (patch: Partial<Person>) => setForm(p => ({ ...p, ...patch }))
+  const save = async () => {
+    setSaving(true); setMsg('')
+    const res = await fetch('/api/hr/personnel', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, ...form }) })
+    setSaving(false); setMsg(res.ok ? t('saved') : t('saveFailed'))
+  }
+
+  const removeCurrent = async () => {
+    const personName = data?.person?.name || t('thisPerson')
+    const isHired = !!data?.person?.hired_employee_id
+    const promptMsg = isHired
+      ? t('confirmDeleteHired', { name: personName })
+      : t('confirmDeleteApplicant', { name: personName })
+    if (!confirm(promptMsg)) return
+    setDeleting(true)
+    const res = await fetch('/api/hr/personnel', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    })
+    setDeleting(false)
+    if (res.ok) {
+      alert(t('deleteSuccess', { name: personName }))
+      onBack()
+    } else {
+      const d = await res.json().catch(() => ({}))
+      alert(d.error ?? t('deleteFailed'))
+    }
+  }
+
+  const haveDoc = new Map(data.documents.map(d => [d.doc_type, d]))
+  const paperOf = new Map(data.checklist.map(c => [c.doc_key, c]))
+  const togglePaper = async (doc_key: string, v: boolean) => {
+    await fetch('/api/hr/candidates/checklist', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ candidate_id: id, doc_key, original_received: v }) })
+    reload()
+  }
+
+  const F = ([label, key, type]: [string, keyof Person, string?]) => (
+    <label className="space-y-1"><span className="text-xs text-gray-500">{label}</span>
+      <Input type={type ?? 'text'} value={String(form[key] ?? '')} onChange={e => set({ [key]: e.target.value } as Partial<Person>)} className="h-9" /></label>
+  )
+
+  return (
+    <div className="space-y-4">
+      {!embedded && <div className="flex items-center justify-between">
+        <button onClick={onBack} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"><ArrowLeft className="h-4 w-4" />{t('backToList')}</button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+          onClick={removeCurrent}
+          disabled={deleting}
+        >
+          {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+          {t('deleteThisList')}
+        </Button>
+      </div>}
+
+      <Card className="p-4 space-y-3">
+        <div className="flex items-center justify-between"><h3 className="font-semibold text-sm">{t('basicInfo')}</h3>
+          <div className="flex items-center gap-2">{msg && <span className="text-xs text-gray-500">{msg}</span>}<Button size="sm" onClick={save} disabled={saving} className="gap-1.5">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{t('save')}</Button></div>
+        </div>
+        <div className="grid md:grid-cols-3 gap-2">
+          {([[t('fieldName'), 'name'], [t('fieldGender'), 'gender'], [t('fieldNativePlace'), 'native_place'], [t('fieldBirthday'), 'birthday', 'date'], [t('fieldIdNumber'), 'id_number'], [t('fieldEducation'), 'education'], [t('fieldPosition'), 'position'], [t('fieldStore'), 'store'], [t('fieldPayrollNo'), 'payroll_no'], [t('fieldStaffCategory'), 'staff_category'], [t('fieldPhone'), 'phone'], [t('fieldEmail'), 'email', 'email'], [t('fieldCompanyEmail'), 'company_email', 'email'], ['ZALO', 'zalo_user_id'], [t('fieldAddress'), 'address']] as [string, keyof Person, string?][]).map(f => <div key={f[1]}>{F(f)}</div>)}
+        </div>
+        <label className="block space-y-1"><span className="text-xs text-gray-500">{t('fieldResume')}</span>
+          <textarea value={String(form.resume_text ?? '')} onChange={e => set({ resume_text: e.target.value })} rows={5}
+            className="w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500" /></label>
+        <p className="text-[11px] text-gray-400">{t('personalLink')}<code>/apply/edit/{data.person.apply_token}</code></p>
+      </Card>
+
+      {/* 文件清單 */}
+      <Card className="p-4 space-y-2">
+        <h3 className="font-semibold text-sm flex items-center gap-1.5"><FileText className="h-4 w-4" />{t('documentList')}</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm"><thead><tr className="text-left text-gray-500 border-b"><th className="py-1.5 pr-2">{t('colDocument')}</th><th className="pr-2">{t('colPurpose')}</th><th className="pr-2">{t('colPaperType')}</th><th className="pr-2 text-center">{t('colUploaded')}</th><th className="pr-2">{t('colPaperReceived')}</th><th className="pr-2"></th></tr></thead>
+            <tbody>{data.catalog.filter(c => c.type !== 'other').map(spec => {
+              const doc = haveDoc.get(spec.type)
+              const paper = paperOf.get(spec.type)
+              return (
+                <tr key={spec.type} className="border-b last:border-0">
+                  <td className="py-1.5 pr-2">{spec.label}</td>
+                  <td className="pr-2 text-[11px] text-gray-400">{spec.categories.map(c => CATEGORY_LABEL[c] ?? c).join('／')}</td>
+                  <td className="pr-2 text-xs text-gray-400">{spec.copy === 'original' ? t('paperOriginal') : spec.copy === 'both' ? t('paperBoth') : t('paperCopy')}</td>
+                  <td className="pr-2 text-center">{doc ? <CheckCircle2 className="h-4 w-4 text-emerald-500 inline" /> : <XCircle className="h-4 w-4 text-gray-300 inline" />}</td>
+                  <td className="pr-2"><input type="checkbox" checked={!!paper?.original_received} onChange={e => togglePaper(spec.type, e.target.checked)} /></td>
+                  <td className="pr-2">{doc?.url && <a href={doc.url} target="_blank" rel="noreferrer" className="text-primary"><ExternalLink className="h-4 w-4" /></a>}</td>
+                </tr>
+              )
+            })}</tbody></table>
+        </div>
+      </Card>
+
+      {/* 薪資獎金 */}
+      {data.employee && (
+        <Card className="p-4 space-y-2">
+          <h3 className="font-semibold text-sm flex items-center gap-1.5"><DollarSign className="h-4 w-4" />{t('payroll')}</h3>
+          <div className="text-xs text-gray-500 flex flex-wrap gap-x-4 gap-y-1">
+            <span>{t('baseSalary', { amount: fmt(data.employee.base_salary, locale) })}</span>
+            {data.employee.hourly_rate > 0 && <span>{t('hourlyRate', { amount: fmt(data.employee.hourly_rate, locale) })}</span>}
+            <span>{t('insurance', { status: data.employee.insurance_required ? t('insuranceRequired', { status: data.employee.insurance_status || '—' }) : t('insuranceExempt') })}</span>
+            {data.employee.attendance_no && <span>{t('attendanceNo', { no: data.employee.attendance_no })}</span>}
+          </div>
+          {data.payroll.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm"><thead><tr className="text-left text-gray-500 border-b"><th className="py-1 pr-2">{t('colMonth')}</th><th className="pr-2 text-right">{t('colBaseSalary')}</th><th className="pr-2 text-right">{t('colAllowances')}</th><th className="pr-2 text-right">{t('colDeductions')}</th><th className="pr-2 text-right">{t('colBonus')}</th><th className="pr-2 text-right">{t('colNetPay')}</th><th className="pr-2">{t('colStatus')}</th></tr></thead>
+                <tbody>{data.payroll.map((p, i) => (
+                  <tr key={i} className="border-b last:border-0">
+                    <td className="py-1 pr-2">{p.year}/{p.month}</td>
+                    <td className="pr-2 text-right tabular-nums">{fmt(p.base_salary, locale)}</td>
+                    <td className="pr-2 text-right tabular-nums">{fmt(p.allowances, locale)}</td>
+                    <td className="pr-2 text-right tabular-nums text-red-500">{fmt(p.deductions, locale)}</td>
+                    <td className="pr-2 text-right tabular-nums text-emerald-600">{fmt(p.bonus, locale)}</td>
+                    <td className="pr-2 text-right tabular-nums font-medium">{fmt(p.net_pay, locale)}</td>
+                    <td className="pr-2 text-xs text-gray-400">{p.status}</td>
+                  </tr>))}</tbody></table>
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* AI 彙整基本資料 */}
+      <AiProfileSection id={id} profileText={data.person.profile_text} hasDocs={data.documents.length > 0} onChange={reload} />
+
+      {/* 勞動合同 */}
+      <ContractSection candidateId={id} contracts={data.contracts} onChange={reload} />
+    </div>
+  )
+}
+
+function AiProfileSection({ id, profileText, hasDocs, onChange }: { id: string; profileText: string; hasDocs: boolean; onChange: () => void }) {
+  const t = useTranslations('Personnel')
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState('')
+  const run = async () => {
+    setBusy(true); setMsg('')
+    const res = await fetch('/api/hr/personnel/extract', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
+    const d = await res.json().catch(() => ({}))
+    setBusy(false)
+    if (res.ok) { setMsg(t('aiSummarized', { used: d.used })); onChange() } else setMsg(d.error ?? t('failed'))
+  }
+  return (
+    <Card className="p-4 space-y-2">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-sm flex items-center gap-1.5"><FileText className="h-4 w-4 text-indigo-500" />{t('aiProfileTitle')}</h3>
+        <div className="flex items-center gap-2">{msg && <span className="text-xs text-gray-500">{msg}</span>}
+          <Button size="sm" variant="outline" onClick={run} disabled={busy || !hasDocs} className="gap-1.5">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}{profileText ? t('reSummarize') : t('aiSummarize')}</Button></div>
+      </div>
+      {!hasDocs && <p className="text-xs text-gray-400">{t('noDocsToSummarize')}</p>}
+      {profileText
+        ? <pre className="text-xs text-gray-600 whitespace-pre-wrap max-h-80 overflow-y-auto bg-gray-50 rounded-lg p-3">{profileText}</pre>
+        : hasDocs && <p className="text-xs text-gray-400">{t('notSummarizedYet')}</p>}
+    </Card>
+  )
+}
+
+function ContractSection({ candidateId, contracts, onChange }: { candidateId: string; contracts: Contract[]; onChange: () => void }) {
+  const t = useTranslations('Personnel')
+  const [adding, setAdding] = useState(false)
+  const [f, setF] = useState({ contract_no: '', sign_date: '', start_date: '', end_date: '', note: '' })
+  const [file, setFile] = useState<File | null>(null)
+  const [busy, setBusy] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const add = async () => {
+    setBusy(true)
+    const fd = new FormData()
+    fd.append('candidate_id', candidateId)
+    Object.entries(f).forEach(([k, v]) => fd.append(k, v))
+    if (file) fd.append('file', file)
+    const res = await fetch('/api/hr/contracts', { method: 'POST', body: fd })
+    setBusy(false)
+    if (res.ok) { setAdding(false); setF({ contract_no: '', sign_date: '', start_date: '', end_date: '', note: '' }); setFile(null); onChange() }
+    else alert((await res.json().catch(() => ({}))).error ?? t('saveFailed'))
+  }
+  const remove = async (id: string) => { if (!confirm(t('confirmDeleteContract'))) return; await fetch('/api/hr/contracts', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) }); onChange() }
+
+  return (
+    <Card className="p-4 space-y-2">
+      <div className="flex items-center justify-between"><h3 className="font-semibold text-sm">{t('laborContract')}</h3><Button size="sm" variant="outline" onClick={() => setAdding(a => !a)}>{adding ? t('cancel') : t('addContract')}</Button></div>
+      {adding && (
+        <div className="space-y-2 border rounded-lg p-3 bg-gray-50">
+          <div className="grid grid-cols-2 gap-2">
+            <label className="space-y-1"><span className="text-xs text-gray-500">{t('contractNo')}</span><Input value={f.contract_no} onChange={e => setF({ ...f, contract_no: e.target.value })} className="h-9" /></label>
+            <label className="space-y-1"><span className="text-xs text-gray-500">{t('signDate')}</span><Input type="date" value={f.sign_date} onChange={e => setF({ ...f, sign_date: e.target.value })} className="h-9" /></label>
+            <label className="space-y-1"><span className="text-xs text-gray-500">{t('startDate')}</span><Input type="date" value={f.start_date} onChange={e => setF({ ...f, start_date: e.target.value })} className="h-9" /></label>
+            <label className="space-y-1"><span className="text-xs text-gray-500">{t('endDate')}</span><Input type="date" value={f.end_date} onChange={e => setF({ ...f, end_date: e.target.value })} className="h-9" /></label>
+          </div>
+          <input ref={fileRef} type="file" hidden accept=".pdf,.png,.jpg,.jpeg,.webp" onChange={(e: ChangeEvent<HTMLInputElement>) => setFile(e.target.files?.[0] ?? null)} />
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => fileRef.current?.click()}><Upload className="h-4 w-4" />{file ? file.name : t('signedContractFile')}</Button>
+            <Button size="sm" className="ml-auto" onClick={add} disabled={busy}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : t('save')}</Button>
+          </div>
+        </div>
+      )}
+      {contracts.length === 0 ? <p className="text-xs text-gray-400">{t('noContracts')}</p>
+        : <div className="grid gap-1">{contracts.map(c => (
+          <div key={c.id} className="flex items-center gap-2 text-sm border-b last:border-0 py-1.5">
+            <span className="font-medium">{c.contract_no || t('noContractNo')}</span>
+            <span className="text-xs text-gray-400">{c.sign_date ?? ''}{c.start_date ? ` ${c.start_date}~${c.end_date ?? ''}` : ''}</span>
+            {c.url && <a href={c.url} target="_blank" rel="noreferrer" className="text-primary ml-auto"><ExternalLink className="h-4 w-4" /></a>}
+            <button onClick={() => remove(c.id)} className="text-gray-400 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
+          </div>))}</div>}
+    </Card>
+  )
+}

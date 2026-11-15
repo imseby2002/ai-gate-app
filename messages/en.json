@@ -8032,8 +8032,9 @@
     "companyEmailPending": "Employee submitted company email: {email}",
     "companyEmailApprove": "Approve",
     "companyEmailReject": "Reject",
-    "resumeTextLabel": "Work experience & self-introduction (text résumé)",
-    "resumeTextPlaceholder": "Filled by the employee in the portal or application link; HR can edit here"
+    "editTabJob": "Employment",
+    "editTabProfile": "Résumé · Documents · Contracts",
+    "editTabNoProfile": "This employee has no applicant/personnel record (created without the application flow), so there is no résumé or document to show."
   },
   "FinancePage": {
     "accountBalancesTitle": "Balance by account",
