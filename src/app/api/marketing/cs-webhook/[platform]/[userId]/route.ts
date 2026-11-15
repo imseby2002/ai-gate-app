@@ -21,6 +21,7 @@ import { queryGoogleSheet, type SheetConfig, type SheetQueryOpts } from '@/lib/c
 import { buildBookingSystemPrompt, BOOKING_HUMAN_CONFIRM_NOTICE, type BookingFlowDef } from '@/lib/cs/booking-prompt'
 import { sendTicketNotification, type NotifyWebhook } from '@/lib/cs/ticket-notify'
 import { buildSellSection, type CsCustomerRow } from '@/lib/cs/sell-section'
+import { buildCrmSection } from '@/lib/crm/cs-context'
 import { queryBnbCheckin, checkBeforeCheckin, queryBookingByGuestName, queryBookingByPhone, noDataFoundSuffix, NAME_VERIFY_ASK_RE, wrapImageDerivedResultForConfirm, looksLikeGuestName, isAffirmativeReply, detectBookingPlatform, stripPlatformMention, orderLookupAltMethods, platformReplyGuidance } from '@/lib/cs/checkin-lookup'
 import { getCsEntitlements } from '@/lib/cs/entitlements'
 import { commitCsRoomBooking, getCsBookingMode, getOfficialBookingUrl, buildReferInstruction, buildReferStandingRule, ROOM_BOOKING_TEXT_RE, type CsBookingMode } from '@/lib/cs/booking-commit'
@@ -948,6 +949,8 @@ async function replyToCustomer(
   // 認識客戶 + 問價次數 → 業務指引；回覆後更新追蹤資料
   const convoPriceAsks = [...history.filter(m => m.role === 'user').map(m => m.content), text].filter(t => PRICE_RE.test(t)).length
   const isPriceAskNow = PRICE_RE.test(text)
+  // 統一客戶系統（CRM）的客人檔案：與下方 cs_customers 查詢並行，逾時或查不到回傳空字串
+  const crmSectionP = buildCrmSection(getServiceClient(), userId, platform, customerId)
   let cust: CsCustomerRow | null = null
   try {
     const { data } = await getServiceClient()
@@ -1076,7 +1079,7 @@ async function replyToCustomer(
     } catch { /* 查不到就照常回覆 */ }
   }
 
-  const rawReply = await getAIReply(text, knowledge, history, userId, buildSellSection(cust, convoPriceAsks, isPriceAskNow, text), gapNote, imageBuffer, imageMimeType, platform, customerId, !!cust?.discount_offered_at, (cust?.facts as Record<string, any> | undefined), bookingCommitSection, onsiteSection)
+  const rawReply = await getAIReply(text, knowledge, history, userId, buildSellSection(cust, convoPriceAsks, isPriceAskNow, text) + (await crmSectionP), gapNote, imageBuffer, imageMimeType, platform, customerId, !!cust?.discount_offered_at, (cust?.facts as Record<string, any> | undefined), bookingCommitSection, onsiteSection)
   const { visibleReply: withoutForm, submit: formSubmit } = extractFormSubmit(rawReply.split(HUMAN_AGENT_TAG).join(''))
   const { visibleReply: aiReply, offered: discountJustOffered } = extractDiscountOffered(withoutForm)
   // AI 自己承諾退款／退房費／金額補償 → 換成安全回覆並建工單通知管家（促成工具箱正式給的折扣除外）
