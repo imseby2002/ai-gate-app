@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabase
     .from('crm_contacts')
-    .select('id, display_name, phone, email, tags, traits, order_count, total_spent, last_activity_at, crm_identities(kind, value, label), added_by_profile:profiles!crm_contacts_added_by_fkey(display_name, email)', { count: 'exact' })
+    .select('id, display_name, phone, email, tags, traits, order_count, total_spent, last_activity_at, crm_identities(kind, value, label), added_by_profile:profiles!crm_contacts_added_by_fkey(display_name:full_name, email)', { count: 'exact' })
     .filter('owner_id', ...own)
     .order('last_activity_at', { ascending: false, nullsFirst: false })
     .range(page * size, page * size + size - 1)

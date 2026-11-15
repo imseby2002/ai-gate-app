@@ -11,9 +11,9 @@ export async function GET(req: NextRequest, { params }: Ctx) {
   const { supabase, own } = auth
   const { id } = await params
   const [{ data: contact }, { data: identities }, { data: activities }] = await Promise.all([
-    supabase.from('crm_contacts').select('*, added_by_profile:profiles!crm_contacts_added_by_fkey(display_name, email)').eq('id', id).filter('owner_id', ...own).maybeSingle(),
+    supabase.from('crm_contacts').select('*, added_by_profile:profiles!crm_contacts_added_by_fkey(display_name:full_name, email)').eq('id', id).filter('owner_id', ...own).maybeSingle(),
     supabase.from('crm_identities').select('id, kind, value, label, cs_customer_id, created_at').eq('contact_id', id).filter('owner_id', ...own).order('created_at'),
-    supabase.from('crm_activities').select('id, source, source_id, kind, title, amount, currency, status, occurred_at, meta, handler:profiles!crm_activities_handled_by_fkey(display_name, email)').eq('contact_id', id).filter('owner_id', ...own).order('occurred_at', { ascending: false }).limit(500),
+    supabase.from('crm_activities').select('id, source, source_id, kind, title, amount, currency, status, occurred_at, meta, handler:profiles!crm_activities_handled_by_fkey(display_name:full_name, email)').eq('contact_id', id).filter('owner_id', ...own).order('occurred_at', { ascending: false }).limit(500),
   ])
   if (!contact) return NextResponse.json({ error: '找不到客人' }, { status: 404 })
   return NextResponse.json({ contact, identities: identities ?? [], activities: activities ?? [] })
