@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { getCrmUser } from '@/lib/crm/auth'
-import { normalizeEmail, normalizePhone } from '@/lib/crm/normalize'
+import { nameKey, normalizeEmail, normalizePhone } from '@/lib/crm/normalize'
 
-// GET /api/crm/contacts?q=&tag=&kind=line&page=0 → 客人列表（含各平台帳號）
+const LIST_SELECT = 'id, display_name, phone, email, tags, traits, order_count, total_spent, last_activity_at, crm_identities(kind, value, label), added_by_profile:profiles!crm_contacts_added_by_fkey(display_name:full_name, email)'
+
+// GET /api/crm/contacts?q=&tag=&kind=line&page=0&sort=recent|name → 客人列表（含各平台帳號）
+//   dup=1：只列出同名（可能重複）的客人，同名排在一起，並回傳 nameKey 供前端分組
+//   same_as=<id>：列出與這位客人同名的其他客人（合併建議）
 export async function GET(req: NextRequest) {
   const auth = await getCrmUser(req)
   if ('error' in auth) return auth.error
@@ -13,12 +18,46 @@ export async function GET(req: NextRequest) {
   const kind = sp.get('kind')
   const page = Math.max(0, Number(sp.get('page')) || 0)
   const size = 50
+  const sort = sp.get('sort') === 'name' ? 'name' : 'recent'
+  const dup = sp.get('dup') === '1'
+  const sameAs = sp.get('same_as')
+
+  // 同名比對要看整份名單（姓名順序、大小寫不同也算同名），在程式裡分組
+  if (dup || sameAs) {
+    const all: Record<string, unknown>[] = []
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await supabase.from('crm_contacts').select(LIST_SELECT).filter('owner_id', ...own).order('id').range(from, from + 999)
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      all.push(...((data ?? []) as Record<string, unknown>[]))
+      if (!data || data.length < 1000) break
+    }
+    const keyOf = (r: Record<string, unknown>) => nameKey(r.display_name as string | null)
+    let list: Record<string, unknown>[]
+    if (sameAs) {
+      const target = all.find(r => r.id === sameAs)
+      const k = target ? keyOf(target) : ''
+      list = k ? all.filter(r => r.id !== sameAs && keyOf(r) === k) : []
+    } else {
+      const counts = new Map<string, number>()
+      for (const r of all) { const k = keyOf(r); if (k) counts.set(k, (counts.get(k) ?? 0) + 1) }
+      list = all.filter(r => (counts.get(keyOf(r)) ?? 0) > 1)
+      if (q) list = list.filter(r => keyOf(r).includes(nameKey(q)))
+      list.sort((a, b) => keyOf(a).localeCompare(keyOf(b)) || String(b.last_activity_at ?? '').localeCompare(String(a.last_activity_at ?? '')))
+    }
+    const pageRows = sameAs ? list.slice(0, 20) : list.slice(page * size, page * size + size)
+    return NextResponse.json({
+      contacts: pageRows.map(r => ({ ...r, name_key: keyOf(r) })),
+      total: list.length, page, size, canPlatform: auth.isAdmin, companies: auth.isAdmin ? await listCompanies(supabase) : [],
+    })
+  }
 
   let query = supabase
     .from('crm_contacts')
-    .select('id, display_name, phone, email, tags, traits, order_count, total_spent, last_activity_at, crm_identities(kind, value, label), added_by_profile:profiles!crm_contacts_added_by_fkey(display_name:full_name, email)', { count: 'exact' })
+    .select(LIST_SELECT, { count: 'exact' })
     .filter('owner_id', ...own)
-    .order('last_activity_at', { ascending: false, nullsFirst: false })
+  query = (sort === 'name'
+    ? query.order('display_name', { ascending: true, nullsFirst: false }).order('last_activity_at', { ascending: false, nullsFirst: false })
+    : query.order('last_activity_at', { ascending: false, nullsFirst: false }))
     .range(page * size, page * size + size - 1)
 
   if (q) {
@@ -40,12 +79,13 @@ export async function GET(req: NextRequest) {
   const { data, error, count } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   // 總管理員可切換查看各公司的客人
-  let companies: { id: string; name: string }[] = []
-  if (auth.isAdmin) {
-    const { data: cs } = await supabase.from('companies').select('id, name').order('name')
-    companies = (cs ?? []) as { id: string; name: string }[]
-  }
+  const companies = auth.isAdmin ? await listCompanies(supabase) : []
   return NextResponse.json({ contacts: data ?? [], total: count ?? 0, page, size, canPlatform: auth.isAdmin, companies })
+}
+
+async function listCompanies(supabase: SupabaseClient) {
+  const { data } = await supabase.from('companies').select('id, name').order('name')
+  return (data ?? []) as { id: string; name: string }[]
 }
 
 // POST /api/crm/contacts → 手動新增客人

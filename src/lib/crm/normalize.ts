@@ -53,3 +53,8 @@ export function normalizeIdentity(kind: string, value: unknown): string | null {
   const v = value.trim()
   return v ? v.slice(0, 200) : null
 }
+
+/** 比對同名用：忽略大小寫、標點與姓名順序（「LIU/JUNG JUNG」＝「Jung Jung Liu」） */
+export function nameKey(name: string | null | undefined): string {
+  return (name ?? '').toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean).sort().join(' ')
+}

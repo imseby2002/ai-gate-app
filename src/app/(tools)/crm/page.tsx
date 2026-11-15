@@ -13,6 +13,7 @@ interface ContactRow {
   tags: string[]; traits: string | null; order_count: number; total_spent: number
   last_activity_at: string | null; crm_identities: Identity[]
   added_by_profile?: Person | null
+  name_key?: string
 }
 interface Person { display_name: string | null; email: string | null }
 const personName = (p?: Person | null) => p?.display_name || p?.email?.split('@')[0] || ''
@@ -67,6 +68,8 @@ export default function CrmPage() {
   const [scope, setScopeState] = useState('')
   const [canPlatform, setCanPlatform] = useState(false)
   const [companies, setCompanies] = useState<{ id: string; name: string }[]>([])
+  const [sort, setSort] = useState<'recent' | 'name'>('recent')
+  const [dupOnly, setDupOnly] = useState(false)
   const setScope = (s: string) => { currentScope = s; setScopeState(s); setSelected(null) }
 
   const load = useCallback(async (p = 0) => {
@@ -75,13 +78,26 @@ export default function CrmPage() {
       const sp = new URLSearchParams({ page: String(p) })
       if (q.trim()) sp.set('q', q.trim())
       if (kind) sp.set('kind', kind)
+      if (sort === 'name') sp.set('sort', 'name')
+      if (dupOnly) sp.set('dup', '1')
       const d = await api(`/api/crm/contacts?${sp}`)
       setRows(d.contacts); setTotal(d.total); setPage(p); setCanPlatform(!!d.canPlatform); setCompanies(d.companies ?? [])
     } catch (e) { setMsg(errMsg(e)) } finally { setLoading(false) }
     // scope 透過 currentScope 帶入 api()，列在相依中讓切換時重新載入
-  }, [q, kind, scope]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [q, kind, scope, sort, dupOnly]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { const t = setTimeout(() => load(0), 300); return () => clearTimeout(t) }, [load])
+
+  // 同名清單：把這一位併入上一位同名客人（上一位保留），合併後立刻從列表移除
+  async function mergeIntoPrev(prev: ContactRow, r: ContactRow) {
+    if (!confirm(`把「${r.display_name || '未命名'}」併入上一位「${prev.display_name || '未命名'}」？`)) return
+    try {
+      await api(`/api/crm/contacts/${prev.id}/merge`, { method: 'POST', body: JSON.stringify({ other_id: r.id }) })
+      setRows(rs => rs.filter(x => x.id !== r.id))
+      setTotal(t => t - 1)
+      load(page)
+    } catch (e) { setMsg(errMsg(e)) }
+  }
 
   async function sync() {
     setSyncing(true); setMsg('')
@@ -113,6 +129,14 @@ export default function CrmPage() {
           <option value="">全部帳號類型</option>
           {IDENTITY_KINDS.map(k => <option key={k.id} value={k.id}>有 {k.label}</option>)}
         </select>
+        <select value={sort} onChange={e => setSort(e.target.value as 'recent' | 'name')} disabled={dupOnly} className="text-sm border rounded-lg px-2 py-2 disabled:opacity-50" title="排序">
+          <option value="recent">依最近互動</option>
+          <option value="name">依姓名</option>
+        </select>
+        <label className={`flex items-center gap-1 text-sm px-3 py-2 rounded-lg border cursor-pointer select-none ${dupOnly ? 'bg-amber-50 border-amber-300 text-amber-800' : 'hover:bg-gray-50'}`}>
+          <input type="checkbox" checked={dupOnly} onChange={e => setDupOnly(e.target.checked)} className="accent-amber-600" />
+          同名可能重複
+        </label>
         <button onClick={() => setCreating(true)} className="flex items-center gap-1 text-sm px-3 py-2 rounded-lg border hover:bg-gray-50">
           <Plus className="w-4 h-4" />新增客人
         </button>
@@ -135,10 +159,21 @@ export default function CrmPage() {
             </tr>
           </thead>
           <tbody className="bg-white">
-            {rows.map(r => (
-              <tr key={r.id} onClick={() => setSelected(r.id)} className="border-t hover:bg-indigo-50/40 cursor-pointer">
+            {rows.map((r, idx) => {
+              const prev = idx > 0 ? rows[idx - 1] : null
+              const sameAsPrev = dupOnly && !!prev && !!r.name_key && prev.name_key === r.name_key
+              return (
+              <tr key={r.id} onClick={() => setSelected(r.id)} className={`hover:bg-indigo-50/40 cursor-pointer ${dupOnly && !sameAsPrev ? 'border-t-4 border-amber-100' : 'border-t'}`}>
                 <td className="px-4 py-2.5">
-                  <div className="font-medium">{r.display_name || '（未命名）'}</div>
+                  <div className="font-medium flex items-center gap-2">
+                    {r.display_name || '（未命名）'}
+                    {sameAsPrev && (
+                      <button onClick={e => { e.stopPropagation(); mergeIntoPrev(prev!, r) }}
+                        className="text-[11px] px-2 py-0.5 rounded border border-amber-300 text-amber-700 hover:bg-amber-50" title="同一人：把這一位併入上一位">
+                        ↑ 併入上一位
+                      </button>
+                    )}
+                  </div>
                   <div className="text-xs text-gray-500">{[r.phone, r.email].filter(Boolean).join(' · ')}</div>
                   {personName(r.added_by_profile) && <div className="text-[11px] text-gray-400">由 {personName(r.added_by_profile)} 帶入</div>}
                 </td>
@@ -157,7 +192,8 @@ export default function CrmPage() {
                 <td className="px-4 py-2.5 text-right">{fmtMoney(r.total_spent)}</td>
                 <td className="px-4 py-2.5 text-right text-gray-500 hidden sm:table-cell">{fmtDate(r.last_activity_at)}</td>
               </tr>
-            ))}
+              )
+            })}
             {!loading && rows.length === 0 && (
               <tr><td colSpan={6} className="text-center text-gray-400 py-16">尚無客人資料，按「同步各系統資料」從預約、訂房、eSIM、客服匯入</td></tr>
             )}
@@ -212,6 +248,7 @@ function ContactDrawer({ id, onClose, onChanged }: { id: string; onClose: () => 
   const [note, setNote] = useState('')
   const [mergeQ, setMergeQ] = useState('')
   const [mergeHits, setMergeHits] = useState<ContactRow[]>([])
+  const [sameName, setSameName] = useState<ContactRow[]>([])
   const [srcFilter, setSrcFilter] = useState('')
 
   const load = useCallback(async () => {
@@ -221,6 +258,14 @@ function ContactDrawer({ id, onClose, onChanged }: { id: string; onClose: () => 
     } catch (e) { setErr(errMsg(e)) }
   }, [id])
   useEffect(() => { const t = setTimeout(load, 0); return () => clearTimeout(t) }, [load])
+  // 自動列出同名客人當合併建議
+  useEffect(() => {
+    const t = setTimeout(async () => {
+      const d = await api(`/api/crm/contacts?same_as=${id}`).catch(() => ({ contacts: [] }))
+      setSameName(d.contacts ?? [])
+    }, 0)
+    return () => clearTimeout(t)
+  }, [id])
 
   useEffect(() => {
     if (!mergeQ.trim()) return
@@ -271,8 +316,14 @@ function ContactDrawer({ id, onClose, onChanged }: { id: string; onClose: () => 
     await load()
   }
   async function merge(other: ContactRow) {
-    if (!confirm(`把「${other.display_name || '未命名'}」的所有帳號與紀錄合併到目前這位客人？（無法復原）`)) return
-    try { await api(`/api/crm/contacts/${id}/merge`, { method: 'POST', body: JSON.stringify({ other_id: other.id }) }); setMergeQ(''); await load(); onChanged() } catch (e) { setErr(errMsg(e)) }
+    if (!confirm(`把「${other.display_name || '未命名'}」併入目前這位客人？（無法復原）`)) return
+    try {
+      await api(`/api/crm/contacts/${id}/merge`, { method: 'POST', body: JSON.stringify({ other_id: other.id }) })
+      // 合併完立刻從建議與搜尋結果移除
+      setSameName(xs => xs.filter(x => x.id !== other.id))
+      setMergeHits(xs => xs.filter(x => x.id !== other.id))
+      await load(); onChanged()
+    } catch (e) { setErr(errMsg(e)) }
   }
   async function remove() {
     if (!confirm('刪除這位客人的客戶資料？（原始預約／訂房／訂單不受影響，下次同步可能重新建立）')) return
@@ -358,13 +409,17 @@ function ContactDrawer({ id, onClose, onChanged }: { id: string; onClose: () => 
 
             <section>
               <h3 className="font-medium mb-2 flex items-center gap-1"><Merge className="w-4 h-4" />合併重複客人</h3>
-              <input value={mergeQ} onChange={e => { setMergeQ(e.target.value); if (!e.target.value.trim()) setMergeHits([]) }} placeholder="搜尋另一筆同一人的資料" className="w-full border rounded-lg px-3 py-1.5 text-sm" />
-              {mergeHits.map(h => (
-                <button key={h.id} onClick={() => merge(h)} className="w-full text-left text-sm px-3 py-1.5 hover:bg-indigo-50 rounded flex justify-between">
-                  <span>{h.display_name || '（未命名）'} <span className="text-gray-500">{[h.phone, h.email].filter(Boolean).join(' · ')}</span></span>
-                  <span className="text-indigo-600">合併 →</span>
-                </button>
+              {[...sameName, ...mergeHits.filter(h => !sameName.some(s => s.id === h.id))].map(h => (
+                <div key={h.id} className="flex items-center gap-2 text-sm py-1.5 border-b last:border-0">
+                  <div className="flex-1 min-w-0">
+                    <span className="font-medium">{h.display_name || '（未命名）'}</span>
+                    <span className="text-gray-500 text-xs ml-2">{[h.phone, h.email, h.order_count ? `${h.order_count} 次` : '', h.last_activity_at ? fmtDate(h.last_activity_at) : ''].filter(Boolean).join(' · ')}</span>
+                  </div>
+                  <button onClick={() => merge(h)} className="shrink-0 px-2.5 py-1 text-xs rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">併入</button>
+                </div>
               ))}
+              {!sameName.length && !mergeHits.length && <div className="text-xs text-gray-400 mb-1">沒有同名的客人</div>}
+              <input value={mergeQ} onChange={e => { setMergeQ(e.target.value); if (!e.target.value.trim()) setMergeHits([]) }} placeholder="找其他名字的同一人…" className="mt-2 w-full border rounded-lg px-3 py-1.5 text-sm" />
             </section>
 
             <section>
