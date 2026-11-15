@@ -5956,7 +5956,13 @@
     "categoryInsurance": "Bảo hiểm",
     "categoryTax": "Thuế thu nhập",
     "fieldResume": "Kinh nghiệm làm việc, giới thiệu bản thân",
-    "resumeInfo": "Thông tin hồ sơ"
+    "resumeInfo": "Thông tin hồ sơ",
+    "scopeNote": "Hồ sơ nhân sự = ứng viên (đang xử lý và không tuyển) + toàn bộ nhân viên trong danh sách (kể cả đã nghỉ). Thiết lập tuyển dụng (lương, bảo hiểm, tài khoản) chỉnh trong Nhân sự → Danh sách nhân viên.",
+    "group_all": "Tất cả",
+    "group_active": "Đang làm",
+    "group_resigned": "Đã nghỉ",
+    "group_applicant": "Đang ứng tuyển",
+    "group_rejected": "Không tuyển"
   },
   "Audit": {
     "adminOnly": "Chỉ bộ phận kiểm toán được sử dụng",

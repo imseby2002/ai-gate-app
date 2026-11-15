@@ -30,7 +30,10 @@ const PERSONNEL_IMPORT_COLUMNS: ImportColumn[] = [
   { key: 'zalo_user_id', label: 'ZALO', example: '0901234567', aliases: ['ZALO', 'zalo', 'zalo_user_id'] },
 ]
 
-interface PersonLite { id: string; name: string; position: string; store: string; staff_category: string; stage: string; hired_employee_id: string | null; doc_missing: number; doc_total: number }
+type Group = 'active' | 'resigned' | 'applicant' | 'rejected'
+const GROUPS: Group[] = ['active', 'resigned', 'applicant', 'rejected']
+const GROUP_CLS: Record<Group, string> = { active: 'bg-emerald-100 text-emerald-800', resigned: 'bg-gray-200 text-gray-600', applicant: 'bg-amber-100 text-amber-800', rejected: 'bg-rose-100 text-rose-700' }
+interface PersonLite { id: string; name: string; position: string; store: string; staff_category: string; stage: string; hired_employee_id: string | null; group: Group; doc_missing: number; doc_total: number }
 
 export default function PersonnelPage() {
   const t = useTranslations('Personnel')
@@ -81,6 +84,7 @@ function PeopleList({ onOpen }: { onOpen: (id: string) => void }) {
   const [people, setPeople] = useState<PersonLite[]>([])
   const [loading, setLoading] = useState(true)
   const [q, setQ] = useState('')
+  const [grp, setGrp] = useState<Group | 'all'>('all')
   const [showImport, setShowImport] = useState(false)
   const [tick, setTick] = useState(0)
 
@@ -109,11 +113,20 @@ function PeopleList({ onOpen }: { onOpen: (id: string) => void }) {
     fetch('/api/hr/personnel').then(r => r.ok ? r.json() : { people: [] }).then(d => { setPeople(d.people ?? []); setLoading(false) })
   }, [tick])
 
-  const filtered = people.filter(p => !q || (p.name || '').toLowerCase().includes(q.toLowerCase()) || (p.store || '').toLowerCase().includes(q.toLowerCase()))
+  const filtered = people.filter(p => grp === 'all' || p.group === grp).filter(p => !q || (p.name || '').toLowerCase().includes(q.toLowerCase()) || (p.store || '').toLowerCase().includes(q.toLowerCase()))
   if (loading) return <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
 
   return (
     <div className="space-y-3">
+      <p className="text-xs text-gray-500 rounded-lg bg-gray-50 border px-3 py-2">{t('scopeNote')}</p>
+      <div className="flex items-center gap-1.5 flex-wrap">
+        {(['all', ...GROUPS] as const).map(g => (
+          <button key={g} onClick={() => setGrp(g)}
+            className={`px-3 py-1 rounded-full text-xs border ${grp === g ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+            {t(`group_${g}`)} ({g === 'all' ? people.length : people.filter(p => p.group === g).length})
+          </button>
+        ))}
+      </div>
       <div className="flex items-center gap-2 flex-wrap">
         <div className="relative flex-1 min-w-[200px]"><Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><Input value={q} onChange={e => setQ(e.target.value)} placeholder={t('searchPlaceholder')} className="pl-9" /></div>
         <Button size="sm" variant="outline" className="gap-1.5 shrink-0" onClick={() => setShowImport(true)}>
@@ -153,6 +166,7 @@ function PeopleList({ onOpen }: { onOpen: (id: string) => void }) {
                   <div className="flex items-center gap-2">
                     <span className="font-medium">{p.name || t('unnamed')}</span>
                     <span className="text-xs text-gray-400">{p.position}{p.store ? `・${p.store}` : ''}</span>
+                    {p.group && <span className={`text-[11px] px-1.5 rounded ${GROUP_CLS[p.group]}`}>{t(`group_${p.group}`)}</span>}
                     <span className={`text-[11px] px-1.5 rounded ${!p.hired_employee_id ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-500'}`}>
                       {p.staff_category === 'parttime' || p.staff_category === 'hourly' ? t('parttime') : p.staff_category === 'fulltime' ? t('fulltime') : p.hired_employee_id ? t('active') : t('applying')}
                     </span>
