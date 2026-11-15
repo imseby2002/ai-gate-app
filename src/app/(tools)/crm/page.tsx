@@ -4,7 +4,10 @@ import { useCallback, useEffect, useState } from 'react'
 import { RefreshCw, Search, Plus, X, Link2, Trash2, Merge, CalendarDays, BedDouble, Smartphone, MessageCircle, StickyNote, Users } from 'lucide-react'
 import { IDENTITY_KINDS } from '@/lib/crm/normalize'
 
-interface Identity { id?: string; kind: string; value: string; label: string | null }
+interface Identity { id?: string; kind: string; value: string; label: string | null; cs?: { platform: string; from_id: string; industry: string | null } | null }
+// 有客服對話的平台帳號 → 連到 IMT CS 收件匣的該對話
+const csInboxUrl = (cs: NonNullable<Identity['cs']>) =>
+  `/cs/inbox?${new URLSearchParams({ industry: cs.industry || 'homestay', platform: cs.platform, to: cs.from_id })}`
 interface ContactRow {
   id: string; display_name: string | null; phone: string | null; email: string | null
   tags: string[]; traits: string | null; order_count: number; total_spent: number
@@ -335,7 +338,9 @@ function ContactDrawer({ id, onClose, onChanged }: { id: string; onClose: () => 
                 {data!.identities.map(i => (
                   <div key={i.id} className="flex items-center gap-2 text-sm">
                     <span className={`text-[11px] px-1.5 py-0.5 rounded shrink-0 ${KIND_COLOR[i.kind] ?? KIND_COLOR.other}`}>{KIND_LABEL[i.kind] ?? i.kind}</span>
-                    <span className="font-mono text-xs truncate">{i.value}</span>
+                    {i.cs
+                      ? <a href={csInboxUrl(i.cs)} target="_blank" rel="noreferrer" title="在 IMT CS 收件匣開啟這位客人的對話" className="font-mono text-xs truncate text-indigo-600 hover:underline">{i.value} ↗</a>
+                      : <span className="font-mono text-xs truncate">{i.value}</span>}
                     {i.label && <span className="text-gray-500 truncate">（{i.label}）</span>}
                     <button onClick={() => delIdent(i.id!)} className="ml-auto text-gray-400 hover:text-red-500"><X className="w-4 h-4" /></button>
                   </div>
