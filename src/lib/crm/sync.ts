@@ -70,7 +70,7 @@ async function loadReserve(db: SupabaseClient, ownerId: string): Promise<SourceR
   if (!stores?.length) return []
   const storeName = new Map(stores.map((s: { id: string; name: string | null }) => [s.id, s.name]))
   const rows = await fetchAll<any>((a, b) => db.from('reserve_appointments')
-    .select('id, appointment_no, store_id, customer_name, customer_phone, customer_email, customer_notes, start_time, status, total_price, payment_status, reserve_services(name)')
+    .select('id, appointment_no, store_id, customer_name, customer_phone, customer_email, customer_notes, start_time, created_at, status, total_price, payment_status, reserve_services(name)')
     .in('store_id', stores.map((s: { id: string }) => s.id))
     .order('start_time', { ascending: true })
     .range(a, b))
@@ -81,7 +81,8 @@ async function loadReserve(db: SupabaseClient, ownerId: string): Promise<SourceR
     title: `預約 ${r.reserve_services?.name ?? '服務'}${storeName.get(r.store_id) ? `（${storeName.get(r.store_id)}）` : ''}`,
     amount: Number(r.total_price) || 0,
     status: r.status,
-    occurred_at: r.start_time,
+    // 互動時間＝客人預約的時間（不是服務日期，避免未來的預約變成「最近互動」）
+    occurred_at: r.created_at ?? r.start_time,
     meta: { appointment_no: r.appointment_no, payment_status: r.payment_status, notes: r.customer_notes ?? null },
     name: r.customer_name,
     idents: baseIdents(r.customer_phone, r.customer_email),
@@ -90,7 +91,7 @@ async function loadReserve(db: SupabaseClient, ownerId: string): Promise<SourceR
 
 async function loadBooking(db: SupabaseClient, ownerId: string): Promise<SourceRecord[]> {
   const rows = await fetchAll<any>((a, b) => db.from('bookings')
-    .select('id, order_id, property_id, platform, platform_booking_id, guest_name, guest_email, guest_phone, check_in, check_out, num_guests, total_price, status, properties(name)')
+    .select('id, order_id, property_id, platform, platform_booking_id, guest_name, guest_email, guest_phone, check_in, check_out, num_guests, total_price, status, created_at, properties(name)')
     .eq('user_id', ownerId)
     .order('check_in', { ascending: true })
     .range(a, b))
@@ -113,7 +114,8 @@ async function loadBooking(db: SupabaseClient, ownerId: string): Promise<SourceR
       title: `住宿 ${r.check_in} → ${r.check_out}${rooms.length ? `（${rooms.join('、')}）` : ''}`,
       amount: (active.length ? active : g).reduce((s, x) => s + (Number(x.total_price) || 0), 0),
       status: active.length ? active[0].status : r.status,
-      occurred_at: `${r.check_in}T00:00:00+08:00`,
+      // 互動時間＝訂房建立時間（入住日期在標題裡），避免未來的入住日變成「最近互動」
+      occurred_at: g.map(x => x.created_at).filter(Boolean).sort()[0] ?? `${r.check_in}T00:00:00+08:00`,
       meta: { platform: r.platform, platform_booking_id: r.platform_booking_id, nights_from: r.check_in, nights_to: r.check_out, guests: r.num_guests, rooms },
       name: g.find(x => x.guest_name)?.guest_name ?? null,
       idents: baseIdents(g.find(x => x.guest_phone)?.guest_phone, g.find(x => x.guest_email)?.guest_email),
@@ -356,6 +358,7 @@ export async function recomputeContacts(db: SupabaseClient, ownerId: string | nu
     return q.order('id').range(a, b)
   })
 
+  const nowIso = new Date().toISOString()
   const agg = new Map<string, { count: number; spent: number; first: string | null; last: string | null }>()
   for (const a of acts) {
     if (!ids.has(a.contact_id)) continue
@@ -365,7 +368,7 @@ export async function recomputeContacts(db: SupabaseClient, ownerId: string | nu
       g.spent += Number(a.amount) || 0
     }
     if (!g.first || a.occurred_at < g.first) g.first = a.occurred_at
-    if (!g.last || a.occurred_at > g.last) g.last = a.occurred_at
+    if (a.occurred_at <= nowIso && (!g.last || a.occurred_at > g.last)) g.last = a.occurred_at
     agg.set(a.contact_id, g)
   }
   const identBy = new Map<string, any[]>()
