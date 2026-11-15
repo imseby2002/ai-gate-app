@@ -38,9 +38,9 @@ type ApiError = Error & { status?: number }
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e))
 const fmtDate = (s: string | null | undefined) => (s ? new Date(s).toLocaleDateString('zh-TW') : '—')
 
-// 總管理員可切換到平台範圍（eSIM 商店客人）；其他人一律是目前公司的客人
+// 總管理員可切換查看各公司或平台範圍（eSIM 商店客人）；其他人一律是目前公司的客人
 let currentScope = ''
-const withScope = (url: string) => (currentScope ? `${url}${url.includes('?') ? '&' : '?'}scope=${currentScope}` : url)
+const withScope = (url: string) => (currentScope ? `${url}${url.includes('?') ? '&' : '?'}scope=${encodeURIComponent(currentScope)}` : url)
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function api<T = any>(url: string, init?: RequestInit): Promise<T> {
@@ -63,6 +63,7 @@ export default function CrmPage() {
   const [creating, setCreating] = useState(false)
   const [scope, setScopeState] = useState('')
   const [canPlatform, setCanPlatform] = useState(false)
+  const [companies, setCompanies] = useState<{ id: string; name: string }[]>([])
   const setScope = (s: string) => { currentScope = s; setScopeState(s); setSelected(null) }
 
   const load = useCallback(async (p = 0) => {
@@ -72,7 +73,7 @@ export default function CrmPage() {
       if (q.trim()) sp.set('q', q.trim())
       if (kind) sp.set('kind', kind)
       const d = await api(`/api/crm/contacts?${sp}`)
-      setRows(d.contacts); setTotal(d.total); setPage(p); setCanPlatform(!!d.canPlatform)
+      setRows(d.contacts); setTotal(d.total); setPage(p); setCanPlatform(!!d.canPlatform); setCompanies(d.companies ?? [])
     } catch (e) { setMsg(errMsg(e)) } finally { setLoading(false) }
     // scope 透過 currentScope 帶入 api()，列在相依中讓切換時重新載入
   }, [q, kind, scope]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -96,6 +97,7 @@ export default function CrmPage() {
         {canPlatform && (
           <select value={scope} onChange={e => setScope(e.target.value)} className="text-sm border rounded-lg px-2 py-2" title="總管理員可切換範圍">
             <option value="">目前公司的客人</option>
+            {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             <option value="platform">平台（eSIM 商店）</option>
           </select>
         )}
