@@ -36,13 +36,13 @@ export async function GET() {
   const slug = await companySlugForOwner(user.id)
   // 履歷修改狀態（人員資料掛在錄用時的應徵者資料上）
   const { data: cands } = await supabase.from('agent_hr_candidates')
-    .select('hired_employee_id, identity_locked, profile_edit_until, resume_updated_at')
+    .select('id, hired_employee_id, identity_locked, profile_edit_until, resume_updated_at, resume_text')
     .eq('user_id', user.id).not('hired_employee_id', 'is', null)
   const pe = new Map((cands ?? []).map(c => [c.hired_employee_id as string, c]))
   const employees = (data ?? []).map(e => {
     const c = pe.get(e.id)
     const open = profileOpen(c ?? {})
-    const row: Record<string, unknown> = { ...e, profile_edit: { open, until: open ? c?.profile_edit_until ?? null : null, updated_at: c?.resume_updated_at ?? null } }
+    const row: Record<string, unknown> = { ...e, candidate_id: c?.id ?? null, resume_text: c?.resume_text ?? '', profile_edit: { open, until: open ? c?.profile_edit_until ?? null : null, updated_at: c?.resume_updated_at ?? null } }
     if (!canPay) for (const f of PAY_FIELDS) delete row[f]
     return row
   })
@@ -133,10 +133,19 @@ export async function PATCH(req: NextRequest) {
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
   // 只讀／衍生欄位不寫回（列表 API 附帶的 profile_edit、舊工號紀錄由下方計算）
   delete updates.profile_edit
+  delete updates.candidate_id
   delete updates.prev_attendance_nos
   delete updates.company_email_pending
   delete updates.company_email_requested_at
   delete updates.updated_at
+  // 文字履歷（工作經歷、自我介紹）存在錄用時的應徵者資料上
+  if (updates.resume_text !== undefined) {
+    const { error: rErr } = await supabase.from('agent_hr_candidates')
+      .update({ resume_text: String(updates.resume_text ?? '').trim(), updated_at: new Date().toISOString() })
+      .eq('hired_employee_id', id).eq('user_id', user.id)
+    if (rErr) return NextResponse.json({ error: rErr.message }, { status: 400 })
+  }
+  delete updates.resume_text
   if (updates.units !== undefined) updates.units = cleanUnits(updates.units)
   // 打卡工號：只能數字、不可重複；變更時保留舊號，舊的員工專區連結會導向新號
   let attendanceChanged = false

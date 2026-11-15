@@ -8031,7 +8031,10 @@
     "companyEmailNeedInitPw": "Set the employee initial password in the employee email whitelist first",
     "companyEmailPending": "Employee submitted company email: {email}",
     "companyEmailApprove": "Approve",
-    "companyEmailReject": "Reject"
+    "companyEmailReject": "Reject",
+    "editTabJob": "Employment",
+    "editTabProfile": "Résumé · Documents · Contracts",
+    "editTabNoProfile": "This employee has no applicant/personnel record (created without the application flow), so there is no résumé or document to show."
   },
   "FinancePage": {
     "accountBalancesTitle": "Balance by account",
