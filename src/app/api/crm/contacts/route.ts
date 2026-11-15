@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import type { SupabaseClient } from '@supabase/supabase-js'
 import { getCrmUser } from '@/lib/crm/auth'
 import { nameKey, normalizeEmail, normalizePhone } from '@/lib/crm/normalize'
 
@@ -47,7 +46,7 @@ export async function GET(req: NextRequest) {
     const pageRows = sameAs ? list.slice(0, 20) : list.slice(page * size, page * size + size)
     return NextResponse.json({
       contacts: pageRows.map(r => ({ ...r, name_key: keyOf(r) })),
-      total: list.length, page, size, canPlatform: auth.isAdmin, companies: auth.isAdmin ? await listCompanies(supabase) : [],
+      total: list.length, page, size,
     })
   }
 
@@ -79,13 +78,7 @@ export async function GET(req: NextRequest) {
   const { data, error, count } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   // 總管理員可切換查看各公司的客人
-  const companies = auth.isAdmin ? await listCompanies(supabase) : []
-  return NextResponse.json({ contacts: data ?? [], total: count ?? 0, page, size, canPlatform: auth.isAdmin, companies })
-}
-
-async function listCompanies(supabase: SupabaseClient) {
-  const { data } = await supabase.from('companies').select('id, name').order('name')
-  return (data ?? []) as { id: string; name: string }[]
+  return NextResponse.json({ contacts: data ?? [], total: count ?? 0, page, size })
 }
 
 // POST /api/crm/contacts → 手動新增客人

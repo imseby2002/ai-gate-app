@@ -42,7 +42,7 @@ type ApiError = Error & { status?: number }
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e))
 const fmtDate = (s: string | null | undefined) => (s ? new Date(s).toLocaleDateString('zh-TW') : '—')
 
-// 總管理員可切換查看各公司或平台範圍（eSIM 商店客人）；其他人一律是目前公司的客人
+// 範圍跟著右上角目前選的公司；從 eSIM 管理頁連過來（/crm?scope=platform）才是 eSIM 商店客人
 let currentScope = ''
 const withScope = (url: string) => (currentScope ? `${url}${url.includes('?') ? '&' : '?'}scope=${encodeURIComponent(currentScope)}` : url)
 
@@ -65,14 +65,19 @@ export default function CrmPage() {
   const [msg, setMsg] = useState('')
   const [selected, setSelected] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
-  const [scope, setScopeState] = useState('')
-  const [canPlatform, setCanPlatform] = useState(false)
-  const [companies, setCompanies] = useState<{ id: string; name: string }[]>([])
+  const [scope, setScopeState] = useState<string | null>(null)
   const [sort, setSort] = useState<'recent' | 'name'>('recent')
   const [dupOnly, setDupOnly] = useState(false)
-  const setScope = (s: string) => { currentScope = s; setScopeState(s); setSelected(null) }
+  // 讀網址上的 ?scope=platform（eSIM 管理頁的連結）
+  useEffect(() => {
+    const s = new URLSearchParams(window.location.search).get('scope') === 'platform' ? 'platform' : ''
+    currentScope = s
+    const t = setTimeout(() => setScopeState(s), 0)
+    return () => clearTimeout(t)
+  }, [])
 
   const load = useCallback(async (p = 0) => {
+    if (scope === null) return
     setLoading(true)
     try {
       const sp = new URLSearchParams({ page: String(p) })
@@ -81,10 +86,10 @@ export default function CrmPage() {
       if (sort === 'name') sp.set('sort', 'name')
       if (dupOnly) sp.set('dup', '1')
       const d = await api(`/api/crm/contacts?${sp}`)
-      setRows(d.contacts); setTotal(d.total); setPage(p); setCanPlatform(!!d.canPlatform); setCompanies(d.companies ?? [])
+      setRows(d.contacts); setTotal(d.total); setPage(p)
     } catch (e) { setMsg(errMsg(e)) } finally { setLoading(false) }
     // scope 透過 currentScope 帶入 api()，列在相依中讓切換時重新載入
-  }, [q, kind, scope, sort, dupOnly]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [q, kind, scope, sort, dupOnly])
 
   useEffect(() => { const t = setTimeout(() => load(0), 300); return () => clearTimeout(t) }, [load])
 
@@ -112,14 +117,7 @@ export default function CrmPage() {
     <div className="h-full flex flex-col bg-slate-50">
       <div className="shrink-0 bg-white border-b px-4 py-3 flex flex-wrap items-center gap-2">
         <Users className="w-5 h-5 text-indigo-600" />
-        <h1 className="text-lg font-semibold mr-2">客戶系統</h1>
-        {canPlatform && (
-          <select value={scope} onChange={e => setScope(e.target.value)} className="text-sm border rounded-lg px-2 py-2" title="總管理員可切換範圍">
-            <option value="">目前公司的客人</option>
-            {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            <option value="platform">平台（eSIM 商店）</option>
-          </select>
-        )}
+        <h1 className="text-lg font-semibold mr-2">{scope === 'platform' ? 'eSIM 商店客戶' : '客戶系統'}</h1>
         <div className="relative flex-1 min-w-[200px] max-w-md">
           <Search className="w-4 h-4 absolute left-2.5 top-2.5 text-gray-400" />
           <input value={q} onChange={e => setQ(e.target.value)} placeholder="搜尋姓名、電話、Email、LINE / WhatsApp ID、特質"
