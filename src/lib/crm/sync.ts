@@ -1,7 +1,10 @@
 // 客戶系統（CRM）同步：把 RESERVE 預約、BOOKING 訂房、eSIM 訂單、AI 客服對話的客人
 // 彙整進 crm_contacts / crm_identities / crm_activities。
 //
-// 比對規則：同一位擁有者底下，電話（正規化）、Email（小寫）、平台帳號（LINE/WhatsApp…）
+// 範圍：以公司為單位（owner_id = 公司 owner 帳號），公司所有成員帳號的資料都匯進同一份；
+// owner_id = null 為平台範圍（eSIM 商店客人）。added_by / handled_by 記錄是哪個帳號帶進來、服務的。
+//
+// 比對規則：同一範圍底下，電話（正規化）、Email（小寫）、平台帳號（LINE/WhatsApp…）
 // 任一相同即視為同一位客人。已屬於另一位客人的身分不會被自動搶走（避免誤合併），
 // 需要合併時由使用者在客戶頁手動「合併」。
 // 資料列來自未產生型別的 Supabase 查詢（跨多張既有資料表），此檔以 any 讀取欄位。
@@ -9,6 +12,7 @@
 import { randomUUID } from 'crypto'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { ownerFilter } from './scope'
 import { csPlatformToKind, normalizeEmail, normalizePhone, type IdentityKind } from './normalize'
 
 type Ident = { kind: IdentityKind; value: string; label?: string | null; cs_customer_id?: string | null }
@@ -26,6 +30,7 @@ interface SourceRecord {
   name: string | null
   idents: Ident[]
   summary?: string | null
+  handled_by?: string | null
 }
 
 // 訂房匯入時的佔位姓名（例如「(待補充)」）或純數字，不足以代表一位客人
@@ -176,23 +181,34 @@ export interface CrmSyncResult {
   sources: Record<string, number>
 }
 
-/** 同步單一擁有者的所有客人資料。includeEsim：eSIM 商店為平台自營，只同步給管理員。 */
-export async function syncCrmForOwner(ownerId: string, opts: { includeEsim?: boolean } = {}): Promise<CrmSyncResult> {
+/**
+ * 同步一個範圍的所有客人資料。
+ * ownerId：公司 owner 帳號；null = 平台範圍。accounts：要匯入哪些帳號的 RESERVE / BOOKING / 客服資料。
+ * includeEsim：eSIM 商店為平台自營，只匯進平台範圍。
+ */
+export { companyAccounts, scopeOwnerOf } from './scope'
+
+export async function syncCrmForScope(ownerId: string | null, accounts: string[], opts: { includeEsim?: boolean } = {}): Promise<CrmSyncResult> {
   const db = createAdminClient() as SupabaseClient
-  const [reserve, booking, esim, cs] = await Promise.all([
-    loadReserve(db, ownerId),
-    loadBooking(db, ownerId),
-    opts.includeEsim ? loadEsim(db) : Promise.resolve([]),
-    loadCs(db, ownerId),
-  ])
+  const own = ownerFilter(ownerId)
+  const tag = (account: string) => (rs: SourceRecord[]) => rs.map(r => ({ ...r, handled_by: account }))
+  const perAccount = await Promise.all(accounts.map(acc => Promise.all([
+    loadReserve(db, acc).then(tag(acc)),
+    loadBooking(db, acc).then(tag(acc)),
+    loadCs(db, acc).then(tag(acc)),
+  ])))
+  const reserve = perAccount.flatMap(a => a[0])
+  const booking = perAccount.flatMap(a => a[1])
+  const cs = perAccount.flatMap(a => a[2])
+  const esim = opts.includeEsim ? await loadEsim(db) : []
   const records = [...reserve, ...booking, ...esim, ...cs]
 
   const existing = await fetchAll<{ contact_id: string; kind: string; value: string }>((a, b) => db.from('crm_identities')
-    .select('contact_id, kind, value').eq('owner_id', ownerId).order('id').range(a, b))
+    .select('contact_id, kind, value').filter('owner_id', ...own).order('id').range(a, b))
   const identMap = new Map(existing.map(i => [`${i.kind}:${i.value}`, i.contact_id]))
   // 已匯入過的紀錄沿用原本的客人（使用者可能已手動合併過；只靠姓名建立的客人也靠這個對回去）
   const prevActs = await fetchAll<{ source: string; source_id: string; contact_id: string }>((a, b) => db.from('crm_activities')
-    .select('source, source_id, contact_id').eq('owner_id', ownerId).neq('source', 'manual').order('id').range(a, b))
+    .select('source, source_id, contact_id').filter('owner_id', ...own).neq('source', 'manual').order('id').range(a, b))
   const actMap = new Map(prevActs.map(a => [`${a.source}:${a.source_id}`, a.contact_id]))
 
   const newContacts: Record<string, unknown>[] = []
@@ -210,19 +226,19 @@ export async function syncCrmForOwner(ownerId: string, opts: { includeEsim?: boo
       // 沒有電話／Email／平台帳號時，有姓名就單獨建一位客人（不依姓名自動合併，避免同名不同人被併在一起）
       if (!rec.idents.length && !isUsableName(rec.name)) continue
       contactId = randomUUID()
-      newContacts.push({ id: contactId, owner_id: ownerId, display_name: rec.name })
+      newContacts.push({ id: contactId, owner_id: ownerId, added_by: rec.handled_by ?? null, display_name: rec.name })
     }
     for (const i of rec.idents) {
       const key = `${i.kind}:${i.value}`
       if (identMap.has(key)) continue
       identMap.set(key, contactId)
-      newIdents.set(key, { owner_id: ownerId, contact_id: contactId, kind: i.kind, value: i.value, label: i.label ?? null, cs_customer_id: i.cs_customer_id ?? null })
+      newIdents.set(key, { owner_id: ownerId, contact_id: contactId, kind: i.kind, value: i.value, label: i.label ?? null, cs_customer_id: i.cs_customer_id ?? null, added_by: rec.handled_by ?? null })
     }
     if (rec.summary) csSummary.set(contactId, rec.summary)
     activities.push({
       owner_id: ownerId, contact_id: contactId, source: rec.source, source_id: rec.source_id,
       kind: rec.kind, title: rec.title, amount: rec.amount, currency: rec.currency ?? 'TWD',
-      status: rec.status, occurred_at: rec.occurred_at, meta: rec.meta, updated_at: new Date().toISOString(),
+      status: rec.status, occurred_at: rec.occurred_at, meta: rec.meta, handled_by: rec.handled_by ?? null, updated_at: new Date().toISOString(),
     })
   }
 
@@ -252,9 +268,9 @@ export async function syncCrmForOwner(ownerId: string, opts: { includeEsim?: boo
 }
 
 /** 重新計算每位客人的累計消費、次數、首次 / 最近互動時間，並補齊空白的姓名、電話、Email */
-export async function recomputeContacts(db: SupabaseClient, ownerId: string, csSummary = new Map<string, string>(), onlyIds?: string[]) {
+export async function recomputeContacts(db: SupabaseClient, ownerId: string | null, csSummary = new Map<string, string>(), onlyIds?: string[]) {
   const contacts = await fetchAll<any>((a, b) => {
-    let q = db.from('crm_contacts').select('id, display_name, phone, email, ai_summary').eq('owner_id', ownerId)
+    let q = db.from('crm_contacts').select('id, display_name, phone, email, ai_summary').filter('owner_id', ...ownerFilter(ownerId))
     if (onlyIds) q = q.in('id', onlyIds)
     return q.order('id').range(a, b)
   })
@@ -262,12 +278,12 @@ export async function recomputeContacts(db: SupabaseClient, ownerId: string, csS
   const ids = new Set(contacts.map(c => c.id))
 
   const acts = await fetchAll<any>((a, b) => {
-    let q = db.from('crm_activities').select('contact_id, source, kind, amount, status, occurred_at').eq('owner_id', ownerId)
+    let q = db.from('crm_activities').select('contact_id, source, kind, amount, status, occurred_at').filter('owner_id', ...ownerFilter(ownerId))
     if (onlyIds) q = q.in('contact_id', onlyIds)
     return q.order('id').range(a, b)
   })
   const idents = await fetchAll<any>((a, b) => {
-    let q = db.from('crm_identities').select('contact_id, kind, value, label').eq('owner_id', ownerId)
+    let q = db.from('crm_identities').select('contact_id, kind, value, label').filter('owner_id', ...ownerFilter(ownerId))
     if (onlyIds) q = q.in('contact_id', onlyIds)
     return q.order('id').range(a, b)
   })

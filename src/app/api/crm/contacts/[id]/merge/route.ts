@@ -7,15 +7,15 @@ type Ctx = { params: Promise<{ id: string }> }
 
 // POST /api/crm/contacts/:id/merge { other_id } → 把 other 的帳號與紀錄全部併入 :id，並刪除 other
 export async function POST(req: NextRequest, { params }: Ctx) {
-  const auth = await getCrmUser()
+  const auth = await getCrmUser(req)
   if ('error' in auth) return auth.error
-  const { supabase, user } = auth
+  const { supabase, ownerId, own } = auth
   const { id } = await params
   const body = await req.json().catch(() => ({}))
   const otherId = String(body.other_id ?? '')
   if (!otherId || otherId === id) return NextResponse.json({ error: '請選擇要合併的另一位客人' }, { status: 400 })
 
-  const { data: rows } = await supabase.from('crm_contacts').select('*').eq('owner_id', user.id).in('id', [id, otherId])
+  const { data: rows } = await supabase.from('crm_contacts').select('*').filter('owner_id', ...own).in('id', [id, otherId])
   const target = rows?.find(r => r.id === id)
   const other = rows?.find(r => r.id === otherId)
   if (!target || !other) return NextResponse.json({ error: '找不到客人' }, { status: 404 })
@@ -34,13 +34,13 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     ai_summary: target.ai_summary ?? other.ai_summary,
   }
   const steps = await Promise.all([
-    supabase.from('crm_identities').update({ contact_id: id }).eq('contact_id', otherId).eq('owner_id', user.id),
-    supabase.from('crm_activities').update({ contact_id: id }).eq('contact_id', otherId).eq('owner_id', user.id),
+    supabase.from('crm_identities').update({ contact_id: id }).eq('contact_id', otherId).filter('owner_id', ...own),
+    supabase.from('crm_activities').update({ contact_id: id }).eq('contact_id', otherId).filter('owner_id', ...own),
   ])
   const failed = steps.find(s => s.error)
   if (failed?.error) return NextResponse.json({ error: failed.error.message }, { status: 500 })
   await supabase.from('crm_contacts').update(patch).eq('id', id)
-  await supabase.from('crm_contacts').delete().eq('id', otherId).eq('owner_id', user.id)
-  await recomputeContacts(supabase as unknown as SupabaseClient, user.id, new Map(), [id])
+  await supabase.from('crm_contacts').delete().eq('id', otherId).filter('owner_id', ...own)
+  await recomputeContacts(supabase as unknown as SupabaseClient, ownerId, new Map(), [id])
   return NextResponse.json({ ok: true })
 }

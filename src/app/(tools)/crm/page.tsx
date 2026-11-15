@@ -9,8 +9,11 @@ interface ContactRow {
   id: string; display_name: string | null; phone: string | null; email: string | null
   tags: string[]; traits: string | null; order_count: number; total_spent: number
   last_activity_at: string | null; crm_identities: Identity[]
+  added_by_profile?: Person | null
 }
-interface Activity { id: string; source: string; kind: string; title: string; amount: number | null; currency: string | null; status: string | null; occurred_at: string; meta: Record<string, unknown> }
+interface Person { display_name: string | null; email: string | null }
+const personName = (p?: Person | null) => p?.display_name || p?.email?.split('@')[0] || ''
+interface Activity { id: string; source: string; kind: string; title: string; amount: number | null; currency: string | null; status: string | null; occurred_at: string; meta: Record<string, unknown>; handler?: Person | null }
 interface ContactFull extends Omit<ContactRow, 'crm_identities'> {
   gender: string | null; birthday: string | null; country: string | null; notes: string | null
   ai_summary: string | null; first_seen_at: string | null
@@ -35,9 +38,13 @@ type ApiError = Error & { status?: number }
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e))
 const fmtDate = (s: string | null | undefined) => (s ? new Date(s).toLocaleDateString('zh-TW') : '—')
 
+// 總管理員可切換到平台範圍（eSIM 商店客人）；其他人一律是目前公司的客人
+let currentScope = ''
+const withScope = (url: string) => (currentScope ? `${url}${url.includes('?') ? '&' : '?'}scope=${currentScope}` : url)
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function api<T = any>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, { ...init, headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) } })
+  const res = await fetch(withScope(url), { ...init, headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) } })
   const data = await res.json().catch(() => ({}))
   if (!res.ok) throw Object.assign(new Error(data.error ?? `HTTP ${res.status}`), { data, status: res.status })
   return data
@@ -54,6 +61,9 @@ export default function CrmPage() {
   const [msg, setMsg] = useState('')
   const [selected, setSelected] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
+  const [scope, setScopeState] = useState('')
+  const [canPlatform, setCanPlatform] = useState(false)
+  const setScope = (s: string) => { currentScope = s; setScopeState(s); setSelected(null) }
 
   const load = useCallback(async (p = 0) => {
     setLoading(true)
@@ -62,9 +72,10 @@ export default function CrmPage() {
       if (q.trim()) sp.set('q', q.trim())
       if (kind) sp.set('kind', kind)
       const d = await api(`/api/crm/contacts?${sp}`)
-      setRows(d.contacts); setTotal(d.total); setPage(p)
+      setRows(d.contacts); setTotal(d.total); setPage(p); setCanPlatform(!!d.canPlatform)
     } catch (e) { setMsg(errMsg(e)) } finally { setLoading(false) }
-  }, [q, kind])
+    // scope 透過 currentScope 帶入 api()，列在相依中讓切換時重新載入
+  }, [q, kind, scope]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { const t = setTimeout(() => load(0), 300); return () => clearTimeout(t) }, [load])
 
@@ -82,6 +93,12 @@ export default function CrmPage() {
       <div className="shrink-0 bg-white border-b px-4 py-3 flex flex-wrap items-center gap-2">
         <Users className="w-5 h-5 text-indigo-600" />
         <h1 className="text-lg font-semibold mr-2">客戶系統</h1>
+        {canPlatform && (
+          <select value={scope} onChange={e => setScope(e.target.value)} className="text-sm border rounded-lg px-2 py-2" title="總管理員可切換範圍">
+            <option value="">目前公司的客人</option>
+            <option value="platform">平台（eSIM 商店）</option>
+          </select>
+        )}
         <div className="relative flex-1 min-w-[200px] max-w-md">
           <Search className="w-4 h-4 absolute left-2.5 top-2.5 text-gray-400" />
           <input value={q} onChange={e => setQ(e.target.value)} placeholder="搜尋姓名、電話、Email、LINE / WhatsApp ID、特質"
@@ -118,6 +135,7 @@ export default function CrmPage() {
                 <td className="px-4 py-2.5">
                   <div className="font-medium">{r.display_name || '（未命名）'}</div>
                   <div className="text-xs text-gray-500">{[r.phone, r.email].filter(Boolean).join(' · ')}</div>
+                  {personName(r.added_by_profile) && <div className="text-[11px] text-gray-400">由 {personName(r.added_by_profile)} 帶入</div>}
                 </td>
                 <td className="px-4 py-2.5 hidden md:table-cell">
                   <div className="flex flex-wrap gap-1">
@@ -277,6 +295,13 @@ function ContactDrawer({ id, onClose, onChanged }: { id: string; onClose: () => 
               <Stat label="累計消費" value={fmtMoney(c.total_spent)} />
               <Stat label="首次接觸" value={fmtDate(c.first_seen_at)} />
             </div>
+            <div className="text-xs text-gray-500 -mt-3">
+              帶入帳號：{personName((c as ContactFull & { added_by_profile?: Person | null }).added_by_profile) || '—'}
+              {(() => {
+                const handlers = [...new Set(data!.activities.map(a => personName(a.handler)).filter(Boolean))]
+                return handlers.length ? `　服務過的帳號：${handlers.join('、')}` : ''
+              })()}
+            </div>
 
             <section className="grid grid-cols-2 gap-3 text-sm">
               <Field label="姓名" value={form.display_name} onChange={v => set('display_name', v)} />
@@ -361,6 +386,7 @@ function ContactDrawer({ id, onClose, onChanged }: { id: string; onClose: () => 
                         </div>
                         <div className="text-xs text-gray-500 flex gap-2 flex-wrap">
                           <span>{m.label}</span><span>{fmtDate(a.occurred_at)}</span>
+                          {personName(a.handler) && <span>服務：{personName(a.handler)}</span>}
                           {a.status && <span>狀態：{a.status}</span>}
                           {typeof a.meta?.platform === 'string' && <span>{a.meta.platform}</span>}
                           {typeof a.meta?.order_no === 'string' && <span>單號 {a.meta.order_no}</span>}
