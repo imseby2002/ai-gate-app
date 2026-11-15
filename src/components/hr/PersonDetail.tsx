@@ -18,6 +18,9 @@ interface Contract { id: string; contract_no: string; sign_date: string | null; 
 interface Employee { base_salary: number; hourly_rate: number; employment_type: string; insurance_required: boolean; insurance_status: string; insurance_salary: number; attendance_no: string; bank_name: string; bank_account: string; department: string; position: string }
 interface Payroll { year: number; month: number; base_salary: number; allowances: number; deductions: number; bonus: number; net_pay: number; status: string }
 interface Person { id: string; name: string; gender: string; native_place: string; birthday: string | null; id_number: string; education: string; email: string; company_email: string; zalo_user_id: string; payroll_no: string; position: string; store: string; staff_category: string; address: string; phone: string; apply_token: string; profile_text: string; resume_text: string; hired_employee_id?: string | null }
+// 嵌入員工名冊時：與雇用資料重複的欄位（姓名、電話、身分證…）由員工表單維護，這裡只顯示／儲存履歷專屬欄位
+const EMBED_KEYS = ['gender', 'native_place', 'education', 'zalo_user_id', 'address', 'resume_text'] as const
+
 export function PersonDetail({ id, onBack, embedded = false }: { id: string; onBack: () => void; embedded?: boolean }) {
   const t = useTranslations('Personnel')
   const locale = useLocale()
@@ -38,7 +41,7 @@ export function PersonDetail({ id, onBack, embedded = false }: { id: string; onB
   const set = (patch: Partial<Person>) => setForm(p => ({ ...p, ...patch }))
   const save = async () => {
     setSaving(true); setMsg('')
-    const res = await fetch('/api/hr/personnel', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, ...form }) })
+    const res = await fetch('/api/hr/personnel', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(embedded ? { id, ...Object.fromEntries(EMBED_KEYS.map(k => [k, form[k] ?? ''])) } : { id, ...form }) })
     setSaving(false); setMsg(res.ok ? t('saved') : t('saveFailed'))
   }
 
@@ -72,6 +75,7 @@ export function PersonDetail({ id, onBack, embedded = false }: { id: string; onB
     reload()
   }
 
+  const fields = ([[t('fieldName'), 'name'], [t('fieldGender'), 'gender'], [t('fieldNativePlace'), 'native_place'], [t('fieldBirthday'), 'birthday', 'date'], [t('fieldIdNumber'), 'id_number'], [t('fieldEducation'), 'education'], [t('fieldPosition'), 'position'], [t('fieldStore'), 'store'], [t('fieldPayrollNo'), 'payroll_no'], [t('fieldStaffCategory'), 'staff_category'], [t('fieldPhone'), 'phone'], [t('fieldEmail'), 'email', 'email'], [t('fieldCompanyEmail'), 'company_email', 'email'], ['ZALO', 'zalo_user_id'], [t('fieldAddress'), 'address']] as [string, keyof Person, string?][])
   const F = ([label, key, type]: [string, keyof Person, string?]) => (
     <label className="space-y-1"><span className="text-xs text-gray-500">{label}</span>
       <Input type={type ?? 'text'} value={String(form[key] ?? '')} onChange={e => set({ [key]: e.target.value } as Partial<Person>)} className="h-9" /></label>
@@ -94,11 +98,11 @@ export function PersonDetail({ id, onBack, embedded = false }: { id: string; onB
       </div>}
 
       <Card className="p-4 space-y-3">
-        <div className="flex items-center justify-between"><h3 className="font-semibold text-sm">{t('basicInfo')}</h3>
+        <div className="flex items-center justify-between"><h3 className="font-semibold text-sm">{embedded ? t('resumeInfo') : t('basicInfo')}</h3>
           <div className="flex items-center gap-2">{msg && <span className="text-xs text-gray-500">{msg}</span>}<Button size="sm" onClick={save} disabled={saving} className="gap-1.5">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{t('save')}</Button></div>
         </div>
         <div className="grid md:grid-cols-3 gap-2">
-          {([[t('fieldName'), 'name'], [t('fieldGender'), 'gender'], [t('fieldNativePlace'), 'native_place'], [t('fieldBirthday'), 'birthday', 'date'], [t('fieldIdNumber'), 'id_number'], [t('fieldEducation'), 'education'], [t('fieldPosition'), 'position'], [t('fieldStore'), 'store'], [t('fieldPayrollNo'), 'payroll_no'], [t('fieldStaffCategory'), 'staff_category'], [t('fieldPhone'), 'phone'], [t('fieldEmail'), 'email', 'email'], [t('fieldCompanyEmail'), 'company_email', 'email'], ['ZALO', 'zalo_user_id'], [t('fieldAddress'), 'address']] as [string, keyof Person, string?][]).map(f => <div key={f[1]}>{F(f)}</div>)}
+          {fields.filter(f => !embedded || (EMBED_KEYS as readonly string[]).includes(f[1])).map(f => <div key={f[1]}>{F(f)}</div>)}
         </div>
         <label className="block space-y-1"><span className="text-xs text-gray-500">{t('fieldResume')}</span>
           <textarea value={String(form.resume_text ?? '')} onChange={e => set({ resume_text: e.target.value })} rows={5}

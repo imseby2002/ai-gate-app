@@ -694,7 +694,6 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
   const INS_STATUS_LABEL = getInsStatusLabel(t)
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Employee | null>(null)
-  const [editTab, setEditTab] = useState<'job' | 'profile'>('job')
   const [saving, setSaving] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [err, setErr] = useState('')
@@ -956,7 +955,7 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
                       <KeyRound className="h-3.5 w-3.5" />{t('tempPin')}
                     </Button>
                   </>)}
-                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { setEditing(emp); setEditTab('job'); setShowForm(false) }}>
+                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { setEditing(emp); setShowForm(false) }}>
                     <Pencil className="h-3.5 w-3.5" />
                   </Button>
                   <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-gray-400 hover:text-red-500" onClick={() => remove(emp.id)}>
@@ -967,17 +966,10 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
 
               {editing?.id === emp.id && (
                 <div className="px-4 pb-4 space-y-3">
-                  <div className="flex gap-1 border-b">
-                    {([['job', t('editTabJob')], ['profile', t('editTabProfile')]] as const).map(([k, label]) => (
-                      <button key={k} type="button" onClick={() => setEditTab(k)}
-                        className={`px-3 py-1.5 text-sm -mb-px border-b-2 ${editTab === k ? 'border-indigo-600 text-indigo-700 font-semibold' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>{label}</button>
-                    ))}
-                  </div>
-                  {editTab === 'job'
-                    ? <EmployeeForm initial={{ ...emp, units: emp.units ?? [], store_locked: emp.store_locked !== false, managed_stores: emp.managed_stores ?? [] }} onSave={save} onCancel={() => setEditing(null)} saving={saving} settings={settings} accounts={accounts} storeOptions={storeOptions} employeeId={emp.id} />
-                    : emp.candidate_id
-                      ? <PersonDetail id={emp.candidate_id} onBack={() => setEditing(null)} embedded />
-                      : <p className="text-sm text-gray-500 py-4">{t('editTabNoProfile')}</p>}
+                  <EmployeeForm initial={{ ...emp, units: emp.units ?? [], store_locked: emp.store_locked !== false, managed_stores: emp.managed_stores ?? [] }} onSave={save} onCancel={() => setEditing(null)} saving={saving} settings={settings} accounts={accounts} storeOptions={storeOptions} employeeId={emp.id} />
+                  {emp.candidate_id
+                    ? <PersonDetail id={emp.candidate_id} onBack={() => setEditing(null)} embedded />
+                    : <p className="text-sm text-gray-500 py-2">{t('editTabNoProfile')}</p>}
                 </div>
               )}
 

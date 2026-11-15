@@ -5955,7 +5955,8 @@
     "categoryRecruit": "Lao động",
     "categoryInsurance": "Bảo hiểm",
     "categoryTax": "Thuế thu nhập",
-    "fieldResume": "Kinh nghiệm làm việc, giới thiệu bản thân"
+    "fieldResume": "Kinh nghiệm làm việc, giới thiệu bản thân",
+    "resumeInfo": "Thông tin hồ sơ"
   },
   "Audit": {
     "adminOnly": "Chỉ bộ phận kiểm toán được sử dụng",
@@ -8032,8 +8033,6 @@
     "companyEmailPending": "Nhân viên gửi email công ty: {email}",
     "companyEmailApprove": "Xác nhận",
     "companyEmailReject": "Từ chối",
-    "editTabJob": "Thông tin tuyển dụng",
-    "editTabProfile": "Hồ sơ · Giấy tờ · Hợp đồng",
     "editTabNoProfile": "Nhân viên này không có hồ sơ ứng tuyển (tạo không qua quy trình ứng tuyển), nên không có hồ sơ/giấy tờ để hiển thị."
   },
   "FinancePage": {
