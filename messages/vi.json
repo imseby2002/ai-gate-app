@@ -461,7 +461,13 @@
     "flagDefaultNote": "Cần xử lý",
     "summaryExpand": "Xem thêm",
     "summaryCollapse": "Thu gọn",
-    "customerSummaryTitle": "Tóm tắt"
+    "customerSummaryTitle": "Tóm tắt",
+    "addToFaq": "Thêm vào FAQ",
+    "faqShort": "FAQ",
+    "faqQuestionPh": "Câu hỏi của khách (có thể để trống, AI sẽ tự chỉnh)",
+    "faqCancel": "Hủy",
+    "faqSave": "Lưu",
+    "faqSaved": "Đã thêm ✓"
   },
   "CsDashboard": {
     "running": "Hệ thống đang hoạt động",

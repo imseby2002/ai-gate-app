@@ -461,7 +461,13 @@
     "flagDefaultNote": "Flagged for follow-up",
     "summaryExpand": "More",
     "summaryCollapse": "Less",
-    "customerSummaryTitle": "Summary"
+    "customerSummaryTitle": "Summary",
+    "addToFaq": "Add to FAQ",
+    "faqShort": "FAQ",
+    "faqQuestionPh": "Customer question (optional, AI will tidy it up)",
+    "faqCancel": "Cancel",
+    "faqSave": "Save",
+    "faqSaved": "Added ✓"
   },
   "CsDashboard": {
     "running": "System Running",
