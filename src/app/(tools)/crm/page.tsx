@@ -73,9 +73,17 @@ export default function CrmPage() {
   const canEdit = access !== 'view'
   // 讀網址上的 ?scope=platform（eSIM 管理頁的連結）
   useEffect(() => {
-    const s = new URLSearchParams(window.location.search).get('scope') === 'platform' ? 'platform' : ''
+    const params = new URLSearchParams(window.location.search)
+    const s = params.get('scope') === 'platform' ? 'platform' : ''
     currentScope = s
-    const t = setTimeout(() => setScopeState(s), 0)
+    // 從客服收件匣點「客戶檔案」進來：?contact= 直接開啟該客人，?q= 帶入搜尋
+    const contact = params.get('contact')
+    const qParam = params.get('q')
+    const t = setTimeout(() => {
+      setScopeState(s)
+      if (contact) setSelected(contact)
+      if (qParam) setQ(qParam)
+    }, 0)
     return () => clearTimeout(t)
   }, [])
 
