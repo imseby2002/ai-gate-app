@@ -5962,7 +5962,12 @@
     "group_active": "Active",
     "group_resigned": "Resigned",
     "group_applicant": "Applying",
-    "group_rejected": "Not hired"
+    "group_rejected": "Not hired",
+    "hrUpload": "Upload",
+    "uploadFailed": "Upload failed",
+    "deleteDoc": "Delete file",
+    "confirmDeleteDoc": "Delete file \"{name}\"?",
+    "docListHint": "HR can upload files employees already handed in (multiple per item, up to 10MB)."
   },
   "Audit": {
     "adminOnly": "Only the Audit unit can use this",

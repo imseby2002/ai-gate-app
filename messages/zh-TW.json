@@ -5962,7 +5962,12 @@
     "group_active": "在職",
     "group_resigned": "離職",
     "group_applicant": "應徵中",
-    "group_rejected": "未錄用"
+    "group_rejected": "未錄用",
+    "hrUpload": "上傳",
+    "uploadFailed": "上傳失敗",
+    "deleteDoc": "刪除檔案",
+    "confirmDeleteDoc": "確定刪除檔案「{name}」？",
+    "docListHint": "人事可代員工上傳已交給人事的檔案（每項可多個，10MB 以內）。"
   },
   "Audit": {
     "adminOnly": "僅稽核單位可使用",
