@@ -3,15 +3,18 @@
 // 把稱呼、標籤、特質、累計往來與最近紀錄整理成 prompt 區塊。
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { csPlatformToKind, normalizeIdentity } from './normalize'
+import { scopeOwnerOf } from './scope'
 
 const SOURCE_LABEL: Record<string, string> = { reserve: '服務預約', booking: '訂房', esim: 'eSIM', cs: '客服對話', manual: '備註' }
 const TIMEOUT_MS = 1500
 
-async function load(db: SupabaseClient, ownerId: string, platform: string, fromId: string): Promise<string> {
+async function load(db: SupabaseClient, accountId: string, platform: string, fromId: string): Promise<string> {
   const kind = csPlatformToKind(platform)
   if (!kind) return ''
   const value = normalizeIdentity(kind, fromId)
   if (!value) return ''
+  // 客戶資料以公司為範圍：客服帳號若是公司成員，查公司 owner 底下的客戶檔案
+  const ownerId = await scopeOwnerOf(db, accountId)
 
   const { data: ident } = await db.from('crm_identities').select('contact_id')
     .eq('owner_id', ownerId).eq('kind', kind).eq('value', value).maybeSingle()
@@ -42,10 +45,10 @@ async function load(db: SupabaseClient, ownerId: string, platform: string, fromI
 }
 
 /** 取得 CRM 客戶檔案 prompt 區塊；查不到或逾時回傳空字串，不影響客服回覆。 */
-export async function buildCrmSection(db: SupabaseClient, ownerId: string, platform: string, fromId: string): Promise<string> {
+export async function buildCrmSection(db: SupabaseClient, accountId: string, platform: string, fromId: string): Promise<string> {
   try {
     return await Promise.race([
-      load(db, ownerId, platform, fromId),
+      load(db, accountId, platform, fromId),
       new Promise<string>(resolve => setTimeout(() => resolve(''), TIMEOUT_MS)),
     ])
   } catch (err) {

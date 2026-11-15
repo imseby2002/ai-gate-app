@@ -4,9 +4,9 @@ import { normalizeEmail, normalizePhone } from '@/lib/crm/normalize'
 
 // GET /api/crm/contacts?q=&tag=&kind=line&page=0 → 客人列表（含各平台帳號）
 export async function GET(req: NextRequest) {
-  const auth = await getCrmUser()
+  const auth = await getCrmUser(req)
   if ('error' in auth) return auth.error
-  const { supabase, user } = auth
+  const { supabase, own } = auth
   const sp = req.nextUrl.searchParams
   const q = (sp.get('q') ?? '').trim().replace(/[,()%]/g, ' ').slice(0, 80)
   const tag = sp.get('tag')
@@ -16,8 +16,8 @@ export async function GET(req: NextRequest) {
 
   let query = supabase
     .from('crm_contacts')
-    .select('id, display_name, phone, email, tags, traits, order_count, total_spent, last_activity_at, crm_identities(kind, value, label)', { count: 'exact' })
-    .eq('owner_id', user.id)
+    .select('id, display_name, phone, email, tags, traits, order_count, total_spent, last_activity_at, crm_identities(kind, value, label), added_by_profile:profiles!crm_contacts_added_by_fkey(display_name, email)', { count: 'exact' })
+    .filter('owner_id', ...own)
     .order('last_activity_at', { ascending: false, nullsFirst: false })
     .range(page * size, page * size + size - 1)
 
@@ -26,27 +26,27 @@ export async function GET(req: NextRequest) {
     const ors = [`display_name.ilike.%${q}%`, `email.ilike.%${q.toLowerCase()}%`, `traits.ilike.%${q}%`, `notes.ilike.%${q}%`]
     if (phone) ors.push(`phone.ilike.%${phone.slice(-9)}%`)
     // 也可以直接用 LINE / WhatsApp 帳號 ID 搜尋
-    const { data: hit } = await supabase.from('crm_identities').select('contact_id').eq('owner_id', user.id).ilike('value', `%${q}%`).limit(50)
+    const { data: hit } = await supabase.from('crm_identities').select('contact_id').filter('owner_id', ...own).ilike('value', `%${q}%`).limit(50)
     const ids = [...new Set((hit ?? []).map(h => h.contact_id))]
     if (ids.length) ors.push(`id.in.(${ids.join(',')})`)
     query = query.or(ors.join(','))
   }
   if (tag) query = query.contains('tags', [tag])
   if (kind) {
-    const { data: hit } = await supabase.from('crm_identities').select('contact_id').eq('owner_id', user.id).eq('kind', kind).limit(1000)
+    const { data: hit } = await supabase.from('crm_identities').select('contact_id').filter('owner_id', ...own).eq('kind', kind).limit(1000)
     query = query.in('id', [...new Set((hit ?? []).map(h => h.contact_id))].concat('00000000-0000-0000-0000-000000000000'))
   }
 
   const { data, error, count } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ contacts: data ?? [], total: count ?? 0, page, size })
+  return NextResponse.json({ contacts: data ?? [], total: count ?? 0, page, size, canPlatform: auth.isAdmin })
 }
 
 // POST /api/crm/contacts → 手動新增客人
 export async function POST(req: NextRequest) {
-  const auth = await getCrmUser()
+  const auth = await getCrmUser(req)
   if ('error' in auth) return auth.error
-  const { supabase, user } = auth
+  const { supabase, user, ownerId } = auth
   const body = await req.json().catch(() => ({}))
   const phone = normalizePhone(body.phone)
   const email = normalizeEmail(body.email)
@@ -54,14 +54,14 @@ export async function POST(req: NextRequest) {
   if (!name && !phone && !email) return NextResponse.json({ error: '至少填寫姓名、電話或 Email' }, { status: 400 })
 
   const { data: contact, error } = await supabase.from('crm_contacts')
-    .insert({ owner_id: user.id, display_name: name, phone, email, traits: body.traits ?? null, notes: body.notes ?? null, tags: Array.isArray(body.tags) ? body.tags : [] })
+    .insert({ owner_id: ownerId, added_by: user.id, display_name: name, phone, email, traits: body.traits ?? null, notes: body.notes ?? null, tags: Array.isArray(body.tags) ? body.tags : [] })
     .select('id').single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   const idents = [phone && { kind: 'phone', value: phone }, email && { kind: 'email', value: email }].filter(Boolean) as { kind: string; value: string }[]
   if (idents.length) {
     await supabase.from('crm_identities').upsert(
-      idents.map(i => ({ ...i, owner_id: user.id, contact_id: contact.id })),
+      idents.map(i => ({ ...i, owner_id: ownerId, contact_id: contact.id, added_by: user.id })),
       { onConflict: 'owner_id,kind,value', ignoreDuplicates: true },
     )
   }
