@@ -39,7 +39,13 @@ export async function GET(req: NextRequest) {
 
   const { data, error, count } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ contacts: data ?? [], total: count ?? 0, page, size, canPlatform: auth.isAdmin })
+  // 總管理員可切換查看各公司的客人
+  let companies: { id: string; name: string }[] = []
+  if (auth.isAdmin) {
+    const { data: cs } = await supabase.from('companies').select('id, name').order('name')
+    companies = (cs ?? []) as { id: string; name: string }[]
+  }
+  return NextResponse.json({ contacts: data ?? [], total: count ?? 0, page, size, canPlatform: auth.isAdmin, companies })
 }
 
 // POST /api/crm/contacts → 手動新增客人
