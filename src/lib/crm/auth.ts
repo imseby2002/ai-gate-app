@@ -28,18 +28,14 @@ export async function getCrmUser(req?: NextRequest) {
     return { error: NextResponse.json({ error: '帳號已停用' }, { status: 403 }) } as const
   }
   const isAdmin = profile?.user_type === 'admin'
-  // scope：'platform' = 平台範圍；公司 id = 指定公司（只有總管理員可用）；未帶 = 目前操作中的公司
+  // 範圍一律跟著右上角目前選的公司；唯一例外是 eSIM 管理頁連過來的 ?scope=platform（只有總管理員）
   const scope = req?.nextUrl.searchParams.get('scope') ?? ''
-  if (scope && !isAdmin) {
-    return { error: NextResponse.json({ error: '沒有切換範圍的權限' }, { status: 403 }) } as const
+  if (scope && (scope !== PLATFORM_SCOPE || !isAdmin)) {
+    return { error: NextResponse.json({ error: '沒有這個範圍的權限' }, { status: 403 }) } as const
   }
   let ownerId: string | null = null
   if (scope === PLATFORM_SCOPE) {
     ownerId = null
-  } else if (scope) {
-    if (!/^[0-9a-f-]{36}$/i.test(scope)) return { error: NextResponse.json({ error: '範圍格式不正確' }, { status: 400 }) } as const
-    ownerId = await resolveCompanyOwner(supabase as never, scope)
-    if (!ownerId) return { error: NextResponse.json({ error: '找不到這家公司或公司沒有負責人帳號' }, { status: 404 }) } as const
   } else {
     const companyId = await resolveActiveCompanyId(supabase as never, user.id, isAdmin, (profile?.company_id as string | null) ?? null)
     ownerId = (await resolveCompanyOwner(supabase as never, companyId)) ?? user.id

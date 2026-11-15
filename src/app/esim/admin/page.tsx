@@ -691,6 +691,14 @@ export default function EsimAdminPage() {
             <span>{syncing ? '方案同步中...' : '重新整理方案庫'}</span>
           </button>
           <Link
+            href="/crm?scope=platform"
+            target="_blank"
+            className="inline-flex items-center gap-1 px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 shadow-sm transition-all"
+          >
+            <span>eSIM 客戶資料</span>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </Link>
+          <Link
             href="/esim"
             target="_blank"
             className="inline-flex items-center gap-1 px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 shadow-sm transition-all"
