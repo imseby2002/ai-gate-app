@@ -13,6 +13,7 @@ import { randomUUID } from 'crypto'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { ownerFilter } from './scope'
+import { mergeContacts } from './merge'
 import { csPlatformToKind, normalizeEmail, normalizePhone, type IdentityKind } from './normalize'
 
 type Ident = { kind: IdentityKind; value: string; label?: string | null; cs_customer_id?: string | null }
@@ -142,7 +143,49 @@ async function loadEsim(db: SupabaseClient): Promise<SourceRecord[]> {
   })
 }
 
+// 客人在對話中自己打出的手機／Email（客服系統不一定有存進 facts）
+const MSG_PHONE_RE = /(?:\+?886[\s-]?|0)9\d{2}[\s-]?\d{3}[\s-]?\d{3}/g
+const MSG_EMAIL_RE = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g
+// 同一支電話／Email 出現在超過這麼多位客人的訊息裡，多半是店家自己的聯絡方式，不當成客人身分
+const SHARED_CONTACT_LIMIT = 3
+
+async function loadMessageIdents(db: SupabaseClient, account: string): Promise<Map<string, Ident[]>> {
+  const msgs = await fetchAll<any>((a, b) => db.from('cs_messages')
+    .select('platform, from_id, message')
+    .eq('user_id', account)
+    .filter('message', 'match', '9[0-9]{2}[- ]?[0-9]{3}[- ]?[0-9]{3}|@')
+    .order('id').range(a, b))
+  const byCustomer = new Map<string, Map<string, Ident>>()
+  const owners = new Map<string, Set<string>>()
+  for (const m of msgs) {
+    const key = `${m.platform}:${m.from_id}`
+    const text = String(m.message ?? '')
+    const found: Ident[] = []
+    for (const raw of text.match(MSG_PHONE_RE) ?? []) {
+      const v = normalizePhone(raw)
+      if (v) found.push({ kind: 'phone', value: v })
+    }
+    for (const raw of text.match(MSG_EMAIL_RE) ?? []) {
+      const v = normalizeEmail(raw)
+      if (v) found.push({ kind: 'email', value: v })
+    }
+    for (const i of found) {
+      const ik = `${i.kind}:${i.value}`
+      if (!byCustomer.has(key)) byCustomer.set(key, new Map())
+      byCustomer.get(key)!.set(ik, i)
+      if (!owners.has(ik)) owners.set(ik, new Set())
+      owners.get(ik)!.add(key)
+    }
+  }
+  const out = new Map<string, Ident[]>()
+  for (const [key, ids] of byCustomer) {
+    out.set(key, [...ids.entries()].filter(([ik]) => (owners.get(ik)?.size ?? 0) <= SHARED_CONTACT_LIMIT).map(([, i]) => i))
+  }
+  return out
+}
+
 async function loadCs(db: SupabaseClient, ownerId: string): Promise<SourceRecord[]> {
+  const msgIdents = await loadMessageIdents(db, ownerId)
   const rows = await fetchAll<any>((a, b) => db.from('cs_customers')
     .select('id, platform, from_id, industry, name, stage, message_count, summary, facts, first_seen_at, last_message_at')
     .eq('user_id', ownerId)
@@ -157,6 +200,9 @@ async function loadCs(db: SupabaseClient, ownerId: string): Promise<SourceRecord
     if (value) idents.push({ kind, value, label: r.name, cs_customer_id: r.id })
     const facts = (r.facts ?? {}) as Record<string, unknown>
     idents.push(...baseIdents(facts.phone ?? facts.guest_phone ?? (kind === 'whatsapp' ? r.from_id : null), facts.email ?? facts.guest_email))
+    for (const i of msgIdents.get(`${r.platform}:${r.from_id}`) ?? []) {
+      if (!idents.some(x => x.kind === i.kind && x.value === i.value)) idents.push(i)
+    }
     out.push({
       source: 'cs',
       source_id: r.id,
@@ -177,6 +223,7 @@ async function loadCs(db: SupabaseClient, ownerId: string): Promise<SourceRecord
 export interface CrmSyncResult {
   records: number
   contactsCreated: number
+  contactsMerged: number
   activities: number
   sources: Record<string, number>
 }
@@ -215,6 +262,7 @@ export async function syncCrmForScope(ownerId: string | null, accounts: string[]
   const newIdents = new Map<string, Record<string, unknown>>()
   const activities: Record<string, unknown>[] = []
   const csSummary = new Map<string, string>()
+  const mergePairs: [string, string][] = []
 
   for (const rec of records) {
     let contactId = actMap.get(`${rec.source}:${rec.source_id}`)
@@ -230,6 +278,9 @@ export async function syncCrmForScope(ownerId: string | null, accounts: string[]
     }
     for (const i of rec.idents) {
       const key = `${i.kind}:${i.value}`
+      const holder = identMap.get(key)
+      // 同一支電話／Email／平台帳號已屬於另一位客人 → 是同一個人，之後自動合併
+      if (holder && holder !== contactId) mergePairs.push([holder, contactId])
       if (identMap.has(key)) continue
       identMap.set(key, contactId)
       newIdents.set(key, { owner_id: ownerId, contact_id: contactId, kind: i.kind, value: i.value, label: i.label ?? null, cs_customer_id: i.cs_customer_id ?? null, added_by: rec.handled_by ?? null })
@@ -257,11 +308,28 @@ export async function syncCrmForScope(ownerId: string | null, accounts: string[]
     if (error) throw error
   }
 
+  // 自動合併：同一組身分對到多位客人時，併到最早建立的那位（union-find 處理連鎖）
+  const parent = new Map<string, string>()
+  const find = (x: string): string => { const p = parent.get(x); if (!p || p === x) return x; const r = find(p); parent.set(x, r); return r }
+  for (const [keep, drop] of mergePairs) {
+    const a = find(keep), b = find(drop)
+    if (a !== b) parent.set(b, a)
+  }
+  let merged = 0
+  for (const id of parent.keys()) {
+    const root = find(id)
+    if (root !== id) {
+      await mergeContacts(db, ownerId, root, id)
+      merged++
+    }
+  }
+
   await recomputeContacts(db, ownerId, csSummary)
 
   return {
     records: records.length,
     contactsCreated: newContacts.length,
+    contactsMerged: merged,
     activities: activities.length,
     sources: { reserve: reserve.length, booking: booking.length, esim: esim.length, cs: cs.length },
   }

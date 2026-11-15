@@ -84,7 +84,7 @@ export default function CrmPage() {
     setSyncing(true); setMsg('')
     try {
       const d = await api('/api/crm/sync', { method: 'POST' })
-      setMsg(`已同步：預約 ${d.sources.reserve}、訂房 ${d.sources.booking}、eSIM ${d.sources.esim}、客服 ${d.sources.cs} 筆，新增客人 ${d.contactsCreated} 位`)
+      setMsg(`已同步：預約 ${d.sources.reserve}、訂房 ${d.sources.booking}、eSIM ${d.sources.esim}、客服 ${d.sources.cs} 筆，新增客人 ${d.contactsCreated} 位、自動合併 ${d.contactsMerged ?? 0} 位`)
       load(0)
     } catch (e) { setMsg(`同步失敗：${errMsg(e)}`) } finally { setSyncing(false) }
   }
