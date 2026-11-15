@@ -28,6 +28,13 @@ interface SourceRecord {
   summary?: string | null
 }
 
+// 訂房匯入時的佔位姓名（例如「(待補充)」）或純數字，不足以代表一位客人
+const PLACEHOLDER_NAME_RE = /待補|未知|unknown|^guest$|^旅客$|^n\/?a$/i
+function isUsableName(name: string | null): boolean {
+  const n = (name ?? '').trim()
+  return !!n && /[A-Za-z\u00c0-\u024f\u1e00-\u1eff\u3040-\u30ff\u4e00-\u9fff\uac00-\ud7af]/.test(n) && !PLACEHOLDER_NAME_RE.test(n)
+}
+
 const EXCLUDED_STATUS = new Set(['cancelled', 'canceled', 'no_show', 'refunded', 'failed', 'pending_payment'])
 const PAGE = 1000
 
@@ -183,6 +190,10 @@ export async function syncCrmForOwner(ownerId: string, opts: { includeEsim?: boo
   const existing = await fetchAll<{ contact_id: string; kind: string; value: string }>((a, b) => db.from('crm_identities')
     .select('contact_id, kind, value').eq('owner_id', ownerId).order('id').range(a, b))
   const identMap = new Map(existing.map(i => [`${i.kind}:${i.value}`, i.contact_id]))
+  // 已匯入過的紀錄沿用原本的客人（使用者可能已手動合併過；只靠姓名建立的客人也靠這個對回去）
+  const prevActs = await fetchAll<{ source: string; source_id: string; contact_id: string }>((a, b) => db.from('crm_activities')
+    .select('source, source_id, contact_id').eq('owner_id', ownerId).neq('source', 'manual').order('id').range(a, b))
+  const actMap = new Map(prevActs.map(a => [`${a.source}:${a.source_id}`, a.contact_id]))
 
   const newContacts: Record<string, unknown>[] = []
   const newIdents = new Map<string, Record<string, unknown>>()
@@ -190,13 +201,14 @@ export async function syncCrmForOwner(ownerId: string, opts: { includeEsim?: boo
   const csSummary = new Map<string, string>()
 
   for (const rec of records) {
-    let contactId: string | undefined
+    let contactId = actMap.get(`${rec.source}:${rec.source_id}`)
     for (const i of rec.idents) {
-      contactId = identMap.get(`${i.kind}:${i.value}`)
       if (contactId) break
+      contactId = identMap.get(`${i.kind}:${i.value}`)
     }
     if (!contactId) {
-      if (!rec.idents.length) continue // 沒有任何可識別資料，無法建立客人
+      // 沒有電話／Email／平台帳號時，有姓名就單獨建一位客人（不依姓名自動合併，避免同名不同人被併在一起）
+      if (!rec.idents.length && !isUsableName(rec.name)) continue
       contactId = randomUUID()
       newContacts.push({ id: contactId, owner_id: ownerId, display_name: rec.name })
     }
@@ -224,16 +236,7 @@ export async function syncCrmForOwner(ownerId: string, opts: { includeEsim?: boo
     if (error) throw error
   }
   for (let i = 0; i < activities.length; i += 150) {
-    // 已存在的紀錄只更新內容，不改 contact_id（使用者可能已手動合併過）
     const chunk = activities.slice(i, i + 150)
-    const keys = chunk.map(a => a.source_id as string)
-    const { data: prev } = await db.from('crm_activities').select('source, source_id, contact_id')
-      .eq('owner_id', ownerId).in('source_id', keys)
-    const prevMap = new Map((prev ?? []).map((p: any) => [`${p.source}:${p.source_id}`, p.contact_id]))
-    for (const a of chunk) {
-      const kept = prevMap.get(`${a.source}:${a.source_id}`)
-      if (kept) a.contact_id = kept
-    }
     const { error } = await db.from('crm_activities').upsert(chunk, { onConflict: 'owner_id,source,source_id' })
     if (error) throw error
   }
