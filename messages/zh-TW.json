@@ -5955,7 +5955,8 @@
     "categoryRecruit": "勞動",
     "categoryInsurance": "保險",
     "categoryTax": "所得稅",
-    "fieldResume": "工作經歷、自我介紹（文字履歷）"
+    "fieldResume": "工作經歷、自我介紹（文字履歷）",
+    "resumeInfo": "履歷資料"
   },
   "Audit": {
     "adminOnly": "僅稽核單位可使用",
@@ -8032,8 +8033,6 @@
     "companyEmailPending": "員工自填公司 Email 待確認：{email}",
     "companyEmailApprove": "確認",
     "companyEmailReject": "退回",
-    "editTabJob": "雇用資料",
-    "editTabProfile": "履歷・文件・合同",
     "editTabNoProfile": "此員工沒有對應的應徵／人員資料（未經應徵流程建立），無履歷與文件可顯示。"
   },
   "FinancePage": {

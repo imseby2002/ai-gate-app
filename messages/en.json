@@ -5955,7 +5955,8 @@
     "categoryRecruit": "Labor",
     "categoryInsurance": "Insurance",
     "categoryTax": "Income Tax",
-    "fieldResume": "Work experience & self-introduction (text résumé)"
+    "fieldResume": "Work experience & self-introduction (text résumé)",
+    "resumeInfo": "Résumé details"
   },
   "Audit": {
     "adminOnly": "Only the Audit unit can use this",
@@ -8032,8 +8033,6 @@
     "companyEmailPending": "Employee submitted company email: {email}",
     "companyEmailApprove": "Approve",
     "companyEmailReject": "Reject",
-    "editTabJob": "Employment",
-    "editTabProfile": "Résumé · Documents · Contracts",
     "editTabNoProfile": "This employee has no applicant/personnel record (created without the application flow), so there is no résumé or document to show."
   },
   "FinancePage": {
