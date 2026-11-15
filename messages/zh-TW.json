@@ -461,7 +461,13 @@
     "flagDefaultNote": "人工標記待處理",
     "summaryExpand": "展開",
     "summaryCollapse": "收合",
-    "customerSummaryTitle": "客人摘要"
+    "customerSummaryTitle": "客人摘要",
+    "addToFaq": "加到常見問答",
+    "faqShort": "常見問答",
+    "faqQuestionPh": "客人問題（可留空，AI 會自動整理）",
+    "faqCancel": "取消",
+    "faqSave": "儲存",
+    "faqSaved": "已加入 ✓"
   },
   "CsDashboard": {
     "running": "系統運行中",

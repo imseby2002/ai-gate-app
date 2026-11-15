@@ -115,6 +115,23 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
   const [extras, setExtras] = useState<ThreadExtras | null>(null)
   const [summaryOpen, setSummaryOpen] = useState(false)
   const [flagBusy, setFlagBusy] = useState(false)
+  // 加到常見問答：點回覆下方的小圖示開一個精簡的底部面板
+  const [faq, setFaq] = useState<{ q: string; a: string; saving: boolean; done: boolean } | null>(null)
+  const saveFaq = async () => {
+    if (!faq || !faq.a.trim() || faq.saving) return
+    setFaq({ ...faq, saving: true })
+    try {
+      const res = await fetch('/api/marketing/cs-faq', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ q: faq.q, a: faq.a, keywords: [], industry, autoSuggest: true, context: faq.q }),
+      })
+      if (!res.ok) throw new Error()
+      setFaq(f => f ? { ...f, saving: false, done: true } : f)
+      setTimeout(() => setFaq(null), 900)
+    } catch {
+      setFaq(f => f ? { ...f, saving: false } : f)
+    }
+  }
   const prevScrollHeight = useRef<number | null>(null)
   useEffect(() => {
     const id = setTimeout(() => setSearchQ(searchInput.trim()), 400)
@@ -682,7 +699,17 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
                             )
                           })()}
                         </div>
-                        <div className={`text-[10px] text-muted-foreground mt-0.5 ${b.side === 'out' ? 'text-right' : ''}`}>{fmtClock(b.at)}</div>
+                        <div className={`text-[10px] text-muted-foreground mt-0.5 flex items-center gap-2 ${b.side === 'out' ? 'justify-end' : ''}`}>
+                          {b.side === 'out' && !!b.text.trim() && (
+                            <button type="button" title={t('addToFaq')}
+                              onClick={() => {
+                                const prevIn = [...bubbles.slice(0, i)].reverse().find(x => x.side === 'in')
+                                setFaq({ q: prevIn?.text ?? '', a: b.text, saving: false, done: false })
+                              }}
+                              className="text-[#1a73e8]">＋{t('faqShort')}</button>
+                          )}
+                          <span>{fmtClock(b.at)}</span>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -696,6 +723,28 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
                   )}
                   </>}
                 </div>
+
+                {/* 加到常見問答：底部精簡面板 */}
+                {faq && (
+                  <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/30" onClick={() => !faq.saving && setFaq(null)}>
+                    <div className="w-full md:max-w-md bg-white rounded-t-2xl md:rounded-2xl p-4 space-y-2" onClick={e => e.stopPropagation()}>
+                      <div className="text-sm font-semibold">{t('addToFaq')}</div>
+                      <textarea value={faq.q} onChange={e => setFaq({ ...faq, q: e.target.value })} rows={2}
+                        placeholder={t('faqQuestionPh')} className="w-full text-base md:text-sm border rounded-lg px-3 py-2" />
+                      <textarea value={faq.a} onChange={e => setFaq({ ...faq, a: e.target.value })} rows={4}
+                        className="w-full text-base md:text-sm border rounded-lg px-3 py-2" />
+                      <div className="flex gap-2 justify-end">
+                        <button type="button" onClick={() => setFaq(null)} disabled={faq.saving}
+                          className="px-3 py-1.5 text-sm rounded-lg border">{t('faqCancel')}</button>
+                        <button type="button" onClick={() => void saveFaq()} disabled={faq.saving || faq.done || !faq.a.trim()}
+                          className="px-3 py-1.5 text-sm rounded-lg bg-[#1a73e8] text-white disabled:opacity-60 inline-flex items-center gap-1">
+                          {faq.saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                          {faq.done ? t('faqSaved') : t('faqSave')}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* 回覆框 */}
                 <div className="border-t bg-card/60 px-3 py-3">
