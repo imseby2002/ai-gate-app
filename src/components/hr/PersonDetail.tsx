@@ -31,6 +31,7 @@ export function PersonDetail({ id, onBack, embedded = false }: { id: string; onB
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [msg, setMsg] = useState('')
+  const [uploading, setUploading] = useState('')
 
   useEffect(() => {
     fetch(`/api/hr/personnel?id=${id}`).then(r => r.ok ? r.json() : null).then(d => { if (d) { setData(d); setForm(d.person) } })
@@ -68,7 +69,20 @@ export function PersonDetail({ id, onBack, embedded = false }: { id: string; onB
     }
   }
 
-  const haveDoc = new Map(data.documents.map(d => [d.doc_type, d]))
+  const docsOf = (type: string) => data.documents.filter(d => d.doc_type === type)
+  const uploadDoc = async (docType: string, file: File) => {
+    setUploading(docType)
+    const fd = new FormData(); fd.append('candidate_id', id); fd.append('doc_type', docType); fd.append('file', file)
+    const r = await fetch('/api/hr/candidates/documents', { method: 'POST', body: fd })
+    setUploading('')
+    if (!r.ok) { alert((await r.json().catch(() => ({}))).error ?? t('uploadFailed')); return }
+    reload()
+  }
+  const deleteDoc = async (docId: string, name: string) => {
+    if (!confirm(t('confirmDeleteDoc', { name }))) return
+    await fetch('/api/hr/candidates/documents', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: docId }) })
+    reload()
+  }
   const paperOf = new Map(data.checklist.map(c => [c.doc_key, c]))
   const togglePaper = async (doc_key: string, v: boolean) => {
     await fetch('/api/hr/candidates/checklist', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ candidate_id: id, doc_key, original_received: v }) })
@@ -113,19 +127,34 @@ export function PersonDetail({ id, onBack, embedded = false }: { id: string; onB
       {/* 文件清單 */}
       <Card className="p-4 space-y-2">
         <h3 className="font-semibold text-sm flex items-center gap-1.5"><FileText className="h-4 w-4" />{t('documentList')}</h3>
+        <p className="text-xs text-gray-500">{t('docListHint')}</p>
         <div className="overflow-x-auto">
           <table className="w-full text-sm"><thead><tr className="text-left text-gray-500 border-b"><th className="py-1.5 pr-2">{t('colDocument')}</th><th className="pr-2">{t('colPurpose')}</th><th className="pr-2">{t('colPaperType')}</th><th className="pr-2 text-center">{t('colUploaded')}</th><th className="pr-2">{t('colPaperReceived')}</th><th className="pr-2"></th></tr></thead>
-            <tbody>{data.catalog.filter(c => c.type !== 'other').map(spec => {
-              const doc = haveDoc.get(spec.type)
+            <tbody>{data.catalog.map(spec => {
+              const docs = docsOf(spec.type)
               const paper = paperOf.get(spec.type)
               return (
                 <tr key={spec.type} className="border-b last:border-0">
                   <td className="py-1.5 pr-2">{spec.label}</td>
                   <td className="pr-2 text-[11px] text-gray-400">{spec.categories.map(c => CATEGORY_LABEL[c] ?? c).join('／')}</td>
                   <td className="pr-2 text-xs text-gray-400">{spec.copy === 'original' ? t('paperOriginal') : spec.copy === 'both' ? t('paperBoth') : t('paperCopy')}</td>
-                  <td className="pr-2 text-center">{doc ? <CheckCircle2 className="h-4 w-4 text-emerald-500 inline" /> : <XCircle className="h-4 w-4 text-gray-300 inline" />}</td>
-                  <td className="pr-2"><input type="checkbox" checked={!!paper?.original_received} onChange={e => togglePaper(spec.type, e.target.checked)} /></td>
-                  <td className="pr-2">{doc?.url && <a href={doc.url} target="_blank" rel="noreferrer" className="text-primary"><ExternalLink className="h-4 w-4" /></a>}</td>
+                  <td className="pr-2 text-center">{docs.length ? <CheckCircle2 className="h-4 w-4 text-emerald-500 inline" /> : <XCircle className="h-4 w-4 text-gray-300 inline" />}</td>
+                  <td className="pr-2">{spec.type !== 'other' && <input type="checkbox" checked={!!paper?.original_received} onChange={e => togglePaper(spec.type, e.target.checked)} />}</td>
+                  <td className="pr-2 py-1">
+                    <div className="flex flex-col gap-0.5">
+                      {docs.map(d => (
+                        <span key={d.id} className="flex items-center gap-1 text-xs">
+                          <a href={d.url} target="_blank" rel="noreferrer" className="text-primary hover:underline truncate max-w-[10rem] inline-flex items-center gap-0.5" title={d.file_name}><ExternalLink className="h-3 w-3 shrink-0" />{d.file_name}</a>
+                          <button type="button" onClick={() => deleteDoc(d.id, d.file_name)} className="text-gray-300 hover:text-red-500" title={t('deleteDoc')}><Trash2 className="h-3 w-3" /></button>
+                        </span>
+                      ))}
+                      <label className="inline-flex items-center gap-1 text-xs text-indigo-600 cursor-pointer hover:underline">
+                        {uploading === spec.type ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}{t('hrUpload')}
+                        <input type="file" hidden accept=".pdf,.png,.jpg,.jpeg,.webp,.heic,.doc,.docx" disabled={!!uploading}
+                          onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) uploadDoc(spec.type, f) }} />
+                      </label>
+                    </div>
+                  </td>
                 </tr>
               )
             })}</tbody></table>

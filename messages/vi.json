@@ -5962,7 +5962,12 @@
     "group_active": "Đang làm",
     "group_resigned": "Đã nghỉ",
     "group_applicant": "Đang ứng tuyển",
-    "group_rejected": "Không tuyển"
+    "group_rejected": "Không tuyển",
+    "hrUpload": "Tải lên",
+    "uploadFailed": "Tải lên thất bại",
+    "deleteDoc": "Xóa tệp",
+    "confirmDeleteDoc": "Xóa tệp \"{name}\"?",
+    "docListHint": "Nhân sự có thể tải lên giấy tờ nhân viên đã nộp (nhiều tệp mỗi mục, tối đa 10MB)."
   },
   "Audit": {
     "adminOnly": "Chỉ bộ phận kiểm toán được sử dụng",
