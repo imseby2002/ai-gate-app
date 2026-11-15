@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { syncCandidateToEmployee } from '@/lib/hr/profile'
+import { syncCandidateToEmployee, candidateForEmployee } from '@/lib/hr/profile'
 import { getHrContext, hasHrArea } from '@/lib/auth/unit-access'
 import { DOC_CATALOG, APPLY_BUCKET } from '@/lib/hr/apply'
 
@@ -17,6 +17,15 @@ export async function GET(req: NextRequest) {
   const id = s(new URL(req.url).searchParams.get('id'))
 
   if (!id) {
+    // 員工名冊中沒有人員資料的員工（未經應徵流程建立）→ 補建，讓人員資料涵蓋所有員工
+    const [{ data: emps }, { data: linked }] = await Promise.all([
+      admin.from('hr_employees').select('id, name, status, store, staff_category, phone, email').eq('owner_id', ownerId),
+      admin.from('agent_hr_candidates').select('hired_employee_id').eq('user_id', ownerId).not('hired_employee_id', 'is', null),
+    ])
+    const linkedIds = new Set((linked ?? []).map(l => l.hired_employee_id as string))
+    for (const e of emps ?? []) if (!linkedIds.has(e.id)) await candidateForEmployee(admin, ownerId, e, true)
+    const empStatus = new Map((emps ?? []).map(e => [e.id as string, e.status as string]))
+
     // 清單：人員 ＋ 文件齊全度
     const { data: people } = await admin.from('agent_hr_candidates')
       .select('id, name, position, store, staff_category, stage, hired_employee_id, apply_token')
@@ -37,7 +46,10 @@ export async function GET(req: NextRequest) {
       const have = byCand.get(p.id) ?? new Set()
       if (have.has('student_card')) have.add('diploma') // 學歷／學生證擇一即可
       const missing = REQUIRED_TYPES.filter(t => !have.has(t)).length
-      return { ...p, doc_missing: missing, doc_total: REQUIRED_TYPES.length }
+      // 分類：在職／離職（員工名冊）、應徵中、未錄用
+      const st = p.hired_employee_id ? empStatus.get(p.hired_employee_id) : undefined
+      const group = p.hired_employee_id ? (st === 'resigned' ? 'resigned' : 'active') : p.stage === 'rejected' ? 'rejected' : 'applicant'
+      return { ...p, group, doc_missing: missing, doc_total: REQUIRED_TYPES.length }
     })
     return NextResponse.json({ people: list })
   }

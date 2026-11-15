@@ -5956,7 +5956,13 @@
     "categoryInsurance": "保險",
     "categoryTax": "所得稅",
     "fieldResume": "工作經歷、自我介紹（文字履歷）",
-    "resumeInfo": "履歷資料"
+    "resumeInfo": "履歷資料",
+    "scopeNote": "人員資料＝應徵中＋未錄用的應徵者＋員工名冊所有員工（含離職）。員工的雇用設定（薪資、保險、帳號權限）請在人事系統 → 員工名冊編輯。",
+    "group_all": "全部",
+    "group_active": "在職",
+    "group_resigned": "離職",
+    "group_applicant": "應徵中",
+    "group_rejected": "未錄用"
   },
   "Audit": {
     "adminOnly": "僅稽核單位可使用",

@@ -5956,7 +5956,13 @@
     "categoryInsurance": "Insurance",
     "categoryTax": "Income Tax",
     "fieldResume": "Work experience & self-introduction (text résumé)",
-    "resumeInfo": "Résumé details"
+    "resumeInfo": "Résumé details",
+    "scopeNote": "Personnel = applicants (in progress and not hired) + every employee in the roster (including resigned). Employment settings (salary, insurance, account access) are edited in HR → Employee roster.",
+    "group_all": "All",
+    "group_active": "Active",
+    "group_resigned": "Resigned",
+    "group_applicant": "Applying",
+    "group_rejected": "Not hired"
   },
   "Audit": {
     "adminOnly": "Only the Audit unit can use this",
