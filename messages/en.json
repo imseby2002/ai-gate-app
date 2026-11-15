@@ -8031,7 +8031,9 @@
     "companyEmailNeedInitPw": "Set the employee initial password in the employee email whitelist first",
     "companyEmailPending": "Employee submitted company email: {email}",
     "companyEmailApprove": "Approve",
-    "companyEmailReject": "Reject"
+    "companyEmailReject": "Reject",
+    "resumeTextLabel": "Work experience & self-introduction (text résumé)",
+    "resumeTextPlaceholder": "Filled by the employee in the portal or application link; HR can edit here"
   },
   "FinancePage": {
     "accountBalancesTitle": "Balance by account",

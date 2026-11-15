@@ -8031,7 +8031,9 @@
     "companyEmailNeedInitPw": "Vui lòng đặt mật khẩu ban đầu ở danh sách email nhân viên trước",
     "companyEmailPending": "Nhân viên gửi email công ty: {email}",
     "companyEmailApprove": "Xác nhận",
-    "companyEmailReject": "Từ chối"
+    "companyEmailReject": "Từ chối",
+    "resumeTextLabel": "Kinh nghiệm làm việc, giới thiệu bản thân",
+    "resumeTextPlaceholder": "Nhân viên điền trong trang cá nhân / link ứng tuyển; nhân sự có thể sửa tại đây"
   },
   "FinancePage": {
     "accountBalancesTitle": "Số dư theo tài khoản",

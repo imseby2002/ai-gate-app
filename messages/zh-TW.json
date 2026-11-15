@@ -8031,7 +8031,9 @@
     "companyEmailNeedInitPw": "請先在「員工 Email 白名單」設定員工初始密碼",
     "companyEmailPending": "員工自填公司 Email 待確認：{email}",
     "companyEmailApprove": "確認",
-    "companyEmailReject": "退回"
+    "companyEmailReject": "退回",
+    "resumeTextLabel": "工作經歷、自我介紹（文字履歷）",
+    "resumeTextPlaceholder": "員工在員工專區／應徵連結填寫，人事也可在此修改"
   },
   "FinancePage": {
     "accountBalancesTitle": "各帳戶結餘",

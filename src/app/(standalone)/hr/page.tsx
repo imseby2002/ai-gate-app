@@ -54,6 +54,7 @@ interface Employee {
   company_email_pending?: string | null
   created_at: string
   profile_edit?: { open: boolean; until: string | null; updated_at: string | null }
+  resume_text?: string
 }
 
 interface SysAccount { id: string; full_name: string | null; email: string | null; employee: { id: string; name: string } | null }
@@ -443,6 +444,12 @@ function EmployeeForm({ initial, onSave, onCancel, saving, settings, accounts, s
         )}
       </div>
 
+      {employeeId && (
+        <Field label={t('resumeTextLabel')}>
+          <textarea value={d.resume_text ?? ''} onChange={e => set('resume_text', e.target.value)} disabled={saving} rows={4}
+            placeholder={t('resumeTextPlaceholder')} className="w-full rounded-md border px-3 py-2 text-sm outline-none disabled:opacity-50" />
+        </Field>
+      )}
       <Field label={t('notesLabel')}>
         <textarea value={d.notes} onChange={e => set('notes', e.target.value)} disabled={saving} rows={2}
           placeholder={t('otherNotesPlaceholder')} className="w-full rounded-md border px-3 py-2 text-sm resize-none outline-none disabled:opacity-50" />
