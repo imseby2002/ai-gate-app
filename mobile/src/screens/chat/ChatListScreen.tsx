@@ -22,6 +22,21 @@ interface Conversation {
   messageCount: number
   lastMessageAt: string
   takeover: boolean
+  /** 最後一則訊息（比照 LINE 官方帳號名單） */
+  preview?: string | null
+  /** 搜尋命中的對話片段 */
+  match?: string | null
+  /** 需要真人處理的提醒 */
+  alert?: { intents: string[]; ticketIds: string[]; notes?: string[] } | null
+}
+
+const MANUAL_FLAG_INTENT = '人工標記待處理'
+
+// 沒有名字時：LINE 用戶不顯示 U 開頭長代號（同網頁版收件匣）
+function displayNameOf(name: string | null, fromId: string): string {
+  if (name && name.trim()) return name.trim()
+  if (fromId.startsWith('U') && fromId.length === 33) return `LINE 用戶 ${fromId.slice(1, 6)}`
+  return fromId
 }
 
 const PLATFORM_META: Record<string, { label: string; color: string; icon: keyof typeof Ionicons.glyphMap }> = {
@@ -40,6 +55,12 @@ export default function ChatListScreen() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  // 搜尋送到後端（可搜姓名、ID 與過往對話內容），輸入停 400ms 才查
+  const [searchQ, setSearchQ] = useState('')
+  useEffect(() => {
+    const id = setTimeout(() => setSearchQ(searchQuery.trim()), 400)
+    return () => clearTimeout(id)
+  }, [searchQuery])
 
   const fetchConversations = useCallback(async () => {
     try {
@@ -51,7 +72,7 @@ export default function ChatListScreen() {
       }
 
       // 走後端 API：與網頁版、每日入住用同一套商戶判定（含公司成員身分、切換中的商戶）
-      const res = await apiFetch('/api/marketing/cs-thread?limit=200')
+      const res = await apiFetch(`/api/marketing/cs-thread?limit=200${searchQ ? `&q=${encodeURIComponent(searchQ)}` : ''}`)
       if (!res.ok) {
         console.log('載入對話清單失敗:', res.status)
         return
@@ -64,7 +85,7 @@ export default function ChatListScreen() {
       setLoading(false)
       setRefreshing(false)
     }
-  }, [])
+  }, [searchQ])
 
   // 當畫面獲得焦點時立即刷新
   useFocusEffect(
@@ -100,23 +121,16 @@ export default function ChatListScreen() {
     }
   }
 
-  const filtered = conversations.filter((c) => {
-    const q = searchQuery.toLowerCase().trim()
-    if (!q) return true
-    return (
-      (c.name && c.name.toLowerCase().includes(q)) ||
-      c.from_id.toLowerCase().includes(q) ||
-      c.platform.toLowerCase().includes(q)
-    )
-  })
+  const filtered = conversations
 
   const renderItem = ({ item }: { item: Conversation }) => {
     const meta = PLATFORM_META[item.platform] || { label: item.platform, color: '#64748B', icon: 'chatbubble-ellipses' }
-    const displayName = item.name?.trim() || (item.from_id.length > 12 ? `${item.platform.toUpperCase()} 用戶` : item.from_id)
+    const displayName = displayNameOf(item.name, item.from_id)
+    const subLine = searchQ ? item.match : item.preview
 
     return (
       <TouchableOpacity
-        style={styles.card}
+        style={[styles.card, item.alert && styles.cardAlert]}
         activeOpacity={0.7}
         onPress={() =>
           navigation.navigate('ChatDetail', {
@@ -139,12 +153,25 @@ export default function ChatListScreen() {
             <Text style={styles.time}>{formatTime(item.lastMessageAt)}</Text>
           </View>
 
+          {!!subLine && (
+            <Text style={styles.preview} numberOfLines={1}>
+              {subLine}
+            </Text>
+          )}
+
           <View style={styles.cardFooter}>
             <View style={styles.badgeRow}>
               <View style={[styles.platformBadge, { borderColor: meta.color }]}>
                 <Text style={[styles.platformBadgeText, { color: meta.color }]}>{meta.label}</Text>
               </View>
 
+              {item.alert && (
+                <View style={styles.alertBadge}>
+                  <Text style={styles.alertBadgeText} numberOfLines={1}>
+                    需要真人{item.alert.intents[0] && item.alert.intents[0] !== MANUAL_FLAG_INTENT ? `：${item.alert.intents[0]}` : ''}
+                  </Text>
+                </View>
+              )}
               {item.takeover ? (
                 <View style={styles.takeoverBadge}>
                   <Text style={styles.takeoverText}>人工接管中</Text>
@@ -260,6 +287,29 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  cardAlert: {
+    borderColor: '#FDA4AF',
+    borderLeftWidth: 4,
+    borderLeftColor: '#F43F5E',
+    backgroundColor: '#FFF1F2',
+  },
+  preview: {
+    fontSize: 13,
+    color: '#64748B',
+    marginBottom: 6,
+  },
+  alertBadge: {
+    backgroundColor: '#F43F5E',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    maxWidth: 160,
+  },
+  alertBadgeText: {
+    fontSize: 11,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
   avatar: {
     width: 48,
     height: 48,
@@ -297,6 +347,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    flexShrink: 1,
+    flexWrap: 'wrap',
   },
   platformBadge: {
     borderWidth: 1,
