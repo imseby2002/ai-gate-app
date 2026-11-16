@@ -89,6 +89,38 @@ async function loadReserve(db: SupabaseClient, ownerId: string): Promise<SourceR
   }))
 }
 
+// 客服回覆過門鎖密碼的訊息 → 這個 LINE／WhatsApp 帳號就是該房間當天的住客。
+// 回覆格式例：「房號：401露臺雙人房 ・大門密碼：1234」或「找到訂單「ABC123」…房門密碼：1234」
+const PW_GIVEN_RE = /密碼[：:]\s*\d{4,}/
+const PW_ROOM_RE = /(?:房號|房間)[：:]\s*(\d{3})/
+const PW_ORDER_RE = /找到訂單「([^」]+)」/
+
+interface CheckinHint { kind: IdentityKind; value: string; label: string | null; date: string; room: string | null; order: string | null }
+
+async function loadCheckinHints(db: SupabaseClient, account: string): Promise<CheckinHint[]> {
+  const msgs = await fetchAll<any>((a, b) => db.from('cs_messages')
+    .select('platform, from_id, from_name, reply, created_at')
+    .eq('user_id', account)
+    .filter('reply', 'match', '密碼[：:][[:space:]]*[0-9]{4,}')
+    .order('id').range(a, b))
+  const out: CheckinHint[] = []
+  for (const m of msgs) {
+    const reply = String(m.reply ?? '')
+    if (!PW_GIVEN_RE.test(reply)) continue
+    const kind = csPlatformToKind(m.platform)
+    if (!kind) continue
+    const value = kind === 'whatsapp' ? normalizePhone(m.from_id) : String(m.from_id ?? '').trim()
+    if (!value) continue
+    const room = reply.match(PW_ROOM_RE)?.[1] ?? null
+    const order = reply.match(PW_ORDER_RE)?.[1] ?? null
+    if (!room && !order) continue
+    // 以台灣日期判斷是哪一晚
+    const date = new Date(new Date(m.created_at).getTime() + 8 * 3600_000).toISOString().slice(0, 10)
+    out.push({ kind, value, label: m.from_name ?? null, date, room, order })
+  }
+  return out
+}
+
 async function loadBooking(db: SupabaseClient, ownerId: string): Promise<SourceRecord[]> {
   const rows = await fetchAll<any>((a, b) => db.from('bookings')
     .select('id, order_id, property_id, platform, platform_booking_id, guest_name, guest_email, guest_phone, check_in, check_out, num_guests, total_price, status, created_at, properties(name)')
@@ -103,6 +135,20 @@ async function loadBooking(db: SupabaseClient, ownerId: string): Promise<SourceR
     if (g) g.push(r)
     else groups.set(key, [r])
   }
+  // 取過密碼的 LINE 帳號 → 對到唯一一筆訂房時，把帳號綁到這筆訂房的客人
+  const hintIdents = new Map<string, Ident[]>()
+  for (const h of await loadCheckinHints(db, ownerId)) {
+    const matched = [...groups.entries()].filter(([, g]) => g.some(x =>
+      !EXCLUDED_STATUS.has(x.status) && (h.order
+        ? x.platform_booking_id === h.order
+        : !!h.room && String(x.properties?.name ?? '').startsWith(h.room) && x.check_in <= h.date && h.date < x.check_out)))
+    if (matched.length !== 1) continue
+    const key = matched[0][0]
+    const list = hintIdents.get(key) ?? []
+    if (!list.some(i => i.kind === h.kind && i.value === h.value)) list.push({ kind: h.kind, value: h.value, label: h.label })
+    hintIdents.set(key, list)
+  }
+
   return [...groups.entries()].map(([key, g]) => {
     const r = g[0]
     const rooms = [...new Set(g.map(x => x.properties?.name).filter(Boolean))]
@@ -118,7 +164,7 @@ async function loadBooking(db: SupabaseClient, ownerId: string): Promise<SourceR
       occurred_at: g.map(x => x.created_at).filter(Boolean).sort()[0] ?? `${r.check_in}T00:00:00+08:00`,
       meta: { platform: r.platform, platform_booking_id: r.platform_booking_id, nights_from: r.check_in, nights_to: r.check_out, guests: r.num_guests, rooms },
       name: g.find(x => x.guest_name)?.guest_name ?? null,
-      idents: baseIdents(g.find(x => x.guest_phone)?.guest_phone, g.find(x => x.guest_email)?.guest_email),
+      idents: [...baseIdents(g.find(x => x.guest_phone)?.guest_phone, g.find(x => x.guest_email)?.guest_email), ...(hintIdents.get(key) ?? [])],
     } as SourceRecord
   })
 }
