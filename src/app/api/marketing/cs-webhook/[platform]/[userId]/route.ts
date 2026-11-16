@@ -298,6 +298,25 @@ async function resolveLineDisplayName(userId: string, customerId: string, token:
   } catch { return undefined }
 }
 
+// 客人加入（或重新加入）LINE 官方帳號好友：還沒傳訊息也要出現在收件匣名單最上面。
+// 真實案例：客人剛加好友，收件匣名單看不到，每次都要用搜尋才找得到（LINE follow 事件原本直接略過）。
+async function recordLineFollow(userId: string, platform: string, customerId: string, token: string, industry: string): Promise<void> {
+  const now = new Date().toISOString()
+  const name = token ? await resolveLineDisplayName(userId, customerId, token) : undefined
+  const sb = getServiceClient()
+  const { data: existing } = await sb.from('cs_customers').select('id, name')
+    .eq('user_id', userId).eq('platform', platform).eq('from_id', customerId).eq('industry', industry).maybeSingle()
+  if (existing) {
+    await sb.from('cs_customers').update({ last_message_at: now, updated_at: now, ...(existing.name ? {} : name ? { name } : {}) })
+      .eq('id', existing.id)
+  } else {
+    await sb.from('cs_customers').insert({
+      user_id: userId, platform, from_id: customerId, industry, name: name ?? null,
+      stage: 'new', message_count: 0, last_message_at: now, updated_at: now,
+    })
+  }
+}
+
 // Atomic fixed-window rate check via the DB. Fails open so an un-applied migration
 // (or a transient DB error) never silences the bot.
 async function checkRateLimit(bucket: string, limit: number, windowSec: number): Promise<boolean> {
@@ -3046,6 +3065,10 @@ export async function POST(
     for (const event of events) {
       // 記錄官方帳號所在的群組（行銷群組排程推播用）；失敗不影響客服
       await trackLineGroupEvent(userId, token, event).catch(() => {})
+      if (event.type === 'follow' && event.source?.type === 'user' && event.source?.userId) {
+        await recordLineFollow(userId, platform, event.source.userId, token, knowledge.industry).catch(err => console.error('[cs-webhook] line follow', err))
+        continue
+      }
       if (event.type !== 'message') continue
       const msgType: string = event.message?.type
       if (msgType !== 'text' && msgType !== 'image') continue

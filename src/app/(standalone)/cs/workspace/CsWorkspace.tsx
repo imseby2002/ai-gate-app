@@ -1721,6 +1721,30 @@ function Unit12CustomerService({
     }
   }
 
+  // 收件匣名單自動更新：原本只在打開頁面時讀一次，新傳訊息的客人不會出現在名單上，只能用搜尋找
+  // （真實案例：客人 18:46 傳訊息，名單最上面還停在 14:54）。每 15 秒、以及切回這個分頁時重抓名單，
+  // 只更新名單本身，不切換目前開著的對話；搜尋中不更新。
+  useEffect(() => {
+    if (tab !== 'inbox' || inboxSearch.trim()) return
+    let stopped = false
+    const refresh = async () => {
+      if (document.visibilityState !== 'visible') return
+      try {
+        const url = inboxPlatformFilter !== 'all'
+          ? `/api/marketing/cs-thread?industry=${ind}&platform=${inboxPlatformFilter}&limit=500`
+          : `/api/marketing/cs-thread?industry=${ind}&limit=500`
+        const res = await fetch(url)
+        if (!res.ok || stopped) return
+        const d = await res.json()
+        if (!stopped && Array.isArray(d.conversations)) setInboxConvos(d.conversations)
+      } catch { /* 下次再試 */ }
+    }
+    const timer = setInterval(refresh, 15000)
+    const onVisible = () => { if (document.visibilityState === 'visible') void refresh() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => { stopped = true; clearInterval(timer); document.removeEventListener('visibilitychange', onVisible) }
+  }, [tab, inboxSearch, inboxPlatformFilter, ind])
+
   useEffect(() => {
     const q = inboxSearch.trim()
     if (!q) { setInboxSearchQ(''); setInboxSearchResults(null); return }
