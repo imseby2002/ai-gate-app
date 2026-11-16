@@ -1739,7 +1739,8 @@
       "ical": "iCal 同步",
       "email": "Email 擷取",
       "plan": "訂閱方案",
-      "sync": "即時同步"
+      "sync": "即時同步",
+      "downloadApp": "下載 App（Android・Beta 測試中）"
     },
     "group": {
       "property": "民宿設定",
@@ -8966,7 +8967,8 @@
     "navInbox": "收件夾",
     "navDashboard": "總覽",
     "upgradePlan": "升級方案",
-    "navAbout": "功能介紹"
+    "navAbout": "功能介紹",
+    "downloadApp": "下載 App（Android・Beta 測試中）"
   },
   "CsChannels": {
     "pageTitle": "客服頻道綁定",
@@ -9874,7 +9876,8 @@
     "flagNotePrompt": "要處理什麼？（例如：等匯款後再報名登島）",
     "flagDefaultNote": "人工標記待處理",
     "crmLink": "客戶檔案",
-    "crmLinkTitle": "在統一客戶系統（CRM）開啟這位客人"
+    "crmLinkTitle": "在統一客戶系統（CRM）開啟這位客人",
+    "downloadApp": "下載 App（Android・Beta 測試中）"
   },
   "Pit": {
     "title": "會計・個人所得稅",

@@ -3,10 +3,11 @@
 import { useTranslations } from 'next-intl'
 import {
   MessageSquare, Sparkles, BookOpen, Database, Calculator,
-  FlaskConical, ClipboardList, Ticket, Inbox, Zap, Lock, ArrowLeft, LayoutDashboard, Info,
+  FlaskConical, ClipboardList, Ticket, Inbox, Zap, Lock, ArrowLeft, LayoutDashboard, Info, Smartphone,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { CsPlanFeatures } from '@/lib/cs/entitlements'
+import { MOBILE_APP_ANDROID_URL } from '@/lib/mobile-app'
 
 // CS 各頁共用的左側功能選單。工作台（/cs/workspace）本身用內部 tab，
 // 但方案頁等獨立頁沿用這個以連結形式呈現同一份功能選單，讓 CS 各頁都有一致的側欄。
@@ -63,6 +64,7 @@ export function CsSideNav({
       )}
       {row({ label: t('upgradePlan'), icon: Zap, href: '/cs/plan', isActive: active === 'plan' })}
       {row({ label: t('navAbout'), icon: Info, href: '/cs/about', isActive: active === 'about' })}
+      {row({ label: t('downloadApp'), icon: Smartphone, href: MOBILE_APP_ANDROID_URL, isActive: false })}
     </nav>
   )
 }

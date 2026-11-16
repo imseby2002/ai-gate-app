@@ -1739,7 +1739,8 @@
       "ical": "Đồng bộ iCal",
       "email": "Trích xuất Email",
       "plan": "Gói đăng ký",
-      "sync": "Đồng bộ tức thời"
+      "sync": "Đồng bộ tức thời",
+      "downloadApp": "Tải ứng dụng (Android, đang thử nghiệm Beta)"
     },
     "group": {
       "property": "Cài đặt nhà nghỉ",
@@ -8966,7 +8967,8 @@
     "navInbox": "Hộp Thư Đến",
     "navDashboard": "Tổng Quan",
     "upgradePlan": "Nâng Cấp Gói",
-    "navAbout": "Giới Thiệu Tính Năng"
+    "navAbout": "Giới Thiệu Tính Năng",
+    "downloadApp": "Tải ứng dụng (Android, đang thử nghiệm Beta)"
   },
   "CsChannels": {
     "pageTitle": "Kết Nối Kênh CS",
@@ -9874,7 +9876,8 @@
     "flagNotePrompt": "Cần xử lý việc gì? (vd: đăng ký tour sau khi khách chuyển khoản)",
     "flagDefaultNote": "Cần xử lý",
     "crmLink": "Hồ sơ khách",
-    "crmLinkTitle": "Mở khách này trong CRM"
+    "crmLinkTitle": "Mở khách này trong CRM",
+    "downloadApp": "Tải ứng dụng (Android, đang thử nghiệm Beta)"
   },
   "Pit": {
     "title": "Kế toán・Thuế TNCN",

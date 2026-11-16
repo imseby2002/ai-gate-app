@@ -8,8 +8,9 @@ import BnbSwitcher from './BnbSwitcher'
 import {
   CalendarDays, Home, List, RefreshCw, Mail, Building2,
   BedDouble, BarChart2, Tag, ChevronLeft, ChevronRight, Menu, X,
-  LayoutGrid, Percent, Bell, Star, Globe, ClipboardList, Users, CreditCard, Zap,
+  LayoutGrid, Percent, Bell, Star, Globe, ClipboardList, Users, CreditCard, Zap, Smartphone,
 } from 'lucide-react'
+import { MOBILE_APP_ANDROID_URL } from '@/lib/mobile-app'
 
 type NavItem = { href: string; labelKey: string; icon: React.ElementType }
 type NavGroup = { titleKey: string; items: NavItem[] }
@@ -124,6 +125,14 @@ export default function BookingLayout({ children }: { children: React.ReactNode 
             </div>
           ))}
         </nav>
+
+        {/* 員工手機 App（Android 安裝檔，Beta 測試中） */}
+        <a href={MOBILE_APP_ANDROID_URL} title={t('nav.downloadApp')}
+          className={`shrink-0 flex items-center rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 border-t transition-colors
+            ${collapsed ? 'justify-center mx-1.5 py-2.5' : 'gap-2.5 mx-2 px-3 py-2.5'} mb-2`}>
+          <Smartphone className="h-4 w-4 shrink-0" />
+          {!collapsed && <span className="truncate">{t('nav.downloadApp')}</span>}
+        </a>
       </aside>
 
       {/* Content area */}
@@ -174,6 +183,11 @@ export default function BookingLayout({ children }: { children: React.ReactNode 
                 </div>
               ))}
             </div>
+            <a href={MOBILE_APP_ANDROID_URL}
+              className="shrink-0 flex items-center gap-3 mx-3 mb-4 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 border-t">
+              <Smartphone className="h-4 w-4 shrink-0" />
+              {t('nav.downloadApp')}
+            </a>
           </nav>
           <div className="flex-1 bg-black/40" onClick={() => setDrawerOpen(false)} />
         </div>

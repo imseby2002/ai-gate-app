@@ -1739,7 +1739,8 @@
       "ical": "iCal Sync",
       "email": "Email Import",
       "plan": "Subscription",
-      "sync": "Real-time Sync"
+      "sync": "Real-time Sync",
+      "downloadApp": "Download app (Android, beta)"
     },
     "group": {
       "property": "Property Settings",
@@ -8966,7 +8967,8 @@
     "navInbox": "Inbox",
     "navDashboard": "Dashboard",
     "upgradePlan": "Upgrade Plan",
-    "navAbout": "About"
+    "navAbout": "About",
+    "downloadApp": "Download app (Android, beta)"
   },
   "CsChannels": {
     "pageTitle": "CS Channel Setup",
@@ -9874,7 +9876,8 @@
     "flagNotePrompt": "What needs to be done? (e.g. register the tour after payment)",
     "flagDefaultNote": "Flagged for follow-up",
     "crmLink": "Customer profile",
-    "crmLinkTitle": "Open this customer in the CRM"
+    "crmLinkTitle": "Open this customer in the CRM",
+    "downloadApp": "Download app (Android, beta)"
   },
   "Pit": {
     "title": "Accounting · Personal Income Tax",
