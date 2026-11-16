@@ -1,6 +1,7 @@
 import crypto from 'crypto'
-import fs from 'fs'
-import path from 'path'
+import { getEsimSettings, saveEsimSettings } from './db'
+
+const PLANS_CACHE_KEY = 'plans_cache'
 
 export interface MicroEsimPlan {
   channel_dataplan_id: string
@@ -64,21 +65,27 @@ export interface MicroEsimTopupDetail {
   error_code?: string
 }
 
+interface PlansCache {
+  timestamp: number
+  syncedAt: string
+  count: number
+  plans: MicroEsimPlan[]
+}
+
 export class MicroEsimClient {
   private account: string
   private secret: string
   private saltHex: string
   private baseUrl: string
-  private cacheFilePath: string
   private static memoryCache: { plans: MicroEsimPlan[]; timestamp: number } | null = null
-  private static CACHE_TTL_MS = 12 * 60 * 60 * 1000 // 12 hours
+  private static CACHE_TTL_MS = 24 * 60 * 60 * 1000 // 資料庫快取 24 小時（排程每 6 小時更新）
+  private static MEMORY_TTL_MS = 5 * 60 * 1000 // 記憶體快取 5 分鐘
 
   constructor() {
     this.account = process.env.MICROESIM_ACCOUNT || 'imseby'
     this.secret = process.env.MICROESIM_SECRET || 'b918bb3fga9ec6ag000a838fe9cb'
     this.saltHex = process.env.MICROESIM_SALT_HEX || '1a236dbfdd9d1e5189b1a6fb0067145c'
     this.baseUrl = process.env.MICROESIM_BASE_URL || 'https://microesim.top/allesim/v1'
-    this.cacheFilePath = path.join(process.cwd(), 'scratch', 'microesim_plans_cache.json')
   }
 
   /**
@@ -129,30 +136,33 @@ export class MicroEsimClient {
   async getDataplanList(forceRefresh: boolean = false): Promise<MicroEsimPlan[]> {
     const now = Date.now()
 
-    // 1. 記憶體快取
-    if (!forceRefresh && MicroEsimClient.memoryCache && (now - MicroEsimClient.memoryCache.timestamp < MicroEsimClient.CACHE_TTL_MS)) {
+    // 1. 記憶體快取（短 TTL，讓各 serverless 實例能及時讀到排程／人工同步的新資料）
+    if (!forceRefresh && MicroEsimClient.memoryCache && (now - MicroEsimClient.memoryCache.timestamp < MicroEsimClient.MEMORY_TTL_MS)) {
       return MicroEsimClient.memoryCache.plans
     }
 
-    // 2. 本地磁碟快取
-    if (!forceRefresh && fs.existsSync(this.cacheFilePath)) {
-      try {
-        const fileContent = fs.readFileSync(this.cacheFilePath, 'utf8')
-        const parsed = JSON.parse(fileContent)
-        if (parsed.timestamp && (now - parsed.timestamp < MicroEsimClient.CACHE_TTL_MS) && Array.isArray(parsed.plans)) {
-          MicroEsimClient.memoryCache = { plans: parsed.plans, timestamp: parsed.timestamp }
-          return parsed.plans
-        }
-      } catch (err) {
-        console.warn('[MicroEsim] Failed to read disk cache:', err)
+    // 2. 資料庫快取（排程與人工同步寫入，所有實例共用）
+    if (!forceRefresh) {
+      const cached = await getEsimSettings<PlansCache | null>(PLANS_CACHE_KEY, null)
+      if (cached && Array.isArray(cached.plans) && cached.timestamp && (now - cached.timestamp < MicroEsimClient.CACHE_TTL_MS)) {
+        MicroEsimClient.memoryCache = { plans: cached.plans, timestamp: now }
+        return cached.plans
       }
     }
 
     // 3. API 呼叫
+    return (await this.syncDataplanList()).plans
+  }
+
+  /**
+   * 從 MICROESIM.TOP 取最新方案並寫入資料庫快取（排程與後台按鈕共用）
+   */
+  async syncDataplanList(): Promise<{ plans: MicroEsimPlan[]; syncedAt: string }> {
     console.log('[MicroEsim] Fetching latest dataplan catalog from microesim.top...')
     const res = await fetch(`${this.baseUrl}/esimDataplanList`, {
       method: 'GET',
       headers: this.getHeaders(),
+      signal: AbortSignal.timeout(30000),
     })
 
     if (!res.ok) {
@@ -165,20 +175,21 @@ export class MicroEsimClient {
     }
 
     const plans: MicroEsimPlan[] = data.result
+    const now = Date.now()
+    const syncedAt = new Date(now).toISOString()
 
-    // 寫入記憶體快取
     MicroEsimClient.memoryCache = { plans, timestamp: now }
+    await saveEsimSettings(PLANS_CACHE_KEY, { timestamp: now, syncedAt, count: plans.length, plans } satisfies PlansCache, 'MICROESIM 方案庫快取')
 
-    // 異步寫入本地檔案快取，不阻塞
-    try {
-      const dir = path.dirname(this.cacheFilePath)
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
-      fs.writeFileSync(this.cacheFilePath, JSON.stringify({ timestamp: now, count: plans.length, plans }), 'utf8')
-    } catch (err) {
-      console.warn('[MicroEsim] Failed to save disk cache:', err)
-    }
+    return { plans, syncedAt }
+  }
 
-    return plans
+  /**
+   * 讀取上次同步資訊（不含方案內容）
+   */
+  async getLastSyncInfo(): Promise<{ syncedAt: string | null; count: number }> {
+    const cached = await getEsimSettings<PlansCache | null>(PLANS_CACHE_KEY, null)
+    return { syncedAt: cached?.syncedAt || null, count: cached?.count || 0 }
   }
 
   /**

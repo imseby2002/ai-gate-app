@@ -20,6 +20,13 @@ export default function EsimAdminPage() {
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
   const [syncMessage, setSyncMessage] = useState('')
+  const [lastSync, setLastSync] = useState<{ syncedAt: string | null; count: number } | null>(null)
+
+  useEffect(() => {
+    fetch('/api/esim/admin/sync-plans').then(r => r.json()).then(d => {
+      if (d.success) setLastSync({ syncedAt: d.syncedAt, count: d.count })
+    }).catch(() => {})
+  }, [])
 
   // 定價與促銷設定狀態
   const [pricingSettings, setPricingSettings] = useState<EsimPricingSettings>(DEFAULT_PRICING_SETTINGS)
@@ -623,10 +630,11 @@ export default function EsimAdminPage() {
     setSyncing(true)
     setSyncMessage('')
     try {
-      const res = await fetch('/api/esim/plans?refresh=1')
+      const res = await fetch('/api/esim/admin/sync-plans', { method: 'POST' })
       const data = await res.json()
       if (data.success) {
-        setSyncMessage(`✅ 方案庫同步完成！共載入全球 ${data.destinations?.length || 0} 個國家/地區、${data.totalPlans || 0} 筆資費方案。`)
+        setLastSync({ syncedAt: data.syncedAt, count: data.count })
+        setSyncMessage(`✅ 方案庫同步完成！共 ${data.count} 筆方案（啟用 ${data.active} 筆）。`)
       } else {
         setSyncMessage(`❌ 同步失敗: ${data.error}`)
       }
@@ -690,6 +698,11 @@ export default function EsimAdminPage() {
             <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
             <span>{syncing ? '方案同步中...' : '重新整理方案庫'}</span>
           </button>
+          {lastSync?.syncedAt && (
+            <span className="text-[11px] text-slate-500" title="每 6 小時自動同步">
+              上次同步 {new Date(lastSync.syncedAt).toLocaleString('zh-TW', { hour12: false })}・{lastSync.count} 筆
+            </span>
+          )}
           <Link
             href="/crm?scope=platform"
             target="_blank"

@@ -17,13 +17,12 @@ export async function GET(req: NextRequest) {
     const country = searchParams.get('country')?.toUpperCase()
     const search = searchParams.get('search')?.toLowerCase()
     const popularOnly = searchParams.get('popular') === 'true'
-    const forceRefresh = searchParams.get('refresh') === '1'
 
     // 0. 讀取管理後台設定的利潤倍率與促銷設定
     const pricingSettings = await getEsimSettings<EsimPricingSettings>('pricing_settings', DEFAULT_PRICING_SETTINGS)
 
-    // 1. 取得所有原生方案（帶快取）
-    const rawPlans = await microEsimClient.getDataplanList(forceRefresh)
+    // 1. 取得所有原生方案（帶快取；強制同步僅限後台 /api/esim/admin/sync-plans 與排程）
+    const rawPlans = await microEsimClient.getDataplanList()
 
     // 2. 解析並美化定價與限制分析
     const parsedPlans = rawPlans
