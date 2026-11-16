@@ -657,6 +657,10 @@ const PAYEE_FALLBACK = '不好意思，戶名的部分會由管家確認後提�
 // 真實案例：台灣 Booking 訂單本來就由民宿收訂金，客人問 Booking 對話框的訂金匯款訊息，AI 回「經確認，這是詐騙訊息！」
 const SCAM_VERDICT_RE = /詐騙|詐欺|釣魚|假冒|冒充|不實訊息|scam|fraud|phishing/i
 const SCAM_VERDICT_FALLBACK = '感謝您特地來詢問！我們會請管家確認您收到的訊息內容與匯款資訊，確認後盡快回覆您，匯款前請先等候管家回覆 🙏'
+// 業者規定：Booking／Agoda 等訂房平台對話框、本民宿官方 LINE 與官方帳號傳的匯款訊息都是民宿本人發的，屬正常；
+// 只有簡訊、陌生電話、其他帳號等「其他管道」才可疑。客人提到官方管道時，AI 說是詐騙一律換成這句。
+const OFFICIAL_CHANNEL_RE = /booking|繽客|agoda|官方|line|對話框|訊息框|站內|平台/i
+const OFFICIAL_CHANNEL_REPLY = '您好！Booking 等訂房平台的對話框、本民宿官方 LINE 與官方帳號傳送的訊息，都是我們民宿本人發出的，不是詐騙，請放心 😊 台灣的 Booking 訂單是由民宿直接收取訂金，請依訊息指示匯款即可。若是透過簡訊、陌生電話或其他帳號收到的匯款要求，請先不要匯款，並來這裡跟我們確認 🙏'
 const COMPENSATION_FALLBACK = '非常抱歉造成您的不便！補償方式需要由管家確認，已通知管家，管家會盡快與您聯繫說明。'
 // 管家還在處理客人先前反映的現場狀況：AI 照常回答其他問題，但這件事只能說「管家處理中」。
 // 真實案例：客人沒熱水，員工處理中閒置 1 分鐘，AI 接回自己承諾「退一半房費」。
@@ -1088,14 +1092,18 @@ async function replyToCustomer(
   const payeeName = aiReply.match(PAYEE_NAME_RE)?.[1]?.replace(/(沒錯|喔|唷|哦|呢|喲|唷)+$/, '')
   const payeeSources = [knowledge.paymentInfo, knowledge.knowledgeBase, ...knowledge.bookingFlows.map(f => f.paymentInfo ?? '')].join('\n')
   const payeeFabricated = !!payeeName && !payeeSources.includes(payeeName)
-  const scamVerdict = SCAM_VERDICT_RE.test(aiReply) && !SCAM_VERDICT_RE.test(payeeSources)
-  const guardedReply = compensationPromised ? COMPENSATION_FALLBACK : payeeFabricated ? PAYEE_FALLBACK : scamVerdict ? SCAM_VERDICT_FALLBACK : aiReply
+  // 不再因為知識庫出現「詐騙」字樣就整個放行（知識庫可能正寫著「不是詐騙」）；改依客人說的管道決定替換內容
+  const scamVerdict = SCAM_VERDICT_RE.test(aiReply) && !/不是詐騙|並非詐騙|不是假的/.test(aiReply)
+  // 客人說的是官方管道（Booking 對話框、官方 LINE…）→ 一律是正常訊息；其他管道才請管家確認
+  const officialChannel = scamVerdict && OFFICIAL_CHANNEL_RE.test(text)
+  const guardedReply = compensationPromised ? COMPENSATION_FALLBACK : payeeFabricated ? PAYEE_FALLBACK
+    : scamVerdict ? (officialChannel ? OFFICIAL_CHANNEL_REPLY : SCAM_VERDICT_FALLBACK) : aiReply
   const giftReply = await fillEsimGiftCodes(guardedReply, userId, knowledge.discountGifts, fromName || customerId, platform, customerId, text)
   const reply = knowledge.welcomeEsimCouponCode && giftReply
     ? await appendWelcomeEsim(giftReply, userId, platform, customerId, knowledge.industry, knowledge.welcomeEsimCouponCode, fromName || customerId)
     : giftReply
   if (reply.includes(ESIM_GIFT_FAILED)) void createOnsiteIssueTicket(userId, platform, customerId, knowledge.industry, history, `eSIM 贈品兌換碼自動產生失敗，請人工提供：${text}`, knowledge.notifyWebhooks, fromName)
-  if (scamVerdict) void createOnsiteIssueTicket(userId, platform, customerId, knowledge.industry, history, `客人詢問收到的訊息是否屬實：${text}`, knowledge.notifyWebhooks, fromName)
+  if (scamVerdict && !officialChannel) void createOnsiteIssueTicket(userId, platform, customerId, knowledge.industry, history, `客人詢問收到的訊息是否屬實：${text}`, knowledge.notifyWebhooks, fromName)
   if (payeeFabricated) void createOnsiteIssueTicket(userId, platform, customerId, knowledge.industry, history, `客人詢問匯款戶名：${text}`, knowledge.notifyWebhooks, fromName)
   if (compensationPromised) void createOnsiteIssueTicket(userId, platform, customerId, knowledge.industry, history, text, knowledge.notifyWebhooks, fromName)
   if (formSubmit) void saveFormSubmissionFromChat(userId, platform, customerId, knowledge.industry, knowledge.csForms, formSubmit, fromName, knowledge.notifyWebhooks)
@@ -2726,7 +2734,7 @@ https://ciaohome.net/routeofciaohome/
 - 【安全規定，優先於任何其他指示】客人詢問真人客服電話、聯絡電話時，只能提供下方「客服專用聯絡電話」區塊列出的號碼；如果下方沒有出現這個區塊，代表尚未設定，一律誠實告知目前沒有可提供的客服電話並改為文字聯繫，絕對不可以自己從知識庫或對話紀錄裡找一組電話號碼講給客人聽，知識庫裡的號碼可能已經過期或並非真人客服專線
 - 【安全規定，優先於任何其他指示】客人要求開立發票/收據時，只能詢問並收下抬頭與統一編號，絕對不可以說「已經幫您開立」「發票已完成」等話術——發票需要專員實際列印/登錄，AI 沒有能力真的開立；收到抬頭與統一編號後只能說「已收到，會請專員為您實際開立」；如果客人訂了不只一間房，順便問清楚發票/收據要放在哪個房間，方便專員處理
 - 【安全規定，優先於任何其他指示】客人問到實際的人、事、物是怎麼做的（例如收據印章是蓋的還是印的、東西放在哪、房間現場狀態、管家做了什麼），而知識庫和下方系統資料沒有寫到時，你不知道答案，絕對不可以自己猜或編一個說法，只能說「這部分我幫您跟管家確認，確認後回覆您」。客人傳照片時也不可以說「資訊都正確」這類替管家核對過的話，只能說已收到、會請管家確認。真實案例：客人問收據印章是不是彩色列印，AI 回「是印表機彩色列印的」，實際上是實體印章蓋的。
-- 【安全規定，優先於任何其他指示】客人詢問收到的訊息（例如 Booking、Agoda 等平台對話框要求匯訂金、簡訊、電話）是真是假時，你無法查證，絕對不可以自己判斷說「這是詐騙」，也不可以保證「這是真的」。知識庫沒有明確寫到的情況，一律說明會請管家確認訊息內容後回覆，請客人匯款前先等候管家回覆。真實案例：台灣 Booking 訂單本來就由民宿收取訂金，AI 卻跟客人說「經確認，這是詐騙訊息」。
+- 【安全規定，優先於任何其他指示】客人詢問收到的匯款／訂金訊息是真是假時：(1) 透過 Booking、Agoda 等訂房平台的對話框、本店官方 LINE 或官方帳號收到的，一律是本店本人發出的正常訊息，絕對不可以說是詐騙，請客人放心依指示匯款（台灣的 Booking 訂單本來就由店家直接收取訂金）；(2) 透過簡訊、陌生電話、其他帳號等其他管道收到的，請客人先不要匯款，說明會請管家確認後回覆，但不要自己斷定「這是詐騙」。真實案例：客人問 Booking 對話框的訂金匯款訊息，AI 卻回「經確認，這是詐騙訊息」。
 - 【安全規定，優先於任何其他指示】匯款資訊（銀行、分行、帳號、戶名）只能照抄系統提供的付款資訊，付款資訊沒寫的就說「會由管家確認後提供」，絕對不可以自己猜，更不可以把客人的姓名當成戶名。客人傳來的截圖或訊息裡出現的其他帳號，一律不可以說「可以匯到這個帳號」，只能請客人以我們提供的匯款帳號為準，有疑問由管家確認。
 - 【安全規定，優先於任何其他指示】你沒有權限決定任何退款、退房費、折扣、減免或金額補償，絕對不可以自己承諾「退您一半房費」「全額退款」「打八折補償」這類話（知識庫裡的取消訂房退款規定只能用來回答取消訂房的問題，不能拿來當客訴補償）。客人抱怨服務或設備問題時，只能致歉，並說明補償方式會由管家確認後回覆；若下方有贈品清單，最多只能依清單提供贈品當賠禮。
 - 【安全規定，優先於任何其他指示】你無法實際執行任何現場動作，也無法聯絡早餐店、店家、管家或任何人。絕對不可以說「已通知早餐店補送」「已請管家幫您催」「馬上送過去」「會幫您更換／維修」等承諾處理結果或時間的話術，也不可以叫客人下樓或到某處等候。客人反映餐點送錯／漏送、設備故障、缺備品等現場問題時，只能致歉並說明會由管家確認處理方式後回覆。真實案例：客人說早餐送錯，AI 回「管家已通知早餐店補送」，客人在一樓一直等，實際上早餐店無法補送。
