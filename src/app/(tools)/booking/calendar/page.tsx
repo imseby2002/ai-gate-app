@@ -45,6 +45,19 @@ function addDays(ds: string, n: number) {
   const d = new Date(ds + 'T00:00:00'); d.setDate(d.getDate() + n); return toDateStr(d)
 }
 
+// 從網址還原日曆目前檢視的年／月／選取日，讓從「訂單詳情」返回時能停在原本看的月份，
+// 不會每次都跳回今天。只讀合法值，其餘交給預設（今天）。
+function readCalendarView(): { year?: number; month?: number; selected?: string } {
+  if (typeof window === 'undefined') return {}
+  const sp = new URLSearchParams(window.location.search)
+  const y = parseInt(sp.get('y') ?? ''), m = parseInt(sp.get('m') ?? ''), d = sp.get('d') ?? ''
+  return {
+    year: Number.isInteger(y) && y >= 2000 && y <= 2100 ? y : undefined,
+    month: Number.isInteger(m) && m >= 1 && m <= 12 ? m - 1 : undefined,
+    selected: /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : undefined,
+  }
+}
+
 interface RoomLine { property_id: string; property_name: string; total_price: string; num_guests: number; extra_beds: number }
 interface QuickForm {
   guest_name: string; guest_phone: string; guest_email: string
@@ -70,13 +83,13 @@ export default function CalendarPage() {
     no_show:   { label: t('status.no_show'),   color: STATUS_COLORS.no_show },
   }
   const now = new Date()
-  const [year, setYear]   = useState(now.getFullYear())
-  const [month, setMonth] = useState(now.getMonth())
+  const [year, setYear]   = useState(() => readCalendarView().year ?? now.getFullYear())
+  const [month, setMonth] = useState(() => readCalendarView().month ?? now.getMonth())
   const [bookings, setBookings]     = useState<Booking[]>([])
   const [properties, setProperties] = useState<Property[]>([])
   const [filterProp, setFilterProp] = useState('')
   const [loading, setLoading]       = useState(true)
-  const [selected, setSelected]     = useState<string>(toDateStr(now))
+  const [selected, setSelected]     = useState<string>(() => readCalendarView().selected ?? toDateStr(now))
   const [quickOpen, setQuickOpen]   = useState(false)
   const [quickForm, setQuickForm]   = useState<QuickForm>({
     guest_name: '', guest_phone: '', guest_email: '',
@@ -119,6 +132,14 @@ export default function CalendarPage() {
   }, [year, month, filterProp])
 
   useEffect(() => { fetchData() }, [fetchData])
+
+  // 把目前檢視的年／月／選取日寫回網址（不重新載入），這樣點進訂單詳情再返回時能停在原本月份
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const sp = new URLSearchParams(window.location.search)
+    sp.set('y', String(year)); sp.set('m', String(month + 1)); sp.set('d', selected)
+    window.history.replaceState(window.history.state, '', `${window.location.pathname}?${sp.toString()}`)
+  }, [year, month, selected])
 
   function prevMonth() { if (month === 0) { setYear(y => y - 1); setMonth(11) } else setMonth(m => m - 1) }
   function nextMonth() { if (month === 11) { setYear(y => y + 1); setMonth(0) } else setMonth(m => m + 1) }
