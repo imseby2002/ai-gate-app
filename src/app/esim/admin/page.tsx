@@ -21,12 +21,34 @@ export default function EsimAdminPage() {
   const [syncing, setSyncing] = useState(false)
   const [syncMessage, setSyncMessage] = useState('')
   const [lastSync, setLastSync] = useState<{ syncedAt: string | null; count: number } | null>(null)
+  const [syncSchedule, setSyncSchedule] = useState<{ interval_days: number; hour: number }>({ interval_days: 1, hour: 4 })
+  const [scheduleSaving, setScheduleSaving] = useState(false)
 
   useEffect(() => {
     fetch('/api/esim/admin/sync-plans').then(r => r.json()).then(d => {
-      if (d.success) setLastSync({ syncedAt: d.syncedAt, count: d.count })
+      if (d.success) {
+        setLastSync({ syncedAt: d.syncedAt, count: d.count })
+        if (d.schedule) setSyncSchedule(d.schedule)
+      }
     }).catch(() => {})
   }, [])
+
+  async function handleSaveSchedule(next: { interval_days: number; hour: number }) {
+    setSyncSchedule(next)
+    setScheduleSaving(true)
+    try {
+      const d = await fetch('/api/esim/admin/sync-plans', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(next),
+      }).then(r => r.json())
+      setSyncMessage(d.success ? '✅ 自動同步設定已儲存' : `❌ 儲存失敗: ${d.error}`)
+    } catch (err: any) {
+      setSyncMessage(`❌ 儲存異常: ${err.message}`)
+    } finally {
+      setScheduleSaving(false)
+    }
+  }
 
   // 定價與促銷設定狀態
   const [pricingSettings, setPricingSettings] = useState<EsimPricingSettings>(DEFAULT_PRICING_SETTINGS)
@@ -689,7 +711,7 @@ export default function EsimAdminPage() {
             設定全域利潤加成、即時匯率、促銷早鳥折扣、查閱原廠 API 餘額與客戶訂單
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={handleSyncCatalog}
             disabled={syncing}
@@ -698,8 +720,36 @@ export default function EsimAdminPage() {
             <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
             <span>{syncing ? '方案同步中...' : '重新整理方案庫'}</span>
           </button>
+          <div className="inline-flex items-center gap-1 text-[11px] text-slate-600">
+            <span title="台灣時間">自動同步</span>
+            <select
+              value={syncSchedule.interval_days}
+              disabled={scheduleSaving}
+              onChange={e => handleSaveSchedule({ ...syncSchedule, interval_days: Number(e.target.value) })}
+              className="border border-slate-200 rounded-lg px-1.5 py-1 bg-white text-[11px]"
+            >
+              <option value={0}>關閉</option>
+              <option value={1}>每天</option>
+              <option value={3}>每 3 天</option>
+              <option value={7}>每週</option>
+              <option value={14}>每 2 週</option>
+              <option value={30}>每 30 天</option>
+            </select>
+            {syncSchedule.interval_days > 0 && (
+              <select
+                value={syncSchedule.hour}
+                disabled={scheduleSaving}
+                onChange={e => handleSaveSchedule({ ...syncSchedule, hour: Number(e.target.value) })}
+                className="border border-slate-200 rounded-lg px-1.5 py-1 bg-white text-[11px]"
+              >
+                {Array.from({ length: 24 }, (_, h) => (
+                  <option key={h} value={h}>{String(h).padStart(2, '0')}:25</option>
+                ))}
+              </select>
+            )}
+          </div>
           {lastSync?.syncedAt && (
-            <span className="text-[11px] text-slate-500" title="每 6 小時自動同步">
+            <span className="text-[11px] text-slate-500">
               上次同步 {new Date(lastSync.syncedAt).toLocaleString('zh-TW', { hour12: false })}・{lastSync.count} 筆
             </span>
           )}
