@@ -1185,7 +1185,10 @@
       "copied": "Copied",
       "importTitle": "Imports (platform → backend)",
       "addImport": "Add import",
-      "noImport": "No platform imports set up yet"
+      "noImport": "No platform imports set up yet",
+      "editTitle": "Edit import",
+      "intervalHint": "30–60 min recommended. Platform calendars only refresh periodically, so a very short interval (e.g. 1 min) gains nothing and may be rate-limited.",
+      "everyMinutes": "every {min} min"
     },
     "notif": {
       "title": "Notification Settings",

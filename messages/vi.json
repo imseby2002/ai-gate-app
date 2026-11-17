@@ -1185,7 +1185,10 @@
       "copied": "Đã sao chép",
       "importTitle": "Nhập từ nền tảng (nền tảng → hệ thống)",
       "addImport": "Thêm nhập",
-      "noImport": "Chưa thiết lập nhập từ nền tảng nào"
+      "noImport": "Chưa thiết lập nhập từ nền tảng nào",
+      "editTitle": "Sửa nhập",
+      "intervalHint": "Khuyến nghị 30–60 phút. Lịch của nền tảng chỉ cập nhật theo chu kỳ, đặt quá ngắn (vd 1 phút) không có lợi và có thể bị giới hạn.",
+      "everyMinutes": "mỗi {min} phút"
     },
     "notif": {
       "title": "Cài đặt thông báo",

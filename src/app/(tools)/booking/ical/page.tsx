@@ -2,11 +2,11 @@
 import { useEffect, useState } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { createPortal } from 'react-dom'
-import { RefreshCw, Plus, Trash2, CheckCircle, XCircle, Loader2, Link2, Copy, Check } from 'lucide-react'
+import { RefreshCw, Plus, Trash2, CheckCircle, XCircle, Loader2, Link2, Copy, Check, Pencil } from 'lucide-react'
 
 interface ICalSetting {
   id: string; property_id: string | null; platform: string; platform_name: string; ical_url: string
-  sync_enabled: boolean; last_synced_at: string | null; last_sync_count: number | null
+  sync_enabled: boolean; sync_interval: number | null; last_synced_at: string | null; last_sync_count: number | null
   last_sync_error: string | null; properties?: { name: string }
 }
 interface Property { id: string; name: string }
@@ -29,6 +29,7 @@ export default function ICalPage() {
   const [loading, setLoading]     = useState(true)
   const [syncing, setSyncing]     = useState<string | null>(null)
   const [adding, setAdding]       = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState({ property_id: '', platform: 'booking_com', platform_name: '', ical_url: '', sync_interval: 60 })
   const [saving, setSaving] = useState(false)
   const [feeds, setFeeds] = useState<ExportFeed[]>([])
@@ -71,13 +72,13 @@ export default function ICalPage() {
     try {
       const pName = PLATFORMS.find(p => p.id === form.platform)?.name ?? form.platform_name
       const res = await fetch('/api/booking/ical', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, platform_name: pName }),
+        method: editingId ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editingId ? { id: editingId, ...form, platform_name: pName } : { ...form, platform_name: pName }),
       })
       const d = await res.json()
       if (d.setting) {
-        setSettings(prev => [...prev, d.setting])
-        setAdding(false)
+        setSettings(prev => editingId ? prev.map(x => x.id === editingId ? d.setting : x) : [...prev, d.setting])
+        closeModal()
         setForm({ property_id: '', platform: 'booking_com', platform_name: '', ical_url: '', sync_interval: 60 })
       } else alert(d.error)
     } finally { setSaving(false) }
@@ -98,9 +99,16 @@ export default function ICalPage() {
   }
 
   function openAdd(propertyId = '') {
+    setEditingId(null)
     setForm({ property_id: propertyId, platform: 'booking_com', platform_name: '', ical_url: '', sync_interval: 60 })
     setAdding(true)
   }
+  function openEdit(s: ICalSetting) {
+    setEditingId(s.id)
+    setForm({ property_id: s.property_id ?? '', platform: s.platform, platform_name: s.platform_name, ical_url: s.ical_url, sync_interval: s.sync_interval ?? 60 })
+    setAdding(true)
+  }
+  function closeModal() { setAdding(false); setEditingId(null) }
 
   // 一筆平台匯入設定的列（房型分組內共用）
   const renderSetting = (s: ICalSetting) => (
@@ -111,6 +119,9 @@ export default function ICalPage() {
           <button onClick={() => toggleEnable(s)}
             className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${s.sync_enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
             {s.sync_enabled ? t('notif.enabled') : t('notif.disabled')}
+          </button>
+          <button onClick={() => openEdit(s)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500">
+            <Pencil className="h-4 w-4" />
           </button>
           <button onClick={() => sync(s.id)} disabled={syncing !== null}
             className="p-1.5 rounded-lg hover:bg-indigo-50 text-indigo-600 disabled:opacity-40">
@@ -125,6 +136,7 @@ export default function ICalPage() {
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-gray-400">
         {s.last_synced_at && <span>{t('ical.lastPrefix', { date: new Date(s.last_synced_at).toLocaleString(locale, { timeZone: 'Asia/Taipei' }) })}</span>}
         {s.last_sync_count != null && <span>{t('bookings.count', { count: s.last_sync_count })}</span>}
+        <span>{t('ical.everyMinutes', { min: s.sync_interval ?? 60 })}</span>
         {s.last_sync_error
           ? <span className="flex items-center gap-1 text-red-500"><XCircle className="h-3 w-3" />{s.last_sync_error.slice(0, 50)}</span>
           : s.last_synced_at && <span className="flex items-center gap-1 text-green-600"><CheckCircle className="h-3 w-3" />{t('ical.normal')}</span>
@@ -219,9 +231,9 @@ export default function ICalPage() {
       {/* Add Modal */}
       {adding && createPortal(
         <div className="fixed inset-0 bg-black/40 z-[9999] flex items-end sm:items-center justify-center sm:p-4"
-          onClick={e => { if (e.target === e.currentTarget) setAdding(false) }}>
+          onClick={e => { if (e.target === e.currentTarget) closeModal() }}>
           <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-md max-h-[92dvh] overflow-y-auto p-5 space-y-4">
-            <h3 className="font-bold text-gray-900">{t('ical.addTitle')}</h3>
+            <h3 className="font-bold text-gray-900">{editingId ? t('ical.editTitle') : t('ical.addTitle')}</h3>
             <div className="space-y-1">
               <label className="text-xs font-medium text-gray-600">{t('ical.platform')}</label>
               <select value={form.platform} onChange={e => setForm(f => ({ ...f, platform: e.target.value }))}
@@ -247,11 +259,12 @@ export default function ICalPage() {
             <div className="space-y-1">
               <label className="text-xs font-medium text-gray-600">{t('ical.interval')}</label>
               <input type="number" min={15} max={1440} value={form.sync_interval}
-                onChange={e => setForm(f => ({ ...f, sync_interval: parseInt(e.target.value) }))}
+                onChange={e => setForm(f => ({ ...f, sync_interval: parseInt(e.target.value) || 60 }))}
                 className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+              <p className="text-[10px] text-gray-400">{t('ical.intervalHint')}</p>
             </div>
             <div className="flex gap-2 pt-1">
-              <button onClick={() => setAdding(false)}
+              <button onClick={closeModal}
                 className="flex-1 py-2.5 rounded-xl text-sm border text-gray-600 hover:bg-gray-50">{t('bookings.form.cancel')}</button>
               <button onClick={save} disabled={!form.ical_url.trim() || saving}
                 className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50">
