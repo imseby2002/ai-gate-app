@@ -4,7 +4,7 @@ import { ChannelAccountPicker } from '@/components/channels/ChannelAccountPicker
 import { useState, useEffect, useCallback, useRef, useContext, createContext, ReactNode, type ChangeEvent } from 'react'
 import Link from 'next/link'
 import { useTranslations, useLocale } from 'next-intl'
-import { Users, DollarSign, Calendar, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Loader2, AlertCircle, Building2, Phone, Mail, Briefcase, CreditCard, Zap, Wallet, Upload, Shield, Clock, Download, UserPlus, ArrowRight, ClipboardCheck, Store, Video, FileSpreadsheet, HeartHandshake, Send, FileText, KeyRound, Copy, Link2, UserCheck, BookOpen, Wand2 } from 'lucide-react'
+import { Users, DollarSign, Calendar, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Loader2, AlertCircle, Building2, Phone, Mail, Briefcase, CreditCard, Zap, Wallet, Upload, Shield, Clock, Download, UserPlus, ArrowRight, ClipboardCheck, Store, Video, FileSpreadsheet, HeartHandshake, Send, FileText, KeyRound, Copy, Link2, UserCheck, BookOpen, Wand2, MapPinned } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -61,7 +61,7 @@ interface Employee {
 
 interface SysAccount { id: string; full_name: string | null; email: string | null; employee: { id: string; name: string } | null }
 
-interface InsSettings { insurance_mode: string; insurance_threshold: number; insurance_currency: string }
+interface InsSettings { insurance_mode: string; insurance_threshold: number; insurance_currency: string; timezone?: string }
 const DEFAULT_INS_SETTINGS: InsSettings = { insurance_mode: 'threshold', insurance_threshold: 5000000, insurance_currency: 'VND' }
 
 // 建議是否需投保：正職即刻投保；工讀依公司政策（全員 or 月薪超過門檻）
@@ -155,6 +155,7 @@ const fmt = (n: number, locale: string) => Math.round(n).toLocaleString(locale =
 // 公司薪資幣別（人事設定，預設 VND）
 const CurrencyCtx = createContext('VND')
 const CURRENCIES = ['VND', 'TWD', 'USD', 'CNY', 'JPY', 'THB']
+const TIMEZONES = ['Asia/Ho_Chi_Minh', 'Asia/Taipei', 'Asia/Shanghai', 'Asia/Tokyo', 'Asia/Bangkok', 'Asia/Singapore']
 const fmtDate = (s: string | null | undefined, locale: string) => s ? new Date(s).toLocaleDateString(locale === 'vi' ? 'vi-VN' : locale === 'en' ? 'en-US' : 'zh-TW') : '—'
 
 // ─── 批次匯入欄位設定 ─────────────────────────────────────────
@@ -1642,7 +1643,7 @@ interface Attendance {
 const hrs = (n: number) => Math.round((Number(n) || 0) * 100) / 100
 const attTypeLabel = (type: string, t: (key: string) => string) => (type.includes('计时') || type.includes('計時') ? t('staffHourly') : type.includes('正常') ? t('staffFulltime') : (type || '—'))
 
-function AttendanceTab() {
+function AttendanceTab({ portalBase }: { portalBase: string | null }) {
   const t = useTranslations('HrPage')
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
@@ -1691,6 +1692,18 @@ function AttendanceTab() {
 
   return (
     <div className="space-y-4">
+      {/* 手機 GPS 打卡：員工入口網址＋管理入口 */}
+      <div className="p-3 rounded-xl border border-emerald-200 bg-emerald-50 flex items-center gap-3 flex-wrap text-sm">
+        <Clock className="h-4 w-4 text-emerald-700" />
+        <span className="font-semibold text-emerald-800">{t('punchTitle')}</span>
+        {portalBase && (
+          <span className="flex items-center gap-1.5 text-xs text-emerald-900">
+            {t('punchEmployeeUrl')}<code className="px-1.5 py-0.5 rounded bg-white border">{portalBase}/punch</code>
+            <button type="button" onClick={() => navigator.clipboard?.writeText(`${portalBase}/punch`)} className="text-emerald-700 hover:underline inline-flex items-center gap-0.5"><Copy className="h-3 w-3" />{t('copy')}</button>
+          </span>
+        )}
+        <Link href="/shift#punch" className="ml-auto"><Button size="sm" variant="outline" className="gap-1.5 bg-white"><MapPinned className="h-4 w-4" />{t('punchManage')}</Button></Link>
+      </div>
       {/* 考勤機來源端與雙軌制說明卡片 */}
       <div className="p-3 bg-slate-50 border rounded-xl flex items-center justify-between text-xs flex-wrap gap-2">
         <div className="flex items-center gap-2">
@@ -2532,6 +2545,7 @@ export default function HRPage() {
       insurance_mode: d.settings.insurance_mode ?? 'threshold',
       insurance_threshold: Number(d.settings.insurance_threshold) || 0,
       insurance_currency: d.settings.insurance_currency ?? 'VND',
+      timezone: d.settings.timezone ?? 'Asia/Ho_Chi_Minh',
     })
   }, [])
   useEffect(() => { loadSettings() }, [loadSettings])
@@ -2607,6 +2621,18 @@ export default function HRPage() {
               {[...new Set([...CURRENCIES, settings.insurance_currency || 'VND'])].map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </label>
+          <label className="flex items-center gap-1 text-sm text-gray-500" title={t('timezoneHint')}>
+            {t('timezoneLabel')}
+            <select value={settings.timezone || 'Asia/Ho_Chi_Minh'} disabled={!canStaff}
+              onChange={async e => {
+                const z = e.target.value
+                const r = await fetch('/api/hr/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ timezone: z }) })
+                if (r.ok) setSettings(prev => ({ ...prev, timezone: z }))
+              }}
+              className="h-8 rounded-md border bg-white px-1.5 text-sm text-gray-700">
+              {[...new Set([...TIMEZONES, settings.timezone || 'Asia/Ho_Chi_Minh'])].map(z => <option key={z} value={z}>{z.replace('Asia/', '')}</option>)}
+            </select>
+          </label>
           {canStaff && (
             <Link href="/personnel">
               <Button variant="outline" size="sm" className="gap-1.5">
@@ -2634,7 +2660,7 @@ export default function HRPage() {
       <CurrencyCtx.Provider value={settings.insurance_currency || 'VND'}>
       <Card className="p-5">
         {activeTab === 'recruitment' && <RecruitmentTab onHired={loadEmployees} />}
-        {activeTab === 'attendance' && <AttendanceTab />}
+        {activeTab === 'attendance' && <AttendanceTab portalBase={portalBase} />}
         {activeTab === 'payroll'   && <PayrollTab employees={employees} loading={empLoading} onRefresh={loadEmployees} />}
         {activeTab === 'evaluation' && <EvaluationTab employees={employees} loading={empLoading} canEditTiers />}
         {activeTab === 'contracts' && <ContractsTab employees={employees} />}

@@ -28,6 +28,10 @@ export async function PUT(req: NextRequest) {
   if (body.insurance_mode !== undefined) patch.insurance_mode = body.insurance_mode === 'all' ? 'all' : 'threshold'
   if (body.insurance_threshold !== undefined) patch.insurance_threshold = Number(body.insurance_threshold) || 0
   if (body.insurance_currency !== undefined) patch.insurance_currency = String(body.insurance_currency ?? 'VND').trim() || 'VND'
+  if (body.timezone !== undefined) {
+    const tz = String(body.timezone ?? '').trim()
+    try { new Intl.DateTimeFormat('en', { timeZone: tz }); patch.timezone = tz } catch { return NextResponse.json({ error: '時區格式錯誤' }, { status: 400 }) }
+  }
   if (body.notify_telegram !== undefined) patch.notify_telegram = !!body.notify_telegram
   if (body.notify_email !== undefined) patch.notify_email = !!body.notify_email
   if (body.eval_tiers !== undefined) patch.eval_tiers = normTiers(body.eval_tiers)

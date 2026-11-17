@@ -14,10 +14,25 @@ export function distanceM(lat1: number, lng1: number, lat2: number, lng2: number
   return 2 * R * Math.asin(Math.min(1, Math.sqrt(a)))
 }
 
-// 越南時間（UTC+7）的日期與當天分鐘數
-export function vnParts(t: Date | string): { date: string; min: number } {
-  const d = new Date(new Date(t).getTime() + 7 * 3600_000)
-  return { date: d.toISOString().slice(0, 10), min: d.getUTCHours() * 60 + d.getUTCMinutes() }
+export const DEFAULT_TZ = 'Asia/Ho_Chi_Minh'
+
+// 公司時區（人事設定 hr_settings.timezone，預設越南）的日期與當天分鐘數
+export function tzParts(t: Date | string, tz: string = DEFAULT_TZ): { date: string; min: number } {
+  let parts: Intl.DateTimeFormatPart[]
+  try {
+    parts = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(t))
+  } catch {
+    parts = new Intl.DateTimeFormat('en-CA', { timeZone: DEFAULT_TZ, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(t))
+  }
+  const g = (k: string) => parts.find(p => p.type === k)?.value ?? '00'
+  return { date: `${g('year')}-${g('month')}-${g('day')}`, min: Number(g('hour')) * 60 + Number(g('minute')) }
+}
+export const vnParts = (t: Date | string) => tzParts(t, DEFAULT_TZ)
+
+// 公司時區
+export async function companyTz(db: Admin, owner: string): Promise<string> {
+  const { data } = await db.from('hr_settings').select('timezone').eq('owner_id', owner).maybeSingle()
+  return (data?.timezone as string) || DEFAULT_TZ
 }
 
 export interface PunchRow { id?: string; employee_id: string; store: string; work_date: string; kind: 'in' | 'out'; punched_at: string; distance_m?: number | null }
@@ -29,7 +44,7 @@ export interface DaySummary {
 }
 
 // 依（員工, 工作日）配對上下班：每個「上班」配下一個「下班」，算總分鐘；與已發布班表比對遲到／早退
-export function summarize(punches: PunchRow[], plans: PlanRow[]): DaySummary[] {
+export function summarize(punches: PunchRow[], plans: PlanRow[], tz: string = DEFAULT_TZ): DaySummary[] {
   const groups = new Map<string, PunchRow[]>()
   for (const p of punches) {
     const k = `${p.employee_id}|${p.work_date}`
@@ -57,7 +72,7 @@ export function summarize(punches: PunchRow[], plans: PlanRow[]): DaySummary[] {
     const planEnd = pl.length ? Math.max(...pl.map(p => p.end_min)) : null
     const [employee_id, work_date] = k.split('|')
     // 打卡分鐘以班表日期為基準（跨夜下班 +1440）
-    const minOf = (iso: string) => { const v = vnParts(iso); return v.min + (v.date > work_date ? 1440 : 0) }
+    const minOf = (iso: string) => { const v = tzParts(iso, tz); return v.min + (v.date > work_date ? 1440 : 0) }
     const lateMin = planStart != null && firstIn ? Math.max(0, minOf(firstIn) - planStart) : 0
     const earlyMin = planEnd != null && lastOut && !inAt ? Math.max(0, planEnd - minOf(lastOut)) : 0
     out.push({ employee_id, work_date, store: list[0].store, firstIn, lastOut, minutes: Math.round(minutes), open: !!inAt, planStart, planEnd, lateMin, earlyMin })

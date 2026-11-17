@@ -14,7 +14,8 @@ import { PunchAdmin } from '@/components/shift/PunchAdmin'
 export default function ShiftPage() {
   const t = useTranslations('Shift')
   const { status: storeStatus, options: storeOptions, store, setStore, locked: lockedStore } = useStoreOptions()
-  const [view, setView] = useState<'schedule' | 'punch' | 'evaluation'>('schedule')
+  // 網址 #punch 直接開打卡分頁（人事系統「打卡管理」連結）
+  const [view, setView] = useState<'schedule' | 'punch' | 'evaluation'>(() => (typeof window !== 'undefined' && window.location.hash === '#punch' ? 'punch' : 'schedule'))
   const isAdmin = storeStatus === 'loading' ? null : storeStatus === 'ok'
 
   if (isAdmin === false) return (

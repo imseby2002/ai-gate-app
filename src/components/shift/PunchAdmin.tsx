@@ -15,7 +15,7 @@ interface Row {
 
 const vnToday = () => new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10)
 const hhmm = (m: number) => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
-const clock = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString('en-GB', { hour12: false, hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' }) : '—')
+const clock = (iso: string | null, tz = 'Asia/Ho_Chi_Minh') => (iso ? new Date(iso).toLocaleTimeString('en-GB', { hour12: false, hour: '2-digit', minute: '2-digit', timeZone: tz }) : '—')
 const dur = (m: number) => `${Math.floor(m / 60)}h${String(m % 60).padStart(2, '0')}`
 const inputCls = 'h-9 px-2 rounded-md border text-sm bg-white dark:bg-gray-900'
 
@@ -25,6 +25,7 @@ export function PunchAdmin({ store }: { store: string }) {
   const [to, setTo] = useState(vnToday())
   const [geo, setGeo] = useState<Geo | null>(null)
   const [rows, setRows] = useState<Row[] | null>(null)
+  const [tz, setTz] = useState<string | undefined>(undefined)
   const [lat, setLat] = useState(''), [lng, setLng] = useState(''), [radius, setRadius] = useState('150')
   const [msg, setMsg] = useState('')
   const [busy, setBusy] = useState(false)
@@ -37,7 +38,7 @@ export function PunchAdmin({ store }: { store: string }) {
       .then(r => (r.ok ? r.json() : { geo: null, rows: [] }))
       .then(d => {
         if (!alive) return
-        setGeo(d.geo); setRows(d.rows ?? [])
+        setGeo(d.geo); setRows(d.rows ?? []); setTz(d.tz)
         if (d.geo) {
           setLat(d.geo.geo_lat != null ? String(d.geo.geo_lat) : '')
           setLng(d.geo.geo_lng != null ? String(d.geo.geo_lng) : '')
@@ -117,8 +118,8 @@ export function PunchAdmin({ store }: { store: string }) {
                       <td className="py-1.5 pr-2 whitespace-nowrap">{r.work_date.slice(5)}</td>
                       <td className="pr-2">{r.name}</td>
                       <td className="pr-2 whitespace-nowrap">{r.planStart != null && r.planEnd != null ? `${hhmm(r.planStart)}–${hhmm(r.planEnd)}` : '—'}</td>
-                      <td className="pr-2">{clock(r.firstIn)}</td>
-                      <td className="pr-2">{r.open ? '…' : clock(r.lastOut)}</td>
+                      <td className="pr-2">{clock(r.firstIn, tz)}</td>
+                      <td className="pr-2">{r.open ? '…' : clock(r.lastOut, tz)}</td>
                       <td className="pr-2">{r.minutes ? dur(r.minutes) : '—'}</td>
                       <td className="space-x-1 whitespace-nowrap">
                         {r.absent && <span className="text-rose-600">{t('punchAbsent')}</span>}
