@@ -18,7 +18,7 @@ export function MyPortalButton() {
   const punch = locale === 'vi' ? 'Chấm công' : locale === 'en' ? 'Clock in/out' : '打卡'
   return (
     <span className="inline-flex items-center gap-1.5">
-      <a href={url} className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full border border-emerald-300 bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700">
+      <a href="/punch" className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full border border-emerald-300 bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700">
         <Clock className="h-3.5 w-3.5" />{punch}
       </a>
       <a href={url} className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full border border-indigo-300 bg-indigo-50 text-indigo-700 text-xs font-medium hover:bg-indigo-100">

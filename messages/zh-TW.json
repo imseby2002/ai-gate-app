@@ -8097,7 +8097,9 @@
     "punchEmployeeUrl": "員工打卡網址：",
     "punchManage": "打卡管理（門市座標、紀錄）",
     "timezoneLabel": "時區",
-    "timezoneHint": "打卡、遲到早退與工作日以此時區計算"
+    "timezoneHint": "打卡、遲到早退與工作日以此時區計算",
+    "punchUrlHintPortal": "（打卡編號或 ERP 帳號登入皆可）",
+    "punchUrlHintLogin": "（登入 ERP 帳號後打卡，帳號需綁定員工）"
   },
   "FinancePage": {
     "accountBalancesTitle": "各帳戶結餘",

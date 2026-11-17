@@ -1696,12 +1696,16 @@ function AttendanceTab({ portalBase }: { portalBase: string | null }) {
       <div className="p-3 rounded-xl border border-emerald-200 bg-emerald-50 flex items-center gap-3 flex-wrap text-sm">
         <Clock className="h-4 w-4 text-emerald-700" />
         <span className="font-semibold text-emerald-800">{t('punchTitle')}</span>
-        {portalBase && (
-          <span className="flex items-center gap-1.5 text-xs text-emerald-900">
-            {t('punchEmployeeUrl')}<code className="px-1.5 py-0.5 rounded bg-white border">{portalBase}/punch</code>
-            <button type="button" onClick={() => navigator.clipboard?.writeText(`${portalBase}/punch`)} className="text-emerald-700 hover:underline inline-flex items-center gap-0.5"><Copy className="h-3 w-3" />{t('copy')}</button>
-          </span>
-        )}
+        {(() => {
+          const url = `${portalBase ?? 'https://office.im-tourist.com'}/punch`
+          return (
+            <span className="flex items-center gap-1.5 text-xs text-emerald-900 flex-wrap">
+              {t('punchEmployeeUrl')}<code className="px-1.5 py-0.5 rounded bg-white border">{url}</code>
+              <button type="button" onClick={() => navigator.clipboard?.writeText(url)} className="text-emerald-700 hover:underline inline-flex items-center gap-0.5"><Copy className="h-3 w-3" />{t('copy')}</button>
+              <span className="text-emerald-700/80">{portalBase ? t('punchUrlHintPortal') : t('punchUrlHintLogin')}</span>
+            </span>
+          )
+        })()}
         <Link href="/shift#punch" className="ml-auto"><Button size="sm" variant="outline" className="gap-1.5 bg-white"><MapPinned className="h-4 w-4" />{t('punchManage')}</Button></Link>
       </div>
       {/* 考勤機來源端與雙軌制說明卡片 */}

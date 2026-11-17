@@ -8097,7 +8097,9 @@
     "punchEmployeeUrl": "Link chấm công cho nhân viên:",
     "punchManage": "Quản lý chấm công (vị trí, lịch sử)",
     "timezoneLabel": "Múi giờ",
-    "timezoneHint": "Chấm công, đi muộn/về sớm tính theo múi giờ này"
+    "timezoneHint": "Chấm công, đi muộn/về sớm tính theo múi giờ này",
+    "punchUrlHintPortal": "(đăng nhập bằng mã chấm công hoặc tài khoản ERP)",
+    "punchUrlHintLogin": "(đăng nhập tài khoản ERP đã liên kết nhân viên)"
   },
   "FinancePage": {
     "accountBalancesTitle": "Số dư theo tài khoản",
