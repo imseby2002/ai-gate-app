@@ -24,7 +24,11 @@ export interface ParseResult {
 export function normalizeDate(val: unknown): string {
   if (val === null || val === undefined || val === '') return ''
   if (val instanceof Date) {
-    return val.toISOString().slice(0, 10)
+    // SheetJS（cellDates）回傳的是「瀏覽器時區」的當天 00:00（舊年份還會有幾十秒的歷史時差），
+    // 用 toISOString 會在 UTC+7／+8 變成前一天。改取本地日期，並加半天避開邊界誤差。
+    const d = new Date(val.getTime() + 12 * 3600_000)
+    if (isNaN(d.getTime())) return ''
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
   }
   if (typeof val === 'number') {
     // Excel base date 1899-12-30
