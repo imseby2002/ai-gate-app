@@ -8,7 +8,7 @@ import {
   FileText, X, Sparkles, Wand2, Zap, TrendingUp, Check, AlertTriangle,
   ClipboardList, PieChart, Clock as ClockIcon, ThumbsUp, Lock,
   MessageSquare, BookOpen, Database, Calculator, FlaskConical, Ticket, Inbox, Send, ShieldCheck, Phone,
-  PanelLeftClose, PanelLeftOpen, UserRound, Image as ImageIcon, Tag, Gift, LayoutDashboard, Info, Menu, ChevronLeft, ImagePlus,
+  PanelLeftClose, PanelLeftOpen, UserRound, Image as ImageIcon, Tag, Gift, LayoutDashboard, Info, Menu, ChevronLeft, ImagePlus, Smartphone,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { uploadInboxImage, formatBubbleTime } from '@/lib/cs/resize-image'
@@ -17,6 +17,7 @@ import { CsSupportPanel } from './CsSupportPanel'
 import { CsFormsPanel } from './CsFormsPanel'
 import { CsCorrectionsPanel } from './CsCorrectionsPanel'
 import type { CsPlanFeatures } from '@/lib/cs/entitlements'
+import { MOBILE_APP_ANDROID_URL } from '@/lib/mobile-app'
 
 function formatCustomerName(name: string | null | undefined, fromId: string, t: (key: string, values?: Record<string, string | number | Date>) => string): string {
   if (name && name.trim()) return name.trim()
@@ -2186,6 +2187,18 @@ function Unit12CustomerService({
           >
             <Info className="h-4 w-4 shrink-0 text-gray-400" />
             {(!sidebarCollapsed || mobileNavOpen) && <span className="flex-1 text-left truncate">{t('aboutCta')}</span>}
+          </a>
+
+          {/* 員工手機 App（Android 安裝檔，Beta 測試中） */}
+          <a
+            href={MOBILE_APP_ANDROID_URL}
+            title={sidebarCollapsed ? t('downloadApp') : undefined}
+            className={`px-3 py-2 rounded-lg text-xs text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors flex items-center gap-2 sm:w-full ${
+              sidebarCollapsed ? 'sm:justify-center' : 'sm:justify-start'
+            }`}
+          >
+            <Smartphone className="h-4 w-4 shrink-0 text-gray-400" />
+            {(!sidebarCollapsed || mobileNavOpen) && <span className="flex-1 text-left truncate">{t('downloadApp')}</span>}
           </a>
         </nav>
         <div className="flex-1 min-w-0 space-y-5">
