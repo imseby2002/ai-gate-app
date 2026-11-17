@@ -2,6 +2,26 @@ import crypto from 'crypto'
 import { getEsimSettings, saveEsimSettings } from './db'
 
 const PLANS_CACHE_KEY = 'plans_cache'
+export const PLANS_SYNC_SETTINGS_KEY = 'plans_sync_settings'
+
+/** 自動同步設定：interval_days = 0 表示關閉；hour 為台灣時間 0–23 */
+export interface PlansSyncSettings {
+  interval_days: number
+  hour: number
+}
+
+export const DEFAULT_PLANS_SYNC_SETTINGS: PlansSyncSettings = { interval_days: 1, hour: 4 }
+
+/** 判斷現在是否該執行自動同步（排程每小時呼叫一次） */
+export function isPlansSyncDue(settings: PlansSyncSettings, lastSyncedAt: string | null, now: Date = new Date()): boolean {
+  if (!settings.interval_days || settings.interval_days <= 0) return false
+  const twHour = (now.getUTCHours() + 8) % 24
+  if (twHour !== settings.hour) return false
+  if (!lastSyncedAt) return true
+  const elapsed = now.getTime() - new Date(lastSyncedAt).getTime()
+  // 預留 2 小時誤差，避免排程延遲造成跳過一輪
+  return elapsed >= settings.interval_days * 24 * 3600 * 1000 - 2 * 3600 * 1000
+}
 
 export interface MicroEsimPlan {
   channel_dataplan_id: string
@@ -78,7 +98,6 @@ export class MicroEsimClient {
   private saltHex: string
   private baseUrl: string
   private static memoryCache: { plans: MicroEsimPlan[]; timestamp: number } | null = null
-  private static CACHE_TTL_MS = 24 * 60 * 60 * 1000 // 資料庫快取 24 小時（排程每 6 小時更新）
   private static MEMORY_TTL_MS = 5 * 60 * 1000 // 記憶體快取 5 分鐘
 
   constructor() {
@@ -141,10 +160,10 @@ export class MicroEsimClient {
       return MicroEsimClient.memoryCache.plans
     }
 
-    // 2. 資料庫快取（排程與人工同步寫入，所有實例共用）
+    // 2. 資料庫快取（排程與人工同步寫入，所有實例共用；不自動過期，只在無快取時才即時抓）
     if (!forceRefresh) {
       const cached = await getEsimSettings<PlansCache | null>(PLANS_CACHE_KEY, null)
-      if (cached && Array.isArray(cached.plans) && cached.timestamp && (now - cached.timestamp < MicroEsimClient.CACHE_TTL_MS)) {
+      if (cached && Array.isArray(cached.plans) && cached.plans.length > 0) {
         MicroEsimClient.memoryCache = { plans: cached.plans, timestamp: now }
         return cached.plans
       }
