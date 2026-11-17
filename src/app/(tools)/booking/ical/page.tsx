@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { createPortal } from 'react-dom'
-import { RefreshCw, Plus, Trash2, CheckCircle, XCircle, Loader2 } from 'lucide-react'
+import { RefreshCw, Plus, Trash2, CheckCircle, XCircle, Loader2, Link2, Copy, Check } from 'lucide-react'
 
 interface ICalSetting {
   id: string; property_id: string | null; platform: string; platform_name: string; ical_url: string
@@ -10,6 +10,7 @@ interface ICalSetting {
   last_sync_error: string | null; properties?: { name: string }
 }
 interface Property { id: string; name: string }
+interface ExportFeed { property_id: string; name: string; url: string }
 
 export default function ICalPage() {
   const t = useTranslations('Booking')
@@ -30,16 +31,25 @@ export default function ICalPage() {
   const [adding, setAdding]       = useState(false)
   const [form, setForm] = useState({ property_id: '', platform: 'booking_com', platform_name: '', ical_url: '', sync_interval: 60 })
   const [saving, setSaving] = useState(false)
+  const [feeds, setFeeds] = useState<ExportFeed[]>([])
+  const [copied, setCopied] = useState<string | null>(null)
 
   useEffect(() => {
     Promise.all([
       fetch('/api/booking/ical').then(r => r.json()),
       fetch('/api/booking/properties').then(r => r.json()),
-    ]).then(([ic, pr]) => {
+      fetch('/api/booking/ical/export-url').then(r => r.json()),
+    ]).then(([ic, pr, ex]) => {
       setSettings(ic.settings ?? [])
       setProperties(pr.properties ?? [])
+      setFeeds(ex.feeds ?? [])
     }).finally(() => setLoading(false))
   }, [])
+
+  async function copyUrl(url: string) {
+    try { await navigator.clipboard.writeText(url) } catch { /* 忽略 */ }
+    setCopied(url); setTimeout(() => setCopied(c => c === url ? null : c), 1500)
+  }
 
   async function sync(id?: string) {
     setSyncing(id ?? 'all')
@@ -153,6 +163,33 @@ export default function ICalPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* 匯出連結：讓平台訂閱後自動關房 */}
+      {!loading && feeds.length > 0 && (
+        <div className="mt-8 space-y-3">
+          <div>
+            <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
+              <Link2 className="h-4 w-4 text-indigo-600" />{t('ical.exportTitle')}
+            </h2>
+            <p className="text-xs text-gray-500 mt-0.5">{t('ical.exportHint')}</p>
+          </div>
+          <div className="space-y-2">
+            {feeds.map(f => (
+              <div key={f.property_id} className="bg-white border rounded-xl p-4 space-y-2">
+                <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded font-medium">{f.name}</span>
+                <div className="flex items-center gap-2">
+                  <input readOnly value={f.url} onFocus={e => e.currentTarget.select()}
+                    className="flex-1 min-w-0 text-[11px] font-mono border rounded-lg px-2 py-1.5 bg-gray-50 text-gray-600" />
+                  <button onClick={() => copyUrl(f.url)}
+                    className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-medium text-indigo-600 hover:bg-indigo-50">
+                    {copied === f.url ? <><Check className="h-3.5 w-3.5" />{t('ical.copied')}</> : <><Copy className="h-3.5 w-3.5" />{t('ical.copy')}</>}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

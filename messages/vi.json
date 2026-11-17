@@ -1178,7 +1178,11 @@
       "platform": "Nền tảng",
       "propertyOptional": "Phòng (tùy chọn)",
       "urlHint": "Lấy từ \"Cài đặt lịch\" hoặc \"Xuất iCal\" trong trang quản trị nền tảng",
-      "interval": "Khoảng đồng bộ (phút)"
+      "interval": "Khoảng đồng bộ (phút)",
+      "exportTitle": "Liên kết xuất (tự động khóa phòng)",
+      "exportHint": "Dán liên kết của mỗi phòng vào mục \"Nhập lịch / iCal\" của từng nền tảng (Booking.com, Agoda, Airbnb…). Nền tảng sẽ đọc định kỳ và tự động khóa những ngày đã đặt hoặc đóng ở hệ thống của bạn.",
+      "copy": "Sao chép",
+      "copied": "Đã sao chép"
     },
     "notif": {
       "title": "Cài đặt thông báo",

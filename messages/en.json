@@ -1178,7 +1178,11 @@
       "platform": "Platform",
       "propertyOptional": "Room (optional)",
       "urlHint": "Get it from the platform's \"Calendar Settings\" or \"iCal Export\"",
-      "interval": "Sync Interval (minutes)"
+      "interval": "Sync Interval (minutes)",
+      "exportTitle": "Export links (auto-block)",
+      "exportHint": "Paste each room's link into each platform's \"Import calendar / iCal\" setting (Booking.com, Agoda, Airbnb…). The platform reads it periodically and auto-blocks the dates booked or closed in your backend.",
+      "copy": "Copy",
+      "copied": "Copied"
     },
     "notif": {
       "title": "Notification Settings",
