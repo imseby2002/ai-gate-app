@@ -1,7 +1,7 @@
 'use client'
 
 import { ChannelAccountPicker } from '@/components/channels/ChannelAccountPicker'
-import { useState, useEffect, useCallback, useRef, ReactNode, type ChangeEvent } from 'react'
+import { useState, useEffect, useCallback, useRef, useContext, createContext, ReactNode, type ChangeEvent } from 'react'
 import Link from 'next/link'
 import { useTranslations, useLocale } from 'next-intl'
 import { Users, DollarSign, Calendar, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Loader2, AlertCircle, Building2, Phone, Mail, Briefcase, CreditCard, Zap, Wallet, Upload, Shield, Clock, Download, UserPlus, ArrowRight, ClipboardCheck, Store, Video, FileSpreadsheet, HeartHandshake, Send, FileText, KeyRound, Copy, Link2, UserCheck, BookOpen, Wand2 } from 'lucide-react'
@@ -152,6 +152,9 @@ const getLabels = (t: (key: string) => string): Record<string, string> => ({
 })
 
 const fmt = (n: number, locale: string) => Math.round(n).toLocaleString(locale === 'vi' ? 'vi-VN' : locale === 'en' ? 'en-US' : 'zh-TW')
+// 公司薪資幣別（人事設定，預設 VND）
+const CurrencyCtx = createContext('VND')
+const CURRENCIES = ['VND', 'TWD', 'USD', 'CNY', 'JPY', 'THB']
 const fmtDate = (s: string | null | undefined, locale: string) => s ? new Date(s).toLocaleDateString(locale === 'vi' ? 'vi-VN' : locale === 'en' ? 'en-US' : 'zh-TW') : '—'
 
 // ─── 批次匯入欄位設定 ─────────────────────────────────────────
@@ -471,6 +474,7 @@ function PayrollForm({ employees, initial, onSave, onCancel, saving, attHours, e
   attHours: Record<string, number>
   evals: Record<string, EvalSummary>
 }) {
+  const currency = useContext(CurrencyCtx)
   const t = useTranslations('HrPage')
   const locale = useLocale()
   const [d, setD] = useState(initial)
@@ -532,7 +536,7 @@ function PayrollForm({ employees, initial, onSave, onCancel, saving, attHours, e
       </div>
       <div className="flex items-center justify-between rounded-lg bg-white border px-4 py-2.5">
         <span className="text-sm font-medium text-gray-600">{t('netPayAmountLabel')}</span>
-        <span className={`text-lg font-bold ${net < 0 ? 'text-red-600' : 'text-green-600'}`}>{fmt(net, locale)} VND</span>
+        <span className={`text-lg font-bold ${net < 0 ? 'text-red-600' : 'text-green-600'}`}>{fmt(net, locale)} {currency}</span>
       </div>
       <Field label={t('notesLabel')}>
         <textarea value={d.notes} onChange={e => set('notes', e.target.value)} disabled={saving} rows={2}
@@ -637,7 +641,8 @@ function InsuranceSettingsPanel({ settings, onSaved, onClose }: {
             type="number" disabled={saving || d.insurance_mode === 'all'} />
         </Field>
         <Field label={t('currencyLabel')}>
-          <InputEl value={d.insurance_currency} onChange={v => setD(p => ({ ...p, insurance_currency: v }))} placeholder="VND" disabled={saving} />
+          <SelectEl value={d.insurance_currency} onChange={v => setD(p => ({ ...p, insurance_currency: v }))}
+            options={[...new Set([...CURRENCIES, d.insurance_currency || 'VND'])].map(c => ({ value: c, label: c }))} disabled={saving} />
         </Field>
       </div>
       <div className="flex justify-end gap-2">
@@ -692,6 +697,7 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
   const LABELS = getLabels(t)
   const STAFF_LABEL = getStaffLabel(t)
   const INS_STATUS_LABEL = getInsStatusLabel(t)
+  const currency = useContext(CurrencyCtx)
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Employee | null>(null)
   const [saving, setSaving] = useState(false)
@@ -940,7 +946,7 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
                   <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-400">
                     {emp.email && <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{emp.email}</span>}
                     {emp.hire_date && <span>{t('hireDatePrefix')}{fmtDate(emp.hire_date, locale)}</span>}
-                    <span className="flex items-center gap-1"><DollarSign className="h-3 w-3" />{t('baseSalaryPrefix')} {fmt(emp.base_salary, locale)} VND</span>
+                    <span className="flex items-center gap-1"><DollarSign className="h-3 w-3" />{t('baseSalaryPrefix')} {fmt(emp.base_salary, locale)} {currency}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
@@ -1111,6 +1117,7 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
 function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: Employee[]; loading: boolean; onRefresh: () => void }) {
   const t = useTranslations('HrPage')
   const locale = useLocale()
+  const currency = useContext(CurrencyCtx)
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
@@ -1305,9 +1312,11 @@ function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: 
           <Button size="sm" variant="outline" className="gap-1" onClick={exportPayrollXlsx} disabled={payroll.length === 0} title={t('payrollExportTitle')}>
             <Download className="h-4 w-4" />{t('payrollExportButton')}
           </Button>
+          {currency === 'VND' && (
           <Button size="sm" variant="outline" className="gap-1 text-emerald-700 border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100" onClick={exportBank} disabled={exporting || payroll.length === 0} title={t('downloadTpbankTitle')}>
-            {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}{t('downloadTpbankButton')}
-          </Button>
+              {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}{t('downloadTpbankButton')}
+            </Button>
+          )}
           <Button size="sm" variant="outline" className="gap-1 border-violet-200 bg-violet-50/60 text-violet-700 hover:bg-violet-100" onClick={generateDraft} disabled={generating} title={t('payrollDraftTitle')}>
             {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}{t('payrollDraftButton')}
           </Button>
@@ -1352,7 +1361,7 @@ function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: 
           </Card>
           <Card className="p-3">
             <p className="text-xs text-gray-500 mb-1">{t('totalPayrollLabel')}</p>
-            <p className="text-xl font-bold">{fmt(totalNet, locale)} VND</p>
+            <p className="text-xl font-bold">{fmt(totalNet, locale)} {currency}</p>
           </Card>
           <Card className="p-3">
             <p className="text-xs text-gray-500 mb-1">{t('paymentProgressLabel')}</p>
@@ -2586,6 +2595,18 @@ export default function HRPage() {
           <span className="text-sm text-gray-400 mr-1">
             {t('activeEmployeesPrefix')} <span className="font-semibold text-gray-700">{employees.filter(e => e.status === 'active').length}</span> {t('activeEmployeesSuffix')}
           </span>
+          <label className="flex items-center gap-1 text-sm text-gray-500" title={t('currencyHint')}>
+            {t('currencyLabel')}
+            <select value={settings.insurance_currency || 'VND'} disabled={!canStaff}
+              onChange={async e => {
+                const c = e.target.value
+                const r = await fetch('/api/hr/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ insurance_currency: c }) })
+                if (r.ok) setSettings(prev => ({ ...prev, insurance_currency: c }))
+              }}
+              className="h-8 rounded-md border bg-white px-1.5 text-sm text-gray-700">
+              {[...new Set([...CURRENCIES, settings.insurance_currency || 'VND'])].map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </label>
           {canStaff && (
             <Link href="/personnel">
               <Button variant="outline" size="sm" className="gap-1.5">
@@ -2610,6 +2631,7 @@ export default function HRPage() {
       </div>
 
       {/* Tab Content */}
+      <CurrencyCtx.Provider value={settings.insurance_currency || 'VND'}>
       <Card className="p-5">
         {activeTab === 'recruitment' && <RecruitmentTab onHired={loadEmployees} />}
         {activeTab === 'attendance' && <AttendanceTab />}
@@ -2621,6 +2643,7 @@ export default function HRPage() {
         {activeTab === 'employees' && <EmployeesTab employees={employees} loading={empLoading} onRefresh={loadEmployees} settings={settings} onSettingsChange={setSettings} portalBase={portalBase} />}
         {activeTab === 'leave'     && <LeaveTab employees={employees} loading={empLoading} />}
       </Card>
+      </CurrencyCtx.Provider>
     </div>
   )
 }

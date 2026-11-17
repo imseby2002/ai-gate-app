@@ -15,7 +15,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ no: 
   const { data } = await ctx.admin.from('hr_payroll').select(FIELDS)
     .eq('id', id).eq('employee_id', ctx.emp.id).eq('owner_id', ctx.company.ownerId).maybeSingle()
   if (!data) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  return NextResponse.json({ payslip: data })
+  const { data: hs } = await ctx.admin.from('hr_settings').select('insurance_currency').eq('owner_id', ctx.company.ownerId).maybeSingle()
+  return NextResponse.json({ payslip: { ...data, currency: hs?.insurance_currency || 'VND' } })
 }
 
 // 確認簽收

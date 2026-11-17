@@ -14,7 +14,8 @@ export default function PayslipView({ data, confirmed, confirming, onConfirm, ba
   banner?: React.ReactNode
 }) {
   const emp = data.hr_employees || {}
-  const fmt = (n: number | null | undefined) => Math.round(Number(n) || 0).toLocaleString('vi-VN') + ' VND'
+  const currency = String(data.currency || 'VND')
+  const fmt = (n: number | null | undefined) => Math.round(Number(n) || 0).toLocaleString(currency === 'VND' ? 'vi-VN' : 'zh-TW') + ' ' + currency
 
   const gross = Math.round(Number(data.gross_salary || (Number(data.base_salary) + Number(data.allowances) + Number(data.bonus))))
   const bhxh = Math.round(Number(data.bhxh_amount || 0))
