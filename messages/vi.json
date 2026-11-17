@@ -1182,7 +1182,10 @@
       "exportTitle": "Liên kết xuất (tự động khóa phòng)",
       "exportHint": "Dán liên kết của mỗi phòng vào mục \"Nhập lịch / iCal\" của từng nền tảng (Booking.com, Agoda, Airbnb…). Nền tảng sẽ đọc định kỳ và tự động khóa những ngày đã đặt hoặc đóng ở hệ thống của bạn.",
       "copy": "Sao chép",
-      "copied": "Đã sao chép"
+      "copied": "Đã sao chép",
+      "importTitle": "Nhập từ nền tảng (nền tảng → hệ thống)",
+      "addImport": "Thêm nhập",
+      "noImport": "Chưa thiết lập nhập từ nền tảng nào"
     },
     "notif": {
       "title": "Cài đặt thông báo",

@@ -1182,7 +1182,10 @@
       "exportTitle": "Export links (auto-block)",
       "exportHint": "Paste each room's link into each platform's \"Import calendar / iCal\" setting (Booking.com, Agoda, Airbnb…). The platform reads it periodically and auto-blocks the dates booked or closed in your backend.",
       "copy": "Copy",
-      "copied": "Copied"
+      "copied": "Copied",
+      "importTitle": "Imports (platform → backend)",
+      "addImport": "Add import",
+      "noImport": "No platform imports set up yet"
     },
     "notif": {
       "title": "Notification Settings",
