@@ -13,7 +13,18 @@ import { PunchAdmin } from '@/components/shift/PunchAdmin'
 
 export default function ShiftPage() {
   const t = useTranslations('Shift')
-  const { status: storeStatus, options: storeOptions, store, setStore, locked: lockedStore } = useStoreOptions()
+  const { status: storeStatus, options: storeOptions, store, setStore, locked: lockedStore, reload: reloadStores } = useStoreOptions()
+  const [creating, setCreating] = useState(false)
+  const [createErr, setCreateErr] = useState('')
+  async function createDefaultLocation() {
+    setCreating(true); setCreateErr('')
+    const r = await fetch('/api/shift/location', { method: 'POST' })
+    const j = await r.json().catch(() => ({}))
+    setCreating(false)
+    if (!r.ok) { setCreateErr(j.error ?? 'error'); return }
+    if (j.code) setStore(j.code)
+    setView('punch'); reloadStores()
+  }
   // 網址 #punch 直接開打卡分頁（人事系統「打卡管理」連結）
   const [view, setView] = useState<'schedule' | 'punch' | 'evaluation'>(() => (typeof window !== 'undefined' && window.location.hash === '#punch' ? 'punch' : 'schedule'))
   const isAdmin = storeStatus === 'loading' ? null : storeStatus === 'ok'
@@ -49,7 +60,13 @@ export default function ShiftPage() {
         </div>
       </Card>
 
-      {!store ? <div className="text-center py-10 text-gray-400 text-sm">{t('selectStoreFirst')}</div>
+      {!store && storeOptions.length === 0 && storeStatus === 'ok' ? (
+        <Card className="p-6 text-center space-y-3">
+          <p className="text-sm text-gray-600">{t('noStoreSingleSite')}</p>
+          <Button onClick={createDefaultLocation} disabled={creating}>{t('createCompanyLocation')}</Button>
+          {createErr && <p className="text-sm text-rose-600">{createErr}</p>}
+        </Card>
+      ) : !store ? <div className="text-center py-10 text-gray-400 text-sm">{t('selectStoreFirst')}</div>
         : view === 'evaluation' ? <StoreEvaluation store={store} />
         : view === 'punch' ? <PunchAdmin key={store} store={store} />
         : <ScheduleBoard key={store} store={store} />}

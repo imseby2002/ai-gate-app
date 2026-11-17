@@ -5673,7 +5673,9 @@
     "estApplyConfirm": "Lưu ước tính làm nhu cầu theo ngày {from}~{to}? (Thay ước tính cũ trong khoảng này; nhu cầu bạn tự đặt được giữ nguyên.)",
     "estApplied": "Đã áp dụng {n} khung nhu cầu",
     "unitCups": "số ly",
-    "unitOrders": "số đơn"
+    "unitOrders": "số đơn",
+    "noStoreSingleSite": "Chưa có cửa hàng. Nếu chỉ có một địa điểm, tạo địa điểm từ hồ sơ công ty (tên, địa chỉ), rồi cài tọa độ ở mục Chấm công. Nhân viên không cần gán cửa hàng.",
+    "createCompanyLocation": "Tạo địa điểm từ hồ sơ công ty"
   },
   "Team": {
     "moduleBooking": "Đặt phòng",

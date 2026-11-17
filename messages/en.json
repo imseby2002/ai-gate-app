@@ -5673,7 +5673,9 @@
     "estApplyConfirm": "Save the estimate as date-specific needs for {from}~{to}? (Replaces earlier estimates in this period; your manual needs stay.)",
     "estApplied": "Applied {n} need ranges",
     "unitCups": "cups",
-    "unitOrders": "orders"
+    "unitOrders": "orders",
+    "noStoreSingleSite": "No store set up yet. If you have a single location, create it from your company profile (name and address), then set its coordinates under Clock-in. Employees don't need a store assigned.",
+    "createCompanyLocation": "Create location from company profile"
   },
   "Team": {
     "moduleBooking": "Booking",

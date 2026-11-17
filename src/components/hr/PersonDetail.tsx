@@ -92,7 +92,8 @@ export function PersonDetail({ id, onBack, embedded = false }: { id: string; onB
   const fields = ([[t('fieldName'), 'name'], [t('fieldGender'), 'gender'], [t('fieldNativePlace'), 'native_place'], [t('fieldBirthday'), 'birthday', 'date'], [t('fieldIdNumber'), 'id_number'], [t('fieldEducation'), 'education'], [t('fieldPosition'), 'position'], [t('fieldStore'), 'store'], [t('fieldPayrollNo'), 'payroll_no'], [t('fieldStaffCategory'), 'staff_category'], [t('fieldPhone'), 'phone'], [t('fieldEmail'), 'email', 'email'], [t('fieldCompanyEmail'), 'company_email', 'email'], ['ZALO', 'zalo_user_id'], [t('fieldAddress'), 'address']] as [string, keyof Person, string?][])
   const F = ([label, key, type]: [string, keyof Person, string?]) => (
     <label className="space-y-1"><span className="text-xs text-gray-500">{label}</span>
-      <Input type={type ?? 'text'} value={String(form[key] ?? '')} onChange={e => set({ [key]: e.target.value } as Partial<Person>)} className="h-9" /></label>
+      <Input type={type ?? 'text'} value={String(form[key] ?? '')} onChange={e => set({ [key]: e.target.value } as Partial<Person>)} className="h-9"
+        {...(key === 'id_number' ? { autoComplete: 'off', name: 'hr-no-autofill', 'data-form-type': 'other' } : {})} /></label>
   )
 
   return (
