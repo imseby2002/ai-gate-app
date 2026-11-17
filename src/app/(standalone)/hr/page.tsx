@@ -243,12 +243,14 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   )
 }
 
-function InputEl({ value, onChange, placeholder, type = 'text', disabled }: {
+function InputEl({ value, onChange, placeholder, type = 'text', disabled, noAutofill }: {
   value: string | number; onChange: (v: string) => void; placeholder?: string; type?: string; disabled?: boolean
+  noAutofill?: boolean // 身分證、銀行帳號等：不讓瀏覽器跳出「儲存身分證／自動填入」
 }) {
   return (
     <Input type={type} value={value} onChange={e => onChange(e.target.value)}
-      placeholder={placeholder} disabled={disabled} className="h-8 text-sm" />
+      placeholder={placeholder} disabled={disabled} className="h-8 text-sm"
+      {...(noAutofill ? { autoComplete: 'off', name: 'hr-no-autofill', 'data-lpignore': 'true', 'data-form-type': 'other' } : {})} />
   )
 }
 
@@ -323,9 +325,9 @@ function EmployeeForm({ initial, onSave, onCancel, saving, settings, accounts, s
         </Field>
         <Field label={t('attendanceNoLabel')}><InputEl value={d.attendance_no} onChange={v => set('attendance_no', v)} placeholder={t('attendanceNoPlaceholder')} disabled={saving} /></Field>
         <Field label={t('payrollCodeLabel')}><InputEl value={d.payroll_code ?? ''} onChange={v => set('payroll_code', v)} placeholder={t('payrollCodePlaceholder')} disabled={saving} /></Field>
-        <Field label={t('bankAccountLabel')}><InputEl value={d.bank_account} onChange={v => set('bank_account', v)} placeholder={t('bankAccountPlaceholder')} disabled={saving} /></Field>
+        <Field label={t('bankAccountLabel')}><InputEl value={d.bank_account} onChange={v => set('bank_account', v)} placeholder={t('bankAccountPlaceholder')} disabled={saving} noAutofill /></Field>
         <Field label={t('bankNameLabel')}><InputEl value={d.bank_name} onChange={v => set('bank_name', v)} placeholder={t('bankNamePlaceholder')} disabled={saving} /></Field>
-        <Field label={t('idNumberLabel')}><InputEl value={d.id_number} onChange={v => set('id_number', v)} placeholder="A123456789" disabled={saving} /></Field>
+        <Field label={t('idNumberLabel')}><InputEl value={d.id_number} onChange={v => set('id_number', v)} placeholder="A123456789" disabled={saving} noAutofill /></Field>
         <Field label={t('birthdayLabel')}><InputEl value={d.birthday ?? ''} onChange={v => set('birthday', v || null)} type="date" disabled={saving} /></Field>
         <Field label={t('empStatusLabel')}>
           <SelectEl value={d.status} onChange={v => set('status', v)}
@@ -2310,7 +2312,7 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
                   <option value="hourly">{t('staffHourly')}</option>
                 </select>
               </Field>
-              <Field label={t('idNumberLabel')}><Input value={editing.id_number ?? ''} onChange={e => setEditing({ ...editing, id_number: e.target.value })} /></Field>
+              <Field label={t('idNumberLabel')}><Input value={editing.id_number ?? ''} onChange={e => setEditing({ ...editing, id_number: e.target.value })} autoComplete="off" name="hr-no-autofill" data-form-type="other" /></Field>
               <Field label={t('birthdayLabel')}><Input type="date" value={editing.birthday ?? ''} onChange={e => setEditing({ ...editing, birthday: e.target.value })} /></Field>
               <Field label={t('interviewTimeLabel')}><Input type="datetime-local" value={editing.interview_at ?? ''} onChange={e => setEditing({ ...editing, interview_at: e.target.value })} /></Field>
               <Field label={t('sourceLabel')}><Input value={editing.source ?? ''} onChange={e => setEditing({ ...editing, source: e.target.value })} /></Field>
