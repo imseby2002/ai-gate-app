@@ -281,6 +281,8 @@ function EmployeeForm({ initial, onSave, onCancel, saving, settings, accounts, s
   const LABELS = getLabels(t)
   const STAFF_LABEL = getStaffLabel(t)
   const INS_STATUS_LABEL = getInsStatusLabel(t)
+  // 單一營業點公司：不顯示門市（員工自動歸屬唯一營業點）
+  const singleSite = (storeOptions ?? []).length <= 1
   const [d, setD] = useState(initial)
   const set = (k: keyof typeof d, v: string | number | boolean | null) => setD(prev => ({ ...prev, [k]: v }))
   const unitAreas = getLocalizedUnitAreas(locale)
@@ -316,13 +318,13 @@ function EmployeeForm({ initial, onSave, onCancel, saving, settings, accounts, s
         <Field label={t('hireDateLabel')}><InputEl value={d.hire_date ?? ''} onChange={v => set('hire_date', v || null)} type="date" disabled={saving} /></Field>
         <Field label={t('baseSalaryMonthlyLabel')}><InputEl value={d.base_salary} onChange={v => set('base_salary', Number(v) || 0)} type="number" placeholder="45000" disabled={saving} /></Field>
         <Field label={d.staff_category === 'hourly' ? t('hourlyRateStarLabel') : t('hourlyRateLabel')}><InputEl value={d.hourly_rate} onChange={v => set('hourly_rate', Number(v) || 0)} type="number" placeholder={t('hourlyRatePlaceholder')} disabled={saving} /></Field>
-        <Field label={t('storeLabel')}>
+        {!singleSite && <Field label={t('storeLabel')}>
           <select value={d.store ?? ''} onChange={e => set('store', e.target.value)} disabled={saving} className="h-9 w-full rounded-md border px-2 text-sm bg-white dark:bg-gray-900">
             <option value="">{t('storeNone')}</option>
             {d.store && !(storeOptions ?? []).some(o => o.code === d.store) && <option value={d.store}>{d.store}</option>}
             {(storeOptions ?? []).map(o => <option key={o.code} value={o.code}>{o.name && o.name !== o.code ? `${o.code}・${o.name}` : o.code}</option>)}
           </select>
-        </Field>
+        </Field>}
         <Field label={t('attendanceNoLabel')}><InputEl value={d.attendance_no} onChange={v => set('attendance_no', v)} placeholder={t('attendanceNoPlaceholder')} disabled={saving} /></Field>
         <Field label={t('payrollCodeLabel')}><InputEl value={d.payroll_code ?? ''} onChange={v => set('payroll_code', v)} placeholder={t('payrollCodePlaceholder')} disabled={saving} /></Field>
         <Field label={t('bankAccountLabel')}><InputEl value={d.bank_account} onChange={v => set('bank_account', v)} placeholder={t('bankAccountPlaceholder')} disabled={saving} noAutofill /></Field>
@@ -352,7 +354,7 @@ function EmployeeForm({ initial, onSave, onCancel, saving, settings, accounts, s
             {t('storeLockedLabel')}
           </label>
         )}
-        {(units.includes('store_leader') || (units.includes('store') && d.store_locked !== false)) && (
+        {!singleSite && (units.includes('store_leader') || (units.includes('store') && d.store_locked !== false)) && (
           <div className="space-y-1">
             <div className="text-xs font-medium text-gray-600">{t('managedStoresLabel')}</div>
             <div className="flex flex-wrap gap-1.5">
@@ -826,7 +828,7 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
     <div className="space-y-4">
       <ProfileEditDaysSetting />
       <div className="flex flex-wrap items-center gap-2">
-        <label className="flex items-center gap-1.5 text-sm text-gray-600">
+        {storeKeys.length > 1 && <label className="flex items-center gap-1.5 text-sm text-gray-600">
           <Building2 className="h-4 w-4" />
           <select value={storeFilter} onChange={e => setStoreFilter(e.target.value)} className="h-9 rounded-md border px-2 text-sm bg-white dark:bg-gray-900" title={t('storeFilterHint')}>
             <option value="">{t('storeFilterAll', { n: employees.length })}</option>
@@ -836,7 +838,7 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
             })}
             {(storeCounts.get('') ?? 0) > 0 && <option value="__none__">{t('storeFilterNone', { n: storeCounts.get('') ?? 0 })}</option>}
           </select>
-        </label>
+        </label>}
         {['all', 'active', 'inactive', 'resigned'].map(s => (
           <Button key={s} size="sm" variant={statusFilter === s ? 'default' : 'ghost'} onClick={() => setStatusFilter(s)}>
             {s === 'all' ? t('allWithCount', { n: base.length }) : t('labelWithCount', { label: LABELS[s] ?? s, n: base.filter(e => e.status === s).length })}
@@ -937,7 +939,7 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
                       </span>
                     )}
                     {emp.position && <span className="text-xs text-gray-400">· {emp.position}</span>}
-                    {emp.store && <Badge variant="outline" className="gap-1 text-xs"><Store className="h-3 w-3" />{emp.store}</Badge>}
+                    {emp.store && storeOptions.length > 1 && <Badge variant="outline" className="gap-1 text-xs"><Store className="h-3 w-3" />{emp.store}</Badge>}
                     <StatusBadge value={emp.status} kind="emp" />
                     {emp.profile_id && (() => { const a = accountOf(emp.profile_id); return <Badge variant="outline" className="gap-1 text-blue-700 border-blue-300" title={t('accountBadgeHint', { account: a?.email || a?.full_name || '' })}><UserCheck className="h-3 w-3" />{t('accountBadge')}</Badge> })()}
                     {emp.status === 'active' && !emp.birthday && <Badge variant="outline" className="text-amber-700 border-amber-300" title={t('missingBirthdayHint')}>{t('missingBirthday')}</Badge>}

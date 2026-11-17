@@ -47,10 +47,11 @@ export default function ShiftPage() {
       </div>
 
       <Card className="p-3 flex flex-wrap items-end gap-3">
-        <label className="space-y-1 inline-block">
+        {/* 單一營業點公司不顯示門市選單 */}
+        {storeOptions.length > 1 && <label className="space-y-1 inline-block">
           <span className="block text-xs text-gray-500">{t('store')}{lockedStore ? ` 🔒` : ''}</span>
           <StoreSelect value={store} onChange={setStore} options={storeOptions} locked={lockedStore} placeholder={t('storePlaceholder')} />
-        </label>
+        </label>}
         <div className="ml-auto flex gap-1 rounded-lg bg-gray-100 dark:bg-gray-900 p-1">
           {(['schedule', 'punch', 'evaluation'] as const).map(v => (
             <button key={v} onClick={() => setView(v)} className={`px-3 py-1.5 rounded-md text-sm ${view === v ? 'bg-white dark:bg-gray-800 shadow-sm font-medium' : 'text-gray-500'}`}>
