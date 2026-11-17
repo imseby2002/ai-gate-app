@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { singleSiteCode } from '@/lib/company/single-site'
 import { profileOpen } from '@/lib/hr/profile'
 import { ATTENDANCE_ERR, attendanceTaken, cleanAttendanceNo, validAttendanceNo } from '@/lib/hr/attendance'
 import { getHrContext, hasHrArea } from '@/lib/auth/unit-access'
@@ -100,7 +101,7 @@ export async function POST(req: NextRequest) {
       hourly_rate: hourly_rate ?? 0,
       attendance_no: cleanAttendanceNo(attendance_no),
       payroll_code: payroll_code ?? '',
-      store: access.store ?? (String(store ?? '').trim() || cleanStores(managed_stores)[0] || ''),
+      store: access.store ?? (String(store ?? '').trim() || cleanStores(managed_stores)[0] || (await singleSiteCode(supabase, user.id)) || ''),
       bank_name: bank_name ?? '',
       birthday: birthday || null,
       units: access.units,
@@ -180,6 +181,8 @@ export async function PATCH(req: NextRequest) {
   if (updates.managed_stores !== undefined) updates.managed_stores = cleanStores(updates.managed_stores)
   // 所屬門市空白但有勾管理門市：以第一家為所屬門市（排班、員工專區以所屬門市為準）
   if (updates.store !== undefined && !String(updates.store ?? '').trim() && Array.isArray(updates.managed_stores) && updates.managed_stores.length) updates.store = updates.managed_stores[0]
+  // 單一營業點公司：門市空白一律歸屬唯一營業點
+  if (updates.store !== undefined && !String(updates.store ?? '').trim()) { const only = await singleSiteCode(supabase, user.id); if (only) updates.store = only }
   if (updates.profile_id !== undefined) {
     updates.profile_id = updates.profile_id || null
     if (updates.profile_id) {

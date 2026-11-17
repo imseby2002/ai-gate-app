@@ -4,6 +4,7 @@
  */
 import { NextResponse } from 'next/server'
 import { getShiftContext } from '@/lib/shift/scope'
+import { assignSingleSite } from '@/lib/company/single-site'
 
 export async function POST() {
   const ctx = await getShiftContext()
@@ -11,7 +12,7 @@ export async function POST() {
   if (!ctx.isAdmin) return NextResponse.json({ error: '只有公司負責人或公司 IT 可以建立營業點' }, { status: 403 })
   const { admin, ownerId } = ctx
   const { data: existing } = await admin.from('fin_stores').select('code').eq('owner_id', ownerId).limit(1)
-  if (existing?.length) return NextResponse.json({ code: existing[0].code, created: false })
+  if (existing?.length) { await assignSingleSite(admin, ownerId); return NextResponse.json({ code: existing[0].code, created: false }) }
   const [{ data: brand }, { data: prof }] = await Promise.all([
     admin.from('mkt_brand').select('name, address').eq('owner_id', ownerId).maybeSingle(),
     admin.from('profiles').select('company_id').eq('id', ownerId).maybeSingle(),
@@ -26,5 +27,6 @@ export async function POST() {
     const { error: e2 } = await admin.from('pnl_stores').insert({ owner_id: ownerId, code, name, kind: 'store' })
     if (e2) return NextResponse.json({ error: e2.message }, { status: 500 })
   }
+  await assignSingleSite(admin, ownerId)
   return NextResponse.json({ code, created: true })
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { singleSiteCode } from '@/lib/company/single-site'
 import { getHrContext } from '@/lib/auth/unit-access'
 
 async function getAdminUser() {
@@ -22,6 +23,7 @@ export async function POST(req: NextRequest) {
   }
 
   const errors: { line: number; reason: string }[] = []
+  const onlySite = await singleSiteCode(supabase, user.id)
   const toInsert: Record<string, unknown>[] = []
 
   rows.forEach((r, i) => {
@@ -48,7 +50,7 @@ export async function POST(req: NextRequest) {
       staff_category,
       hourly_rate: Number(r.hourly_rate) || 0,
       attendance_no: String(r.attendance_no ?? ''),
-      store: String(r.store ?? ''),
+      store: String(r.store ?? '').trim() || onlySite || '',
       bank_name: String(r.bank_name ?? ''),
     })
   })
