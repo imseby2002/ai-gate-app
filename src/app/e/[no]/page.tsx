@@ -161,8 +161,8 @@ const ruleOn = (r: AvailRuleRow, d: string) => r.start_date <= d && r.end_date >
 
 // 手機 GPS 打卡：取得目前位置送到伺服器，伺服器判斷是否在門市範圍內及上班／下班
 interface PunchDay { work_date: string; firstIn: string | null; lastOut: string | null; minutes: number; open: boolean; planStart: number | null; planEnd: number | null; lateMin: number; earlyMin: number }
-interface PunchInfo { today: string; next: 'in' | 'out'; punches: { id: string; kind: 'in' | 'out'; punched_at: string; distance_m: number | null }[]; days: PunchDay[]; stores: { code: string; name: string; ready: boolean; radius: number }[] }
-const clock = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString('vi-VN', { hour12: false, hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' }) : '—')
+interface PunchInfo { today: string; tz?: string; next: 'in' | 'out'; punches: { id: string; kind: 'in' | 'out'; punched_at: string; distance_m: number | null }[]; days: PunchDay[]; stores: { code: string; name: string; ready: boolean; radius: number }[] }
+const clock = (iso: string | null, tz = 'Asia/Ho_Chi_Minh') => (iso ? new Date(iso).toLocaleTimeString('vi-VN', { hour12: false, hour: '2-digit', minute: '2-digit', timeZone: tz }) : '—')
 const dur = (m: number) => `${Math.floor(m / 60)}h${String(m % 60).padStart(2, '0')}`
 
 function PunchCard({ api }: { api: string }) {
@@ -216,7 +216,7 @@ function PunchCard({ api }: { api: string }) {
         <div className="text-sm divide-y">
           {info.punches.map(p => (
             <div key={p.id} className="flex justify-between py-1.5">
-              <span>{p.kind === 'in' ? 'Vào ca / 上班' : 'Tan ca / 下班'}</span><b>{clock(p.punched_at)}</b>
+              <span>{p.kind === 'in' ? 'Vào ca / 上班' : 'Tan ca / 下班'}</span><b>{clock(p.punched_at, info.tz)}</b>
             </div>
           ))}
         </div>
@@ -228,7 +228,7 @@ function PunchCard({ api }: { api: string }) {
             {info.days.map(d => (
               <div key={d.work_date} className="py-1.5 flex flex-wrap items-center gap-x-3">
                 <span className="w-20">{d.work_date.slice(5)} ({wd(d.work_date)})</span>
-                <span>{clock(d.firstIn)}–{d.open ? '…' : clock(d.lastOut)}</span>
+                <span>{clock(d.firstIn, info.tz)}–{d.open ? '…' : clock(d.lastOut, info.tz)}</span>
                 <b>{dur(d.minutes)}</b>
                 {d.lateMin > 0 && <span className="text-rose-600">Trễ / 遲到 {d.lateMin}′</span>}
                 {d.earlyMin > 0 && <span className="text-orange-600">Về sớm / 早退 {d.earlyMin}′</span>}

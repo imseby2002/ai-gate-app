@@ -61,7 +61,7 @@ interface Employee {
 
 interface SysAccount { id: string; full_name: string | null; email: string | null; employee: { id: string; name: string } | null }
 
-interface InsSettings { insurance_mode: string; insurance_threshold: number; insurance_currency: string }
+interface InsSettings { insurance_mode: string; insurance_threshold: number; insurance_currency: string; timezone?: string }
 const DEFAULT_INS_SETTINGS: InsSettings = { insurance_mode: 'threshold', insurance_threshold: 5000000, insurance_currency: 'VND' }
 
 // 建議是否需投保：正職即刻投保；工讀依公司政策（全員 or 月薪超過門檻）
@@ -155,6 +155,7 @@ const fmt = (n: number, locale: string) => Math.round(n).toLocaleString(locale =
 // 公司薪資幣別（人事設定，預設 VND）
 const CurrencyCtx = createContext('VND')
 const CURRENCIES = ['VND', 'TWD', 'USD', 'CNY', 'JPY', 'THB']
+const TIMEZONES = ['Asia/Ho_Chi_Minh', 'Asia/Taipei', 'Asia/Shanghai', 'Asia/Tokyo', 'Asia/Bangkok', 'Asia/Singapore']
 const fmtDate = (s: string | null | undefined, locale: string) => s ? new Date(s).toLocaleDateString(locale === 'vi' ? 'vi-VN' : locale === 'en' ? 'en-US' : 'zh-TW') : '—'
 
 // ─── 批次匯入欄位設定 ─────────────────────────────────────────
@@ -2544,6 +2545,7 @@ export default function HRPage() {
       insurance_mode: d.settings.insurance_mode ?? 'threshold',
       insurance_threshold: Number(d.settings.insurance_threshold) || 0,
       insurance_currency: d.settings.insurance_currency ?? 'VND',
+      timezone: d.settings.timezone ?? 'Asia/Ho_Chi_Minh',
     })
   }, [])
   useEffect(() => { loadSettings() }, [loadSettings])
@@ -2617,6 +2619,18 @@ export default function HRPage() {
               }}
               className="h-8 rounded-md border bg-white px-1.5 text-sm text-gray-700">
               {[...new Set([...CURRENCIES, settings.insurance_currency || 'VND'])].map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </label>
+          <label className="flex items-center gap-1 text-sm text-gray-500" title={t('timezoneHint')}>
+            {t('timezoneLabel')}
+            <select value={settings.timezone || 'Asia/Ho_Chi_Minh'} disabled={!canStaff}
+              onChange={async e => {
+                const z = e.target.value
+                const r = await fetch('/api/hr/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ timezone: z }) })
+                if (r.ok) setSettings(prev => ({ ...prev, timezone: z }))
+              }}
+              className="h-8 rounded-md border bg-white px-1.5 text-sm text-gray-700">
+              {[...new Set([...TIMEZONES, settings.timezone || 'Asia/Ho_Chi_Minh'])].map(z => <option key={z} value={z}>{z.replace('Asia/', '')}</option>)}
             </select>
           </label>
           {canStaff && (

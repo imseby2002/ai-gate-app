@@ -8095,7 +8095,9 @@
     "currencyHint": "本公司薪資與金額顯示的幣別",
     "punchTitle": "手機 GPS 打卡",
     "punchEmployeeUrl": "員工打卡網址：",
-    "punchManage": "打卡管理（門市座標、紀錄）"
+    "punchManage": "打卡管理（門市座標、紀錄）",
+    "timezoneLabel": "時區",
+    "timezoneHint": "打卡、遲到早退與工作日以此時區計算"
   },
   "FinancePage": {
     "accountBalancesTitle": "各帳戶結餘",

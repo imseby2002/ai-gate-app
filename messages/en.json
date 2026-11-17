@@ -8095,7 +8095,9 @@
     "currencyHint": "Currency used for this company's salaries and amounts",
     "punchTitle": "Mobile GPS clock-in",
     "punchEmployeeUrl": "Employee clock-in link:",
-    "punchManage": "Clock-in admin (store location, records)"
+    "punchManage": "Clock-in admin (store location, records)",
+    "timezoneLabel": "Time zone",
+    "timezoneHint": "Clock-in, late/early and work dates use this time zone"
   },
   "FinancePage": {
     "accountBalancesTitle": "Balance by account",

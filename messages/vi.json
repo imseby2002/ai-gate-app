@@ -8095,7 +8095,9 @@
     "currencyHint": "Đơn vị tiền tệ dùng cho lương và số tiền của công ty",
     "punchTitle": "Chấm công GPS trên điện thoại",
     "punchEmployeeUrl": "Link chấm công cho nhân viên:",
-    "punchManage": "Quản lý chấm công (vị trí, lịch sử)"
+    "punchManage": "Quản lý chấm công (vị trí, lịch sử)",
+    "timezoneLabel": "Múi giờ",
+    "timezoneHint": "Chấm công, đi muộn/về sớm tính theo múi giờ này"
   },
   "FinancePage": {
     "accountBalancesTitle": "Số dư theo tài khoản",

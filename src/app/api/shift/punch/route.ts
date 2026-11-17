@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getShiftContext, storeAllowed } from '@/lib/shift/scope'
 import { isDate } from '@/lib/shift/time'
-import { summarize, vnParts, type PlanRow, type PunchRow } from '@/lib/hr/punch'
+import { companyTz, summarize, tzParts, type PlanRow, type PunchRow } from '@/lib/hr/punch'
 import type { UnitContext } from '@/lib/auth/unit-access'
 
 const deny = (ctx: UnitContext) => NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status })
@@ -17,7 +17,8 @@ export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams
   const store = (sp.get('store') ?? '').trim()
   if (!store || !storeAllowed(ctx, store)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  const today = vnParts(new Date()).date
+  const tz = await companyTz(ctx.admin, ctx.ownerId)
+  const today = tzParts(new Date(), tz).date
   const from = isDate(sp.get('from')) ? sp.get('from')! : today
   const to = isDate(sp.get('to')) ? sp.get('to')! : from
   const [{ data: geo }, { data: punches }, { data: plans }] = await Promise.all([
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest) {
       .eq('owner_id', ctx.ownerId).eq('store', store).eq('status', 'published').gte('work_date', from).lte('work_date', to),
   ])
   const list = (punches ?? []) as PunchRow[]
-  const days = summarize(list, (plans ?? []) as PlanRow[])
+  const days = summarize(list, (plans ?? []) as PlanRow[], tz)
   // 有排班但沒打卡＝缺卡
   const punched = new Set(days.map(d => `${d.employee_id}|${d.work_date}`))
   const missing = new Map<string, PlanRow[]>()
@@ -51,7 +52,7 @@ export async function GET(req: NextRequest) {
       planStart: Math.min(...v.map(p => p.start_min)), planEnd: Math.max(...v.map(p => p.end_min)), lateMin: 0, earlyMin: 0,
     })),
   ].sort((a, b) => b.work_date.localeCompare(a.work_date) || a.name.localeCompare(b.name))
-  return NextResponse.json({ geo: geo ?? null, rows })
+  return NextResponse.json({ geo: geo ?? null, rows, tz })
 }
 
 export async function PUT(req: NextRequest) {
