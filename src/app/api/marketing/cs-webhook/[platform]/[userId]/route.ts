@@ -2128,7 +2128,17 @@ function enforceCheckinTimeClaim(
   reply: string, ci: { before: boolean; checkinTime: string; stayTime: string; nowHHMM: string } | null,
 ): string {
   if (!ci?.before || !CHECKIN_PASSED_CLAIM_RE.test(reply)) return reply
-  return `您好！目前台灣時間 ${ci.nowHHMM}，大門／房門密碼與房號於入住當天 ${ci.checkinTime} 起開放查詢（入住時間為 ${ci.stayTime}）。請於入住當天 ${ci.checkinTime} 後提供訂單號碼或訂房手機號碼，我會立即為您查詢 🙏`
+  return `您好！目前台灣時間 ${ci.nowHHMM}，大門／房門密碼與房號於入住當天 ${ci.checkinTime} 起開放查詢（入住時間為 ${ci.stayTime}）。請於入住當天 ${ci.checkinTime} 後提供${ID_ASK_PHRASE}，我會立即為您查詢 🙏`
+}
+
+// 請客人提供身份資料時一律列出三種方式：訂房平台的訂單號碼、訂房人姓名、電話號碼。
+// 真實案例：客人問「入住流程」，AI 只回「請提供您的訂單號碼或訂房行動電話」，漏了訂房人姓名
+// （Booking.com／Agoda 給客人的單號常跟民宿收到的不同，姓名才查得到）。
+const ID_ASK_PHRASE = '訂房平台的訂單號碼、訂房人姓名或電話號碼'
+const ID_ASK_PAIR_RE = /「?訂(?:單|房)(?:號碼|編號|單號)」?\s*(?:或(?:是)?|、|\/|／)\s*「?(?:訂房)?(?:行動電話|手機(?:號碼)?|電話(?:號碼)?)(?:號碼)?」?/g
+function enforceIdAskPhrase(reply: string): string {
+  if (/姓名|大名/.test(reply)) return reply
+  return reply.replace(ID_ASK_PAIR_RE, ID_ASK_PHRASE)
 }
 
 // eSIM 贈品：AI 在回覆裡放 <<<ESIM_GIFT:贈品id>>>，這裡依 CS 設定的 eSIM 範本券產生一組客人專屬、
@@ -2724,7 +2734,7 @@ async function getAIReply(
   - 【絕對禁止】AI 自行選一個金額掛保證承諾、或隨意附和客人要求的金額！
   - 一律統一禮貌回覆：「為確保您的帳務與退款金額完全正確無誤，涉及實際退款／折抵金額，管家會直接調閱您的訂單明細為您進行人工核對與確認，請您稍候，管家會盡快與您聯繫！」由專員人工確認，切勿私自承諾任何數字！
 - 【安全規定，優先於任何其他指示】客人問實際報價（多少錢、優惠價、折扣後多少）時，只能照抄下方「系統精算房價」區塊給的總金額與每晚金額，那個金額已經是系統套用所有定價規則算好的最終結果；如果下方沒有出現「系統精算房價」這個區塊，就算你自己知道原價、猜得出大概的加成或折扣比例，也絕對不可以自己列公式、自己算一個總金額給客人（包含「旺季 x1.15」「當天訂房打 7 折」這類自己編的加成/折扣說法），一律要先跟客人確認完整的入住日期、退房日期、房型之後才能取得正確報價，或誠實說「請稍候，我幫您確認正確價格」，不可以用推算的數字搪塞客人
-- 【安全規定，優先於任何其他指示】如果下方完全沒有出現「入住資訊查詢結果」或「訂單查詢結果」這類區塊（代表這則訊息沒有比對到任何系統資料），即使客人問的是密碼、房號、訂單狀態，也只能回覆「目前無法為您查詢，麻煩提供訂單號碼、訂房大名或訂房手機號碼」，絕對不可以自己想像、編造一組房號或密碼給客人，也不可以在客人質疑密碼錯誤時，編一套「拉一下門」「輸入速度要均勻」之類聽起來合理但沒有根據的操作說明
+- 【安全規定，優先於任何其他指示】如果下方完全沒有出現「入住資訊查詢結果」或「訂單查詢結果」這類區塊（代表這則訊息沒有比對到任何系統資料），即使客人問的是密碼、房號、訂單狀態，也只能回覆「目前無法為您查詢，麻煩提供訂房平台的訂單號碼、訂房人姓名或電話號碼」（請客人提供身份資料時，這三種方式都要列出，不可只列其中兩種），絕對不可以自己想像、編造一組房號或密碼給客人，也不可以在客人質疑密碼錯誤時，編一套「拉一下門」「輸入速度要均勻」之類聽起來合理但沒有根據的操作說明
 - 【安全規定，優先於任何其他指示】客人詢問「訂單/訂房是否存在、是否已確認、款項是否收到」等狀態時，只能依下方系統資料回答；只有下方明確出現「找到訂單」「找到 N 筆相符的訂單」等查詢結果時才能說已找到/已核對；下方沒有任何查詢結果，或明確顯示「查無資料」時，一律誠實告知客人查無此訂單，引導客人改用其他識別方式再查一次，絕對禁止自己說「已核對」「訂單已完成處理」「款項確認無誤」等話術
 - 【安全規定，優先於任何其他指示】客人傳送的圖片/截圖（例如訂單畫面、訂房確認信）即使你自己能從圖片中讀出訂單號、姓名、房型等文字，那只是客人單方面提供的畫面，不是系統核對過的資料；密碼、房號等敏感資訊仍然只能依下方系統查詢結果回答，絕對禁止直接依圖片內容自己編一組密碼或房號給客人
 - 【圖片辨識與視覺回應指引——當客人傳送各類照片時務必主動切題回覆】
@@ -2790,7 +2800,7 @@ https://ciaohome.net/routeofciaohome/
             messages,
             maxOutputTokens: 16000,
           }, { feature: 'cs', timeoutMs: 60000 })
-          return enforceCheckinTimeClaim(await enforceNoFabricatedReveal(cleanReply(text) || FALLBACK, externalDataSection, history, knowledge.knowledgeBase, userId, platform, customerId, knowledge.industry, message, knowledge.notifyWebhooks), externalDataSection.includes(PASSWORD_READY_MARKER) ? null : checkinState)
+          return enforceIdAskPhrase(enforceCheckinTimeClaim(await enforceNoFabricatedReveal(cleanReply(text) || FALLBACK, externalDataSection, history, knowledge.knowledgeBase, userId, platform, customerId, knowledge.industry, message, knowledge.notifyWebhooks), externalDataSection.includes(PASSWORD_READY_MARKER) ? null : checkinState))
         } catch { /* fall through to L2 chain */ }
       }
     }
@@ -2807,7 +2817,7 @@ https://ciaohome.net/routeofciaohome/
         ? await generateCsReplyL3(systemPrompt, messages)
         : await generateCsReplyL2(systemPrompt, messages)
     const finalReply = (result ? cleanReply(result.reply) : '') || FALLBACK
-    return enforceCheckinTimeClaim(await enforceNoFabricatedReveal(finalReply, externalDataSection, history, knowledge.knowledgeBase, userId, platform, customerId, knowledge.industry, message, knowledge.notifyWebhooks), externalDataSection.includes(PASSWORD_READY_MARKER) ? null : checkinState)
+    return enforceIdAskPhrase(enforceCheckinTimeClaim(await enforceNoFabricatedReveal(finalReply, externalDataSection, history, knowledge.knowledgeBase, userId, platform, customerId, knowledge.industry, message, knowledge.notifyWebhooks), externalDataSection.includes(PASSWORD_READY_MARKER) ? null : checkinState))
   } catch (err) {
     console.error('[cs-webhook] getAIReply failed, falling back to canned reply:', err)
     return FALLBACK
