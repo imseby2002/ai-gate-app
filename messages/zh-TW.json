@@ -5673,7 +5673,9 @@
     "estApplyConfirm": "把估算結果存成 {from}~{to} 的指定日期需求？（會取代這段期間先前的估算，不動你手動設定的需求）",
     "estApplied": "已套用 {n} 段需求",
     "unitCups": "杯數",
-    "unitOrders": "單數"
+    "unitOrders": "單數",
+    "noStoreSingleSite": "公司尚未設定門市。只有一個營業點的話，按下方按鈕以「公司資料」的名稱與地址建立營業點，再到「打卡」設定座標即可，員工不需指定門市。",
+    "createCompanyLocation": "以公司資料建立營業點"
   },
   "Team": {
     "moduleBooking": "訂房",
