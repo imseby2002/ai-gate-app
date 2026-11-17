@@ -1182,7 +1182,10 @@
       "exportTitle": "匯出連結（自動關房）",
       "exportHint": "把每間房的連結貼到各平台（Booking.com／Agoda／Airbnb…）的「匯入行事曆／iCal」設定，平台會定時讀取，後台這間房被訂走或關房的日期就會在該平台自動關房。",
       "copy": "複製",
-      "copied": "已複製"
+      "copied": "已複製",
+      "importTitle": "各平台匯入（平台 → 後台）",
+      "addImport": "新增匯入",
+      "noImport": "尚未設定任何平台匯入"
     },
     "notif": {
       "title": "通知信設定",

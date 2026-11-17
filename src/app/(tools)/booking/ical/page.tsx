@@ -97,6 +97,44 @@ export default function ICalPage() {
     setSettings(prev => prev.map(x => x.id === s.id ? { ...x, sync_enabled: !x.sync_enabled } : x))
   }
 
+  function openAdd(propertyId = '') {
+    setForm({ property_id: propertyId, platform: 'booking_com', platform_name: '', ical_url: '', sync_interval: 60 })
+    setAdding(true)
+  }
+
+  // 一筆平台匯入設定的列（房型分組內共用）
+  const renderSetting = (s: ICalSetting) => (
+    <div key={s.id} className="border rounded-lg p-3 space-y-1.5 bg-gray-50/60">
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-semibold text-sm text-gray-900">{s.platform_name || s.platform}</span>
+        <div className="flex items-center gap-1.5">
+          <button onClick={() => toggleEnable(s)}
+            className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${s.sync_enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+            {s.sync_enabled ? t('notif.enabled') : t('notif.disabled')}
+          </button>
+          <button onClick={() => sync(s.id)} disabled={syncing !== null}
+            className="p-1.5 rounded-lg hover:bg-indigo-50 text-indigo-600 disabled:opacity-40">
+            {syncing === s.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+          </button>
+          <button onClick={() => del(s.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-500">
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+      <div className="text-[11px] text-gray-400 font-mono truncate">{s.ical_url}</div>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-gray-400">
+        {s.last_synced_at && <span>{t('ical.lastPrefix', { date: new Date(s.last_synced_at).toLocaleString(locale, { timeZone: 'Asia/Taipei' }) })}</span>}
+        {s.last_sync_count != null && <span>{t('bookings.count', { count: s.last_sync_count })}</span>}
+        {s.last_sync_error
+          ? <span className="flex items-center gap-1 text-red-500"><XCircle className="h-3 w-3" />{s.last_sync_error.slice(0, 50)}</span>
+          : s.last_synced_at && <span className="flex items-center gap-1 text-green-600"><CheckCircle className="h-3 w-3" />{t('ical.normal')}</span>
+        }
+      </div>
+    </div>
+  )
+
+  const unassigned = settings.filter(s => !feeds.some(f => f.property_id === s.property_id))
+
   return (
     <div className="p-4 md:p-6 pb-16 space-y-5 max-w-3xl">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -112,84 +150,69 @@ export default function ICalPage() {
             <span className="hidden sm:inline">{t('ical.syncAll')}</span>
             <span className="sm:hidden">{t('ical.sync')}</span>
           </button>
-          <button onClick={() => setAdding(true)}
+          <button onClick={() => openAdd()}
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white border text-sm font-medium hover:bg-gray-50">
-            <Plus className="h-4 w-4" /> {t('bookings.add')}
+            <Plus className="h-4 w-4" /> {t('ical.addImport')}
           </button>
         </div>
       </div>
 
       {loading ? (
         <div className="text-sm text-gray-400 text-center py-12">{t('common.loading')}</div>
-      ) : settings.length === 0 ? (
+      ) : feeds.length === 0 && unassigned.length === 0 ? (
         <div className="text-center py-16 text-gray-400 space-y-2">
           <RefreshCw className="h-10 w-10 mx-auto opacity-30" />
           <p className="text-sm">{t('ical.empty')}</p>
-          <button onClick={() => setAdding(true)} className="text-indigo-600 text-sm hover:underline">{t('ical.addFirst')}</button>
+          <button onClick={() => openAdd()} className="text-indigo-600 text-sm hover:underline">{t('ical.addFirst')}</button>
         </div>
       ) : (
-        <div className="space-y-3">
-          {settings.map(s => (
-            <div key={s.id} className="bg-white border rounded-xl p-4 space-y-2">
-              <div className="flex items-start sm:items-center justify-between gap-2 flex-wrap">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded font-medium">
-                    {s.properties?.name ?? properties.find(p => p.id === s.property_id)?.name ?? t('bookings.form.unspecified')}
-                  </span>
-                  <span className="font-semibold text-sm text-gray-900">{s.platform_name || s.platform}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => toggleEnable(s)}
-                    className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${s.sync_enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                    {s.sync_enabled ? t('notif.enabled') : t('notif.disabled')}
-                  </button>
-                  <button onClick={() => sync(s.id)} disabled={syncing !== null}
-                    className="p-1.5 rounded-lg hover:bg-indigo-50 text-indigo-600 disabled:opacity-40">
-                    {syncing === s.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-                  </button>
-                  <button onClick={() => del(s.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-500">
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-              <div className="text-[11px] text-gray-400 font-mono truncate">{s.ical_url}</div>
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-gray-400">
-                {s.last_synced_at && <span>{t('ical.lastPrefix', { date: new Date(s.last_synced_at).toLocaleString(locale, { timeZone: 'Asia/Taipei' }) })}</span>}
-                {s.last_sync_count != null && <span>{t('bookings.count', { count: s.last_sync_count })}</span>}
-                {s.last_sync_error
-                  ? <span className="flex items-center gap-1 text-red-500"><XCircle className="h-3 w-3" />{s.last_sync_error.slice(0, 50)}</span>
-                  : s.last_synced_at && <span className="flex items-center gap-1 text-green-600"><CheckCircle className="h-3 w-3" />{t('ical.normal')}</span>
-                }
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+        <div className="space-y-4">
+          {feeds.map(room => {
+            const imports = settings.filter(s => s.property_id === room.property_id)
+            return (
+              <div key={room.property_id} className="bg-white border rounded-xl p-4 space-y-4">
+                <span className="inline-block text-sm px-2.5 py-1 bg-emerald-100 text-emerald-700 rounded-lg font-bold">{room.name}</span>
 
-      {/* 匯出連結：讓平台訂閱後自動關房 */}
-      {!loading && feeds.length > 0 && (
-        <div className="mt-8 space-y-3">
-          <div>
-            <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
-              <Link2 className="h-4 w-4 text-indigo-600" />{t('ical.exportTitle')}
-            </h2>
-            <p className="text-xs text-gray-500 mt-0.5">{t('ical.exportHint')}</p>
-          </div>
-          <div className="space-y-2">
-            {feeds.map(f => (
-              <div key={f.property_id} className="bg-white border rounded-xl p-4 space-y-2">
-                <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded font-medium">{f.name}</span>
-                <div className="flex items-center gap-2">
-                  <input readOnly value={f.url} onFocus={e => e.currentTarget.select()}
-                    className="flex-1 min-w-0 text-[11px] font-mono border rounded-lg px-2 py-1.5 bg-gray-50 text-gray-600" />
-                  <button onClick={() => copyUrl(f.url)}
-                    className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-medium text-indigo-600 hover:bg-indigo-50">
-                    {copied === f.url ? <><Check className="h-3.5 w-3.5" />{t('ical.copied')}</> : <><Copy className="h-3.5 w-3.5" />{t('ical.copy')}</>}
-                  </button>
+                {/* 匯出網址（給平台匯入，自動關房）*/}
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-700">
+                    <Link2 className="h-3.5 w-3.5 text-emerald-600" />{t('ical.exportTitle')}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input readOnly value={room.url} onFocus={e => e.currentTarget.select()}
+                      className="flex-1 min-w-0 text-[11px] font-mono border rounded-lg px-2 py-1.5 bg-gray-50 text-gray-600" />
+                    <button onClick={() => copyUrl(room.url)}
+                      className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-medium text-indigo-600 hover:bg-indigo-50">
+                      {copied === room.url ? <><Check className="h-3.5 w-3.5" />{t('ical.copied')}</> : <><Copy className="h-3.5 w-3.5" />{t('ical.copy')}</>}
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-gray-400">{t('ical.exportHint')}</p>
+                </div>
+
+                {/* 各平台匯入（平台→後台）*/}
+                <div className="space-y-2 border-t pt-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-gray-700">{t('ical.importTitle')}</span>
+                    <button onClick={() => openAdd(room.property_id)}
+                      className="flex items-center gap-1 text-xs text-indigo-600 hover:underline">
+                      <Plus className="h-3.5 w-3.5" />{t('ical.addImport')}
+                    </button>
+                  </div>
+                  {imports.length === 0
+                    ? <p className="text-[11px] text-gray-400">{t('ical.noImport')}</p>
+                    : <div className="space-y-2">{imports.map(renderSetting)}</div>}
                 </div>
               </div>
-            ))}
-          </div>
+            )
+          })}
+
+          {/* 未對應到房型的匯入設定 */}
+          {unassigned.length > 0 && (
+            <div className="bg-white border rounded-xl p-4 space-y-2">
+              <span className="inline-block text-sm px-2.5 py-1 bg-gray-100 text-gray-600 rounded-lg font-bold">{t('bookings.form.unspecified')}</span>
+              <div className="space-y-2">{unassigned.map(renderSetting)}</div>
+            </div>
+          )}
         </div>
       )}
 
