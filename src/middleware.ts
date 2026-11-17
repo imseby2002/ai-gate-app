@@ -114,6 +114,7 @@ export async function middleware(request: NextRequest) {
       pathname.startsWith('/apply') ||
       pathname.startsWith('/payslip') ||
       pathname.startsWith('/e/') ||
+      pathname === '/punch' ||
       pathname.startsWith('/v/') ||
       pathname.startsWith('/vendor/') ||
       pathname.startsWith('/f/') ||

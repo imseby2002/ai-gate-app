@@ -24,6 +24,8 @@ export default function EmployeePortalPage({ params }: { params: Promise<{ no: s
   const { no } = use(params)
   const api = `/api/e/${encodeURIComponent(no)}`
   const [me, setMe] = useState<Me | null>(null)
+  // 記住打卡編號：<子網域>/punch 下次直接進來打卡
+  useEffect(() => { try { localStorage.setItem('punch_no', decodeURIComponent(no)) } catch { /* ignore */ } }, [no])
   const [loading, setLoading] = useState(true)
   const [secret, setSecret] = useState('')
   const [pin, setPin] = useState('')

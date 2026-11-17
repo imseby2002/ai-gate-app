@@ -8092,7 +8092,10 @@
     "companyEmailApprove": "確認",
     "companyEmailReject": "退回",
     "editTabNoProfile": "此員工沒有對應的應徵／人員資料（未經應徵流程建立），無履歷與文件可顯示。",
-    "currencyHint": "本公司薪資與金額顯示的幣別"
+    "currencyHint": "本公司薪資與金額顯示的幣別",
+    "punchTitle": "手機 GPS 打卡",
+    "punchEmployeeUrl": "員工打卡網址：",
+    "punchManage": "打卡管理（門市座標、紀錄）"
   },
   "FinancePage": {
     "accountBalancesTitle": "各帳戶結餘",

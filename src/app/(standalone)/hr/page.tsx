@@ -4,7 +4,7 @@ import { ChannelAccountPicker } from '@/components/channels/ChannelAccountPicker
 import { useState, useEffect, useCallback, useRef, useContext, createContext, ReactNode, type ChangeEvent } from 'react'
 import Link from 'next/link'
 import { useTranslations, useLocale } from 'next-intl'
-import { Users, DollarSign, Calendar, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Loader2, AlertCircle, Building2, Phone, Mail, Briefcase, CreditCard, Zap, Wallet, Upload, Shield, Clock, Download, UserPlus, ArrowRight, ClipboardCheck, Store, Video, FileSpreadsheet, HeartHandshake, Send, FileText, KeyRound, Copy, Link2, UserCheck, BookOpen, Wand2 } from 'lucide-react'
+import { Users, DollarSign, Calendar, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Loader2, AlertCircle, Building2, Phone, Mail, Briefcase, CreditCard, Zap, Wallet, Upload, Shield, Clock, Download, UserPlus, ArrowRight, ClipboardCheck, Store, Video, FileSpreadsheet, HeartHandshake, Send, FileText, KeyRound, Copy, Link2, UserCheck, BookOpen, Wand2, MapPinned } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -1642,7 +1642,7 @@ interface Attendance {
 const hrs = (n: number) => Math.round((Number(n) || 0) * 100) / 100
 const attTypeLabel = (type: string, t: (key: string) => string) => (type.includes('计时') || type.includes('計時') ? t('staffHourly') : type.includes('正常') ? t('staffFulltime') : (type || '—'))
 
-function AttendanceTab() {
+function AttendanceTab({ portalBase }: { portalBase: string | null }) {
   const t = useTranslations('HrPage')
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
@@ -1691,6 +1691,18 @@ function AttendanceTab() {
 
   return (
     <div className="space-y-4">
+      {/* 手機 GPS 打卡：員工入口網址＋管理入口 */}
+      <div className="p-3 rounded-xl border border-emerald-200 bg-emerald-50 flex items-center gap-3 flex-wrap text-sm">
+        <Clock className="h-4 w-4 text-emerald-700" />
+        <span className="font-semibold text-emerald-800">{t('punchTitle')}</span>
+        {portalBase && (
+          <span className="flex items-center gap-1.5 text-xs text-emerald-900">
+            {t('punchEmployeeUrl')}<code className="px-1.5 py-0.5 rounded bg-white border">{portalBase}/punch</code>
+            <button type="button" onClick={() => navigator.clipboard?.writeText(`${portalBase}/punch`)} className="text-emerald-700 hover:underline inline-flex items-center gap-0.5"><Copy className="h-3 w-3" />{t('copy')}</button>
+          </span>
+        )}
+        <Link href="/shift#punch" className="ml-auto"><Button size="sm" variant="outline" className="gap-1.5 bg-white"><MapPinned className="h-4 w-4" />{t('punchManage')}</Button></Link>
+      </div>
       {/* 考勤機來源端與雙軌制說明卡片 */}
       <div className="p-3 bg-slate-50 border rounded-xl flex items-center justify-between text-xs flex-wrap gap-2">
         <div className="flex items-center gap-2">
@@ -2634,7 +2646,7 @@ export default function HRPage() {
       <CurrencyCtx.Provider value={settings.insurance_currency || 'VND'}>
       <Card className="p-5">
         {activeTab === 'recruitment' && <RecruitmentTab onHired={loadEmployees} />}
-        {activeTab === 'attendance' && <AttendanceTab />}
+        {activeTab === 'attendance' && <AttendanceTab portalBase={portalBase} />}
         {activeTab === 'payroll'   && <PayrollTab employees={employees} loading={empLoading} onRefresh={loadEmployees} />}
         {activeTab === 'evaluation' && <EvaluationTab employees={employees} loading={empLoading} canEditTiers />}
         {activeTab === 'contracts' && <ContractsTab employees={employees} />}

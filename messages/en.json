@@ -8092,7 +8092,10 @@
     "companyEmailApprove": "Approve",
     "companyEmailReject": "Reject",
     "editTabNoProfile": "This employee has no applicant/personnel record (created without the application flow), so there is no résumé or document to show.",
-    "currencyHint": "Currency used for this company's salaries and amounts"
+    "currencyHint": "Currency used for this company's salaries and amounts",
+    "punchTitle": "Mobile GPS clock-in",
+    "punchEmployeeUrl": "Employee clock-in link:",
+    "punchManage": "Clock-in admin (store location, records)"
   },
   "FinancePage": {
     "accountBalancesTitle": "Balance by account",

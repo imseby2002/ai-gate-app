@@ -8092,7 +8092,10 @@
     "companyEmailApprove": "Xác nhận",
     "companyEmailReject": "Từ chối",
     "editTabNoProfile": "Nhân viên này không có hồ sơ ứng tuyển (tạo không qua quy trình ứng tuyển), nên không có hồ sơ/giấy tờ để hiển thị.",
-    "currencyHint": "Đơn vị tiền tệ dùng cho lương và số tiền của công ty"
+    "currencyHint": "Đơn vị tiền tệ dùng cho lương và số tiền của công ty",
+    "punchTitle": "Chấm công GPS trên điện thoại",
+    "punchEmployeeUrl": "Link chấm công cho nhân viên:",
+    "punchManage": "Quản lý chấm công (vị trí, lịch sử)"
   },
   "FinancePage": {
     "accountBalancesTitle": "Số dư theo tài khoản",
