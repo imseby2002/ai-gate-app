@@ -9,11 +9,12 @@ import { Card } from '@/components/ui/card'
 import { StoreSelect, useStoreOptions } from '@/components/store/StoreSelect'
 import { EvaluationTab, type EvalEmployee } from '@/components/hr/EvaluationTab'
 import { ScheduleBoard } from '@/components/shift/ScheduleBoard'
+import { PunchAdmin } from '@/components/shift/PunchAdmin'
 
 export default function ShiftPage() {
   const t = useTranslations('Shift')
   const { status: storeStatus, options: storeOptions, store, setStore, locked: lockedStore } = useStoreOptions()
-  const [view, setView] = useState<'schedule' | 'evaluation'>('schedule')
+  const [view, setView] = useState<'schedule' | 'punch' | 'evaluation'>('schedule')
   const isAdmin = storeStatus === 'loading' ? null : storeStatus === 'ok'
 
   if (isAdmin === false) return (
@@ -39,9 +40,9 @@ export default function ShiftPage() {
           <StoreSelect value={store} onChange={setStore} options={storeOptions} locked={lockedStore} placeholder={t('storePlaceholder')} />
         </label>
         <div className="ml-auto flex gap-1 rounded-lg bg-gray-100 dark:bg-gray-900 p-1">
-          {(['schedule', 'evaluation'] as const).map(v => (
+          {(['schedule', 'punch', 'evaluation'] as const).map(v => (
             <button key={v} onClick={() => setView(v)} className={`px-3 py-1.5 rounded-md text-sm ${view === v ? 'bg-white dark:bg-gray-800 shadow-sm font-medium' : 'text-gray-500'}`}>
-              {v === 'schedule' ? t('tabSchedule') : t('tabEvaluation')}
+              {v === 'schedule' ? t('tabSchedule') : v === 'punch' ? t('tabPunch') : t('tabEvaluation')}
             </button>
           ))}
         </div>
@@ -49,6 +50,7 @@ export default function ShiftPage() {
 
       {!store ? <div className="text-center py-10 text-gray-400 text-sm">{t('selectStoreFirst')}</div>
         : view === 'evaluation' ? <StoreEvaluation store={store} />
+        : view === 'punch' ? <PunchAdmin key={store} store={store} />
         : <ScheduleBoard key={store} store={store} />}
     </div>
   )
