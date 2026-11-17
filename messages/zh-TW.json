@@ -1185,7 +1185,10 @@
       "copied": "已複製",
       "importTitle": "各平台匯入（平台 → 後台）",
       "addImport": "新增匯入",
-      "noImport": "尚未設定任何平台匯入"
+      "noImport": "尚未設定任何平台匯入",
+      "editTitle": "編輯匯入設定",
+      "intervalHint": "建議 30～60 分鐘。平台的行事曆本來就只每隔一段時間才更新，設太短（如 1 分鐘）沒有幫助，還可能被平台限流。",
+      "everyMinutes": "每 {min} 分鐘"
     },
     "notif": {
       "title": "通知信設定",
