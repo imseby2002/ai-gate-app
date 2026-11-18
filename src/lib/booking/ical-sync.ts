@@ -2,6 +2,7 @@ import { createHash } from 'crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { findOrCreateOrder } from './orders'
 import { safeFetch } from '@/lib/ssrf'
+import { isBookingFilled, datesOverlap, deduplicateBookings, BookingRow } from './dedup'
 
 export const ICAL_PLATFORMS: Record<string, { name: string; color: string }> = {
   booking_com:  { name: 'Booking.com',  color: '#003580' },
@@ -35,7 +36,7 @@ export async function syncICalForSetting(settingId: string): Promise<SyncResult>
 
   const { data: setting, error: se } = await supabase
     .from('ical_settings')
-    .select('*, properties(id, name)')
+    .select('*, properties(id, name, room_count)')
     .eq('id', settingId)
     .single()
 
@@ -96,6 +97,19 @@ export async function syncICalForSetting(settingId: string): Promise<SyncResult>
     return result
   }
 
+  const roomCount = (setting.properties as { room_count?: number } | null)?.room_count ?? 1
+  const isSingleRoom = roomCount === 1
+
+  // 抓取此房源既有的非取消訂單，用以比對「該房型是否已填寫」與避免重複建立
+  const { data: propBookings } = await supabase
+    .from('bookings')
+    .select('id, guest_name, total_price, num_guests, source, platform, platform_booking_id, check_in, check_out, status, notes, raw_data, order_id')
+    .eq('user_id', setting.user_id)
+    .eq('property_id', setting.property_id)
+    .neq('status', 'cancelled')
+
+  const existingPropBookings: BookingRow[] = (propBookings ?? []) as BookingRow[]
+
   // 同一天以後出現的事件為準（與逐筆 upsert 時的覆蓋順序一致）
   const wantedBlocks = new Map<string, string | null>()
 
@@ -115,39 +129,89 @@ export async function syncICalForSetting(settingId: string): Promise<SyncResult>
     let bookingId: string | null = null
     if (!isUnavailableBlock) {
       const uid = ev.uid || `${settingId}_${ev.start}`
-      // iCal 事件本來就是一個房型一個訂單，1:1 建一筆 booking_orders 即可，不像
-      // email 那樣需要把多個房型併成同一張訂單。
-      const orderId = await findOrCreateOrder(supabase, setting.user_id, setting.platform, uid, {
-        guest_name: guestName, source: 'ical',
-      })
-      const { data: bk, error: bkErr } = await supabase
-        .from('bookings')
-        .upsert({
-          user_id:             setting.user_id,
-          order_id:            orderId,
-          property_id:         setting.property_id,
-          platform:            setting.platform,
-          platform_booking_id: uid,
-          guest_name:          guestName,
-          check_in:            checkIn,
-          check_out:           checkOut,
-          status:              'confirmed',
-          source:              'ical',
-          raw_data:            { summary: ev.summary, uid, description: ev.description },
-        }, { onConflict: 'user_id,platform,platform_booking_id,property_id' })
-        .select('id')
-        .single()
 
-      if (bkErr) {
-        result.errors.push(`訂單 upsert 失敗 ${uid}: ${bkErr.message}`)
-        continue
-      }
+      // 檢查是否已存在同一平台、同日期區間重疊的有效訂單
+      const overlapping = existingPropBookings.filter(b =>
+        b.platform === setting.platform &&
+        datesOverlap(b.check_in, b.check_out, checkIn, checkOut)
+      )
 
-      bookingId = bk?.id ?? null
-      if (bk && !bkErr) {
-        result.added++
-      } else {
+      // 規則 1：如果該房間已經填寫，且 iCal 也是同一個訂購平台（尤其是單間房型 room_count === 1），
+      // 應該就不用再重複建立，直接沿用既有訂單 ID 阻擋房況！
+      const filledBooking = isSingleRoom
+        ? overlapping.find(b => isBookingFilled(b))
+        : overlapping.find(b => isBookingFilled(b) && b.check_in === checkIn && b.check_out === checkOut)
+
+      if (filledBooking) {
+        // 已有完整資料的同平台訂單：不重複新增，沿用其 id
+        bookingId = filledBooking.id
         result.updated++
+      } else {
+        // 規則 2：如果沒有填寫，以 iCal 為主（建立或更新 iCal 訂單）
+        // 先尋找是否已有同 UID 或同日期的 iCal 佔位訂單，避免多餘 insert
+        const existingIcal = overlapping.find(b => b.platform_booking_id === uid) ||
+          (isSingleRoom ? overlapping.find(b => b.source === 'ical') : null)
+
+        if (existingIcal) {
+          bookingId = existingIcal.id
+          // 若原本就有姓名（例如手動填入），不被 "(iCal 訂單)" 佔位覆蓋
+          const updatePatch: Record<string, unknown> = {
+            check_in: checkIn,
+            check_out: checkOut,
+            raw_data: { summary: ev.summary, uid, description: ev.description },
+          }
+          if (guestName && guestName !== '(iCal 訂單)' && (!existingIcal.guest_name || existingIcal.guest_name === '(iCal 訂單)')) {
+            updatePatch.guest_name = guestName
+          }
+          await supabase.from('bookings').update(updatePatch).eq('id', existingIcal.id)
+          result.updated++
+        } else {
+          // 真正全新的 iCal 訂單
+          const orderId = await findOrCreateOrder(supabase, setting.user_id, setting.platform, uid, {
+            guest_name: guestName, source: 'ical',
+          })
+          const { data: bk, error: bkErr } = await supabase
+            .from('bookings')
+            .upsert({
+              user_id:             setting.user_id,
+              order_id:            orderId,
+              property_id:         setting.property_id,
+              platform:            setting.platform,
+              platform_booking_id: uid,
+              guest_name:          guestName,
+              check_in:            checkIn,
+              check_out:           checkOut,
+              status:              'confirmed',
+              source:              'ical',
+              raw_data:            { summary: ev.summary, uid, description: ev.description },
+            }, { onConflict: 'user_id,platform,platform_booking_id,property_id' })
+            .select('id')
+            .single()
+
+          if (bkErr) {
+            result.errors.push(`訂單 upsert 失敗 ${uid}: ${bkErr.message}`)
+            continue
+          }
+
+          bookingId = bk?.id ?? null
+          if (bk && !bkErr) {
+            result.added++
+            existingPropBookings.push({
+              id: bk.id,
+              user_id: setting.user_id,
+              property_id: setting.property_id,
+              platform: setting.platform,
+              platform_booking_id: uid,
+              guest_name: guestName,
+              check_in: checkIn,
+              check_out: checkOut,
+              status: 'confirmed',
+              source: 'ical',
+            })
+          } else {
+            result.updated++
+          }
+        }
       }
     }
 
@@ -214,6 +278,16 @@ export async function syncICalForSetting(settingId: string): Promise<SyncResult>
     // 有錯誤時不記雜湊，下次照常完整同步
     last_ical_hash:  result.errors.length > 0 ? null : icalHash,
   }).eq('id', settingId)
+
+  // 規則 3：同步後自動檢核並清理重複訂單
+  try {
+    await deduplicateBookings(supabase, {
+      userId: setting.user_id,
+      propertyId: setting.property_id,
+    })
+  } catch (err) {
+    console.error('iCal post-sync deduplication error:', err)
+  }
 
   return result
 }

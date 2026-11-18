@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptSecret, encryptSecret, isEncrypted } from '@/lib/crypto/secret'
 import { findOrCreateOrder } from './orders'
 import { generateTextByChain, looksLikeJson } from '@/lib/ai/proxy-fallback'
+import { isBookingFilled, deduplicateBookings } from './dedup'
 
 interface AdditionalRoom {
   property_name: string | null
@@ -595,25 +596,28 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
         if (validCheckOut) {
           let icalQ = supabase
             .from('bookings')
-            .select('id, status, guest_name, total_price, num_guests, notes')
+            .select('id, status, guest_name, total_price, num_guests, notes, platform_booking_id, source')
             .eq('user_id', setting.user_id)
             .eq('platform', platform)
             .eq('check_in', checkIn)
             .eq('check_out', validCheckOut)
-            .eq('source', 'ical')
+            .neq('status', 'cancelled')
           if (resolvedPropertyId) icalQ = icalQ.eq('property_id', resolvedPropertyId)
-          const { data: icalBooking } = await icalQ.maybeSingle()
+          const { data: icalBookings } = await icalQ.order('created_at', { ascending: false }).limit(5)
+          const icalBooking = (icalBookings ?? []).find(b => !isBookingFilled(b)) ?? icalBookings?.[0]
           if (icalBooking) {
             const patch: Record<string, unknown> = {}
             if (extracted.is_cancellation) {
               if (icalBooking.status !== 'cancelled') patch.status = 'cancelled'
             } else {
-              if (extracted.guest_name && (!icalBooking.guest_name || icalBooking.guest_name === '(iCal 訂單)'))
+              if (extracted.guest_name && !isBookingFilled(icalBooking))
                 patch.guest_name = extracted.guest_name
               if (roomTotalPrice != null && icalBooking.total_price == null)
                 patch.total_price = roomTotalPrice
               if (roomNumGuests && (icalBooking.num_guests == null || icalBooking.num_guests <= 1))
                 patch.num_guests = roomNumGuests
+              if (confId && (!icalBooking.platform_booking_id || icalBooking.platform_booking_id.startsWith('ical_') || icalBooking.platform_booking_id.includes('@')))
+                patch.platform_booking_id = confId
             }
             if (Object.keys(patch).length > 0) {
               if (DEBUG_FETCH_NOTE) patch.notes = appendFetchNote(icalBooking.notes)
@@ -622,6 +626,14 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
               result.added++
             } else {
               result.debug.skipped_duplicate++
+            }
+            if (resolvedPropertyId) {
+              await deduplicateBookings(supabase, {
+                userId: setting.user_id,
+                propertyId: resolvedPropertyId,
+                from: checkIn,
+                to: validCheckOut,
+              }).catch(() => {})
             }
             continue
           }
@@ -793,6 +805,14 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
         } else {
           addLog(`[新增✓] ${confId} ${checkIn}→${checkOut} canc=${extracted.is_cancellation} | ${subj80}`)
           result.added++
+          if (resolvedPropertyId) {
+            await deduplicateBookings(supabase, {
+              userId: setting.user_id,
+              propertyId: resolvedPropertyId,
+              from: checkIn,
+              to: checkOut,
+            }).catch(() => {})
+          }
         }
       }
 

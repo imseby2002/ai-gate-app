@@ -212,8 +212,11 @@ export default function CalendarPage() {
     return g
   }
 
-  // Email 同步抓不到旅客資料的佔位訂單（guest_name = '(待補充)'），在日曆旁直接刪除
-  const isPlaceholder = (bk: Booking) => bk.guest_name === '(待補充)'
+  // 佔位訂單（guest_name = '(待補充)' 或 '(iCal 訂單)' 等），在日曆旁直接顯示刪除按鈕
+  const isPlaceholder = (bk: Booking) => {
+    const name = (bk.guest_name ?? '').trim()
+    return name === '(待補充)' || name === '(iCal 訂單)' || /^RoomStatus/i.test(name) || /^Fully booked$/i.test(name)
+  }
   async function removeBooking(id: string) {
     if (!window.confirm(t('bookings.toast.deleteConfirm'))) return
     try {

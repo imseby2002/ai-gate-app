@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getBnbContext } from '@/lib/bnb/context'
 import { syncDailyRecordForBooking, clearDailyRecordForDeletedBooking } from '@/lib/booking/daily-sync'
 import { findOrCreateOrder, autoBookingNo, AUTO_BOOKING_NO_PREFIX } from '@/lib/booking/orders'
+import { findDuplicateClusters, deduplicateBookings, BookingRow } from '@/lib/booking/dedup'
 
 export async function GET(req: NextRequest) {
   const supabase = await createClient()
@@ -19,7 +20,7 @@ export async function GET(req: NextRequest) {
 
   let q = supabase
     .from('bookings')
-    .select('*, properties(name)')
+    .select('*, properties(id, name, room_count)')
     .eq('user_id', ctx.ownerId)
     .order('check_in', { ascending: false })
     .limit(limit)
@@ -31,6 +32,22 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await q
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // 規則 3：若檢測到同房型同平台的重複訂單（例如已填寫 Email 訂單 + iCal 佔位），自動執行去重清理
+  if (data && data.length > 1) {
+    const clusters = findDuplicateClusters(data as unknown as BookingRow[])
+    if (clusters.length > 0) {
+      await deduplicateBookings(supabase, {
+        userId: ctx.ownerId,
+        propertyId: property_id ?? undefined,
+        from: from ?? undefined,
+        to: to ?? undefined,
+      })
+      const { data: cleanData } = await q
+      return NextResponse.json({ bookings: cleanData ?? [] })
+    }
+  }
+
   return NextResponse.json({ bookings: data ?? [] })
 }
 
