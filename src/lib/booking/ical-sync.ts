@@ -25,12 +25,13 @@ interface SyncResult {
   added: number
   updated: number
   blocked: number
+  cancelled: number
   errors: string[]
 }
 
 export async function syncICalForSetting(settingId: string): Promise<SyncResult> {
   const supabase = createAdminClient()
-  const result: SyncResult = { added: 0, updated: 0, blocked: 0, errors: [] }
+  const result: SyncResult = { added: 0, updated: 0, blocked: 0, cancelled: 0, errors: [] }
 
   const { data: setting, error: se } = await supabase
     .from('ical_settings')
@@ -180,6 +181,31 @@ export async function syncICalForSetting(settingId: string): Promise<SyncResult>
     if (bdErr) result.errors.push(`房況寫入失敗：${bdErr.message}`)
   }
   result.blocked = wantedBlocks.size
+
+  // ── 取消處理 ──────────────────────────────────────────────
+  // 客人在平台取消後，該事件會從 iCal feed 消失。把這個設定底下「原本有、這次已不在
+  // feed」的房況日期釋出，並把事件整筆消失（原本有 block、現在完全沒有）的訂單標記取消。
+  // 只有 feed 抓取/解析成功才會走到這裡（失敗會提早 return），不會因為一次抓取失敗就誤放房況。
+  if (!exErr) {
+    const staleDates = (existingBlocks ?? []).map(b => b.date).filter(d => !wantedBlocks.has(d))
+    for (let i = 0; i < staleDates.length; i += 500) {
+      const { error: delErr } = await supabase.from('blocked_dates').delete()
+        .eq('user_id', setting.user_id).eq('property_id', setting.property_id)
+        .eq('ical_setting_id', settingId).in('date', staleDates.slice(i, i + 500))
+      if (delErr) result.errors.push(`釋出房況失敗：${delErr.message}`)
+    }
+    const wantedBookingIds = new Set([...wantedBlocks.values()].filter((v): v is string => !!v))
+    const cancelledIds = [...new Set((existingBlocks ?? [])
+      .map(b => b.booking_id).filter((v): v is string => !!v))]
+      .filter(id => !wantedBookingIds.has(id))
+    if (cancelledIds.length > 0) {
+      const { error: cErr } = await supabase.from('bookings')
+        .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+        .in('id', cancelledIds).eq('user_id', setting.user_id).eq('source', 'ical').neq('status', 'cancelled')
+      if (cErr) result.errors.push(`標記取消失敗：${cErr.message}`)
+      else result.cancelled = cancelledIds.length
+    }
+  }
 
   await supabase.from('ical_settings').update({
     last_synced_at:  new Date().toISOString(),
