@@ -78,5 +78,5 @@ export async function buildPropertyICal(
 }
 
 export function propertyIcalUrl(domain: string, token: string): string {
-  return `${domain}/api/booking/ical/feed?token=${token}`
+  return `${domain}/api/booking/ical/feed/${token}.ics`
 }
