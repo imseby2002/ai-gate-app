@@ -77,11 +77,24 @@ export interface DuplicateCluster {
 }
 
 /**
+ * 判斷名稱是否為 OTA 的關房/滿房狀態（如 Trip.com 的 RoomStatus Fully booked、Airbnb 的 Not available）
+ * 這些本質上是「不可訂房況」，絕非真實訂單。
+ */
+export function isUnavailableStatusName(name: string | null | undefined): boolean {
+  if (!name) return false
+  const n = name.trim()
+  return /^(?:roomstatus(?:\s+fully\s*booked)?|fully\s*booked|not\s*available)$/i.test(n) || /roomstatus/i.test(n) || /fully\s*booked/i.test(n)
+}
+
+/**
  * 偵測訂單列表中的重複訂單群組。
  * 規則：
- * 1. 同一房源、同一平台、非取消狀態，且日期區間重疊。
- * 2. 若房型為單間（room_count === 1），同房源重疊必為同一間房，不可有多筆訂單；
- * 3. 若為多間房型，但一筆為「已填寫」且另一筆為「iCal 佔位」，且入住退房日完全相同，亦視為同筆重複。
+ * 1. 同一房源、非取消狀態，且日期區間重疊。
+ * 2. 若房型為單間（room_count === 1）：
+ *    - 同平台重疊必為重複。
+ *    - 跨平台重疊時，若其中一筆為「已填寫」（如 Agoda、直訂真實訂單），另一筆為佔位（如 Trip.com 傳來的 RoomStatus Fully booked 或 iCal 佔位），
+ *      代表是同一間房已被訂走，其他平台只是在傳遞滿房關房狀態，因此判定為重複，保留真實訂單。
+ * 3. 若為多間房型，同日期且含佔位者亦判定為重複。
  */
 export function findDuplicateClusters(
   bookings: BookingRow[],
@@ -90,10 +103,10 @@ export function findDuplicateClusters(
   // 排除已取消訂單與未指派房源的訂單
   const active = bookings.filter(b => b.status !== 'cancelled' && b.property_id)
 
-  // 依 (user_id, property_id, platform) 分組
+  // 依 (user_id, property_id) 分組：單間房型同一房間不應有多筆重複佔用
   const groups = new Map<string, BookingRow[]>()
   for (const b of active) {
-    const key = `${b.user_id}|${b.property_id}|${b.platform}`
+    const key = `${b.user_id}|${b.property_id}`
     const list = groups.get(key) ?? []
     list.push(b)
     groups.set(key, list)
@@ -125,17 +138,24 @@ export function findDuplicateClusters(
         const overlap = datesOverlap(b1.check_in, b1.check_out, b2.check_in, b2.check_out)
         if (!overlap) continue
 
+        const samePlatform = b1.platform === b2.platform
+        const oneFilledOnePlaceholder =
+          (isBookingFilled(b1) && !isBookingFilled(b2)) ||
+          (isBookingFilled(b2) && !isBookingFilled(b1))
+        const bothPlaceholders = !isBookingFilled(b1) && !isBookingFilled(b2)
+
         if (isSingleRoom) {
-          // 單間房型：同平台重疊必然重複
-          clusterItems.push(b2)
-          visited.add(b2.id)
+          // 單間房型：
+          // 1. 同平台重疊必然重複
+          // 2. 跨平台重疊時，只要至少有一筆是佔位/狀態訂單（如 RoomStatus Fully booked 或 (iCal 訂單)），必為同一間房重複！
+          if (samePlatform || oneFilledOnePlaceholder || bothPlaceholders) {
+            clusterItems.push(b2)
+            visited.add(b2.id)
+          }
         } else {
           // 多間房型：若起訖日期相同且其中一筆為 iCal 佔位、另一筆為已填寫訂單，視為重複
           const sameDates = b1.check_in === b2.check_in && b1.check_out === b2.check_out
-          const oneFilledOnePlaceholder =
-            (isBookingFilled(b1) && !isBookingFilled(b2)) ||
-            (isBookingFilled(b2) && !isBookingFilled(b1))
-          if (sameDates && oneFilledOnePlaceholder) {
+          if (sameDates && (samePlatform || oneFilledOnePlaceholder || bothPlaceholders)) {
             clusterItems.push(b2)
             visited.add(b2.id)
           }
@@ -218,12 +238,15 @@ export async function deduplicateBookings(
 
   result.examined = bookings.length
 
-  // 3. 找出重複群組
+  // 3. 找出重複群組並清理
   const clusters = findDuplicateClusters(bookings as BookingRow[], roomCountMap)
-  if (!clusters.length) return result
+  const deletedIds = new Set<string>()
 
   for (const { keeper, duplicatesToRemove } of clusters) {
     for (const dup of duplicatesToRemove) {
+      if (deletedIds.has(dup.id)) continue
+      deletedIds.add(dup.id)
+
       // a. 將 blocked_dates 關聯切換至 keeper
       // 避免唯一約束衝突：先刪除 duplicate 產生的 blocked_dates 中已有 keeper 存在的日期
       const { data: dupBlocks } = await supabase
@@ -292,6 +315,56 @@ export async function deduplicateBookings(
       await syncDailyRecordForBooking(supabase, keeper.user_id, keeper)
     } catch {
       // 容錯處理
+    }
+  }
+
+  // 4. 清理誤被當成訂單的 OTA 房況關房佔位（如 RoomStatus Fully booked / Not available 等非真實訂單）
+  const fakeStatusBookings = (bookings as BookingRow[]).filter(
+    b => !deletedIds.has(b.id) && isUnavailableStatusName(b.guest_name)
+  )
+  for (const fake of fakeStatusBookings) {
+    deletedIds.add(fake.id)
+    // 確保其日期區間依然在 blocked_dates 中被封鎖，房況不漏擋
+    const dates: string[] = []
+    const cur = new Date(fake.check_in + 'T00:00:00')
+    const endDt = new Date(fake.check_out + 'T00:00:00')
+    while (cur < endDt) {
+      dates.push(cur.toISOString().slice(0, 10))
+      cur.setDate(cur.getDate() + 1)
+    }
+    for (const d of dates) {
+      if (fake.property_id) {
+        await supabase.from('blocked_dates').upsert({
+          user_id: fake.user_id,
+          property_id: fake.property_id,
+          date: d,
+          platform: fake.platform,
+          reason: 'booking',
+        }, { onConflict: 'user_id,property_id,date,ical_setting_id' })
+      }
+    }
+    // 解除 blocked_dates 關聯並刪除假訂單
+    await supabase.from('blocked_dates').update({ booking_id: null }).eq('booking_id', fake.id)
+    await supabase.from('bnb_daily_records').delete().eq('booking_id', fake.id)
+    const { error: delErr } = await supabase.from('bookings').delete().eq('id', fake.id)
+    if (!delErr) {
+      result.deleted++
+      result.details.push({
+        propertyId: fake.property_id ?? '',
+        platform: fake.platform,
+        keeperId: '',
+        keeperName: '房況封鎖（非旅客訂單）',
+        removedId: fake.id,
+        removedName: fake.guest_name ?? null,
+        checkIn: fake.check_in,
+        checkOut: fake.check_out,
+      })
+    }
+    if (fake.order_id) {
+      const { count } = await supabase.from('bookings').select('id', { count: 'exact', head: true }).eq('order_id', fake.order_id)
+      if ((count ?? 0) === 0) {
+        await supabase.from('booking_orders').delete().eq('id', fake.order_id)
+      }
     }
   }
 

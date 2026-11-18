@@ -118,39 +118,48 @@ export async function syncICalForSetting(settingId: string): Promise<SyncResult>
     const checkOut = ev.end
     const guestName = extractGuestName(ev.summary, setting.platform)
 
-    // Airbnb 等平台的「不可訂」佔位區塊（SUMMARY 為 "Not available" 之類，代表房主
-    // 自行封鎖的可訂範圍，不是真實訂單）常常沒有穩定的 UID，或 UID 隨著區間每天往前
-    // 滑動而跟著變——這種事件不能當成訂單 upsert（onConflict 對不上舊資料），會導致
-    // 每天同步都插入一筆新的假訂單，長期累積成大量重複、把空房算成已被佔用。
+    // Airbnb 等平台的「不可訂」佔位區塊（SUMMARY 為 "Not available"、Trip.com 的
+    // "RoomStatus Fully booked" 之類，代表房況已滿或房主自行封鎖，不是真實訂單）
     // 這種區塊本來就只代表「不可訂」，只需要寫 blocked_dates 阻擋房況，不必也不該
     // 建立 bookings 資料列。
-    const isUnavailableBlock = /not\s*available/i.test(ev.summary) || /not\s*available/i.test(guestName)
+    const isUnavailableBlock =
+      /not\s*available/i.test(ev.summary) ||
+      /not\s*available/i.test(guestName) ||
+      /roomstatus/i.test(ev.summary) ||
+      /fully\s*booked/i.test(ev.summary) ||
+      /roomstatus/i.test(guestName) ||
+      /fully\s*booked/i.test(guestName)
 
     let bookingId: string | null = null
     if (!isUnavailableBlock) {
       const uid = ev.uid || `${settingId}_${ev.start}`
 
       // 檢查是否已存在同一平台、同日期區間重疊的有效訂單
-      const overlapping = existingPropBookings.filter(b =>
+      const overlappingSamePlatform = existingPropBookings.filter(b =>
         b.platform === setting.platform &&
         datesOverlap(b.check_in, b.check_out, checkIn, checkOut)
       )
 
-      // 規則 1：如果該房間已經填寫，且 iCal 也是同一個訂購平台（尤其是單間房型 room_count === 1），
+      // 跨平台檢查：若為單間房型（room_count === 1），且該房型已被其他平台（如 Agoda、直訂）訂走
+      const filledBookingAnyPlatform = isSingleRoom
+        ? existingPropBookings.find(b => isBookingFilled(b) && datesOverlap(b.check_in, b.check_out, checkIn, checkOut))
+        : null
+
+      // 規則 1：如果該房間已經填寫（無論是同平台，或是單間房型已被其他平台填寫），
       // 應該就不用再重複建立，直接沿用既有訂單 ID 阻擋房況！
       const filledBooking = isSingleRoom
-        ? overlapping.find(b => isBookingFilled(b))
-        : overlapping.find(b => isBookingFilled(b) && b.check_in === checkIn && b.check_out === checkOut)
+        ? (filledBookingAnyPlatform || overlappingSamePlatform.find(b => isBookingFilled(b)))
+        : overlappingSamePlatform.find(b => isBookingFilled(b) && b.check_in === checkIn && b.check_out === checkOut)
 
       if (filledBooking) {
-        // 已有完整資料的同平台訂單：不重複新增，沿用其 id
+        // 已有完整資料的訂單：不重複新增，沿用其 id
         bookingId = filledBooking.id
         result.updated++
       } else {
         // 規則 2：如果沒有填寫，以 iCal 為主（建立或更新 iCal 訂單）
         // 先尋找是否已有同 UID 或同日期的 iCal 佔位訂單，避免多餘 insert
-        const existingIcal = overlapping.find(b => b.platform_booking_id === uid) ||
-          (isSingleRoom ? overlapping.find(b => b.source === 'ical') : null)
+        const existingIcal = overlappingSamePlatform.find(b => b.platform_booking_id === uid) ||
+          (isSingleRoom ? overlappingSamePlatform.find(b => b.source === 'ical') : null)
 
         if (existingIcal) {
           bookingId = existingIcal.id
