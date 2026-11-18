@@ -30,6 +30,10 @@
       "schedule": "0 1 * * *"
     },
     {
+      "path": "/api/cron/ical-monitor",
+      "schedule": "0 1 * * *"
+    },
+    {
       "path": "/api/cron/market-snapshot",
       "schedule": "0 5 * * *"
     },
