@@ -11,6 +11,23 @@ const MAX_BATCH_SIZE = 5
 
 export type TypeCounts = Partial<Record<QuestionType, number>>
 
+export interface RemedialWeaknessItem {
+  questionText: string
+  type: string
+  correctAnswer: string
+  explanation: string
+  errorRate: number
+  commonMistakes?: string
+}
+
+export interface RemedialContext {
+  sourceExamId?: string
+  sourceExamTitle?: string
+  weaknesses: RemedialWeaknessItem[]
+  /** 弱點深化題比例（0.1 ~ 1.0，預設 0.5 即 50% 錯題深化題 + 50% 全新概念題） */
+  remedialRatio?: number
+}
+
 const TYPE_GUIDE: Record<QuestionType, string> = {
   single: 'single = 單選題：options 3~4 個，answer 為單一選項代號（如 "B"）',
   multi: 'multi = 多選題：options 4~5 個，answer 為 2 個以上正確選項代號陣列（如 ["A","C"]）',
@@ -148,6 +165,7 @@ async function generateSingleBatch(opts: {
   counts: TypeCounts
   topic?: string
   scope?: string
+  remedial?: RemedialContext
   startPosition: number
 }): Promise<ExamQuestion[]> {
   const wanted = Object.entries(opts.counts).filter(([, n]) => (n ?? 0) > 0) as [QuestionType, number][]
@@ -157,9 +175,38 @@ async function generateSingleBatch(opts: {
   const slicedKnowledge = applyScopeToKnowledge(opts.knowledge, opts.scope)
   const knowledgeText = slicedKnowledge.map((k, i) => `<document index="${i + 1}" title="${k.title.replace(/"/g, "'")}">\n${k.content}\n</document>`).join('\n\n')
 
+  const hasRemedial = !!(opts.remedial && opts.remedial.weaknesses.length > 0)
+  const remedialRatio = Math.max(0.1, Math.min(1.0, opts.remedial?.remedialRatio ?? 0.5))
+  const remedialPct = Math.round(remedialRatio * 100)
+  const newPct = 100 - remedialPct
+
+  const remedialGuide = hasRemedial ? `
+【重要核心任務 — 歷史測驗錯題深化與弱點強化出題】：
+這份考卷旨在幫助之前已考過試的員工「補強常錯概念、真正理解原理與正確作法」，同時兼顧「全新考點測驗」。
+過去員工在之前的考試中，於以下考題／概念中失分最多、理解最容易混淆：
+
+${opts.remedial!.weaknesses.slice(0, 8).map((w, idx) => `
+[弱點概念 ${idx + 1}]（歷史錯誤率 ${(w.errorRate * 100).toFixed(0)}%）
+- 原考題題目：${w.questionText}
+- 原題型：${w.type}
+- 正確解答：${w.correctAnswer}
+- 正確觀念說明：${w.explanation}
+${w.commonMistakes ? `- 員工常見錯誤選項／回答：${w.commonMistakes}` : ''}
+`).join('\n')}
+
+【混合出題規則】：
+1. 針對上述弱點概念進一步深化出題（約佔 ${remedialPct}% 題數）：
+   - 目的：讓之前考過的員工能「真正理解背後原理與實務運作」，而不是只死背答案。
+   - 方式：針對相同核心觀念設計「實務情境應用題」、「變形考題」、「易混淆對比題」或「操作步驟排序／因果分析題」。
+   - 嚴禁：直接複製原考題！必須出全新角度、更有深度的題目。
+2. 同時包含全新題目（約佔 ${newPct}% 題數）：
+   - 從所附知識文件中，挑選其他未出現在上述弱點中的重要章節或 SOP 規範出題，兼顧測驗的全面性與新鮮度。
+` : ''
+
   const system = `你是企業內訓的出題老師。只能根據提供的公司知識文件出題，不可加入文件以外的事實；每題都要能在文件中找到依據。
 題目要測驗理解與實務應用，避免只考字面記憶；選項的錯誤答案要合理、具迷惑性。
 ${opts.scope ? `【重要規則 — 指定出題範圍／章節限制】：本次出題已被嚴格限定於「${opts.scope}」範圍內，絕不可超出此範圍出題！未提及的章節或知識請勿作為考點。` : ''}
+${hasRemedial ? remedialGuide : ''}
 每題的題目、選項、答案說明都要同時提供繁體中文（zh）、英文（en）、越南文（vi），三種語言內容一致；越南文欄位不可夾雜中文。
 explanation 說明為什麼正確答案是對的，並指出出自哪份文件。
 
@@ -170,7 +217,9 @@ ${wanted.map(([t]) => '- ' + TYPE_GUIDE[t]).join('\n')}`
 
   const user = `${knowledgeText}
 
-請依上面的文件出題，數量：${wanted.map(([t, n]) => `${t} ${n} 題`).join('、')}，共 ${total} 題。${opts.scope ? `\n出題範圍限制：${opts.scope}` : ''}${opts.topic ? `\n出題重點：${opts.topic}` : ''}`
+${hasRemedial ? remedialGuide : ''}
+
+請依上面的文件出題，數量：${wanted.map(([t, n]) => `${t} ${n} 題`).join('、')}，共 ${total} 題。${opts.scope ? `\n出題範圍限制：${opts.scope}` : ''}${opts.topic ? `\n出題重點：${opts.topic}` : ''}${hasRemedial ? '\n（請務必依上述混合出題規則，同時包含弱點深化題與全新概念題）' : ''}`
 
   return runModel(system, user, opts.startPosition)
 }
@@ -184,6 +233,7 @@ export async function generateExamQuestions(opts: {
   counts: TypeCounts
   topic?: string
   scope?: string
+  remedial?: RemedialContext
   startPosition: number
 }): Promise<ExamQuestion[]> {
   const wanted = Object.entries(opts.counts).filter(([, n]) => (n ?? 0) > 0) as [QuestionType, number][]

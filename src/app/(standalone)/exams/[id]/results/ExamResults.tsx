@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useLocale, useTranslations } from 'next-intl'
-import { ArrowLeft, Download, Loader2, X } from 'lucide-react'
+import { ArrowLeft, Download, Loader2, Sparkles, TrendingDown, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { AutoTextarea } from '@/components/ui/auto-textarea'
 import type { ExamLang, ExamQuestion, L10n } from '@/lib/exams/types'
+import type { ExamWeaknessSummary } from '@/lib/exams/weakness'
 
 interface Result { score: number; max: number; correct?: boolean; feedback?: string; pending?: boolean }
 interface Sub {
@@ -19,12 +21,14 @@ interface Sub {
 export function ExamResults({ id }: { id: string }) {
   const t = useTranslations('Exams')
   const locale = useLocale()
+  const router = useRouter()
   const lang: ExamLang = locale === 'vi' ? 'vi' : locale === 'en' ? 'en' : 'zh'
   const pick = (l: L10n | undefined) => (l ? l[lang] || l.zh || l.en || l.vi : '')
 
   const [title, setTitle] = useState<L10n | null>(null)
   const [questions, setQuestions] = useState<ExamQuestion[]>([])
   const [subs, setSubs] = useState<Sub[]>([])
+  const [weaknessSummary, setWeaknessSummary] = useState<ExamWeaknessSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState<Sub | null>(null)
   const [edits, setEdits] = useState<Record<string, { score: number; feedback: string }>>({})
@@ -35,18 +39,47 @@ export function ExamResults({ id }: { id: string }) {
   // 作答來源篩選：員工（系統帳號）、員工專區、應徵者
   const [kindFilter, setKindFilter] = useState<string>('all')
 
+  // 補強考卷彈窗狀態
+  const [remedialModalOpen, setRemedialModalOpen] = useState(false)
+  const [creatingRemedial, setCreatingRemedial] = useState(false)
+  const [remedialRatio, setRemedialRatio] = useState<number>(0.5)
+
   useEffect(() => {
     let alive = true
     Promise.all([
       fetch(`/api/exams/${id}`).then(r => (r.ok ? r.json() : null)),
       fetch(`/api/exams/${id}/submissions`).then(r => (r.ok ? r.json() : null)),
-    ]).then(([e, s]) => {
+      fetch(`/api/exams/${id}/weaknesses`).then(r => (r.ok ? r.json() : null)),
+    ]).then(([e, s, w]) => {
       if (!alive) return
       if (e) { setTitle(e.exam.title); setQuestions(e.questions) }
       if (s) setSubs(s.submissions)
+      if (w) setWeaknessSummary(w)
     }).finally(() => { if (alive) setLoading(false) })
     return () => { alive = false }
   }, [id, reloadKey])
+
+  const createRemedialExam = async () => {
+    setCreatingRemedial(true)
+    try {
+      const res = await fetch(`/api/exams/${id}/create-remedial`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ remedial_ratio: remedialRatio }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        alert(data.error ? `${t('saveFailed')} (${data.error})` : t('saveFailed'))
+        setCreatingRemedial(false)
+        return
+      }
+      setRemedialModalOpen(false)
+      router.push(`/exams/${data.id}`)
+    } catch {
+      alert(t('saveFailed'))
+      setCreatingRemedial(false)
+    }
+  }
 
   const openSub = (s: Sub) => {
     setOpen(s)
@@ -90,8 +123,68 @@ export function ExamResults({ id }: { id: string }) {
         <div className="flex flex-wrap items-center gap-3">
           <Link href={`/exams/${id}`} className="text-muted-foreground hover:text-foreground"><ArrowLeft className="h-5 w-5" /></Link>
           <h1 className="text-xl font-bold flex-1 min-w-[12rem]">{pick(title ?? undefined)} · {t('results')}</h1>
+          {subs.length > 0 && (
+            <Button size="sm" onClick={() => setRemedialModalOpen(true)} className="bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-sm hover:from-indigo-700 hover:to-violet-700">
+              <Sparkles className="h-3.5 w-3.5 mr-1.5" />{t('createRemedialExam')}
+            </Button>
+          )}
           <a href={`/api/exams/${id}/export`}><Button size="sm" variant="outline"><Download className="h-3.5 w-3.5 mr-1" />{t('exportExcel')}</Button></a>
         </div>
+
+        {/* 錯題與弱點診斷區塊 */}
+        {weaknessSummary && weaknessSummary.totalSubmissions > 0 && (
+          <div className="rounded-2xl border bg-card p-5 space-y-3.5 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 rounded-lg bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+                  <TrendingDown className="h-4 w-4" />
+                </span>
+                <div>
+                  <h2 className="font-semibold text-sm">{t('weaknessAnalysis')}</h2>
+                  <p className="text-xs text-muted-foreground">
+                    {t('weaknessCount', { n: weaknessSummary.totalSubmissions, count: weaknessSummary.weaknesses.length })}
+                  </p>
+                </div>
+              </div>
+              <Button size="sm" variant="outline" onClick={() => setRemedialModalOpen(true)} className="text-xs border-indigo-200 text-indigo-700 hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-300">
+                <Sparkles className="h-3.5 w-3.5 mr-1" />{t('createRemedialExam')}
+              </Button>
+            </div>
+
+            {weaknessSummary.weaknesses.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-2 text-center bg-muted/40 rounded-lg">{t('noWeaknessesYet')}</p>
+            ) : (
+              <div className="grid sm:grid-cols-2 gap-3 pt-1">
+                {weaknessSummary.weaknesses.slice(0, 6).map((w, idx) => (
+                  <div key={w.questionId || idx} className="rounded-xl border border-amber-200/70 bg-amber-50/30 dark:bg-amber-950/10 p-3 space-y-1.5 text-xs">
+                    <div className="flex items-center justify-between gap-2 font-medium">
+                      <span className="truncate flex-1 text-foreground">
+                        #{w.position + 1}. {pick(w.question)}
+                      </span>
+                      <span className="shrink-0 px-2 py-0.5 rounded-full font-semibold bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300">
+                        {t('errorRate')} {(w.errorRate * 100).toFixed(0)}%
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-muted-foreground">
+                      {t('weaknessPoints', { max: w.maxPoints, avg: w.avgScore.toFixed(1), count: w.incorrectCount })}
+                    </div>
+                    {w.commonWrongAnswers.length > 0 && (
+                      <div className="text-[11px] text-slate-700 dark:text-slate-300 bg-background/80 rounded px-2 py-1 border border-border/50">
+                        <span className="font-medium text-amber-800 dark:text-amber-300">{t('commonWrong')}：</span>
+                        {w.commonWrongAnswers.map((cw, i) => (
+                          <span key={i} className="inline-block mr-2">
+                            {cw.answerText} <span className="text-muted-foreground">({cw.count}人)</span>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="flex flex-wrap items-center gap-2">
           <div className="text-sm text-muted-foreground mr-auto">
             {t('summary', { n: shown.length, avg: avg.toFixed(0), pending: shown.filter(s => s.grading_status === 'pending').length })}
@@ -215,6 +308,115 @@ export function ExamResults({ id }: { id: string }) {
                 {open.released_at && <span className="text-xs text-emerald-700">（{t('releasedAt', { time: new Date(open.released_at).toLocaleString(undefined, { hour12: false }) })}）</span>}
               </label>
               <Button onClick={saveReview} disabled={saving}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : t('saveReview')}</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 依錯題建立補強考卷彈窗 */}
+      {remedialModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => !creatingRemedial && setRemedialModalOpen(false)}>
+          <div className="bg-card rounded-2xl w-full max-w-lg p-6 space-y-5 border shadow-xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-indigo-600" />
+                  {t('remedialModalTitle')}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                  {t('remedialModalDesc')}
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={creatingRemedial}
+                onClick={() => setRemedialModalOpen(false)}
+                className="text-muted-foreground hover:text-foreground p-1 rounded-md"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {weaknessSummary && (
+              <div className="rounded-xl border bg-muted/40 p-3 space-y-1 text-xs">
+                <div className="font-medium text-foreground">
+                  {t('weaknessCount', { n: weaknessSummary.totalSubmissions, count: weaknessSummary.weaknesses.length })}
+                </div>
+                {weaknessSummary.weaknesses.length > 0 && (
+                  <p className="text-muted-foreground">
+                    {t('remedialLoaded', {
+                      n: weaknessSummary.weaknesses.length,
+                      rate: (
+                        (weaknessSummary.weaknesses.reduce((s, w) => s + w.errorRate, 0) /
+                          weaknessSummary.weaknesses.length) *
+                        100
+                      ).toFixed(0),
+                    })}
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-foreground block">
+                {t('remedialRatio')}
+              </label>
+              <div className="space-y-2 text-xs">
+                {[
+                  { ratio: 0.5, label: t('remedialRatio50') },
+                  { ratio: 0.7, label: t('remedialRatio70') },
+                  { ratio: 1.0, label: t('remedialRatio100') },
+                ].map(opt => (
+                  <label
+                    key={opt.ratio}
+                    className={`flex items-center gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-colors ${
+                      remedialRatio === opt.ratio
+                        ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/20 font-medium'
+                        : 'border-border bg-card hover:bg-muted/30'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="remedialRatio"
+                      value={opt.ratio}
+                      checked={remedialRatio === opt.ratio}
+                      disabled={creatingRemedial}
+                      onChange={() => setRemedialRatio(opt.ratio)}
+                      className="text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <span>{opt.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={creatingRemedial}
+                onClick={() => setRemedialModalOpen(false)}
+              >
+                {t('cancel')}
+              </Button>
+              <Button
+                size="sm"
+                disabled={creatingRemedial}
+                onClick={createRemedialExam}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              >
+                {creatingRemedial ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                    {t('creatingRemedial')}
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4 mr-1.5" />
+                    {t('createRemedialExam')}
+                  </>
+                )}
+              </Button>
             </div>
           </div>
         </div>

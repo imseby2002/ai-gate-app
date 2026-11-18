@@ -22,7 +22,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { count: subCount } = await access.admin.from('exam_submissions').select('id', { count: 'exact', head: true }).eq('exam_id', exam.id)
   if ((subCount ?? 0) > 0) return NextResponse.json({ error: 'has_submissions' }, { status: 409 })
 
-  const body = await req.json().catch(() => null) as { counts?: Record<string, unknown>; topic?: unknown; scope?: unknown; knowledge_doc_ids?: unknown; manual?: unknown } | null
+  const body = await req.json().catch(() => null) as {
+    counts?: Record<string, unknown>
+    topic?: unknown
+    scope?: unknown
+    remedial_source_exam_id?: unknown
+    remedial_ratio?: unknown
+    knowledge_doc_ids?: unknown
+    manual?: unknown
+  } | null
   const manual = typeof body?.manual === 'string' ? body.manual.trim() : ''
   if (manual.length > MAX_MANUAL_CHARS) return NextResponse.json({ error: 'manual_too_long', max: MAX_MANUAL_CHARS }, { status: 400 })
 
@@ -38,9 +46,43 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (total > MAX_QUESTIONS_PER_RUN) return NextResponse.json({ error: 'too_many', max: MAX_QUESTIONS_PER_RUN }, { status: 400 })
   }
 
-  const docIds = Array.isArray(body?.knowledge_doc_ids)
+  // 若有指定歷史考卷進行弱點出題，載入該考卷弱點分析
+  const remedialExamId = typeof body?.remedial_source_exam_id === 'string' ? body.remedial_source_exam_id.trim() : ''
+  let remedialContext: import('@/lib/exams/generate').RemedialContext | undefined
+  let sourceDocIds: string[] = []
+
+  if (remedialExamId) {
+    const { analyzeExamWeaknesses } = await import('@/lib/exams/weakness')
+    const summary = await analyzeExamWeaknesses(access.admin, remedialExamId)
+    if (summary) {
+      const { data: sExam } = await access.admin.from('exams').select('knowledge_doc_ids').eq('id', remedialExamId).maybeSingle()
+      if (Array.isArray(sExam?.knowledge_doc_ids)) sourceDocIds = sExam.knowledge_doc_ids
+
+      remedialContext = {
+        sourceExamId: summary.examId,
+        sourceExamTitle: summary.examTitle.zh || summary.examTitle.vi || summary.examTitle.en,
+        remedialRatio: typeof body?.remedial_ratio === 'number' ? body.remedial_ratio : 0.5,
+        weaknesses: summary.weaknesses.map(w => ({
+          questionText: w.question.zh || w.question.vi || w.question.en,
+          type: w.type,
+          correctAnswer: typeof w.answer === 'string' ? w.answer : JSON.stringify(w.answer),
+          explanation: w.explanation.zh || w.explanation.vi || w.explanation.en,
+          errorRate: w.errorRate,
+          commonMistakes: w.commonWrongAnswers.length ? w.commonWrongAnswers.map(c => `${c.answerText} (${c.count}人)`).join('、') : undefined,
+        })),
+      }
+    }
+  }
+
+  let docIds = Array.isArray(body?.knowledge_doc_ids)
     ? body!.knowledge_doc_ids.filter((x): x is string => typeof x === 'string')
     : exam.knowledge_doc_ids
+
+  // 若當前考卷未選知識，但有參考考卷，則自動採用參考考卷的知識文件
+  if (!docIds.length && sourceDocIds.length) {
+    docIds = sourceDocIds
+  }
+
   // AI 出題一定要有知識；人工出題的知識只是參考，可不選
   if (!docIds.length && !manual) return NextResponse.json({ error: 'no_knowledge' }, { status: 400 })
 
@@ -67,6 +109,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         counts,
         topic: typeof body?.topic === 'string' ? body.topic.slice(0, 500) : undefined,
         scope: typeof body?.scope === 'string' ? body.scope.slice(0, 500) : undefined,
+        remedial: remedialContext,
         startPosition: existing ?? 0,
       })
   } catch (e) {

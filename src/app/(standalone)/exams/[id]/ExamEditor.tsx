@@ -49,6 +49,9 @@ export function ExamEditor({ id }: { id: string }) {
   const [questions, setQuestions] = useState<ExamQuestion[]>([])
   const [submissionCount, setSubmissionCount] = useState(0)
   const [docs, setDocs] = useState<Doc[]>([])
+  const [pastExams, setPastExams] = useState<{ id: string; title: L10n; submission_count?: number }[]>([])
+  const [remedialSourceExamId, setRemedialSourceExamId] = useState<string>('')
+  const [remedialRatio, setRemedialRatio] = useState<number>(0.5)
   const [loadError, setLoadError] = useState(false)
   const [editLang, setEditLang] = useState<ExamLang>(locale === 'vi' ? 'vi' : locale === 'en' ? 'en' : 'zh')
   const [counts, setCounts] = useState<Record<QuestionType, number>>({ single: 5, multi: 2, fill: 2, short: 1, essay: 0 })
@@ -70,9 +73,14 @@ export function ExamEditor({ id }: { id: string }) {
     Promise.all([
       fetch(`/api/exams/${id}`).then(r => (r.ok ? r.json() : Promise.reject())),
       fetch('/api/knowledge').then(r => (r.ok ? r.json() : { docs: [] })),
-    ]).then(([e, k]) => {
+      fetch('/api/exams').then(r => (r.ok ? r.json() : { exams: [] })),
+    ]).then(([e, k, ex]) => {
       if (!alive) return
-      setExam(e.exam); setQuestions(e.questions); setSubmissionCount(e.submission_count); setDocs(k.docs); setDirty(false)
+      setExam(e.exam); setQuestions(e.questions); setSubmissionCount(e.submission_count); setDocs(k.docs)
+      if (ex?.exams) {
+        setPastExams(ex.exams.filter((x: { id: string; submission_count?: number }) => x.id !== id && (x.submission_count ?? 0) > 0))
+      }
+      setDirty(false)
     }).catch(() => { if (alive) setLoadError(true) })
     return () => { alive = false }
   }, [id, reloadKey])
@@ -112,7 +120,14 @@ export function ExamEditor({ id }: { id: string }) {
     setGenerating(true)
     const res = await fetch(`/api/exams/${id}/generate`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ counts, topic, scope, knowledge_doc_ids: exam.knowledge_doc_ids }),
+      body: JSON.stringify({
+        counts,
+        topic,
+        scope,
+        knowledge_doc_ids: exam.knowledge_doc_ids,
+        remedial_source_exam_id: remedialSourceExamId || undefined,
+        remedial_ratio: remedialSourceExamId ? remedialRatio : undefined,
+      }),
     }).catch(() => null)
     setGenerating(false)
     const d = await res?.json().catch(() => ({}))
@@ -318,6 +333,50 @@ export function ExamEditor({ id }: { id: string }) {
                   onChange={e => setScope(e.target.value)}
                 />
               </div>
+
+              {/* 歷史考卷錯題弱點強化（選填） */}
+              {pastExams.length > 0 && (
+                <div className="space-y-2 p-3 rounded-xl border border-indigo-200/70 bg-indigo-50/30 dark:bg-indigo-950/20 text-xs">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium text-foreground flex items-center gap-1.5">
+                      <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
+                      {t('remedialTitle')}
+                    </span>
+                    <span className="text-[11px] text-muted-foreground">{t('remedialHint')}</span>
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-2 pt-1">
+                    <label className="space-y-1 block">
+                      <span className="text-muted-foreground">{t('remedialSourceExam')}</span>
+                      <select
+                        className="w-full h-8 rounded-md border bg-background px-2 text-xs"
+                        value={remedialSourceExamId}
+                        onChange={e => setRemedialSourceExamId(e.target.value)}
+                      >
+                        <option value="">{t('remedialNone')}</option>
+                        {pastExams.map(pe => (
+                          <option key={pe.id} value={pe.id}>
+                            {pe.title[editLang] || pe.title.zh || pe.title.vi || pe.title.en}（{pe.submission_count}份作答）
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    {remedialSourceExamId && (
+                      <label className="space-y-1 block">
+                        <span className="text-muted-foreground">{t('remedialRatio')}</span>
+                        <select
+                          className="w-full h-8 rounded-md border bg-background px-2 text-xs"
+                          value={remedialRatio}
+                          onChange={e => setRemedialRatio(Number(e.target.value))}
+                        >
+                          <option value={0.5}>{t('remedialRatio50')}</option>
+                          <option value={0.7}>{t('remedialRatio70')}</option>
+                          <option value={1.0}>{t('remedialRatio100')}</option>
+                        </select>
+                      </label>
+                    )}
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                 {QUESTION_TYPES.map(qt => (
