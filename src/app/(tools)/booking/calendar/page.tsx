@@ -113,6 +113,13 @@ export default function CalendarPage() {
     fetch('/api/booking/active-bnb').then(r => r.json()).then(d => { if (d.canWrite === false) setCanWrite(false) }).catch(() => {})
   }, [])
 
+  // 房源清單不會隨月份改變，只在進頁時抓一次，換月時不重複抓（換月才會快）
+  useEffect(() => {
+    fetch('/api/booking/properties').then(r => r.json())
+      .then(pr => setProperties((pr.properties ?? []).filter((p: Property) => p.room_count > 0)))
+      .catch(() => {})
+  }, [])
+
   const fetchData = useCallback(async () => {
     setLoading(true)
     const from = `${year}-${String(month + 1).padStart(2, '0')}-01`
@@ -120,14 +127,12 @@ export default function CalendarPage() {
     const to = `${year}-${String(month + 1).padStart(2, '0')}-${lastDay}`
     const params = new URLSearchParams({ from, to, limit: '500' })
     if (filterProp) params.set('property_id', filterProp)
-    const [bk, pr, bl] = await Promise.all([
+    const [bk, bl] = await Promise.all([
       fetch(`/api/booking/bookings?${params}`).then(r => r.json()),
-      fetch('/api/booking/properties').then(r => r.json()),
       fetch(`/api/booking/blocked?from=${from}&to=${to}`).then(r => r.json()),
     ])
     setBookings(bk.bookings ?? [])
     setBlocked(new Set((bl.blocked ?? []).map((b: { property_id: string; date: string }) => `${b.property_id}|${b.date}`)))
-    setProperties((pr.properties ?? []).filter((p: Property) => p.room_count > 0))
     setLoading(false)
   }, [year, month, filterProp])
 

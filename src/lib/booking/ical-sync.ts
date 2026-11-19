@@ -357,16 +357,32 @@ export async function syncICalForSetting(
         .eq('ical_setting_id', settingId).in('date', staleDates.slice(i, i + 500))
       if (delErr) result.errors.push(`釋出房況失敗：${delErr.message}`)
     }
+    // 自動取消要很保守：平台（尤其 Trip.com）常會更換同一筆訂單的事件 UID，舊 UID 從
+    // feed 消失不代表客人取消。只取消「純 iCal 佔位、且日期已完全不再被任何目前事件封鎖」
+    // 的訂單；一旦有人工填寫資料（真實姓名／金額／電話／Email）就絕不自動取消，避免把
+    // 民宿主自己補好的真實訂單誤殺（改由每日偵測報告提醒人工確認）。
     const wantedBookingIds = new Set([...wantedBlocks.values()].filter((v): v is string => !!v))
-    const cancelledIds = [...new Set((existingBlocks ?? [])
+    const wantedDates = new Set(wantedBlocks.keys())
+    const candidateIds = [...new Set((existingBlocks ?? [])
       .map(b => b.booking_id).filter((v): v is string => !!v))]
       .filter(id => !wantedBookingIds.has(id))
-    if (cancelledIds.length > 0) {
-      const { error: cErr } = await supabase.from('bookings')
-        .update({ status: 'cancelled', updated_at: new Date().toISOString() })
-        .in('id', cancelledIds).eq('user_id', setting.user_id).eq('source', 'ical').neq('status', 'cancelled')
-      if (cErr) result.errors.push(`標記取消失敗：${cErr.message}`)
-      else result.cancelled = cancelledIds.length
+    if (candidateIds.length > 0) {
+      const { data: cand } = await supabase.from('bookings')
+        .select('id, guest_name, guest_email, guest_phone, total_price, source, check_in, check_out, status')
+        .in('id', candidateIds).eq('user_id', setting.user_id)
+      const toCancel = (cand ?? []).filter(b => {
+        if (b.status === 'cancelled') return false
+        if (isBookingFilled(b)) return false                      // 有人工資料 → 不自動取消
+        for (const d of dateRange(b.check_in, b.check_out)) if (wantedDates.has(d)) return false // 日期仍被封鎖 → 可能只是換 UID
+        return true
+      }).map(b => b.id)
+      if (toCancel.length > 0) {
+        const { error: cErr } = await supabase.from('bookings')
+          .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+          .in('id', toCancel).eq('user_id', setting.user_id).neq('status', 'cancelled')
+        if (cErr) result.errors.push(`標記取消失敗：${cErr.message}`)
+        else result.cancelled = toCancel.length
+      }
     }
   }
 

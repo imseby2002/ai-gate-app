@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getBnbContext } from '@/lib/bnb/context'
 import { syncDailyRecordForBooking, clearDailyRecordForDeletedBooking } from '@/lib/booking/daily-sync'
 import { findOrCreateOrder, autoBookingNo, AUTO_BOOKING_NO_PREFIX } from '@/lib/booking/orders'
-import { findDuplicateClusters, deduplicateBookings, isUnavailableStatusName, isBookingComClosedPlaceholder, BookingRow } from '@/lib/booking/dedup'
+import { findDuplicateClusters, deduplicateBookings, BookingRow } from '@/lib/booking/dedup'
 
 export async function GET(req: NextRequest) {
   const supabase = await createClient()
@@ -33,17 +33,14 @@ export async function GET(req: NextRequest) {
   const { data, error } = await q
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // 規則 3：若檢測到同房型重複訂單或非真實旅客的房況佔位，自動執行去重與清理
+  // 規則 3：只有「真的有同房型重複訂單叢集」才跑去重（去重會寫入＋重查，很耗時）。
+  // 原本只要月份內出現任何「RoomStatus／Fully Booked／Not available」這類平台關房標記
+  // 就會整批去重，導致每次換月都跑一次沉重清理 → 日曆換月很慢。這類關房標記本身不是
+  // 重複訂單，交給 iCal 同步端分類為房況封鎖即可，不必在讀取時清理。
   if (data && data.length > 0) {
     const bks = data as unknown as BookingRow[]
     const clusters = findDuplicateClusters(bks)
-    const hasFakeStatus = bks.some(b =>
-      isUnavailableStatusName(b.guest_name) ||
-      isBookingComClosedPlaceholder(b) ||
-      /roomstatus/i.test(b.guest_name ?? '') ||
-      /fully\s*booked/i.test(b.guest_name ?? '')
-    )
-    if (clusters.length > 0 || hasFakeStatus) {
+    if (clusters.length > 0) {
       await deduplicateBookings(supabase, {
         userId: ctx.ownerId,
         propertyId: property_id ?? undefined,
