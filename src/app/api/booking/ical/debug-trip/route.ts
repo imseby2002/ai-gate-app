@@ -31,9 +31,13 @@ export async function GET(req: NextRequest) {
       fetchErr = String(e)
     }
 
+    let raw301 = ''
     const events22: string[] = []
     let allTripEvents: string[] = []
     if (raw) {
+      if (s.platform === 'trip_com' && s.properties?.name?.includes('301')) {
+        raw301 = raw
+      }
       const unfolded = raw.replace(/\r\n[ \t]/g, '').replace(/\n[ \t]/g, '')
       const lines = unfolded.split(/\r?\n/)
       let cur: string[] = []
@@ -43,9 +47,6 @@ export async function GET(req: NextRequest) {
         } else if (line === 'END:VEVENT') {
           cur.push(line)
           const text = cur.join('\n')
-          if (text.includes('20261122') || text.includes('2026-11-22') || text.includes('1122') || text.includes('1123')) {
-            events22.push(text)
-          }
           if (s.platform === 'trip_com' && s.properties?.name?.includes('301')) {
             allTripEvents.push(text)
           }
@@ -67,6 +68,7 @@ export async function GET(req: NextRequest) {
       events22,
       allTripEvents: allTripEvents.length > 0 ? allTripEvents : undefined,
       rawLength: raw.length,
+      raw301: raw301 || undefined,
     })
   }
 
