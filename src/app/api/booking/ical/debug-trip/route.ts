@@ -66,9 +66,8 @@ export async function GET(req: NextRequest) {
       last_sync_error: s.last_sync_error,
       fetchErr,
       events22,
-      allTripEvents: allTripEvents.length > 0 ? allTripEvents : undefined,
       rawLength: raw.length,
-      raw301: raw301 || undefined,
+      tripRaw: s.platform === 'trip_com' ? raw : undefined,
     })
   }
 
