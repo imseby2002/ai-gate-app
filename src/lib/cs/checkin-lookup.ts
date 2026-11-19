@@ -527,7 +527,7 @@ export async function queryBnbCheckin(supabase: any, userId: string, orderNum: s
       `・房間：${todayDaily.room_name || '（尚未設定，請聯繫工作人員）'}`,
       `・房門密碼：${pw.room_password}`,
       `・大門密碼：${pw.gate_password}`,
-      `（以上每一項請逐條列出給客人，不可省略任何一項或濃縮成一句話；資料為系統即時資料，請直接引用，禁止修改或捏造）`,
+      `（以上資料為系統即時資料，請逐條提供給客人，不可省略任何一項；禁止捏造密碼數字。若客人使用外語（如英文），請務必將「旅客姓名、房間、房門密碼、大門密碼」等標籤與問候語翻譯為客人的語言提供）`,
     ].filter(Boolean).join('\n')
     return lines
   }
@@ -589,7 +589,7 @@ async function formatBookingsWithPassword(supabase: any, userId: string, rows: M
       lines.push(`・房間密碼：（訂單尚未對應房型，請聯繫工作人員確認）`)
     }
   }
-  lines.push(`（以上每一項請逐條列出給客人，不可省略任何一項或濃縮成一句話；資料為系統即時資料，請直接引用，禁止修改或捏造）`)
+  lines.push(`（以上資料為系統即時資料，請逐條提供給客人，不可省略任何一項；禁止捏造密碼數字。若客人使用外語（如英文），請務必將「旅客姓名、房間、房門密碼、大門密碼」等標籤與問候語翻譯為客人的語言提供）`)
   return lines.filter(Boolean)
 }
 
@@ -936,7 +936,7 @@ export async function queryBookingByGuestName(supabase: any, userId: string, can
           lines.push(`　房門密碼：${pw.room_password}`)
           lines.push(`　大門密碼：${pw.gate_password}`)
         }
-        lines.push(`（以上每一項請逐條列出給客人，不可省略任何一項或濃縮成一句話；資料為系統即時資料，請直接引用，禁止修改或捏造）`)
+        lines.push(`（以上資料為系統即時資料，請逐條提供給客人，不可省略任何一項；禁止捏造密碼數字。若客人使用外語（如英文），請務必將「旅客姓名、房間、房門密碼、大門密碼」等標籤與問候語翻譯為客人的語言提供）`)
         return lines.join('\n')
       }
 
