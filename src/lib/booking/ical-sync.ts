@@ -30,7 +30,7 @@ interface SyncResult {
   errors: string[]
 }
 
-const ICAL_HASH_VERSION = 'v6_subsegment_split_20261119'
+const ICAL_HASH_VERSION = 'v7_per_date_owner_block_20261119'
 
 export async function syncICalForSetting(
   settingId: string,
@@ -159,14 +159,12 @@ export async function syncICalForSetting(
       /^not\s*available$/i.test(ev.summary.trim())
 
     const rawSummary = (ev.summary ?? '').trim()
-    const isUnavailableBlock =
-      hasOwnerBlock && isPlaceholderOrGeneric
-        ? true
-        : setting.platform === 'airbnb'
-          ? (/not\s*available/i.test(rawSummary) || /not\s*available/i.test(guestName))
-          : setting.platform === 'booking_com'
-            ? (/^closed(?:\s*-.*)?$/i.test(rawSummary) || /^not\s*available$/i.test(rawSummary) || /^not\s*available$/i.test(guestName.trim()))
-            : (/^not\s*available$/i.test(rawSummary) || /^not\s*available$/i.test(guestName.trim()) || /^closed(?:\s*-.*)?$/i.test(rawSummary))
+    const isUnavailableSummary =
+      setting.platform === 'airbnb'
+        ? (/not\s*available/i.test(rawSummary) || /not\s*available/i.test(guestName))
+        : setting.platform === 'booking_com'
+          ? (/^closed(?:\s*-.*)?$/i.test(rawSummary) || /^not\s*available$/i.test(rawSummary) || /^not\s*available$/i.test(guestName.trim()))
+          : (/^not\s*available$/i.test(rawSummary) || /^not\s*available$/i.test(guestName.trim()) || /^closed(?:\s*-.*)?$/i.test(rawSummary))
 
     const baseUid = ev.uid || `${settingId}_${ev.start}`
 
@@ -195,7 +193,7 @@ export async function syncICalForSetting(
         continue
       }
 
-      if (isUnavailableBlock) {
+      if (isUnavailableSummary) {
         // 純關房佔位（CLOSED / Not available），無對應訂單
         wantedBlocks.set(date, null)
         continue
