@@ -4,10 +4,10 @@
 interface BookingLike {
   id: string
   property_id: string | null
-  guest_name: string | null
-  platform_booking_id: string | null
-  total_price: number | null
-  platform: string | null
+  guest_name?: string | null
+  platform_booking_id?: string | null
+  total_price?: number | null
+  platform?: string | null
   check_in: string
   check_out?: string | null
   status: string

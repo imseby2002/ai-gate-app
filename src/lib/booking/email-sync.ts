@@ -5,6 +5,7 @@ import { decryptSecret, encryptSecret, isEncrypted } from '@/lib/crypto/secret'
 import { findOrCreateOrder } from './orders'
 import { generateTextByChain, looksLikeJson } from '@/lib/ai/proxy-fallback'
 import { isBookingFilled, deduplicateBookings } from './dedup'
+import { syncDailyRecordForBooking } from './daily-sync'
 
 interface AdditionalRoom {
   property_name: string | null
@@ -25,6 +26,7 @@ interface BookingExtracted {
   matched_property_id: string | null
   is_cancellation: boolean
   is_booking: boolean
+  is_modification?: boolean
   // 同一張訂單同時訂了其他房型時（第一個房型仍照上面欄位填），其餘房型各自列在這裡；
   // 全部房型共用同一位旅客與同一組入住/退房日、訂單號。
   additional_rooms?: AdditionalRoom[] | null
@@ -99,6 +101,8 @@ const BOOKING_SUBJECT_KEYWORDS = [
   '取消確認', '取消通知', '訂單取消', '訂單已取消', '您的訂單已取消',
   '訂房已取消', '預訂已取消', '已取消',
   '行程確認', '您已接受',
+  // 修改/變更類
+  '修改訂單', '訂單修改', '變更預訂', '修改預訂', '預訂變更', '訂單變更', '行程變更', '更改預訂', '預訂修改', '改期',
   // English
   'booking confirmation', 'reservation confirmed', 'confirmed booking',
   'reservation confirmation', 'booking confirmed',
@@ -107,6 +111,8 @@ const BOOKING_SUBJECT_KEYWORDS = [
   'new reservation', 'new booking', 'booking accepted',
   'booking no.', 'accepted', 'itinerary',
   'new reservation notification', 'new booking notification', 'booking notification', 'reservation notification',
+  // Modification English
+  'booking modified', 'booking amendment', 'amended booking', 'reservation modified', 'booking updated', 'reservation amended', 'amended',
   // Trip.com specific
   'booking no.#', 'accepted#',
   // Agoda specific
@@ -543,6 +549,11 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
         continue
       }
 
+      const isModificationDetected = Boolean(
+        extracted.is_modification ||
+        /修改訂單|訂單修改|變更預訂|修改預訂|預訂變更|訂單變更|行程變更|更改預訂|預訂修改|改期|booking modified|booking amendment|amended booking|reservation modified|booking updated|reservation amended/i.test(subject + ' ' + body.slice(0, 1000))
+      )
+
       const validMatchedId =
         extracted.matched_property_id && properties.some(p => p.id === extracted.matched_property_id)
           ? extracted.matched_property_id
@@ -625,10 +636,183 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
         const roomTotalPrice = room.totalPrice ?? (multiRoom ? null : extracted.total_price)
         const roomNumGuests = room.numGuests ?? (multiRoom ? null : extracted.num_guests)
 
+        // ── 檢查此單號 (confId) 是否已存在於系統中（處理取消、修改/改期、同單號去重）────
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let existingBookingForConf: any = null
+        if (confId && !confId.startsWith('email_')) {
+          const { data: bksByConf } = await supabase
+            .from('bookings')
+            .select('id, status, guest_name, check_in, check_out, total_price, num_guests, property_id, notes, platform, platform_booking_id, order_id')
+            .eq('user_id', setting.user_id)
+            .eq('platform', platform)
+            .eq('platform_booking_id', confId)
+            .neq('status', 'cancelled')
+
+          if (bksByConf && bksByConf.length > 0) {
+            existingBookingForConf = (bksByConf.find(b => resolvedPropertyId ? b.property_id === resolvedPropertyId : true)) ?? bksByConf[0]
+          }
+        }
+
+        // 1. 若為取消信且系統已有此訂單
+        if (existingBookingForConf && extracted.is_cancellation) {
+          if (existingBookingForConf.status !== 'cancelled') {
+            await supabase.from('bookings').update({
+              status: 'cancelled',
+              ...(DEBUG_FETCH_NOTE ? { notes: appendFetchNote(existingBookingForConf.notes) } : {}),
+            }).eq('id', existingBookingForConf.id)
+            // 同步清除每日入住與 blocked_dates
+            await syncDailyRecordForBooking(supabase, setting.user_id, { ...existingBookingForConf, status: 'cancelled' }).catch(() => {})
+            await supabase.from('blocked_dates').delete().eq('booking_id', existingBookingForConf.id)
+            if (existingBookingForConf.property_id) {
+              await deduplicateBookings(supabase, {
+                userId: setting.user_id,
+                propertyId: existingBookingForConf.property_id,
+                from: existingBookingForConf.check_in,
+                to: existingBookingForConf.check_out,
+              }).catch(() => {})
+            }
+            addLog(`[取消✓ conf] ${confId} | ${subj80}`)
+            result.added++
+          } else {
+            addLog(`[已取消skip] ${confId} | ${subj80}`)
+          }
+          continue
+        }
+
+        // 2. 判斷是否為「修改訂單」（改日期或改房型）
+        const isDateChanged = Boolean(
+          existingBookingForConf && checkIn && (
+            checkIn !== existingBookingForConf.check_in ||
+            (validCheckOut && validCheckOut !== existingBookingForConf.check_out)
+          )
+        )
+        const isPropChanged = Boolean(
+          existingBookingForConf && resolvedPropertyId &&
+          existingBookingForConf.property_id &&
+          resolvedPropertyId !== existingBookingForConf.property_id
+        )
+        const isOrderModified = Boolean(
+          existingBookingForConf && (isModificationDetected || isDateChanged || isPropChanged)
+        )
+
+        if (existingBookingForConf && isOrderModified && (isDateChanged || isPropChanged)) {
+          const prevBooking = { ...existingBookingForConf }
+          const targetPropId = resolvedPropertyId || existingBookingForConf.property_id
+          const targetCheckIn = checkIn || existingBookingForConf.check_in
+          const targetCheckOut = checkOut || existingBookingForConf.check_out
+
+          // 若新日期上已有 iCal 佔位訂單，將其合併轉移至本訂單，避免在行事曆上產生兩筆重複
+          if (targetCheckOut) {
+            const { data: placeholders } = await supabase
+              .from('bookings')
+              .select('id')
+              .eq('user_id', setting.user_id)
+              .eq('platform', platform)
+              .eq('property_id', targetPropId)
+              .eq('check_in', targetCheckIn)
+              .eq('check_out', targetCheckOut)
+              .neq('id', existingBookingForConf.id)
+              .neq('status', 'cancelled')
+            if (placeholders?.length) {
+              for (const pl of placeholders) {
+                await supabase.from('blocked_dates').update({ booking_id: existingBookingForConf.id }).eq('booking_id', pl.id)
+                await supabase.from('bnb_daily_records').update({ booking_id: existingBookingForConf.id }).eq('booking_id', pl.id)
+                await supabase.from('bookings').delete().eq('id', pl.id)
+              }
+            }
+          }
+
+          // 清理舊日期區間的 blocked_dates（不再屬於新日期住宿範圍的封鎖日）
+          const { data: oldBlocks } = await supabase
+            .from('blocked_dates')
+            .select('id, date, property_id')
+            .eq('booking_id', existingBookingForConf.id)
+          if (oldBlocks?.length) {
+            for (const b of oldBlocks) {
+              if (b.date < targetCheckIn || b.date >= targetCheckOut || (targetPropId && b.property_id !== targetPropId)) {
+                await supabase.from('blocked_dates').delete().eq('id', b.id)
+              }
+            }
+          }
+
+          const patch: Record<string, unknown> = {
+            check_in: targetCheckIn,
+            check_out: targetCheckOut,
+            property_id: targetPropId,
+            status: 'confirmed',
+          }
+          if (extracted.guest_name && (!existingBookingForConf.guest_name || existingBookingForConf.guest_name === '(待補充)')) {
+            patch.guest_name = extracted.guest_name
+          }
+          if (roomTotalPrice != null) patch.total_price = roomTotalPrice
+          if (roomNumGuests != null) patch.num_guests = roomNumGuests
+          const modNote = `[修改訂單: 原${prevBooking.check_in}~${prevBooking.check_out} 改為${targetCheckIn}~${targetCheckOut}]`
+          patch.notes = appendFetchNote(existingBookingForConf.notes ? `${existingBookingForConf.notes} ${modNote}` : modNote)
+
+          await supabase.from('bookings').update(patch).eq('id', existingBookingForConf.id)
+
+          // 同步更新每日入住名冊（清除舊日期、填入新日期）
+          const updatedBooking = { ...existingBookingForConf, ...patch }
+          await syncDailyRecordForBooking(supabase, setting.user_id, updatedBooking, prevBooking).catch(() => {})
+
+          // 去重：整理舊住宿日期與新住宿日期的房況
+          if (prevBooking.property_id) {
+            await deduplicateBookings(supabase, {
+              userId: setting.user_id,
+              propertyId: prevBooking.property_id,
+              from: prevBooking.check_in,
+              to: prevBooking.check_out,
+            }).catch(() => {})
+          }
+          if (targetPropId) {
+            await deduplicateBookings(supabase, {
+              userId: setting.user_id,
+              propertyId: targetPropId,
+              from: targetCheckIn,
+              to: targetCheckOut,
+            }).catch(() => {})
+          }
+
+          addLog(`[修改訂單✓] ${confId} ${prevBooking.check_in}→${targetCheckIn} | ${subj80}`)
+          result.added++
+          continue
+        }
+
+        // 3. 若單號相同且日期房型均未變（重複信件或資料補齊）
+        if (existingBookingForConf) {
+          const patch: Record<string, unknown> = {}
+          if (extracted.guest_name && (!existingBookingForConf.guest_name || existingBookingForConf.guest_name === '(待補充)'))
+            patch.guest_name = extracted.guest_name
+          if (validCheckOut && (!existingBookingForConf.check_out || validCheckOut > existingBookingForConf.check_out))
+            patch.check_out = validCheckOut
+          if (roomTotalPrice != null && existingBookingForConf.total_price == null)
+            patch.total_price = roomTotalPrice
+          if (roomNumGuests && (existingBookingForConf.num_guests == null || existingBookingForConf.num_guests <= 1))
+            patch.num_guests = roomNumGuests
+          if (resolvedPropertyId && !existingBookingForConf.property_id)
+            patch.property_id = resolvedPropertyId
+          const hadPatch = Object.keys(patch).length > 0
+          if (hadPatch && existingBookingForConf.status === 'pending' && !isPartial) {
+            patch.status = 'confirmed'
+            patch.notes = null
+          }
+          if (DEBUG_FETCH_NOTE) {
+            patch.notes = appendFetchNote('notes' in patch ? (patch.notes as string | null) : existingBookingForConf.notes)
+          }
+          if (Object.keys(patch).length > 0) {
+            await supabase.from('bookings').update(patch).eq('id', existingBookingForConf.id)
+            const updated = { ...existingBookingForConf, ...patch }
+            await syncDailyRecordForBooking(supabase, setting.user_id, updated).catch(() => {})
+            if (hadPatch) result.added++; else result.debug.skipped_duplicate++
+          } else {
+            result.debug.skipped_duplicate++
+          }
+          continue
+        }
+
         // ── iCal 為主要來源，Email 只負責補齊資料 ──────────────────
-        // 有設定 iCal 同步時，訂房阻擋已經靠 iCal 完成；若這封信對應到一筆已存在的
-        // iCal 訂單（同平台＋同房型＋同入住退房日），把姓名／金額／人數等 iCal
-        // 沒有的細節補進去（或標記取消），不要另外新增一筆重複訂單。
+        // 若系統中尚無此單號，但此信對應到已存在的 iCal 訂單（同平台＋同房型＋同入住退房日），
+        // 把姓名／金額／人數等 iCal 沒有的細節補進去（或標記取消），不要另外新增一筆重複訂單。
         if (validCheckOut) {
           let icalQ = supabase
             .from('bookings')
@@ -660,6 +844,8 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
               await supabase.from('bookings').update(patch).eq('id', icalBooking.id)
               addLog(`[補齊iCal✓] ${confId} | ${subj80}`)
               result.added++
+              const enriched = { ...icalBooking, ...patch, platform, property_id: resolvedPropertyId, check_in: checkIn, check_out: validCheckOut }
+              await syncDailyRecordForBooking(supabase, setting.user_id, enriched).catch(() => {})
             } else {
               result.debug.skipped_duplicate++
             }
@@ -673,65 +859,6 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
             }
             continue
           }
-        }
-
-        // Duplicate check 1: exact confirmation_id + property match
-        // （同一單號現在可能對應多筆房型，一定要搭配 property 篩選才能鎖到「這個房型」的那一筆）
-        const { data: dupById } = await filterByProperty(
-          supabase
-            .from('bookings')
-            .select('id, status, guest_name, check_in, check_out, total_price, num_guests, property_id, notes')
-            .eq('user_id', setting.user_id)
-            .eq('platform_booking_id', confId),
-          resolvedPropertyId,
-        ).maybeSingle()
-        if (dupById) {
-          if (extracted.is_cancellation && dupById.status !== 'cancelled') {
-            await supabase.from('bookings').update({
-              status: 'cancelled',
-              ...(DEBUG_FETCH_NOTE ? { notes: appendFetchNote(dupById.notes) } : {}),
-            }).eq('id', dupById.id)
-            addLog(`[取消✓ dup1] ${confId} | ${subj80}`)
-            result.added++
-            continue
-          }
-          if (extracted.is_cancellation && dupById.status === 'cancelled') {
-            addLog(`[已取消skip] ${confId} | ${subj80}`)
-          }
-          const patch: Record<string, unknown> = {}
-          if (extracted.guest_name && (!dupById.guest_name || dupById.guest_name === '(待補充)'))
-            patch.guest_name = extracted.guest_name
-          // check_in 只在訂單還沒確認（status 仍是 pending，代表當初是 AI 沒解析完整才建立的
-          // 佔位資料）時才允許校正；已經是 confirmed 的訂單絕不動 check_in，避免誤蓋掉真實資料。
-          if (checkIn && checkIn !== dupById.check_in && dupById.status === 'pending')
-            patch.check_in = checkIn
-          // 只在缺資料（沒有 check_out）或信件延後退房日時才更新，絕不往回改：
-          // 每日入住的「續住」會直接延後訂單的 check_out，若這裡照信件內容無條件覆寫，
-          // 同一張訂單的信只要被重新處理到，就會把手動續住延長的天數改回去，
-          // 連帶讓那天的每日入住資料被清空（GET 找不到涵蓋當天的有效訂單）。
-          if (validCheckOut && (!dupById.check_out || validCheckOut > dupById.check_out))
-            patch.check_out = validCheckOut
-          if (roomTotalPrice != null && dupById.total_price == null)
-            patch.total_price = roomTotalPrice
-          if (roomNumGuests && (dupById.num_guests == null || dupById.num_guests <= 1))
-            patch.num_guests = roomNumGuests
-          if (resolvedPropertyId && !dupById.property_id)
-            patch.property_id = resolvedPropertyId
-          const hadPatch = Object.keys(patch).length > 0
-          if (hadPatch && !extracted.is_cancellation && dupById.status === 'pending' && !isPartial) {
-            patch.status = 'confirmed'
-            patch.notes = null
-          }
-          if (DEBUG_FETCH_NOTE) {
-            patch.notes = appendFetchNote('notes' in patch ? (patch.notes as string | null) : dupById.notes)
-          }
-          if (Object.keys(patch).length > 0) {
-            await supabase.from('bookings').update(patch).eq('id', dupById.id)
-            if (hadPatch) result.added++; else result.debug.skipped_duplicate++
-          } else {
-            result.debug.skipped_duplicate++
-          }
-          continue
         }
 
         // Duplicate check 2: same platform + check_in + check_out + guest_name + property
@@ -855,12 +982,23 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
         } else {
           addLog(`[新增✓] ${confId} ${checkIn}→${checkOut} canc=${extracted.is_cancellation} | ${subj80}`)
           result.added++
+          const { data: insertedBk } = await supabase
+            .from('bookings')
+            .select('id, property_id, guest_name, platform_booking_id, total_price, platform, check_in, check_out, status')
+            .eq('user_id', setting.user_id)
+            .eq('platform', platform)
+            .eq('platform_booking_id', confId)
+            .eq('property_id', targetPropertyId)
+            .maybeSingle()
+          if (insertedBk) {
+            await syncDailyRecordForBooking(supabase, setting.user_id, insertedBk).catch(() => {})
+          }
           if (resolvedPropertyId) {
             await deduplicateBookings(supabase, {
               userId: setting.user_id,
               propertyId: resolvedPropertyId,
               from: checkIn,
-              to: checkOut,
+              to: checkOut || undefined,
             }).catch(() => {})
           }
         }
@@ -968,8 +1106,12 @@ const FEW_SHOT_EXAMPLES: Record<string, string> = {
 
 範例2（房東接單通知，訂單號在主旨重複多次）：輸入主旨：「已確認訂單編號 #1616399988877766#//Booking no. #1616399988877766# accepted#1616399988877766#」
 輸入內文片段：「已確認訂單 您已接受旅客的預訂 預約編號1616399988877766 飯店確認編號 1616399988877766 … 旅客姓名：WANG/XIAO MING 房型：豪華雙人房 breakfast-Commission 15%｜1房 保留房 床型：1張特大床 住宿日期：2026 年 9 月 10 日 - 2026 年 9 月 12 日｜2 晚 抵達時間：9 月 10 日 15:00 - 9 月 12 日 06:00 每日餐點：2 客普通早餐 預計到店人數：2 位成人」
-正確輸出：{"is_booking":true,"is_cancellation":false,"guest_name":"WANG/XIAO MING","check_in":"2026-09-10","check_out":"2026-09-12","confirmation_id":"1616399988877766","total_price":null,"num_guests":2,"property_name":"豪華雙人房","matched_property_id":null,"platform":"trip_com"}
-（說明：主旨裡同一個訂單號出現 3 次是正常格式，不是 3 筆訂單；房型後面的「-Commission 15%」「保留房」是佣金/狀態標籤，不算房型名稱的一部分；住宿日期用第一個日期當入住、第二個當退房，不要用「N 晚」去反推。）`,
+正確輸出：{"is_booking":true,"is_cancellation":false,"is_modification":false,"guest_name":"WANG/XIAO MING","check_in":"2026-09-10","check_out":"2026-09-12","confirmation_id":"1616399988877766","total_price":null,"num_guests":2,"property_name":"豪華雙人房","matched_property_id":null,"platform":"trip_com"}
+（說明：主旨裡同一個訂單號出現 3 次是正常格式，不是 3 筆訂單；房型後面的「-Commission 15%」「保留房」是佣金/狀態標籤，不算房型名稱的一部分；住宿日期用第一個日期當入住、第二個當退房，不要用「N 晚」去反推。）
+
+範例3（訂單修改/改期通知）：輸入主旨：「【訂單修改】Trip.com 預訂變更通知 (booking no. #1616330516335375#)」
+輸入內文片段：「訂單編號 1616330516335375 … 旅客姓名 HUANG/YA CHI … 原住宿日期 2026 年 11 月 19 日 - 2026 年 11 月 20 日 已變更為 2026 年 11 月 30 日 - 2026 年 12 月 01 日 … 房型 豪華雙人房」
+正確輸出：{"is_booking":true,"is_cancellation":false,"is_modification":true,"guest_name":"HUANG/YA CHI","check_in":"2026-11-30","check_out":"2026-12-01","confirmation_id":"1616330516335375","total_price":null,"num_guests":null,"property_name":"豪華雙人房","matched_property_id":null,"platform":"trip_com"}`,
   asiayo: `輸入主旨：「AsiaYo.com 訂房已確認通知 (202605260319)」
 輸入內文片段：「訂單編號 202605260319 … 會員姓名 函霓 林 … 大人：1 位 小孩：0 位 … 海景房: 最多4人入住 … 入住日期 2026/07/10 退房日期 2026/07/12 … 已付金額 4,838」
 正確輸出：{"is_booking":true,"is_cancellation":false,"guest_name":"函霓 林","check_in":"2026-07-10","check_out":"2026-07-12","confirmation_id":"202605260319","total_price":4838,"num_guests":1,"property_name":"海景房: 最多4人入住","matched_property_id":null,"platform":"asiayo"}`,
@@ -1016,13 +1158,13 @@ function regexPreExtract(subject: string, body: string, platform: string): {
 // 清單／平台提示／少樣本範例）先做便宜的二元分類，只有判斷像訂單的信才送進
 // Stage 2 完整擷取，大幅降低平均每封信的成本。
 async function classifyIsBooking(subject: string, body: string): Promise<boolean> {
-  // 高信心關鍵字直通：明顯為訂單或取消通知的主旨直接放行，避免 AI 便宜分類誤判
-  if (/新訂單|新預訂|訂單通知|預訂通知|訂房確認|預訂確認|預約確認|訂單確認|訂單已確認|已確認訂單|cancellation|cancelled|booking no\.|new booking|new reservation/i.test(subject)) {
+  // 高信心關鍵字直通：明顯為新訂單、修改訂單或取消通知的主旨直接放行，避免 AI 便宜分類誤判
+  if (/新訂單|新預訂|訂單通知|預訂通知|訂房確認|預訂確認|預約確認|訂單確認|訂單已確認|已確認訂單|修改訂單|訂單修改|變更預訂|修改預訂|預訂變更|訂單變更|行程變更|更改預訂|預訂修改|改期|cancellation|cancelled|booking no\.|new booking|new reservation|booking modified|booking amendment|amended booking|reservation modified/i.test(subject)) {
     return true
   }
 
   const truncated = body.slice(0, 1500)
-  const prompt = `判斷以下郵件是否為訂房平台的「訂房確認」或「訂房取消」通知信（不是訂房須知、行銷信、一般客服往來、或其他無關信件）。
+  const prompt = `判斷以下郵件是否為訂房平台的「訂房確認」、「訂房修改/變更」或「訂房取消」通知信（不是訂房須知、行銷信、一般客服往來、或其他無關信件）。
 
 郵件主旨：${subject}
 郵件內容片段：
@@ -1087,14 +1229,16 @@ ${roomListStr}${hint}${preLine}${fewShot}
 - 日期一律輸出 YYYY-MM-DD；中文「2026年6月5日」要轉成「2026-06-05」；退房日必須晚於入住日。
 - 連住多晚時，check_out 必須填最後退房日（不是入住日+1天）。若郵件標明「退房 7/13」check_out=2026-07-13；若只有「住 N 晚」，check_out = check_in + N 天。
 - 取消類郵件 is_cancellation 設 true，但 is_booking 仍為 true；盡量從郵件擷取 confirmation_id、入住/退房日。
+- 修改類郵件（如修改日期、變更房型、修改預訂、booking modified、booking amendment 等），is_modification 設 true，is_booking 為 true，is_cancellation 為 false；請擷取「變更後最新」的入住/退房日期、房型與單號。
 - 重要：「取消政策」「取消條款」「免費取消」「cancellation policy」「free cancellation」屬於訂房須知/條款用語，不代表此訂單已被取消。is_cancellation 只有在郵件明確表示本訂單「已取消／被取消／cancelled／canceled／cancellation request accepted」時才設為 true；若只是預定確認信中提到取消政策，is_cancellation 必須為 false。
 - 重要：同一張訂單有時會同時訂「不同房型」（例如一次訂了兩間不同的房，共用同一個訂單號、同一位旅客、同一組入住/退房日，只是房型和金額分開列）。這種情況下，把「第一個房型」照 property_name/matched_property_id/total_price/num_guests 正常填；其餘每個房型各自的房型名稱/id/金額/人數，依序放進 additional_rooms 陣列（一個房型一個物件）。只有真的同一張訂單訂了多個不同房型才需要 additional_rooms；只訂一個房型（就算訂了好幾晚）不要填這個欄位，也不要把「連住多晚」誤判成多房型。
 - 無法確定的欄位填 null，不要猜測。
 
 請回傳以下 JSON（無法確定的欄位填 null，不要猜測）：
 {
-  "is_booking": true 或 false（是否為訂房確認/取消郵件）,
+  "is_booking": true 或 false（是否為訂房確認/修改/取消郵件）,
   "is_cancellation": true 或 false,
+  "is_modification": true 或 false（是否為修改日期/房型/內容之訂單變更通知）,
   "guest_name": "旅客姓名，無法取得填 null",
   "check_in": "YYYY-MM-DD，入住日期",
   "check_out": "YYYY-MM-DD，退房日期，無法取得填 null",
