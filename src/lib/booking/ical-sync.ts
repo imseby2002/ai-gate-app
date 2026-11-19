@@ -118,17 +118,14 @@ export async function syncICalForSetting(settingId: string): Promise<SyncResult>
     const checkOut = ev.end
     const guestName = extractGuestName(ev.summary, setting.platform)
 
-    // Airbnb 等平台的「不可訂」佔位區塊（SUMMARY 為 "Not available"、Trip.com 的
-    // "RoomStatus Fully booked" 之類，代表房況已滿或房主自行封鎖，不是真實訂單）
-    // 這種區塊本來就只代表「不可訂」，只需要寫 blocked_dates 阻擋房況，不必也不該
-    // 建立 bookings 資料列。
+    // Airbnb 等平台的「不可訂」佔位區塊（SUMMARY 為 "Not available" 代表房況封鎖，非真實訂單）。
+    // 注意：Trip.com 的 iCal 協議因隱私規範，真實旅客預訂在摘要中皆顯示為 "RoomStatus Fully booked"，
+    // 絕不能當成不可訂佔位略過，否則 Trip.com 訂單永遠無法建立！
+    // 跨平台重複的情形在下方規則 1（filledBooking）已能精準辨識並沿用既有訂單，不重複建立。
     const isUnavailableBlock =
-      /not\s*available/i.test(ev.summary) ||
-      /not\s*available/i.test(guestName) ||
-      /roomstatus/i.test(ev.summary) ||
-      /fully\s*booked/i.test(ev.summary) ||
-      /roomstatus/i.test(guestName) ||
-      /fully\s*booked/i.test(guestName)
+      setting.platform === 'airbnb'
+        ? (/not\s*available/i.test(ev.summary) || /not\s*available/i.test(guestName))
+        : (/^not\s*available$/i.test(ev.summary.trim()) || /^not\s*available$/i.test(guestName.trim()))
 
     let bookingId: string | null = null
     if (!isUnavailableBlock) {
@@ -163,13 +160,18 @@ export async function syncICalForSetting(settingId: string): Promise<SyncResult>
 
         if (existingIcal) {
           bookingId = existingIcal.id
-          // 若原本就有姓名（例如手動填入），不被 "(iCal 訂單)" 佔位覆蓋
+          // 若原本就有姓名（例如手動填入或 Email 補齊），不被佔位名稱覆蓋
+          const isPlaceholderName = (n: string | null | undefined) =>
+            !n || n === '(iCal 訂單)' || n === '(Trip.com 訂單)' || n === '(待補充)' || /roomstatus/i.test(n) || /fully\s*booked/i.test(n)
+
           const updatePatch: Record<string, unknown> = {
             check_in: checkIn,
             check_out: checkOut,
             raw_data: { summary: ev.summary, uid, description: ev.description },
           }
-          if (guestName && guestName !== '(iCal 訂單)' && (!existingIcal.guest_name || existingIcal.guest_name === '(iCal 訂單)')) {
+          if (guestName && !isPlaceholderName(guestName) && isPlaceholderName(existingIcal.guest_name)) {
+            updatePatch.guest_name = guestName
+          } else if (isPlaceholderName(existingIcal.guest_name) && guestName && guestName !== existingIcal.guest_name) {
             updatePatch.guest_name = guestName
           }
           await supabase.from('bookings').update(updatePatch).eq('id', existingIcal.id)
@@ -397,5 +399,11 @@ function extractGuestName(summary: string, platform: string): string {
     .replace(/^CLOSED\s*-?\s*/i, '')
     .replace(new RegExp(`^${platform}\\s*-?\\s*`, 'i'), '')
     .trim()
-  return cleaned || '(iCal 訂單)'
+
+  const isTrip = platform === 'trip_com' || platform === 'ctrip'
+  if (!cleaned || /^(?:roomstatus(?:\s+fully\s*booked)?|fully\s*booked|not\s*available|reserved)$/i.test(cleaned) || /roomstatus/i.test(cleaned)) {
+    return isTrip ? '(Trip.com 訂單)' : '(iCal 訂單)'
+  }
+  return cleaned
 }
+

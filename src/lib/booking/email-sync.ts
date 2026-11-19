@@ -93,6 +93,9 @@ const BOOKING_SUBJECT_KEYWORDS = [
   '訂房確認', '預訂確認', '預約確認', '訂單確認', '確認通知',
   '入住確認', '訂房成功', '預訂成功', '已確認訂單', '確認訂單',
   '訂單已確認', '已接受預訂', '已確認預訂',
+  '新訂單', '新預訂', '新訂單通知', '新預訂通知', '訂單通知', '預訂通知',
+  '您有新的訂單', 'Trip.com', '携程', '攜程',
+  '已確認訂單編號', '預約編號', '飯店確認編號',
   '取消確認', '取消通知', '訂單取消', '訂單已取消', '您的訂單已取消',
   '訂房已取消', '預訂已取消', '已取消',
   '行程確認', '您已接受',
@@ -103,6 +106,7 @@ const BOOKING_SUBJECT_KEYWORDS = [
   'reservation has been cancelled', 'your booking has been cancelled',
   'new reservation', 'new booking', 'booking accepted',
   'booking no.', 'accepted', 'itinerary',
+  'new reservation notification', 'new booking notification', 'booking notification', 'reservation notification',
   // Trip.com specific
   'booking no.#', 'accepted#',
   // Agoda specific
@@ -362,12 +366,12 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
     try {
       result.debug.since_date = (labelMode ? labelSince : incrementalSince).toISOString().slice(0, 10)
 
-      // Build a nested OR tree: {or:[a,{or:[b,{or:[c,d]}]}]}
-      // Top-level keys outside 'or' are implicit AND (e.g. since applies to all branches).
-      function buildOr(items: Record<string, unknown>[]): Record<string, unknown> {
+      // 二元平衡樹構建 OR 查詢，避免深層單鏈遞迴在特定 IMAP 伺服器產生語法逾限錯誤
+      function buildBalancedOr(items: Record<string, unknown>[]): Record<string, unknown> {
+        if (items.length === 0) return {}
         if (items.length === 1) return items[0]
-        const [head, ...tail] = items
-        return { or: [head, buildOr(tail)] }
+        const mid = Math.floor(items.length / 2)
+        return { or: [buildBalancedOr(items.slice(0, mid)), buildBalancedOr(items.slice(mid))] }
       }
 
       // 用 UID（而非連線臨時的 sequence number）搜尋/抓取，讓 last_synced_uid 可以
@@ -381,21 +385,30 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
         try {
           const found = await client.search({ since: labelSince }, { uid: true })
           if (Array.isArray(found)) uids = found
-        } catch { /* ignore */ }
+        } catch (e) {
+          addLog(`[標籤搜尋錯誤] ${String(e)}`)
+        }
       } else {
         // Strategy 1: one combined search across all known sender domains
+        // 不加前綴 @，以支援各 OTA 子網域（如 notification.trip.com、mail.trip.com、e.agoda.com）
         try {
-          const domainCriteria = Object.values(PLATFORM_SENDERS).map(d => ({ from: `@${d}` }))
-          const found = await client.search({ ...buildOr(domainCriteria), since: incrementalSince }, { uid: true })
+          const domainCriteria = Object.values(PLATFORM_SENDERS).map(d => ({ from: d }))
+          const found = await client.search({ ...buildBalancedOr(domainCriteria), since: incrementalSince }, { uid: true })
           if (Array.isArray(found)) uids = [...uids, ...found]
-        } catch { /* ignore */ }
+        } catch (e) {
+          console.error('[email-sync] Domain search error:', e)
+          addLog(`[網域搜尋錯誤] ${String(e)}`)
+        }
 
         // Strategy 2: one combined search across key booking subject keywords
         try {
           const kwCriteria = BOOKING_SUBJECT_KEYWORDS.map(kw => ({ subject: kw }))
-          const found = await client.search({ ...buildOr(kwCriteria), since: incrementalSince }, { uid: true })
+          const found = await client.search({ ...buildBalancedOr(kwCriteria), since: incrementalSince }, { uid: true })
           if (Array.isArray(found)) uids = [...uids, ...found]
-        } catch { /* ignore */ }
+        } catch (e) {
+          console.error('[email-sync] Keyword search error:', e)
+          addLog(`[關鍵字搜尋錯誤] ${String(e)}`)
+        }
       }
 
       // Phase 1: 一次批次串流抓取所有 raw source（取代逐封 fetchOne，速度差數十倍）。
@@ -488,6 +501,13 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
       for (const [key, domain] of Object.entries(PLATFORM_SENDERS)) {
         if (from.toLowerCase().includes(domain)) { platform = key; break }
       }
+      if (platform === 'other') {
+        const fullHeaderAndSubj = (from + ' ' + subject).toLowerCase()
+        if (/trip\.com|携程|攜程/i.test(fullHeaderAndSubj)) platform = 'trip_com'
+        else if (/agoda/i.test(fullHeaderAndSubj)) platform = 'agoda'
+        else if (/booking\.com/i.test(fullHeaderAndSubj)) platform = 'booking_com'
+        else if (/airbnb/i.test(fullHeaderAndSubj)) platform = 'airbnb'
+      }
 
       const subj80 = subject.slice(0, 80)
       if (platform !== 'other') addLog(`[掃描] ${platform} | ${subj80}`)
@@ -528,12 +548,28 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
           ? extracted.matched_property_id
           : null
 
-      const resolvedPropertyId =
+      let resolvedPropertyId =
         validMatchedId
         ?? matchPropertyByName(extracted.property_name, properties)
         ?? fallbackPropertyId
 
       const checkIn = isValidYmd(extracted.check_in) ? extracted.check_in : null
+
+      // 若未直接匹配房型，嘗試從同平台同日期的房況封鎖 (blocked_dates) 中找到房源
+      if (!resolvedPropertyId && checkIn) {
+        const { data: matchedBlock } = await supabase
+          .from('blocked_dates')
+          .select('property_id')
+          .eq('user_id', setting.user_id)
+          .eq('platform', platform)
+          .eq('date', checkIn)
+          .not('property_id', 'is', null)
+          .limit(1)
+          .maybeSingle()
+        if (matchedBlock?.property_id) {
+          resolvedPropertyId = matchedBlock.property_id
+        }
+      }
       const validCheckOut =
         isValidYmd(extracted.check_out) && checkIn && extracted.check_out > checkIn
           ? extracted.check_out
@@ -768,12 +804,22 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
           }
         }
 
-        // 配不到房型就不要新增佔位訂單：沒有房號的「(待補充)」只會讓每日入住表多出一堆
-        // 看不出是哪間房的空殼。此信已處理過的重複／取消情形在上面都已 continue，到這裡
-        // 代表是「全新、但房型未知」的訂單——直接略過不寫入。
-        if (!resolvedPropertyId) {
+        // 配不到房型時的保底機制：若有房源列表，將其暫掛到首個房源並標註提醒，絕不遺漏真實旅客訂單
+        let propertyFallback = false
+        let targetPropertyId = resolvedPropertyId
+        if (!targetPropertyId && properties.length > 0) {
+          targetPropertyId = properties[0].id
+          propertyFallback = true
+          await logSkip('unknown_property_assigned_fallback', {
+            platform, subject, from, body,
+            detail: `單號 ${confId} 房型「${extracted.property_name}」未能精準配對，暫掛於「${properties[0].name}」`,
+          })
+        }
+
+        if (!targetPropertyId) {
           addLog(`[略過：房型未知] ${confId} ${checkIn ?? ''} | ${subj80}`)
           result.debug.skipped_no_property++
+          await logSkip('no_property_available', { platform, subject, from, body, detail: `未建立任何房源，無法掛載訂單 ${confId}` })
           continue
         }
 
@@ -782,7 +828,7 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
           .upsert({
             user_id:             setting.user_id,
             order_id:            orderId,
-            property_id:         resolvedPropertyId,
+            property_id:         targetPropertyId,
             platform,
             platform_booking_id: confId,
             guest_name:          extracted.guest_name || '(待補充)',
@@ -793,7 +839,11 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
             status:              bookingStatus,
             source:              'email',
             notes:               (() => {
-              const base = isPartial ? '由 Email 部分擷取，請至平台後台確認完整資料' : null
+              let base = isPartial ? '由 Email 部分擷取，請至平台後台確認完整資料' : null
+              if (propertyFallback) {
+                const warn = `【待確認房型】原始郵件房型為「${extracted.property_name || '未指定'}」，請至後台確認並重新分配房間`
+                base = base ? `${warn}；${base}` : warn
+              }
               return DEBUG_FETCH_NOTE ? appendFetchNote(base) : base
             })(),
             raw_data:            { subject, from, confirmation_id: extracted.confirmation_id, property_name: extracted.property_name },
@@ -966,6 +1016,11 @@ function regexPreExtract(subject: string, body: string, platform: string): {
 // 清單／平台提示／少樣本範例）先做便宜的二元分類，只有判斷像訂單的信才送進
 // Stage 2 完整擷取，大幅降低平均每封信的成本。
 async function classifyIsBooking(subject: string, body: string): Promise<boolean> {
+  // 高信心關鍵字直通：明顯為訂單或取消通知的主旨直接放行，避免 AI 便宜分類誤判
+  if (/新訂單|新預訂|訂單通知|預訂通知|訂房確認|預訂確認|預約確認|訂單確認|訂單已確認|已確認訂單|cancellation|cancelled|booking no\.|new booking|new reservation/i.test(subject)) {
+    return true
+  }
+
   const truncated = body.slice(0, 1500)
   const prompt = `判斷以下郵件是否為訂房平台的「訂房確認」或「訂房取消」通知信（不是訂房須知、行銷信、一般客服往來、或其他無關信件）。
 

@@ -24,14 +24,14 @@ export interface BookingRow {
   properties?: { id?: string; name?: string; room_count?: number } | null
 }
 
-const PLACEHOLDER_NAME_REGEX = /^(?:\(iCal\s*訂單\)|\(待補充\)|not\s*available|fully\s*booked|roomstatus.*|closed.*)$/i
+const PLACEHOLDER_NAME_REGEX = /^(?:\(iCal\s*訂單\)|\(Trip\.com\s*訂單\)|\(待補充\)|not\s*available|fully\s*booked|roomstatus.*|closed.*)$/i
 
 /**
  * 判斷該訂單是否已有旅客或訂購資訊填寫（非單純的 iCal 佔位）。
  * 滿足以下任一條件即視為「已填寫」：
  * 1. 來源不是 ical（如 email、manual、form、direct）
  * 2. 總金額大於 0（iCal 協議通常不含訂單金額）
- * 3. 旅客姓名非空且非佔位字串（如 "(iCal 訂單)"、"RoomStatus Fully booked" 等）
+ * 3. 旅客姓名非空且非佔位字串（如 "(iCal 訂單)"、"(Trip.com 訂單)" 等）
  * 4. 有填寫電話或 Email
  */
 export function isBookingFilled(bk: Partial<BookingRow>): boolean {
@@ -77,13 +77,12 @@ export interface DuplicateCluster {
 }
 
 /**
- * 判斷名稱是否為 OTA 的關房/滿房狀態（如 Trip.com 的 RoomStatus Fully booked、Airbnb 的 Not available）
- * 這些本質上是「不可訂房況」，絕非真實訂單。
+ * 判斷名稱是否為純房況封鎖佔位（如 Airbnb 的 Not available、CLOSED）
  */
 export function isUnavailableStatusName(name: string | null | undefined): boolean {
   if (!name) return false
   const n = name.trim()
-  return /^(?:roomstatus(?:\s+fully\s*booked)?|fully\s*booked|not\s*available)$/i.test(n) || /roomstatus/i.test(n) || /fully\s*booked/i.test(n)
+  return /^(?:not\s*available|closed)$/i.test(n)
 }
 
 /**
@@ -318,52 +317,68 @@ export async function deduplicateBookings(
     }
   }
 
-  // 4. 清理誤被當成訂單的 OTA 房況關房佔位（如 RoomStatus Fully booked / Not available 等非真實訂單）
-  const fakeStatusBookings = (bookings as BookingRow[]).filter(
-    b => !deletedIds.has(b.id) && isUnavailableStatusName(b.guest_name)
+  // 4. 清理純房況關房佔位（如 Not available / closed）或正規化 Trip.com 佔位名稱
+  const statusBookings = (bookings as BookingRow[]).filter(
+    b => !deletedIds.has(b.id) && (isUnavailableStatusName(b.guest_name) || /roomstatus/i.test(b.guest_name ?? '') || /fully\s*booked/i.test(b.guest_name ?? ''))
   )
-  for (const fake of fakeStatusBookings) {
-    deletedIds.add(fake.id)
-    // 確保其日期區間依然在 blocked_dates 中被封鎖，房況不漏擋
-    const dates: string[] = []
-    const cur = new Date(fake.check_in + 'T00:00:00')
-    const endDt = new Date(fake.check_out + 'T00:00:00')
-    while (cur < endDt) {
-      dates.push(cur.toISOString().slice(0, 10))
-      cur.setDate(cur.getDate() + 1)
-    }
-    for (const d of dates) {
-      if (fake.property_id) {
-        await supabase.from('blocked_dates').upsert({
-          user_id: fake.user_id,
-          property_id: fake.property_id,
-          date: d,
-          platform: fake.platform,
-          reason: 'booking',
-        }, { onConflict: 'user_id,property_id,date,ical_setting_id' })
+  for (const fake of statusBookings) {
+    const isRoomStatusOrTrip = /roomstatus/i.test(fake.guest_name ?? '') || /fully\s*booked/i.test(fake.guest_name ?? '')
+
+    // 若同一時段同一房間已有其他已填寫訂單（跨平台），代表此筆僅為關房/佔位重複，刪除之
+    const hasFilledOverlap = (bookings as BookingRow[]).some(
+      b => b.id !== fake.id && !deletedIds.has(b.id) && b.property_id === fake.property_id && isBookingFilled(b) && datesOverlap(b.check_in, b.check_out, fake.check_in, fake.check_out)
+    )
+
+    if (hasFilledOverlap || !isRoomStatusOrTrip) {
+      deletedIds.add(fake.id)
+      // 確保其日期區間依然在 blocked_dates 中被封鎖，房況不漏擋
+      const dates: string[] = []
+      const cur = new Date(fake.check_in + 'T00:00:00')
+      const endDt = new Date(fake.check_out + 'T00:00:00')
+      while (cur < endDt) {
+        dates.push(cur.toISOString().slice(0, 10))
+        cur.setDate(cur.getDate() + 1)
       }
-    }
-    // 解除 blocked_dates 關聯並刪除假訂單
-    await supabase.from('blocked_dates').update({ booking_id: null }).eq('booking_id', fake.id)
-    await supabase.from('bnb_daily_records').delete().eq('booking_id', fake.id)
-    const { error: delErr } = await supabase.from('bookings').delete().eq('id', fake.id)
-    if (!delErr) {
-      result.deleted++
-      result.details.push({
-        propertyId: fake.property_id ?? '',
-        platform: fake.platform,
-        keeperId: '',
-        keeperName: '房況封鎖（非旅客訂單）',
-        removedId: fake.id,
-        removedName: fake.guest_name ?? null,
-        checkIn: fake.check_in,
-        checkOut: fake.check_out,
-      })
-    }
-    if (fake.order_id) {
-      const { count } = await supabase.from('bookings').select('id', { count: 'exact', head: true }).eq('order_id', fake.order_id)
-      if ((count ?? 0) === 0) {
-        await supabase.from('booking_orders').delete().eq('id', fake.order_id)
+      for (const d of dates) {
+        if (fake.property_id) {
+          await supabase.from('blocked_dates').upsert({
+            user_id: fake.user_id,
+            property_id: fake.property_id,
+            date: d,
+            platform: fake.platform,
+            reason: 'booking',
+          }, { onConflict: 'user_id,property_id,date,ical_setting_id' })
+        }
+      }
+      // 解除 blocked_dates 關聯並刪除假訂單
+      await supabase.from('blocked_dates').update({ booking_id: null }).eq('booking_id', fake.id)
+      await supabase.from('bnb_daily_records').delete().eq('booking_id', fake.id)
+      const { error: delErr } = await supabase.from('bookings').delete().eq('id', fake.id)
+      if (!delErr) {
+        result.deleted++
+        result.details.push({
+          propertyId: fake.property_id ?? '',
+          platform: fake.platform,
+          keeperId: '',
+          keeperName: '房況封鎖（非旅客訂單）',
+          removedId: fake.id,
+          removedName: fake.guest_name ?? null,
+          checkIn: fake.check_in,
+          checkOut: fake.check_out,
+        })
+      }
+      if (fake.order_id) {
+        const { count } = await supabase.from('bookings').select('id', { count: 'exact', head: true }).eq('order_id', fake.order_id)
+        if ((count ?? 0) === 0) {
+          await supabase.from('booking_orders').delete().eq('id', fake.order_id)
+        }
+      }
+    } else {
+      // 該房間在此時段沒有其他已填寫訂單，代表是 Trip.com 唯一預訂，正規化為 (Trip.com 訂單) 予以保留！
+      const normalizedName = (fake.platform === 'trip_com' || fake.platform === 'ctrip') ? '(Trip.com 訂單)' : '(iCal 訂單)'
+      if (fake.guest_name !== normalizedName) {
+        await supabase.from('bookings').update({ guest_name: normalizedName }).eq('id', fake.id)
+        fake.guest_name = normalizedName
       }
     }
   }

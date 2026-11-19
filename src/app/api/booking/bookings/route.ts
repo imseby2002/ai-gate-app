@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
   if (data && data.length > 0) {
     const bks = data as unknown as BookingRow[]
     const clusters = findDuplicateClusters(bks)
-    const hasFakeStatus = bks.some(b => isUnavailableStatusName(b.guest_name))
+    const hasFakeStatus = bks.some(b => isUnavailableStatusName(b.guest_name) || /roomstatus/i.test(b.guest_name ?? '') || /fully\s*booked/i.test(b.guest_name ?? ''))
     if (clusters.length > 0 || hasFakeStatus) {
       await deduplicateBookings(supabase, {
         userId: ctx.ownerId,
