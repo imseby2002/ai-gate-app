@@ -3,20 +3,33 @@ import { createAdminClient } from '@/lib/supabase/admin'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(req: NextRequest) {
+export async function POST(req: NextRequest) {
   const supabase = createAdminClient()
 
-  const { data: properties } = await supabase
-    .from('properties')
-    .select('id, name, ical_export_token')
+  // 刪除 401 與 202 在 2026-11-23 的 Trip.com 假訂單
+  // 401: 7237cf0f-bfe4-42bf-b1d0-f5e0e0e765cc
+  // 202: a8d3be18-8ccd-4d2d-9c11-d6981937ef27
+  const toDelete = [
+    '7237cf0f-bfe4-42bf-b1d0-f5e0e0e765cc',
+    'a8d3be18-8ccd-4d2d-9c11-d6981937ef27'
+  ]
 
-  const { data: icalSettings } = await supabase
-    .from('ical_settings')
-    .select('id, platform, platform_name, ical_url, property_id, properties(name)')
+  // 先清 blocked_dates
+  await supabase
+    .from('blocked_dates')
+    .delete()
+    .in('booking_id', toDelete)
+
+  // 再刪 bookings
+  const { data, error } = await supabase
+    .from('bookings')
+    .delete()
+    .in('id', toDelete)
+    .select('id, guest_name, check_in, check_out, property_id')
 
   return NextResponse.json({
-    properties,
-    icalSettings,
+    deleted: data,
+    error: error?.message,
   })
 }
 
