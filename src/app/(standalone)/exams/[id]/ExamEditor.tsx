@@ -130,8 +130,12 @@ export function ExamEditor({ id }: { id: string }) {
       }),
     }).catch(() => null)
     setGenerating(false)
-    const d = await res?.json().catch(() => ({}))
-    if (!res?.ok) {
+    if (!res) {
+      alert(`${t('generateFailed')} (伺服器處理逾時或網路中斷，請稍後再試或減少單次出題數量)`)
+      return
+    }
+    const d = await res.json().catch(() => ({}))
+    if (!res.ok) {
       alert(d?.error === 'knowledge_too_long' ? t('knowledgeTooLong') : d?.error === 'too_many' ? t('tooMany', { max: d.max }) : d?.detail ? `${t('generateFailed')} (${d.detail})` : t('generateFailed'))
       return
     }
