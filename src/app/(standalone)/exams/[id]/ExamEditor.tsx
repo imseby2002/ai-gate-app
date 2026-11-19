@@ -50,8 +50,6 @@ export function ExamEditor({ id }: { id: string }) {
   const [submissionCount, setSubmissionCount] = useState(0)
   const [docs, setDocs] = useState<Doc[]>([])
   const [pastExams, setPastExams] = useState<{ id: string; title: L10n; submission_count?: number }[]>([])
-  const [remedialSourceExamId, setRemedialSourceExamId] = useState<string>('')
-  const [remedialRatio, setRemedialRatio] = useState<number>(0.5)
   const [loadError, setLoadError] = useState(false)
   const [editLang, setEditLang] = useState<ExamLang>(locale === 'vi' ? 'vi' : locale === 'en' ? 'en' : 'zh')
 

@@ -6,8 +6,6 @@ import { normalizeQuestion, type ExamQuestion, type QuestionType } from './types
 /** 一次出題的知識總長上限（字元）；超過時請使用者減少選用的知識檔案，不靜默截斷 */
 export const MAX_KNOWLEDGE_CHARS = 600_000
 export const MAX_QUESTIONS_PER_RUN = 40
-/** 每次呼叫 AI 產出題目的單批上限：三語題目量大（約 300~500 tokens/題），每批 4 題配合 2 條並行處理，產出最快且兼顧品質 */
-const MAX_BATCH_SIZE = 4
 
 export type TypeCounts = Partial<Record<QuestionType, number>>
 
@@ -206,6 +204,7 @@ ${w.commonMistakes ? `- 員工常見錯誤選項／回答：${w.commonMistakes}`
 ` : ''
 
   const system = `你是企業內訓的出題老師。只能根據提供的公司知識文件出題，不可加入文件以外的事實；每題都要能在文件中找到依據。
+若出題重點（topic）提及特定活動、外部案例或模擬情境，應將其作為實務題目之情境背景，測驗員工運用知識庫規範進行分析判斷與應對之能力。
 題目要測驗理解與實務應用，避免只考字面記憶；選項的錯誤答案要合理、具迷惑性。
 ${opts.scope ? `【重要規則 — 指定出題範圍／章節限制】：本次出題已被嚴格限定於「${opts.scope}」範圍內，絕不可超出此範圍出題！未提及的章節或知識請勿作為考點。` : ''}
 ${hasRemedial ? remedialGuide : ''}
@@ -226,7 +225,9 @@ ${wanted.map(([t]) => '- ' + TYPE_GUIDE[t]).join('\n')}`
 
 /**
  * AI 依公司知識出題：
- * 支援章節／範圍限定（scope），並自動分批（每批上限 4 題）並行（並行數 2）加速產生，徹底解決單次多題超過閘道/雲端超時或 token 截斷問題。
+ * 支援章節／範圍限定（scope），並依題型權重自動分批並行（並行數 2）加速產生。
+ * 申論題/簡答題因需三語長篇論述與多項評分細則，採專屬小批次（最多 1~2 題/批），
+ * 單選/多選/填空則每批最多 4 題，徹底解決單次多題超過閘道/雲端超時或 token 截斷問題。
  */
 export async function generateExamQuestions(opts: {
   knowledge: { title: string; content: string }[]
@@ -240,36 +241,65 @@ export async function generateExamQuestions(opts: {
   const total = wanted.reduce((s, [, n]) => s + n, 0)
   if (!total) return []
 
-  // 若題數 <= MAX_BATCH_SIZE (4題)，直接單次產出
-  if (total <= MAX_BATCH_SIZE) {
-    return generateSingleBatch(opts)
+  // 計算題型負載權重：essay 需三語論述+評分標準，short 需三語要點，其餘為一般
+  // 單批權重上限為 4.0（單選/多選/填空 = 1.0, short = 1.5, essay = 2.5）
+  // 這樣一來：
+  // - 純單選/多選/填空：每批最多 4 題
+  // - 申論題：每批最多 1 題（2.5 + 2.5 = 5 > 4）或 1 題申論 + 1 題選擇，絕不擠壓 3 題申論導致 120 秒超時
+  const TYPE_WEIGHT: Record<QuestionType, number> = {
+    essay: 2.5,
+    short: 1.5,
+    single: 1.0,
+    multi: 1.0,
+    fill: 1.0,
   }
+  const MAX_BATCH_WEIGHT = 4.0
 
-  // 將所有要求的題目拆分成若干批次，每批最多 MAX_BATCH_SIZE (4題)
   const items: QuestionType[] = []
   for (const [t, n] of wanted) {
     for (let i = 0; i < n; i++) items.push(t)
   }
 
+  // 若只有單題或總權重 <= 2.5，直接單批送出
+  const totalWeight = items.reduce((sum, t) => sum + (TYPE_WEIGHT[t] ?? 1.0), 0)
+  if (items.length <= 1 || totalWeight <= 2.5) {
+    return generateSingleBatch(opts)
+  }
+
+  // 依權重打包成多個批次
   const batchCountsList: TypeCounts[] = []
-  for (let i = 0; i < items.length; i += MAX_BATCH_SIZE) {
-    const chunk = items.slice(i, i + MAX_BATCH_SIZE)
-    const bCounts: TypeCounts = {}
-    for (const t of chunk) {
-      bCounts[t] = (bCounts[t] ?? 0) + 1
+  let currentBatch: QuestionType[] = []
+  let currentWeight = 0
+
+  for (const t of items) {
+    const w = TYPE_WEIGHT[t] ?? 1.0
+    if (currentBatch.length > 0 && currentWeight + w > MAX_BATCH_WEIGHT) {
+      const bCounts: TypeCounts = {}
+      for (const item of currentBatch) bCounts[item] = (bCounts[item] ?? 0) + 1
+      batchCountsList.push(bCounts)
+      currentBatch = [t]
+      currentWeight = w
+    } else {
+      currentBatch.push(t)
+      currentWeight += w
     }
+  }
+  if (currentBatch.length > 0) {
+    const bCounts: TypeCounts = {}
+    for (const item of currentBatch) bCounts[item] = (bCounts[item] ?? 0) + 1
     batchCountsList.push(bCounts)
   }
 
   // 採 2 組並行處理（Concurrency = 2），大幅縮減整體產題耗時（20 題由 150 秒降至 40 秒以內）避免雲端/閘道逾時
   const CONCURRENCY = 2
   const allResults: ExamQuestion[] = []
+  let lastErrorDetail = ''
 
   for (let i = 0; i < batchCountsList.length; i += CONCURRENCY) {
     const currentBatches = batchCountsList.slice(i, i + CONCURRENCY)
     const promises = currentBatches.map(async (bCounts, subIdx) => {
       const batchIdx = i + subIdx
-      const startPos = opts.startPosition + allResults.length + subIdx * MAX_BATCH_SIZE
+      const startPos = opts.startPosition + allResults.length + subIdx * 4
       try {
         return await generateSingleBatch({
           ...opts,
@@ -277,6 +307,7 @@ export async function generateExamQuestions(opts: {
           startPosition: startPos,
         })
       } catch (err) {
+        lastErrorDetail = err instanceof Error ? err.message : String(err)
         console.warn(`[exam-generate-batch] batch ${batchIdx} failed, retrying once...`, err)
         try {
           return await generateSingleBatch({
@@ -285,6 +316,7 @@ export async function generateExamQuestions(opts: {
             startPosition: startPos,
           })
         } catch (retryErr) {
+          lastErrorDetail = retryErr instanceof Error ? retryErr.message : String(retryErr)
           console.error(`[exam-generate-batch] batch ${batchIdx} retry failed:`, retryErr)
           return [] as ExamQuestion[]
         }
@@ -300,7 +332,7 @@ export async function generateExamQuestions(opts: {
   }
 
   if (allResults.length === 0) {
-    throw new Error('AI 出題服務暫時無法取得題目，請稍後再試')
+    throw new Error(lastErrorDetail || 'AI 出題服務暫時無法取得題目，請稍後再試或減少單次題數')
   }
 
   // 統一重設 position 確保連貫
