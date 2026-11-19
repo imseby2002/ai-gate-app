@@ -109,25 +109,35 @@ async function runModel(system: string, user: string, startPosition: number): Pr
   text = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()
   const start = text.indexOf('[')
   const end = text.lastIndexOf(']')
-  if (start < 0 || end <= start) throw new Error('AI 回傳格式錯誤，請再試一次')
+  if (start < 0 || end <= start) {
+    console.error('[exam-runModel] No JSON array found in output. Preview:', text.slice(0, 300))
+    throw new Error('AI 回傳格式非 JSON 陣列，請再試一次')
+  }
   let arr: unknown
   try {
     arr = JSON.parse(text.slice(start, end + 1))
   } catch {
     try {
-      // 容錯移除尾端多餘逗號或換行字元
+      // 容錯移除尾端多餘逗號或控制字元
       const sanitized = text.slice(start, end + 1)
         .replace(/,\s*([\]}])/g, '$1')
         .replace(/[\u0000-\u001F]+/g, (match) => (match === '\n' || match === '\r' || match === '\t' ? match : ' '))
       arr = JSON.parse(sanitized)
-    } catch {
+    } catch (parseErr) {
+      console.error('[exam-runModel] JSON.parse failed. Preview:', text.slice(start, start + 300), parseErr)
       throw new Error('AI 回傳格式解析失敗，請再試一次')
     }
   }
   if (!Array.isArray(arr)) throw new Error('AI 回傳格式非陣列，請再試一次')
-  return arr
+  const results = arr
     .map((q, i) => normalizeQuestion(q, startPosition + i))
     .filter((q): q is ExamQuestion => !!q)
+
+  if (results.length === 0 && arr.length > 0) {
+    console.error('[exam-runModel] All returned items failed normalizeQuestion validation. First item:', JSON.stringify(arr[0]).slice(0, 300))
+    throw new Error('AI 產出之題目內容或答案格式不符規範')
+  }
+  return results
 }
 
 /**
@@ -203,9 +213,13 @@ ${w.commonMistakes ? `- 員工常見錯誤選項／回答：${w.commonMistakes}`
    - 從所附知識文件中，挑選其他未出現在上述弱點中的重要章節或 SOP 規範出題，兼顧測驗的全面性與新鮮度。
 ` : ''
 
+  const batchTypeNames = wanted.map(([t]) => t).join('、')
   const system = `你是企業內訓的出題老師。只能根據提供的公司知識文件出題，不可加入文件以外的事實；每題都要能在文件中找到依據。
 若出題重點（topic）提及特定活動、外部案例或模擬情境，應將其作為實務題目之情境背景，測驗員工運用知識庫規範進行分析判斷與應對之能力。
 題目要測驗理解與實務應用，避免只考字面記憶；選項的錯誤答案要合理、具迷惑性。
+【題型嚴格限制】：
+本批次必須嚴格產出指定題型（${batchTypeNames}），切勿自行變更題型！
+若出題重點提及其他題型（例如重點寫了「申論...」，但本批次為「單選」），請將該重點的核心觀念改編為本批次指定的「${batchTypeNames}」題型，不要輸出其他題型。
 ${opts.scope ? `【重要規則 — 指定出題範圍／章節限制】：本次出題已被嚴格限定於「${opts.scope}」範圍內，絕不可超出此範圍出題！未提及的章節或知識請勿作為考點。` : ''}
 ${hasRemedial ? remedialGuide : ''}
 每題的題目、選項、答案說明都要同時提供繁體中文（zh）、英文（en）、越南文（vi），三種語言內容一致；越南文欄位不可夾雜中文。
@@ -218,7 +232,9 @@ ${wanted.map(([t]) => '- ' + TYPE_GUIDE[t]).join('\n')}`
 
   const user = `${knowledgeText}
 
-請依上面的文件出題，數量：${wanted.map(([t, n]) => `${t} ${n} 題`).join('、')}，共 ${total} 題。${opts.scope ? `\n出題範圍限制：${opts.scope}` : ''}${opts.topic ? `\n出題重點：${opts.topic}` : ''}${hasRemedial ? '\n（請務必依系統提示中的混合出題規則，同時包含弱點深化題與全新概念題）' : ''}`
+請依上面的文件出題，題型與數量：${wanted.map(([t, n]) => `${t} ${n} 題`).join('、')}，共 ${total} 題。
+【特別注意】：請務必只產出上述指定的 ${batchTypeNames} 題型！
+${opts.scope ? `出題範圍限制：${opts.scope}\n` : ''}${opts.topic ? `出題重點（若內含特定情境或題型指示，請融入上述指定題型中測驗）：\n${opts.topic}\n` : ''}${hasRemedial ? '（請務必依系統提示中的混合出題規則，同時包含弱點深化題與全新概念題）' : ''}`
 
   return runModel(system, user, opts.startPosition)
 }

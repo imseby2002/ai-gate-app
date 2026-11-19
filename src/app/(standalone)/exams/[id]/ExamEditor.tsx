@@ -226,7 +226,15 @@ export function ExamEditor({ id }: { id: string }) {
     }
     const d = await res.json().catch(() => ({}))
     if (!res.ok) {
-      alert(d?.error === 'knowledge_too_long' ? t('knowledgeTooLong') : d?.error === 'too_many' ? t('tooMany', { max: d.max }) : d?.detail ? `${t('generateFailed')} (${d.detail})` : t('generateFailed'))
+      const reason = d?.detail || d?.error || (res.status ? `HTTP ${res.status}` : '')
+      const msg = d?.error === 'knowledge_too_long'
+        ? t('knowledgeTooLong')
+        : d?.error === 'too_many'
+          ? t('tooMany', { max: d.max })
+          : reason
+            ? `${t('generateFailed')} (${reason})`
+            : t('generateFailed')
+      alert(msg)
       return
     }
     setReloadKey(k => k + 1)
@@ -277,7 +285,15 @@ export function ExamEditor({ id }: { id: string }) {
     setPolishing(false)
     const d = await res?.json().catch(() => ({}))
     if (!res?.ok) {
-      alert(d?.error === 'manual_too_long' ? t('manualTooLong', { max: d.max }) : d?.error === 'knowledge_too_long' ? t('knowledgeTooLong') : t('generateFailed'))
+      const reason = d?.detail || d?.error || (res?.status ? `HTTP ${res.status}` : '')
+      const msg = d?.error === 'manual_too_long'
+        ? t('manualTooLong', { max: d.max })
+        : d?.error === 'knowledge_too_long'
+          ? t('knowledgeTooLong')
+          : reason
+            ? `${t('generateFailed')} (${reason})`
+            : t('generateFailed')
+      alert(msg)
       return
     }
     setManual('')
@@ -484,7 +500,13 @@ export function ExamEditor({ id }: { id: string }) {
                   </label>
                 ))}
               </div>
-              <Input placeholder={t('topicPh')} value={topic} maxLength={500} onChange={e => setTopic(e.target.value)} />
+              <AutoTextarea
+                rows={2}
+                placeholder={t('topicPh')}
+                value={topic}
+                maxLength={500}
+                onChange={e => setTopic(e.target.value)}
+              />
               <div className="flex flex-wrap items-center gap-3">
                 <Button onClick={generate} disabled={generating || !totalCount}>
                   {generating ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1" />}
