@@ -54,10 +54,102 @@ export function ExamEditor({ id }: { id: string }) {
   const [remedialRatio, setRemedialRatio] = useState<number>(0.5)
   const [loadError, setLoadError] = useState(false)
   const [editLang, setEditLang] = useState<ExamLang>(locale === 'vi' ? 'vi' : locale === 'en' ? 'en' : 'zh')
-  const [counts, setCounts] = useState<Record<QuestionType, number>>({ single: 5, multi: 2, fill: 2, short: 1, essay: 0 })
-  const [topic, setTopic] = useState('')
-  const [scope, setScope] = useState('')
-  const [manual, setManual] = useState('')
+
+  const draftKey = `exam_ai_draft_${id}`
+
+  // 初始化草稿（出題題數、重點 Topic、範圍 Scope、錯題考卷、手寫草稿）
+  const [counts, setCounts] = useState<Record<QuestionType, number>>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(`${draftKey}_counts`)
+        if (saved) return JSON.parse(saved)
+      } catch { /* ignore */ }
+    }
+    return { single: 5, multi: 2, fill: 2, short: 1, essay: 0 }
+  })
+  const [topic, setTopic] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(`${draftKey}_topic`)
+        if (saved !== null) return saved
+      } catch { /* ignore */ }
+    }
+    return ''
+  })
+  const [scope, setScope] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(`${draftKey}_scope`)
+        if (saved !== null) return saved
+      } catch { /* ignore */ }
+    }
+    return ''
+  })
+  const [remedialSourceExamId, setRemedialSourceExamId] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(`${draftKey}_remedialSourceExamId`)
+        if (saved !== null) return saved
+      } catch { /* ignore */ }
+    }
+    return ''
+  })
+  const [remedialRatio, setRemedialRatio] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(`${draftKey}_remedialRatio`)
+        if (saved !== null) return Number(saved)
+      } catch { /* ignore */ }
+    }
+    return 0.5
+  })
+  const [manual, setManual] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(`${draftKey}_manual`)
+        if (saved !== null) return saved
+      } catch { /* ignore */ }
+    }
+    return ''
+  })
+
+  // 自動同步儲存到 localStorage，防止出題失敗、網路斷線或頁面刷新時丟失輸入內容
+  useEffect(() => {
+    try {
+      localStorage.setItem(`${draftKey}_counts`, JSON.stringify(counts))
+    } catch { /* ignore */ }
+  }, [draftKey, counts])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(`${draftKey}_topic`, topic)
+    } catch { /* ignore */ }
+  }, [draftKey, topic])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(`${draftKey}_scope`, scope)
+    } catch { /* ignore */ }
+  }, [draftKey, scope])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(`${draftKey}_remedialSourceExamId`, remedialSourceExamId)
+    } catch { /* ignore */ }
+  }, [draftKey, remedialSourceExamId])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(`${draftKey}_remedialRatio`, String(remedialRatio))
+    } catch { /* ignore */ }
+  }, [draftKey, remedialRatio])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(`${draftKey}_manual`, manual)
+    } catch { /* ignore */ }
+  }, [draftKey, manual])
+
   const [polishing, setPolishing] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [regenIdx, setRegenIdx] = useState<number | null>(null)
