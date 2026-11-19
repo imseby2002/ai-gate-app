@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { safeFetch } from '@/lib/ssrf'
 
+import { syncICalForSetting } from '@/lib/booking/ical-sync'
+
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
@@ -12,6 +14,17 @@ export async function GET(req: NextRequest) {
     .order('created_at')
 
   const results: any[] = []
+
+  // 強制觸發同步所有 setting
+  const syncOutputs: any[] = []
+  for (const s of settings ?? []) {
+    try {
+      const out = await syncICalForSetting(s.id, { force: true })
+      syncOutputs.push({ id: s.id, platform: s.platform, name: s.properties?.name, out })
+    } catch (e) {
+      syncOutputs.push({ id: s.id, error: String(e) })
+    }
+  }
 
   for (const s of settings ?? []) {
     let raw = ''
@@ -84,6 +97,7 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     now: new Date().toISOString(),
+    syncOutputs,
     results,
     bookings22,
     blocked22,
