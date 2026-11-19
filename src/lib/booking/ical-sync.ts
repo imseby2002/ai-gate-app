@@ -30,7 +30,7 @@ interface SyncResult {
   errors: string[]
 }
 
-const ICAL_HASH_VERSION = 'v3_trip_force_20261119'
+const ICAL_HASH_VERSION = 'v4_bcom_closed_20261119'
 
 export async function syncICalForSetting(
   settingId: string,
@@ -128,14 +128,18 @@ export async function syncICalForSetting(
     const checkOut = ev.end
     const guestName = extractGuestName(ev.summary, setting.platform)
 
-    // Airbnb 等平台的「不可訂」佔位區塊（SUMMARY 為 "Not available" 代表房況封鎖，非真實訂單）。
-    // 注意：Trip.com 的 iCal 協議因隱私規範，真實旅客預訂在摘要中皆顯示為 "RoomStatus Fully booked"，
-    // 絕不能當成不可訂佔位略過，否則 Trip.com 訂單永遠無法建立！
-    // 跨平台重複的情形在下方規則 1（filledBooking）已能精準辨識並沿用既有訂單，不重複建立。
+    // Airbnb、Booking.com 等平台的「不可訂／關房」佔位區塊。
+    // - SUMMARY 為 "Not available" 或 "CLOSED"（如 Booking.com 關房或外部同步）代表房況封鎖，非真實訂單。
+    //   此類區塊會寫入 blocked_dates 阻擋房況，但 bookingId 設為 null，避免在訂單列表與行事曆中產生虛假訂單。
+    // - 注意：Trip.com 的 iCal 協議因隱私規範，真實旅客預訂在摘要中皆顯示為 "RoomStatus Fully booked"，
+    //   絕不能當成不可訂佔位略過，否則 Trip.com 訂單永遠無法建立！
+    const rawSummary = (ev.summary ?? '').trim()
     const isUnavailableBlock =
       setting.platform === 'airbnb'
-        ? (/not\s*available/i.test(ev.summary) || /not\s*available/i.test(guestName))
-        : (/^not\s*available$/i.test(ev.summary.trim()) || /^not\s*available$/i.test(guestName.trim()))
+        ? (/not\s*available/i.test(rawSummary) || /not\s*available/i.test(guestName))
+        : setting.platform === 'booking_com'
+          ? (/^closed(?:\s*-.*)?$/i.test(rawSummary) || /^not\s*available$/i.test(rawSummary) || /^not\s*available$/i.test(guestName.trim()))
+          : (/^not\s*available$/i.test(rawSummary) || /^not\s*available$/i.test(guestName.trim()) || /^closed(?:\s*-.*)?$/i.test(rawSummary))
 
     let bookingId: string | null = null
     if (!isUnavailableBlock) {

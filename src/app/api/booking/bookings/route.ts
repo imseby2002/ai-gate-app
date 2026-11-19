@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getBnbContext } from '@/lib/bnb/context'
 import { syncDailyRecordForBooking, clearDailyRecordForDeletedBooking } from '@/lib/booking/daily-sync'
 import { findOrCreateOrder, autoBookingNo, AUTO_BOOKING_NO_PREFIX } from '@/lib/booking/orders'
-import { findDuplicateClusters, deduplicateBookings, isUnavailableStatusName, BookingRow } from '@/lib/booking/dedup'
+import { findDuplicateClusters, deduplicateBookings, isUnavailableStatusName, isBookingComClosedPlaceholder, BookingRow } from '@/lib/booking/dedup'
 
 export async function GET(req: NextRequest) {
   const supabase = await createClient()
@@ -37,7 +37,12 @@ export async function GET(req: NextRequest) {
   if (data && data.length > 0) {
     const bks = data as unknown as BookingRow[]
     const clusters = findDuplicateClusters(bks)
-    const hasFakeStatus = bks.some(b => isUnavailableStatusName(b.guest_name) || /roomstatus/i.test(b.guest_name ?? '') || /fully\s*booked/i.test(b.guest_name ?? ''))
+    const hasFakeStatus = bks.some(b =>
+      isUnavailableStatusName(b.guest_name) ||
+      isBookingComClosedPlaceholder(b) ||
+      /roomstatus/i.test(b.guest_name ?? '') ||
+      /fully\s*booked/i.test(b.guest_name ?? '')
+    )
     if (clusters.length > 0 || hasFakeStatus) {
       await deduplicateBookings(supabase, {
         userId: ctx.ownerId,

@@ -77,12 +77,29 @@ export interface DuplicateCluster {
 }
 
 /**
- * 判斷名稱是否為純房況封鎖佔位（如 Airbnb 的 Not available、CLOSED）
+ * 判斷名稱或訂單是否為純房況封鎖佔位（如 Airbnb 的 Not available、Booking.com 的 CLOSED / 關房佔位）
  */
 export function isUnavailableStatusName(name: string | null | undefined): boolean {
   if (!name) return false
   const n = name.trim()
-  return /^(?:not\s*available|closed)$/i.test(n)
+  return /^(?:not\s*available|closed(?:\s*-.*)?)$/i.test(n)
+}
+
+export function isBookingComClosedPlaceholder(bk: BookingRow): boolean {
+  if (bk.platform !== 'booking_com') return false
+  if (bk.source !== 'ical') return false
+  if (bk.total_price != null && Number(bk.total_price) > 0) return false
+  if (bk.guest_phone?.trim() || bk.guest_email?.trim()) return false
+
+  const rawSummary = (bk.raw_data as Record<string, unknown> | null)?.summary
+  if (typeof rawSummary === 'string' && /^closed(?:\s*-.*)?$/i.test(rawSummary.trim())) {
+    return true
+  }
+
+  // 若旅客姓名是佔位且無其他資料，且 summary 是 closed
+  const name = (bk.guest_name ?? '').trim()
+  if (isUnavailableStatusName(name)) return true
+  return false
 }
 
 /**
@@ -317,19 +334,26 @@ export async function deduplicateBookings(
     }
   }
 
-  // 4. 清理純房況關房佔位（如 Not available / closed）或正規化 Trip.com 佔位名稱
+  // 4. 清理純房況關房佔位（如 Not available / CLOSED / Booking.com CLOSED）或正規化 Trip.com 佔位名稱
   const statusBookings = (bookings as BookingRow[]).filter(
-    b => !deletedIds.has(b.id) && (isUnavailableStatusName(b.guest_name) || /roomstatus/i.test(b.guest_name ?? '') || /fully\s*booked/i.test(b.guest_name ?? ''))
+    b => !deletedIds.has(b.id) && (
+      isUnavailableStatusName(b.guest_name) ||
+      isBookingComClosedPlaceholder(b) ||
+      /roomstatus/i.test(b.guest_name ?? '') ||
+      /fully\s*booked/i.test(b.guest_name ?? '')
+    )
   )
   for (const fake of statusBookings) {
     const isRoomStatusOrTrip = /roomstatus/i.test(fake.guest_name ?? '') || /fully\s*booked/i.test(fake.guest_name ?? '')
+    const isBcomClosed = isBookingComClosedPlaceholder(fake)
 
     // 若同一時段同一房間已有其他已填寫訂單（跨平台），代表此筆僅為關房/佔位重複，刪除之
     const hasFilledOverlap = (bookings as BookingRow[]).some(
       b => b.id !== fake.id && !deletedIds.has(b.id) && b.property_id === fake.property_id && isBookingFilled(b) && datesOverlap(b.check_in, b.check_out, fake.check_in, fake.check_out)
     )
 
-    if (hasFilledOverlap || !isRoomStatusOrTrip) {
+    // Booking.com 的 CLOSED 佔位或是已有人填寫的佔位，一律轉為 blocked_dates 並清除假訂單
+    if (hasFilledOverlap || isBcomClosed || !isRoomStatusOrTrip) {
       deletedIds.add(fake.id)
       // 確保其日期區間依然在 blocked_dates 中被封鎖，房況不漏擋
       const dates: string[] = []
