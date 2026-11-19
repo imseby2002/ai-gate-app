@@ -150,6 +150,7 @@ export function ExamEditor({ id }: { id: string }) {
 
   const [polishing, setPolishing] = useState(false)
   const [generating, setGenerating] = useState(false)
+  const [genProgress, setGenProgress] = useState<{ done: number; total: number } | null>(null)
   const [regenIdx, setRegenIdx] = useState<number | null>(null)
   const [regenFeedback, setRegenFeedback] = useState('')
   const [regenerating, setRegenerating] = useState(false)
@@ -204,40 +205,65 @@ export function ExamEditor({ id }: { id: string }) {
     return true
   }
 
+  // 前端分批出題：每批一個請求（單選/多選/填空 1、簡答 1.5、申論 2.5，每批權重上限 4），
+  // 避免一次出很多題時伺服器在單一請求內跑太久被 Vercel 300 秒上限切斷（HTTP 504）
+  const splitBatches = (c: Record<QuestionType, number>): Partial<Record<QuestionType, number>>[] => {
+    const W: Record<string, number> = { essay: 2.5, short: 1.5, single: 1, multi: 1, fill: 1 }
+    const items: QuestionType[] = []
+    for (const [k, n] of Object.entries(c) as [QuestionType, number][]) for (let i = 0; i < (n || 0); i++) items.push(k)
+    const out: Partial<Record<QuestionType, number>>[] = []
+    let cur: Partial<Record<QuestionType, number>> = {}, w = 0
+    for (const k of items) {
+      const kw = W[k] ?? 1
+      if (w > 0 && w + kw > 4) { out.push(cur); cur = {}; w = 0 }
+      cur[k] = (cur[k] ?? 0) + 1; w += kw
+    }
+    if (w > 0) out.push(cur)
+    return out
+  }
+
   const generate = async () => {
     if (dirty && !(await saveAll())) return
     if (!exam.knowledge_doc_ids.length) { alert(t('needKnowledge')); return }
+    const batches = splitBatches(counts)
+    if (!batches.length) return
     setGenerating(true)
-    const res = await fetch(`/api/exams/${id}/generate`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        counts,
-        topic,
-        scope,
-        knowledge_doc_ids: exam.knowledge_doc_ids,
-        remedial_source_exam_id: remedialSourceExamId || undefined,
-        remedial_ratio: remedialSourceExamId ? remedialRatio : undefined,
-      }),
-    }).catch(() => null)
+    setGenProgress({ done: 0, total: batches.length })
+    let added = 0
+    let failMsg = ''
+    for (let b = 0; b < batches.length; b++) {
+      let res: Response | null = null
+      for (let attempt = 0; attempt < 2 && !(res && res.ok); attempt++) {
+        res = await fetch(`/api/exams/${id}/generate`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            counts: batches[b],
+            topic,
+            scope,
+            knowledge_doc_ids: exam.knowledge_doc_ids,
+            remedial_source_exam_id: remedialSourceExamId || undefined,
+            remedial_ratio: remedialSourceExamId ? remedialRatio : undefined,
+          }),
+        }).catch(() => null)
+        // 知識庫太長等不會因重試而成功的錯誤不重試
+        if (res && (res.status === 400 || res.status === 403 || res.status === 409)) break
+      }
+      const d = res ? await res.json().catch(() => ({})) : {}
+      if (!res || !res.ok) {
+        const reason = !res ? '伺服器處理逾時或網路中斷' : (d?.detail || d?.error || `HTTP ${res.status}`)
+        failMsg = d?.error === 'knowledge_too_long' ? t('knowledgeTooLong')
+          : d?.error === 'too_many' ? t('tooMany', { max: d.max })
+          : `${t('generateFailed')} (${reason})`
+        if (res && (res.status === 400 || res.status === 403 || res.status === 409)) break
+      } else {
+        added += Number(d?.added) || 0
+      }
+      setGenProgress({ done: b + 1, total: batches.length })
+      setReloadKey(k => k + 1)
+    }
     setGenerating(false)
-    if (!res) {
-      alert(`${t('generateFailed')} (伺服器處理逾時或網路中斷，請稍後再試或減少單次出題數量)`)
-      return
-    }
-    const d = await res.json().catch(() => ({}))
-    if (!res.ok) {
-      const reason = d?.detail || d?.error || (res.status ? `HTTP ${res.status}` : '')
-      const msg = d?.error === 'knowledge_too_long'
-        ? t('knowledgeTooLong')
-        : d?.error === 'too_many'
-          ? t('tooMany', { max: d.max })
-          : reason
-            ? `${t('generateFailed')} (${reason})`
-            : t('generateFailed')
-      alert(msg)
-      return
-    }
-    setReloadKey(k => k + 1)
+    setGenProgress(null)
+    if (failMsg) alert(added > 0 ? `${failMsg}\n已成功加入 ${added} 題，可再按一次補出剩下的題目。` : failMsg)
   }
 
   // AI 單題重新出題（可給意見或不給意見）
@@ -510,7 +536,7 @@ export function ExamEditor({ id }: { id: string }) {
               <div className="flex flex-wrap items-center gap-3">
                 <Button onClick={generate} disabled={generating || !totalCount}>
                   {generating ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1" />}
-                  {generating ? t('generating') : t('generate', { n: totalCount })}
+                  {generating ? `${t('generating')}${genProgress && genProgress.total > 1 ? `（${genProgress.done}/${genProgress.total}）` : ''}` : t('generate', { n: totalCount })}
                 </Button>
                 <span className="text-xs text-muted-foreground">{t('generateHint')}</span>
               </div>
