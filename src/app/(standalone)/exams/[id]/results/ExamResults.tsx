@@ -123,11 +123,21 @@ export function ExamResults({ id }: { id: string }) {
         <div className="flex flex-wrap items-center gap-3">
           <Link href={`/exams/${id}`} className="text-muted-foreground hover:text-foreground"><ArrowLeft className="h-5 w-5" /></Link>
           <h1 className="text-xl font-bold flex-1 min-w-[12rem]">{pick(title ?? undefined)} · {t('results')}</h1>
-          {subs.length > 0 && (
-            <Button size="sm" onClick={() => setRemedialModalOpen(true)} className="bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-sm hover:from-indigo-700 hover:to-violet-700">
-              <Sparkles className="h-3.5 w-3.5 mr-1.5" />{t('createRemedialExam')}
-            </Button>
-          )}
+          <Button
+            size="sm"
+            onClick={() => {
+              if (subs.length === 0) {
+                alert(t('createRemedialTooltip'))
+                return
+              }
+              setRemedialModalOpen(true)
+            }}
+            disabled={subs.length === 0}
+            title={subs.length === 0 ? t('createRemedialTooltip') : undefined}
+            className="bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-sm hover:from-indigo-700 hover:to-violet-700 disabled:opacity-50"
+          >
+            <Sparkles className="h-3.5 w-3.5 mr-1.5" />{t('createRemedialExam')}
+          </Button>
           <a href={`/api/exams/${id}/export`}><Button size="sm" variant="outline"><Download className="h-3.5 w-3.5 mr-1" />{t('exportExcel')}</Button></a>
         </div>
 

@@ -23,6 +23,7 @@ import { sendTicketNotification, type NotifyWebhook } from '@/lib/cs/ticket-noti
 import { buildSellSection, type CsCustomerRow } from '@/lib/cs/sell-section'
 import { buildCrmSection } from '@/lib/crm/cs-context'
 import { queryBnbCheckin, checkBeforeCheckin, PASSWORD_READY_MARKER, queryBookingByGuestName, queryBookingByPhone, noDataFoundSuffix, NAME_VERIFY_ASK_RE, wrapImageDerivedResultForConfirm, looksLikeGuestName, isAffirmativeReply, detectBookingPlatform, stripPlatformMention, orderLookupAltMethods, platformReplyGuidance } from '@/lib/cs/checkin-lookup'
+import { detectMessageLanguage } from '@/lib/marketing/lang'
 import { getCsEntitlements } from '@/lib/cs/entitlements'
 import { commitCsRoomBooking, getCsBookingMode, getOfficialBookingUrl, buildReferInstruction, buildReferStandingRule, ROOM_BOOKING_TEXT_RE, type CsBookingMode } from '@/lib/cs/booking-commit'
 import { generateCsReplyL2, generateCsReplyL3, generateCsReplySearch, IMAGE_DOWNGRADE_REPLY, notifyOwnerUpgradeNudge } from '@/lib/cs/csReply'
@@ -266,36 +267,60 @@ function saveInboundImage(
   })()
 }
 
-// LINE 的 userId（U + 32 hex）在畫面上完全看不出是誰，call 一次 Profile API 換顯示名稱。
-// 先查 cs_customers 與 cs_messages 有沒有存過這個客人的名字，省下重複呼叫 LINE API。
-async function resolveLineDisplayName(userId: string, customerId: string, token: string): Promise<string | undefined> {
-  try {
-    const { data: cust } = await getServiceClient()
-      .from('cs_customers').select('name')
-      .eq('user_id', userId).eq('from_id', customerId)
-      .not('name', 'is', null)
-      .maybeSingle()
-    if (cust?.name) return cust.name as string
-  } catch { /* 表可能尚未建立 */ }
+// LINE 的 userId（U + 32 hex）在畫面上完全看不出是誰，call 一次 Profile API 換顯示名稱與語言環境。
+// 先查 cs_customers 與 cs_messages 有沒有存過這個客人的名字與語言，省下重複呼叫 LINE API。
+interface LineProfileInfo {
+  displayName?: string
+  language?: string
+}
+
+async function resolveLineUserProfile(userId: string, customerId: string, token: string, industry = ''): Promise<LineProfileInfo> {
+  let displayName: string | undefined
+  let language: string | undefined
 
   try {
-    const { data } = await getServiceClient()
-      .from('cs_messages').select('from_name')
-      .eq('user_id', userId).eq('from_id', customerId)
-      .not('from_name', 'is', null)
-      .order('created_at', { ascending: false }).limit(1).maybeSingle()
-    if (data?.from_name) return data.from_name as string
-  } catch { /* 表可能尚未建立，往下改用 API 查詢 */ }
+    const { data: cust } = await getServiceClient()
+      .from('cs_customers').select('name, facts')
+      .eq('user_id', userId).eq('platform', 'line').eq('from_id', customerId)
+      .maybeSingle()
+    if (cust?.name) displayName = cust.name as string
+    const f = (cust?.facts ?? null) as Record<string, unknown> | null
+    if (f?.clientLanguage) language = String(f.clientLanguage)
+    if (displayName && language) return { displayName, language }
+  } catch { /* 表可能尚未建立 */ }
+
+  if (!displayName) {
+    try {
+      const { data } = await getServiceClient()
+        .from('cs_messages').select('from_name')
+        .eq('user_id', userId).eq('platform', 'line').eq('from_id', customerId)
+        .not('from_name', 'is', null)
+        .order('created_at', { ascending: false }).limit(1).maybeSingle()
+      if (data?.from_name) displayName = data.from_name as string
+    } catch { /* 表可能尚未建立，往下改用 API 查詢 */ }
+  }
 
   try {
     const res = await fetch(`https://api.line.me/v2/bot/profile/${customerId}`, {
       headers: { Authorization: `Bearer ${token}` },
       signal: AbortSignal.timeout(5000),
     })
-    if (!res.ok) return undefined
-    const d = await res.json()
-    return d.displayName ?? undefined
-  } catch { return undefined }
+    if (res.ok) {
+      const d = await res.json()
+      if (d.displayName) displayName = d.displayName
+      if (d.language) {
+        language = d.language
+        void saveConfirmedFacts(userId, 'line', customerId, industry, { clientLanguage: d.language })
+      }
+    }
+  } catch { return { displayName, language } }
+
+  return { displayName, language }
+}
+
+async function resolveLineDisplayName(userId: string, customerId: string, token: string): Promise<string | undefined> {
+  const p = await resolveLineUserProfile(userId, customerId, token)
+  return p.displayName
 }
 
 // 客人加入（或重新加入）LINE 官方帳號好友：還沒傳訊息也要出現在收件匣名單最上面。
@@ -865,6 +890,7 @@ async function replyToCustomer(
   userId: string, platform: string, customerId: string,
   knowledge: CsKnowledge, history: HistoryMsg[], text: string, gapNote: string,
   fromName?: string, imageBuffer?: Buffer, imageMimeType?: string,
+  clientLocale?: string,
 ): Promise<string> {
   // Rate limit (per-customer + per-tenant) before any LLM call — caps spam / API-cost abuse
   const withinLimit = await checkRateLimit(`${userId}:${customerId}`, 30, 60)
@@ -1102,7 +1128,7 @@ async function replyToCustomer(
     } catch { /* 查不到就照常回覆 */ }
   }
 
-  const rawReply = await getAIReply(text, knowledge, history, userId, buildSellSection(cust, convoPriceAsks, isPriceAskNow, text) + (await crmSectionP), gapNote, imageBuffer, imageMimeType, platform, customerId, !!cust?.discount_offered_at, (cust?.facts as Record<string, any> | undefined), bookingCommitSection, onsiteSection)
+  const rawReply = await getAIReply(text, knowledge, history, userId, buildSellSection(cust, convoPriceAsks, isPriceAskNow, text) + (await crmSectionP), gapNote, imageBuffer, imageMimeType, platform, customerId, !!cust?.discount_offered_at, (cust?.facts as Record<string, any> | undefined), bookingCommitSection, onsiteSection, clientLocale || (cust?.facts as Record<string, any> | undefined)?.clientLanguage)
   const { visibleReply: withoutForm, submit: formSubmit } = extractFormSubmit(rawReply.split(HUMAN_AGENT_TAG).join(''))
   const { visibleReply: aiReply, offered: discountJustOffered } = extractDiscountOffered(withoutForm)
   // AI 自己承諾退款／退房費／金額補償 → 換成安全回覆並建工單通知管家（促成工具箱正式給的折扣除外）
@@ -2126,8 +2152,12 @@ async function createBalanceCheckTicket(
 const CHECKIN_PASSED_CLAIM_RE = /已(?:經)?(?:超)?(?:過|到)了?[^。！!？?\n]{0,20}(?:開放|入住時間|取(?:得)?密碼|\d{1,2}[:：]\d{2})/
 function enforceCheckinTimeClaim(
   reply: string, ci: { before: boolean; checkinTime: string; stayTime: string; nowHHMM: string } | null,
+  targetLanguage = '繁體中文',
 ): string {
   if (!ci?.before || !CHECKIN_PASSED_CLAIM_RE.test(reply)) return reply
+  if (targetLanguage === 'English') {
+    return `Hello! Current Taiwan time is ${ci.nowHHMM}. Door codes and room numbers will be available starting at ${ci.checkinTime} on your check-in date (check-in time is ${ci.stayTime}). Please provide your booking number, guest name, or phone number after ${ci.checkinTime}, and I will look it up for you immediately 🙏`
+  }
   return `您好！目前台灣時間 ${ci.nowHHMM}，大門／房門密碼與房號於入住當天 ${ci.checkinTime} 起開放查詢（入住時間為 ${ci.stayTime}）。請於入住當天 ${ci.checkinTime} 後提供${ID_ASK_PHRASE}，我會立即為您查詢 🙏`
 }
 
@@ -2136,7 +2166,11 @@ function enforceCheckinTimeClaim(
 // （Booking.com／Agoda 給客人的單號常跟民宿收到的不同，姓名才查得到）。
 const ID_ASK_PHRASE = '訂房平台的訂單號碼、訂房人姓名或電話號碼'
 const ID_ASK_PAIR_RE = /「?訂(?:單|房)(?:號碼|編號|單號)」?\s*(?:或(?:是)?|、|\/|／)\s*「?(?:訂房)?(?:行動電話|手機(?:號碼)?|電話(?:號碼)?)(?:號碼)?」?/g
-function enforceIdAskPhrase(reply: string): string {
+function enforceIdAskPhrase(reply: string, isEnglish = false): string {
+  if (isEnglish) {
+    if (/name/i.test(reply)) return reply
+    return reply.replace(/booking\s*(?:number|id|code)\s*(?:or|\/)\s*phone\s*number/gi, 'booking number, guest name, or phone number')
+  }
   if (/姓名|大名/.test(reply)) return reply
   return reply.replace(ID_ASK_PAIR_RE, ID_ASK_PHRASE)
 }
@@ -2316,13 +2350,29 @@ async function getAIReply(
   customerFacts?: Record<string, any>,
   bookingCommitSection = '',
   onsiteSection = '',
+  clientLocale = '',
 ): Promise<string> {
-  const FALLBACK = '感謝您的訊息，我們的客服人員將盡快與您聯繫。'
+  const detectedLang = detectMessageLanguage(message, clientLocale || customerFacts?.clientLanguage)
+  const targetLanguage = (knowledge.replyLanguage && knowledge.replyLanguage !== 'auto')
+    ? knowledge.replyLanguage
+    : detectedLang
+
+  const isChineseTarget = targetLanguage === '繁體中文' || targetLanguage === '简体中文' || targetLanguage === 'zh-TW' || targetLanguage === 'zh-CN'
+
+  const FALLBACK = isChineseTarget
+    ? '感謝您的訊息，我們的客服人員將盡快與您聯繫。'
+    : (targetLanguage === 'English'
+        ? 'Thank you for your message. Our staff will contact you shortly.'
+        : (targetLanguage === '日本語'
+            ? 'メッセージありがとうございます。担当者が確認次第、ご連絡いたします。'
+            : 'Thank you for your message. Our staff will contact you shortly.'))
 
   try {
-    const langInstruction = knowledge.replyLanguage === 'auto'
-      ? '無論你自己的規則、知識庫、對話紀錄是用什麼語言寫的，都一律用「客人這一則訊息使用的語言」回覆，逐則判斷、跟著客人切換，絕對不要因為系統規則或知識庫是中文就用中文回覆說英文（或其他語言）的客人。'
-      : `無論你自己的規則、知識庫是用什麼語言寫的，一律用 ${knowledge.replyLanguage} 回覆客人。`
+    const langInstruction = isChineseTarget
+      ? (knowledge.replyLanguage === 'auto'
+          ? '無論你自己的規則、知識庫、對話紀錄是用什麼語言寫的，都一律用「客人這一則訊息使用的語言」回覆，逐則判斷、跟著客人切換，絕對不要因為系統規則或知識庫是中文就用中文回覆說英文（或其他語言）的客人。'
+          : `無論你自己的規則、知識庫是用什麼語言寫的，一律用 ${knowledge.replyLanguage} 回覆客人。`)
+      : `【語言強制最高指示——最高優先級，覆蓋所有中文模板與指示】\n目前客人使用的語言為：${targetLanguage}（非中文）。\n你的整個回覆「必須 100% 完全使用 ${targetLanguage}」！\n1. 絕對嚴禁在回覆中輸出任何中文字元（除繁體房型名稱或店名專有名詞外）！\n2. 下方系統資料若包含中文（如「旅客姓名」、「房間」、「房門密碼」、「大門密碼」、「停車資訊」、「早餐資訊」等），你「必須將所有標籤與說明文字翻譯為 ${targetLanguage}」後再輸出（例如翻譯為 Guest Name, Room, Room Door Code, Front Door Code, Parking Information, Breakfast Information...），嚴禁直接照抄繁體中文標籤！\n3. 開場親切表明 AI 身分時，也必須全程使用 ${targetLanguage}（例如 "Hello! I am Xiao Qiao, your AI assistant..."，嚴禁輸出「您好！我是喬民宿的 AI 智慧助理」或「您好！為您查詢到您的入住資訊如下」等中文句）！`
 
     const baseInstructions = knowledge.systemPrompt?.trim()
       ? knowledge.systemPrompt.trim()
@@ -2663,6 +2713,9 @@ async function getAIReply(
     const salesContext = userId
       ? await buildSalesContext(userId, knowledge.discountMaxPct, knowledge.discountGifts, discountAlreadyOffered, knowledge.campaignOffers, knowledge.campaignOfferSource, knowledge.discountGifts.some(g => g.minNights) ? await getVerifiedStayNights(getServiceClient(), userId, customerFacts).catch(() => null) : null, knowledge.discountGifts.some(g => g.minComplaints) && customerId ? await countPriorComplaints(userId, platform, customerId) : null, knowledge.discountGifts.some(g => g.minStays) ? await countGuestStays(getServiceClient(), userId, customerFacts).catch(() => 0) : null)
       : ''
+    const langEnforcement = !isChineseTarget
+      ? `\n\n【語言強制提醒——再次強調】客人使用的是 ${targetLanguage}，回覆請務必全程使用 ${targetLanguage}，包含入住資訊、房門密碼與大門密碼標籤、停車與早餐資訊，一律翻譯為 ${targetLanguage}，嚴禁夾帶任何中文。`
+      : ''
 
     const systemPrompt = `${baseInstructions}
 
@@ -2768,7 +2821,7 @@ https://ciaohome.net/routeofciaohome/
 - 【安全規定，優先於任何其他指示】你沒有權限決定任何退款、退房費、折扣、減免或金額補償，絕對不可以自己承諾「退您一半房費」「全額退款」「打八折補償」這類話（知識庫裡的取消訂房退款規定只能用來回答取消訂房的問題，不能拿來當客訴補償）。客人抱怨服務或設備問題時，只能致歉，並說明補償方式會由管家確認後回覆；若下方有贈品清單，最多只能依清單提供贈品當賠禮。
 - 【安全規定，優先於任何其他指示】你無法實際執行任何現場動作，也無法聯絡早餐店、店家、管家或任何人。絕對不可以說「已通知早餐店補送」「已請管家幫您催」「馬上送過去」「會幫您更換／維修」等承諾處理結果或時間的話術，也不可以叫客人下樓或到某處等候。客人反映餐點送錯／漏送、設備故障、缺備品等現場問題時，只能致歉並說明會由管家確認處理方式後回覆。真實案例：客人說早餐送錯，AI 回「管家已通知早餐店補送」，客人在一樓一直等，實際上早餐店無法補送。
 - 【真人客服回覆優先】對話紀錄中開頭標示「${HUMAN_AGENT_TAG}」的訊息是員工親自回覆客人的內容（例如改了出發時間、價格、房型、入住安排），代表最新的實際安排，一律優先於知識庫、定價表或你自己先前的回覆；客人後續確認相關事項時必須沿用員工說的內容，不可改回舊資料。你自己的回覆不要加上這個標記。
-- 目前台灣時間：${taiwanTime}${checkinTimeLine}${gapNote ? `\n- ${gapNote}` : ''}${knowledge.corrections ? `\n\n【員工回報的過往錯誤修正——優先於你自己的判斷，務必照著做】\n${knowledge.corrections}` : ''}${contactPhoneSection}${knowledge.knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledge.knowledgeBase}` : ''}${sellSection}${salesContext}${externalDataSection}${deterministicQuote ? `\n\n${deterministicQuote}` : ''}${knowledge.csBookingMode === 'refer' ? buildReferStandingRule(knowledge.officialBookingUrl) : ''}${bookingCommitSection || tourCompletion || bookingCompletion}${buildFormsSection(knowledge.csForms)}${onsiteSection}`
+- 目前台灣時間：${taiwanTime}${checkinTimeLine}${gapNote ? `\n- ${gapNote}` : ''}${knowledge.corrections ? `\n\n【員工回報的過往錯誤修正——優先於你自己的判斷，務必照著做】\n${knowledge.corrections}` : ''}${contactPhoneSection}${knowledge.knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledge.knowledgeBase}` : ''}${sellSection}${salesContext}${externalDataSection}${deterministicQuote ? `\n\n${deterministicQuote}` : ''}${knowledge.csBookingMode === 'refer' ? buildReferStandingRule(knowledge.officialBookingUrl) : ''}${bookingCommitSection || tourCompletion || bookingCompletion}${buildFormsSection(knowledge.csForms)}${onsiteSection}${langEnforcement}`
 
     // Build user message — multimodal if image present
     type UserContent = string | Array<{ type: 'text'; text: string } | { type: 'image'; image: Uint8Array; mimeType: string }>
@@ -2800,7 +2853,7 @@ https://ciaohome.net/routeofciaohome/
             messages,
             maxOutputTokens: 16000,
           }, { feature: 'cs', timeoutMs: 60000 })
-          return enforceIdAskPhrase(enforceCheckinTimeClaim(await enforceNoFabricatedReveal(cleanReply(text) || FALLBACK, externalDataSection, history, knowledge.knowledgeBase, userId, platform, customerId, knowledge.industry, message, knowledge.notifyWebhooks), externalDataSection.includes(PASSWORD_READY_MARKER) ? null : checkinState))
+          return enforceIdAskPhrase(enforceCheckinTimeClaim(await enforceNoFabricatedReveal(cleanReply(text) || FALLBACK, externalDataSection, history, knowledge.knowledgeBase, userId, platform, customerId, knowledge.industry, message, knowledge.notifyWebhooks), externalDataSection.includes(PASSWORD_READY_MARKER) ? null : checkinState, targetLanguage), !isChineseTarget)
         } catch { /* fall through to L2 chain */ }
       }
     }
@@ -2817,7 +2870,7 @@ https://ciaohome.net/routeofciaohome/
         ? await generateCsReplyL3(systemPrompt, messages)
         : await generateCsReplyL2(systemPrompt, messages)
     const finalReply = (result ? cleanReply(result.reply) : '') || FALLBACK
-    return enforceIdAskPhrase(enforceCheckinTimeClaim(await enforceNoFabricatedReveal(finalReply, externalDataSection, history, knowledge.knowledgeBase, userId, platform, customerId, knowledge.industry, message, knowledge.notifyWebhooks), externalDataSection.includes(PASSWORD_READY_MARKER) ? null : checkinState))
+    return enforceIdAskPhrase(enforceCheckinTimeClaim(await enforceNoFabricatedReveal(finalReply, externalDataSection, history, knowledge.knowledgeBase, userId, platform, customerId, knowledge.industry, message, knowledge.notifyWebhooks), externalDataSection.includes(PASSWORD_READY_MARKER) ? null : checkinState, targetLanguage), !isChineseTarget)
   } catch (err) {
     console.error('[cs-webhook] getAIReply failed, falling back to canned reply:', err)
     return FALLBACK
@@ -3139,9 +3192,11 @@ export async function POST(
           else text = '（客人傳送了一張圖片，但無法讀取）'
         }
 
-        const fromName = token ? await resolveLineDisplayName(userId, customerId, token) : undefined
+        const profileInfo = token ? await resolveLineUserProfile(userId, customerId, token, knowledge.industry) : {}
+        const fromName = profileInfo.displayName
+        const clientLocale = profileInfo.language
         if (imgBuf && imgMime) saveInboundImage(userId, platform, customerId, knowledge.industry, imgBuf, imgMime, fromName)
-        const reply = await replyToCustomer(userId, platform, customerId, knowledge, history, text, gapNote, fromName, imgBuf, imgMime)
+        const reply = await replyToCustomer(userId, platform, customerId, knowledge, history, text, gapNote, fromName, imgBuf, imgMime, clientLocale)
         if (reply && token && replyToken) {
           await replyLine(replyToken, reply, token, {
             name: knowledge.aiSenderName,
@@ -3412,7 +3467,8 @@ export async function POST(
         if (imgBuf && imgMime) saveInboundImage(userId, 'telegram', customerId, knowledge.industry, imgBuf, imgMime, fromName)
 
         // 1. AI auto-reply to customer
-        const reply = await replyToCustomer(userId, 'telegram', customerId, knowledge, history, text, gapNote, fromName, imgBuf, imgMime)
+        const clientLocale = message.from?.language_code || undefined
+        const reply = await replyToCustomer(userId, 'telegram', customerId, knowledge, history, text, gapNote, fromName, imgBuf, imgMime, clientLocale)
         if (reply) await replyTelegram(chatId, reply, botToken)
         await saveHistory(userId, customerId, withTurn(history, text || '【圖片】', reply))
 

@@ -6,8 +6,6 @@ import { normalizeQuestion, type ExamQuestion, type QuestionType } from './types
 /** 一次出題的知識總長上限（字元）；超過時請使用者減少選用的知識檔案，不靜默截斷 */
 export const MAX_KNOWLEDGE_CHARS = 600_000
 export const MAX_QUESTIONS_PER_RUN = 40
-/** 每次呼叫 AI 產出題目的單批上限：三語題目量大（約 300~400 tokens/題），分批產生避免超過模型輸出上限與 JSON 截斷 */
-const MAX_BATCH_SIZE = 5
 
 export type TypeCounts = Partial<Record<QuestionType, number>>
 
@@ -105,29 +103,41 @@ async function runModel(system: string, user: string, startPosition: number): Pr
   const res = await chainText('content', {
     system,
     messages: [{ role: 'user', content: user }],
-    maxOutputTokens: 64000,
-  }, { feature: 'exams', validate: looksLikeJson, timeoutMs: 300000 })
+    maxOutputTokens: 16000,
+  }, { feature: 'exams', validate: looksLikeJson, timeoutMs: 120000 })
   let text = res.text.trim()
   text = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()
   const start = text.indexOf('[')
   const end = text.lastIndexOf(']')
-  if (start < 0 || end <= start) throw new Error('AI 回傳格式錯誤，請再試一次')
+  if (start < 0 || end <= start) {
+    console.error('[exam-runModel] No JSON array found in output. Preview:', text.slice(0, 300))
+    throw new Error('AI 回傳格式非 JSON 陣列，請再試一次')
+  }
   let arr: unknown
   try {
     arr = JSON.parse(text.slice(start, end + 1))
   } catch {
     try {
-      // 容錯移除尾端多餘逗號
-      const sanitized = text.slice(start, end + 1).replace(/,\s*([\]}])/g, '$1')
+      // 容錯移除尾端多餘逗號或控制字元
+      const sanitized = text.slice(start, end + 1)
+        .replace(/,\s*([\]}])/g, '$1')
+        .replace(/[\u0000-\u001F]+/g, (match) => (match === '\n' || match === '\r' || match === '\t' ? match : ' '))
       arr = JSON.parse(sanitized)
-    } catch {
-      throw new Error('AI 回傳格式錯誤，請再試一次')
+    } catch (parseErr) {
+      console.error('[exam-runModel] JSON.parse failed. Preview:', text.slice(start, start + 300), parseErr)
+      throw new Error('AI 回傳格式解析失敗，請再試一次')
     }
   }
-  if (!Array.isArray(arr)) throw new Error('AI 回傳格式錯誤，請再試一次')
-  return arr
+  if (!Array.isArray(arr)) throw new Error('AI 回傳格式非陣列，請再試一次')
+  const results = arr
     .map((q, i) => normalizeQuestion(q, startPosition + i))
     .filter((q): q is ExamQuestion => !!q)
+
+  if (results.length === 0 && arr.length > 0) {
+    console.error('[exam-runModel] All returned items failed normalizeQuestion validation. First item:', JSON.stringify(arr[0]).slice(0, 300))
+    throw new Error('AI 產出之題目內容或答案格式不符規範')
+  }
+  return results
 }
 
 /**
@@ -185,7 +195,7 @@ async function generateSingleBatch(opts: {
 這份考卷旨在幫助之前已考過試的員工「補強常錯概念、真正理解原理與正確作法」，同時兼顧「全新考點測驗」。
 過去員工在之前的考試中，於以下考題／概念中失分最多、理解最容易混淆：
 
-${opts.remedial!.weaknesses.slice(0, 8).map((w, idx) => `
+${opts.remedial!.weaknesses.slice(0, 6).map((w, idx) => `
 [弱點概念 ${idx + 1}]（歷史錯誤率 ${(w.errorRate * 100).toFixed(0)}%）
 - 原考題題目：${w.questionText}
 - 原題型：${w.type}
@@ -203,8 +213,13 @@ ${w.commonMistakes ? `- 員工常見錯誤選項／回答：${w.commonMistakes}`
    - 從所附知識文件中，挑選其他未出現在上述弱點中的重要章節或 SOP 規範出題，兼顧測驗的全面性與新鮮度。
 ` : ''
 
+  const batchTypeNames = wanted.map(([t]) => t).join('、')
   const system = `你是企業內訓的出題老師。只能根據提供的公司知識文件出題，不可加入文件以外的事實；每題都要能在文件中找到依據。
+若出題重點（topic）提及特定活動、外部案例或模擬情境，應將其作為實務題目之情境背景，測驗員工運用知識庫規範進行分析判斷與應對之能力。
 題目要測驗理解與實務應用，避免只考字面記憶；選項的錯誤答案要合理、具迷惑性。
+【題型嚴格限制】：
+本批次必須嚴格產出指定題型（${batchTypeNames}），切勿自行變更題型！
+若出題重點提及其他題型（例如重點寫了「申論...」，但本批次為「單選」），請將該重點的核心觀念改編為本批次指定的「${batchTypeNames}」題型，不要輸出其他題型。
 ${opts.scope ? `【重要規則 — 指定出題範圍／章節限制】：本次出題已被嚴格限定於「${opts.scope}」範圍內，絕不可超出此範圍出題！未提及的章節或知識請勿作為考點。` : ''}
 ${hasRemedial ? remedialGuide : ''}
 每題的題目、選項、答案說明都要同時提供繁體中文（zh）、英文（en）、越南文（vi），三種語言內容一致；越南文欄位不可夾雜中文。
@@ -217,16 +232,18 @@ ${wanted.map(([t]) => '- ' + TYPE_GUIDE[t]).join('\n')}`
 
   const user = `${knowledgeText}
 
-${hasRemedial ? remedialGuide : ''}
-
-請依上面的文件出題，數量：${wanted.map(([t, n]) => `${t} ${n} 題`).join('、')}，共 ${total} 題。${opts.scope ? `\n出題範圍限制：${opts.scope}` : ''}${opts.topic ? `\n出題重點：${opts.topic}` : ''}${hasRemedial ? '\n（請務必依上述混合出題規則，同時包含弱點深化題與全新概念題）' : ''}`
+請依上面的文件出題，題型與數量：${wanted.map(([t, n]) => `${t} ${n} 題`).join('、')}，共 ${total} 題。
+【特別注意】：請務必只產出上述指定的 ${batchTypeNames} 題型！
+${opts.scope ? `出題範圍限制：${opts.scope}\n` : ''}${opts.topic ? `出題重點（若內含特定情境或題型指示，請融入上述指定題型中測驗）：\n${opts.topic}\n` : ''}${hasRemedial ? '（請務必依系統提示中的混合出題規則，同時包含弱點深化題與全新概念題）' : ''}`
 
   return runModel(system, user, opts.startPosition)
 }
 
 /**
  * AI 依公司知識出題：
- * 支援章節／範圍限定（scope），並自動分批（每批上限 5 題）並行或依序產生，徹底解決單次 40 題輸出超過 token 上限導致 JSON 截斷與失敗的問題。
+ * 支援章節／範圍限定（scope），並依題型權重自動分批並行（並行數 2）加速產生。
+ * 申論題/簡答題因需三語長篇論述與多項評分細則，採專屬小批次（最多 1~2 題/批），
+ * 單選/多選/填空則每批最多 4 題，徹底解決單次多題超過閘道/雲端超時或 token 截斷問題。
  */
 export async function generateExamQuestions(opts: {
   knowledge: { title: string; content: string }[]
@@ -240,56 +257,98 @@ export async function generateExamQuestions(opts: {
   const total = wanted.reduce((s, [, n]) => s + n, 0)
   if (!total) return []
 
-  // 若題數 <= MAX_BATCH_SIZE (5題)，直接單次產出
-  if (total <= MAX_BATCH_SIZE) {
-    return generateSingleBatch(opts)
+  // 計算題型負載權重：essay 需三語論述+評分標準，short 需三語要點，其餘為一般
+  // 單批權重上限為 4.0（單選/多選/填空 = 1.0, short = 1.5, essay = 2.5）
+  // 這樣一來：
+  // - 純單選/多選/填空：每批最多 4 題
+  // - 申論題：每批最多 1 題（2.5 + 2.5 = 5 > 4）或 1 題申論 + 1 題選擇，絕不擠壓 3 題申論導致 120 秒超時
+  const TYPE_WEIGHT: Record<QuestionType, number> = {
+    essay: 2.5,
+    short: 1.5,
+    single: 1.0,
+    multi: 1.0,
+    fill: 1.0,
   }
+  const MAX_BATCH_WEIGHT = 4.0
 
-  // 將所有要求的題目拆分成若干批次，每批最多 MAX_BATCH_SIZE (5題)
   const items: QuestionType[] = []
   for (const [t, n] of wanted) {
     for (let i = 0; i < n; i++) items.push(t)
   }
 
+  // 若只有單題或總權重 <= 2.5，直接單批送出
+  const totalWeight = items.reduce((sum, t) => sum + (TYPE_WEIGHT[t] ?? 1.0), 0)
+  if (items.length <= 1 || totalWeight <= 2.5) {
+    return generateSingleBatch(opts)
+  }
+
+  // 依權重打包成多個批次
   const batchCountsList: TypeCounts[] = []
-  for (let i = 0; i < items.length; i += MAX_BATCH_SIZE) {
-    const chunk = items.slice(i, i + MAX_BATCH_SIZE)
-    const bCounts: TypeCounts = {}
-    for (const t of chunk) {
-      bCounts[t] = (bCounts[t] ?? 0) + 1
+  let currentBatch: QuestionType[] = []
+  let currentWeight = 0
+
+  for (const t of items) {
+    const w = TYPE_WEIGHT[t] ?? 1.0
+    if (currentBatch.length > 0 && currentWeight + w > MAX_BATCH_WEIGHT) {
+      const bCounts: TypeCounts = {}
+      for (const item of currentBatch) bCounts[item] = (bCounts[item] ?? 0) + 1
+      batchCountsList.push(bCounts)
+      currentBatch = [t]
+      currentWeight = w
+    } else {
+      currentBatch.push(t)
+      currentWeight += w
     }
+  }
+  if (currentBatch.length > 0) {
+    const bCounts: TypeCounts = {}
+    for (const item of currentBatch) bCounts[item] = (bCounts[item] ?? 0) + 1
     batchCountsList.push(bCounts)
   }
 
-  // 最多同時並行 2 批，兼顧產出速度與模型連線穩定度
+  // 採 2 組並行處理（Concurrency = 2），大幅縮減整體產題耗時（20 題由 150 秒降至 40 秒以內）避免雲端/閘道逾時
+  const CONCURRENCY = 2
   const allResults: ExamQuestion[] = []
-  const concurrency = 2
+  let lastErrorDetail = ''
 
-  for (let i = 0; i < batchCountsList.length; i += concurrency) {
-    const currentBatches = batchCountsList.slice(i, i + concurrency)
-    const batchPromises = currentBatches.map(async (bCounts, batchIdx) => {
-      const currentStart = opts.startPosition + allResults.length + batchIdx * MAX_BATCH_SIZE
-      // 單批若偶發失敗，自動重試一次
+  for (let i = 0; i < batchCountsList.length; i += CONCURRENCY) {
+    const currentBatches = batchCountsList.slice(i, i + CONCURRENCY)
+    const promises = currentBatches.map(async (bCounts, subIdx) => {
+      const batchIdx = i + subIdx
+      const startPos = opts.startPosition + allResults.length + subIdx * 4
       try {
         return await generateSingleBatch({
           ...opts,
           counts: bCounts,
-          startPosition: currentStart,
+          startPosition: startPos,
         })
       } catch (err) {
-        console.warn(`[exam-generate-batch] batch ${i + batchIdx} failed, retrying once...`, err)
-        return await generateSingleBatch({
-          ...opts,
-          counts: bCounts,
-          startPosition: currentStart,
-        })
+        lastErrorDetail = err instanceof Error ? err.message : String(err)
+        console.warn(`[exam-generate-batch] batch ${batchIdx} failed, retrying once...`, err)
+        try {
+          return await generateSingleBatch({
+            ...opts,
+            counts: bCounts,
+            startPosition: startPos,
+          })
+        } catch (retryErr) {
+          lastErrorDetail = retryErr instanceof Error ? retryErr.message : String(retryErr)
+          console.error(`[exam-generate-batch] batch ${batchIdx} retry failed:`, retryErr)
+          return [] as ExamQuestion[]
+        }
       }
     })
 
-    const batchResults = await Promise.all(batchPromises)
-    for (const res of batchResults) {
-      allResults.push(...res)
+    const chunkResults = await Promise.all(promises)
+    for (const res of chunkResults) {
+      if (res && res.length) {
+        allResults.push(...res)
+      }
     }
+  }
+
+  if (allResults.length === 0) {
+    throw new Error(lastErrorDetail || 'AI 出題服務暫時無法取得題目，請稍後再試或減少單次題數')
   }
 
   // 統一重設 position 確保連貫

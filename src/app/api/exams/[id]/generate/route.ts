@@ -116,7 +116,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     console.error('[exam-generate]', e)
     return NextResponse.json({ error: 'generate_failed', detail: e instanceof Error ? e.message : String(e) }, { status: 502 })
   }
-  if (!questions.length) return NextResponse.json({ error: 'generate_failed' }, { status: 502 })
+  if (!questions.length) {
+    return NextResponse.json({
+      error: 'generate_failed',
+      detail: '未能成功生成題目，建議減少申論題數或單次總題數後再試一次',
+    }, { status: 502 })
+  }
 
   const { error } = await access.admin.from('exam_questions').insert(questions.map(q => questionRow(exam.id, q)))
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

@@ -220,7 +220,7 @@ export default function CalendarPage() {
   // 佔位訂單（guest_name = '(待補充)' 或 '(iCal 訂單)' 等），在日曆旁直接顯示刪除按鈕
   const isPlaceholder = (bk: Booking) => {
     const name = (bk.guest_name ?? '').trim()
-    return name === '(待補充)' || name === '(iCal 訂單)' || /^RoomStatus/i.test(name) || /^Fully booked$/i.test(name)
+    return name === '(待補充)' || name === '(iCal 訂單)' || name === '(Trip.com 訂單)' || /^RoomStatus/i.test(name) || /^Fully booked$/i.test(name)
   }
   async function removeBooking(id: string) {
     if (!window.confirm(t('bookings.toast.deleteConfirm'))) return

@@ -13543,6 +13543,8 @@
     "remedialHint": "Let AI generate deeper situational questions based on employees' past mistakes to reinforce understanding, combined with fresh questions for comprehensive coverage.",
     "remedialSourceExam": "Reference Past Exam",
     "remedialNone": "No reference exam (100% brand new questions)",
+    "noPastExamsAvailable": "No past exams with submissions available for reference yet (employees need to have submitted answers)",
+    "createRemedialTooltip": "Submissions are required before AI can analyze mistakes and generate a remedial exam",
     "remedialLoaded": "Loaded {n} high-error weak points (average error rate {rate}%)",
     "remedialRatio": "Question Mix",
     "remedialRatio50": "50% Weakness Reinforcement + 50% New Questions (Recommended)",

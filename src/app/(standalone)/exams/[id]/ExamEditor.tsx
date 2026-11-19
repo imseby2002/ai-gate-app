@@ -50,16 +50,107 @@ export function ExamEditor({ id }: { id: string }) {
   const [submissionCount, setSubmissionCount] = useState(0)
   const [docs, setDocs] = useState<Doc[]>([])
   const [pastExams, setPastExams] = useState<{ id: string; title: L10n; submission_count?: number }[]>([])
-  const [remedialSourceExamId, setRemedialSourceExamId] = useState<string>('')
-  const [remedialRatio, setRemedialRatio] = useState<number>(0.5)
   const [loadError, setLoadError] = useState(false)
   const [editLang, setEditLang] = useState<ExamLang>(locale === 'vi' ? 'vi' : locale === 'en' ? 'en' : 'zh')
-  const [counts, setCounts] = useState<Record<QuestionType, number>>({ single: 5, multi: 2, fill: 2, short: 1, essay: 0 })
-  const [topic, setTopic] = useState('')
-  const [scope, setScope] = useState('')
-  const [manual, setManual] = useState('')
+
+  const draftKey = `exam_ai_draft_${id}`
+
+  // 初始化草稿（出題題數、重點 Topic、範圍 Scope、錯題考卷、手寫草稿）
+  const [counts, setCounts] = useState<Record<QuestionType, number>>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(`${draftKey}_counts`)
+        if (saved) return JSON.parse(saved)
+      } catch { /* ignore */ }
+    }
+    return { single: 5, multi: 2, fill: 2, short: 1, essay: 0 }
+  })
+  const [topic, setTopic] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(`${draftKey}_topic`)
+        if (saved !== null) return saved
+      } catch { /* ignore */ }
+    }
+    return ''
+  })
+  const [scope, setScope] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(`${draftKey}_scope`)
+        if (saved !== null) return saved
+      } catch { /* ignore */ }
+    }
+    return ''
+  })
+  const [remedialSourceExamId, setRemedialSourceExamId] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(`${draftKey}_remedialSourceExamId`)
+        if (saved !== null) return saved
+      } catch { /* ignore */ }
+    }
+    return ''
+  })
+  const [remedialRatio, setRemedialRatio] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(`${draftKey}_remedialRatio`)
+        if (saved !== null) return Number(saved)
+      } catch { /* ignore */ }
+    }
+    return 0.5
+  })
+  const [manual, setManual] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(`${draftKey}_manual`)
+        if (saved !== null) return saved
+      } catch { /* ignore */ }
+    }
+    return ''
+  })
+
+  // 自動同步儲存到 localStorage，防止出題失敗、網路斷線或頁面刷新時丟失輸入內容
+  useEffect(() => {
+    try {
+      localStorage.setItem(`${draftKey}_counts`, JSON.stringify(counts))
+    } catch { /* ignore */ }
+  }, [draftKey, counts])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(`${draftKey}_topic`, topic)
+    } catch { /* ignore */ }
+  }, [draftKey, topic])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(`${draftKey}_scope`, scope)
+    } catch { /* ignore */ }
+  }, [draftKey, scope])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(`${draftKey}_remedialSourceExamId`, remedialSourceExamId)
+    } catch { /* ignore */ }
+  }, [draftKey, remedialSourceExamId])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(`${draftKey}_remedialRatio`, String(remedialRatio))
+    } catch { /* ignore */ }
+  }, [draftKey, remedialRatio])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(`${draftKey}_manual`, manual)
+    } catch { /* ignore */ }
+  }, [draftKey, manual])
+
   const [polishing, setPolishing] = useState(false)
   const [generating, setGenerating] = useState(false)
+  const [genProgress, setGenProgress] = useState<{ done: number; total: number } | null>(null)
   const [regenIdx, setRegenIdx] = useState<number | null>(null)
   const [regenFeedback, setRegenFeedback] = useState('')
   const [regenerating, setRegenerating] = useState(false)
@@ -114,28 +205,65 @@ export function ExamEditor({ id }: { id: string }) {
     return true
   }
 
+  // 前端分批出題：每批一個請求（單選/多選/填空 1、簡答 1.5、申論 2.5，每批權重上限 4），
+  // 避免一次出很多題時伺服器在單一請求內跑太久被 Vercel 300 秒上限切斷（HTTP 504）
+  const splitBatches = (c: Record<QuestionType, number>): Partial<Record<QuestionType, number>>[] => {
+    const W: Record<string, number> = { essay: 2.5, short: 1.5, single: 1, multi: 1, fill: 1 }
+    const items: QuestionType[] = []
+    for (const [k, n] of Object.entries(c) as [QuestionType, number][]) for (let i = 0; i < (n || 0); i++) items.push(k)
+    const out: Partial<Record<QuestionType, number>>[] = []
+    let cur: Partial<Record<QuestionType, number>> = {}, w = 0
+    for (const k of items) {
+      const kw = W[k] ?? 1
+      if (w > 0 && w + kw > 4) { out.push(cur); cur = {}; w = 0 }
+      cur[k] = (cur[k] ?? 0) + 1; w += kw
+    }
+    if (w > 0) out.push(cur)
+    return out
+  }
+
   const generate = async () => {
     if (dirty && !(await saveAll())) return
     if (!exam.knowledge_doc_ids.length) { alert(t('needKnowledge')); return }
+    const batches = splitBatches(counts)
+    if (!batches.length) return
     setGenerating(true)
-    const res = await fetch(`/api/exams/${id}/generate`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        counts,
-        topic,
-        scope,
-        knowledge_doc_ids: exam.knowledge_doc_ids,
-        remedial_source_exam_id: remedialSourceExamId || undefined,
-        remedial_ratio: remedialSourceExamId ? remedialRatio : undefined,
-      }),
-    }).catch(() => null)
-    setGenerating(false)
-    const d = await res?.json().catch(() => ({}))
-    if (!res?.ok) {
-      alert(d?.error === 'knowledge_too_long' ? t('knowledgeTooLong') : d?.error === 'too_many' ? t('tooMany', { max: d.max }) : d?.detail ? `${t('generateFailed')} (${d.detail})` : t('generateFailed'))
-      return
+    setGenProgress({ done: 0, total: batches.length })
+    let added = 0
+    let failMsg = ''
+    for (let b = 0; b < batches.length; b++) {
+      let res: Response | null = null
+      for (let attempt = 0; attempt < 2 && !(res && res.ok); attempt++) {
+        res = await fetch(`/api/exams/${id}/generate`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            counts: batches[b],
+            topic,
+            scope,
+            knowledge_doc_ids: exam.knowledge_doc_ids,
+            remedial_source_exam_id: remedialSourceExamId || undefined,
+            remedial_ratio: remedialSourceExamId ? remedialRatio : undefined,
+          }),
+        }).catch(() => null)
+        // 知識庫太長等不會因重試而成功的錯誤不重試
+        if (res && (res.status === 400 || res.status === 403 || res.status === 409)) break
+      }
+      const d = res ? await res.json().catch(() => ({})) : {}
+      if (!res || !res.ok) {
+        const reason = !res ? '伺服器處理逾時或網路中斷' : (d?.detail || d?.error || `HTTP ${res.status}`)
+        failMsg = d?.error === 'knowledge_too_long' ? t('knowledgeTooLong')
+          : d?.error === 'too_many' ? t('tooMany', { max: d.max })
+          : `${t('generateFailed')} (${reason})`
+        if (res && (res.status === 400 || res.status === 403 || res.status === 409)) break
+      } else {
+        added += Number(d?.added) || 0
+      }
+      setGenProgress({ done: b + 1, total: batches.length })
+      setReloadKey(k => k + 1)
     }
-    setReloadKey(k => k + 1)
+    setGenerating(false)
+    setGenProgress(null)
+    if (failMsg) alert(added > 0 ? `${failMsg}\n已成功加入 ${added} 題，可再按一次補出剩下的題目。` : failMsg)
   }
 
   // AI 單題重新出題（可給意見或不給意見）
@@ -183,7 +311,15 @@ export function ExamEditor({ id }: { id: string }) {
     setPolishing(false)
     const d = await res?.json().catch(() => ({}))
     if (!res?.ok) {
-      alert(d?.error === 'manual_too_long' ? t('manualTooLong', { max: d.max }) : d?.error === 'knowledge_too_long' ? t('knowledgeTooLong') : t('generateFailed'))
+      const reason = d?.detail || d?.error || (res?.status ? `HTTP ${res.status}` : '')
+      const msg = d?.error === 'manual_too_long'
+        ? t('manualTooLong', { max: d.max })
+        : d?.error === 'knowledge_too_long'
+          ? t('knowledgeTooLong')
+          : reason
+            ? `${t('generateFailed')} (${reason})`
+            : t('generateFailed')
+      alert(msg)
       return
     }
     setManual('')
@@ -335,15 +471,15 @@ export function ExamEditor({ id }: { id: string }) {
               </div>
 
               {/* 歷史考卷錯題弱點強化（選填） */}
-              {pastExams.length > 0 && (
-                <div className="space-y-2 p-3 rounded-xl border border-indigo-200/70 bg-indigo-50/30 dark:bg-indigo-950/20 text-xs">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium text-foreground flex items-center gap-1.5">
-                      <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
-                      {t('remedialTitle')}
-                    </span>
-                    <span className="text-[11px] text-muted-foreground">{t('remedialHint')}</span>
-                  </div>
+              <div className="space-y-2 p-3 rounded-xl border border-indigo-200/70 bg-indigo-50/30 dark:bg-indigo-950/20 text-xs">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-medium text-foreground flex items-center gap-1.5">
+                    <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
+                    {t('remedialTitle')}
+                  </span>
+                  <span className="text-[11px] text-muted-foreground">{t('remedialHint')}</span>
+                </div>
+                {pastExams.length > 0 ? (
                   <div className="grid sm:grid-cols-2 gap-2 pt-1">
                     <label className="space-y-1 block">
                       <span className="text-muted-foreground">{t('remedialSourceExam')}</span>
@@ -375,8 +511,12 @@ export function ExamEditor({ id }: { id: string }) {
                       </label>
                     )}
                   </div>
-                </div>
-              )}
+                ) : (
+                  <p className="text-[11px] text-muted-foreground pt-1 bg-background/60 p-2 rounded border border-indigo-100 dark:border-indigo-900/50">
+                    💡 {t('noPastExamsAvailable')}
+                  </p>
+                )}
+              </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                 {QUESTION_TYPES.map(qt => (
@@ -386,11 +526,17 @@ export function ExamEditor({ id }: { id: string }) {
                   </label>
                 ))}
               </div>
-              <Input placeholder={t('topicPh')} value={topic} maxLength={500} onChange={e => setTopic(e.target.value)} />
+              <AutoTextarea
+                rows={2}
+                placeholder={t('topicPh')}
+                value={topic}
+                maxLength={500}
+                onChange={e => setTopic(e.target.value)}
+              />
               <div className="flex flex-wrap items-center gap-3">
                 <Button onClick={generate} disabled={generating || !totalCount}>
                   {generating ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1" />}
-                  {generating ? t('generating') : t('generate', { n: totalCount })}
+                  {generating ? `${t('generating')}${genProgress && genProgress.total > 1 ? `（${genProgress.done}/${genProgress.total}）` : ''}` : t('generate', { n: totalCount })}
                 </Button>
                 <span className="text-xs text-muted-foreground">{t('generateHint')}</span>
               </div>

@@ -30,7 +30,12 @@ interface SyncResult {
   errors: string[]
 }
 
-export async function syncICalForSetting(settingId: string): Promise<SyncResult> {
+const ICAL_HASH_VERSION = 'v7_per_date_owner_block_20261119'
+
+export async function syncICalForSetting(
+  settingId: string,
+  options?: { force?: boolean }
+): Promise<SyncResult> {
   const supabase = createAdminClient()
   const result: SyncResult = { added: 0, updated: 0, blocked: 0, cancelled: 0, errors: [] }
 
@@ -60,7 +65,11 @@ export async function syncICalForSetting(settingId: string): Promise<SyncResult>
   let rawIcal: string
   try {
     const res = await safeFetch(setting.ical_url, {
-      headers: { 'User-Agent': 'AI-GATE/1.0 iCal Sync' },
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AI-GATE/1.0 iCal Sync',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+      },
       signal: AbortSignal.timeout(15000),
     })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -88,11 +97,12 @@ export async function syncICalForSetting(settingId: string): Promise<SyncResult>
   }
 
   // 事件內容與上次成功同步時相同 → 房況沒變，不重寫訂單與 blocked_dates。
-  // 比對解析後的事件而非原始文字：平台每次回應的 DTSTAMP 都會變。
+  // 強制同步 (force=true) 或雜湊版本升級時必跑完整流程。
   const icalHash = createHash('sha256')
+    .update(ICAL_HASH_VERSION)
     .update(JSON.stringify(vevents.map(e => [e.uid, e.start, e.end, e.summary, e.description])))
     .digest('hex')
-  if (setting.last_ical_hash === icalHash && !setting.last_sync_error) {
+  if (!options?.force && setting.last_ical_hash === icalHash && !setting.last_sync_error) {
     await supabase.from('ical_settings').update({ last_synced_at: new Date().toISOString() }).eq('id', settingId)
     return result
   }
@@ -110,6 +120,18 @@ export async function syncICalForSetting(settingId: string): Promise<SyncResult>
 
   const existingPropBookings: BookingRow[] = (propBookings ?? []) as BookingRow[]
 
+  // 抓取此房源由房東在系統手動設定的「關房日期」（owner_block）
+  // 核心保護：本系統手動關房後，iCal 匯出會帶給 Booking.com 等 OTA 關房；
+  // 但 OTA 同步回傳的 CLOSED / 關房事件 UID 絕不可被當成新訂單「回溯」建立訂單！
+  const { data: ownerBlocks } = await supabase
+    .from('blocked_dates')
+    .select('date')
+    .eq('user_id', setting.user_id)
+    .eq('property_id', setting.property_id)
+    .eq('reason', 'owner_block')
+
+  const ownerBlockedDateSet = new Set<string>((ownerBlocks ?? []).map((b: { date: string }) => b.date))
+
   // 同一天以後出現的事件為準（與逐筆 upsert 時的覆蓋順序一致）
   const wantedBlocks = new Map<string, string | null>()
 
@@ -118,65 +140,131 @@ export async function syncICalForSetting(settingId: string): Promise<SyncResult>
     const checkOut = ev.end
     const guestName = extractGuestName(ev.summary, setting.platform)
 
-    // Airbnb 等平台的「不可訂」佔位區塊（SUMMARY 為 "Not available"、Trip.com 的
-    // "RoomStatus Fully booked" 之類，代表房況已滿或房主自行封鎖，不是真實訂單）
-    // 這種區塊本來就只代表「不可訂」，只需要寫 blocked_dates 阻擋房況，不必也不該
-    // 建立 bookings 資料列。
-    const isUnavailableBlock =
-      /not\s*available/i.test(ev.summary) ||
-      /not\s*available/i.test(guestName) ||
+    // Airbnb、Booking.com 等平台的「不可訂／關房」佔位區塊。
+    // - SUMMARY 為 "Not available" 或 "CLOSED"（如 Booking.com 關房或外部同步）代表房況封鎖，非真實訂單。
+    //   此類區塊會寫入 blocked_dates 阻擋房況，但 bookingId 設為 null，避免在訂單列表與行事曆中產生虛假訂單。
+    // - 注意：Trip.com 的 iCal 協議因隱私規範，真實旅客預訂在摘要中皆顯示為 "RoomStatus Fully booked"，
+    //   絕不能當成不可訂佔位略過，否則 Trip.com 訂單永遠無法建立！
+    // - 若此日期區間已有房東手動關房（owner_block），且事件為佔位性質（或 Booking.com 回傳的關房狀態），
+    //   絕不能被當作真實訂單重新寫入！
+    const evDates = dateRange(checkIn, checkOut)
+    const hasOwnerBlock = evDates.some(d => ownerBlockedDateSet.has(d))
+    const isPlaceholderOrGeneric =
+      !guestName ||
+      guestName === '(iCal 訂單)' ||
+      guestName === '(Trip.com 訂單)' ||
       /roomstatus/i.test(ev.summary) ||
       /fully\s*booked/i.test(ev.summary) ||
-      /roomstatus/i.test(guestName) ||
-      /fully\s*booked/i.test(guestName)
+      /^closed/i.test(ev.summary.trim()) ||
+      /^not\s*available$/i.test(ev.summary.trim())
 
-    let bookingId: string | null = null
-    if (!isUnavailableBlock) {
-      const uid = ev.uid || `${settingId}_${ev.start}`
+    const rawSummary = (ev.summary ?? '').trim()
+    const isUnavailableSummary =
+      setting.platform === 'airbnb'
+        ? (/not\s*available/i.test(rawSummary) || /not\s*available/i.test(guestName))
+        : setting.platform === 'booking_com'
+          ? (/^closed(?:\s*-.*)?$/i.test(rawSummary) || /^not\s*available$/i.test(rawSummary) || /^not\s*available$/i.test(guestName.trim()))
+          : (/^not\s*available$/i.test(rawSummary) || /^not\s*available$/i.test(guestName.trim()) || /^closed(?:\s*-.*)?$/i.test(rawSummary))
 
-      // 檢查是否已存在同一平台、同日期區間重疊的有效訂單
-      const overlappingSamePlatform = existingPropBookings.filter(b =>
-        b.platform === setting.platform &&
-        datesOverlap(b.check_in, b.check_out, checkIn, checkOut)
-      )
+    const baseUid = ev.uid || `${settingId}_${ev.start}`
 
-      // 跨平台檢查：若為單間房型（room_count === 1），且該房型已被其他平台（如 Agoda、直訂）訂走
-      const filledBookingAnyPlatform = isSingleRoom
-        ? existingPropBookings.find(b => isBookingFilled(b) && datesOverlap(b.check_in, b.check_out, checkIn, checkOut))
-        : null
+    // 依每一天檢查此事件在該日期的狀況：
+    // 1. 是否已有房東手動關房（owner_block）
+    // 2. 是否已有既有的已填寫訂單（跨平台或同平台，如 Agoda、Email、直訂、手動輸入）
+    // 3. 是否為純粹關房佔位（如 CLOSED / Not available）
+    // 4. 若不是上述情況，則收集為需要建立/更新 iCal 訂單的待分配日期
+    const unallocatedDates: string[] = []
 
-      // 規則 1：如果該房間已經填寫（無論是同平台，或是單間房型已被其他平台填寫），
-      // 應該就不用再重複建立，直接沿用既有訂單 ID 阻擋房況！
-      const filledBooking = isSingleRoom
-        ? (filledBookingAnyPlatform || overlappingSamePlatform.find(b => isBookingFilled(b)))
-        : overlappingSamePlatform.find(b => isBookingFilled(b) && b.check_in === checkIn && b.check_out === checkOut)
+    for (const date of evDates) {
+      if (ownerBlockedDateSet.has(date)) {
+        // 房東手動關房：絕不建立假訂單，但標記為房況封鎖 (bookingId = null)
+        wantedBlocks.set(date, null)
+        continue
+      }
 
-      if (filledBooking) {
-        // 已有完整資料的訂單：不重複新增，沿用其 id
-        bookingId = filledBooking.id
-        result.updated++
-      } else {
-        // 規則 2：如果沒有填寫，以 iCal 為主（建立或更新 iCal 訂單）
-        // 先尋找是否已有同 UID 或同日期的 iCal 佔位訂單，避免多餘 insert
-        const existingIcal = overlappingSamePlatform.find(b => b.platform_booking_id === uid) ||
-          (isSingleRoom ? overlappingSamePlatform.find(b => b.source === 'ical') : null)
+      // 檢查此日期是否已被任何有效已填寫訂單涵蓋 (check_in <= date < check_out)
+      const filledBookingOnDate = isSingleRoom
+        ? existingPropBookings.find(b => isBookingFilled(b) && b.check_in <= date && b.check_out > date)
+        : existingPropBookings.find(b => b.platform === setting.platform && isBookingFilled(b) && b.check_in <= date && b.check_out > date)
+
+      if (filledBookingOnDate) {
+        // 已有完整資料的真實訂單：沿用該訂單的 ID 封鎖房況，不覆蓋成佔位訂單
+        wantedBlocks.set(date, filledBookingOnDate.id)
+        continue
+      }
+
+      if (isUnavailableSummary) {
+        // 純關房佔位（CLOSED / Not available），無對應訂單
+        wantedBlocks.set(date, null)
+        continue
+      }
+
+      unallocatedDates.push(date)
+    }
+
+    // 若此事件中有未被現有訂單與關房涵蓋的日期（例如 Trip.com 合併了多天連貫預訂），
+    // 將連續的未分配日期切成連續的住宿區段（segments），為每個區段建立或更新 iCal 訂單！
+    if (unallocatedDates.length > 0) {
+      // 切成連續區段：比如 ['2026-11-22', '2026-11-23'] => checkIn: 2026-11-22, checkOut: 2026-11-24
+      const segments: Array<{ segCheckIn: string; segCheckOut: string }> = []
+      let segStart = unallocatedDates[0]
+      let prevDate = unallocatedDates[0]
+
+      for (let i = 1; i < unallocatedDates.length; i++) {
+        const curDate = unallocatedDates[i]
+        const expectedNext = new Date(new Date(prevDate + 'T00:00:00').getTime() + 86400000).toISOString().slice(0, 10)
+        if (curDate === expectedNext) {
+          prevDate = curDate
+        } else {
+          // 斷開，結束前一個 segment
+          const segEnd = new Date(new Date(prevDate + 'T00:00:00').getTime() + 86400000).toISOString().slice(0, 10)
+          segments.push({ segCheckIn: segStart, segCheckOut: segEnd })
+          segStart = curDate
+          prevDate = curDate
+        }
+      }
+      const lastSegEnd = new Date(new Date(prevDate + 'T00:00:00').getTime() + 86400000).toISOString().slice(0, 10)
+      segments.push({ segCheckIn: segStart, segCheckOut: lastSegEnd })
+
+      // 為每個連續未分配區段建立/更新 iCal 訂單
+      for (const seg of segments) {
+        // 若切段與原始事件起訖完全相同，沿用 baseUid；若切碎了，使用 baseUid_segCheckIn 保持唯一且可追蹤
+        const segUid = (seg.segCheckIn === checkIn && seg.segCheckOut === checkOut)
+          ? baseUid
+          : `${baseUid}_${seg.segCheckIn}`
+
+        // 檢查同一平台同一房源是否已存在同 UID 或該時段的 iCal 訂單
+        const existingIcal = existingPropBookings.find(b =>
+          b.platform === setting.platform &&
+          (b.platform_booking_id === segUid ||
+           (b.source === 'ical' && (b.check_in === seg.segCheckIn || datesOverlap(b.check_in, b.check_out, seg.segCheckIn, seg.segCheckOut))))
+        )
+
+        let segBookingId: string | null = null
 
         if (existingIcal) {
-          bookingId = existingIcal.id
-          // 若原本就有姓名（例如手動填入），不被 "(iCal 訂單)" 佔位覆蓋
+          segBookingId = existingIcal.id
+          const isPlaceholderName = (n: string | null | undefined) =>
+            !n || n === '(iCal 訂單)' || n === '(Trip.com 訂單)' || n === '(待補充)' || /roomstatus/i.test(n) || /fully\s*booked/i.test(n)
+
           const updatePatch: Record<string, unknown> = {
-            check_in: checkIn,
-            check_out: checkOut,
-            raw_data: { summary: ev.summary, uid, description: ev.description },
+            check_in: seg.segCheckIn,
+            check_out: seg.segCheckOut,
+            platform_booking_id: segUid,
+            raw_data: { summary: ev.summary, uid: segUid, description: ev.description },
           }
-          if (guestName && guestName !== '(iCal 訂單)' && (!existingIcal.guest_name || existingIcal.guest_name === '(iCal 訂單)')) {
+          if (guestName && !isPlaceholderName(guestName) && isPlaceholderName(existingIcal.guest_name)) {
+            updatePatch.guest_name = guestName
+          } else if (isPlaceholderName(existingIcal.guest_name) && guestName && guestName !== existingIcal.guest_name) {
             updatePatch.guest_name = guestName
           }
           await supabase.from('bookings').update(updatePatch).eq('id', existingIcal.id)
+          existingIcal.check_in = seg.segCheckIn
+          existingIcal.check_out = seg.segCheckOut
           result.updated++
         } else {
           // 真正全新的 iCal 訂單
-          const orderId = await findOrCreateOrder(supabase, setting.user_id, setting.platform, uid, {
+          const orderId = await findOrCreateOrder(supabase, setting.user_id, setting.platform, segUid, {
             guest_name: guestName, source: 'ical',
           })
           const { data: bk, error: bkErr } = await supabase
@@ -186,23 +274,23 @@ export async function syncICalForSetting(settingId: string): Promise<SyncResult>
               order_id:            orderId,
               property_id:         setting.property_id,
               platform:            setting.platform,
-              platform_booking_id: uid,
+              platform_booking_id: segUid,
               guest_name:          guestName,
-              check_in:            checkIn,
-              check_out:           checkOut,
+              check_in:            seg.segCheckIn,
+              check_out:           seg.segCheckOut,
               status:              'confirmed',
               source:              'ical',
-              raw_data:            { summary: ev.summary, uid, description: ev.description },
+              raw_data:            { summary: ev.summary, uid: segUid, description: ev.description },
             }, { onConflict: 'user_id,platform,platform_booking_id,property_id' })
             .select('id')
             .single()
 
           if (bkErr) {
-            result.errors.push(`訂單 upsert 失敗 ${uid}: ${bkErr.message}`)
+            result.errors.push(`訂單 upsert 失敗 ${segUid}: ${bkErr.message}`)
             continue
           }
 
-          bookingId = bk?.id ?? null
+          segBookingId = bk?.id ?? null
           if (bk && !bkErr) {
             result.added++
             existingPropBookings.push({
@@ -210,10 +298,10 @@ export async function syncICalForSetting(settingId: string): Promise<SyncResult>
               user_id: setting.user_id,
               property_id: setting.property_id,
               platform: setting.platform,
-              platform_booking_id: uid,
+              platform_booking_id: segUid,
               guest_name: guestName,
-              check_in: checkIn,
-              check_out: checkOut,
+              check_in: seg.segCheckIn,
+              check_out: seg.segCheckOut,
               status: 'confirmed',
               source: 'ical',
             })
@@ -221,10 +309,12 @@ export async function syncICalForSetting(settingId: string): Promise<SyncResult>
             result.updated++
           }
         }
+
+        for (const date of dateRange(seg.segCheckIn, seg.segCheckOut)) {
+          wantedBlocks.set(date, segBookingId)
+        }
       }
     }
-
-    for (const date of dateRange(checkIn, checkOut)) wantedBlocks.set(date, bookingId)
   }
 
   // 只寫入新增或 booking_id 有變的日期，已存在且相同的不重寫
@@ -317,7 +407,7 @@ export async function syncICalForSetting(settingId: string): Promise<SyncResult>
   return result
 }
 
-export async function syncAllICalForUser(userId: string) {
+export async function syncAllICalForUser(userId: string, options?: { force?: boolean }) {
   const supabase = createAdminClient()
   const { data: settings } = await supabase
     .from('ical_settings')
@@ -326,7 +416,7 @@ export async function syncAllICalForUser(userId: string) {
     .eq('sync_enabled', true)
 
   if (!settings?.length) return []
-  return Promise.all(settings.map((s: { id: string }) => syncICalForSetting(s.id)))
+  return Promise.all(settings.map((s: { id: string }) => syncICalForSetting(s.id, options)))
 }
 
 // ── Lightweight iCal parser ───────────────────────────────────
@@ -348,7 +438,12 @@ function parseICalEvents(raw: string): ICalEvent[] {
     }
     if (line === 'END:VEVENT') {
       inEvent = false
-      if (current.start && current.end) {
+      if (current.start) {
+        // 若缺少 DTEND 或結束日早於等於入住日，預設入住 1 晚
+        if (!current.end || current.end <= current.start) {
+          const nextDay = new Date(new Date(current.start + 'T00:00:00').getTime() + 86400000).toISOString().slice(0, 10)
+          current.end = nextDay
+        }
         events.push({
           uid:         current.uid ?? '',
           start:       current.start,
@@ -384,6 +479,18 @@ function parseDateValue(key: string, value: string): string {
     // DATE: YYYYMMDD
     return `${cleaned.slice(0, 4)}-${cleaned.slice(4, 6)}-${cleaned.slice(6, 8)}`
   }
+  // 若為 UTC 時間格式 (含 Z)，換算為台灣時間 (UTC+8) 日期，避免跨日時差導致日期偏移 1 天
+  if (value.toUpperCase().includes('Z') && cleaned.length >= 15) {
+    const y = parseInt(cleaned.slice(0, 4), 10)
+    const mo = parseInt(cleaned.slice(4, 6), 10) - 1
+    const d = parseInt(cleaned.slice(6, 8), 10)
+    const h = parseInt(cleaned.slice(9, 11), 10)
+    const mi = parseInt(cleaned.slice(11, 13), 10)
+    const s = parseInt(cleaned.slice(13, 15), 10)
+    const utcMs = Date.UTC(y, mo, d, h, mi, s)
+    const twDate = new Date(utcMs + 8 * 3600 * 1000)
+    return twDate.toISOString().slice(0, 10)
+  }
   // DATETIME: parse as ISO
   const y = cleaned.slice(0, 4)
   const mo = cleaned.slice(4, 6)
@@ -413,5 +520,11 @@ function extractGuestName(summary: string, platform: string): string {
     .replace(/^CLOSED\s*-?\s*/i, '')
     .replace(new RegExp(`^${platform}\\s*-?\\s*`, 'i'), '')
     .trim()
-  return cleaned || '(iCal 訂單)'
+
+  const isTrip = platform === 'trip_com' || platform === 'ctrip'
+  if (!cleaned || /^(?:roomstatus(?:\s+fully\s*booked)?|fully\s*booked|not\s*available|reserved)$/i.test(cleaned) || /roomstatus/i.test(cleaned)) {
+    return isTrip ? '(Trip.com 訂單)' : '(iCal 訂單)'
+  }
+  return cleaned
 }
+
