@@ -6,8 +6,8 @@ import { normalizeQuestion, type ExamQuestion, type QuestionType } from './types
 /** 一次出題的知識總長上限（字元）；超過時請使用者減少選用的知識檔案，不靜默截斷 */
 export const MAX_KNOWLEDGE_CHARS = 600_000
 export const MAX_QUESTIONS_PER_RUN = 40
-/** 每次呼叫 AI 產出題目的單批上限：三語題目量大（約 300~400 tokens/題），分批產生避免超過模型輸出上限與 JSON 截斷 */
-const MAX_BATCH_SIZE = 5
+/** 每次呼叫 AI 產出題目的單批上限：三語題目量大（約 300~500 tokens/題），每批 3 題最為穩健，避免模型超時或長文本解析失敗 */
+const MAX_BATCH_SIZE = 3
 
 export type TypeCounts = Partial<Record<QuestionType, number>>
 
@@ -105,8 +105,8 @@ async function runModel(system: string, user: string, startPosition: number): Pr
   const res = await chainText('content', {
     system,
     messages: [{ role: 'user', content: user }],
-    maxOutputTokens: 64000,
-  }, { feature: 'exams', validate: looksLikeJson, timeoutMs: 300000 })
+    maxOutputTokens: 16000,
+  }, { feature: 'exams', validate: looksLikeJson, timeoutMs: 120000 })
   let text = res.text.trim()
   text = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()
   const start = text.indexOf('[')
@@ -117,14 +117,16 @@ async function runModel(system: string, user: string, startPosition: number): Pr
     arr = JSON.parse(text.slice(start, end + 1))
   } catch {
     try {
-      // 容錯移除尾端多餘逗號
-      const sanitized = text.slice(start, end + 1).replace(/,\s*([\]}])/g, '$1')
+      // 容錯移除尾端多餘逗號或換行字元
+      const sanitized = text.slice(start, end + 1)
+        .replace(/,\s*([\]}])/g, '$1')
+        .replace(/[\u0000-\u001F]+/g, (match) => (match === '\n' || match === '\r' || match === '\t' ? match : ' '))
       arr = JSON.parse(sanitized)
     } catch {
-      throw new Error('AI 回傳格式錯誤，請再試一次')
+      throw new Error('AI 回傳格式解析失敗，請再試一次')
     }
   }
-  if (!Array.isArray(arr)) throw new Error('AI 回傳格式錯誤，請再試一次')
+  if (!Array.isArray(arr)) throw new Error('AI 回傳格式非陣列，請再試一次')
   return arr
     .map((q, i) => normalizeQuestion(q, startPosition + i))
     .filter((q): q is ExamQuestion => !!q)
@@ -261,34 +263,36 @@ export async function generateExamQuestions(opts: {
     batchCountsList.push(bCounts)
   }
 
-  // 最多同時並行 2 批，兼顧產出速度與模型連線穩定度
+  // 採依序批次處理，避免多請求並行造成模型供應商限流或超時
   const allResults: ExamQuestion[] = []
-  const concurrency = 2
 
-  for (let i = 0; i < batchCountsList.length; i += concurrency) {
-    const currentBatches = batchCountsList.slice(i, i + concurrency)
-    const batchPromises = currentBatches.map(async (bCounts, batchIdx) => {
-      const currentStart = opts.startPosition + allResults.length + batchIdx * MAX_BATCH_SIZE
-      // 單批若偶發失敗，自動重試一次
+  for (let i = 0; i < batchCountsList.length; i++) {
+    const bCounts = batchCountsList[i]
+    const currentStart = opts.startPosition + allResults.length
+    try {
+      const batchRes = await generateSingleBatch({
+        ...opts,
+        counts: bCounts,
+        startPosition: currentStart,
+      })
+      allResults.push(...batchRes)
+    } catch (err) {
+      console.warn(`[exam-generate-batch] batch ${i} failed, retrying once...`, err)
       try {
-        return await generateSingleBatch({
+        const retryRes = await generateSingleBatch({
           ...opts,
           counts: bCounts,
           startPosition: currentStart,
         })
-      } catch (err) {
-        console.warn(`[exam-generate-batch] batch ${i + batchIdx} failed, retrying once...`, err)
-        return await generateSingleBatch({
-          ...opts,
-          counts: bCounts,
-          startPosition: currentStart,
-        })
+        allResults.push(...retryRes)
+      } catch (retryErr) {
+        // 如果前面已有成功產生的題目，保留已產生的題目而不整份失敗
+        if (allResults.length > 0) {
+          console.error(`[exam-generate-batch] batch ${i} retry failed, but keeping ${allResults.length} questions`, retryErr)
+          break
+        }
+        throw retryErr
       }
-    })
-
-    const batchResults = await Promise.all(batchPromises)
-    for (const res of batchResults) {
-      allResults.push(...res)
     }
   }
 
