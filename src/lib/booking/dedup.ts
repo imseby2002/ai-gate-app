@@ -162,9 +162,23 @@ export function findDuplicateClusters(
 
         if (isSingleRoom) {
           // 單間房型：
-          // 1. 同平台重疊必然重複
-          // 2. 跨平台重疊時，只要至少有一筆是佔位/狀態訂單（如 RoomStatus Fully booked 或 (iCal 訂單)），必為同一間房重複！
-          if (samePlatform || oneFilledOnePlaceholder || bothPlaceholders) {
+          // 1. 同平台且起訖相同必然重複
+          // 2. 若為一筆已填寫、一筆佔位：只有在「已填寫訂單」涵蓋了該佔位的住宿日期時，才視為重複！
+          //    （若 OTA 把多日連貫關房/預訂包在同一個 iCal 事件，但既有訂單只佔其中一天，剩餘天數不可被刪除）
+          const b1CoversB2 = b1.check_in <= b2.check_in && b1.check_out >= b2.check_out
+          const b2CoversB1 = b2.check_in <= b1.check_in && b2.check_out >= b1.check_out
+          const exactDates = b1.check_in === b2.check_in && b1.check_out === b2.check_out
+
+          if (samePlatform && exactDates) {
+            clusterItems.push(b2)
+            visited.add(b2.id)
+          } else if (isBookingFilled(b1) && !isBookingFilled(b2) && b1CoversB2) {
+            clusterItems.push(b2)
+            visited.add(b2.id)
+          } else if (isBookingFilled(b2) && !isBookingFilled(b1) && b2CoversB1) {
+            clusterItems.push(b2)
+            visited.add(b2.id)
+          } else if (bothPlaceholders && exactDates) {
             clusterItems.push(b2)
             visited.add(b2.id)
           }
@@ -376,13 +390,15 @@ export async function deduplicateBookings(
       ? dates.some(d => ownerBlockKeySet.has(`${fake.property_id}|${d}`))
       : false
 
-    // 若同一時段同一房間已有其他已填寫訂單（跨平台），代表此筆僅為關房/佔位重複，刪除之
-    const hasFilledOverlap = (bookings as BookingRow[]).some(
-      b => b.id !== fake.id && !deletedIds.has(b.id) && b.property_id === fake.property_id && isBookingFilled(b) && datesOverlap(b.check_in, b.check_out, fake.check_in, fake.check_out)
+    // 若同一時段同一房間已有其他已填寫訂單（跨平台），
+    // 注意：只有在「已填寫訂單」完全涵蓋此佔位訂單的入住天數（b.check_in <= fake.check_in && b.check_out >= fake.check_out）
+    // 時，才代表此筆純粹是重複佔位；若佔位包含其他未被涵蓋的天數，不應直接整筆刪除。
+    const hasFilledCovers = (bookings as BookingRow[]).some(
+      b => b.id !== fake.id && !deletedIds.has(b.id) && b.property_id === fake.property_id && isBookingFilled(b) && b.check_in <= fake.check_in && b.check_out >= fake.check_out
     )
 
-    // Booking.com 的 CLOSED 佔位、房東已手動關房、或是已有人填寫的佔位，一律轉為 blocked_dates 並清除假訂單
-    if (hasFilledOverlap || isBcomClosed || hasOwnerBlock || !isRoomStatusOrTrip) {
+    // Booking.com 的 CLOSED 佔位、房東已手動關房、或是已有人填寫且涵蓋的佔位，一律轉為 blocked_dates 並清除假訂單
+    if (hasFilledCovers || isBcomClosed || hasOwnerBlock || !isRoomStatusOrTrip) {
       deletedIds.add(fake.id)
       // 確保其日期區間依然在 blocked_dates 中被封鎖，房況不漏擋
       for (const d of dates) {
