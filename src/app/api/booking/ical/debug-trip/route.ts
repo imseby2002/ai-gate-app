@@ -17,6 +17,19 @@ export async function GET(req: NextRequest) {
     syncOutputs.push({ id: targetSettingId, error: String(e) })
   }
 
+  const { data: ownerBlocks } = await supabase
+    .from('blocked_dates')
+    .select('*')
+    .eq('property_id', 'e6152875-453a-4afc-89e3-052fbbf66dab')
+    .eq('reason', 'owner_block')
+
+  const { data: allBookings301 } = await supabase
+    .from('bookings')
+    .select('id, platform, guest_name, check_in, check_out, status, source, platform_booking_id')
+    .eq('property_id', 'e6152875-453a-4afc-89e3-052fbbf66dab')
+    .gte('check_out', '2026-11-18')
+    .lte('check_in', '2026-11-25')
+
   const { data: bookings22 } = await supabase
     .from('bookings')
     .select('id, property_id, platform, guest_name, check_in, check_out, status, source, total_price, properties(name)')
@@ -31,6 +44,8 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     now: new Date().toISOString(),
     syncOutputs,
+    ownerBlocks,
+    allBookings301,
     bookings22,
     blocked22,
   })
