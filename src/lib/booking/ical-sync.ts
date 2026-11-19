@@ -30,7 +30,12 @@ interface SyncResult {
   errors: string[]
 }
 
-export async function syncICalForSetting(settingId: string): Promise<SyncResult> {
+const ICAL_HASH_VERSION = 'v3_trip_force_20261119'
+
+export async function syncICalForSetting(
+  settingId: string,
+  options?: { force?: boolean }
+): Promise<SyncResult> {
   const supabase = createAdminClient()
   const result: SyncResult = { added: 0, updated: 0, blocked: 0, cancelled: 0, errors: [] }
 
@@ -60,7 +65,11 @@ export async function syncICalForSetting(settingId: string): Promise<SyncResult>
   let rawIcal: string
   try {
     const res = await safeFetch(setting.ical_url, {
-      headers: { 'User-Agent': 'AI-GATE/1.0 iCal Sync' },
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AI-GATE/1.0 iCal Sync',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+      },
       signal: AbortSignal.timeout(15000),
     })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -88,11 +97,12 @@ export async function syncICalForSetting(settingId: string): Promise<SyncResult>
   }
 
   // 事件內容與上次成功同步時相同 → 房況沒變，不重寫訂單與 blocked_dates。
-  // 比對解析後的事件而非原始文字：平台每次回應的 DTSTAMP 都會變。
+  // 強制同步 (force=true) 或雜湊版本升級時必跑完整流程。
   const icalHash = createHash('sha256')
+    .update(ICAL_HASH_VERSION)
     .update(JSON.stringify(vevents.map(e => [e.uid, e.start, e.end, e.summary, e.description])))
     .digest('hex')
-  if (setting.last_ical_hash === icalHash && !setting.last_sync_error) {
+  if (!options?.force && setting.last_ical_hash === icalHash && !setting.last_sync_error) {
     await supabase.from('ical_settings').update({ last_synced_at: new Date().toISOString() }).eq('id', settingId)
     return result
   }
@@ -303,7 +313,7 @@ export async function syncICalForSetting(settingId: string): Promise<SyncResult>
   return result
 }
 
-export async function syncAllICalForUser(userId: string) {
+export async function syncAllICalForUser(userId: string, options?: { force?: boolean }) {
   const supabase = createAdminClient()
   const { data: settings } = await supabase
     .from('ical_settings')
@@ -312,7 +322,7 @@ export async function syncAllICalForUser(userId: string) {
     .eq('sync_enabled', true)
 
   if (!settings?.length) return []
-  return Promise.all(settings.map((s: { id: string }) => syncICalForSetting(s.id)))
+  return Promise.all(settings.map((s: { id: string }) => syncICalForSetting(s.id, options)))
 }
 
 // ── Lightweight iCal parser ───────────────────────────────────
@@ -334,7 +344,12 @@ function parseICalEvents(raw: string): ICalEvent[] {
     }
     if (line === 'END:VEVENT') {
       inEvent = false
-      if (current.start && current.end) {
+      if (current.start) {
+        // 若缺少 DTEND 或結束日早於等於入住日，預設入住 1 晚
+        if (!current.end || current.end <= current.start) {
+          const nextDay = new Date(new Date(current.start + 'T00:00:00').getTime() + 86400000).toISOString().slice(0, 10)
+          current.end = nextDay
+        }
         events.push({
           uid:         current.uid ?? '',
           start:       current.start,
@@ -369,6 +384,18 @@ function parseDateValue(key: string, value: string): string {
   if (cleaned.length === 8) {
     // DATE: YYYYMMDD
     return `${cleaned.slice(0, 4)}-${cleaned.slice(4, 6)}-${cleaned.slice(6, 8)}`
+  }
+  // 若為 UTC 時間格式 (含 Z)，換算為台灣時間 (UTC+8) 日期，避免跨日時差導致日期偏移 1 天
+  if (value.toUpperCase().includes('Z') && cleaned.length >= 15) {
+    const y = parseInt(cleaned.slice(0, 4), 10)
+    const mo = parseInt(cleaned.slice(4, 6), 10) - 1
+    const d = parseInt(cleaned.slice(6, 8), 10)
+    const h = parseInt(cleaned.slice(9, 11), 10)
+    const mi = parseInt(cleaned.slice(11, 13), 10)
+    const s = parseInt(cleaned.slice(13, 15), 10)
+    const utcMs = Date.UTC(y, mo, d, h, mi, s)
+    const twDate = new Date(utcMs + 8 * 3600 * 1000)
+    return twDate.toISOString().slice(0, 10)
   }
   // DATETIME: parse as ISO
   const y = cleaned.slice(0, 4)

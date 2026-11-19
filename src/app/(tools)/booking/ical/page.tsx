@@ -57,11 +57,16 @@ export default function ICalPage() {
     try {
       const res = await fetch('/api/booking/ical/sync', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(id ? { setting_id: id } : {}),
+        body: JSON.stringify(id ? { setting_id: id, force: true } : { force: true }),
       })
       const d = await res.json()
-      const total = (d.results ?? []).reduce((s: number, r: { added: number; updated: number }) => s + r.added + r.updated, 0)
-      alert(t('ical.syncDone', { count: total }))
+      const total = (d.results ?? []).reduce((s: number, r: { added: number; updated: number }) => s + (r.added || 0) + (r.updated || 0), 0)
+      const errors = (d.results ?? []).flatMap((r: { errors?: string[] }) => r.errors || []).filter(Boolean)
+      if (errors.length > 0) {
+        alert(`${t('ical.syncDone', { count: total })}\n警告: ${errors.join('\n')}`)
+      } else {
+        alert(t('ical.syncDone', { count: total }))
+      }
       const ic = await fetch('/api/booking/ical').then(r => r.json())
       setSettings(ic.settings ?? [])
     } finally { setSyncing(null) }
