@@ -232,6 +232,23 @@ export async function deduplicateBookings(
     roomCountMap.set(p.id, p.room_count ?? 1)
   }
 
+  // 1.5 讀取房東手動關房的日期（owner_block）
+  // 核心保護：本系統關房後，OTA 同步回傳的佔位/關房事件絕不能留在 bookings 中
+  let obQ = supabase
+    .from('blocked_dates')
+    .select('property_id, date')
+    .eq('reason', 'owner_block')
+
+  if (options.userId) obQ = obQ.eq('user_id', options.userId)
+  if (options.propertyId) obQ = obQ.eq('property_id', options.propertyId)
+  if (options.from) obQ = obQ.gte('date', options.from)
+  if (options.to) obQ = obQ.lte('date', options.to)
+
+  const { data: ownerBlocks } = await obQ
+  const ownerBlockKeySet = new Set<string>(
+    (ownerBlocks ?? []).map((b: { property_id: string; date: string }) => `${b.property_id}|${b.date}`)
+  )
+
   // 2. 讀取待比對的有效訂單
   let bkQ = supabase
     .from('bookings')
@@ -347,22 +364,27 @@ export async function deduplicateBookings(
     const isRoomStatusOrTrip = /roomstatus/i.test(fake.guest_name ?? '') || /fully\s*booked/i.test(fake.guest_name ?? '')
     const isBcomClosed = isBookingComClosedPlaceholder(fake)
 
+    // 檢查是否有房東手動關房（owner_block）涵蓋此日期區間
+    const dates: string[] = []
+    const cur = new Date(fake.check_in + 'T00:00:00')
+    const endDt = new Date(fake.check_out + 'T00:00:00')
+    while (cur < endDt) {
+      dates.push(cur.toISOString().slice(0, 10))
+      cur.setDate(cur.getDate() + 1)
+    }
+    const hasOwnerBlock = fake.property_id
+      ? dates.some(d => ownerBlockKeySet.has(`${fake.property_id}|${d}`))
+      : false
+
     // 若同一時段同一房間已有其他已填寫訂單（跨平台），代表此筆僅為關房/佔位重複，刪除之
     const hasFilledOverlap = (bookings as BookingRow[]).some(
       b => b.id !== fake.id && !deletedIds.has(b.id) && b.property_id === fake.property_id && isBookingFilled(b) && datesOverlap(b.check_in, b.check_out, fake.check_in, fake.check_out)
     )
 
-    // Booking.com 的 CLOSED 佔位或是已有人填寫的佔位，一律轉為 blocked_dates 並清除假訂單
-    if (hasFilledOverlap || isBcomClosed || !isRoomStatusOrTrip) {
+    // Booking.com 的 CLOSED 佔位、房東已手動關房、或是已有人填寫的佔位，一律轉為 blocked_dates 並清除假訂單
+    if (hasFilledOverlap || isBcomClosed || hasOwnerBlock || !isRoomStatusOrTrip) {
       deletedIds.add(fake.id)
       // 確保其日期區間依然在 blocked_dates 中被封鎖，房況不漏擋
-      const dates: string[] = []
-      const cur = new Date(fake.check_in + 'T00:00:00')
-      const endDt = new Date(fake.check_out + 'T00:00:00')
-      while (cur < endDt) {
-        dates.push(cur.toISOString().slice(0, 10))
-        cur.setDate(cur.getDate() + 1)
-      }
       for (const d of dates) {
         if (fake.property_id) {
           await supabase.from('blocked_dates').upsert({

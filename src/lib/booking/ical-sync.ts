@@ -30,7 +30,7 @@ interface SyncResult {
   errors: string[]
 }
 
-const ICAL_HASH_VERSION = 'v4_bcom_closed_20261119'
+const ICAL_HASH_VERSION = 'v5_owner_block_loop_20261119'
 
 export async function syncICalForSetting(
   settingId: string,
@@ -120,6 +120,18 @@ export async function syncICalForSetting(
 
   const existingPropBookings: BookingRow[] = (propBookings ?? []) as BookingRow[]
 
+  // 抓取此房源由房東在系統手動設定的「關房日期」（owner_block）
+  // 核心保護：本系統手動關房後，iCal 匯出會帶給 Booking.com 等 OTA 關房；
+  // 但 OTA 同步回傳的 CLOSED / 關房事件 UID 絕不可被當成新訂單「回溯」建立訂單！
+  const { data: ownerBlocks } = await supabase
+    .from('blocked_dates')
+    .select('date')
+    .eq('user_id', setting.user_id)
+    .eq('property_id', setting.property_id)
+    .eq('reason', 'owner_block')
+
+  const ownerBlockedDateSet = new Set<string>((ownerBlocks ?? []).map((b: { date: string }) => b.date))
+
   // 同一天以後出現的事件為準（與逐筆 upsert 時的覆蓋順序一致）
   const wantedBlocks = new Map<string, string | null>()
 
@@ -133,13 +145,28 @@ export async function syncICalForSetting(
     //   此類區塊會寫入 blocked_dates 阻擋房況，但 bookingId 設為 null，避免在訂單列表與行事曆中產生虛假訂單。
     // - 注意：Trip.com 的 iCal 協議因隱私規範，真實旅客預訂在摘要中皆顯示為 "RoomStatus Fully booked"，
     //   絕不能當成不可訂佔位略過，否則 Trip.com 訂單永遠無法建立！
+    // - 若此日期區間已有房東手動關房（owner_block），且事件為佔位性質（或 Booking.com 回傳的關房狀態），
+    //   絕不能被當作真實訂單重新寫入！
+    const evDates = dateRange(checkIn, checkOut)
+    const hasOwnerBlock = evDates.some(d => ownerBlockedDateSet.has(d))
+    const isPlaceholderOrGeneric =
+      !guestName ||
+      guestName === '(iCal 訂單)' ||
+      guestName === '(Trip.com 訂單)' ||
+      /roomstatus/i.test(ev.summary) ||
+      /fully\s*booked/i.test(ev.summary) ||
+      /^closed/i.test(ev.summary.trim()) ||
+      /^not\s*available$/i.test(ev.summary.trim())
+
     const rawSummary = (ev.summary ?? '').trim()
     const isUnavailableBlock =
-      setting.platform === 'airbnb'
-        ? (/not\s*available/i.test(rawSummary) || /not\s*available/i.test(guestName))
-        : setting.platform === 'booking_com'
-          ? (/^closed(?:\s*-.*)?$/i.test(rawSummary) || /^not\s*available$/i.test(rawSummary) || /^not\s*available$/i.test(guestName.trim()))
-          : (/^not\s*available$/i.test(rawSummary) || /^not\s*available$/i.test(guestName.trim()) || /^closed(?:\s*-.*)?$/i.test(rawSummary))
+      hasOwnerBlock && isPlaceholderOrGeneric
+        ? true
+        : setting.platform === 'airbnb'
+          ? (/not\s*available/i.test(rawSummary) || /not\s*available/i.test(guestName))
+          : setting.platform === 'booking_com'
+            ? (/^closed(?:\s*-.*)?$/i.test(rawSummary) || /^not\s*available$/i.test(rawSummary) || /^not\s*available$/i.test(guestName.trim()))
+            : (/^not\s*available$/i.test(rawSummary) || /^not\s*available$/i.test(guestName.trim()) || /^closed(?:\s*-.*)?$/i.test(rawSummary))
 
     let bookingId: string | null = null
     if (!isUnavailableBlock) {
