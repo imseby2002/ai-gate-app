@@ -13543,6 +13543,8 @@
     "remedialHint": "Cho phép AI dựa vào lỗi sai trong bài thi trước để ra câu hỏi chuyên sâu hơn, giúp nhân viên thực sự hiểu bản chất kiến thức; đồng thời kết hợp câu hỏi mới để đảm bảo tính toàn diện.",
     "remedialSourceExam": "Bài thi lịch sử tham chiếu",
     "remedialNone": "Không tham chiếu bài thi trước (100% câu hỏi mới)",
+    "noPastExamsAvailable": "Hiện chưa có bài thi lịch sử nào có lượt làm bài để tham chiếu (cần có nhân viên nộp bài)",
+    "createRemedialTooltip": "Cần có nhân viên nộp bài làm trước khi có thể phân tích lỗi sai và tạo bài thi củng cố",
     "remedialLoaded": "Đã tải {n} câu có tỷ lệ sai cao (tỷ lệ lỗi trung bình {rate}%)",
     "remedialRatio": "Tỷ lệ phân bổ",
     "remedialRatio50": "50% đào sâu điểm yếu + 50% câu hỏi mới (Khuyên dùng)",

@@ -13542,6 +13542,8 @@
     "remedialHint": "讓 AI 依據過去員工的作答錯題進一步深入出題，幫助員工真正理解概念；同時搭配全新題目，兼顧全面性。",
     "remedialSourceExam": "參考的歷史考卷",
     "remedialNone": "不參考歷史考卷（純全新題目）",
+    "noPastExamsAvailable": "目前尚無其他有作答紀錄的歷史考卷可供參考（需有員工已提交成績）",
+    "createRemedialTooltip": "需有員工提交作答紀錄後，方可分析錯題並生成補強考卷",
     "remedialLoaded": "已載入 {n} 個高頻錯誤弱點（平均錯誤率 {rate}%）",
     "remedialRatio": "出題配比",
     "remedialRatio50": "50% 弱點深化 + 50% 全新題目 (推薦)",

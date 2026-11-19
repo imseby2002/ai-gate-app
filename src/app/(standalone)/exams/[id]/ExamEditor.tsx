@@ -335,15 +335,15 @@ export function ExamEditor({ id }: { id: string }) {
               </div>
 
               {/* 歷史考卷錯題弱點強化（選填） */}
-              {pastExams.length > 0 && (
-                <div className="space-y-2 p-3 rounded-xl border border-indigo-200/70 bg-indigo-50/30 dark:bg-indigo-950/20 text-xs">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium text-foreground flex items-center gap-1.5">
-                      <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
-                      {t('remedialTitle')}
-                    </span>
-                    <span className="text-[11px] text-muted-foreground">{t('remedialHint')}</span>
-                  </div>
+              <div className="space-y-2 p-3 rounded-xl border border-indigo-200/70 bg-indigo-50/30 dark:bg-indigo-950/20 text-xs">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-medium text-foreground flex items-center gap-1.5">
+                    <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
+                    {t('remedialTitle')}
+                  </span>
+                  <span className="text-[11px] text-muted-foreground">{t('remedialHint')}</span>
+                </div>
+                {pastExams.length > 0 ? (
                   <div className="grid sm:grid-cols-2 gap-2 pt-1">
                     <label className="space-y-1 block">
                       <span className="text-muted-foreground">{t('remedialSourceExam')}</span>
@@ -375,8 +375,12 @@ export function ExamEditor({ id }: { id: string }) {
                       </label>
                     )}
                   </div>
-                </div>
-              )}
+                ) : (
+                  <p className="text-[11px] text-muted-foreground pt-1 bg-background/60 p-2 rounded border border-indigo-100 dark:border-indigo-900/50">
+                    💡 {t('noPastExamsAvailable')}
+                  </p>
+                )}
+              </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                 {QUESTION_TYPES.map(qt => (
