@@ -541,8 +541,7 @@ const PAYMENT_SUFFIX_REPLY_RE = /^\D{0,6}\d{3,6}\D{0,6}$/
 // 真實案例：客人不是被動回覆「末五碼」問句，而是主動用一整句話回報匯款（「我已於
 // 2026/08/28 從彰化銀行帳戶後五碼 42600，轉帳 $2,000 給您囉！」），這種完整句子
 // 不會落在 PAYMENT_SUFFIX_REPLY_RE 那種「幾乎整句都是數字」的窄範圍內，需要另外
-// 用「訊息同時提到轉帳/匯款關鍵字，又帶了一組後五碼」來偵測。
-const PAYMENT_KEYWORD_RE = /轉帳|匯款/
+// 用「訊息帶了一組後五碼／末五碼」來偵測。
 const PAYMENT_SUFFIX_CODE_RE = /(?:後|末)(?:五|5)碼\s*[:：]?\s*\d{4,6}/
 
 // 真實案例：商家在「自建表單」幫某類訂單（例如賞鯨行程）另外指定了專屬通知對象
@@ -614,15 +613,18 @@ async function maybeCreateOrderTicket(
 // 通知管家核對並手動建立訂單，見上方 PAYMENT_SUFFIX_ASK_RE 註解。
 async function maybeCreatePaymentProofTicket(
   userId: string, platform: string, customerId: string, industry: string,
-  history: HistoryMsg[], text: string, notifyWebhooks: NotifyWebhook[], fromName?: string,
+  history: HistoryMsg[], text: string, notifyWebhooks: NotifyWebhook[], forms: CsChatForm[], fromName?: string,
 ): Promise<void> {
   try {
-    const lastAssistant = [...history].reverse().find(m => m.role === 'assistant')?.content ?? ''
+    // 真實案例：AI 問完末五碼後客人先問了戶名，AI 回了一句沒提到末五碼的話，客人才回「末五碼： 84008」——
+    // 只看上一則 AI 訊息會漏掉，改看最近 3 則 AI 訊息
+    const lastAssistant = history.filter(m => m.role === 'assistant').slice(-3).map(m => m.content).join('\n')
     // 訊號一：AI 剛問完末五碼，客人回一串幾乎全是數字的訊息
     // 訊號二：客人主動用一整句話回報匯款（不管 AI 前一句問了什麼）
     // 訊號三：客人明確表達已匯款、已轉帳或請查收
     const isSuffixReply = PAYMENT_SUFFIX_ASK_RE.test(lastAssistant) && PAYMENT_SUFFIX_REPLY_RE.test(text.trim())
-    const isProofStatement = PAYMENT_KEYWORD_RE.test(text) && PAYMENT_SUFFIX_CODE_RE.test(text)
+    // 「末五碼：84008」本身就是匯款回報，不需要另外出現「匯款／轉帳」字眼
+    const isProofStatement = PAYMENT_SUFFIX_CODE_RE.test(text)
     // 真實需求：客人只簡單說「已經付款了」「已經付款請查收」這類自然說法，未來
     // 就算系統做了 email 自動對帳查詢，也不能因為查不到或還沒做這個功能就不理會——
     // 只要客人明確表達已付款，一律先建工單讓專員人工核對，不能悄悄漏掉。原本的
@@ -645,9 +647,19 @@ async function maybeCreatePaymentProofTicket(
       description: `${summary ? `摘要：${summary}\n\n` : ''}客人回報匯款資訊：「${text.trim()}」，請專員核對款項並手動建立或更新訂單紀錄（本次訂房/行程可能是自由對話談成，系統未必已有結構化訂單資料）。\n\n【近期對話】\n${recentText.slice(0, 1500)}`,
       priority: 'high', intent: '付款確認待跟進',
     })
-    const notifyMsg = `客人已回報匯款：「${text.trim()}」，請核對款項並手動建立/更新訂單。`
+    // 最近一則 AI 整理的訂單內容（行程、日期、人數、金額），一起附在通知裡
+    const orderText = [...history].reverse().find(m => m.role === 'assistant' && /總金額|預訂確認|訂單確認|請匯款至/.test(m.content))?.content ?? ''
+    const notifyMsg = `客人已回報匯款：「${text.trim()}」，請核對款項並手動建立/更新訂單。${orderText ? `\n\n【訂單內容】\n${orderText.slice(0, 900)}` : ''}`
     void notifyStaffOrder(userId, notifyMsg)
     dispatchTicketNotify(notifyWebhooks, { platform, customerId, industry, fromName }, notifyMsg)
+    // 客人沒有明確回「正確」就直接匯款時，訂單確認那一步不會觸發，表單指定的對象（例如賞鯨船公司群組）
+    // 也就收不到；近 7 天沒有「新訂單待跟進」工單（代表沒轉發過）就補轉發一次
+    if (orderText) {
+      const { data: orderTicket } = await getServiceClient().from('cs_tickets').select('id')
+        .eq('user_id', userId).eq('from_id', customerId).eq('intent', '新訂單待跟進')
+        .gte('created_at', new Date(Date.now() - 7 * 86400_000).toISOString()).limit(1)
+      if (!orderTicket?.length) void forwardOrderToMatchingForms(userId, forms, `${orderText}\n\n匯款回報：${text.trim()}`, fromName)
+    }
   } catch { /* 不中斷主流程 */ }
 }
 
@@ -917,7 +929,7 @@ async function replyToCustomer(
     }
 
     // 即使在真人接管靜音期間，若客人傳送匯款證明或發票需求，依然開工單通知專員（不漏收付款證據）
-    void maybeCreatePaymentProofTicket(userId, platform, customerId, knowledge.industry, history, text, knowledge.notifyWebhooks, fromName)
+    void maybeCreatePaymentProofTicket(userId, platform, customerId, knowledge.industry, history, text, knowledge.notifyWebhooks, knowledge.csForms, fromName)
     void maybeCreateInvoiceTicket(userId, platform, customerId, knowledge.industry, history, text, knowledge.notifyWebhooks, fromName)
 
     void classifyGeneralIntent(text).then(intent => logCsMessage(userId, platform, customerId, knowledge.industry, text, '', fromName, intent))
@@ -1163,7 +1175,7 @@ async function replyToCustomer(
     void maybeCreateOrderTicket(userId, platform, customerId, knowledge.industry, history, text, knowledge.notifyWebhooks, knowledge.csForms, fromName)
   }
   // 客人提供匯款末五碼 → 不論訂房走的是哪套流程，都直接建工單通知管家核對
-  void maybeCreatePaymentProofTicket(userId, platform, customerId, knowledge.industry, history, text, knowledge.notifyWebhooks, fromName)
+  void maybeCreatePaymentProofTicket(userId, platform, customerId, knowledge.industry, history, text, knowledge.notifyWebhooks, knowledge.csForms, fromName)
   // 客人回覆發票抬頭/統一編號 → 直接建工單通知專員實際開立發票，不能只靠 AI 口頭收下
   void maybeCreateInvoiceTicket(userId, platform, customerId, knowledge.industry, history, text, knowledge.notifyWebhooks, fromName)
 
