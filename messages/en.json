@@ -670,7 +670,10 @@
         "phone": "Phone",
         "source": "Source",
         "status": "Status"
-      }
+      },
+      "suspectBadge": "Likely cancelled · release",
+      "releaseSuspect": "Guest cancelled — release this date",
+      "releaseConfirm": "This booking has disappeared from the platform (likely cancelled). Delete it and release the date for other guests?"
     },
     "roomgrid": {
       "today": "Today",

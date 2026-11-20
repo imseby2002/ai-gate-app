@@ -370,11 +370,14 @@ export async function syncICalForSetting(
       const { data: cand } = await supabase.from('bookings')
         .select('id, guest_name, guest_email, guest_phone, total_price, source, check_in, check_out, status')
         .in('id', candidateIds).eq('user_id', setting.user_id)
+      const fullyFreed = (b: { check_in: string; check_out: string }) => {
+        for (const d of dateRange(b.check_in, b.check_out)) if (wantedDates.has(d)) return false
+        return true
+      }
       const toCancel = (cand ?? []).filter(b => {
         if (b.status === 'cancelled') return false
         if (isBookingFilled(b)) return false                      // 有人工資料 → 不自動取消
-        for (const d of dateRange(b.check_in, b.check_out)) if (wantedDates.has(d)) return false // 日期仍被封鎖 → 可能只是換 UID
-        return true
+        return fullyFreed(b)                                       // 日期仍被封鎖 → 可能只是換 UID
       }).map(b => b.id)
       if (toCancel.length > 0) {
         const { error: cErr } = await supabase.from('bookings')
@@ -383,6 +386,25 @@ export async function syncICalForSetting(
         if (cErr) result.errors.push(`標記取消失敗：${cErr.message}`)
         else result.cancelled = toCancel.length
       }
+
+      // 有人工資料、但事件已從平台 feed 完全消失（日期也不再被封鎖）→ 可能客人真的取消了，
+      // 但不敢自動刪。標記 ical_missing_since，由每日偵測報告提醒、日曆顯示「疑似已取消」供一鍵釋出。
+      const suspectedIds = (cand ?? []).filter(b =>
+        b.status !== 'cancelled' && isBookingFilled(b) && fullyFreed(b)
+      ).map(b => b.id)
+      if (suspectedIds.length > 0) {
+        await supabase.from('bookings')
+          .update({ ical_missing_since: new Date().toISOString() })
+          .in('id', suspectedIds).eq('user_id', setting.user_id).is('ical_missing_since', null)
+      }
+    }
+
+    // 事件又回來的訂單（UID 換回來或客人重新下單）→ 清掉「疑似已取消」標記
+    const reappeared = [...wantedBookingIds]
+    for (let i = 0; i < reappeared.length; i += 500) {
+      await supabase.from('bookings')
+        .update({ ical_missing_since: null })
+        .in('id', reappeared.slice(i, i + 500)).eq('user_id', setting.user_id).not('ical_missing_since', 'is', null)
     }
   }
 

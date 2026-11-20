@@ -8,7 +8,8 @@ import Link from 'next/link'
 interface Booking {
   id: string; guest_name: string; guest_phone: string; check_in: string; check_out: string
   status: string; platform: string; num_guests: number; total_price: number | null; currency: string
-  properties?: { name: string }; property_id: string | null
+  properties?: { name: string }; property_id: string | null; ical_missing_since?: string | null
+  is_paid?: boolean | null; deposit_amount?: number | null
 }
 interface Property {
   id: string; name: string; room_count: number; base_price: number | null; currency: string
@@ -43,6 +44,27 @@ function getDaysInMonth(y: number, m: number) { return new Date(y, m + 1, 0).get
 function getFirstDayOfWeek(y: number, m: number) { return new Date(y, m, 1).getDay() }
 function addDays(ds: string, n: number) {
   const d = new Date(ds + 'T00:00:00'); d.setDate(d.getDate() + n); return toDateStr(d)
+}
+
+// 房名縮短：把「加大/雙人/大床…房」收斂成「房」，例如 202蘭博大床房 → 202蘭博房
+function shortRoom(name?: string | null): string {
+  const n = (name ?? '').trim()
+  if (!n) return '—'
+  return n.replace(/(?:加大|特大|標準|精緻|豪華|經典)?(?:單人|雙人|三人|四人|家庭|和式)?(?:大|小)?床?房$/, '房')
+}
+// 平台簡寫：Booking.com → Booking、Trip.com → Trip
+const SHORT_PLATFORM: Record<string, string> = {
+  booking_com: 'Booking', agoda: 'Agoda', airbnb: 'Airbnb', trip_com: 'Trip',
+  asiayo: 'AsiaYo', easytravel: 'EasyTravel', direct: '直訂', manual: '手動', other: '其他',
+}
+function shortPlatform(p: string): string {
+  return SHORT_PLATFORM[p] ?? p.replace(/\.com$/i, '')
+}
+// 付款狀態小標：已付款 / 已付訂金
+function payTag(bk: { is_paid?: boolean | null; deposit_amount?: number | null }): { label: string; cls: string } | null {
+  if (bk.is_paid) return { label: '已付款', cls: 'bg-emerald-100 text-emerald-700' }
+  if (bk.deposit_amount != null && Number(bk.deposit_amount) > 0) return { label: '已付訂金', cls: 'bg-sky-100 text-sky-700' }
+  return null
 }
 
 // 從網址還原日曆目前檢視的年／月／選取日，讓從「訂單詳情」返回時能停在原本看的月份，
@@ -224,6 +246,20 @@ export default function CalendarPage() {
   }
   async function removeBooking(id: string) {
     if (!window.confirm(t('bookings.toast.deleteConfirm'))) return
+    try {
+      const res = await fetch('/api/booking/bookings', {
+        method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      })
+      if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.error ?? t('bookings.toast.deleteFailed')); return }
+      setBookings(prev => prev.filter(b => b.id !== id))
+    } catch { alert(t('bookings.toast.networkError')) }
+  }
+
+  // 有人工資料、但事件已從平台 feed 消失（疑似客人取消）。不自動刪，由民宿主確認後一鍵釋出。
+  const suspectedCancelled = (bk: Booking) => !!bk.ical_missing_since && bk.status !== 'cancelled'
+  async function releaseBooking(id: string) {
+    if (!window.confirm(t('calendar.releaseConfirm'))) return
     try {
       const res = await fetch('/api/booking/bookings', {
         method: 'DELETE', headers: { 'Content-Type': 'application/json' },
@@ -529,6 +565,12 @@ export default function CalendarPage() {
                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${st?.color ?? 'bg-gray-100 text-gray-600'}`}>
                           {st?.label ?? bk.status}
                         </span>
+                        {suspectedCancelled(bk) && (
+                          <button onClick={() => releaseBooking(bk.id)} title={t('calendar.releaseSuspect')}
+                            className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700 hover:bg-amber-200">
+                            {t('calendar.suspectBadge')}
+                          </button>
+                        )}
                         {isPlaceholder(bk) && (
                           <button onClick={() => removeBooking(bk.id)} title={t('bookings.delete')}
                             className="p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50">
@@ -537,11 +579,14 @@ export default function CalendarPage() {
                         )}
                       </div>
                     </div>
-                    <div className="text-xs text-gray-500">
-                      {bk.properties?.name ?? '—'} · {bk.guest_phone || '—'}
+                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <span>{shortRoom(bk.properties?.name)}</span>
+                      {payTag(bk) && (
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${payTag(bk)!.cls}`}>{payTag(bk)!.label}</span>
+                      )}
                     </div>
                     <div className="flex items-center justify-between text-xs text-gray-400">
-                      <span>{PLATFORM_NAMES[bk.platform] ?? bk.platform}</span>
+                      <span>{shortPlatform(bk.platform)}</span>
                       <span>{bk.total_price ? `NT$ ${Number(bk.total_price).toLocaleString()}` : '—'}</span>
                     </div>
                   </div>
@@ -555,7 +600,6 @@ export default function CalendarPage() {
                   <th className="text-left px-5 py-2.5">{t('calendar.bcol.room')}</th>
                   <th className="text-left px-3 py-2.5">{t('calendar.bcol.price')}</th>
                   <th className="text-left px-3 py-2.5">{t('calendar.bcol.booker')}</th>
-                  <th className="text-left px-3 py-2.5">{t('calendar.bcol.phone')}</th>
                   <th className="text-left px-3 py-2.5">{t('calendar.bcol.source')}</th>
                   <th className="text-left px-3 py-2.5">{t('calendar.bcol.status')}</th>
                 </tr>
@@ -565,8 +609,8 @@ export default function CalendarPage() {
                   const st = STATUS_MAP[bk.status]
                   return (
                     <tr key={bk.id} className="hover:bg-gray-50">
-                      <td className="px-5 py-3 text-gray-700">{bk.properties?.name ?? '—'}</td>
-                      <td className="px-3 py-3 text-gray-600">
+                      <td className="px-5 py-3 text-gray-700 whitespace-nowrap">{shortRoom(bk.properties?.name)}</td>
+                      <td className="px-3 py-3 text-gray-600 whitespace-nowrap">
                         {bk.total_price ? `NT$ ${Number(bk.total_price).toLocaleString()}` : '—'}
                       </td>
                       <td className="px-3 py-3">
@@ -574,13 +618,21 @@ export default function CalendarPage() {
                           {bk.guest_name || '—'}
                         </Link>
                       </td>
-                      <td className="px-3 py-3 text-gray-500 text-xs">{bk.guest_phone || '—'}</td>
-                      <td className="px-3 py-3 text-gray-500 text-xs">{PLATFORM_NAMES[bk.platform] ?? bk.platform}</td>
+                      <td className="px-3 py-3 text-gray-500 text-xs">{shortPlatform(bk.platform)}</td>
                       <td className="px-3 py-3">
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${st?.color ?? 'bg-gray-100 text-gray-600'}`}>
                             {st?.label ?? bk.status}
                           </span>
+                          {payTag(bk) && (
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${payTag(bk)!.cls}`}>{payTag(bk)!.label}</span>
+                          )}
+                          {suspectedCancelled(bk) && (
+                            <button onClick={() => releaseBooking(bk.id)} title={t('calendar.releaseSuspect')}
+                              className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700 hover:bg-amber-200">
+                              {t('calendar.suspectBadge')}
+                            </button>
+                          )}
                           {isPlaceholder(bk) && (
                             <button onClick={() => removeBooking(bk.id)} title={t('bookings.delete')}
                               className="p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50">
