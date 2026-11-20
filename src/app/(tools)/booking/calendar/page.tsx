@@ -8,7 +8,7 @@ import Link from 'next/link'
 interface Booking {
   id: string; guest_name: string; guest_phone: string; check_in: string; check_out: string
   status: string; platform: string; num_guests: number; total_price: number | null; currency: string
-  properties?: { name: string }; property_id: string | null
+  properties?: { name: string }; property_id: string | null; ical_missing_since?: string | null
 }
 interface Property {
   id: string; name: string; room_count: number; base_price: number | null; currency: string
@@ -224,6 +224,20 @@ export default function CalendarPage() {
   }
   async function removeBooking(id: string) {
     if (!window.confirm(t('bookings.toast.deleteConfirm'))) return
+    try {
+      const res = await fetch('/api/booking/bookings', {
+        method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      })
+      if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.error ?? t('bookings.toast.deleteFailed')); return }
+      setBookings(prev => prev.filter(b => b.id !== id))
+    } catch { alert(t('bookings.toast.networkError')) }
+  }
+
+  // 有人工資料、但事件已從平台 feed 消失（疑似客人取消）。不自動刪，由民宿主確認後一鍵釋出。
+  const suspectedCancelled = (bk: Booking) => !!bk.ical_missing_since && bk.status !== 'cancelled'
+  async function releaseBooking(id: string) {
+    if (!window.confirm(t('calendar.releaseConfirm'))) return
     try {
       const res = await fetch('/api/booking/bookings', {
         method: 'DELETE', headers: { 'Content-Type': 'application/json' },
@@ -529,6 +543,12 @@ export default function CalendarPage() {
                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${st?.color ?? 'bg-gray-100 text-gray-600'}`}>
                           {st?.label ?? bk.status}
                         </span>
+                        {suspectedCancelled(bk) && (
+                          <button onClick={() => releaseBooking(bk.id)} title={t('calendar.releaseSuspect')}
+                            className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700 hover:bg-amber-200">
+                            {t('calendar.suspectBadge')}
+                          </button>
+                        )}
                         {isPlaceholder(bk) && (
                           <button onClick={() => removeBooking(bk.id)} title={t('bookings.delete')}
                             className="p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50">
@@ -581,6 +601,12 @@ export default function CalendarPage() {
                           <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${st?.color ?? 'bg-gray-100 text-gray-600'}`}>
                             {st?.label ?? bk.status}
                           </span>
+                          {suspectedCancelled(bk) && (
+                            <button onClick={() => releaseBooking(bk.id)} title={t('calendar.releaseSuspect')}
+                              className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700 hover:bg-amber-200">
+                              {t('calendar.suspectBadge')}
+                            </button>
+                          )}
                           {isPlaceholder(bk) && (
                             <button onClick={() => removeBooking(bk.id)} title={t('bookings.delete')}
                               className="p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50">

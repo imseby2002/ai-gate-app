@@ -670,7 +670,10 @@
         "phone": "Điện thoại",
         "source": "Nguồn",
         "status": "Trạng thái"
-      }
+      },
+      "suspectBadge": "Có thể đã hủy · mở lại",
+      "releaseSuspect": "Khách đã hủy — mở lại ngày này",
+      "releaseConfirm": "Đơn này đã biến mất khỏi nền tảng (có thể đã hủy). Xóa và mở lại ngày cho khách khác?"
     },
     "roomgrid": {
       "today": "Hôm nay",

@@ -670,7 +670,10 @@
         "phone": "電話",
         "source": "來源",
         "status": "狀態"
-      }
+      },
+      "suspectBadge": "疑似平台已取消・釋出",
+      "releaseSuspect": "客人已取消，釋出此房況",
+      "releaseConfirm": "這筆訂單在平台上已經不見了（疑似客人取消）。確定要刪除並釋出房況，開放給其他客人預訂嗎？"
     },
     "roomgrid": {
       "today": "今日",

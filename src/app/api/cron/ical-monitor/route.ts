@@ -38,7 +38,7 @@ export async function GET(req: Request) {
     const propName = new Map((props ?? []).map(p => [p.id, p.name as string]))
     const roomOf = (id: string | null) => (id && propName.get(id)) || '未指定房型'
 
-    const [{ data: news }, { data: cancels }, { data: settings }] = await Promise.all([
+    const [{ data: news }, { data: cancels }, { data: suspects }, { data: settings }] = await Promise.all([
       admin.from('bookings')
         .select('property_id, platform, check_in, check_out, guest_name, created_at')
         .eq('user_id', uid).eq('source', 'ical').neq('status', 'cancelled').gte('created_at', since)
@@ -46,6 +46,11 @@ export async function GET(req: Request) {
       admin.from('bookings')
         .select('property_id, platform, check_in, check_out, updated_at')
         .eq('user_id', uid).eq('source', 'ical').eq('status', 'cancelled').gte('updated_at', since)
+        .order('check_in'),
+      // 有人工資料、但事件已從平台 feed 消失（疑似客人取消，系統不敢自動刪）
+      admin.from('bookings')
+        .select('property_id, platform, check_in, check_out, guest_name')
+        .eq('user_id', uid).eq('status', 'confirmed').not('ical_missing_since', 'is', null)
         .order('check_in'),
       admin.from('ical_settings')
         .select('platform, platform_name, property_id, last_sync_error, last_synced_at, sync_interval')
@@ -63,7 +68,8 @@ export async function GET(req: Request) {
 
     const newRows = news ?? []
     const cancelRows = cancels ?? []
-    if (newRows.length === 0 && cancelRows.length === 0 && unhealthy.length === 0) continue
+    const suspectRows = suspects ?? []
+    if (newRows.length === 0 && cancelRows.length === 0 && suspectRows.length === 0 && unhealthy.length === 0) continue
 
     let to = ''
     const { data: profile } = await admin.from('bnb_profiles').select('name, email').eq('user_id', uid).maybeSingle()
@@ -90,6 +96,15 @@ ${newRows.map(b => {
 <th style="padding:6px 10px;text-align:left">房型</th><th style="padding:6px 10px;text-align:left">日期</th><th style="padding:6px 10px;text-align:left">平台</th></tr>
 ${cancelRows.map(b => row([esc(roomOf(b.property_id)), esc(fmtRange(b.check_in, b.check_out)), esc(platName(b.platform))])).join('')}</table>`
 
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
+    const suspectHtml = suspectRows.length === 0 ? '' : `
+<h3 style="margin:16px 0 6px;color:#b45309">⚠️ 人工訂單疑似被平台取消 ${suspectRows.length} 筆（請確認是否釋出）</h3>
+<p style="font-size:13px;color:#475569;margin:0 0 6px">以下是你有補過資料、但訂單已從平台 feed 消失的訂房。為避免誤刪真實訂單，系統不自動取消；請到日曆確認，若客人確實取消可一鍵釋出該房況。</p>
+<table style="border-collapse:collapse;font-size:14px"><tr style="background:#fef3c7">
+<th style="padding:6px 10px;text-align:left">房型</th><th style="padding:6px 10px;text-align:left">日期</th><th style="padding:6px 10px;text-align:left">平台</th><th style="padding:6px 10px;text-align:left">旅客</th></tr>
+${suspectRows.map(b => row([esc(roomOf(b.property_id)), esc(fmtRange(b.check_in, b.check_out)), esc(platName(b.platform)), esc(b.guest_name ?? '')])).join('')}</table>
+${appUrl ? `<p style="margin:8px 0 0"><a href="${appUrl}/booking/calendar">前往日曆確認／釋出</a></p>` : ''}`
+
     const healthHtml = unhealthy.length === 0
       ? '<p style="color:#16a34a;margin:16px 0 0">✅ iCal 同步運作正常。</p>'
       : `<h3 style="margin:16px 0 6px;color:#dc2626">⚠️ iCal 同步異常 ${unhealthy.length} 筆</h3><ul style="font-size:13px;color:#475569">${
@@ -101,8 +116,8 @@ ${cancelRows.map(b => row([esc(roomOf(b.property_id)), esc(fmtRange(b.check_in, 
       await resend.emails.send({
         from: `AI-GATE iCal 偵測 <${fromEmail}>`,
         to,
-        subject: `【iCal 偵測】${profile?.name ?? '您的民宿'}：新進 ${newRows.length}・取消 ${cancelRows.length}${unhealthy.length ? `・異常 ${unhealthy.length}` : ''}`,
-        html: `<p>${esc(profile?.name ?? '您的民宿')} 過去 24 小時的 iCal 房況異動：</p>${newHtml}${cancelHtml}${healthHtml}
+        subject: `【iCal 偵測】${profile?.name ?? '您的民宿'}：新進 ${newRows.length}・取消 ${cancelRows.length}${suspectRows.length ? `・待確認 ${suspectRows.length}` : ''}${unhealthy.length ? `・異常 ${unhealthy.length}` : ''}`,
+        html: `<p>${esc(profile?.name ?? '您的民宿')} 過去 24 小時的 iCal 房況異動：</p>${newHtml}${cancelHtml}${suspectHtml}${healthHtml}
 <p style="margin-top:16px;font-size:12px;color:#94a3b8">iCal 來源的訂單沒有姓名與訂單編號；若需要旅客資訊，請到該平台後台查詢，或確認 Email 自動匯入是否已設定。</p>`,
       })
       sent++
