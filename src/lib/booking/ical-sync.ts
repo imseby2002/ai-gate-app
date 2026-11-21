@@ -263,6 +263,32 @@ export async function syncICalForSetting(
           existingIcal.check_out = seg.segCheckOut
           result.updated++
         } else {
+          // 先認領「房型未定」的 Email 暫掛訂單：同平台、入住退房日完全相同、尚未指派房間者
+          // （通常是 Booking.com 通知信沒帶房型），把它補上本房源並保留真實訂單號與旅客資料，
+          // 不再另建 iCal 佔位，達成「iCal 補正房型」的自動對應。
+          const { data: pendingUnassigned } = await supabase
+            .from('bookings')
+            .select('id, check_in, check_out, guest_name, platform_booking_id')
+            .eq('user_id', setting.user_id)
+            .eq('platform', setting.platform)
+            .eq('source', 'email')
+            .is('property_id', null)
+            .neq('status', 'cancelled')
+          const adopt = (pendingUnassigned ?? []).find(b =>
+            b.check_in === seg.segCheckIn && b.check_out === seg.segCheckOut)
+          if (adopt) {
+            await supabase.from('bookings').update({
+              property_id: setting.property_id, status: 'confirmed',
+            }).eq('id', adopt.id)
+            segBookingId = adopt.id
+            result.updated++
+            existingPropBookings.push({
+              id: adopt.id, user_id: setting.user_id, property_id: setting.property_id,
+              platform: setting.platform, platform_booking_id: adopt.platform_booking_id,
+              guest_name: adopt.guest_name, check_in: adopt.check_in, check_out: adopt.check_out,
+              status: 'confirmed', source: 'email',
+            })
+          } else {
           // 真正全新的 iCal 訂單
           const orderId = await findOrCreateOrder(supabase, setting.user_id, setting.platform, segUid, {
             guest_name: guestName, source: 'ical',
@@ -307,6 +333,7 @@ export async function syncICalForSetting(
             })
           } else {
             result.updated++
+          }
           }
         }
 

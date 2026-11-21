@@ -580,7 +580,7 @@ export default function CalendarPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 text-xs text-gray-500">
-                      <span>{shortRoom(bk.properties?.name)}</span>
+                      <span className={bk.property_id ? '' : 'text-amber-600 font-medium'}>{bk.property_id ? shortRoom(bk.properties?.name) : '房型未定'}</span>
                       {payTag(bk) && (
                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${payTag(bk)!.cls}`}>{payTag(bk)!.label}</span>
                       )}
@@ -609,7 +609,9 @@ export default function CalendarPage() {
                   const st = STATUS_MAP[bk.status]
                   return (
                     <tr key={bk.id} className="hover:bg-gray-50">
-                      <td className="px-5 py-3 text-gray-700 whitespace-nowrap">{shortRoom(bk.properties?.name)}</td>
+                      <td className="px-5 py-3 whitespace-nowrap">{bk.property_id
+                        ? <span className="text-gray-700">{shortRoom(bk.properties?.name)}</span>
+                        : <span className="text-amber-600 font-medium">房型未定</span>}</td>
                       <td className="px-3 py-3 text-gray-600 whitespace-nowrap">
                         {bk.total_price ? `NT$ ${Number(bk.total_price).toLocaleString()}` : '—'}
                       </td>
