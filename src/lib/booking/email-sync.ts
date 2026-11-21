@@ -653,6 +653,13 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
           }
         }
 
+        // 先前因 Email 無房型而暫列「房型未定」(property_id = null) 的訂單，之後房況／iCal
+        // 補到正確房型時，把房間補上（升級本筆），而不是另外產生重複訂單。
+        if (existingBookingForConf && !existingBookingForConf.property_id && resolvedPropertyId && !extracted.is_cancellation) {
+          await supabase.from('bookings').update({ property_id: resolvedPropertyId }).eq('id', existingBookingForConf.id)
+          existingBookingForConf.property_id = resolvedPropertyId
+        }
+
         // 1. 若為取消信且系統已有此訂單
         if (existingBookingForConf && extracted.is_cancellation) {
           if (existingBookingForConf.status !== 'cancelled') {
@@ -931,23 +938,22 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
           }
         }
 
-        // 配不到房型時的保底機制：若有房源列表，將其暫掛到首個房源並標註提醒，絕不遺漏真實旅客訂單
-        let propertyFallback = false
-        let targetPropertyId = resolvedPropertyId
-        if (!targetPropertyId && properties.length > 0) {
-          targetPropertyId = properties[0].id
-          propertyFallback = true
-          await logSkip('unknown_property_assigned_fallback', {
-            platform, subject, from, body,
-            detail: `單號 ${confId} 房型「${extracted.property_name}」未能精準配對，暫掛於「${properties[0].name}」`,
-          })
-        }
-
+        // 配不到房型：不再亂猜房間（例如 Booking.com 通知信沒帶房型），避免誤佔其他房間。
+        // 改以「房型未定」(property_id = null) 暫掛，不佔任何實際房間；等 iCal 補到正確
+        // 房型自動對應（見 ical-sync 的認領邏輯），或由人工在日曆指派。
+        let roomUnassigned = false
+        const targetPropertyId = resolvedPropertyId
         if (!targetPropertyId) {
-          addLog(`[略過：房型未知] ${confId} ${checkIn ?? ''} | ${subj80}`)
-          result.debug.skipped_no_property++
-          await logSkip('no_property_available', { platform, subject, from, body, detail: `未建立任何房源，無法掛載訂單 ${confId}` })
-          continue
+          if (extracted.is_cancellation) {
+            addLog(`[取消：無對應訂單skip] ${confId} ${checkIn ?? ''} | ${subj80}`)
+            result.debug.skipped_duplicate++
+            continue
+          }
+          roomUnassigned = true
+          await logSkip('unknown_property_pending_assignment', {
+            platform, subject, from, body,
+            detail: `單號 ${confId} 房型「${extracted.property_name || '未指定'}」無法判定，暫列為房型未定，待 iCal 對應或人工指派`,
+          })
         }
 
         const { error: bkErr } = await supabase
@@ -963,12 +969,12 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
             check_out:           checkOut,
             num_guests:          roomNumGuests || 1,
             total_price:         roomTotalPrice,
-            status:              bookingStatus,
+            status:              roomUnassigned ? 'pending' : bookingStatus,
             source:              'email',
             notes:               (() => {
               let base = isPartial ? '由 Email 部分擷取，請至平台後台確認完整資料' : null
-              if (propertyFallback) {
-                const warn = `【待確認房型】原始郵件房型為「${extracted.property_name || '未指定'}」，請至後台確認並重新分配房間`
+              if (roomUnassigned) {
+                const warn = `【房型未定】原始郵件房型為「${extracted.property_name || '未指定'}」，尚未佔任何房間；待 iCal 補到正確房型自動對應，或由人工指派`
                 base = base ? `${warn}；${base}` : warn
               }
               return DEBUG_FETCH_NOTE ? appendFetchNote(base) : base
