@@ -47,10 +47,12 @@ export async function GET(req: Request) {
         .select('property_id, platform, check_in, check_out, updated_at')
         .eq('user_id', uid).eq('source', 'ical').eq('status', 'cancelled').gte('updated_at', since)
         .order('check_in'),
-      // 有人工資料、但事件已從平台 feed 消失（疑似客人取消，系統不敢自動刪）
+      // 有人工資料、但事件已從平台 feed 消失（疑似客人取消，系統不敢自動刪）。
+      // 需「持續消失 ≥ 60 分」才列入，避免平台偶發殘缺 feed 造成短暫誤報。
       admin.from('bookings')
         .select('property_id, platform, check_in, check_out, guest_name')
         .eq('user_id', uid).eq('status', 'confirmed').not('ical_missing_since', 'is', null)
+        .lt('ical_missing_since', new Date(Date.now() - 60 * 60_000).toISOString())
         .order('check_in'),
       admin.from('ical_settings')
         .select('platform, platform_name, property_id, last_sync_error, last_synced_at, sync_interval')
