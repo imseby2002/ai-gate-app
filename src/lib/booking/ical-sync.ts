@@ -132,6 +132,22 @@ export async function syncICalForSetting(
 
   const ownerBlockedDateSet = new Set<string>((ownerBlocks ?? []).map((b: { date: string }) => b.date))
 
+  // Email 已確認取消的訂單（同平台＋本房源）：其日期視為已釋出。Trip.com 等平台的 iCal
+  // feed 常在客人取消後仍延遲數天帶著原本的佔位，導致 iCal 一直重建佔位把房間擋住。
+  // 既然 Email（有訂單號）已確認取消，就以 Email 為準，不再因 feed 延遲重新封鎖這些日期。
+  const { data: cancelledEmail } = await supabase
+    .from('bookings')
+    .select('check_in, check_out')
+    .eq('user_id', setting.user_id)
+    .eq('property_id', setting.property_id)
+    .eq('platform', setting.platform)
+    .eq('source', 'email')
+    .eq('status', 'cancelled')
+  const cancelledEmailDates = new Set<string>()
+  for (const b of cancelledEmail ?? []) {
+    for (const d of dateRange(b.check_in, b.check_out)) cancelledEmailDates.add(d)
+  }
+
   // 同一天以後出現的事件為準（與逐筆 upsert 時的覆蓋順序一致）
   const wantedBlocks = new Map<string, string | null>()
 
@@ -190,6 +206,12 @@ export async function syncICalForSetting(
       if (filledBookingOnDate) {
         // 已有完整資料的真實訂單：沿用該訂單的 ID 封鎖房況，不覆蓋成佔位訂單
         wantedBlocks.set(date, filledBookingOnDate.id)
+        continue
+      }
+
+      if (cancelledEmailDates.has(date)) {
+        // 該日期對應的 Email 訂單已確認取消：釋出房況，不因平台 feed 延遲重新封鎖。
+        // （不加入 wantedBlocks，既有的 iCal 佔位會在下方的取消處理中一併釋出。）
         continue
       }
 
