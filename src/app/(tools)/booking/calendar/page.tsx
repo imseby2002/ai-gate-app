@@ -257,7 +257,10 @@ export default function CalendarPage() {
   }
 
   // 有人工資料、但事件已從平台 feed 消失（疑似客人取消）。不自動刪，由民宿主確認後一鍵釋出。
-  const suspectedCancelled = (bk: Booking) => !!bk.ical_missing_since && bk.status !== 'cancelled'
+  // 需「持續消失 ≥ 60 分」才顯示，避免平台偶發回傳殘缺 feed 造成短暫誤標。
+  const suspectedCancelled = (bk: Booking) =>
+    !!bk.ical_missing_since && bk.status !== 'cancelled' &&
+    (Date.now() - new Date(bk.ical_missing_since).getTime()) >= 60 * 60 * 1000
   async function releaseBooking(id: string) {
     if (!window.confirm(t('calendar.releaseConfirm'))) return
     try {

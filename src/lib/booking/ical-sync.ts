@@ -399,56 +399,72 @@ export async function syncICalForSetting(
   // feed」的房況日期釋出，並把事件整筆消失（原本有 block、現在完全沒有）的訂單標記取消。
   // 只有 feed 抓取/解析成功才會走到這裡（失敗會提早 return），不會因為一次抓取失敗就誤放房況。
   if (!exErr) {
-    const staleDates = (existingBlocks ?? []).map(b => b.date).filter(d => !wantedBlocks.has(d))
-    for (let i = 0; i < staleDates.length; i += 500) {
-      const { error: delErr } = await supabase.from('blocked_dates').delete()
-        .eq('user_id', setting.user_id).eq('property_id', setting.property_id)
-        .eq('ical_setting_id', settingId).in('date', staleDates.slice(i, i + 500))
-      if (delErr) result.errors.push(`釋出房況失敗：${delErr.message}`)
-    }
-    // 自動取消要很保守：平台（尤其 Trip.com）常會更換同一筆訂單的事件 UID，舊 UID 從
-    // feed 消失不代表客人取消。只取消「純 iCal 佔位、且日期已完全不再被任何目前事件封鎖」
-    // 的訂單；一旦有人工填寫資料（真實姓名／金額／電話／Email）就絕不自動取消，避免把
-    // 民宿主自己補好的真實訂單誤殺（改由每日偵測報告提醒人工確認）。
     const wantedBookingIds = new Set([...wantedBlocks.values()].filter((v): v is string => !!v))
     const wantedDates = new Set(wantedBlocks.keys())
-    const candidateIds = [...new Set((existingBlocks ?? [])
+    const priorBookingIds = [...new Set((existingBlocks ?? [])
       .map(b => b.booking_id).filter((v): v is string => !!v))]
-      .filter(id => !wantedBookingIds.has(id))
-    if (candidateIds.length > 0) {
-      const { data: cand } = await supabase.from('bookings')
-        .select('id, guest_name, guest_email, guest_phone, total_price, source, check_in, check_out, status')
-        .in('id', candidateIds).eq('user_id', setting.user_id)
-      const fullyFreed = (b: { check_in: string; check_out: string }) => {
-        for (const d of dateRange(b.check_in, b.check_out)) if (wantedDates.has(d)) return false
-        return true
-      }
-      const toCancel = (cand ?? []).filter(b => {
-        if (b.status === 'cancelled') return false
-        if (isBookingFilled(b)) return false                      // 有人工資料 → 不自動取消
-        return fullyFreed(b)                                       // 日期仍被封鎖 → 可能只是換 UID
-      }).map(b => b.id)
-      if (toCancel.length > 0) {
-        const { error: cErr } = await supabase.from('bookings')
-          .update({ status: 'cancelled', updated_at: new Date().toISOString() })
-          .in('id', toCancel).eq('user_id', setting.user_id).neq('status', 'cancelled')
-        if (cErr) result.errors.push(`標記取消失敗：${cErr.message}`)
-        else result.cancelled = toCancel.length
-      }
+    const candidateIds = priorBookingIds.filter(id => !wantedBookingIds.has(id))
 
-      // 有人工資料、但事件已從平台 feed 完全消失（日期也不再被封鎖）→ 可能客人真的取消了，
-      // 但不敢自動刪。標記 ical_missing_since，由每日偵測報告提醒、日曆顯示「疑似已取消」供一鍵釋出。
-      const suspectedIds = (cand ?? []).filter(b =>
-        b.status !== 'cancelled' && isBookingFilled(b) && fullyFreed(b)
-      ).map(b => b.id)
-      if (suspectedIds.length > 0) {
-        await supabase.from('bookings')
-          .update({ ical_missing_since: new Date().toISOString() })
-          .in('id', suspectedIds).eq('user_id', setting.user_id).is('ical_missing_since', null)
+    // feed 疑似殘缺／空：本次事件為 0，或「一次消失的訂單」佔原有的一半以上（且 ≥3 筆）。
+    // 平台（Agoda、Booking 等）偶發回傳空的或不完整的 .ics（HTTP 200 但內容殘缺），
+    // 不可據此整批釋出房況或判定取消，否則會把現有真實訂單誤標「疑似取消」甚至釋出房間。
+    // 此時保留既有房況，記錄錯誤（last_ical_hash 會被清空）讓下次完整重試。
+    const feedDegraded =
+      priorBookingIds.length > 0 && (
+        vevents.length === 0 ||
+        (candidateIds.length >= 3 && candidateIds.length / priorBookingIds.length >= 0.5)
+      )
+
+    if (feedDegraded) {
+      result.errors.push(`iCal feed 疑似殘缺（本次事件 ${vevents.length}、原有訂單 ${priorBookingIds.length}、消失 ${candidateIds.length}），已略過釋出/取消判定，保留既有房況`)
+    } else {
+      // 釋出不再被任何事件封鎖的日期
+      const staleDates = (existingBlocks ?? []).map(b => b.date).filter(d => !wantedBlocks.has(d))
+      for (let i = 0; i < staleDates.length; i += 500) {
+        const { error: delErr } = await supabase.from('blocked_dates').delete()
+          .eq('user_id', setting.user_id).eq('property_id', setting.property_id)
+          .eq('ical_setting_id', settingId).in('date', staleDates.slice(i, i + 500))
+        if (delErr) result.errors.push(`釋出房況失敗：${delErr.message}`)
+      }
+      // 自動取消要很保守：平台（尤其 Trip.com）常會更換同一筆訂單的事件 UID，舊 UID 從
+      // feed 消失不代表客人取消。只取消「純 iCal 佔位、且日期已完全不再被任何目前事件封鎖」
+      // 的訂單；一旦有人工填寫資料（真實姓名／金額／電話／Email）就絕不自動取消，避免把
+      // 民宿主自己補好的真實訂單誤殺（改由每日偵測報告提醒人工確認）。
+      if (candidateIds.length > 0) {
+        const { data: cand } = await supabase.from('bookings')
+          .select('id, guest_name, guest_email, guest_phone, total_price, source, check_in, check_out, status')
+          .in('id', candidateIds).eq('user_id', setting.user_id)
+        const fullyFreed = (b: { check_in: string; check_out: string }) => {
+          for (const d of dateRange(b.check_in, b.check_out)) if (wantedDates.has(d)) return false
+          return true
+        }
+        const toCancel = (cand ?? []).filter(b => {
+          if (b.status === 'cancelled') return false
+          if (isBookingFilled(b)) return false                      // 有人工資料 → 不自動取消
+          return fullyFreed(b)                                       // 日期仍被封鎖 → 可能只是換 UID
+        }).map(b => b.id)
+        if (toCancel.length > 0) {
+          const { error: cErr } = await supabase.from('bookings')
+            .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+            .in('id', toCancel).eq('user_id', setting.user_id).neq('status', 'cancelled')
+          if (cErr) result.errors.push(`標記取消失敗：${cErr.message}`)
+          else result.cancelled = toCancel.length
+        }
+
+        // 有人工資料、但事件已從平台 feed 完全消失（日期也不再被封鎖）→ 可能客人真的取消了，
+        // 但不敢自動刪。標記 ical_missing_since，由每日偵測報告提醒、日曆顯示「疑似已取消」供一鍵釋出。
+        const suspectedIds = (cand ?? []).filter(b =>
+          b.status !== 'cancelled' && isBookingFilled(b) && fullyFreed(b)
+        ).map(b => b.id)
+        if (suspectedIds.length > 0) {
+          await supabase.from('bookings')
+            .update({ ical_missing_since: new Date().toISOString() })
+            .in('id', suspectedIds).eq('user_id', setting.user_id).is('ical_missing_since', null)
+        }
       }
     }
 
-    // 事件又回來的訂單（UID 換回來或客人重新下單）→ 清掉「疑似已取消」標記
+    // 事件又回來的訂單（UID 換回來或客人重新下單）→ 清掉「疑似已取消」標記（永遠執行，安全）
     const reappeared = [...wantedBookingIds]
     for (let i = 0; i < reappeared.length; i += 500) {
       await supabase.from('bookings')
