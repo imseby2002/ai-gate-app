@@ -184,6 +184,16 @@ export async function syncICalForSetting(
 
     const baseUid = ev.uid || `${settingId}_${ev.start}`
 
+    // Trip.com（及其他平台）常把「尚未開放訂購的遠期窗口」用一段很長的
+    // "RoomStatus Fully booked" / 佔位事件表示（實測一次塞 43～190 晚、每間房都有）。
+    // 這不是真實訂房，若當成訂單會把半年關掉，還會透過本系統 iCal 匯出把那段期間
+    // 一併關到 Agoda／Booking 等其他平台。因此：無旅客姓名的佔位事件若長度 > 31 晚，
+    // 視為平台窗口雜訊，整筆略過（不建立訂單、不封鎖）。真實旅客長住極罕見，且會由
+    // Email／人工輸入另行建立；房東要長期關房請用系統的手動關房（owner_block）。
+    if (isPlaceholderOrGeneric && evDates.length > 31) {
+      continue
+    }
+
     // 依每一天檢查此事件在該日期的狀況：
     // 1. 是否已有房東手動關房（owner_block）
     // 2. 是否已有既有的已填寫訂單（跨平台或同平台，如 Agoda、Email、直訂、手動輸入）
