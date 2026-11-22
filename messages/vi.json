@@ -1399,6 +1399,8 @@
       "confirmCodeLabel": "Mã đơn đặt",
       "idLabel": "ID: {id}…",
       "roomsSection": "Chi tiết phòng",
+      "roomType": "Phòng",
+      "roomUnassigned": "Chưa gán phòng (vui lòng chọn)",
       "deleteOrder": "Xóa toàn bộ đơn",
       "deleteOrderConfirm": "Xóa toàn bộ đơn này? Thao tác sẽ xóa tất cả các phòng trong đơn và không thể hoàn tác.",
       "roomDeleteConfirm": "Xóa bản ghi đặt phòng này? Không thể hoàn tác.",

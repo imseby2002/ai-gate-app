@@ -1399,6 +1399,8 @@
       "confirmCodeLabel": "訂單號碼",
       "idLabel": "ID：{id}…",
       "roomsSection": "房型明細",
+      "roomType": "房號／房型",
+      "roomUnassigned": "房型未定（請指派）",
       "deleteOrder": "刪除整張訂單",
       "deleteOrderConfirm": "確定要刪除整張訂單嗎？此動作會一併刪除所有房型明細，且無法復原。",
       "roomDeleteConfirm": "確定要移除這間房型的訂房記錄嗎？此動作無法復原。",

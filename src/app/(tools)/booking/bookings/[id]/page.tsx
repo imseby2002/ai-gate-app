@@ -72,6 +72,7 @@ export default function BookingDetailPage() {
   const [bk, setBk]           = useState<Booking | null>(null)
   const [order, setOrder]     = useState<OrderInfo | null>(null)
   const [rooms, setRooms]     = useState<RoomRow[]>([])
+  const [props, setProps]     = useState<{ id: string; name: string }[]>([])
   const [loading, setLoading] = useState(true)
 
   const [editingOrder, setEditingOrder] = useState(false)
@@ -102,6 +103,15 @@ export default function BookingDetailPage() {
       })
       .finally(() => setLoading(false))
   }, [id])
+
+  // 房源清單（供指派房號用）
+  useEffect(() => {
+    fetch('/api/booking/properties').then(r => r.json())
+      .then(pr => setProps((pr.properties ?? [])
+        .filter((p: { room_count?: number }) => (p.room_count ?? 1) > 0)
+        .map((p: { id: string; name: string }) => ({ id: p.id, name: p.name }))))
+      .catch(() => {})
+  }, [])
 
   async function saveOrder() {
     if (!order) return
@@ -147,6 +157,7 @@ export default function BookingDetailPage() {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: editingRoomId,
+          property_id: roomForm.property_id ?? null,
           check_in: roomForm.check_in, check_out: roomForm.check_out,
           num_guests: roomForm.num_guests, extra_beds: roomForm.extra_beds ?? 0,
           total_price: roomForm.total_price,
@@ -155,7 +166,8 @@ export default function BookingDetailPage() {
       })
       const d = await res.json()
       if (d.booking) {
-        setRooms(rs => rs.map(r => r.id === editingRoomId ? { ...r, ...d.booking } : r))
+        const prop = props.find(p => p.id === d.booking.property_id) ?? null
+        setRooms(rs => rs.map(r => r.id === editingRoomId ? { ...r, ...d.booking, properties: prop } : r))
         if (bk && bk.id === editingRoomId) setBk({ ...bk, ...d.booking })
         setEditingRoomId(null)
       }
@@ -266,6 +278,15 @@ export default function BookingDetailPage() {
                 className={`rounded-lg border p-3 ${isCurrent ? 'border-indigo-300 bg-indigo-50/50' : 'border-gray-200'}`}>
                 {isEditingRoom ? (
                   <div className="space-y-2">
+                    <div className="space-y-0.5">
+                      <div className="text-[11px] text-gray-400">{t('detail.roomType')}</div>
+                      <select value={roomForm.property_id ?? ''}
+                        onChange={e => setRoomForm(p => ({ ...p, property_id: e.target.value || null }))}
+                        className={`w-full text-sm border rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300 ${roomForm.property_id ? '' : 'text-amber-600'}`}>
+                        <option value="">{t('detail.roomUnassigned')}</option>
+                        {props.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                      </select>
+                    </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-0.5">
                         <div className="text-[11px] text-gray-400">{t('bookings.form.checkIn')}</div>
@@ -322,7 +343,7 @@ export default function BookingDetailPage() {
                 ) : (
                   <div className="flex items-center justify-between gap-3 flex-wrap">
                     <div>
-                      <div className="text-sm font-medium text-gray-900">{room.properties?.name ?? '—'}</div>
+                      <div className={`text-sm font-medium ${room.property_id ? 'text-gray-900' : 'text-amber-600'}`}>{room.property_id ? (room.properties?.name ?? '—') : t('detail.roomUnassigned')}</div>
                       <div className="text-xs text-gray-500">
                         {room.check_in} → {room.check_out} ({t('detail.nights', { nights: nightsOf(room) })}) · {t('detail.guestsUnit', { count: room.num_guests })}
                       </div>
