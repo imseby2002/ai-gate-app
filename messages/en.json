@@ -1399,6 +1399,8 @@
       "confirmCodeLabel": "Order Number",
       "idLabel": "ID: {id}…",
       "roomsSection": "Room Details",
+      "roomType": "Room",
+      "roomUnassigned": "Unassigned (please assign)",
       "deleteOrder": "Delete Entire Order",
       "deleteOrderConfirm": "Delete this entire order? This will remove all rooms in it and cannot be undone.",
       "roomDeleteConfirm": "Remove this room's booking record? This cannot be undone.",
