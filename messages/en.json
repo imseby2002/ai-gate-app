@@ -1752,6 +1752,7 @@
       "reviews": "Reviews",
       "reports": "Reports",
       "ical": "iCal Sync",
+      "connector": "Extranet Connector",
       "email": "Email Import",
       "plan": "Subscription",
       "sync": "Real-time Sync",

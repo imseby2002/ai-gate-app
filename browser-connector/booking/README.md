@@ -1,7 +1,14 @@
-# AI-GATE Booking.com 讀後台連接器（原型）
+# AI-GATE 讀後台連接器（原型，多平台）
 
-在一台「常開、已登入 Booking.com 後台」的電腦上，用瀏覽器外掛**唯讀**讀取訂單列表，
+在一台「常開、已登入各平台後台」的電腦上，用瀏覽器外掛**唯讀**讀取訂單列表，
 把新訂單／取消推送到 AI-GATE。**不爬蟲登入、不自動操作平台、不自動發文**。
+
+支援平台（各自偵測網域）：
+- Booking.com — `admin.booking.com`
+- Agoda — `ycs.agoda.com`
+- Trip.com / Ctrip — `ebooking.trip.com`、`*.ctrip.com`
+- AsiaYo — `expert.asiayo.com`
+- Expedia — `apps.expediapartnercentral.com`
 
 解決的痛點：Booking.com 通知信沒房型、iCal 慢又會換 UID——後台頁面有完整的
 姓名／房號／單號，直接讀最準。
@@ -19,8 +26,8 @@ Booking.com 後台(已登入) ──讀DOM──▶ content.js ──▶ backgro
 3. 釘選外掛，點圖示開設定。
 
 ## 配對
-1. 在 AI-GATE 網頁（登入民宿主帳號）呼叫 `POST /api/connector/booking/pair-code`
-   取得 8 碼配對碼（10 分鐘有效）。※之後可在設定頁加一顆「產生配對碼」按鈕。
+1. 在 AI-GATE 網頁 → 訂房 → 「讀後台連接器」頁，按「產生配對碼」（10 分鐘有效），
+   也可在同頁看到／撤銷已配對裝置。
 2. 外掛設定頁填「AI-GATE 網址」→ 輸入配對碼 → 按「配對」。成功後顯示「已配對 ✓」。
 
 ## 使用
@@ -30,12 +37,13 @@ Booking.com 後台(已登入) ──讀DOM──▶ content.js ──▶ backgro
 - 偵測到被導回登入頁／出現密碼框／「session expired」→ 發系統通知請你手動重登。
 
 ## ⚠️ 需要微調選擇器（重要）
-`content.js` 的 `SELECTORS` 是「起始猜測」，**一定要依實際後台版面調整**：
-1. 打開訂單列表頁，F12 → Elements。
-2. 找到「每一筆訂單的列」元素 → 更新 `SELECTORS.row`。
+`content.js` 的 `PLATFORM_SELECTORS` 內**每個平台各一組**選擇器，都是「起始猜測」，
+**一定要依該平台實際後台版面調整**：
+1. 在該平台後台打開訂單列表頁，F12 → Elements。
+2. 找到「每一筆訂單的列」元素 → 更新該平台的 `row`。
 3. 對照每欄（單號/姓名/房型/入住/退房/金額/狀態）填入相對子選擇器。
 4. 存檔後在 `chrome://extensions` 按外掛的「重新整理」。
-- Booking.com 後台會改版，壞掉時回來重調這一段即可。
+- 各平台後台會改版，壞掉時回來重調對應平台那一組即可。
 
 ## 伺服器端
 - `POST /api/connector/booking/ingest`（Bearer 裝置 token）：比對房源、去重後寫入 `bookings`

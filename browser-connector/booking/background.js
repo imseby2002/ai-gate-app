@@ -54,8 +54,9 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
         sendResponse({ ok: false, error: r.error });
       }
     } else if (msg?.type === 'logged_out') {
-      notify('Booking 後台已登出', '連接器偵測到 Booking.com 後台已登出，請手動重新登入以繼續同步。');
-      await chrome.storage.local.set({ loggedOut: true, loggedOutAt: Date.now() });
+      const p = msg.platform || '平台';
+      notify('後台已登出', `連接器偵測到 ${p} 後台已登出，請手動重新登入以繼續同步。`);
+      await chrome.storage.local.set({ loggedOut: true, loggedOutAt: Date.now(), loggedOutPlatform: p });
       sendResponse({ ok: true });
     } else {
       sendResponse({ ok: false, error: 'unknown message' });
@@ -73,9 +74,20 @@ chrome.runtime.onInstalled.addListener(setupAlarm);
 chrome.runtime.onStartup.addListener(setupAlarm);
 chrome.storage.onChanged.addListener(c => { if (c.keepAliveMin) setupAlarm(); });
 
+const OTA_TAB_URLS = [
+  'https://admin.booking.com/*',
+  'https://ycs.agoda.com/*',
+  'https://ebooking.trip.com/*',
+  'https://*.ctrip.com/*',
+  'https://expert.asiayo.com/*',
+  'https://*.asiayo.com/*',
+  'https://apps.expediapartnercentral.com/*',
+  'https://*.expediapartnercentral.com/*',
+];
+
 chrome.alarms.onAlarm.addListener(async alarm => {
   if (alarm.name !== 'keepAlive') return;
-  const tabs = await chrome.tabs.query({ url: 'https://admin.booking.com/*' });
+  const tabs = await chrome.tabs.query({ url: OTA_TAB_URLS });
   for (const tab of tabs) {
     if (tab.id != null) chrome.tabs.sendMessage(tab.id, { type: 'keep_alive' }).catch(() => {});
   }

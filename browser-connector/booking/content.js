@@ -1,32 +1,90 @@
-// AI-GATE Booking 讀後台連接器 — content script
-// 掛在 admin.booking.com 頁面：定時讀「訂單列表」DOM，抽出訂單 → 傳給背景推送。
+// AI-GATE 讀後台連接器 — content script（多平台）
+// 掛在各 OTA 後台頁面：定時讀「訂單列表」DOM，抽出訂單 → 傳給背景推送。
 // 只讀 DOM、不點擊、不送出任何表單。
 //
-// ⚠️ 選擇器需要依實際後台版面微調：Booking.com extranet 會改版，下面的選擇器是
-//    「起始猜測」。調校步驟見 README。打開列表頁、F12 找到每筆訂單的列元素，
-//    對照欄位（單號 / 姓名 / 房型 / 入住 / 退房 / 金額 / 狀態）填入下方 SELECTORS。
+// ⚠️ 每個平台的 SELECTORS 需要依實際後台版面微調（會改版）。調校步驟見 README：
+//    打開列表頁 F12，找到每筆訂單的列元素與各欄位，填入對應平台的選擇器。
 
-const SELECTORS = {
-  // 訂單列表每一列（row）。常見為表格 tr，或卡片 div。請改成實際的選擇器。
-  row: 'table tbody tr, [data-testid="reservation-row"]',
-  // 下列為「相對於 row」的子選擇器；找不到時該欄位留空。
-  confirmationId: '[data-testid="reservation-id"], .bui-table__cell--id, td:nth-child(1)',
-  guestName: '[data-testid="guest-name"], .guest-name, td:nth-child(2)',
-  roomName: '[data-testid="room-name"], .room-name',
-  checkIn: '[data-testid="checkin"], .checkin',
-  checkOut: '[data-testid="checkout"], .checkout',
-  price: '[data-testid="price"], .price',
-  guests: '[data-testid="guests"], .guests',
-  status: '[data-testid="status"], .status',
+// 依網域判斷目前在哪個平台
+function detectPlatform() {
+  const h = location.hostname;
+  if (h.includes('booking.com')) return 'booking_com';
+  if (h.includes('agoda.com')) return 'agoda';
+  if (h.includes('trip.com') || h.includes('ctrip.com')) return 'trip_com';
+  if (h.includes('asiayo.com')) return 'asiayo';
+  if (h.includes('expediapartnercentral.com')) return 'expedia';
+  return null;
+}
+
+// 各平台的選擇器（起始猜測，需調校）。row 之下的子選擇器找不到就留空。
+const PLATFORM_SELECTORS = {
+  booking_com: {
+    row: 'table tbody tr, [data-testid="reservation-row"]',
+    confirmationId: '[data-testid="reservation-id"], td:nth-child(1)',
+    guestName: '[data-testid="guest-name"], td:nth-child(2)',
+    roomName: '[data-testid="room-name"]',
+    checkIn: '[data-testid="checkin"]',
+    checkOut: '[data-testid="checkout"]',
+    price: '[data-testid="price"]',
+    guests: '[data-testid="guests"]',
+    status: '[data-testid="status"]',
+  },
+  agoda: {
+    row: 'table tbody tr',
+    confirmationId: 'td:nth-child(1)',
+    guestName: 'td:nth-child(2)',
+    roomName: 'td:nth-child(3)',
+    checkIn: 'td:nth-child(4)',
+    checkOut: 'td:nth-child(5)',
+    price: 'td:nth-child(6)',
+    guests: '',
+    status: 'td:last-child',
+  },
+  trip_com: {
+    row: 'table tbody tr',
+    confirmationId: 'td:nth-child(1)',
+    guestName: 'td:nth-child(2)',
+    roomName: 'td:nth-child(3)',
+    checkIn: 'td:nth-child(4)',
+    checkOut: 'td:nth-child(5)',
+    price: 'td:nth-child(6)',
+    guests: '',
+    status: 'td:last-child',
+  },
+  asiayo: {
+    row: 'table tbody tr',
+    confirmationId: 'td:nth-child(1)',
+    guestName: 'td:nth-child(2)',
+    roomName: 'td:nth-child(3)',
+    checkIn: 'td:nth-child(4)',
+    checkOut: 'td:nth-child(5)',
+    price: 'td:nth-child(6)',
+    guests: '',
+    status: 'td:last-child',
+  },
+  expedia: {
+    row: 'table tbody tr',
+    confirmationId: 'td:nth-child(1)',
+    guestName: 'td:nth-child(2)',
+    roomName: 'td:nth-child(3)',
+    checkIn: 'td:nth-child(4)',
+    checkOut: 'td:nth-child(5)',
+    price: 'td:nth-child(6)',
+    guests: '',
+    status: 'td:last-child',
+  },
 };
 
-// 已登出偵測：出現登入表單或導向 account.booking.com/sign-in 等
+const PLATFORM = detectPlatform();
+const SELECTORS = PLATFORM ? PLATFORM_SELECTORS[PLATFORM] : null;
+
 function looksLoggedOut() {
   const url = location.href;
-  if (/\/sign-?in|\/login|account\.booking\.com/i.test(url)) return true;
+  if (/\/sign-?in|\/login|\/account\/|auth/i.test(url)) return true;
   if (document.querySelector('input[type="password"]')) return true;
   const bodyText = document.body?.innerText || '';
-  if (/(sign in to continue|session (has )?expired|請重新登入|登入以繼續)/i.test(bodyText)) return true;
+  if (/(sign in to continue|session (has )?expired|log ?in|請重新登入|登入以繼續|重新登录)/i.test(bodyText)
+      && document.querySelector('input[type="password"], button[type="submit"]')) return true;
   return false;
 }
 
@@ -36,7 +94,6 @@ function txt(el, sel) {
   return (node?.textContent || '').trim();
 }
 
-// 把後台各種日期格式盡量轉成 YYYY-MM-DD
 function toYmd(s) {
   if (!s) return '';
   const iso = s.match(/(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
@@ -45,23 +102,18 @@ function toYmd(s) {
   if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
   return '';
 }
-
-function toNumber(s) {
-  const n = String(s || '').replace(/[^\d.]/g, '');
-  return n ? parseFloat(n) : null;
-}
-
-function parseStatus(s) {
-  return /取消|cancell?ed/i.test(s) ? 'cancelled' : 'confirmed';
-}
+function toNumber(s) { const n = String(s || '').replace(/[^\d.]/g, ''); return n ? parseFloat(n) : null; }
+function parseStatus(s) { return /取消|取消|cancell?ed|退订/i.test(s) ? 'cancelled' : 'confirmed'; }
 
 function scrape() {
+  if (!SELECTORS) return [];
   const rows = Array.from(document.querySelectorAll(SELECTORS.row));
   const out = [];
   for (const row of rows) {
-    const confirmation_id = (txt(row, SELECTORS.confirmationId).match(/\d{6,}/) || [''])[0];
+    const confirmation_id = (txt(row, SELECTORS.confirmationId).match(/[A-Za-z]?\d{6,}/) || [''])[0];
     if (!confirmation_id) continue;
     out.push({
+      platform: PLATFORM,
       confirmation_id,
       guest_name: txt(row, SELECTORS.guestName) || null,
       room_name: txt(row, SELECTORS.roomName) || null,
@@ -77,26 +129,24 @@ function scrape() {
 
 let lastSentHash = '';
 async function tick() {
+  if (!PLATFORM) return;
   if (looksLoggedOut()) {
-    chrome.runtime.sendMessage({ type: 'logged_out' }).catch(() => {});
+    chrome.runtime.sendMessage({ type: 'logged_out', platform: PLATFORM }).catch(() => {});
     return;
   }
   const reservations = scrape();
   if (!reservations.length) return;
-  // 只在內容有變時才送，避免重複推送
   const hash = JSON.stringify(reservations);
   if (hash === lastSentHash) return;
   lastSentHash = hash;
-  chrome.runtime.sendMessage({ type: 'reservations', reservations }).catch(() => {});
+  chrome.runtime.sendMessage({ type: 'reservations', platform: PLATFORM, reservations }).catch(() => {});
 }
 
-// 每 30 秒掃一次；背景保活訊號則重新整理頁面
 setInterval(tick, 30_000);
 setTimeout(tick, 3_000);
 
 chrome.runtime.onMessage.addListener((msg, _s, send) => {
   if (msg?.type === 'keep_alive') {
-    // 溫和保活：若在列表頁就重新整理，刷新 session 並拿到最新訂單
     if (!looksLoggedOut()) location.reload();
     send?.({ ok: true });
   }

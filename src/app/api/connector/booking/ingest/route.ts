@@ -9,10 +9,23 @@ import { findOrCreateOrder } from '@/lib/booking/orders'
 import { syncDailyRecordForBooking } from '@/lib/booking/daily-sync'
 import { isBookingFilled } from '@/lib/booking/dedup'
 
-const PLATFORM = 'booking_com'
+// 連接器支援的平台（讀各家後台）。別名正規化：ctrip→trip_com、expedia 保留。
+const PLATFORM_ALIASES: Record<string, string> = {
+  booking_com: 'booking_com', 'booking.com': 'booking_com', booking: 'booking_com',
+  agoda: 'agoda', 'agoda.com': 'agoda',
+  trip_com: 'trip_com', 'trip.com': 'trip_com', ctrip: 'trip_com', 'ctrip.com': 'trip_com',
+  asiayo: 'asiayo', 'asiayo.com': 'asiayo',
+  expedia: 'expedia', 'expedia.com': 'expedia',
+  airbnb: 'airbnb', easytravel: 'easytravel',
+}
+function normalizePlatform(p: unknown): string | null {
+  const key = String(p ?? '').trim().toLowerCase()
+  return PLATFORM_ALIASES[key] ?? null
+}
 const isYmd = (s: unknown): s is string => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s)
 
 interface IncomingReservation {
+  platform?: string // booking_com / agoda / trip_com(ctrip) / asiayo / expedia …
   confirmation_id?: string
   guest_name?: string
   room_name?: string
@@ -53,9 +66,14 @@ export async function POST(req: NextRequest) {
   const { data: propRows } = await admin.from('properties').select('id, name').eq('user_id', userId)
   const props = (propRows ?? []) as { id: string; name: string }[]
 
+  // 整批可帶一個預設平台（body.platform），個別訂單也可自帶 platform 覆蓋
+  const defaultPlatform = normalizePlatform(body?.platform)
+
   const result = { received: reservations.length, created: 0, updated: 0, cancelled: 0, skipped: 0, errors: [] as string[] }
 
   for (const r of reservations) {
+    const platform = normalizePlatform(r.platform) ?? defaultPlatform
+    if (!platform) { result.skipped++; continue }
     const confId = (r.confirmation_id ?? '').trim()
     if (!confId) { result.skipped++; continue }
     const checkIn = isYmd(r.check_in) ? r.check_in : null
@@ -64,7 +82,7 @@ export async function POST(req: NextRequest) {
     // 找同單號既有訂單（任一房型，排除已取消）
     const { data: existingRows } = await admin.from('bookings')
       .select('id, property_id, guest_name, guest_email, guest_phone, total_price, num_guests, check_in, check_out, status, platform, source')
-      .eq('user_id', userId).eq('platform', PLATFORM).eq('platform_booking_id', confId)
+      .eq('user_id', userId).eq('platform', platform).eq('platform_booking_id', confId)
       .neq('status', 'cancelled')
     const existing = (existingRows ?? [])[0]
 
@@ -111,14 +129,14 @@ export async function POST(req: NextRequest) {
 
     // 全新訂單 → 建立（房型配不到就留 null「房型未定」，待人工指派或 iCal 對應）
     try {
-      const orderId = await findOrCreateOrder(admin, userId, PLATFORM, confId, {
+      const orderId = await findOrCreateOrder(admin, userId, platform, confId, {
         guest_name: guestName, source: 'connector',
       })
       const { data: inserted, error: insErr } = await admin.from('bookings').upsert({
         user_id: userId,
         order_id: orderId,
         property_id: propertyId,
-        platform: PLATFORM,
+        platform,
         platform_booking_id: confId,
         guest_name: guestName ?? '(待補充)',
         check_in: checkIn,
@@ -127,7 +145,7 @@ export async function POST(req: NextRequest) {
         total_price: price,
         status: 'confirmed',
         source: 'connector',
-        raw_data: { source: 'booking_extranet', confirmation_id: confId, room_name: r.room_name ?? null },
+        raw_data: { source: 'extranet', platform, confirmation_id: confId, room_name: r.room_name ?? null },
       }, { onConflict: 'user_id,platform,platform_booking_id,property_id' })
         .select('id, property_id, guest_name, total_price, num_guests, check_in, check_out, status, platform').single()
       if (insErr) { result.errors.push(`${confId}: ${insErr.message}`); continue }

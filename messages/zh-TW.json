@@ -1752,6 +1752,7 @@
       "reviews": "評價管理",
       "reports": "數據報表",
       "ical": "iCal 同步",
+      "connector": "讀後台連接器",
       "email": "Email 擷取",
       "plan": "訂閱方案",
       "sync": "即時同步",
