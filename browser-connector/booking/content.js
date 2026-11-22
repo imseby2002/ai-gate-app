@@ -1,11 +1,8 @@
-// AI-GATE 讀後台連接器 — content script（多平台）
-// 掛在各 OTA 後台頁面：定時讀「訂單列表」DOM，抽出訂單 → 傳給背景推送。
-// 只讀 DOM、不點擊、不送出任何表單。
-//
-// ⚠️ 每個平台的 SELECTORS 需要依實際後台版面微調（會改版）。調校步驟見 README：
-//    打開列表頁 F12，找到每筆訂單的列元素與各欄位，填入對應平台的選擇器。
+// AI-GATE 讀後台連接器 — content script（API 攔截版）
+// 原理：各 OTA 後台是 SPA，訂單資料由前端打內部 JSON API 取得。此腳本在頁面注入
+// inject.js 攔截那些 API 回應（唯讀），用通用啟發式從 JSON 找出訂單 → 推送到 AI-GATE。
+// 完全不爬畫面、不改請求、不送表單。改版時若解析失敗，popup 可「匯出樣本」回報給開發者校準。
 
-// 依網域判斷目前在哪個平台
 function detectPlatform() {
   const h = location.hostname;
   if (h.includes('booking.com')) return 'booking_com';
@@ -15,140 +12,155 @@ function detectPlatform() {
   if (h.includes('expediapartnercentral.com')) return 'expedia';
   return null;
 }
-
-// 各平台的選擇器（起始猜測，需調校）。row 之下的子選擇器找不到就留空。
-const PLATFORM_SELECTORS = {
-  booking_com: {
-    row: 'table tbody tr, [data-testid="reservation-row"]',
-    confirmationId: '[data-testid="reservation-id"], td:nth-child(1)',
-    guestName: '[data-testid="guest-name"], td:nth-child(2)',
-    roomName: '[data-testid="room-name"]',
-    checkIn: '[data-testid="checkin"]',
-    checkOut: '[data-testid="checkout"]',
-    price: '[data-testid="price"]',
-    guests: '[data-testid="guests"]',
-    status: '[data-testid="status"]',
-  },
-  agoda: {
-    row: 'table tbody tr',
-    confirmationId: 'td:nth-child(1)',
-    guestName: 'td:nth-child(2)',
-    roomName: 'td:nth-child(3)',
-    checkIn: 'td:nth-child(4)',
-    checkOut: 'td:nth-child(5)',
-    price: 'td:nth-child(6)',
-    guests: '',
-    status: 'td:last-child',
-  },
-  trip_com: {
-    row: 'table tbody tr',
-    confirmationId: 'td:nth-child(1)',
-    guestName: 'td:nth-child(2)',
-    roomName: 'td:nth-child(3)',
-    checkIn: 'td:nth-child(4)',
-    checkOut: 'td:nth-child(5)',
-    price: 'td:nth-child(6)',
-    guests: '',
-    status: 'td:last-child',
-  },
-  asiayo: {
-    row: 'table tbody tr',
-    confirmationId: 'td:nth-child(1)',
-    guestName: 'td:nth-child(2)',
-    roomName: 'td:nth-child(3)',
-    checkIn: 'td:nth-child(4)',
-    checkOut: 'td:nth-child(5)',
-    price: 'td:nth-child(6)',
-    guests: '',
-    status: 'td:last-child',
-  },
-  expedia: {
-    row: 'table tbody tr',
-    confirmationId: 'td:nth-child(1)',
-    guestName: 'td:nth-child(2)',
-    roomName: 'td:nth-child(3)',
-    checkIn: 'td:nth-child(4)',
-    checkOut: 'td:nth-child(5)',
-    price: 'td:nth-child(6)',
-    guests: '',
-    status: 'td:last-child',
-  },
-};
-
 const PLATFORM = detectPlatform();
-const SELECTORS = PLATFORM ? PLATFORM_SELECTORS[PLATFORM] : null;
 
-function looksLoggedOut() {
-  const url = location.href;
-  if (/\/sign-?in|\/login|\/account\/|auth/i.test(url)) return true;
-  if (document.querySelector('input[type="password"]')) return true;
-  const bodyText = document.body?.innerText || '';
-  if (/(sign in to continue|session (has )?expired|log ?in|請重新登入|登入以繼續|重新登录)/i.test(bodyText)
-      && document.querySelector('input[type="password"], button[type="submit"]')) return true;
-  return false;
-}
+// 注入頁面環境攔截器
+try {
+  const s = document.createElement('script');
+  s.src = chrome.runtime.getURL('inject.js');
+  (document.head || document.documentElement).appendChild(s);
+  s.onload = () => s.remove();
+} catch (e) {}
 
-function txt(el, sel) {
-  if (!sel) return '';
-  const node = el.querySelector(sel);
-  return (node?.textContent || '').trim();
-}
+// 最近擷取的 API 回應（環形緩衝，供解析與匯出樣本）
+const MAX_BUF = 60;
+const buffer = []; // { url, body, at }
 
-function toYmd(s) {
-  if (!s) return '';
-  const iso = s.match(/(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
-  if (iso) return `${iso[1]}-${iso[2].padStart(2, '0')}-${iso[3].padStart(2, '0')}`;
+window.addEventListener('message', ev => {
+  const d = ev.data;
+  if (!d || d.__aigate !== 'aigate-capture') return;
+  buffer.push({ url: d.url, body: d.body, at: Date.now() });
+  while (buffer.length > MAX_BUF) buffer.shift();
+  scheduleParse();
+});
+
+// ───────── 通用啟發式：從任意 JSON 樹找出「訂單陣列」並正規化 ─────────
+const reDate = /\d{4}[-/.]\d{1,2}[-/.]\d{1,2}/;
+const looksDate = v => typeof v === 'string' && reDate.test(v);
+const FIELD = {
+  id: /(reservation|booking|confirmation|order)[_\s]*(id|no|number|code)|^id$|reserveid|resid/i,
+  name: /guest.*name|customer.*name|booker|travel|contact.*name|^name$|guestname/i,
+  room: /room.*(name|type)|roomtype|room_?name|unit.*name|property.*name|accommodation/i,
+  checkin: /check.?in|arrival|arrivaldate|start.*date|from.*date|checkindate|date.*in/i,
+  checkout: /check.?out|depart|departure|end.*date|to.*date|checkoutdate|date.*out/i,
+  price: /total.*(price|amount|rate|charge)|grand.*total|amount|price|revenue|payout|totalprice/i,
+  guests: /guest.*(count|number|qty)|occupancy|adults|persons|pax|num.*guest|numguests/i,
+  status: /status|state|cancell|reservationstatus/i,
+};
+function toYmd(v) {
+  if (v == null) return '';
+  const s = String(v);
+  const m = s.match(/(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+  if (m) return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
   const d = new Date(s);
-  if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
-  return '';
+  return isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
 }
-function toNumber(s) { const n = String(s || '').replace(/[^\d.]/g, ''); return n ? parseFloat(n) : null; }
-function parseStatus(s) { return /取消|取消|cancell?ed|退订/i.test(s) ? 'cancelled' : 'confirmed'; }
-
-function scrape() {
-  if (!SELECTORS) return [];
-  const rows = Array.from(document.querySelectorAll(SELECTORS.row));
+function toNum(v) { const n = String(v ?? '').replace(/[^\d.]/g, ''); return n ? parseFloat(n) : null; }
+// 在一個物件（可含一層巢狀）裡依欄位名找值
+function findField(obj, re, depth = 2) {
+  if (!obj || typeof obj !== 'object') return undefined;
+  for (const k of Object.keys(obj)) {
+    const v = obj[k];
+    if (re.test(k) && (v == null || typeof v !== 'object')) return v;
+  }
+  if (depth > 0) for (const k of Object.keys(obj)) {
+    const v = obj[k];
+    if (v && typeof v === 'object' && !Array.isArray(v)) {
+      const r = findField(v, re, depth - 1);
+      if (r !== undefined) return r;
+    }
+  }
+  return undefined;
+}
+function objHasReservationShape(o) {
+  if (!o || typeof o !== 'object' || Array.isArray(o)) return false;
+  const ci = findField(o, FIELD.checkin);
+  const co = findField(o, FIELD.checkout);
+  const hasDate = looksDate(ci) || looksDate(co);
+  const id = findField(o, FIELD.id);
+  const name = findField(o, FIELD.name);
+  return hasDate && (id != null || name != null);
+}
+function normalize(o) {
+  const ci = toYmd(findField(o, FIELD.checkin));
+  if (!ci) return null;
+  let co = toYmd(findField(o, FIELD.checkout));
+  if (!co || co <= ci) co = new Date(new Date(ci).getTime() + 86400000).toISOString().slice(0, 10);
+  const idRaw = findField(o, FIELD.id);
+  const confirmation_id = (String(idRaw ?? '').match(/[A-Za-z]?\d{6,}/) || [''])[0];
+  if (!confirmation_id) return null;
+  const statusRaw = String(findField(o, FIELD.status) ?? '');
+  const name = findField(o, FIELD.name);
+  const room = findField(o, FIELD.room);
+  return {
+    platform: PLATFORM,
+    confirmation_id,
+    guest_name: (name != null ? String(name).trim() : '') || null,
+    room_name: (room != null ? String(room).trim() : '') || null,
+    check_in: ci,
+    check_out: co,
+    total_price: toNum(findField(o, FIELD.price)),
+    num_guests: toNum(findField(o, FIELD.guests)),
+    status: /取消|cancel|退订|refund/i.test(statusRaw) ? 'cancelled' : 'confirmed',
+  };
+}
+// 深走 JSON，找出所有「像訂單的物件」
+function walk(node, out, depth = 0) {
+  if (!node || typeof node !== 'object' || depth > 8) return;
+  if (Array.isArray(node)) {
+    for (const o of node) { if (objHasReservationShape(o)) { const n = normalize(o); if (n) out.push(n); } }
+    for (const v of node) walk(v, out, depth + 1);
+  } else {
+    if (objHasReservationShape(node)) { const n = normalize(node); if (n) out.push(n); }
+    for (const k of Object.keys(node)) walk(node[k], out, depth + 1);
+  }
+}
+function extractAll() {
   const out = [];
-  for (const row of rows) {
-    const confirmation_id = (txt(row, SELECTORS.confirmationId).match(/[A-Za-z]?\d{6,}/) || [''])[0];
-    if (!confirmation_id) continue;
-    out.push({
-      platform: PLATFORM,
-      confirmation_id,
-      guest_name: txt(row, SELECTORS.guestName) || null,
-      room_name: txt(row, SELECTORS.roomName) || null,
-      check_in: toYmd(txt(row, SELECTORS.checkIn)),
-      check_out: toYmd(txt(row, SELECTORS.checkOut)),
-      total_price: toNumber(txt(row, SELECTORS.price)),
-      num_guests: toNumber(txt(row, SELECTORS.guests)),
-      status: parseStatus(txt(row, SELECTORS.status)),
-    });
-  }
-  return out;
+  for (const item of buffer) { try { walk(item.body, out); } catch (e) {} }
+  const map = new Map();
+  for (const r of out) map.set(r.confirmation_id, r); // 去重，保留最後
+  return [...map.values()];
 }
 
-let lastSentHash = '';
-async function tick() {
-  if (!PLATFORM) return;
-  if (looksLoggedOut()) {
-    chrome.runtime.sendMessage({ type: 'logged_out', platform: PLATFORM }).catch(() => {});
-    return;
-  }
-  const reservations = scrape();
-  if (!reservations.length) return;
-  const hash = JSON.stringify(reservations);
-  if (hash === lastSentHash) return;
-  lastSentHash = hash;
-  chrome.runtime.sendMessage({ type: 'reservations', platform: PLATFORM, reservations }).catch(() => {});
+// ───────── 自動推送（去重、節流）─────────
+let parseTimer = null;
+let sentKeys = new Set();
+function scheduleParse() {
+  clearTimeout(parseTimer);
+  parseTimer = setTimeout(() => pushNew(false), 2500);
+}
+function pushNew(force) {
+  const all = extractAll();
+  chrome.storage.local.set({ [`parsed_${PLATFORM}`]: all.length, [`parsedAt_${PLATFORM}`]: Date.now() }).catch(() => {});
+  if (force) sentKeys = new Set();
+  const fresh = all.filter(r => !sentKeys.has(r.confirmation_id + '|' + r.status));
+  if (!fresh.length) return 0;
+  fresh.forEach(r => sentKeys.add(r.confirmation_id + '|' + r.status));
+  chrome.runtime.sendMessage({ type: 'reservations', platform: PLATFORM, reservations: fresh }).catch(() => {});
+  return fresh.length;
 }
 
-setInterval(tick, 30_000);
-setTimeout(tick, 3_000);
-
+// ───────── 與 popup 溝通：手動擷取 / 匯出樣本 / 保活 ─────────
 chrome.runtime.onMessage.addListener((msg, _s, send) => {
-  if (msg?.type === 'keep_alive') {
+  if (msg?.type === 'capture_push') {
+    const n = pushNew(true);
+    send?.({ ok: true, platform: PLATFORM, parsed: extractAll().length, pushed: n });
+  } else if (msg?.type === 'capture_export') {
+    const sample = buffer.slice(-30).map(b => ({ url: b.url, body: b.body }));
+    send?.({ ok: true, platform: PLATFORM, parsed: extractAll().length, sample });
+  } else if (msg?.type === 'keep_alive') {
     if (!looksLoggedOut()) location.reload();
     send?.({ ok: true });
   }
   return true;
 });
+
+function looksLoggedOut() {
+  if (/\/sign-?in|\/login|auth/i.test(location.href)) return true;
+  if (document.querySelector('input[type="password"]')) return true;
+  return false;
+}
+setInterval(() => {
+  if (PLATFORM && looksLoggedOut()) chrome.runtime.sendMessage({ type: 'logged_out', platform: PLATFORM }).catch(() => {});
+}, 30_000);
