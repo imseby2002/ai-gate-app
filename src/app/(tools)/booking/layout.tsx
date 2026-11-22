@@ -8,7 +8,7 @@ import BnbSwitcher from './BnbSwitcher'
 import {
   CalendarDays, Home, List, RefreshCw, Mail, Building2,
   BedDouble, BarChart2, Tag, ChevronLeft, ChevronRight, Menu, X,
-  LayoutGrid, Percent, Bell, Star, Globe, ClipboardList, Users, CreditCard, Zap, Smartphone,
+  LayoutGrid, Percent, Bell, Star, Globe, ClipboardList, Users, CreditCard, Zap, Smartphone, MonitorSmartphone,
 } from 'lucide-react'
 import { MOBILE_APP_ANDROID_URL } from '@/lib/mobile-app'
 
@@ -58,6 +58,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: '/booking/sync',    labelKey: 'nav.sync',    icon: Zap },
       { href: '/booking/ical',    labelKey: 'nav.ical',    icon: RefreshCw },
       { href: '/booking/email',   labelKey: 'nav.email',   icon: Mail },
+      { href: '/booking/connector', labelKey: 'nav.connector', icon: MonitorSmartphone },
     ],
   },
 ]
