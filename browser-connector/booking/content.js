@@ -34,19 +34,56 @@ window.addEventListener('message', ev => {
   scheduleParse();
 });
 
-// ───────── 通用啟發式：從任意 JSON 樹找出「訂單陣列」並正規化 ─────────
+// ───────── 解析規則：內建預設，啟動時向 AI-GATE 抓最新（平台改版免重載外掛）─────────
+const DEFAULT_RULES = {
+  version: 0,
+  field: {
+    id: '(reservation|booking|confirmation|order)[_\\s]*(id|no|number|code)|^id$|reserveid|resid',
+    name: 'guest.*name|customer.*name|booker|travel|contact.*name|^name$|guestname',
+    room: 'room.*(name|type)|roomtype|room_?name|unit.*name|property.*name|accommodation',
+    checkin: 'check.?in|arrival|arrivaldate|start.*date|from.*date|checkindate|date.*in',
+    checkout: 'check.?out|depart|departure|end.*date|to.*date|checkoutdate|date.*out',
+    price: 'total.*(price|amount|rate|charge)|grand.*total|amount|price|revenue|payout|totalprice',
+    guests: 'guest.*(count|number|qty)|occupancy|adults|persons|pax|num.*guest|numguests',
+    status: 'status|state|cancell|reservationstatus',
+  },
+  cancel: '取消|cancel|退订|退訂|refund|void',
+  idShape: '[A-Za-z]?\\d{6,}',
+};
+
+let FIELD = {};
+let reCancel = /取消|cancel|退订|退訂|refund/i;
+let reIdShape = /[A-Za-z]?\d{6,}/;
+function applyRules(rules) {
+  try {
+    const f = rules.field || {};
+    FIELD = {
+      id: new RegExp(f.id, 'i'), name: new RegExp(f.name, 'i'), room: new RegExp(f.room, 'i'),
+      checkin: new RegExp(f.checkin, 'i'), checkout: new RegExp(f.checkout, 'i'),
+      price: new RegExp(f.price, 'i'), guests: new RegExp(f.guests, 'i'), status: new RegExp(f.status, 'i'),
+    };
+    reCancel = new RegExp(rules.cancel, 'i');
+    reIdShape = new RegExp(rules.idShape);
+  } catch (e) { applyRules(DEFAULT_RULES); }
+}
+applyRules(DEFAULT_RULES);
+
+// 從伺服器抓規則（apiBase 來自 popup 設定），成功即覆蓋並快取；失敗用快取或預設。
+async function loadRules() {
+  try {
+    const s = await chrome.storage.local.get(['apiBase', 'rulesCache']);
+    if (s.rulesCache && s.rulesCache.field) applyRules(s.rulesCache);
+    if (!s.apiBase) return;
+    const res = await fetch(`${s.apiBase.replace(/\/$/, '')}/api/connector/booking/rules`, { cache: 'no-store' });
+    if (!res.ok) return;
+    const rules = await res.json();
+    if (rules && rules.field) { applyRules(rules); chrome.storage.local.set({ rulesCache: rules }).catch(() => {}); }
+  } catch (e) {}
+}
+loadRules();
+
 const reDate = /\d{4}[-/.]\d{1,2}[-/.]\d{1,2}/;
 const looksDate = v => typeof v === 'string' && reDate.test(v);
-const FIELD = {
-  id: /(reservation|booking|confirmation|order)[_\s]*(id|no|number|code)|^id$|reserveid|resid/i,
-  name: /guest.*name|customer.*name|booker|travel|contact.*name|^name$|guestname/i,
-  room: /room.*(name|type)|roomtype|room_?name|unit.*name|property.*name|accommodation/i,
-  checkin: /check.?in|arrival|arrivaldate|start.*date|from.*date|checkindate|date.*in/i,
-  checkout: /check.?out|depart|departure|end.*date|to.*date|checkoutdate|date.*out/i,
-  price: /total.*(price|amount|rate|charge)|grand.*total|amount|price|revenue|payout|totalprice/i,
-  guests: /guest.*(count|number|qty)|occupancy|adults|persons|pax|num.*guest|numguests/i,
-  status: /status|state|cancell|reservationstatus/i,
-};
 function toYmd(v) {
   if (v == null) return '';
   const s = String(v);
@@ -87,7 +124,7 @@ function normalize(o) {
   let co = toYmd(findField(o, FIELD.checkout));
   if (!co || co <= ci) co = new Date(new Date(ci).getTime() + 86400000).toISOString().slice(0, 10);
   const idRaw = findField(o, FIELD.id);
-  const confirmation_id = (String(idRaw ?? '').match(/[A-Za-z]?\d{6,}/) || [''])[0];
+  const confirmation_id = (String(idRaw ?? '').match(reIdShape) || [''])[0];
   if (!confirmation_id) return null;
   const statusRaw = String(findField(o, FIELD.status) ?? '');
   const name = findField(o, FIELD.name);
@@ -101,7 +138,7 @@ function normalize(o) {
     check_out: co,
     total_price: toNum(findField(o, FIELD.price)),
     num_guests: toNum(findField(o, FIELD.guests)),
-    status: /取消|cancel|退订|refund/i.test(statusRaw) ? 'cancelled' : 'confirmed',
+    status: reCancel.test(statusRaw) ? 'cancelled' : 'confirmed',
   };
 }
 // 深走 JSON，找出所有「像訂單的物件」
@@ -150,6 +187,7 @@ chrome.runtime.onMessage.addListener((msg, _s, send) => {
     const sample = buffer.slice(-30).map(b => ({ url: b.url, body: b.body }));
     send?.({ ok: true, platform: PLATFORM, parsed: extractAll().length, sample });
   } else if (msg?.type === 'keep_alive') {
+    loadRules();
     if (!looksLoggedOut()) location.reload();
     send?.({ ok: true });
   }
