@@ -1,18 +1,16 @@
 {
   "manifest_version": 3,
   "name": "AI-GATE 讀後台連接器",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "讀取已登入的 OTA 後台訂單頁（Booking.com / Agoda / Trip.com / AsiaYo / Expedia）的內部 API 回應，把新訂單/取消推送到 AI-GATE（唯讀，不自動操作平台）。",
   "permissions": ["storage", "alarms", "notifications", "tabs"],
   "host_permissions": [
     "https://*.im-tourist.com/*",
     "https://admin.booking.com/*",
-    "https://ycs.agoda.com/*",
-    "https://ebooking.trip.com/*",
+    "https://*.agoda.com/*",
+    "https://*.trip.com/*",
     "https://*.ctrip.com/*",
-    "https://expert.asiayo.com/*",
     "https://*.asiayo.com/*",
-    "https://apps.expediapartnercentral.com/*",
     "https://*.expediapartnercentral.com/*"
   ],
   "background": { "service_worker": "background.js" },
@@ -21,12 +19,10 @@
     {
       "matches": [
         "https://admin.booking.com/*",
-        "https://ycs.agoda.com/*",
-        "https://ebooking.trip.com/*",
+        "https://*.agoda.com/*",
+        "https://*.trip.com/*",
         "https://*.ctrip.com/*",
-        "https://expert.asiayo.com/*",
         "https://*.asiayo.com/*",
-        "https://apps.expediapartnercentral.com/*",
         "https://*.expediapartnercentral.com/*"
       ],
       "js": ["content.js"],
@@ -38,12 +34,10 @@
       "resources": ["inject.js"],
       "matches": [
         "https://admin.booking.com/*",
-        "https://ycs.agoda.com/*",
-        "https://ebooking.trip.com/*",
+        "https://*.agoda.com/*",
+        "https://*.trip.com/*",
         "https://*.ctrip.com/*",
-        "https://expert.asiayo.com/*",
         "https://*.asiayo.com/*",
-        "https://apps.expediapartnercentral.com/*",
         "https://*.expediapartnercentral.com/*"
       ]
     }
