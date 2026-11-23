@@ -8,6 +8,7 @@ import { requireBookingDevice } from '@/lib/connector/booking-auth'
 import { findOrCreateOrder } from '@/lib/booking/orders'
 import { syncDailyRecordForBooking } from '@/lib/booking/daily-sync'
 import { isBookingFilled } from '@/lib/booking/dedup'
+import { matchPropertyByName } from '@/lib/booking/email-sync'
 
 // 連接器支援的平台（讀各家後台）。別名正規化：ctrip→trip_com、expedia 保留。
 const PLATFORM_ALIASES: Record<string, string> = {
@@ -44,20 +45,16 @@ function cleanRoomName(roomName: string | undefined): string | null {
   return n.replace(/\s*[（(]\s*\d{3,}\s*[)）]\s*$/, '').trim() || n
 }
 
-// 把後台房型名稱比對到系統房源：先查人工對應表，再完全相同，再互相包含，最後比對房號數字（如 "201"）。
-function matchProperty(
-  roomName: string | undefined,
-  props: { id: string; name: string }[],
-  aliasMap?: Map<string, string>,
-): string | null {
+type PropRow = { id: string; name: string; name_aliases: string[] }
+
+// 把後台房型名稱比對到系統房源：
+// 1) 房型管理的名稱/別名比對（與 Email 同步共用同一套 name_aliases）
+// 2) 房號數字後援（如房名含 "302"）
+function matchProperty(roomName: string | undefined, props: PropRow[]): string | null {
   const n = (roomName ?? '').trim()
   if (!n) return null
-  const alias = aliasMap?.get(n.toLowerCase())
-  if (alias) return alias
-  const exact = props.find(p => p.name.trim() === n)
-  if (exact) return exact.id
-  const contains = props.find(p => p.name.includes(n) || n.includes(p.name))
-  if (contains) return contains.id
+  const byAlias = matchPropertyByName(n, props)
+  if (byAlias) return byAlias
   const num = n.match(/\d{2,4}/)?.[0]
   if (num) {
     const byNum = props.find(p => p.name.includes(num))
@@ -77,18 +74,11 @@ export async function POST(req: NextRequest) {
   if (reservations.length > 200) return NextResponse.json({ error: '單次最多 200 筆' }, { status: 400 })
 
   const admin = createAdminClient()
-  const { data: propRows } = await admin.from('properties').select('id, name').eq('user_id', userId)
-  const props = (propRows ?? []) as { id: string; name: string }[]
+  const { data: propRows } = await admin.from('properties').select('id, name, name_aliases').eq('user_id', userId)
+  const props: PropRow[] = (propRows ?? []).map(p => ({
+    id: p.id as string, name: p.name as string, name_aliases: (p.name_aliases as string[] | null) ?? [],
+  }))
 
-  // 人工房名對應表（platform → (room_name 小寫 → property_id)）
-  const { data: aliasRows } = await admin.from('connector_room_aliases')
-    .select('platform, room_name, property_id').eq('user_id', userId)
-  const aliasByPlatform = new Map<string, Map<string, string>>()
-  for (const a of aliasRows ?? []) {
-    const key = String(a.platform)
-    if (!aliasByPlatform.has(key)) aliasByPlatform.set(key, new Map())
-    aliasByPlatform.get(key)!.set(String(a.room_name).trim().toLowerCase(), String(a.property_id))
-  }
 
   // 整批可帶一個預設平台（body.platform），個別訂單也可自帶 platform 覆蓋
   const defaultPlatform = normalizePlatform(body?.platform)
@@ -128,7 +118,7 @@ export async function POST(req: NextRequest) {
       ? r.check_out
       : new Date(new Date(checkIn).getTime() + 86400000).toISOString().slice(0, 10)
     const roomName = cleanRoomName(r.room_name)
-    const propertyId = matchProperty(roomName ?? undefined, props, aliasByPlatform.get(platform))
+    const propertyId = matchProperty(roomName ?? undefined, props)
     const guestName = (r.guest_name ?? '').trim() || null
     const price = typeof r.total_price === 'number' && r.total_price > 0 ? r.total_price : null
     const guests = typeof r.num_guests === 'number' && r.num_guests > 0 ? r.num_guests : null

@@ -166,7 +166,7 @@ function isValidYmd(d: string | null | undefined): d is string {
 }
 
 // ── Property name fuzzy matching ─────────────────────────────
-function matchPropertyByName(name: string | null, properties: UserProperty[]): string | null {
+export function matchPropertyByName(name: string | null, properties: UserProperty[]): string | null {
   if (!name || !properties.length) return null
   const lower = name.toLowerCase().trim()
   const tokens = lower.split(/[\s\-_,]+/).filter(t => t.length > 1)
