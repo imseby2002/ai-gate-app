@@ -1,6 +1,8 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { MonitorSmartphone, Copy, Check, RefreshCw, Trash2 } from 'lucide-react'
+import { MonitorSmartphone, Copy, Check, RefreshCw, Trash2, Download } from 'lucide-react'
+
+const CONNECTOR_VERSION = '0.4.1'
 
 interface Device { id: string; name: string | null; last_seen_at: string | null; revoked_at: string | null; created_at: string }
 
@@ -73,9 +75,24 @@ export default function ConnectorPage() {
         （含 Booking.com 通知信抓不到的房號、姓名）。不爬蟲登入、不自動操作平台。
       </p>
 
+      {/* 下載外掛 */}
+      <div className="bg-white rounded-xl border p-5 space-y-3">
+        <h2 className="font-semibold text-gray-800">1. 下載並安裝外掛</h2>
+        <a href="/connector/aigate-connector.zip" download
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm hover:bg-emerald-700">
+          <Download className="h-4 w-4" /> 下載外掛（v{CONNECTOR_VERSION}）
+        </a>
+        <ol className="text-xs text-gray-500 leading-relaxed list-decimal pl-4 space-y-0.5">
+          <li>下載後解壓縮，記住 <code className="bg-gray-100 px-1 rounded">booking</code> 資料夾位置。</li>
+          <li>Chrome / Edge 網址列輸入 <code className="bg-gray-100 px-1 rounded">chrome://extensions</code>，右上開「開發者模式」。</li>
+          <li>點「載入未封裝項目」→ 選剛剛的 <code className="bg-gray-100 px-1 rounded">booking</code> 資料夾。</li>
+          <li>之後更新：下載新版覆蓋同資料夾 →「重新載入」（不要移除重裝，免重新配對）。</li>
+        </ol>
+      </div>
+
       {/* 配對碼 */}
       <div className="bg-white rounded-xl border p-5 space-y-3">
-        <h2 className="font-semibold text-gray-800">1. 產生配對碼</h2>
+        <h2 className="font-semibold text-gray-800">2. 產生配對碼</h2>
         <p className="text-xs text-gray-500">在外掛設定頁貼上此配對碼完成綁定（10 分鐘內有效）。</p>
         {code ? (
           <div className="flex items-center gap-3 flex-wrap">
@@ -97,7 +114,7 @@ export default function ConnectorPage() {
 
       {/* 已配對裝置 */}
       <div className="bg-white rounded-xl border p-5 space-y-3">
-        <h2 className="font-semibold text-gray-800">2. 已配對裝置</h2>
+        <h2 className="font-semibold text-gray-800">3. 已配對裝置</h2>
         {devices.length === 0 ? (
           <p className="text-sm text-gray-400">尚無裝置。</p>
         ) : (
