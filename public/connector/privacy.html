@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI-GATE 讀後台連接器 — 隱私權政策</title>
+<style>
+  :root { --fg:#1f2937; --muted:#6b7280; --bg:#ffffff; --accent:#4F46E5; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --fg:#e5e7eb; --muted:#9ca3af; --bg:#0b0f17; } }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.7 system-ui,-apple-system,"Noto Sans TC",sans-serif; }
+  main { max-width:760px; margin:0 auto; padding:32px 16px 64px; }
+  h1 { font-size:1.5rem; }
+  h2 { font-size:1.1rem; margin-top:2rem; }
+  .muted { color:var(--muted); }
+  code { background:rgba(127,127,127,.15); padding:.1em .35em; border-radius:4px; }
+  a { color:var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>AI-GATE 讀後台連接器 — 隱私權政策</h1>
+  <p class="muted">最後更新：2026-11-23</p>
+
+  <p>「AI-GATE 讀後台連接器」是一個瀏覽器擴充功能，供民宿經營者在自己的電腦上，把<strong>自己已登入</strong>的訂房平台後台（Booking.com、Agoda、Trip.com/Ctrip、AsiaYo、Expedia）所顯示的訂單資料，唯讀同步到自己的 AI-GATE 訂房管理系統。</p>
+
+  <h2>我們處理哪些資料</h2>
+  <p>擴充功能僅讀取使用者已登入之訂房平台後台頁面本身向該平台請求的訂單 API 回應，從中擷取：訂單編號、訂房人姓名、房型/房號、入住與退房日期、人數、金額、訂單狀態（確認/取消）。不讀取密碼、付款卡號或與訂單無關的頁面內容。</p>
+
+  <h2>資料如何傳送與儲存</h2>
+  <ul>
+    <li>擷取到的訂單資料僅傳送到使用者自行設定的 AI-GATE 網域（<code>*.im-tourist.com</code>）之訂房系統，供其管理自己的訂單。不傳送給任何第三方、不販售、不用於廣告。</li>
+    <li>配對用的裝置權杖（token）僅儲存在該瀏覽器的 <code>chrome.storage.local</code>，可於 AI-GATE 後台隨時撤銷。</li>
+    <li>擴充功能不自行建立帳號、不蒐集瀏覽紀錄、不追蹤使用者跨網站行為。</li>
+  </ul>
+
+  <h2>權限用途</h2>
+  <ul>
+    <li><code>storage</code>：儲存 AI-GATE 網址、裝置權杖與設定。</li>
+    <li><code>alarms</code>：定時溫和重新整理後台頁面以維持登入（保活）。</li>
+    <li><code>notifications</code>：偵測到後台登出時提醒使用者手動重新登入。</li>
+    <li><code>tabs</code>：判斷目前分頁是否為支援的平台後台訂單頁。</li>
+    <li>各平台後台與 <code>*.im-tourist.com</code> 的主機權限：讀取後台訂單 API 回應並推送至使用者自己的系統。</li>
+  </ul>
+
+  <h2>唯讀聲明</h2>
+  <p>擴充功能僅被動讀取頁面既有的 API 回應，不自動登入、不代替使用者送出表單、不自動發文或與平台互動。發布或任何變更動作一律由使用者自行操作。</p>
+
+  <h2>聯絡方式</h2>
+  <p>如有隱私權相關問題，請透過 AI-GATE 系統管理者聯繫。</p>
+</main>
+</body>
+</html>
