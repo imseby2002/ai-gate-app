@@ -3,7 +3,7 @@ const statusEl = $('status');
 function setStatus(msg, cls) { statusEl.textContent = msg; statusEl.className = 'muted ' + (cls || ''); }
 
 async function load() {
-  const s = await chrome.storage.local.get(['apiBase', 'keepAliveMin', 'token', 'lastSync', 'lastResult', 'lastError', 'loggedOut']);
+  const s = await chrome.storage.local.get(['apiBase', 'keepAliveMin', 'token', 'lastSync', 'lastResult', 'lastError', 'lastErrorAt', 'loggedOut']);
   $('apiBase').value = s.apiBase || '';
   $('keepAliveMin').value = s.keepAliveMin || 10;
   const bits = [];
@@ -13,7 +13,8 @@ async function load() {
     const r = s.lastResult || {};
     bits.push(`上次同步 ${new Date(s.lastSync).toLocaleTimeString()}：新增 ${r.created ?? 0}・更新 ${r.updated ?? 0}・取消 ${r.cancelled ?? 0}`);
   }
-  if (s.lastError) bits.push('錯誤：' + s.lastError);
+  // 只在錯誤比上次成功同步新時才顯示，避免配對/成功後仍殘留舊錯誤
+  if (s.lastError && (!s.lastSync || (s.lastErrorAt || 0) > s.lastSync)) bits.push('錯誤：' + s.lastError);
   setStatus(bits.join('\n'), s.token ? 'ok' : '');
 }
 
@@ -21,6 +22,7 @@ $('save').onclick = async () => {
   await chrome.storage.local.set({
     apiBase: $('apiBase').value.trim(),
     keepAliveMin: Math.max(5, parseInt($('keepAliveMin').value) || 10),
+    lastError: null,
   });
   setStatus('設定已儲存', 'ok');
 };
@@ -73,7 +75,7 @@ $('pair').onclick = async () => {
     });
     const data = await res.json();
     if (!res.ok || !data.token) return setStatus('配對失敗：' + (data.error || res.status), 'err');
-    await chrome.storage.local.set({ apiBase, token: data.token, loggedOut: false });
+    await chrome.storage.local.set({ apiBase, token: data.token, loggedOut: false, lastError: null });
     setStatus('配對成功 ✓', 'ok');
     load();
   } catch (e) {

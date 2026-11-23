@@ -47,7 +47,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       const r = await postReservations(msg.reservations);
       if (r.ok) {
         const d = r.data || {};
-        await chrome.storage.local.set({ lastSync: Date.now(), lastResult: d });
+        await chrome.storage.local.set({ lastSync: Date.now(), lastResult: d, lastError: null });
         sendResponse({ ok: true, data: d });
       } else {
         await chrome.storage.local.set({ lastError: r.error, lastErrorAt: Date.now() });
