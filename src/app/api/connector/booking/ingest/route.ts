@@ -36,10 +36,16 @@ interface IncomingReservation {
   status?: string // 'cancelled' | 'confirmed'（外掛自行判斷後台列表狀態）
 }
 
-// 把後台房型名稱比對到系統房源：先完全相同，再互相包含，最後比對房號數字（如 "201"）。
-function matchProperty(roomName: string | undefined, props: { id: string; name: string }[]): string | null {
+// 把後台房型名稱比對到系統房源：先查人工對應表，再完全相同，再互相包含，最後比對房號數字（如 "201"）。
+function matchProperty(
+  roomName: string | undefined,
+  props: { id: string; name: string }[],
+  aliasMap?: Map<string, string>,
+): string | null {
   const n = (roomName ?? '').trim()
   if (!n) return null
+  const alias = aliasMap?.get(n.toLowerCase())
+  if (alias) return alias
   const exact = props.find(p => p.name.trim() === n)
   if (exact) return exact.id
   const contains = props.find(p => p.name.includes(n) || n.includes(p.name))
@@ -65,6 +71,16 @@ export async function POST(req: NextRequest) {
   const admin = createAdminClient()
   const { data: propRows } = await admin.from('properties').select('id, name').eq('user_id', userId)
   const props = (propRows ?? []) as { id: string; name: string }[]
+
+  // 人工房名對應表（platform → (room_name 小寫 → property_id)）
+  const { data: aliasRows } = await admin.from('connector_room_aliases')
+    .select('platform, room_name, property_id').eq('user_id', userId)
+  const aliasByPlatform = new Map<string, Map<string, string>>()
+  for (const a of aliasRows ?? []) {
+    const key = String(a.platform)
+    if (!aliasByPlatform.has(key)) aliasByPlatform.set(key, new Map())
+    aliasByPlatform.get(key)!.set(String(a.room_name).trim().toLowerCase(), String(a.property_id))
+  }
 
   // 整批可帶一個預設平台（body.platform），個別訂單也可自帶 platform 覆蓋
   const defaultPlatform = normalizePlatform(body?.platform)
@@ -103,7 +119,7 @@ export async function POST(req: NextRequest) {
     const checkOut = isYmd(r.check_out) && r.check_out > checkIn
       ? r.check_out
       : new Date(new Date(checkIn).getTime() + 86400000).toISOString().slice(0, 10)
-    const propertyId = matchProperty(r.room_name, props)
+    const propertyId = matchProperty(r.room_name, props, aliasByPlatform.get(platform))
     const guestName = (r.guest_name ?? '').trim() || null
     const price = typeof r.total_price === 'number' && r.total_price > 0 ? r.total_price : null
     const guests = typeof r.num_guests === 'number' && r.num_guests > 0 ? r.num_guests : null

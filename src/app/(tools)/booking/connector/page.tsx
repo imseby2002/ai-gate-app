@@ -5,6 +5,9 @@ import { MonitorSmartphone, Copy, Check, RefreshCw, Trash2, Download } from 'luc
 const CONNECTOR_VERSION = '0.4.2'
 
 interface Device { id: string; name: string | null; last_seen_at: string | null; revoked_at: string | null; created_at: string }
+interface Property { id: string; name: string }
+interface Alias { id: string; platform: string; room_name: string; property_id: string }
+interface Unmapped { platform: string; room_name: string; count: number }
 
 const PLATFORMS = [
   { key: 'booking_com', name: 'Booking.com', url: 'admin.booking.com' },
@@ -22,12 +25,45 @@ export default function ConnectorPage() {
   const [copied, setCopied] = useState(false)
   const [devices, setDevices] = useState<Device[]>([])
   const [err, setErr] = useState('')
+  const [aliases, setAliases] = useState<Alias[]>([])
+  const [properties, setProperties] = useState<Property[]>([])
+  const [unmapped, setUnmapped] = useState<Unmapped[]>([])
+  const [pick, setPick] = useState<Record<string, string>>({})
+  const [aliasMsg, setAliasMsg] = useState('')
 
   async function loadDevices() {
     const r = await fetch('/api/connector/booking/devices').then(r => r.json()).catch(() => ({}))
     setDevices(r.devices ?? [])
   }
-  useEffect(() => { loadDevices() }, [])
+  async function loadAliases() {
+    const r = await fetch('/api/connector/booking/room-aliases').then(r => r.json()).catch(() => ({}))
+    setAliases(r.aliases ?? [])
+    setProperties(r.properties ?? [])
+    setUnmapped(r.unmapped ?? [])
+  }
+  useEffect(() => { loadDevices(); loadAliases() }, [])
+
+  const propName = (id: string) => properties.find(p => p.id === id)?.name ?? '（已刪除房源）'
+  const platLabel = (k: string) => PLATFORMS.find(p => p.key === k)?.name ?? k
+
+  async function saveAlias(platform: string, room_name: string, property_id: string) {
+    if (!property_id) return
+    setAliasMsg('')
+    const r = await fetch('/api/connector/booking/room-aliases', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ platform, room_name, property_id }),
+    })
+    const d = await r.json().catch(() => ({}))
+    if (!r.ok) { setAliasMsg(d.error || '儲存失敗'); return }
+    setAliasMsg(`已對應「${room_name}」→ ${propName(property_id)}${d.backfilled ? `，回填 ${d.backfilled} 筆既有訂單` : ''}`)
+    loadAliases()
+  }
+  async function delAlias(id: string) {
+    await fetch('/api/connector/booking/room-aliases', {
+      method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }),
+    })
+    loadAliases()
+  }
 
   useEffect(() => {
     if (!expiresAt) return
@@ -135,6 +171,67 @@ export default function ConnectorPage() {
               </div>
             ))}
           </div>
+        )}
+      </div>
+
+      {/* 房名對應 */}
+      <div className="bg-white rounded-xl border p-5 space-y-3">
+        <h2 className="font-semibold text-gray-800">4. 房名對應</h2>
+        <p className="text-xs text-gray-500 leading-relaxed">
+          各平台後台房名常與系統房號不同（如 Agoda「Ciao Home」、Trip「山景雙人房」）。在此建立對應，
+          之後同平台同房名會自動配到正確房源，並回填既有「房型未定」訂單。
+        </p>
+
+        {unmapped.length > 0 && (
+          <div className="space-y-2">
+            <div className="text-xs font-medium text-amber-600">待對應（來自連接器訂單）</div>
+            {unmapped.map(u => {
+              const key = `${u.platform}||${u.room_name}`
+              return (
+                <div key={key} className="flex items-center gap-2 flex-wrap border rounded-lg px-3 py-2">
+                  <span className="text-xs text-gray-400 w-24 shrink-0">{platLabel(u.platform)}</span>
+                  <span className="text-sm font-medium text-gray-900 flex-1 min-w-[120px]">{u.room_name}
+                    <span className="text-xs text-gray-400 ml-1">×{u.count}</span>
+                  </span>
+                  <select value={pick[key] ?? ''} onChange={e => setPick(s => ({ ...s, [key]: e.target.value }))}
+                    className="text-sm border rounded-lg px-2 py-1.5 bg-white">
+                    <option value="">選擇房源…</option>
+                    {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                  <button onClick={() => saveAlias(u.platform, u.room_name, pick[key] ?? '')}
+                    disabled={!pick[key]}
+                    className="text-sm px-3 py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40">
+                    對應
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {aliasMsg && <p className="text-sm text-emerald-600">{aliasMsg}</p>}
+
+        {aliases.length > 0 && (
+          <div className="space-y-2 pt-1">
+            <div className="text-xs font-medium text-gray-500">已建立對應</div>
+            {aliases.map(a => (
+              <div key={a.id} className="flex items-center justify-between gap-3 border rounded-lg px-3 py-2">
+                <div className="text-sm">
+                  <span className="text-xs text-gray-400 mr-2">{platLabel(a.platform)}</span>
+                  <span className="font-medium text-gray-900">{a.room_name}</span>
+                  <span className="text-gray-400 mx-1">→</span>
+                  <span className="text-gray-700">{propName(a.property_id)}</span>
+                </div>
+                <button onClick={() => delAlias(a.id)} className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {unmapped.length === 0 && aliases.length === 0 && (
+          <p className="text-sm text-gray-400">目前沒有待對應的房名。</p>
         )}
       </div>
 
