@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { MonitorSmartphone, Copy, Check, RefreshCw, Trash2, Download } from 'lucide-react'
 
-const CONNECTOR_VERSION = '0.4.1'
+const CONNECTOR_VERSION = '0.4.2'
 
 interface Device { id: string; name: string | null; last_seen_at: string | null; revoked_at: string | null; created_at: string }
 
