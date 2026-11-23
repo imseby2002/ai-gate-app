@@ -25,6 +25,40 @@ $('save').onclick = async () => {
   setStatus('設定已儲存', 'ok');
 };
 
+// 取得目前作用中的 OTA 分頁
+async function otaTab() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab || !/admin\.booking\.com|ycs\.agoda\.com|ebooking\.trip\.com|ctrip\.com|asiayo\.com|expediapartnercentral\.com/.test(tab.url || '')) return null;
+  return tab;
+}
+async function ask(type) {
+  const tab = await otaTab();
+  if (!tab) { setStatus('請先切到該平台後台的訂單頁再操作', 'err'); return null; }
+  try { return await chrome.tabs.sendMessage(tab.id, { type }); }
+  catch (e) { setStatus('無法連到後台分頁，請重新整理該頁再試', 'err'); return null; }
+}
+
+if ($('capture')) $('capture').onclick = async () => {
+  setStatus('擷取中…');
+  const r = await ask('capture_push');
+  if (!r) return;
+  if (!r.parsed) setStatus(`在此頁未解析到訂單（可能需要匯出樣本回報校準）。平台：${r.platform || '未知'}`, 'err');
+  else setStatus(`解析到 ${r.parsed} 筆，已推送 ${r.pushed} 筆（平台：${r.platform}）`, 'ok');
+  setTimeout(load, 1200);
+};
+
+if ($('export')) $('export').onclick = async () => {
+  setStatus('匯出樣本中…');
+  const r = await ask('capture_export');
+  if (!r) return;
+  const blob = new Blob([JSON.stringify({ platform: r.platform, parsed: r.parsed, capturedAt: new Date().toISOString(), sample: r.sample }, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `aigate-sample-${r.platform || 'unknown'}-${Date.now()}.json`;
+  a.click(); URL.revokeObjectURL(url);
+  setStatus(`已下載樣本（解析到 ${r.parsed} 筆）。把檔案回報給開發者校準即可。`, 'ok');
+};
+
 $('pair').onclick = async () => {
   const apiBase = $('apiBase').value.trim();
   const code = $('pairCode').value.trim();

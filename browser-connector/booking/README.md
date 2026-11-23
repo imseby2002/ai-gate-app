@@ -1,7 +1,7 @@
-# AI-GATE 讀後台連接器（原型，多平台）
+# AI-GATE 讀後台連接器（多平台，API 攔截版）
 
-在一台「常開、已登入各平台後台」的電腦上，用瀏覽器外掛**唯讀**讀取訂單列表，
-把新訂單／取消推送到 AI-GATE。**不爬蟲登入、不自動操作平台、不自動發文**。
+在一台「常開、已登入各平台後台」的電腦上，用瀏覽器外掛**唯讀攔截後台自己打的訂單 API 回應**，
+把新訂單／取消推送到 AI-GATE。**不爬畫面、不爬蟲登入、不改請求、不自動操作平台、不自動發文**。
 
 支援平台（各自偵測網域）：
 - Booking.com — `admin.booking.com`
@@ -10,52 +10,57 @@
 - AsiaYo — `expert.asiayo.com`
 - Expedia — `apps.expediapartnercentral.com`
 
-解決的痛點：Booking.com 通知信沒房型、iCal 慢又會換 UID——後台頁面有完整的
-姓名／房號／單號，直接讀最準。
+解決的痛點：通知信沒房型、iCal 慢又會換 UID——後台 API 有完整的姓名／房號／單號，直接讀最準。
+
+## 為什麼是「攔 API」而不是「爬畫面」
+各家後台都是 SPA（React/Vue/微前端），畫面 class 是打包亂碼、改版就變，爬 DOM 很脆弱。
+但畫面上的訂單其實是前端打**內部 JSON API**（例：Booking 的 `graphql.json`、`get_reservation_details`；
+AsiaYo 的 `host_order_all.js`…）取得的。外掛在頁面環境掛一個**唯讀攔截器**（`inject.js`）side-記下
+這些 JSON 回應，再用**通用啟發式**從中找出訂單欄位。比爬畫面穩很多，且多數平台免逐家寫死。
 
 ## 架構
 ```
-Booking.com 後台(已登入) ──讀DOM──▶ content.js ──▶ background.js ──POST──▶ AI-GATE
-                                                           │                /api/connector/booking/ingest
-                                      保活/登出偵測 ◀───────┘
+OTA 後台(已登入) ──內部API JSON──▶ inject.js(唯讀攔截) ──▶ content.js(啟發式解析)
+                                                              │
+                              background.js ──POST──▶ AI-GATE /api/connector/booking/ingest
+                              保活/登出偵測 ◀──────────┘
 ```
 
-## 安裝（Chrome / Edge，開發者模式載入）
-1. 開 `chrome://extensions`，右上「開發者模式」開啟。
-2. 「載入未封裝項目」→ 選本資料夾 `browser-connector/booking`。
-3. 釘選外掛，點圖示開設定。
+## 安裝（Chrome / Edge，開發者模式）
+1. `chrome://extensions` → 開「開發者模式」。
+2. 「載入未封裝項目」→ 選 `browser-connector/booking`。
+3. 釘選外掛。
 
 ## 配對
-1. 在 AI-GATE 網頁 → 訂房 → 「讀後台連接器」頁，按「產生配對碼」（10 分鐘有效），
-   也可在同頁看到／撤銷已配對裝置。
-2. 外掛設定頁填「AI-GATE 網址」→ 輸入配對碼 → 按「配對」。成功後顯示「已配對 ✓」。
+1. AI-GATE 網頁 → 訂房 → 「讀後台連接器」→「產生配對碼」。
+2. 外掛設定頁填「AI-GATE 網址」→ 輸入配對碼 →「配對」。
 
 ## 使用
-- 在那台電腦開著 Booking.com 後台的「訂單列表」頁並保持登入。
-- content.js 每 30 秒讀一次列表，內容有變才推送（去重）。
-- 背景每 `keepAliveMin` 分鐘叫列表頁重新整理一次（保活，避免逾時登出）。
-- 偵測到被導回登入頁／出現密碼框／「session expired」→ 發系統通知請你手動重登。
+- 在那台電腦開著各平台後台的訂單頁並保持登入。
+- 外掛**自動**攔截 API、解析、推送（去重）；新訂單／取消會進系統。
+- 背景每 `keepAliveMin` 分鐘刷新保活；偵測到登出→系統通知請你手動重登。
+- 手動：在後台訂單頁點外掛「**擷取並推送**」可立即重推。
 
-## ⚠️ 需要微調選擇器（重要）
-`content.js` 的 `PLATFORM_SELECTORS` 內**每個平台各一組**選擇器，都是「起始猜測」，
-**一定要依該平台實際後台版面調整**：
-1. 在該平台後台打開訂單列表頁，F12 → Elements。
-2. 找到「每一筆訂單的列」元素 → 更新該平台的 `row`。
-3. 對照每欄（單號/姓名/房型/入住/退房/金額/狀態）填入相對子選擇器。
-4. 存檔後在 `chrome://extensions` 按外掛的「重新整理」。
-- 各平台後台會改版，壞掉時回來重調對應平台那一組即可。
+## 改版壞掉時怎麼辦（你只要點一下）
+通用啟發式涵蓋多數情況；若某平台改版導致**解析到 0 筆**：
+1. 在該平台後台訂單頁，點外掛「**匯出樣本**」→ 會下載一個 JSON 檔（含該頁攔到的 API 回應，
+   姓名等個資可自行塗改，但**欄位結構要保留**）。
+2. 把這個檔案回報給開發者 → 校準解析規則（或補該平台對應）。
+3. 之後哪個平台再壞，就只重點那個平台的「匯出樣本」回報即可。
 
 ## 伺服器端
-- `POST /api/connector/booking/ingest`（Bearer 裝置 token）：比對房源、去重後寫入 `bookings`
-  （`source='connector'`）。房型配不到 → 留「房型未定」，可在訂單詳情手動指派。
-- 取消：後台狀態為「已取消」→ 系統同步標取消並釋出房況。
+- `POST /api/connector/booking/ingest`（Bearer 裝置 token，支援多平台）：比對房源、去重後寫入
+  `bookings`（`source='connector'`）。房型配不到 → 留「房型未定」，可在訂單詳情手動指派。
+- 取消：API 狀態為取消 → 系統同步標取消並釋出房況。
 
 ## 安全 / 條款
-- 唯讀讀取你**自己**已登入的後台資料，不自動點擊、不送表單、不自動發文。
+- 唯讀讀取你**自己**已登入後台的 API 回應，不改請求、不點擊、不送表單、不自動發文。
 - 仍屬平台條款灰色地帶；風險遠低於自動登入爬蟲，但非官方授權，請自行斟酌。
-- token 僅存於此瀏覽器的 `chrome.storage.local`；可在 AI-GATE 撤銷裝置。
+- Ctrip／Expedia 等有反自動化偵測；本外掛只被動讀回應，不主動發請求，風險較低但非零。
+- token 僅存於此瀏覽器 `chrome.storage.local`；可在 AI-GATE 撤銷裝置。
 
-## 待辦（原型之後）
-- 網頁端加「產生配對碼 / 裝置管理」UI。
-- Agoda、Trip.com 各自的 content script（版面不同，各一支解析器）。
-- 更穩的新訂單差異偵測（記住已送單號，只送新的）。
+## 檔案
+- `inject.js`：頁面環境唯讀攔截 fetch/XHR 的 JSON 回應。
+- `content.js`：啟發式解析訂單、去重、推送；處理擷取/匯出/保活/登出。
+- `background.js`：推送 ingest、保活 alarm、登出通知。
+- `popup.*`：設定、配對、擷取、匯出。
