@@ -76,12 +76,10 @@ chrome.storage.onChanged.addListener(c => { if (c.keepAliveMin) setupAlarm(); })
 
 const OTA_TAB_URLS = [
   'https://admin.booking.com/*',
-  'https://ycs.agoda.com/*',
-  'https://ebooking.trip.com/*',
+  'https://*.agoda.com/*',
+  'https://*.trip.com/*',
   'https://*.ctrip.com/*',
-  'https://expert.asiayo.com/*',
   'https://*.asiayo.com/*',
-  'https://apps.expediapartnercentral.com/*',
   'https://*.expediapartnercentral.com/*',
 ];
 

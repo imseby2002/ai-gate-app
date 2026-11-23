@@ -28,7 +28,7 @@ $('save').onclick = async () => {
 // 取得目前作用中的 OTA 分頁
 async function otaTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab || !/admin\.booking\.com|ycs\.agoda\.com|ebooking\.trip\.com|ctrip\.com|asiayo\.com|expediapartnercentral\.com/.test(tab.url || '')) return null;
+  if (!tab || !/admin\.booking\.com|agoda\.com|trip\.com|ctrip\.com|asiayo\.com|expediapartnercentral\.com/.test(tab.url || '')) return null;
   return tab;
 }
 async function ask(type) {
