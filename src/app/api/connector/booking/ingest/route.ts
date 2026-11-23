@@ -36,6 +36,14 @@ interface IncomingReservation {
   status?: string // 'cancelled' | 'confirmed'（外掛自行判斷後台列表狀態）
 }
 
+// 清理各平台房名尾端的括號 ID（如 Agoda roomTypeName「山景雙人房 (6804244)」→「山景雙人房」），
+// 避免括號內 ID 干擾房號比對，並讓房名對應更乾淨一致。
+function cleanRoomName(roomName: string | undefined): string | null {
+  const n = (roomName ?? '').trim()
+  if (!n) return null
+  return n.replace(/\s*[（(]\s*\d{3,}\s*[)）]\s*$/, '').trim() || n
+}
+
 // 把後台房型名稱比對到系統房源：先查人工對應表，再完全相同，再互相包含，最後比對房號數字（如 "201"）。
 function matchProperty(
   roomName: string | undefined,
@@ -119,7 +127,8 @@ export async function POST(req: NextRequest) {
     const checkOut = isYmd(r.check_out) && r.check_out > checkIn
       ? r.check_out
       : new Date(new Date(checkIn).getTime() + 86400000).toISOString().slice(0, 10)
-    const propertyId = matchProperty(r.room_name, props, aliasByPlatform.get(platform))
+    const roomName = cleanRoomName(r.room_name)
+    const propertyId = matchProperty(roomName ?? undefined, props, aliasByPlatform.get(platform))
     const guestName = (r.guest_name ?? '').trim() || null
     const price = typeof r.total_price === 'number' && r.total_price > 0 ? r.total_price : null
     const guests = typeof r.num_guests === 'number' && r.num_guests > 0 ? r.num_guests : null
@@ -161,7 +170,7 @@ export async function POST(req: NextRequest) {
         total_price: price,
         status: 'confirmed',
         source: 'connector',
-        raw_data: { source: 'extranet', platform, confirmation_id: confId, room_name: r.room_name ?? null },
+        raw_data: { source: 'extranet', platform, confirmation_id: confId, room_name: roomName },
       }, { onConflict: 'user_id,platform,platform_booking_id,property_id' })
         .select('id, property_id, guest_name, total_price, num_guests, check_in, check_out, status, platform').single()
       if (insErr) { result.errors.push(`${confId}: ${insErr.message}`); continue }
