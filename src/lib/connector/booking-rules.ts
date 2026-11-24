@@ -20,13 +20,13 @@ export interface BookingParseRules {
 }
 
 export const BOOKING_PARSE_RULES: BookingParseRules = {
-  version: 4,
+  version: 5,
   field: {
     id: '(reservation|booking|confirmation|order)[_\\s]*(id|no|number|code)|^id$|reserveid|resid|bookingno|orderno|orderid',
     // 含 clientName（Trip/Ctrip 的訂房人欄位）
     name: 'guest.*name|customer.*name|booker|travel|contact.*name|^name$|guestname|contactname|client.*name|clientname',
-    // 只抓「房型/房間」名稱，避免誤抓飯店/物業名稱（如 Agoda 的 Ciao Home）
-    room: 'room.?type|roomtype|room_?name|roomname|bedroom.?type|unit.*(name|type)|rateplan.*room|房型|房間|房名',
+    // 只抓「房型/房間名稱」欄位；用 (?!id) 避開 roomTypeId 等數字 ID，避免誤抓飯店名
+    room: 'roomtypename|room.?type(?!id)|room_?name|roomname|roomenname|merchantroomname|bedroom.?type|unit.*(name|type)|rateplan.*room|房型|房間|房名',
     checkin: 'check.?in|arrival|arrivaldate|checkindate|start.*date|from.*date|indate',
     checkout: 'check.?out|depart|departure|checkoutdate|end.*date|to.*date|outdate',
     price: 'total.*(price|amount|rate|charge)|grand.*total|amount|price|revenue|payout|totalprice|orderamount',
