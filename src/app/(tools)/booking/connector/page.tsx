@@ -172,6 +172,16 @@ export default function ConnectorPage() {
           各平台房名與系統房名不同時，連接器會留「房型未定」。在此選房源即可把該房名加入
           <b>房型管理的別名</b>（與 Email 同步共用），之後自動配對並回填既有訂單。別名清單於「房型管理」統一維護。
         </p>
+        <div className="text-xs text-gray-500 leading-relaxed bg-indigo-50 rounded-lg p-3 space-y-1">
+          <div className="font-medium text-indigo-700">新民宿第一次設定</div>
+          <div>別名是<b>每間民宿各自獨立</b>的，不會和別家混用。流程：</div>
+          <ol className="list-decimal pl-4 space-y-0.5">
+            <li>先在「房型管理」建好自己的房型。</li>
+            <li>配對連接器、開始抓單後，平台房名對不上的會自動出現在下方「待對應」（標著平台）。</li>
+            <li>每個選一次房源、按「加入別名」→ 寫進自己的別名，之後同平台同房名自動配對、回填既有訂單。</li>
+          </ol>
+          <div className="text-gray-400">多數會自動配上（房名含房號如「…(302)」、或與系統房名相同/包含）；只有平台用完全不同的叫法才需指派一次。</div>
+        </div>
 
         {unmapped.length > 0 ? (
           <div className="space-y-2">
