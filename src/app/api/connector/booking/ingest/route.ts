@@ -130,6 +130,12 @@ export async function POST(req: NextRequest) {
       if (propertyId && !existing.property_id) patch.property_id = propertyId
       if (price != null && existing.total_price == null) patch.total_price = price
       if (guests != null && (existing.num_guests == null || existing.num_guests <= 1)) patch.num_guests = guests
+      // 連接器為該 OTA 資料的權威來源：重抓時刷新入住/退房日（修正舊版解析錯誤），不動人工手填資料
+      if (existing.source === 'connector') {
+        if (checkIn && existing.check_in !== checkIn) patch.check_in = checkIn
+        const co = isYmd(r.check_out) && r.check_out > (checkIn ?? '') ? r.check_out : null
+        if (co && existing.check_out !== co) patch.check_out = co
+      }
       if (Object.keys(patch).length > 0) {
         const { data: updated } = await admin.from('bookings')
           .update({ ...patch, updated_at: new Date().toISOString() }).eq('id', existing.id)
