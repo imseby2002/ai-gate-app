@@ -47,20 +47,19 @@ function cleanRoomName(roomName: string | undefined): string | null {
 
 type PropRow = { id: string; name: string; name_aliases: string[] }
 
-// 把後台房型名稱比對到系統房源：
-// 1) 房型管理的名稱/別名比對（與 Email 同步共用同一套 name_aliases）
-// 2) 房號數字後援（如房名含 "302"）
-function matchProperty(roomName: string | undefined, props: PropRow[]): string | null {
-  const n = (roomName ?? '').trim()
-  if (!n) return null
-  const byAlias = matchPropertyByName(n, props)
-  if (byAlias) return byAlias
-  const num = n.match(/\d{2,4}/)?.[0]
-  if (num) {
-    const byNum = props.find(p => p.name.includes(num))
-    if (byNum) return byNum.id
+// 把後台房型名稱比對到系統房源（傳入「原始」房名，內部自行清理）：
+// 1) 房號優先：房名含系統房號（如 Expedia「…(302)」）→ 強訊號，優先於模糊比對，
+//    並以系統房號開頭精準比對，避開 Agoda roomTypeId（如 6804244）誤中。
+// 2) 名稱/別名比對（清理後；與 Email 同步共用同一套 name_aliases）。
+function matchProperty(rawRoom: string | undefined, props: PropRow[]): string | null {
+  const raw = (rawRoom ?? '').trim()
+  if (!raw) return null
+  for (const p of props) {
+    const pn = p.name.match(/^\d{2,4}/)?.[0]
+    if (pn && raw.includes(pn)) return p.id
   }
-  return null
+  const cleaned = cleanRoomName(raw) ?? raw
+  return matchPropertyByName(cleaned, props)
 }
 
 export async function POST(req: NextRequest) {
@@ -122,7 +121,7 @@ export async function POST(req: NextRequest) {
       ? r.check_out
       : new Date(new Date(checkIn).getTime() + 86400000).toISOString().slice(0, 10)
     const roomName = cleanRoomName(r.room_name)
-    const propertyId = matchProperty(roomName ?? undefined, props)
+    const propertyId = matchProperty(r.room_name, props)
     const guestName = (r.guest_name ?? '').trim() || null
     const price = typeof r.total_price === 'number' && r.total_price > 0 ? r.total_price : null
     const guests = typeof r.num_guests === 'number' && r.num_guests > 0 ? r.num_guests : null
