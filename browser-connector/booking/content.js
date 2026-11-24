@@ -118,6 +118,21 @@ function objHasReservationShape(o) {
   const name = findField(o, FIELD.name);
   return hasDate && (id != null || name != null);
 }
+// 房型名稱：先直接找；找不到再找巢狀陣列（如 Booking 的 rooms[].name、roomReservations[].roomType）
+function findRoomName(o) {
+  const direct = findField(o, FIELD.room);
+  if (direct != null && String(direct).trim()) return direct;
+  for (const k of Object.keys(o)) {
+    if (/room|unit|accommodation/i.test(k) && Array.isArray(o[k]) && o[k].length) {
+      const el = o[k][0];
+      if (el && typeof el === 'object') {
+        const rn = findField(el, FIELD.room) ?? el.name ?? el.roomName ?? el.type;
+        if (rn != null && String(rn).trim()) return rn;
+      } else if (typeof el === 'string' && el.trim()) return el;
+    }
+  }
+  return undefined;
+}
 function normalize(o) {
   const ci = toYmd(findField(o, FIELD.checkin));
   if (!ci) return null;
@@ -128,7 +143,7 @@ function normalize(o) {
   if (!confirmation_id) return null;
   const statusRaw = String(findField(o, FIELD.status) ?? '');
   const name = findField(o, FIELD.name);
-  const room = findField(o, FIELD.room);
+  const room = findRoomName(o);
   return {
     platform: PLATFORM,
     confirmation_id,
