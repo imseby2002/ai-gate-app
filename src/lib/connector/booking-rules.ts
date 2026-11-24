@@ -20,17 +20,19 @@ export interface BookingParseRules {
 }
 
 export const BOOKING_PARSE_RULES: BookingParseRules = {
-  version: 3,
+  version: 4,
   field: {
     id: '(reservation|booking|confirmation|order)[_\\s]*(id|no|number|code)|^id$|reserveid|resid|bookingno|orderno|orderid',
-    name: 'guest.*name|customer.*name|booker|travel|contact.*name|^name$|guestname|contactname',
+    // 含 clientName（Trip/Ctrip 的訂房人欄位）
+    name: 'guest.*name|customer.*name|booker|travel|contact.*name|^name$|guestname|contactname|client.*name|clientname',
     // 只抓「房型/房間」名稱，避免誤抓飯店/物業名稱（如 Agoda 的 Ciao Home）
     room: 'room.?type|roomtype|room_?name|roomname|bedroom.?type|unit.*(name|type)|rateplan.*room|房型|房間|房名',
-    checkin: 'check.?in|arrival|arrivaldate|start.*date|from.*date|checkindate|date.*in|indate',
-    checkout: 'check.?out|depart|departure|end.*date|to.*date|checkoutdate|date.*out|outdate',
+    checkin: 'check.?in|arrival|arrivaldate|checkindate|start.*date|from.*date|indate',
+    checkout: 'check.?out|depart|departure|checkoutdate|end.*date|to.*date|outdate',
     price: 'total.*(price|amount|rate|charge)|grand.*total|amount|price|revenue|payout|totalprice|orderamount',
     guests: 'guest.*(count|number|qty)|occupancy|adults|persons|pax|num.*guest|numguests|peoplecount',
-    status: 'status|state|cancell|reservationstatus|orderstatus',
+    // 抓「文字版」狀態欄位（如 Trip orderStatusDesc「已取消」），避開數字版 orderStatus:100
+    status: '^status$|statusdesc|statustype|orderstatustypestr|reservationstatus|bookingstatus|^state$|cancel|refund|void|取消|退订|退訂',
   },
   cancel: '取消|cancel|退订|退訂|refund|void',
   idShape: '[A-Za-z]?\\d{6,}',
