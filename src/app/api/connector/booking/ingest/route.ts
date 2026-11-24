@@ -93,12 +93,16 @@ export async function POST(req: NextRequest) {
     const checkIn = isYmd(r.check_in) ? r.check_in : null
     const isCancel = (r.status ?? '').toLowerCase() === 'cancelled'
 
-    // 找同單號既有訂單（任一房型，排除已取消）
+    // 找同單號既有訂單（跨來源：connector/email/iCal 同一張 OTA 訂單視為同一筆，含已取消）
+    // 連接器為權威來源，一律合併進既有那筆，避免跨來源各存一份造成重複與狀態打架。
     const { data: existingRows } = await admin.from('bookings')
       .select('id, property_id, guest_name, guest_email, guest_phone, total_price, num_guests, check_in, check_out, status, platform, source')
       .eq('user_id', userId).eq('platform', platform).eq('platform_booking_id', confId)
-      .neq('status', 'cancelled')
-    const existing = (existingRows ?? [])[0]
+    // 優先合併到「已配房」那筆，其次非取消，最後任一
+    const existing = (existingRows ?? []).slice().sort((a, b) => {
+      const s = (x: typeof a) => (x.property_id ? 2 : 0) + (x.status !== 'cancelled' ? 1 : 0)
+      return s(b) - s(a)
+    })[0]
 
     // 取消：後台顯示已取消 → 把系統這筆也標取消並釋出房況
     if (isCancel) {
@@ -123,19 +127,19 @@ export async function POST(req: NextRequest) {
     const price = typeof r.total_price === 'number' && r.total_price > 0 ? r.total_price : null
     const guests = typeof r.num_guests === 'number' && r.num_guests > 0 ? r.num_guests : null
 
-    // 既有訂單 → 補齊（姓名、房型、金額、人數），不覆蓋人工已填的真實資料
+    // 既有訂單 → 合併（connector 為此 OTA 訂單的權威來源）
     if (existing) {
       const patch: Record<string, unknown> = {}
       if (guestName && !isBookingFilled(existing)) patch.guest_name = guestName
       if (propertyId && !existing.property_id) patch.property_id = propertyId
       if (price != null && existing.total_price == null) patch.total_price = price
       if (guests != null && (existing.num_guests == null || existing.num_guests <= 1)) patch.num_guests = guests
-      // 連接器為該 OTA 資料的權威來源：重抓時刷新入住/退房日（修正舊版解析錯誤），不動人工手填資料
-      if (existing.source === 'connector') {
-        if (checkIn && existing.check_in !== checkIn) patch.check_in = checkIn
-        const co = isYmd(r.check_out) && r.check_out > (checkIn ?? '') ? r.check_out : null
-        if (co && existing.check_out !== co) patch.check_out = co
-      }
+      // 連接器看到確認即為確認：若既有被（email 等）標成取消，還原為確認並重新占房
+      if (existing.status === 'cancelled') patch.status = 'confirmed'
+      // connector 為權威：刷新入住/退房日（修正舊版解析錯誤或其他來源的偏差）
+      if (checkIn && existing.check_in !== checkIn) patch.check_in = checkIn
+      const co = isYmd(r.check_out) && r.check_out > (checkIn ?? '') ? r.check_out : null
+      if (co && existing.check_out !== co) patch.check_out = co
       if (Object.keys(patch).length > 0) {
         const { data: updated } = await admin.from('bookings')
           .update({ ...patch, updated_at: new Date().toISOString() }).eq('id', existing.id)
