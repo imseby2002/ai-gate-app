@@ -208,14 +208,16 @@ function scheduleParse() {
 function alive() { try { return !!chrome.runtime?.id } catch { return false } }
 function pushNew(force) {
   if (!alive()) return 0;
-  const all = extractAll();
-  chrome.storage.local.set({ [`parsed_${PLATFORM}`]: all.length, [`parsedAt_${PLATFORM}`]: Date.now() }).catch(() => {});
-  if (force) sentKeys = new Set();
-  const fresh = all.filter(r => !sentKeys.has(r.confirmation_id + '|' + r.status));
-  if (!fresh.length) return 0;
-  fresh.forEach(r => sentKeys.add(r.confirmation_id + '|' + r.status));
-  chrome.runtime.sendMessage({ type: 'reservations', platform: PLATFORM, reservations: fresh }).catch(() => {});
-  return fresh.length;
+  try {
+    const all = extractAll();
+    chrome.storage.local.set({ [`parsed_${PLATFORM}`]: all.length, [`parsedAt_${PLATFORM}`]: Date.now() }).catch(() => {});
+    if (force) sentKeys = new Set();
+    const fresh = all.filter(r => !sentKeys.has(r.confirmation_id + '|' + r.status));
+    if (!fresh.length) return 0;
+    fresh.forEach(r => sentKeys.add(r.confirmation_id + '|' + r.status));
+    chrome.runtime.sendMessage({ type: 'reservations', platform: PLATFORM, reservations: fresh }).catch(() => {});
+    return fresh.length;
+  } catch (e) { return 0; } // context invalidated 等情況直接吞掉，不往外拋
 }
 
 // ───────── 與 popup 溝通：手動擷取 / 匯出樣本 / 保活 ─────────
