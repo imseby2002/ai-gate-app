@@ -23,7 +23,7 @@ try {
 } catch (e) {}
 
 // 最近擷取的 API 回應（環形緩衝，供解析與匯出樣本）
-const MAX_BUF = 60;
+const MAX_BUF = 200;
 const buffer = []; // { url, body, at }
 
 window.addEventListener('message', ev => {
@@ -133,6 +133,29 @@ function findRoomName(o) {
   }
   return undefined;
 }
+// 金額：排除佣金/稅費,優先總額欄位,物件取其 amount/value/formatted；候選取最大(通常是總額)。
+function moneyOf(v) {
+  if (v == null) return null;
+  if (typeof v === 'number') return v || null;
+  if (typeof v === 'object') return moneyOf(v.amount ?? v.value ?? v.total ?? v.formatted);
+  const n = String(v).replace(/[^\d.]/g, ''); return n ? parseFloat(n) : null;
+}
+const reBadMoney = /commission|fee|tax|佣金|手續|服務費|gap|discount|deposit|refund|markup|per.?night|dailyrate/i;
+const rePreferMoney = /total.*(price|amount|rate|charge)|grand.?total|totalprice|order.?amount|sellinclusive|inclusive|^price$|^amount$|^total$|totalsaleprice|totalcostprice/i;
+function findPrice(o) {
+  const cands = [];
+  (function walk(node, depth) {
+    if (!node || typeof node !== 'object' || depth > 3) return;
+    for (const k of Object.keys(node)) {
+      const v = node[k];
+      if (reBadMoney.test(k)) continue; // 跳過佣金/稅費整個子樹
+      if (rePreferMoney.test(k)) { const n = moneyOf(v); if (n) cands.push(n); }
+      if (v && typeof v === 'object' && !Array.isArray(v)) walk(v, depth + 1);
+    }
+  })(o, 0);
+  if (cands.length) return Math.max(...cands);
+  const fb = findField(o, FIELD.price); return moneyOf(fb);
+}
 function normalize(o) {
   const ci = toYmd(findField(o, FIELD.checkin));
   if (!ci) return null;
@@ -151,7 +174,7 @@ function normalize(o) {
     room_name: (room != null ? String(room).trim() : '') || null,
     check_in: ci,
     check_out: co,
-    total_price: toNum(findField(o, FIELD.price)),
+    total_price: findPrice(o),
     num_guests: toNum(findField(o, FIELD.guests)),
     status: reCancel.test(statusRaw) ? 'cancelled' : 'confirmed',
   };
@@ -199,8 +222,13 @@ chrome.runtime.onMessage.addListener((msg, _s, send) => {
     const n = pushNew(true);
     send?.({ ok: true, platform: PLATFORM, parsed: extractAll().length, pushed: n });
   } else if (msg?.type === 'capture_export') {
-    const sample = buffer.slice(-30).map(b => ({ url: b.url, body: b.body }));
-    send?.({ ok: true, platform: PLATFORM, parsed: extractAll().length, sample });
+    // 優先保留「像訂單」的回應（含訂單陣列/訂單欄位），再補最近的其他回應，確保匯出含訂單 API。
+    const scored = buffer.map(b => { const out = []; try { walk(b.body, out); } catch (e) {} return { b, hit: out.length }; });
+    const reservationy = scored.filter(s => s.hit > 0).map(s => s.b);
+    const recent = buffer.slice(-40);
+    const seen = new Set(); const sample = [];
+    for (const b of [...reservationy, ...recent]) { if (seen.has(b)) continue; seen.add(b); sample.push({ url: b.url, body: b.body }); }
+    send?.({ ok: true, platform: PLATFORM, parsed: extractAll().length, sample: sample.slice(0, 80) });
   } else if (msg?.type === 'keep_alive') {
     loadRules();
     if (!looksLoggedOut()) location.reload();
