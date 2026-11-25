@@ -205,7 +205,9 @@ function scheduleParse() {
   clearTimeout(parseTimer);
   parseTimer = setTimeout(() => pushNew(false), 2500);
 }
+function alive() { try { return !!chrome.runtime?.id } catch { return false } }
 function pushNew(force) {
+  if (!alive()) return 0;
   const all = extractAll();
   chrome.storage.local.set({ [`parsed_${PLATFORM}`]: all.length, [`parsedAt_${PLATFORM}`]: Date.now() }).catch(() => {});
   if (force) sentKeys = new Set();
@@ -242,6 +244,7 @@ function looksLoggedOut() {
   if (document.querySelector('input[type="password"]')) return true;
   return false;
 }
-setInterval(() => {
+const loggedOutTimer = setInterval(() => {
+  if (!alive()) { clearInterval(loggedOutTimer); return; }
   if (PLATFORM && looksLoggedOut()) chrome.runtime.sendMessage({ type: 'logged_out', platform: PLATFORM }).catch(() => {});
 }, 30_000);
