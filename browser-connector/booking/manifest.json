@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AI-GATE 讀後台連接器",
-  "version": "0.4.5",
+  "version": "0.4.6",
   "description": "讀取已登入的 OTA 後台訂單頁（Booking.com / Agoda / Trip.com / AsiaYo / Expedia）的內部 API 回應，把新訂單/取消推送到 AI-GATE（唯讀，不自動操作平台）。",
   "icons": { "16": "icons/icon16.png", "32": "icons/icon32.png", "48": "icons/icon48.png", "128": "icons/icon128.png" },
   "permissions": ["storage", "alarms", "notifications", "tabs"],
