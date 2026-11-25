@@ -4,7 +4,6 @@ import { createClient } from '@/lib/supabase/server'
 import { getBnbContext } from '@/lib/bnb/context'
 import { syncDailyRecordForBooking, clearDailyRecordForDeletedBooking } from '@/lib/booking/daily-sync'
 import { findOrCreateOrder, autoBookingNo, AUTO_BOOKING_NO_PREFIX } from '@/lib/booking/orders'
-import { findDuplicateClusters, deduplicateBookings, BookingRow } from '@/lib/booking/dedup'
 
 export async function GET(req: NextRequest) {
   const supabase = await createClient()
@@ -33,25 +32,8 @@ export async function GET(req: NextRequest) {
   const { data, error } = await q
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // 規則 3：只有「真的有同房型重複訂單叢集」才跑去重（去重會寫入＋重查，很耗時）。
-  // 原本只要月份內出現任何「RoomStatus／Fully Booked／Not available」這類平台關房標記
-  // 就會整批去重，導致每次換月都跑一次沉重清理 → 日曆換月很慢。這類關房標記本身不是
-  // 重複訂單，交給 iCal 同步端分類為房況封鎖即可，不必在讀取時清理。
-  if (data && data.length > 0) {
-    const bks = data as unknown as BookingRow[]
-    const clusters = findDuplicateClusters(bks)
-    if (clusters.length > 0) {
-      await deduplicateBookings(supabase, {
-        userId: ctx.ownerId,
-        propertyId: property_id ?? undefined,
-        from: from ?? undefined,
-        to: to ?? undefined,
-      })
-      const { data: cleanData } = await q
-      return NextResponse.json({ bookings: cleanData ?? [] })
-    }
-  }
-
+  // 讀取為純讀取：不在 GET 內做去重（去重會寫入＋重查，曾造成重查偶發回空 → 日曆顯示沒訂單，
+  // 跳開再回來才正常）。去重統一在寫入／同步（ingest、iCal/email sync）階段處理。
   return NextResponse.json({ bookings: data ?? [] })
 }
 
