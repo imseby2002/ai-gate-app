@@ -133,6 +133,29 @@ function findRoomName(o) {
   }
   return undefined;
 }
+// 金額：排除佣金/稅費,優先總額欄位,物件取其 amount/value/formatted；候選取最大(通常是總額)。
+function moneyOf(v) {
+  if (v == null) return null;
+  if (typeof v === 'number') return v || null;
+  if (typeof v === 'object') return moneyOf(v.amount ?? v.value ?? v.total ?? v.formatted);
+  const n = String(v).replace(/[^\d.]/g, ''); return n ? parseFloat(n) : null;
+}
+const reBadMoney = /commission|fee|tax|佣金|手續|服務費|gap|discount|deposit|refund|markup|per.?night|dailyrate/i;
+const rePreferMoney = /total.*(price|amount|rate|charge)|grand.?total|totalprice|order.?amount|sellinclusive|inclusive|^price$|^amount$|^total$|totalsaleprice|totalcostprice/i;
+function findPrice(o) {
+  const cands = [];
+  (function walk(node, depth) {
+    if (!node || typeof node !== 'object' || depth > 3) return;
+    for (const k of Object.keys(node)) {
+      const v = node[k];
+      if (reBadMoney.test(k)) continue; // 跳過佣金/稅費整個子樹
+      if (rePreferMoney.test(k)) { const n = moneyOf(v); if (n) cands.push(n); }
+      if (v && typeof v === 'object' && !Array.isArray(v)) walk(v, depth + 1);
+    }
+  })(o, 0);
+  if (cands.length) return Math.max(...cands);
+  const fb = findField(o, FIELD.price); return moneyOf(fb);
+}
 function normalize(o) {
   const ci = toYmd(findField(o, FIELD.checkin));
   if (!ci) return null;
@@ -151,7 +174,7 @@ function normalize(o) {
     room_name: (room != null ? String(room).trim() : '') || null,
     check_in: ci,
     check_out: co,
-    total_price: toNum(findField(o, FIELD.price)),
+    total_price: findPrice(o),
     num_guests: toNum(findField(o, FIELD.guests)),
     status: reCancel.test(statusRaw) ? 'cancelled' : 'confirmed',
   };
