@@ -23,7 +23,7 @@ try {
 } catch (e) {}
 
 // 最近擷取的 API 回應（環形緩衝，供解析與匯出樣本）
-const MAX_BUF = 60;
+const MAX_BUF = 200;
 const buffer = []; // { url, body, at }
 
 window.addEventListener('message', ev => {
@@ -222,8 +222,13 @@ chrome.runtime.onMessage.addListener((msg, _s, send) => {
     const n = pushNew(true);
     send?.({ ok: true, platform: PLATFORM, parsed: extractAll().length, pushed: n });
   } else if (msg?.type === 'capture_export') {
-    const sample = buffer.slice(-30).map(b => ({ url: b.url, body: b.body }));
-    send?.({ ok: true, platform: PLATFORM, parsed: extractAll().length, sample });
+    // 優先保留「像訂單」的回應（含訂單陣列/訂單欄位），再補最近的其他回應，確保匯出含訂單 API。
+    const scored = buffer.map(b => { const out = []; try { walk(b.body, out); } catch (e) {} return { b, hit: out.length }; });
+    const reservationy = scored.filter(s => s.hit > 0).map(s => s.b);
+    const recent = buffer.slice(-40);
+    const seen = new Set(); const sample = [];
+    for (const b of [...reservationy, ...recent]) { if (seen.has(b)) continue; seen.add(b); sample.push({ url: b.url, body: b.body }); }
+    send?.({ ok: true, platform: PLATFORM, parsed: extractAll().length, sample: sample.slice(0, 80) });
   } else if (msg?.type === 'keep_alive') {
     loadRules();
     if (!looksLoggedOut()) location.reload();
