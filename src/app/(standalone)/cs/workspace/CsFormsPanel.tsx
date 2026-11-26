@@ -17,6 +17,7 @@ interface CsForm {
   available_weekdays: number[]
   confirm_before_fields: boolean
   pricing_rules: CsFormPricingRule[]
+  requires_payment?: boolean
 }
 
 // route.ts 那份是伺服器端模組（依賴 next/headers），client component 只能拿型別，
@@ -35,6 +36,8 @@ interface CsFormSubmission {
   updated_at: string | null
   notified_at: string | null
   notify_error: string | null
+  paid_at?: string | null
+  payment_note?: string | null
 }
 
 const getFieldTypes = (t: (key: string) => string): { value: CsFormField['type']; label: string }[] => [
@@ -88,6 +91,8 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
   const [notifyTarget, setNotifyTarget] = useState<CsFormNotifyTarget>(emptyNotifyTarget())
   const [availableWeekdays, setAvailableWeekdays] = useState<number[]>(ALL_WEEKDAYS)
   const [confirmBeforeFields, setConfirmBeforeFields] = useState(true)
+  const [requiresPayment, setRequiresPayment] = useState(false)
+  const [payingId, setPayingId] = useState<string | null>(null)
   const [pricingRules, setPricingRules] = useState<CsFormPricingRule[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -107,7 +112,7 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
 
   const resetEditor = () => {
     setName(''); setFields([emptyField()]); setTriggerKeywords(''); setNotifyTarget(emptyNotifyTarget())
-    setAvailableWeekdays(ALL_WEEKDAYS); setConfirmBeforeFields(true); setPricingRules([])
+    setAvailableWeekdays(ALL_WEEKDAYS); setConfirmBeforeFields(true); setRequiresPayment(false); setPricingRules([])
     setError(''); setEditingId(null); setCreating(false)
   }
 
@@ -119,6 +124,7 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
     setNotifyTarget(f.notify_target?.platform !== undefined ? f.notify_target : emptyNotifyTarget())
     setAvailableWeekdays(f.available_weekdays?.length ? f.available_weekdays : ALL_WEEKDAYS)
     setConfirmBeforeFields(f.confirm_before_fields !== false)
+    setRequiresPayment(!!f.requires_payment)
     setPricingRules(f.pricing_rules ?? [])
     setError(''); setEditingId(f.id); setCreating(false)
   }
@@ -135,7 +141,7 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
     setSaving(true); setError('')
     try {
       const cleanRules = pricingRules.filter(r => r.fieldId && r.matchValue.trim() && r.amount)
-      const body = { name: name.trim(), fields: cleanFields, triggerKeywords, notifyTarget, industry, availableWeekdays, confirmBeforeFields, pricingRules: cleanRules }
+      const body = { name: name.trim(), fields: cleanFields, triggerKeywords, notifyTarget, industry, availableWeekdays, confirmBeforeFields, requiresPayment, pricingRules: cleanRules }
       const res = editingId
         ? await fetch(`/api/marketing/cs-forms/${editingId}`, {
             method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
@@ -181,6 +187,22 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
       setSubs(data.submissions ?? [])
     } finally {
       setSubsLoading(false)
+    }
+  }
+
+  const togglePaid = async (formId: string, s: CsFormSubmission) => {
+    const paid = !s.paid_at
+    if (!paid && !confirm(t('confirmUnpaid'))) return
+    setPayingId(s.id)
+    try {
+      const res = await fetch(`/api/marketing/cs-forms/${formId}/submissions/${s.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paid }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { alert(data.error || t('paidFailed')); return }
+      setSubs(prev => prev.map(x => x.id === s.id ? { ...x, paid_at: data.paid_at ?? null } : x))
+    } finally {
+      setPayingId(null)
     }
   }
 
@@ -347,6 +369,12 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
             <span>{t('confirmBeforeFieldsLabel')}</span>
           </label>
 
+          <label className="flex items-start gap-2 text-xs text-gray-600">
+            <input type="checkbox" className="mt-0.5" checked={requiresPayment}
+              onChange={e => setRequiresPayment(e.target.checked)} />
+            <span>{t('requiresPaymentLabel')}</span>
+          </label>
+
           <div className="border rounded-lg p-2.5 bg-white space-y-2">
             <label className="block text-xs font-medium text-gray-500">{t('notifyAfterSubmitLabel')}</label>
             <div className="flex gap-2">
@@ -489,6 +517,20 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
                         )}
                         {s.room_ref && <span className="px-1.5 py-0.5 rounded bg-gray-100 border">{t('roomRefPrefix', { value: s.room_ref })}</span>}
                         <span className="px-1.5 py-0.5 rounded bg-gray-100 border">{s.source === 'public_form' ? t('sourcePublicForm') : t('sourceCsChat')}</span>
+                        {f.requires_payment && (
+                          <button
+                            type="button"
+                            onClick={() => togglePaid(f.id, s)}
+                            disabled={payingId === s.id}
+                            title={s.paid_at ? t('markUnpaidTitle') : t('markPaidTitle')}
+                            className={`px-2 py-0.5 rounded border font-medium flex items-center gap-1 disabled:opacity-50 ${s.paid_at
+                              ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                              : 'bg-rose-600 border-rose-600 text-white hover:bg-rose-700'}`}
+                          >
+                            {payingId === s.id && <Loader2 className="h-3 w-3 animate-spin" />}
+                            {s.paid_at ? t('paidPrefix', { time: formatDateTime(s.paid_at, locale) }) : t('unpaidMarkPaid')}
+                          </button>
+                        )}
                         {s.notify_error && (
                           <span className="px-1.5 py-0.5 rounded bg-red-50 border border-red-200 text-red-600" title={s.notify_error}>
                             {t('notifyFailedPrefix', { msg: s.notify_error.slice(0, 40) })}
@@ -531,6 +573,9 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
                           </div>
                         )}
                       </div>
+                      {f.requires_payment && s.payment_note && (
+                        <div className="px-2 py-1 rounded bg-amber-50 border border-amber-200 text-amber-800 whitespace-pre-line">{s.payment_note}</div>
+                      )}
                       <div className="text-gray-700 bg-white p-2.5 rounded-lg border space-y-1">
                         {f.fields.map(field => s.answers[field.id] ? (
                           <div key={field.id} className="whitespace-pre-line">
