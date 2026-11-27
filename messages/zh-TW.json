@@ -9116,6 +9116,13 @@
     "networkError": "網路錯誤，請稍後再試"
   },
   "CsFormsPanel": {
+    "requiresPaymentLabel": "需要收費（提交紀錄顯示付款狀態，可按「已付」）",
+    "unpaidMarkPaid": "未付款・按此標記已付",
+    "paidPrefix": "已付款 {time}",
+    "markPaidTitle": "確認已收到款項後按此標記已付",
+    "markUnpaidTitle": "按此改回未付款",
+    "confirmUnpaid": "確定改回未付款？",
+    "paidFailed": "更新付款狀態失敗",
     "wd0": "日",
     "wd1": "一",
     "wd2": "二",

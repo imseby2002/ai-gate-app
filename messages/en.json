@@ -9116,6 +9116,13 @@
     "networkError": "Network error, please try again later"
   },
   "CsFormsPanel": {
+    "requiresPaymentLabel": "Requires payment (submissions show payment status and a \"Paid\" button)",
+    "unpaidMarkPaid": "Unpaid · tap to mark paid",
+    "paidPrefix": "Paid {time}",
+    "markPaidTitle": "Mark as paid after confirming the payment",
+    "markUnpaidTitle": "Tap to mark as unpaid",
+    "confirmUnpaid": "Mark this as unpaid?",
+    "paidFailed": "Failed to update payment status",
     "wd0": "Sun",
     "wd1": "Mon",
     "wd2": "Tue",

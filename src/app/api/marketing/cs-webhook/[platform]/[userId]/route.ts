@@ -563,15 +563,105 @@ function matchFormsByKeywords(forms: CsChatForm[], text: string): CsChatForm[] {
   })
 }
 
-async function forwardOrderToMatchingForms(
-  userId: string, forms: CsChatForm[], orderText: string, fromName?: string,
+// 對話談成的行程訂單（客人一次講完、沒被逐欄位問表單）也要留一筆表單紀錄，之後才查得到：
+// 用 AI 從對話整理出各欄位答案存成 cs_form_submissions（來源 cs_chat），表單設定立即通知的照樣通知。
+// 同一位客人近 7 天已有這張表單的紀錄（例如 AI 已走逐欄位流程送出）就不重複建立；
+// 帶了匯款資訊時把客人的匯款回報記在 payment_note（專員核對後在表單紀錄按「已付」）。
+const NOTE_FIELD_RE = /備註|note|remark/i
+
+async function extractFormAnswers(form: CsChatForm, convo: string): Promise<Record<string, string>> {
+  try {
+    const geminiKey = process.env.GOOGLE_AI_API_KEY
+    if (!geminiKey) return {}
+    const google = createGoogleGenerativeAI({ apiKey: geminiKey })
+    const fieldList = form.fields.map(f => `- id: ${f.id}｜${f.label}${f.options?.length ? `｜選項：${f.options.join(' / ')}` : ''}`).join('\n')
+    const { text } = await generateText({
+      model: google('gemini-3.1-flash-lite'),
+      messages: [{
+        role: 'user',
+        content: `你是客服系統的內部工具，負責把對話中客人已確認的訂單整理成表單欄位。\n\n表單「${form.name}」欄位：\n${fieldList}\n\n對話：\n${convo.slice(-5000)}\n\n只填對話裡真的出現的內容（以客人最後確認的版本為準），沒提到的欄位不要填、絕對不要猜。有選項的欄位盡量對應到選項原文。多人資料每人一行。只輸出 JSON 物件，key 是欄位 id、value 是字串，不要其他文字。`,
+      }],
+    })
+    const m = text.match(/\{[\s\S]*\}/)
+    if (!m) return {}
+    const parsed = JSON.parse(m[0]) as Record<string, unknown>
+    const ids = new Set(form.fields.map(f => f.id))
+    const out: Record<string, string> = {}
+    for (const [k, v] of Object.entries(parsed)) {
+      if (ids.has(k) && v != null && String(v).trim()) out[k] = String(v).trim()
+    }
+    return out
+  } catch {
+    return {}
+  }
+}
+
+async function saveOrderToMatchingForms(
+  userId: string, platform: string, customerId: string, industry: string,
+  forms: CsChatForm[], history: HistoryMsg[], orderText: string, payment: string | null, fromName?: string,
+  allowUpdate = false,
 ): Promise<void> {
-  const matched = matchFormsByKeywords(forms, orderText).filter(f => f.notify_target?.batchMode === 'immediate')
+  // 有房號欄位的表單（例如早餐直送）要核對當天入住，只走逐欄位填寫流程；訂房確認內容常提到「含早餐」，
+  // 不能因為關鍵字命中就幫客人建一筆早餐訂單並通知廚房
+  const matched = matchFormsByKeywords(forms, orderText).filter(f => !f.fields.some(x => /房號|房型|room/i.test(x.label)))
+  if (!matched.length) return
+  const supabase = getServiceClient()
+  const since = new Date(Date.now() - 7 * 86400_000).toISOString()
+  const convo = history.slice(-20).map(m => `${m.role === 'user' ? '客人' : 'AI'}：${m.content}`).join('\n')
   for (const form of matched) {
-    void notifyFormSubmission(
-      userId, form.notify_target, form.name,
-      `📋 ${form.name}（客人已在對話中確認訂單，非逐欄位表單填寫）\n\n${orderText.slice(0, 900)}${fromName ? `\n\n客人：${fromName}` : ''}`,
-    )
+    try {
+      const noteField = form.fields.find(f => NOTE_FIELD_RE.test(f.label) || f.id === 'note')
+      const payNote = payment ? `匯款回報：${payment}` : ''
+      const { data: existing } = await supabase.from('cs_form_submissions').select('id, answers, payment_note, paid_at')
+        .eq('form_id', form.id).eq('user_id', userId).eq('from_id', customerId).gte('created_at', since)
+        .order('created_at', { ascending: false }).limit(1)
+      const prev = existing?.[0] as { id: string; answers: Record<string, string>; payment_note: string | null; paid_at: string | null } | undefined
+      if (prev && allowUpdate && !prev.paid_at) {
+        // AI 又整理了一次訂單（客人改人數、日期等）且還沒付款 → 以最新內容更新同一筆，並通知「已更新」
+        const answers = await extractFormAnswers(form, convo)
+        if (!Object.keys(answers).length || JSON.stringify(answers) === JSON.stringify(prev.answers)) continue
+        await supabase.from('cs_form_submissions')
+          .update({ answers, updated_at: new Date().toISOString(), notified_at: null, notify_error: null })
+          .eq('id', prev.id)
+        if (form.notify_target?.batchMode === 'immediate') {
+          const result = await notifyFormSubmission(
+            userId, form.notify_target, form.name,
+            `${formatFormSubmission(form.name, form.fields, answers, null, true)}${fromName ? `\n客人：${fromName}` : ''}`,
+            { fields: form.fields, answers, roomRef: null },
+          )
+          await supabase.from('cs_form_submissions')
+            .update(result.ok ? { notified_at: new Date().toISOString() } : { notify_error: result.error ?? '未知錯誤' })
+            .eq('id', prev.id)
+        }
+        continue
+      }
+      if (prev) {
+        // 已有紀錄：只補上匯款回報，不重複建立、不重複通知
+        if (payNote && !(prev.payment_note ?? '').includes(payNote)) {
+          await supabase.from('cs_form_submissions')
+            .update({ payment_note: [prev.payment_note, payNote].filter(Boolean).join('\n') })
+            .eq('id', prev.id)
+        }
+        continue
+      }
+      const answers = await extractFormAnswers(form, convo)
+      // 整理失敗時至少把 AI 整理的訂單內容原文存進備註，不讓這筆訂單沒有紀錄
+      if (!Object.keys(answers).length && noteField) answers[noteField.id] = orderText.slice(0, 1500)
+      if (!Object.keys(answers).length) continue
+      const { data: row } = await supabase.from('cs_form_submissions').insert({
+        form_id: form.id, user_id: userId, industry, answers, source: 'cs_chat', platform, from_id: customerId,
+        payment_note: payNote || null,
+      }).select('id').single()
+      if (!row || form.notify_target?.batchMode !== 'immediate') continue
+      const result = await notifyFormSubmission(
+        userId, form.notify_target, form.name,
+        `${formatFormSubmission(form.name, form.fields, answers, null)}${fromName ? `\n客人：${fromName}` : ''}`,
+        { fields: form.fields, answers, roomRef: null },
+      )
+      await supabase.from('cs_form_submissions')
+        .update(result.ok ? { notified_at: new Date().toISOString() } : { notify_error: result.error ?? '未知錯誤' })
+        .eq('id', row.id)
+    } catch { /* 不中斷主流程 */ }
   }
 }
 
@@ -605,7 +695,7 @@ async function maybeCreateOrderTicket(
     void notifyStaffOrder(userId, lastAssistant)
     void fireGroupNotify(userId, 'order_confirmed', lastAssistant)
     dispatchTicketNotify(notifyWebhooks, { platform, customerId, industry, fromName }, `🔔 有新訂單已確認，請盡快跟進：\n\n${lastAssistant.slice(0, 900)}`)
-    void forwardOrderToMatchingForms(userId, forms, lastAssistant, fromName)
+    void saveOrderToMatchingForms(userId, platform, customerId, industry, forms, [...history, { role: 'user', content: text }], lastAssistant, null, fromName)
   } catch { /* 不中斷主流程 */ }
 }
 
@@ -652,14 +742,9 @@ async function maybeCreatePaymentProofTicket(
     const notifyMsg = `客人已回報匯款：「${text.trim()}」，請核對款項並手動建立/更新訂單。${orderText ? `\n\n【訂單內容】\n${orderText.slice(0, 900)}` : ''}`
     void notifyStaffOrder(userId, notifyMsg)
     dispatchTicketNotify(notifyWebhooks, { platform, customerId, industry, fromName }, notifyMsg)
-    // 客人沒有明確回「正確」就直接匯款時，訂單確認那一步不會觸發，表單指定的對象（例如賞鯨船公司群組）
-    // 也就收不到；近 7 天沒有「新訂單待跟進」工單（代表沒轉發過）就補轉發一次
-    if (orderText) {
-      const { data: orderTicket } = await getServiceClient().from('cs_tickets').select('id')
-        .eq('user_id', userId).eq('from_id', customerId).eq('intent', '新訂單待跟進')
-        .gte('created_at', new Date(Date.now() - 7 * 86400_000).toISOString()).limit(1)
-      if (!orderTicket?.length) void forwardOrderToMatchingForms(userId, forms, `${orderText}\n\n匯款回報：${text.trim()}`, fromName)
-    }
+    // 客人沒有明確回「正確」就直接匯款時，訂單確認那一步不會觸發：在這裡存表單紀錄並通知表單指定對象
+    // （例如賞鯨船公司群組）；已有紀錄的話只把匯款回報補進備註
+    if (orderText) void saveOrderToMatchingForms(userId, platform, customerId, industry, forms, [...history, { role: 'user', content: text }], orderText, text.trim(), fromName)
   } catch { /* 不中斷主流程 */ }
 }
 
@@ -1164,6 +1249,12 @@ async function replyToCustomer(
   if (payeeFabricated) void createOnsiteIssueTicket(userId, platform, customerId, knowledge.industry, history, `客人詢問匯款戶名：${text}`, knowledge.notifyWebhooks, fromName)
   if (compensationPromised) void createOnsiteIssueTicket(userId, platform, customerId, knowledge.industry, history, text, knowledge.notifyWebhooks, fromName)
   if (formSubmit) void saveFormSubmissionFromChat(userId, platform, customerId, knowledge.industry, knowledge.csForms, formSubmit, fromName, knowledge.notifyWebhooks)
+  // AI 整理好訂單並請客人付款（例如賞鯨行程報上總金額與匯款帳號）＝資料已齊全：立刻存表單紀錄（未付款）並通知表單指定對象，
+  // 不等客人回「正確」或回報匯款——真實案例：近 90 天 4 筆賞鯨訂單只有 1 筆送到船公司群組
+  else if (/總金額/.test(reply) && /匯款|預付|付款/.test(reply)) {
+    void saveOrderToMatchingForms(userId, platform, customerId, knowledge.industry, knowledge.csForms,
+      [...history, { role: 'user', content: text }, { role: 'assistant', content: reply }], reply, null, fromName, true)
+  }
   void classifyGeneralIntent(text).then(intent => logCsMessage(userId, platform, customerId, knowledge.industry, text, reply, fromName, intent))
   // AI 仍說了「已通知管家」「補送」等話 → 確保真的有工單通知管家
   if (!onsiteIssue && !compensationPromised && ACTION_PROMISE_RE.test(reply)) {

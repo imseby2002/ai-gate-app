@@ -9116,6 +9116,13 @@
     "networkError": "Lỗi mạng, vui lòng thử lại sau"
   },
   "CsFormsPanel": {
+    "requiresPaymentLabel": "Cần thu phí (bản ghi hiển thị trạng thái thanh toán, có nút \"Đã trả\")",
+    "unpaidMarkPaid": "Chưa trả · bấm để đánh dấu đã trả",
+    "paidPrefix": "Đã trả {time}",
+    "markPaidTitle": "Đánh dấu đã trả sau khi xác nhận đã nhận tiền",
+    "markUnpaidTitle": "Bấm để chuyển về chưa trả",
+    "confirmUnpaid": "Chuyển về chưa trả?",
+    "paidFailed": "Cập nhật trạng thái thanh toán thất bại",
     "wd0": "CN",
     "wd1": "T2",
     "wd2": "T3",
