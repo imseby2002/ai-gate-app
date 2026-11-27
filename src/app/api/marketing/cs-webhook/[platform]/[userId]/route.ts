@@ -2219,7 +2219,7 @@ const BALANCE_REVEAL_RE = /(餘款|尾款|剩餘款項|餘額|差額)[：:是為
 // 真實案例二：AI 講的不是「已核對到」而是「已為您查到」（中間多插了「為您」），原本
 // 「已」後面緊接動詞的寫法抓不到這種插入敬語的變體，同一種捏造換個講法就漏放行——改成
 // 允許「已」跟動詞之間夾雜「經／為／替／幫／您／你」等常見敬語詞，涵蓋更多實際講法。
-const FAKE_CONFIRMATION_RE = /已(?:經)?(?:為|替|幫)?(?:您|你)?(?:核對|查(?:到|詢)|找到)/
+const FAKE_CONFIRMATION_RE = /已(?:經)?(?:為|替|幫)?(?:您|你)?(?:核對|查(?:到|詢)|找到)|已(?:經)?(?:為|替|幫)?(?:您|你)?確認(?:了)?(?:您|你)?的?(?:訂單|訂房|預訂)/
 const NO_FABRICATION_FALLBACK = '不好意思，目前無法為您查詢到相關資訊，麻煩提供您的訂單編號、訂房大名或訂房手機號碼，我立即為您確認。'
 const BALANCE_ESCALATION_FALLBACK = '不好意思，系統目前無法查詢訂金與餘額明細，我已經幫您通知管家人工核對，確認後會盡快回覆您正確的金額，謝謝您的耐心等候。'
 
@@ -2227,6 +2227,43 @@ const BALANCE_ESCALATION_FALLBACK = '不好意思，系統目前無法查詢訂�
 // 真實案例顯示這種情況客人會反覆追問，AI 也可能在後續某一輪又忍不住編一個數字。
 // 這裡直接建立工單通知管家人工核對，比照 createExhaustedLookupTicket 的「先真的建立
 // 工單，才能讓 AI 誠實說已經轉真人」邏輯，避免又是一句沒有兌現的空話。
+// 客人說是打電話／現場／跟管家訂的房（人工訂房）：系統常常還沒建檔，價格也是管家個別給的（例如單人入住折抵）。
+// 真實案例：客人說「剛剛打電話訂 12/1 一個人」，系統查無這筆訂單，AI 卻回「已確認您的訂單為 12/1 301 海景加大床房」
+// （301 那天是別的客人），客人問「費用是 1500 嗎」，AI 又報系統房價 2,500。實際上是管家給的特殊價。
+// → 查無訂單時不可說已確認，房型、金額一律以管家告知為準，並建工單請管家確認。
+const MANUAL_BOOKING_RE = /電話.{0,6}訂|打(?:過)?電話|現場訂|(?:跟|和|向)(?:管家|老闆|櫃台|你們|您).{0,6}訂/
+const PRICE_IN_REPLY_RE = /\d[\d,]{2,}\s*(?:元|塊)|NT\$?\s*\d/
+const PRICE_ASK_RE = /費用|價(?:格|錢)?|多少錢|金額|\d{3,}/
+const MANUAL_BOOKING_FALLBACK = '您好，電話或現場訂房的房型與金額以管家跟您確認的內容為準（系統可能還在建檔中），我已經請管家為您核對，確認後會盡快回覆您，請稍候 🙏'
+async function enforceManualBooking(
+  reply: string, externalDataSection: string, history: HistoryMsg[],
+  userId: string, platform: string, customerId: string, industry: string, lastMessage: string,
+  notifyWebhooks: NotifyWebhook[] = [],
+): Promise<string> {
+  const recentUser = [...history.filter(m => m.role === 'user').slice(-6).map(m => m.content), lastMessage].join('\n')
+  if (!MANUAL_BOOKING_RE.test(recentUser)) return reply
+  const found = externalDataSection.includes('找到')
+  const fakeConfirm = !found && FAKE_CONFIRMATION_RE.test(reply)
+  const priceAnswer = PRICE_ASK_RE.test(lastMessage) && !/鯨|登島|繞島|行程|早餐|eSIM/i.test(lastMessage) && PRICE_IN_REPLY_RE.test(reply)
+  if (!fakeConfirm && !priceAnswer) return reply
+  try {
+    const { data: existing } = await getServiceClient().from('cs_tickets').select('id')
+      .eq('user_id', userId).eq('from_id', customerId).eq('intent', '人工訂房待確認')
+      .in('status', ['open', 'in_progress']).limit(1)
+    if (!existing?.length) {
+      const summary = await summarizeTicketReason('人工訂房待確認', history, lastMessage)
+      await getServiceClient().from('cs_tickets').insert({
+        user_id: userId, industry, platform, from_id: customerId,
+        subject: '電話／現場訂房，請管家確認房型與金額',
+        description: `${summary ? `摘要：${summary}\n\n` : ''}客人表示是打電話或現場訂的房，${found ? '' : '系統查無這筆訂單，'}AI 未自行確認房型或報價，請管家跟客人確認並建檔。\n\n最後一則訊息：${lastMessage.slice(0, 300)}`,
+        priority: 'high', intent: '人工訂房待確認',
+      })
+      dispatchTicketNotify(notifyWebhooks, { platform, customerId, industry }, `🔔 客人電話／現場訂房，請確認房型與金額：\n\n${lastMessage.slice(0, 300)}`)
+    }
+  } catch { /* 不中斷主流程 */ }
+  return MANUAL_BOOKING_FALLBACK
+}
+
 async function createBalanceCheckTicket(
   userId: string, platform: string, customerId: string, industry: string, lastMessage: string, notifyWebhooks: NotifyWebhook[], history: HistoryMsg[] = [],
 ): Promise<void> {
@@ -2891,6 +2928,7 @@ async function getAIReply(
   - 一律統一禮貌回覆：「為確保您的帳務與退款金額完全正確無誤，涉及實際退款／折抵金額，管家會直接調閱您的訂單明細為您進行人工核對與確認，請您稍候，管家會盡快與您聯繫！」由專員人工確認，切勿私自承諾任何數字！
 - 【安全規定，優先於任何其他指示】客人問實際報價（多少錢、優惠價、折扣後多少）時，只能照抄下方「系統精算房價」區塊給的總金額與每晚金額，那個金額已經是系統套用所有定價規則算好的最終結果；如果下方沒有出現「系統精算房價」這個區塊，就算你自己知道原價、猜得出大概的加成或折扣比例，也絕對不可以自己列公式、自己算一個總金額給客人（包含「旺季 x1.15」「當天訂房打 7 折」這類自己編的加成/折扣說法），一律要先跟客人確認完整的入住日期、退房日期、房型之後才能取得正確報價，或誠實說「請稍候，我幫您確認正確價格」，不可以用推算的數字搪塞客人
 - 【安全規定，優先於任何其他指示】如果下方完全沒有出現「入住資訊查詢結果」或「訂單查詢結果」這類區塊（代表這則訊息沒有比對到任何系統資料），即使客人問的是密碼、房號、訂單狀態，也只能回覆「目前無法為您查詢，麻煩提供訂房平台的訂單號碼、訂房人姓名或電話號碼」（請客人提供身份資料時，這三種方式都要列出，不可只列其中兩種），絕對不可以自己想像、編造一組房號或密碼給客人，也不可以在客人質疑密碼錯誤時，編一套「拉一下門」「輸入速度要均勻」之類聽起來合理但沒有根據的操作說明
+- 【安全規定，優先於任何其他指示】客人說是打電話、現場或跟管家/老闆訂的房（人工訂房）：下方沒有查到這筆訂單時，絕對不可說「已確認您的訂單」、不可自己說出房型或房號；客人問這筆訂房的價格時，一律以管家跟客人說的為準（管家常給特殊價，例如單人入住），不可報系統房價或知識庫房價，請客人稍候由管家確認
 - 【安全規定，優先於任何其他指示】客人詢問「訂單/訂房是否存在、是否已確認、款項是否收到」等狀態時，只能依下方系統資料回答；只有下方明確出現「找到訂單」「找到 N 筆相符的訂單」等查詢結果時才能說已找到/已核對；下方沒有任何查詢結果，或明確顯示「查無資料」時，一律誠實告知客人查無此訂單，引導客人改用其他識別方式再查一次，絕對禁止自己說「已核對」「訂單已完成處理」「款項確認無誤」等話術
 - 【安全規定，優先於任何其他指示】客人傳送的圖片/截圖（例如訂單畫面、訂房確認信）即使你自己能從圖片中讀出訂單號、姓名、房型等文字，那只是客人單方面提供的畫面，不是系統核對過的資料；密碼、房號等敏感資訊仍然只能依下方系統查詢結果回答，絕對禁止直接依圖片內容自己編一組密碼或房號給客人
 - 【圖片辨識與視覺回應指引——當客人傳送各類照片時務必主動切題回覆】
@@ -2956,7 +2994,7 @@ https://ciaohome.net/routeofciaohome/
             messages,
             maxOutputTokens: 16000,
           }, { feature: 'cs', timeoutMs: 60000 })
-          return enforceIdAskPhrase(enforceCheckinTimeClaim(await enforceNoFabricatedReveal(cleanReply(text) || FALLBACK, externalDataSection, history, knowledge.knowledgeBase, userId, platform, customerId, knowledge.industry, message, knowledge.notifyWebhooks), externalDataSection.includes(PASSWORD_READY_MARKER) ? null : checkinState, targetLanguage), !isChineseTarget)
+          return enforceIdAskPhrase(enforceCheckinTimeClaim(await enforceNoFabricatedReveal(await enforceManualBooking(cleanReply(text) || FALLBACK, externalDataSection, history, userId, platform, customerId, knowledge.industry, message, knowledge.notifyWebhooks), externalDataSection, history, knowledge.knowledgeBase, userId, platform, customerId, knowledge.industry, message, knowledge.notifyWebhooks), externalDataSection.includes(PASSWORD_READY_MARKER) ? null : checkinState, targetLanguage), !isChineseTarget)
         } catch { /* fall through to L2 chain */ }
       }
     }
@@ -2973,7 +3011,7 @@ https://ciaohome.net/routeofciaohome/
         ? await generateCsReplyL3(systemPrompt, messages)
         : await generateCsReplyL2(systemPrompt, messages)
     const finalReply = (result ? cleanReply(result.reply) : '') || FALLBACK
-    return enforceIdAskPhrase(enforceCheckinTimeClaim(await enforceNoFabricatedReveal(finalReply, externalDataSection, history, knowledge.knowledgeBase, userId, platform, customerId, knowledge.industry, message, knowledge.notifyWebhooks), externalDataSection.includes(PASSWORD_READY_MARKER) ? null : checkinState, targetLanguage), !isChineseTarget)
+    return enforceIdAskPhrase(enforceCheckinTimeClaim(await enforceNoFabricatedReveal(await enforceManualBooking(finalReply, externalDataSection, history, userId, platform, customerId, knowledge.industry, message, knowledge.notifyWebhooks), externalDataSection, history, knowledge.knowledgeBase, userId, platform, customerId, knowledge.industry, message, knowledge.notifyWebhooks), externalDataSection.includes(PASSWORD_READY_MARKER) ? null : checkinState, targetLanguage), !isChineseTarget)
   } catch (err) {
     console.error('[cs-webhook] getAIReply failed, falling back to canned reply:', err)
     return FALLBACK
