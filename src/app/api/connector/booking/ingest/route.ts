@@ -7,7 +7,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { requireBookingDevice } from '@/lib/connector/booking-auth'
 import { findOrCreateOrder } from '@/lib/booking/orders'
 import { syncDailyRecordForBooking } from '@/lib/booking/daily-sync'
-import { isBookingFilled } from '@/lib/booking/dedup'
+import { hasRealGuestName } from '@/lib/booking/dedup'
 import { matchPropertyByName } from '@/lib/booking/email-sync'
 
 // 連接器支援的平台（讀各家後台）。別名正規化：ctrip→trip_com、expedia 保留。
@@ -129,7 +129,9 @@ export async function POST(req: NextRequest) {
     // 既有訂單 → 合併（connector 為此 OTA 訂單的權威來源）
     if (existing) {
       const patch: Record<string, unknown> = {}
-      if (guestName && !isBookingFilled(existing)) patch.guest_name = guestName
+      // 連接器有真實姓名、且既有姓名空白或為佔位（如 email 來的「待補充」）→ 補上。
+      // 不用 isBookingFilled（它把任何非 ical 來源都當已填，會擋掉 email 的待補充）。
+      if (guestName && !hasRealGuestName(existing)) patch.guest_name = guestName
       if (propertyId && !existing.property_id) patch.property_id = propertyId
       if (price != null && existing.total_price == null) patch.total_price = price
       if (guests != null && (existing.num_guests == null || existing.num_guests <= 1)) patch.num_guests = guests
