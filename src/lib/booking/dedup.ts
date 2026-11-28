@@ -24,7 +24,13 @@ export interface BookingRow {
   properties?: { id?: string; name?: string; room_count?: number } | null
 }
 
-const PLACEHOLDER_NAME_REGEX = /^(?:\(iCal\s*訂單\)|\(Trip\.com\s*訂單\)|\(待補充\)|not\s*available|fully\s*booked|roomstatus.*|closed.*)$/i
+const PLACEHOLDER_NAME_REGEX = /^(?:\(iCal\s*訂單\)|\(Trip\.com\s*訂單\)|\(待補充\)|待補充|not\s*available|fully\s*booked|roomstatus.*|closed.*)$/i
+
+/** 姓名是否為真實旅客名（非空、非佔位字串）。不看來源，供連接器判斷是否該補姓名。 */
+export function hasRealGuestName(bk: Partial<BookingRow>): boolean {
+  const name = (bk.guest_name ?? '').trim()
+  return !!name && !PLACEHOLDER_NAME_REGEX.test(name)
+}
 
 /**
  * 判斷該訂單是否已有旅客或訂購資訊填寫（非單純的 iCal 佔位）。
